@@ -1,3 +1,9 @@
+vyos-1x (1.0.1) unstable; urgency=low
+
+  * Added the Python library for reading VyOS configs
+
+ -- Daniil Baturin <daniil@baturin.org>  Thu, 17 Aug 2017 22:22:17 -0400
+
 vyos-1x (1.0.0) unstable; urgency=low
 
   * Created the package
