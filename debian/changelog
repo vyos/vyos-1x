@@ -1,0 +1,6 @@
+vyos-1x (1.0.0) unstable; urgency=low
+
+  * Created the package
+
+ -- Daniil Baturin <daniil@baturin.org>  Thu, 17 Aug 2017 20:17:04 -0400
+

@@ -1,0 +1,12 @@
+Source: vyos-1x
+Section: contrib/net
+Priority: extra
+Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
+Build-Depends: debhelper (>= 5)
+Standards-Version: 3.9.6
+
+Package: vyos-1x
+Architecture: all
+Depends: python3
+Description: VyOS configuration scripts and data
+ VyOS configuration scripts, interface definitions, and everything
