@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+  <!--
+       interface_definition.rnc: VyConf reference tree XML grammar
+    
+       Copyright (C) 2014 VyOS Development Group <maintainers@vyos.net>
+    
+       This library is free software; you can redistribute it and/or
+       modify it under the terms of the GNU Lesser General Public
+       License as published by the Free Software Foundation; either
+       version 2.1 of the License, or (at your option) any later version.
+    
+       This library is distributed in the hope that it will be useful,
+       but WITHOUT ANY WARRANTY; without even the implied warranty of
+       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+       Lesser General Public License for more details.
+    
+       You should have received a copy of the GNU Lesser General Public
+       License along with this library; if not, write to the Free Software
+       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+       USA
+  -->
+  <!--
+    The language of this file is compact form RELAX-NG
+    http://relaxng.org/compact-tutorial-20030326.htm
+    (unless converted to XML, then just RELAX-NG :)
+  -->
+  <!-- Interface definition starts with interfaceDefinition tag that may contain node tags -->
+  <start>
+    <element name="interfaceDefinition">
+      <zeroOrMore>
+        <ref name="node"/>
+      </zeroOrMore>
+    </element>
+  </start>
+  <!--
+    node tag may contain node, leafNode, or tagNode tags
+    Those are intermediate configuration nodes that may only contain
+    other nodes and must not have values
+  -->
+  <define name="node">
+    <element name="node">
+      <interleave>
+        <optional>
+          <ref name="ownerAttr"/>
+        </optional>
+        <ref name="nodeNameAttr"/>
+      </interleave>
+      <interleave>
+        <optional>
+          <ref name="properties"/>
+        </optional>
+        <optional>
+          <ref name="children"/>
+        </optional>
+      </interleave>
+    </element>
+  </define>
+  <!--
+    Tag nodes are containers for nodes without predefined names, like network interfaces
+    or user names (e.g. "interfaces ethernet eth0" or "user jrandomhacker")
+    Tag nodes may contain node and leafNode elements, and also nameConstraint tags
+    They must not contain other tag nodes
+  -->
+  <define name="tagNode">
+    <element name="tagNode">
+      <interleave>
+        <optional>
+          <ref name="ownerAttr"/>
+        </optional>
+        <ref name="nodeNameAttr"/>
+      </interleave>
+      <interleave>
+        <optional>
+          <ref name="properties"/>
+        </optional>
+        <ref name="children"/>
+      </interleave>
+    </element>
+  </define>
+  <!--
+    Leaf nodes are terminal configuration nodes that can't have children,
+    but can have values.
+    Leaf node may contain one or more valueConstraint tags
+    If multiple valueConstraint tags are used, they work a logical OR
+    Leaf nodes can have "multi" attribute that indicated that it can have
+    more than one value
+  -->
+  <define name="leafNode">
+    <element name="leafNode">
+      <ref name="nodeNameAttr"/>
+      <ref name="properties"/>
+    </element>
+  </define>
+  <!-- Normal and tag nodes may have children -->
+  <define name="children">
+    <element name="children">
+      <oneOrMore>
+        <choice>
+          <ref name="node"/>
+          <ref name="tagNode"/>
+          <ref name="leafNode"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <!--
+    Nodes may have properties
+    For simplicity, any property is allowed in any node,
+    but whether they are used or not is implementation-defined
+    
+    Leaf nodes may differ in number of values that can be
+    associated with them.
+    By default, a leaf node can have only one value.
+    "multi" tag means a node can have one or more values,
+    "valueless" means it can have no values at all.
+
+    Future VyOS 2.0 only:
+    "hidden" means node visibility can be toggled, eg 'dangerous' commands,
+    "secret" allows a node to hide its value from unprivileged users.
+
+    VyOS 1.x only: "priority" tag defined boot priority
+  -->
+  <define name="properties">
+    <element name="properties">
+      <interleave>
+        <optional>
+          <ref name="help"/>
+        </optional>
+        <optional>
+          <ref name="priority"/>
+        </optional>
+        <optional>
+          <ref name="constraint"/>
+        </optional>
+        <zeroOrMore>
+          <ref name="valueHelp"/>
+        </zeroOrMore>
+        <optional>
+          <element name="constraintErrorMessage">
+            <text/>
+          </element>
+        </optional>
+        <optional>
+          <!-- These are meaningful only for leaf nodes -->
+          <group>
+            <element name="valueless">
+              <empty/>
+            </element>
+          </group>
+        </optional>
+        <optional>
+          <element name="multi">
+            <empty/>
+          </element>
+        </optional>
+        <optional>
+          <element name="hidden">
+            <empty/>
+          </element>
+        </optional>
+        <optional>
+          <element name="secret">
+            <empty/>
+          </element>
+        </optional>
+        <optional>
+          <!-- These are meaningful only for tag nodes -->
+          <group>
+            <element name="keepChildOrder">
+              <empty/>
+            </element>
+          </group>
+        </optional>
+      </interleave>
+    </element>
+  </define>
+  <!-- All nodes must have "name" attribute -->
+  <define name="nodeNameAttr">
+    <attribute name="name"/>
+  </define>
+  <!--
+    Ordinary nodes and tag nodes can have "owner" attribute.
+    Owner is the component that is notified when node changes.
+  -->
+  <define name="ownerAttr">
+    <attribute name="owner"/>
+  </define>
+  <!--
+    Tag and leaf nodes may have constraints on their names and values
+    (respectively).
+    When multiple constraints are listed, they work as logical OR
+  -->
+  <define name="constraint">
+    <element name="constraint">
+      <oneOrMore>
+        <choice>
+          <element name="regex">
+            <text/>
+          </element>
+          <ref name="validator"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <!-- A constraint may also use an external validator rather than regex -->
+  <define name="validator">
+    <element name="validator">
+      <interleave>
+        <attribute name="name"/>
+        <optional>
+          <attribute name="argument"/>
+        </optional>
+      </interleave>
+      <empty/>
+    </element>
+  </define>
+  <!-- help tags contains brief description of the purpose of the node -->
+  <define name="help">
+    <element name="help">
+      <text/>
+    </element>
+  </define>
+  <!-- valueHelp tags contain information about acceptable value format -->
+  <define name="valueHelp">
+    <element name="valueHelp">
+      <interleave>
+        <element name="format">
+          <text/>
+        </element>
+        <element name="description">
+          <text/>
+        </element>
+      </interleave>
+    </element>
+  </define>
+  <define name="priority">
+    <element name="priority">
+      <text/>
+    </element>
+  </define>
+</grammar>

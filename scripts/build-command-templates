@@ -79,7 +79,7 @@ def get_properties(p):
     try:
         props["help"] = p.find("help").text
     except:
-        props["help"] = None
+        pass
 
     # Get value help strings
     try:
@@ -91,15 +91,27 @@ def get_properties(p):
     except:
         props["val_help"] = []
 
+    # Get priority
+    try:
+        props["priority"] = p.find("priority").text
+    except:
+        pass
+
     return props
 
 def make_node_def(props):
+    # XXX: replace with a template processor if it grows
+    #      out of control
+
     node_def = ""
 
     if "tag" in props:
         node_def += "tag:\n"
 
     node_def += "type: {0}\n".format(props["type"])
+
+    if "priority" in props:
+        node_def += "priority: {0}\n".format(props["priority"])
 
     if "help" in props:
         node_def += "help: {0}\n".format(props["help"])
