@@ -3,11 +3,14 @@
 <!-- Cron configuration -->
 
 <interfaceDefinition>
-  <node name="system" owner="vyos-update-cron">
+  <node name="system">
     <children>
       <node name="task-scheduler">
+        <properties>
+          <help>Task scheduler settings</help>
+        </properties>
         <children>
-          <tagNode name="task">
+          <tagNode name="task" owner="${vyatta_sbindir}/vyos-update-crontab.py">
             <properties>
               <help>Scheduled task</help>
               <valueHelp>

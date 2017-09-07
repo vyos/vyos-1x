@@ -70,7 +70,7 @@ def make_path(l):
     return(functools.reduce(os.path.join, l))
 
 def get_properties(p):
-    props = {"tag": False, "type": "txt"}
+    props = {}
 
     if p is None:
         return props
@@ -97,6 +97,10 @@ def get_properties(p):
     except:
         pass
 
+    # Get "multi"
+    if p.find("multi") is not None:
+        props["multi"] = True
+
     return props
 
 def make_node_def(props):
@@ -108,7 +112,11 @@ def make_node_def(props):
     if "tag" in props:
         node_def += "tag:\n"
 
-    node_def += "type: {0}\n".format(props["type"])
+    if "type" in props:
+        node_def += "type: {0}\n".format(props["type"])
+
+    if "multi" in props:
+        node_def += "multi:\n"
 
     if "priority" in props:
         node_def += "priority: {0}\n".format(props["priority"])
@@ -135,6 +143,7 @@ def process_node(n, tmpl_dir):
 
     name = n.get("name")
     owner = n.get("owner")
+    node_type = n.tag
 
     my_tmpl_dir.append(name)
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
@@ -142,13 +151,17 @@ def process_node(n, tmpl_dir):
     props = get_properties(props_elem)
     if owner:
         props["owner"] = owner
+    # Type should not be set for non-tag, non-leaf nodes
+    if node_type != "node":
+        props["type"] = "txt"
+    if node_type == "tagNode":
+        props["tag"] = "True"
     
 
     with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
         f.write(make_node_def(props))
 
 
-    node_type = n.tag
     if node_type == "node":
         inner_nodes = children.iterfind("*")
         for inner_n in inner_nodes:
