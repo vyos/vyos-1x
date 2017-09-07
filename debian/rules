@@ -1,11 +1,21 @@
 #!/usr/bin/make -f
 
+DIR := debian/vyos-1x
+VYOS_SBIN_DIR := opt/vyatta/sbin/
+VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
+
 %:
 	dh $@ --with python3, --with quilt
 
 override_dh_auto_build:
+	make
 
 override_dh_auto_install:
 	dh_install -pvyos-1x
-	cd python; python3 setup.py install --install-layout=deb --root ../debian/vyos-1x; cd ..
+	cd python; python3 setup.py install --install-layout=deb --root $(DIR); cd ..
 
+	mkdir -p $(DIR)/$(VYOS_SBIN_DIR)
+	cp -r src/conf-mode/* $(DIR)/$(VYOS_SBIN_DIR)
+
+	mkdir -p $(DIR)/$(VYOS_CFG_TMPL_DIR)
+	cp -r templates/* $(DIR)/$(VYOS_CFG_TMPL_DIR)

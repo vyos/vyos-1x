@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+
+<!-- Cron configuration -->
+
+<interfaceDefinition>
+  <node name="system" owner="vyos-update-cron">
+    <children>
+      <node name="task-scheduler">
+        <children>
+          <tagNode name="task">
+            <properties>
+              <help>Scheduled task</help>
+              <valueHelp>
+                <format>&lt;string&gt;</format>
+                <description>Task name</description>
+              </valueHelp>
+              <priority>999</priority>
+            </properties>
+            <children>
+              <leafNode name="crontab-spec">
+                <properties>
+                  <help>UNIX crontab time specification string</help>
+                </properties>
+              </leafNode>
+              <leafNode name="interval">
+                <properties>
+                  <help>Execution interval</help>
+                </properties>
+              </leafNode>
+              <node name="executable">
+                <properties>
+                  <help>Executable path and arguments</help>
+                </properties>
+                <children>
+                  <leafNode name="path">
+                    <properties>
+                      <help>Path to executable</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="arguments">
+                    <properties>
+                      <help>Arguments passed to the executable</help>
+                      <valueHelp>
+                        <format>&lt;minutes&gt;</format>
+                        <description>Execution interval in minutes</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;minutes&gt;m</format>
+                        <description>Execution interval in minutes</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;hours&gt;h</format>
+                        <description>Execution interval in hours</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;days&gt;d</format>
+                        <description>Execution interval in days</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
