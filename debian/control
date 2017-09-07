@@ -2,7 +2,8 @@ Source: vyos-1x
 Section: contrib/net
 Priority: extra
 Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
-Build-Depends: debhelper (>= 9), python3, python3-setuptools, quilt
+Build-Depends: debhelper (>= 9), python3, python3-setuptools, quilt,
+ python3-lxml
 Standards-Version: 3.9.6
 
 Package: vyos-1x

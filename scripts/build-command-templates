@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+#
+#    build-command-template: converts new style command definitions in XML
+#      to the old style (bunch of dirs and node.def's) command templates
+#
+#    Copyright (C) 2017 VyOS maintainers <maintainers@vyos.net>
+#
+#    This library is free software; you can redistribute it and/or
+#    modify it under the terms of the GNU Lesser General Public
+#    License as published by the Free Software Foundation; either
+#    version 2.1 of the License, or (at your option) any later version.
+#
+#    This library is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#    Lesser General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public
+#    License along with this library; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+#    USA
+
+import sys
+import os
+import copy
+import functools
+
+from lxml import etree as ET
+
+
+## Get arguments
+
+debug = True
+
+if len(sys.argv) < 4:
+    print("Usage: {0} <interface definition file> <schema file> <output directory>".format(sys.argv[0]))
+    sys.exit(1)
+
+input_file = sys.argv[1]
+schema_file = sys.argv[2]
+output_dir = sys.argv[3]
+
+## Load and validate the inputs
+
+try:
+    xml = ET.parse(input_file)
+except Exception as e:
+    print("Failed to load interface definition file {0}".format(input_file))
+    print(e)
+    sys.exit(1)
+
+try:
+    relaxng_xml = ET.parse(schema_file)
+    validator = ET.RelaxNG(relaxng_xml)
+
+    if not validator.validate(xml):
+        print(validator.error_log)
+        print("Interface definition file {0} does not match the schema!".format(input_file))
+        sys.exit(1)
+except Exception as e:
+    print("Failed to load the XML schema {0}".format(schema_file))
+    print(e)
+    sys.exit(1)
+
+if not os.access(output_dir, os.W_OK):
+    print("The output directory {0} is not writeable".format(output_dir))
+    sys.exit(1)
+
+## If we got this far, everything must be ok and we can convert the file
+
+def make_path(l):
+    return(functools.reduce(os.path.join, l))
+
+def get_properties(p):
+    props = {"tag": False, "type": "txt"}
+
+    if p is None:
+        return props
+
+    # Get the help string
+    try:
+        props["help"] = p.find("help").text
+    except:
+        props["help"] = None
+
+    # Get value help strings
+    try:
+        vhe = p.findall("valueHelp")
+        vh = []
+        for v in vhe:
+            vh.append( (v.find("format").text, v.find("description").text) )
+        props["val_help"] = vh
+    except:
+        props["val_help"] = []
+
+    return props
+
+def make_node_def(props):
+    node_def = ""
+
+    if "tag" in props:
+        node_def += "tag:\n"
+
+    node_def += "type: {0}\n".format(props["type"])
+
+    if "help" in props:
+        node_def += "help: {0}\n".format(props["help"])
+
+    if "val_help" in props:
+        for v in props["val_help"]:
+            node_def += "val_help: {0}; {1}\n".format(v[0], v[1])
+
+    if "owner" in props:
+        node_def += "end: {0}\n".format(props["owner"])
+
+    return node_def
+
+
+def process_node(n, tmpl_dir):
+    # Avoid mangling the path from the outer call
+    my_tmpl_dir = copy.copy(tmpl_dir)
+
+    props_elem = n.find("properties")
+    children = n.find("children")
+
+    name = n.get("name")
+    owner = n.get("owner")
+
+    if debug: print("Processing node {0}".format(name))
+
+    my_tmpl_dir.append(name)
+    os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
+
+    props = get_properties(props_elem)
+    if owner:
+        props["owner"] = owner
+    
+
+    with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
+        f.write(make_node_def(props))
+
+    print(make_node_def(props))
+
+    node_type = n.tag
+    if node_type == "node":
+        inner_nodes = children.iterfind("*")
+        for inner_n in inner_nodes:
+            process_node(inner_n, my_tmpl_dir)
+    if node_type == "tagNode":
+        my_tmpl_dir.append("node.tag")
+        os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
+        inner_nodes = children.iterfind("*")
+        for inner_n in inner_nodes:
+            process_node(inner_n, my_tmpl_dir)
+    else:
+        # This is a leaf node
+        pass
+        
+
+root = xml.getroot()
+
+nodes = root.iterfind("*")
+for n in nodes:
+    process_node(n, [output_dir])
