@@ -12,7 +12,7 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	dh_install -pvyos-1x
-	cd python; python3 setup.py install --install-layout=deb --root $(DIR); cd ..
+	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
 
 	mkdir -p $(DIR)/$(VYOS_SBIN_DIR)
 	cp -r src/conf-mode/* $(DIR)/$(VYOS_SBIN_DIR)
