@@ -30,8 +30,6 @@ from lxml import etree as ET
 
 ## Get arguments
 
-debug = True
-
 if len(sys.argv) < 4:
     print("Usage: {0} <interface definition file> <schema file> <output directory>".format(sys.argv[0]))
     sys.exit(1)
@@ -126,8 +124,6 @@ def process_node(n, tmpl_dir):
     name = n.get("name")
     owner = n.get("owner")
 
-    if debug: print("Processing node {0}".format(name))
-
     my_tmpl_dir.append(name)
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
@@ -139,7 +135,6 @@ def process_node(n, tmpl_dir):
     with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
         f.write(make_node_def(props))
 
-    print(make_node_def(props))
 
     node_type = n.tag
     if node_type == "node":
