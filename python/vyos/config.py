@@ -42,7 +42,7 @@ class Config(object):
         if p.returncode != 0:
             raise VyOSError()
         else:
-            return out
+            return out.decode('ascii')
 
     def set_level(self, path):
         # Make sure there's always a space between default path (level)
