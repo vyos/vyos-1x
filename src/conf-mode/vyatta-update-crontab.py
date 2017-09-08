@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 #
-#
-# Maintainer: Daniil Baturin <daniil@baturin.org>
-#
-# Copyright (C) 2013 SO3Group
+# Copyright (C) 2017 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as
+# it under the terms of the GNU General Public License version 2 or later as
 # published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -19,142 +16,113 @@
 #
 #
 
-#!/usr/bin/env python3
 import io
 import re
 import sys
-sys.path.append("/usr/lib/python3/dist-packages/vyos/")
 
-from config import VyOSError, Config
+from vyos.config import VyOSError, Config
 
 
-class CronTask(Config):
-    def __init__(self, task):
+crontab_file = "/etc/cron.d/vyos-crontab"
 
-        self.task = task
-        self.minutes = "*"
-        self.hours = "*"
-        self.days = "*"
-        self.user = "root"
-        self.executable = None
-        self.arguments = ""
-        self.interval = None
-        self.crontab_spec = None
-        self._cli_shell_api = "/bin/cli-shell-api"
 
-        # Unused now
-        self.months = "*"
-        self.days_of_week = "*"
-        super(CronTask, self).set_level("system task-scheduler task")
-        try:
-            self.user = super(CronTask, self).return_value(" ".join([self.task, "user"]))
-        except VyOSError:
-            pass
+def format_task(minute="*", hour="*", day="*", dayofweek="*", month="*", user="root", rawspec=None, command=""):
+    fmt_full = "{minute} {hour} {day} {month} {dayofweek} {user} {command}\n"
+    fmt_raw = "{spec} {user} {command}\n"
 
-        try:
-            byte_executable = super(CronTask, self).return_value(" ".join([self.task, "executable path"]))
-            self.executable = byte_executable.decode("utf-8")
-        except VyOSError:
-            raise VyOSError (task + "must define executable")
+    if rawspec is None:
+        s = fmt_full.format(minute=minute, hour=hour, day=day,
+                            dayofweek=dayofweek, month=month, command=command, user=user)
+    else:
+        s = fmt_raw.format(spec=rawspec, user=user, command=command)
 
-        try:
-            byte_arguments = super(CronTask, self).return_value(" ".join([self.task, "executable arguments"]))
-            self.executable = byte_arguments.decode("utf-8")
-        except VyOSError:
-            pass
+    return s
 
-        try:
-            self.interval = super(CronTask, self).return_value(" ".join([self.task, "interval"]))
-        except VyOSError:
-            self.interval = None
+def split_interval(s):
+    result = re.search(r"(\d+)([mdh]?)", s)
+    value = int(result.group(1))
+    suffix = result.group(2)
+    return( (value, suffix) )
 
-        try:
-            byte_crontab_spec = super(CronTask, self).return_value(" ".join([self.task, "crontab-spec"]))
-            self.crontab_spec = byte_crontab_spec
-        except:
-            self.crontab_spec = None
-
+def make_command(executable, arguments):
+    if arguments:
+        return("{0} {1}".format(executable, arguments))
+    else:
+        return(executable)
 
 def get_config():
     conf = Config()
     conf.set_level("system task-scheduler task")
-    tasks = conf.list_nodes("")
-    list_of_instanses=[]
+    task_names = conf.list_nodes("")
+    tasks = []
+
+    for name in task_names:
+        interval = conf.return_value("{0} interval".format(name))
+        spec = conf.return_value("{0} crontab-spec".format(name))
+        executable = conf.return_value("{0} executable path".format(name))
+        args = conf.return_value("{0} executable arguments".format(name))
+        task = {
+                "name": name,
+                "interval": interval,
+                "spec": spec,
+                "executable": executable,
+                "args": args
+              }
+        tasks.append(task)
+
+    return tasks
+
+def verify(tasks):
     for task in tasks:
-        list_of_instanses.append(CronTask(task.decode("utf-8")))
-    return list_of_instanses
+        if not task["interval"] and not task["spec"]:
+            raise VyOSError(task, "Invalid task {0}: must define either interval or crontab-spec".format(task["name"]))
 
+        if task["interval"]:
+            if task["spec"]:
+                raise VyOSError("Invalid task {0}: cannot use interval and crontab-spec at the same time".format(task["name"]))
+ 
+            if not re.match(r"^\d+[mdh]?$", task["interval"]):
+                raise(VyOSError("Invalid interval {0} in task {1}: interval should be a number optionally followed by m, h, or d".format(task["name"], task["interval"])))
+            else:
+                # Check if values are within allowed range
+                value, suffix = split_interval(task["interval"])
 
-def verify(config):
-    for task in config:
-        if task.interval and task.crontab_spec:
-            raise VyOSError(task, "can not use interval and crontab-spec at the same time!")
+                if not suffix or suffix == "m":
+                    if value > 60:
+                        raise VyOSError("Invalid task {0}: interval in minutes must not exceed 60".format(task["name"]))
+                elif suffix == "h":
+                    if value > 24:
+                        raise VyOSError("Invalid task {0}: interval in hours must not exceed 24".format(task["name"]))
+                elif suffix == "d":
+                    if value > 31:
+                        raise VyOSError("Invalid task {0}: interval in days must not exceed 31".format(task["name"]))
 
-        if task.interval:
-            result = re.search(b"(\d+)([mdh]?)", task.interval)
-            value = int(result.group(1))
-            suffix = result.group(2)
+def generate(tasks):
+    crontab_header = "### Generated by vyos-update-crontab.py ###\n"
+    if len(tasks) == 0:
+        os.remove(crontab_file)
+    else:
+        crontab_lines = []
+        for task in tasks:
+            command = make_command(task["executable"], task["args"])
+            if task["spec"]:
+                line = format_task(command=command, rawspec=task["spec"])
+            else:
+                value, suffix = split_interval(task["interval"])
+                if not suffix or suffix == "m":
+                    line = format_task(command=command, minute="*/{0}".format(value))
+                elif suffix == "h":
+                    line = format_task(command=command, minute="0", hour="*/{0}".format(value))
+                elif suffix == "d":
+                    line = format_task(command=command, minute="0", hour="0", day="*/{0}".format(value))
+            crontab_lines.append(line)
 
-
-            if not suffix or suffix == b"m":
-                if value > 60:
-                    raise VyOSError("Interval in minutes must not exceed 60!")
-                task.minutes = "*/" + str(value)
-
-            elif suffix == b"h":
-                if value > 24:
-                    raise VyOSError("Interval in hours must not exceed 24!")
-                task.minutes = "0"
-                task.hours = "*/" + str(value)
-
-            elif suffix == b"d":
-                if value > 31:
-                    raise VyOSError("Interval in days must not exceed 31!")
-
-                task.minutes = "0"
-                task.hours = "0"
-                task.days = "*/" + str(value)
-        elif task.interval and task.crontab_spec:
-            raise VyOSError(task, "must define either interval or crontab-spec")
-    return None
-
-
-def generate(config):
-    crontab = "/etc/cron.d/vyatta-crontab"
-    crontab_header = "### Added by /opt/vyatta/sbin/vyatta-update-crontab.py ###\n"
-    crontab_append = crontab_header
-    count = 0
-    for task in config:
-        if task.interval:
-            crontab_string = "{minutes} {hours} {days} {months} {days_of_week} {user} {executable} {arguments}\n".format(
-                minutes=task.minutes,
-                hours=task.hours,
-                days=task.days,
-                months=task.months,
-                days_of_week=task.days_of_week,
-                user=task.user,
-                executable=task.executable,
-                arguments=task.arguments
-            )
-        elif task.crontab_spec:
-            crontab_string = "{crontab_spec) {user} {executable} {arguments}\n".format(
-                crontab_spec=task.crontab_spec,
-                user=task.user,
-                executable=task.executable,
-                arguments=task.arguments
-            )
-        crontab_append = crontab_append + crontab_string
-        count = count + 1
-    if count > 0:
-        try:
-            f = io.open(crontab, "w")
-            f.write(crontab_append)
-            f.close()
-        except IOError:
-                print("Could not open /etc/crontab for write")
-
+        with open(crontab_file, 'w') as f:
+            f.write(crontab_header)
+            f.writelines(crontab_lines)
 
 def apply(config):
+    # No daemon restarts etc. needed for cron
     pass
 
 
@@ -164,6 +132,6 @@ if __name__ == '__main__':
         verify(c)
         generate(c)
         apply(c)
-    except VyOSError:
-        sys.exit(0)
-
+    except VyOSError as e:
+        print(e)
+        sys.exit(1)
