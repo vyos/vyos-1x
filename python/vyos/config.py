@@ -95,7 +95,7 @@ class Config(object):
         except VyOSError:
             return False
 
-    def return_value(self, path):
+    def return_value(self, path, default=None):
         full_path = self._level + path
         if self.is_multi(path):
             raise VyOSError("Cannot use return_value on multi node: {0}".format(full_path))
@@ -106,9 +106,9 @@ class Config(object):
                 out = self._run(self._make_command('returnValue', full_path))
                 return out
             except VyOSError:
-                raise VyOSError("Path doesn't exist: {0}".format(full_path))
+                return(default)
 
-    def return_values(self, path):
+    def return_values(self, path, default=[]):
         full_path = self._level + path
         if not self.is_multi(path):
             raise VyOSError("Cannot use return_values on non-multi node: {0}".format(full_path))
@@ -119,9 +119,9 @@ class Config(object):
                 out = self._run(self._make_command('returnValues', full_path))
                 return out
             except VyOSError:
-                raise VyOSError("Path doesn't exist: {0}".format(full_path))
+                return(default)
 
-    def list_nodes(self, path):
+    def list_nodes(self, path, default=[]):
         full_path = self._level + path
         if self.is_tag(path):
             try:
@@ -129,6 +129,6 @@ class Config(object):
                 values = out.split()
                 return list(map(lambda x: re.sub(r'^\'(.*)\'$', r'\1',x), values))
             except VyOSError:
-                raise VyOSError("Path doesn't exist: {0}".format(full_path)) 
+                return(default)
         else:
             raise VyOSError("Cannot use list_nodes on a non-tag node: {0}".format(full_path))
