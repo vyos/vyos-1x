@@ -129,7 +129,7 @@ def make_node_def(props):
             node_def += "val_help: {0}; {1}\n".format(v[0], v[1])
 
     if "owner" in props:
-        node_def += "end: {0}\n".format(props["owner"])
+        node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
 
     return node_def
 
