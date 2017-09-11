@@ -22,8 +22,10 @@
 
 import sys
 import os
+import getopt
 import copy
 import functools
+
 
 from lxml import etree as ET
 
@@ -37,6 +39,16 @@ if len(sys.argv) < 4:
 input_file = sys.argv[1]
 schema_file = sys.argv[2]
 output_dir = sys.argv[3]
+
+
+debug = False
+opts, args = getopt.getopt(sys.argv[4:], '', ['debug='])
+
+for opt, arg in opts:
+    if opt == '--debug':
+        if arg == "1":
+            debug = True
+
 
 ## Load and validate the inputs
 
@@ -67,7 +79,10 @@ if not os.access(output_dir, os.W_OK):
 ## If we got this far, everything must be ok and we can convert the file
 
 def make_path(l):
-    return(functools.reduce(os.path.join, l))
+    path = functools.reduce(os.path.join, l)
+    if debug:
+        print(path)
+    return path
 
 def get_properties(p):
     props = {}
@@ -146,6 +161,8 @@ def process_node(n, tmpl_dir):
     node_type = n.tag
 
     my_tmpl_dir.append(name)
+    if debug:
+        print("Make dir for the node:", n)
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
     props = get_properties(props_elem)
@@ -175,7 +192,7 @@ def process_node(n, tmpl_dir):
     else:
         # This is a leaf node
         pass
-        
+
 
 root = xml.getroot()
 
