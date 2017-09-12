@@ -3,7 +3,7 @@
   <!--
        interface_definition.rnc: VyConf reference tree XML grammar
     
-       Copyright (C) 2014 VyOS Development Group <maintainers@vyos.net>
+       Copyright (C) 2014. 2017 VyOS maintainers and contributors <maintainers@vyos.net>
     
        This library is free software; you can redistribute it and/or
        modify it under the terms of the GNU Lesser General Public
@@ -114,21 +114,17 @@
     By default, a leaf node can have only one value.
     "multi" tag means a node can have one or more values,
     "valueless" means it can have no values at all.
-
-    Future VyOS 2.0 only:
     "hidden" means node visibility can be toggled, eg 'dangerous' commands,
     "secret" allows a node to hide its value from unprivileged users.
-
-    VyOS 1.x only: "priority" tag defined boot priority
+    
+    "priority" is used to influence node processing order for nodes
+    with exact same dependencies and in compatibility modes.
   -->
   <define name="properties">
     <element name="properties">
       <interleave>
         <optional>
           <ref name="help"/>
-        </optional>
-        <optional>
-          <ref name="priority"/>
         </optional>
         <optional>
           <ref name="constraint"/>
@@ -141,6 +137,9 @@
             <text/>
           </element>
         </optional>
+        <zeroOrMore>
+          <ref name="completionHelp"/>
+        </zeroOrMore>
         <optional>
           <!-- These are meaningful only for leaf nodes -->
           <group>
@@ -162,6 +161,11 @@
         <optional>
           <element name="secret">
             <empty/>
+          </element>
+        </optional>
+        <optional>
+          <element name="priority">
+            <text/>
           </element>
         </optional>
         <optional>
@@ -234,9 +238,33 @@
       </interleave>
     </element>
   </define>
-  <define name="priority">
-    <element name="priority">
-      <text/>
+  <!--
+    completionHelp tags contain information about allowed values of a node that is used for generating
+    tab completion in the CLI frontend and drop-down lists in GUI frontends
+    It is only meaninful for leaf nodes
+    Allowed values can be given as a fixed list of values (e.g. <list>foo bar baz</list>),
+    as a configuration path (e.g. <path>interfaces ethernet</path>),
+    or as a path to a script file that generates the list (e.g. <script>/usr/lib/foo/list-things</script>
+  -->
+  <define name="completionHelp">
+    <element name="completionHelp">
+      <interleave>
+        <zeroOrMore>
+          <element name="list">
+            <text/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="path">
+            <text/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="script">
+            <text/>
+          </element>
+        </zeroOrMore>
+      </interleave>
     </element>
   </define>
 </grammar>
