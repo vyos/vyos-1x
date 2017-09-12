@@ -22,8 +22,11 @@
 
 import sys
 import os
+import getopt
 import copy
 import functools
+import pprint
+
 
 from lxml import etree as ET
 
@@ -37,6 +40,18 @@ if len(sys.argv) < 4:
 input_file = sys.argv[1]
 schema_file = sys.argv[2]
 output_dir = sys.argv[3]
+
+
+debug = False
+try:
+    opts, args = getopt.getopt(sys.argv[4:], '', ['debug=', ])
+    for opt, arg in opts:
+        if opt == '--debug':
+            if arg == "1":
+                debug = True
+except getopt.GetoptError as err:
+    pass
+
 
 ## Load and validate the inputs
 
@@ -67,7 +82,10 @@ if not os.access(output_dir, os.W_OK):
 ## If we got this far, everything must be ok and we can convert the file
 
 def make_path(l):
-    return(functools.reduce(os.path.join, l))
+    path = functools.reduce(os.path.join, l)
+    if debug:
+        print(path)
+    return path
 
 def get_properties(p):
     props = {}
@@ -130,9 +148,9 @@ def make_node_def(props):
 
     if "owner" in props:
         node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
-
+    if debug:
+        print("The content of node_def:", node_def)
     return node_def
-
 
 def process_node(n, tmpl_dir):
     # Avoid mangling the path from the outer call
@@ -146,6 +164,9 @@ def process_node(n, tmpl_dir):
     node_type = n.tag
 
     my_tmpl_dir.append(name)
+
+    if debug:
+        print("Name of the node: {};\n Created directory: ".format(name), end="")
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
     props = get_properties(props_elem)
@@ -168,6 +189,8 @@ def process_node(n, tmpl_dir):
             process_node(inner_n, my_tmpl_dir)
     if node_type == "tagNode":
         my_tmpl_dir.append("node.tag")
+        if debug:
+            print("Created path for the tagNode:", end="")
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
         inner_nodes = children.iterfind("*")
         for inner_n in inner_nodes:
@@ -175,7 +198,7 @@ def process_node(n, tmpl_dir):
     else:
         # This is a leaf node
         pass
-        
+
 
 root = xml.getroot()
 
