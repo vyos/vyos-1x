@@ -22,36 +22,27 @@
 
 import sys
 import os
-import getopt
+import argparse
 import copy
 import functools
-import pprint
-
 
 from lxml import etree as ET
 
 
 ## Get arguments
 
-if len(sys.argv) < 4:
-    print("Usage: {0} <interface definition file> <schema file> <output directory>".format(sys.argv[0]))
-    sys.exit(1)
+parser = argparse.ArgumentParser(description='Converts new-style XML interface definitions to old-style command templates')
+parser.add_argument('--debug', help='Enable debug information output', action='store_true')
+parser.add_argument('INPUT_FILE', type=str, help="XML interface definition file")
+parser.add_argument('SCHEMA_FILE', type=str, help="RelaxNG schema file")
+parser.add_argument('OUTPUT_DIR', type=str, help="Output directory")
 
-input_file = sys.argv[1]
-schema_file = sys.argv[2]
-output_dir = sys.argv[3]
+args = parser.parse_args()
 
-
-debug = False
-try:
-    opts, args = getopt.getopt(sys.argv[4:], '', ['debug=', ])
-    for opt, arg in opts:
-        if opt == '--debug':
-            if arg == "1":
-                debug = True
-except getopt.GetoptError as err:
-    pass
-
+input_file = args.INPUT_FILE
+schema_file = args.SCHEMA_FILE
+output_dir = args.OUTPUT_DIR
+debug = args.debug
 
 ## Load and validate the inputs
 
@@ -176,7 +167,7 @@ def make_node_def(props):
         node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
 
     if debug:
-        print("The content of node_def:", node_def)
+        print("The contents of the node.def file:\n", node_def)
 
     return node_def
 
