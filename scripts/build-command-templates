@@ -109,6 +109,29 @@ def get_properties(p):
     except:
         props["val_help"] = []
 
+    # Get the completion help strings
+    try:
+        che = p.findall("completionHelp")
+        ch = ""
+        for c in che:
+            scripts = c.findall("script")
+            paths = c.findall("path")
+            lists = c.findall("list")
+
+            # Current backend doesn't support multiple allowed: tags
+            # so we get to emulate it
+            comp_exprs = []
+            for i in lists:
+                comp_exprs.append("echo \"{0}\"".format(i.text))
+            for i in paths:
+                comp_exprs.append("/bin/cli-shell-api listNodes {0}".format(i.text))
+            for i in scripts:
+                comp_exprs.append("sh -c \"{0}\"".format(i.text))
+            comp_help = " && ".join(comp_exprs)
+            props["comp_help"] = comp_help
+    except:
+        props["comp_help"] = []
+
     # Get priority
     try:
         props["priority"] = p.find("priority").text
@@ -146,10 +169,15 @@ def make_node_def(props):
         for v in props["val_help"]:
             node_def += "val_help: {0}; {1}\n".format(v[0], v[1])
 
+    if "comp_help" in props:
+        node_def += "allowed: {0}\n".format(props["comp_help"])
+
     if "owner" in props:
         node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
+
     if debug:
         print("The content of node_def:", node_def)
+
     return node_def
 
 def process_node(n, tmpl_dir):
