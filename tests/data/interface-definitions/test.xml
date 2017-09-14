@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="foo">
+    <properties>
+      <help>foo</help>
+    </properties>
+    <children>
+      <leafNode name="bar">
+        <properties>
+          <help>bar</help>
+          <valueHelp>
+            <format>bar</format>
+            <description>bar</description>
+          </valueHelp>
+          <completionHelp>
+            <list>foo bar</list>
+            <path>interfaces tunnel</path>
+            <script>/usr/bin/foo</script>
+          </completionHelp>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
