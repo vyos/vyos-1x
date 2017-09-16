@@ -28,6 +28,11 @@ import functools
 
 from lxml import etree as ET
 
+# Defaults
+
+validator_dir = "/opt/vyatta/libexec/validators"
+default_constraint_err_msg = "Invalid value"
+
 
 ## Get arguments
 
@@ -100,6 +105,37 @@ def get_properties(p):
     except:
         props["val_help"] = []
 
+    # Get the constraint statements
+    try:
+        error_msg = default_constraint_err_msg
+        # Get the error message if it's there
+        try:
+            error_msg = p.find("constraintErrorMessage").text
+        except:
+            pass
+        
+        vce = p.findall("constraint")
+        vc = []
+        for v in vce:
+            if v.find("regex") is not None:
+                vc.append("pattern $VAR(@) \"{0}\"; {1}".format(v.find("regex").text, error_msg))
+            else:
+                validator = v.find("validator")
+                v_name = validator.get("name")
+
+                # XXX: lxml returns None for empty arguments
+                v_argument = None
+                try:
+                    v_argument = validator.get("argument")
+                except:
+                    pass
+                if v_argument is None:
+                    v_argument = ""
+                vc.append("exec {0}/{1} {2} $VAR(@); {3}".format(validator_dir, v_name, v_argument, error_msg))
+        props["constraints"] = vc
+    except:
+        props["constraints"] = []
+
     # Get the completion help strings
     try:
         che = p.findall("completionHelp")
@@ -162,6 +198,10 @@ def make_node_def(props):
 
     if "comp_help" in props:
         node_def += "allowed: {0}\n".format(props["comp_help"])
+
+    if "constraints" in props:
+        for c in props["constraints"]:
+            node_def += "syntax:expression: {0}\n".format(c)
 
     if "owner" in props:
         node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
