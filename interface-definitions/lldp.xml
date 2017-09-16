@@ -40,7 +40,7 @@
                       <help>Civic-based location data</help>
                     </properties>
                     <children>
-                      <TagNode name="ca-type">
+                      <tagNode name="ca-type">
                         <properties>
                           <help>LLDP-MED Civic Address type [REQUIRED]</help>
                           <valueHelp>
@@ -139,7 +139,7 @@
                             </properties>
                           </leafNode>
                         </children>
-                      </TagNode>
+                      </tagNode>
                       <leafNode name="country-code">
                         <properties>
                           <help>Country code [REQUIRED]</help>
