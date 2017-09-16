@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+#
+# numeric value validator
+#
+# Copyright (C) 2017 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import argparse
+import re
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--float", action="store_true", help="Accept floating point values")
+group = parser.add_mutually_exclusive_group()
+group.add_argument("-r", "--range", type=str, help="Check if the number is within range (inclusive), example: 1024-65535")
+group.add_argument("-n", "--non-negative", action="store_true", help="")
+parser.add_argument("number", type=str, help="Number to validate")
+
+args = parser.parse_args()
+
+# Try to load the argument
+number = None
+if args.float:
+    try:
+        number = float(args.number)
+    except:
+        print("{0} is not a valid floating point number".format(args.number), file=sys.stderr)
+        sys.exit(1)
+else:
+    try:
+        number = int(args.number)
+    except:
+        print("{0} is not a valid integer number".format(args.number), file=sys.stderr)
+        sys.exit(1)
+
+if args.range:
+    try:
+        lower, upper = re.match(r'(\d+)\s*\-\s*(\d+)', args.range).groups()
+        lower, upper = int(lower), int(upper)
+    except:
+        print("{0} is not a valid number range",format(args.range), file=sys.stderr)
+        sys.exit(1)
+
+    if (number < lower) or (number > upper):
+        print("Number {0} is not in the {1} range".format(number, args.range), file=sys.stderr)
+        sys.exit(1)
+elif args.non_negative:
+    if number < 0:
+        print("Number should be non-negative", file=sys.stderr)
+        sys.exit(1)

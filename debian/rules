@@ -2,6 +2,7 @@
 
 DIR := debian/vyos-1x
 VYOS_SBIN_DIR := opt/vyatta/sbin/
+VYOS_LIBEXEC_DIR := opt/vyatta/libexec
 VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
 
 %:
@@ -14,8 +15,13 @@ override_dh_auto_install:
 	dh_install -pvyos-1x
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
 
+	# Install configuration scripts
 	mkdir -p $(DIR)/$(VYOS_SBIN_DIR)
 	cp -r src/conf-mode/* $(DIR)/$(VYOS_SBIN_DIR)
+
+	# Install validators
+	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
+	cp -r src/validators/* $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 
 	mkdir -p $(DIR)/$(VYOS_CFG_TMPL_DIR)
 	cp -r templates/* $(DIR)/$(VYOS_CFG_TMPL_DIR)
