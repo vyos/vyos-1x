@@ -17,6 +17,21 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 #  IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import json
 
 class ConfigError(Exception):
     pass
+
+
+def get_version_data(file='/opt/vyatta/etc/version.json'):
+    with open(file, 'r') as f:
+        version_data = json.load(f)
+    return version_data
+
+def get_version(file=None):
+    version_data = None
+    if file:
+        version_data = get_version_data(file=file)
+    else:
+        version_data = get_version_data()
+    return version_data["version"]
