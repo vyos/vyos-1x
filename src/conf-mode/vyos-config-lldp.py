@@ -27,59 +27,54 @@ from vyos.util import ConfigError
 
 def get_options(config):
     options ={}
-    config.set_level('service lldp')
-    options['listen_vlan'] = config.exists('listen-vlan')
-
-    options["addr"] = config.return_value('management-address')
-
-    snmp = config.exists('snmp enable')
+    options["listen_vlan"] = config.exists("service lldp listen-vlan")
+    options["addr"] = config.return_value("service lldp management-address")
+    snmp = config.exists("service lldp snmp enable")
     options["snmp"] = snmp
     if snmp:
-        config.set_level('')
-        options["sys_snmp"] = config.exists('service snmp')
-        config.set_level('service lldp')
+        options["sys_snmp"] = config.exists("service snmp")
 
-    config.set_level('service lldp legacy-protocols')
+    config.set_level("service lldp legacy-protocols")
     options["cdp"] = config.exists("cdp")
     options["edp"] = config.exists("edp")
     options["fdp"] = config.exists("fdp")
     options["sonmp"] = config.exists("sonmp")
+    config.set_level("")
     return options
 
 
 def get_interface_list(config):
-    config.set_level('service lldp')
-    intfs_names = config.list_nodes('interface')
-    if len(intfs_names) < 0:
+    intfs_names = config.list_nodes("service lldp interface")
+    if not intfs_names:
         return 0
     interface_list = []
     for name in intfs_names:
         config.set_level("service lldp interface {0}".format(name))
-        disable = config.exists('disable')
+        disable = config.exists("disable")
         intf = {
             "name": name,
             "disable": disable
         }
         interface_list.append(intf)
+    config.set_level("")
     return interface_list
 
 
 def get_location_intf(config, name):
     path = "service lldp interface {0}".format(name)
-    config.set_level(path)
-    if config.exists("location"):
+    if not config.exists("{0} location".format(path)):
         return 0
-    config.set_level("{} location".format(path))
     civic_based = {}
     elin = None
     coordinate_based = {}
 
-    if config.exists('civic-based'):
+    config.set_level("{} location".format(path))
+    if config.exists("civic-based"):
         config.set_level("{} location civic-based".format(path))
         cc = config.return_value("country-code")
         civic_based["country_code"] = cc
         civic_based["ca_type"] = []
-        ca_types_names = config.list_nodes('ca-type')
+        ca_types_names = config.list_nodes("ca-type")
         if ca_types_names:
             for ca_types_name in ca_types_names:
                 config.set_level("{0} location civic-based ca-type {1}".format(path, ca_types_name))
@@ -111,13 +106,13 @@ def get_location_intf(config, name):
         "coordinate_based": coordinate_based
 
     }
+    config.set_level("")
     return intf
 
 
 def get_location(config):
-    config.set_level('service lldp')
-    intfs_names = config.list_nodes('interface')
-    if len(intfs_names) < 0:
+    intfs_names = config.list_nodes("service lldp interface")
+    if not intfs_names:
         return 0
     if config.exists("disable"):
         return 0
@@ -143,8 +138,8 @@ def verify(lldp):
     for location in lldp["location"]:
 
         # check civic-based
-        if len(location["civic_based"]) > 0:
-            if len(location["coordinate_based"]) > 0 or location["elin"]:
+        if location["civic_based"]:
+            if location["coordinate_based"] or location["elin"]:
                 raise ConfigError("Can only configure 1 location type for interface {0}".format(location["name"]))
 
             # check country-code
@@ -154,7 +149,7 @@ def verify(lldp):
             if not re.match(r"^[a-zA-Z]{2}$", location["civic_based"]["country_code"]):
                 raise ConfigError("Invalid location for interface {0}: country-code must be 2 characters".format(location["name"]))
             # check ca-type
-            if len(location["civic_based"]["ca_type"]) < 0:
+            if not location["civic_based"]["ca_type"]:
                 raise ConfigError("Invalid location for interface {0}: must define at least 1 ca-type".format(location["name"]))
 
             for ca_type in location["civic_based"]["ca_type"]:
@@ -165,7 +160,7 @@ def verify(lldp):
                     raise ConfigError("Invalid location for interface {0}: must configure the ca-value for ca-type {1}".format(location["name"],ca_type["name"]))
 
         # check coordinate-based
-        elif len(location["coordinate_based"]) > 0:
+        elif location["coordinate_based"]:
             # check longitude and latitude
             if not location["coordinate_based"]["longitude"]:
                 raise ConfigError("Must define longitude for interface {0}".format(location["name"]))
@@ -189,7 +184,7 @@ def verify(lldp):
                     raise ConfigError("Invalid location for interface {0}: datum should be WGS84, NAD83, or MLLW".format(location["name"]))
 
         # check elin
-        elif len(location["elin"]) > 0:
+        elif location["elin"]:
             if not re.match(r"^[0-9]{10,25}$", location["elin"]):
                 raise ConfigError("Invalid location for interface {0}: ELIN number must be between 10-25 numbers".format(location["name"]))
 
