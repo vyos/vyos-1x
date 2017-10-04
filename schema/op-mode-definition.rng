@@ -35,7 +35,7 @@
   </start>
   <!--
     node tag may contain node, leafNode, or tagNode tags
-    Those are intermediate configuration nodes that may only contain
+    Those are intermediate operational nodes that may only contain
     other nodes and must not have values
   -->
   <define name="node">
@@ -85,7 +85,7 @@
     </element>
   </define>
   <!--
-    Leaf nodes are terminal configuration nodes that can't have children,
+    Leaf nodes are terminal operational nodes that can't have children,
     but can have values.
     Leaf node may contain one or more valueConstraint tags
   -->
