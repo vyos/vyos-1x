@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+  <!--
+       interface_definition.rnc: VyConf reference tree XML grammar
+    
+       Copyright (C) 2014. 2017 VyOS maintainers and contributors <maintainers@vyos.net>
+    
+       This library is free software; you can redistribute it and/or
+       modify it under the terms of the GNU Lesser General Public
+       License as published by the Free Software Foundation; either
+       version 2.1 of the License, or (at your option) any later version.
+    
+       This library is distributed in the hope that it will be useful,
+       but WITHOUT ANY WARRANTY; without even the implied warranty of
+       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+       Lesser General Public License for more details.
+    
+       You should have received a copy of the GNU Lesser General Public
+       License along with this library; if not, write to the Free Software
+       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+       USA
+  -->
+  <!--
+    The language of this file is compact form RELAX-NG
+    http://relaxng.org/compact-tutorial-20030326.htm
+    (unless converted to XML, then just RELAX-NG :)
+  -->
+  <!-- Interface definition starts with interfaceDefinition tag that may contain node tags -->
+  <start>
+    <element name="interfaceDefinition">
+      <zeroOrMore>
+        <ref name="node"/>
+      </zeroOrMore>
+    </element>
+  </start>
+  <!--
+    node tag may contain node, leafNode, or tagNode tags
+    Those are intermediate configuration nodes that may only contain
+    other nodes and must not have values
+  -->
+  <define name="node">
+    <element name="node">
+      <ref name="nodeNameAttr"/>
+      <interleave>
+        <optional>
+          <ref name="properties"/>
+        </optional>
+        <optional>
+          <ref name="children"/>
+        </optional>
+        <optional>
+          <ref name="command"/>
+        </optional>
+      </interleave>
+    </element>
+  </define>
+  <!--
+    Tag nodes are containers for nodes without predefined names, like network interfaces
+    or user names (e.g. "interfaces ethernet eth0" or "user jrandomhacker")
+    Tag nodes may contain node and leafNode elements, and also nameConstraint tags
+    They must not contain other tag nodes
+  -->
+  <define name="tagNode">
+    <element name="tagNode">
+      <ref name="nodeNameAttr"/>
+      <interleave>
+        <optional>
+          <ref name="properties"/>
+        </optional>
+        <ref name="children"/>
+        <optional>
+          <ref name="command"/>
+        </optional>
+      </interleave>
+    </element>
+  </define>
+  <!--
+    Leaf nodes are terminal configuration nodes that can't have children,
+    but can have values.
+  -->
+  <define name="leafNode">
+    <element name="leafNode">
+      <ref name="nodeNameAttr"/>
+      <ref name="command"/>
+      <ref name="properties"/>
+    </element>
+  </define>
+  <!-- Normal and tag nodes may have children -->
+  <define name="children">
+    <element name="children">
+      <oneOrMore>
+        <choice>
+          <ref name="node"/>
+          <ref name="tagNode"/>
+          <ref name="leafNode"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <!--
+    Nodes may have properties
+    For simplicity, any property is allowed in any node,
+    but whether they are used or not is implementation-defined
+  -->
+  <define name="properties">
+    <element name="properties">
+      <interleave>
+        <optional>
+          <ref name="help"/>
+        </optional>
+        <zeroOrMore>
+          <ref name="completionHelp"/>
+        </zeroOrMore>
+      </interleave>
+    </element>
+  </define>
+  <!-- All nodes must have "name" attribute -->
+  <define name="nodeNameAttr">
+    <attribute name="name"/>
+  </define>
+  <!-- help tags contains brief description of the purpose of the node -->
+  <define name="help">
+    <element name="help">
+      <text/>
+    </element>
+  </define>
+  <define name="command">
+    <element name="command">
+      <text/>
+    </element>
+  </define>
+  <!--
+    completionHelp tags contain information about allowed values of a node that is used for generating
+    tab completion in the CLI frontend and drop-down lists in GUI frontends
+    It is only meaninful for leaf nodes
+    Allowed values can be given as a fixed list of values (e.g. <list>foo bar baz</list>),
+    as a configuration path (e.g. <path>interfaces ethernet</path>),
+    or as a path to a script file that generates the list (e.g. <script>/usr/lib/foo/list-things</script>
+  -->
+  <define name="completionHelp">
+    <element name="completionHelp">
+      <interleave>
+        <zeroOrMore>
+          <element name="list">
+            <text/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="path">
+            <text/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="script">
+            <text/>
+          </element>
+        </zeroOrMore>
+      </interleave>
+    </element>
+  </define>
+</grammar>
