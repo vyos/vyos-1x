@@ -132,3 +132,48 @@ class Config(object):
                 return(default)
         else:
             raise VyOSError("Cannot use list_nodes on a non-tag node: {0}".format(full_path))
+
+    def exists_effective(self, path):
+        try:
+            self._run(self._make_command('existsEffective', self._level + path))
+            return True
+        except VyOSError:
+            return False
+
+    def return_effective_value(self, path, default=None):
+        full_path = self._level + path
+        if self.is_multi(path):
+            raise VyOSError("Cannot use return_effective_value on multi node: {0}".format(full_path))
+        elif not self.is_leaf(path):
+            raise VyOSError("Cannot use return_effective_value on non-leaf node: {0}".format(full_path))
+        else:
+            try:
+                out = self._run(self._make_command('returnEffectiveValue', full_path))
+                return out
+            except VyOSError:
+                return(default)
+
+    def return_effective_values(self, path, default=[]):
+        full_path = self._level + path
+        if not self.is_multi(path):
+            raise VyOSError("Cannot use return_effective_values on non-multi node: {0}".format(full_path))
+        elif not self.is_leaf(path):
+            raise VyOSError("Cannot use return_effective_values on non-leaf node: {0}".format(full_path))
+        else:
+            try:
+                out = self._run(self._make_command('returnEffectiveValues', full_path))
+                return out
+            except VyOSError:
+                return(default)
+
+    def list_effective_nodes(self, path, default=[]):
+        full_path = self._level + path
+        if self.is_tag(path):
+            try:
+                out = self._run(self._make_command('listEffectiveNodes', full_path))
+                values = out.split()
+                return list(map(lambda x: re.sub(r'^\'(.*)\'$', r'\1',x), values))
+            except VyOSError:
+                return(default)
+        else:
+            raise VyOSError("Cannot use list_effective_nodes on a non-tag node: {0}".format(full_path))
