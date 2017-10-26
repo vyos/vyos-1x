@@ -33,8 +33,8 @@ from lxml import etree as ET
 validator_dir = "/opt/vyatta/libexec/validators"
 default_constraint_err_msg = "Invalid value"
 
-
 ## Get arguments
+
 
 parser = argparse.ArgumentParser(description='Converts new-style XML interface definitions to old-style command templates')
 parser.add_argument('--debug', help='Enable debug information output', action='store_true')
@@ -95,7 +95,6 @@ def get_properties(p):
     except:
         pass
 
-
     # Get the completion help strings
     try:
         che = p.findall("completionHelp")
@@ -119,6 +118,7 @@ def get_properties(p):
     except:
         props["comp_help"] = []
 
+
     return props
 
 
@@ -131,27 +131,23 @@ def make_node_def(props, command):
     if "tag" in props:
         node_def += "tag:\n"
 
-
     if "type" in props:
         node_def += "type: {0}\n".format(props["type"])
-
 
     if "help" in props:
         node_def += "help: {0}\n".format(props["help"])
 
-
     if "comp_help" in props:
         node_def += "allowed: {0}\n".format(props["comp_help"])
 
-
     if command is not None:
-        node_def += "run: sudo sh -c {0}\n".format(command.text)
-
+        node_def += "run: sudo sh -c \"{0}\"\n".format(command.text)
 
     if debug:
         print("The contents of the node.def file:\n", node_def)
 
     return node_def
+
 
 def process_node(n, tmpl_dir):
     # Avoid mangling the path from the outer call
@@ -178,17 +174,15 @@ def process_node(n, tmpl_dir):
         props["type"] = "txt"
     if node_type == "tagNode":
         props["tag"] = "True"
-    
 
     with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
         f.write(make_node_def(props, command))
-
 
     if node_type == "node":
         inner_nodes = children.iterfind("*")
         for inner_n in inner_nodes:
             process_node(inner_n, my_tmpl_dir)
-    if node_type == "tagNode":
+    if node_type == "tagNode" and children is not None:
         my_tmpl_dir.append("node.tag")
         if debug:
             print("Created path for the tagNode:", end="")

@@ -43,7 +43,7 @@ node = element node
 tagNode = element tagNode
 {
     nodeNameAttr,
-    (properties? & children & command?)
+    (properties? & children? & command?)
 }
 
 # Leaf nodes are terminal configuration nodes that can't have children,
