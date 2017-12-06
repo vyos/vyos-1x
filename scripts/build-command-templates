@@ -113,7 +113,7 @@ def get_properties(p):
             error_msg = p.find("constraintErrorMessage").text
         except:
             pass
-        
+
         vce = p.findall("constraint")
         vc = []
         for v in vce:
@@ -180,11 +180,11 @@ def make_node_def(props):
     if "tag" in props:
         node_def += "tag:\n"
 
-    if "type" in props:
-        node_def += "type: {0}\n".format(props["type"])
-
     if "multi" in props:
         node_def += "multi:\n"
+
+    if "type" in props:
+        node_def += "type: {0}\n".format(props["type"])
 
     if "priority" in props:
         node_def += "priority: {0}\n".format(props["priority"])
@@ -236,7 +236,7 @@ def process_node(n, tmpl_dir):
         props["type"] = "txt"
     if node_type == "tagNode":
         props["tag"] = "True"
-    
+
 
     with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
         f.write(make_node_def(props))
