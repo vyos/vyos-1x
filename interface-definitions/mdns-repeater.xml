@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+
+<!-- mDNS repeater configuration -->
+
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="mdns">
+        <properties>
+          <help>Multicast DNS (mDNS) parameters</help>
+        </properties>
+        <children>
+          <node name="repeater" owner="${vyos_sbindir}/vyos-update-mdns-repeater.py">
+            <properties>
+              <help>mDNS repeater configuration</help>
+              <priority>999</priority>
+            </properties>
+            <children>
+              <leafNode name="interfaces">
+                <properties>
+                  <help>Interface to repeat mdns advertisements to [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
