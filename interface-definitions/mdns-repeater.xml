@@ -10,7 +10,7 @@
           <help>Multicast DNS (mDNS) parameters</help>
         </properties>
         <children>
-          <node name="repeater" owner="${vyos_sbindir}/vyos-update-mdns-repeater.py">
+          <node name="repeater" owner="${vyos_sbindir}/vyos-config-mdns-repeater.py">
             <properties>
               <help>mDNS repeater configuration</help>
               <priority>999</priority>
