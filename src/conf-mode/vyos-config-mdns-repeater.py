@@ -76,12 +76,14 @@ def generate(mdns):
     return None
 
 def apply(mdns):
-    systemd_cmd = ["sudo", "service", "mdns-repeater"]
+    systemd_cmd = ["sudo", "systemctl"]
 
     if len(mdns) == 0:
         systemd_cmd.append("stop")
     else:
         systemd_cmd.append("restart")
+
+    systemd_cmd.append("mdns-repeater.service")
 
     subprocess.call(systemd_cmd)
     return None
