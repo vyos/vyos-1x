@@ -1,3 +1,9 @@
+vyos-1x (1.0.2) unstable; urgency=low
+
+  * Added mdns-repeater configuration nodes
+
+ -- Christian Poessinger <christian@poessinger.com>  Sat, 09 Dec 2017 10:39:35 +0100
+
 vyos-1x (1.0.1) unstable; urgency=low
 
   * Added the Python library for reading VyOS configs
