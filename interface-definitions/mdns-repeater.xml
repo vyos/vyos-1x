@@ -16,7 +16,7 @@
               <priority>990</priority>
             </properties>
             <children>
-              <leafNode name="interfaces">
+              <leafNode name="interface">
                 <properties>
                   <help>Interface to repeat mdns advertisements to [REQUIRED]</help>
                   <completionHelp>

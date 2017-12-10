@@ -35,8 +35,8 @@ def get_config():
     if not conf.exists(''):
         return interface_list
 
-    if conf.exists('interfaces'):
-        intfs_names = conf.return_values('interfaces')
+    if conf.exists('interface'):
+        intfs_names = conf.return_values('interface')
         intfs_names=intfs_names.replace("'", "")
         intfs_names=intfs_names.split()
 
