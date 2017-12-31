@@ -165,6 +165,12 @@ def get_properties(p):
     except:
         pass
 
+    # Get type
+    try:
+        props["type"] = p.find("type").text
+    except:
+        pass
+
     # Get "multi"
     if p.find("multi") is not None:
         props["multi"] = True
@@ -233,7 +239,8 @@ def process_node(n, tmpl_dir):
         props["owner"] = owner
     # Type should not be set for non-tag, non-leaf nodes
     if node_type != "node":
-        props["type"] = "txt"
+        if "type" not in props.keys():
+            props["type"] = "txt"
     if node_type == "tagNode":
         props["tag"] = "True"
 
