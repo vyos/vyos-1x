@@ -28,6 +28,22 @@
               <leafNode name="interval">
                 <properties>
                   <help>Execution interval</help>
+                  <valueHelp>
+                    <format>&lt;minutes&gt;</format>
+                    <description>Execution interval in minutes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;minutes&gt;m</format>
+                    <description>Execution interval in minutes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;hours&gt;h</format>
+                    <description>Execution interval in hours</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;days&gt;d</format>
+                    <description>Execution interval in days</description>
+                  </valueHelp>
                 </properties>
               </leafNode>
               <node name="executable">
@@ -43,22 +59,6 @@
                   <leafNode name="arguments">
                     <properties>
                       <help>Arguments passed to the executable</help>
-                      <valueHelp>
-                        <format>&lt;minutes&gt;</format>
-                        <description>Execution interval in minutes</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>&lt;minutes&gt;m</format>
-                        <description>Execution interval in minutes</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>&lt;hours&gt;h</format>
-                        <description>Execution interval in hours</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>&lt;days&gt;d</format>
-                        <description>Execution interval in days</description>
-                      </valueHelp>
                     </properties>
                   </leafNode>
                 </children>
