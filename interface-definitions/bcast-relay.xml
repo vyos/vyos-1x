@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+
+<!-- UDP broadcast relay configuration -->
+
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="bcast-relay">
+        <properties>
+          <help>UDP Broadcast Relay parameters</help>
+        </properties>
+        <children>
+          <tagNode name="id" owner="${vyos_sbindir}/vyos-config-bcast-relay.py">
+            <properties>
+              <help>Unique ID for each UDP port to forward</help>
+              <valueHelp>
+                <format>u32:1-99</format>
+                <description>Numerical ID #</description>
+              </valueHelp>
+              <type>u32</type>
+              <priority>990</priority>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Set source IP of forwarded packets, otherwise original senders address is used</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Optional source address for forwarded packets</description>
+                  </valueHelp>
+                  <type>ipv4</type>
+                </properties>
+              </leafNode>
+              <leafNode name="description">
+                <properties>
+                  <help>Description</help>
+                </properties>
+              </leafNode>
+              <leafNode name="interface">
+                <properties>
+                  <help>Interface to repeat UDP broadcasts to [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="port">
+                <properties>
+                  <help>Destination or source port to listen and retransmit on [REQUIRED]</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>UDP port to listen on</description>
+                  </valueHelp>
+                  <type>u32</type>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

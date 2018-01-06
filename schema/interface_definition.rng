@@ -169,6 +169,11 @@
           </element>
         </optional>
         <optional>
+          <element name="type">
+            <text/>
+          </element>
+        </optional>
+        <optional>
           <!-- These are meaningful only for tag nodes -->
           <group>
             <element name="keepChildOrder">
