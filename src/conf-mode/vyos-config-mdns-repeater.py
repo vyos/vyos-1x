@@ -20,7 +20,6 @@ import sys
 import os
 import netifaces
 import time
-import subprocess
 
 from vyos.config import Config
 from vyos.util import ConfigError
@@ -76,16 +75,12 @@ def generate(mdns):
     return None
 
 def apply(mdns):
-    systemd_cmd = ["sudo", "systemctl"]
-
     if len(mdns) == 0:
-        systemd_cmd.append("stop")
+        cmd = "sudo systemctl stop mdns-repeater"
     else:
-        systemd_cmd.append("restart")
+        cmd = "sudo systemctl restart mdns-repeater"
 
-    systemd_cmd.append("mdns-repeater.service")
-
-    subprocess.call(systemd_cmd)
+    os.system(cmd)
     return None
 
 if __name__ == '__main__':
