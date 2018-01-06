@@ -1,3 +1,11 @@
+vyos-1x (1.0.3) unstable; urgency=medium
+
+  * T379: Add UDP broadcast relay support
+  * mdns repeater scripts - remove python subprocess
+  * Support setting optional 'type' node in command templates
+
+ -- Christian Poessinger <christian@poessinger.com>  Sat, 06 Jan 2018 13:18:30 +0100
+
 vyos-1x (1.0.2) unstable; urgency=low
 
   * Added mdns-repeater configuration nodes
