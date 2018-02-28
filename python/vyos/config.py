@@ -117,7 +117,8 @@ class Config(object):
         else:
             try:
                 out = self._run(self._make_command('returnValues', full_path))
-                return out
+                values = out.split()
+                return list(map(lambda x: re.sub(r'^\'(.*)\'$', r'\1',x), values))
             except VyOSError:
                 return(default)
 
