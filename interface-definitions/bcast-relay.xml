@@ -5,7 +5,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="bcast-relay">
+      <node name="broadcast-relay">
         <properties>
           <help>UDP Broadcast Relay parameters</help>
         </properties>

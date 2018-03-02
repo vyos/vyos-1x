@@ -29,7 +29,7 @@ config_file = r'/etc/default/udp-broadcast-relay'
 
 def get_config():
     conf = Config()
-    conf.set_level("service bcast-relay id")
+    conf.set_level("service broadcast-relay id")
     relay_id = conf.list_nodes("")
     relays = []
 
@@ -61,10 +61,10 @@ def get_config():
 def verify(relays):
     for relay in relays:
         if not relay["port"]:
-            raise ConfigError("UDP bcast relay 'id {0}' requires a port number".format(relay["id"]))
+            raise ConfigError("UDP broadcast relay 'id {0}' requires a port number".format(relay["id"]))
 
         if len(relay["interfaces"]) < 2:
-            raise ConfigError("UDP bcast relay 'id {0}' requires at least 2 interfaces".format(relay["id"]))
+            raise ConfigError("UDP broadcast relay 'id {0}' requires at least 2 interfaces".format(relay["id"]))
 
     return None
 
