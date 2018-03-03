@@ -7,12 +7,12 @@
     <children>
       <node name="host-name" owner="${vyos_sbindir}/vyos-config-host-name.py">
         <properties>
-          <help>Hostname settings</help>
+          <help>System host name (default: vyos)</help>
         </properties>
         <children>
           <leafNode name="hostname">
             <properties>
-              <help>server's hostname </help>
+              <help>System host name (default: vyos)</help>
             </properties>
           </leafNode>
         </children>
