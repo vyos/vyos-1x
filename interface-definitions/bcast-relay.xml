@@ -33,7 +33,8 @@
               </leafNode>
               <leafNode name="description">
                 <properties>
-                  <help>Description</help>
+                  <help>Service description</help>
+                  <type>txt</type>
                 </properties>
               </leafNode>
               <leafNode name="interface">
@@ -43,6 +44,7 @@
                     <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
                   </completionHelp>
                   <multi/>
+                  <type>txt</type>
                 </properties>
               </leafNode>
               <leafNode name="port">

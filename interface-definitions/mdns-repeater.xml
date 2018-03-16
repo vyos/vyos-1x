@@ -23,6 +23,7 @@
                     <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
                   </completionHelp>
                   <multi/>
+                  <type>txt</type>
                 </properties>
               </leafNode>
             </children>

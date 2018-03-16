@@ -27,6 +27,7 @@
                 <properties>
                   <help>Use nameservers received from DHCP server for specified interface</help>
                   <multi/>
+                  <type>txt</type>
                 </properties>
               </leafNode>
               <tagNode name="domain">
