@@ -85,6 +85,9 @@ def get_config():
         nameservers = conf.return_values('name-server')
         dns.setdefault('name-server', nameservers)
 
+    if conf.exists('query-all-servers'):
+        dns.setdefault('query-all-servers', True)
+
     if conf.exists('system'):
         conf.set_level('system')
         nameservers = []
@@ -96,8 +99,9 @@ def get_config():
     return dns
 
 def verify(dns):
-    if 'listen-on' not in dns.keys():
-        raise ConfigError("Error: DNS forwarding requires a configured listen interface!")
+    if len(dns) > 0:
+        if 'listen-on' not in dns.keys():
+            raise ConfigError("Error: DNS forwarding requires a configured listen interface!")
 
     return None
 
@@ -134,6 +138,9 @@ def generate(dns):
     if 'name-server' in dns.keys():
         for nameserver in dns['name-server']:
             f.write("server={0}\t# statically configured\n".format(nameserver))
+
+    if 'query-all-servers' in dns.keys():
+        f.write("all-servers\n")
 
     if 'system-name-server' in dns.keys():
         # Read the IP addresses of the upstream nameservers from /etc/resolv.conf
