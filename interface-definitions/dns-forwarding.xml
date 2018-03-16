@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+
+<!-- DNS forwarder configuration -->
+
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dns">
+        <children>
+          <node name="forwarding" owner="${vyos_sbindir}/vyos-config-dns-forwarding.py">
+            <properties>
+              <help>DNS forwarding</help>
+              <priority>918</priority>
+            </properties>
+            <children>
+              <leafNode name="cache-size">
+                <properties>
+                  <help>DNS forwarding cache size</help>
+                  <valueHelp>
+                    <format>u32:0-10000</format>
+                    <description>DNS forwarding cache size</description>
+                  </valueHelp>
+                  <type>u32</type>
+                </properties>
+              </leafNode>
+              <leafNode name="dhcp">
+                <properties>
+                  <help>Use nameservers received from DHCP server for specified interface</help>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <tagNode name="domain">
+                <properties>
+                  <help>DNS domain to forward to a local server</help>
+                </properties>
+                <children>
+                  <leafNode name="server">
+                    <properties>
+                      <help>Domain Name Server (DNS) to forward queries</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Domain Name Server (DNS) IPv4 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Domain Name Server (DNS) IPv6 address</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="ignore-hosts-file">
+                <properties>
+                <help>Do not use local /etc/hosts file in name resolution</help>
+              </properties>
+              </leafNode>
+              <leafNode name="listen-on">
+                <properties>
+                  <help>Interface to listen for DNS queries [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="name-server">
+                <properties>
+                  <help>Domain Name Server (DNS)</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Domain Name Server (DNS) IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Domain Name Server (DNS) IPv6 address</description>
+                  </valueHelp>
+                <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="query-all-servers">
+                <properties>
+                  <help>Query all DNS servers, respond and cache fastest result</help>
+                </properties>
+              </leafNode>
+              <leafNode name="system">
+                <properties>
+                  <help>DNS forwarding to system nameservers</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
