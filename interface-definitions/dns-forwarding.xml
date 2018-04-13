@@ -32,7 +32,6 @@
               <tagNode name="domain">
                 <properties>
                   <help>DNS domain to forward to a local server</help>
-                  <type>txt</type>
                 </properties>
                 <children>
                   <leafNode name="server">
@@ -77,12 +76,8 @@
                     <format>ipv6</format>
                     <description>Domain Name Server (DNS) IPv6 address</description>
                   </valueHelp>
-                <multi/>
-                </properties>
-              </leafNode>
-              <leafNode name="query-all-servers">
-                <properties>
-                  <help>Query all DNS servers, respond and cache fastest result</help>
+                  <multi/>
+                  <type>ipv4,ipv6</type>
                 </properties>
               </leafNode>
               <leafNode name="system">
