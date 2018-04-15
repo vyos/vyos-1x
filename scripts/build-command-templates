@@ -237,17 +237,11 @@ def process_node(n, tmpl_dir):
     props = get_properties(props_elem)
     if owner:
         props["owner"] = owner
-    # Type should not be set for non-tag, non-leaf nodes
-    if node_type != "node":
-        if "type" not in props.keys():
-            props["type"] = "txt"
     if node_type == "tagNode":
         props["tag"] = "True"
 
-
     with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
         f.write(make_node_def(props))
-
 
     if node_type == "node":
         inner_nodes = children.iterfind("*")

@@ -18,11 +18,13 @@
                 <description>Task name</description>
               </valueHelp>
               <priority>999</priority>
+              <type>txt</type>
             </properties>
             <children>
               <leafNode name="crontab-spec">
                 <properties>
                   <help>UNIX crontab time specification string</help>
+                  <type>txt</type>
                 </properties>
               </leafNode>
               <leafNode name="interval">
@@ -44,6 +46,7 @@
                     <format>&lt;days&gt;d</format>
                     <description>Execution interval in days</description>
                   </valueHelp>
+                  <type>txt</type>
                 </properties>
               </leafNode>
               <node name="executable">
@@ -54,11 +57,13 @@
                   <leafNode name="path">
                     <properties>
                       <help>Path to executable</help>
+                      <type>txt</type>
                     </properties>
                   </leafNode>
                   <leafNode name="arguments">
                     <properties>
                       <help>Arguments passed to the executable</help>
+                      <type>txt</type>
                     </properties>
                   </leafNode>
                 </children>
