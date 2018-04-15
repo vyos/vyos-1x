@@ -13,6 +13,10 @@ interface_definitions:
 	rm -f $(TMPL_DIR)/service/dns/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 
+	# Workaround for special nodes that should not have "type: txt"
+	sed -i '/^type: txt/d' $(TMPL_DIR)/service/dns/forwarding/listen-on/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/service/dns/forwarding/system/node.def
+
 .PHONY: all
 all: interface_definitions
 
