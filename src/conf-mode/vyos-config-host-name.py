@@ -25,6 +25,7 @@ from vyos.util import ConfigError
 
 hostname_config = "/etc/hostname"
 mailname_config = "/etc/mailname"
+hostname_regex = re.compile("^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$")
 
 def get_config():
     conf = Config()
@@ -42,7 +43,9 @@ def verify(config):
 	# check for invalid host
 	
 	# pattern $VAR(@) "^[[:alnum:]][-.[:alnum:]]*[[:alnum:]]$" ; "invalid host name $VAR(@)"
-	# TODO
+	valid = hostname_regex.match(config.hostname)
+	if (!valid):
+		raise ConfigError('invalid host name' + config.hostname)
 
 	# pattern $VAR(@) "^.{1,63}$" ; "invalid host-name length"
 	length = len(config.hostname)
