@@ -37,8 +37,8 @@ def get_resolvers(file):
                 if 'nameserver' in line:
                     resolvers.append(line.split()[1])
         return resolvers
-    except IOError as error:
-        return error.strerror
+    except IOError:
+        return []
 
 def get_config():
     dns = {}
@@ -57,11 +57,12 @@ def get_config():
         interfaces = conf.return_values('dhcp')
         for interface in interfaces:
             resolvers = get_resolvers("/etc/resolv.conf.dhclient-new-{0}".format(interface))
-            dhcp = {
-                "interface": interface,
-                "resolvers": resolvers
-            }
-            dns['dhcp'].append(dhcp)
+            if len(resolvers) > 0:
+                dhcp = {
+                    "interface": interface,
+                    "resolvers": resolvers
+                }
+                dns['dhcp'].append(dhcp)
 
     if conf.exists('domain'):
         dns.setdefault('domain', [])
