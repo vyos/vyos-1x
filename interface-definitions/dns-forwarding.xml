@@ -26,6 +26,9 @@
               <leafNode name="dhcp">
                 <properties>
                   <help>Use nameservers received from DHCP server for specified interface</help>
+                  <completionHelp>
+                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                  </completionHelp>
                   <multi/>
                 </properties>
               </leafNode>
