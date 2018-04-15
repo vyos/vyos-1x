@@ -56,8 +56,8 @@
               </tagNode>
               <leafNode name="ignore-hosts-file">
                 <properties>
-                <help>Do not use local /etc/hosts file in name resolution</help>
-              </properties>
+                  <help>Do not use local /etc/hosts file in name resolution</help>
+                </properties>
               </leafNode>
               <leafNode name="listen-on">
                 <properties>
