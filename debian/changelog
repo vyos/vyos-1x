@@ -1,3 +1,10 @@
+vyos-1x (1.0.4) UNRELEASED; urgency=medium
+
+  * T560: dns-forwarding: replace dnsmasq with pdns-recursor
+  * T588: Rewrite 'service dns forwarding' in new XML style format
+
+ -- Christian Poessinger <christian@poessinger.com>  Sun, 15 Apr 2018 16:13:32 +0200
+
 vyos-1x (1.0.3) unstable; urgency=medium
 
   * T379: Add UDP broadcast relay support
