@@ -1,4 +1,11 @@
-vyos-1x (1.0.4) UNRELEASED; urgency=medium
+vyos-1x (1.0.5) unstable; urgency=medium
+
+  * T606: Error in DNS Forwarder listen-on
+  * T608: Cannot configure broadcast-relay service
+
+ -- Christian Poessinger <christian@poessinger.com>  Thu, 19 Apr 2018 21:16:28 +0200
+
+vyos-1x (1.0.4) unstable; urgency=medium
 
   * T560: dns-forwarding: replace dnsmasq with pdns-recursor
   * T588: Rewrite 'service dns forwarding' in new XML style format
