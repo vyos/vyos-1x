@@ -35,6 +35,7 @@ def get_config():
         return interface_list
 
     if conf.exists('interface'):
+        intfs_names = []
         intfs_names = conf.return_values('interface')
 
         for name in intfs_names:
