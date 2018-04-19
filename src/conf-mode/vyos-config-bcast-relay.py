@@ -90,7 +90,7 @@ def generate(relays):
     for relay in relays:
          file = config_file + str(relay["id"])
          interfaces = ' '.join(str(intf) for intf in relay["interfaces"])
-         config_args = 'DAEMON_ARGS="{0} {1} {2}"\n'.format(relay["id"], relay["port"], interfaces)
+         config_args = 'DAEMON_ARGS="{0} {1}"\n'.format(relay["port"], interfaces)
 
          f = open(file, 'w')
          f.write(config_header)
