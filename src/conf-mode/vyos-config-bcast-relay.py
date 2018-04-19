@@ -41,9 +41,9 @@ def get_config():
 
         # split the interface name listing and form a list
         if conf.exists("{0} interface".format(id)):
+            intfs_names = []
             intfs_names = conf.return_values("{0} interface".format(id))
-            intfs_names=intfs_names.replace("'", "")
-            intfs_names=intfs_names.split()
+
             for name in intfs_names:
                 interface_list.append(name)
 
