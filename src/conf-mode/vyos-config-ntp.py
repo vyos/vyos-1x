@@ -19,7 +19,6 @@
 import sys
 import os
 import time
-import socket
 import ipaddress
 
 from vyos.config import Config
@@ -80,30 +79,29 @@ def generate(ntp):
     # write new configuration file
     f = open(config_file, 'w')
     f.write(config_header)
+    f.write('\n')
     f.write('driftfile /var/lib/ntp/ntp.drift\n')
-    f.write('# By default, only allow ntpd to query time sources, ignore any\n')
-    f.write('# incoming requests.\n')
+    f.write('\n')
+    f.write('# By default, only allow ntpd to query time sources, ignore any incoming requests\n')
     f.write('restrict default ignore\n')
     f.write('\n')
-    f.write('# Local users have unrestricted access, allowing reconfiguration\n')
-    f.write('# via ntpdc\n')
+    f.write('# Local users have unrestricted access, allowing reconfiguration via ntpdc\n')
     f.write('restrict 127.0.0.1\n')
     f.write('restrict -6 ::1\n')
     f.write('\n')
 
     if 'servers' in ntp.keys():
         for server in ntp['servers']:
-            addr = socket.gethostbyname(server['name'])
             opt = ['dynamic', 'noselect', 'preempt', 'prefer']
-            f.write('# Server configuration {0}\n'.format(server['name']))
-            f.write('server {0} iburst {1}\n'.format(addr, '{0}'.format(' '.join(str(o) for o in opt if server[o]))))
-            f.write('restrict {0} nomodify notrap nopeer noquery\n'.format(addr))
+            f.write('# Server configuration for: {0}\n'.format(server['name']))
+            f.write('server {0} iburst {1}\n'.format(server['name'], '{0}'.format(' '.join(str(o) for o in opt if server[o]))))
+            f.write('restrict {0} nomodify notrap nopeer noquery\n'.format(server['name']))
             f.write('\n')
 
     if 'allow-networks' in ntp.keys():
         for network in ntp['allow-networks']:
             addr = ipaddress.ip_network(network)
-            f.write('# Client configuration: {0}\n'.format(network))
+            f.write('# Client configuration for network: {0}\n'.format(network))
             f.write('restrict {0} mask {1} nomodify notrap nopeer\n'.format(addr.network_address, addr.netmask))
             f.write('\n')
 
