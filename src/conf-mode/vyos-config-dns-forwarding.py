@@ -161,6 +161,8 @@ def generate(dns):
 
     if 'ignore-hosts-file' in dns.keys():
         f.write("export-etc-hosts=no\n")
+    else:
+        f.write("export-etc-hosts=yes\n")
 
     if 'name-server' in dns.keys():
         fwds_src.append('statically configured: {0}'.format(', '.join(str(ns) for ns in dns['name-server'])))
