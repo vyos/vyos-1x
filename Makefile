@@ -13,9 +13,13 @@ interface_definitions:
 	rm -f $(TMPL_DIR)/service/dns/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 
-	# Workaround for special nodes that should not have "type: txt"
+	# Workaround for T604: vyos-1x: node.def generation always contains "type: txt"
 	sed -i '/^type: txt/d' $(TMPL_DIR)/service/dns/forwarding/ignore-hosts-file/node.def
 	sed -i '/^type: txt/d' $(TMPL_DIR)/service/dns/forwarding/system/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/dynamic/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/noselect/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/preempt/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/prefer/node.def
 
 .PHONY: all
 all: interface_definitions

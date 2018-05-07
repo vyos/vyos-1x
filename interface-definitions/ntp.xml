@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+
+<!-- NTP configuration -->
+
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="ntp" owner="${vyos_sbindir}/vyos-config-ntp.py">
+        <properties>
+          <help>Network Time Protocol (NTP) configuration</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <tagNode name="server">
+            <properties>
+              <help>Network Time Protocol (NTP) server</help>
+            </properties>
+            <children>
+              <leafNode name="dynamic">
+                <properties>
+                  <help>Allow server to be configured even if not reachable</help>
+                </properties>
+              </leafNode>
+              <leafNode name="noselect">
+                <properties>
+                  <help>Marks the server as unused</help>
+                </properties>
+              </leafNode>
+              <leafNode name="preempt">
+                <properties>
+                  <help>Specifies the association as preemptable rather than the default persistent</help>
+                </properties>
+              </leafNode>
+              <leafNode name="prefer">
+                <properties>
+                  <help>Marks the server as preferred</help>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="allow-clients">
+            <properties>
+              <help>Network Time Protocol (NTP) server options</help>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IP address</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IP address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <multi/>
+                  <type>ipv4net,ipv6net</type>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
