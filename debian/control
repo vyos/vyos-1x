@@ -9,6 +9,7 @@ Standards-Version: 3.9.6
 Package: vyos-1x
 Architecture: all
 Depends: python3, ${python3:Depends}, python3-netifaces,
+ python3-jinja2, ipaddrcheck
  ${shlibs:Depends}, ${misc:Depends}
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
