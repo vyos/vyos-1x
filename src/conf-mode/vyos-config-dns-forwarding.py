@@ -160,6 +160,10 @@ def get_config():
     return dns
 
 def verify(dns):
+    # bail out early - looks like removal from running config
+    if dns is None:
+        return None
+
     if not dns['interfaces']:
         raise ConfigError('Error: DNS forwarding requires a configured listen interface!')
 
@@ -177,6 +181,10 @@ def verify(dns):
     return None
 
 def generate(dns):
+    # bail out early - looks like removal from running config
+    if dns is None:
+        return None
+
     tmpl = jinja2.Template(config_tmpl)
 
     config_text = tmpl.render(dns)
@@ -185,7 +193,7 @@ def generate(dns):
     return None
 
 def apply(dns):
-    if dns:
+    if dns is not None:
         os.system("systemctl restart pdns-recursor")
     else:
         # DNS forwarding is removed in the commit
