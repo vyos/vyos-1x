@@ -46,58 +46,9 @@
           <leafNode name="ciphers">
             <properties>
               <help>Allowed ciphers</help>
-              <valueHelp>
-                <format>chacha20-poly1305@openssh.com</format>
-                <description>ChaCha20 Poly1305</description>
-              </valueHelp>
-              <valueHelp>
-                <format>3des-cbc</format>
-                <description>3DES CBC (weak)</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes128-cbc</format>
-                <description>AES 128 CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes192-cbc</format>
-                <description>AES 192 CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes256-cbc</format>
-                <description>AES 256 CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes128-ctr</format>
-                <description>AES 128 CTR</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes192-ctr</format>
-                <description>AES 192 CTR</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes256-ctr</format>
-                <description>AES 256 CTR</description>
-              </valueHelp>
-              <valueHelp>
-                <format>arcfour128</format>
-                <description>AC4 128 (broken)</description>
-              </valueHelp>
-              <valueHelp>
-                <format>arcfour256</format>
-                <description>AC4 256 (broken)</description>
-              </valueHelp>
-              <valueHelp>
-                <format>arcfour</format>
-                <description>AC4 (broken)</description>
-              </valueHelp>
-              <valueHelp>
-                <format>blowfish-cbc</format>
-                <description>Blowfish CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>cast128-cbc</format>
-                <description>CAST 128 CBC</description>
-              </valueHelp>
+              <completionHelp>
+                <script>ssh -Q cipher | tr '\n' ' '</script>
+              </completionHelp>
             </properties>
           </leafNode>
           <leafNode name="disable-host-validation">
@@ -114,7 +65,7 @@
             <properties>
               <help>Key exchange algorithms</help>
               <completionHelp>
-                <script>ssh -Q kex | perl -ne '$_=~s/\n/ /;print'</script>
+                <script>ssh -Q kex | tr '\n' ' '</script>
               </completionHelp>
             </properties>
           </leafNode>
@@ -162,7 +113,7 @@
             <properties>
               <help>Allowed message authentication algorithms</help>
               <completionHelp>
-                <script>ssh -Q mac | perl -ne '$_=~s/\n/ /;print'</script>
+                <script>ssh -Q mac | tr '\n' ' '</script>
               </completionHelp>
             </properties>
           </leafNode>
