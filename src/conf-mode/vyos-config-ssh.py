@@ -32,6 +32,69 @@ def get_config():
     if not conf.exists(''):
         return ssh
 
+    if conf.exists('access-control allow'):
+        ssh.setdefault('allowed-users', [])
+        allow_user = []
+        allow_user = conf.return_values('access-control allow user')
+        for user in allow_user:
+            ssh['allowed-users'].append(user)
+
+        ssh.setdefault('allowed-groups', [])
+        allow_group = []
+        allow_group = conf.return_values('access-control allow group')
+        for group in allow_group:
+            ssh['allowed-groups'].append(group)
+
+    if conf.exists('access-control deny'):
+        ssh.setdefault('deny-users', [])
+        deny_user = []
+        deny_user = conf.return_values('access-control deny user')
+        for user in deny_user:
+            ssh['deny-users'].append(user)
+
+        ssh.setdefault('deny-groups', [])
+        deny_group = []
+        deny_group = conf.return_values('access-control deny group')
+        for group in deny_group:
+            ssh['deny-groups'].append(group)
+
+    if conf.exists('allow-root'):
+        ssh.setdefault('allow-root', True)
+
+    if conf.exists('ciphers'):
+        ciphers = conf.return_value('ciphers')
+        ssh.setdefault('ciphers', ciphers)
+
+    if conf.exists('disable-host-validation'):
+        ssh.setdefault('disable-host-validation', True)
+
+    if conf.exists('disable-password-authentication'):
+        ssh.setdefault('disable-password-authentication', True)
+
+    if conf.exists('key-exchange'):
+        kex = conf.return_value('key-exchange')
+        ssh.setdefault('key-exchange', kex)
+
+    if conf.exists('listen-address'):
+        ssh.setdefault('listen-address', [])
+        addresses = []
+        addresses = conf.return_values('listen-address')
+        for addr in addresses:
+            ssh['listen-address'].append(addr)
+
+    if conf.exists('loglevel'):
+        level = conf.return_value('loglevel')
+        ssh.setdefault('loglevel', level)
+
+    if conf.exists('mac'):
+        mac = conf.return_value('mac')
+        ssh.setdefault('mac', mac)
+
+    if conf.exists('port'):
+        port = conf.return_value('port')
+        ssh.setdefault('port', port)
+
+    print(ssh)
     return ssh
 
 def verify(ssh):
@@ -44,14 +107,108 @@ def generate(ssh):
     f = open(config_file, 'w')
     f.write(config_header)
     f.write('\n')
+
+    if 'port' in ssh.keys():
+        f.write('Port {0}\n'.format(ssh['port']))
+    else:
+        f.write('Port 22\n')
+
+    f.write('Protocol 2\n')
+    f.write('HostKey /etc/ssh/ssh_host_rsa_key\n')
+    f.write('HostKey /etc/ssh/ssh_host_dsa_key\n')
+    f.write('HostKey /etc/ssh/ssh_host_ecdsa_key\n')
+    f.write('HostKey /etc/ssh/ssh_host_ed25519_key\n')
+    f.write('UsePrivilegeSeparation yes\n')
+    f.write('\n')
+    f.write('KeyRegenerationInterval 3600\n')
+    f.write('ServerKeyBits 1024\n')
+    f.write('\n')
+    f.write('SyslogFacility AUTH\n')
+
+    if 'loglevel' in ssh.keys():
+        f.write('LogLevel {0}\n'.format(ssh['loglevel']))
+    else:
+        f.write('LogLevel INFO\n')
+
+    f.write('\n')
+    f.write('LoginGraceTime 120\n')
+
+    if 'allow-root' in ssh.keys():
+        f.write('PermitRootLogin yes\n')
+    else:
+        f.write('PermitRootLogin no\n')
+
+    f.write('StrictModes yes\n')
+    f.write('\n')
+    f.write('RSAAuthentication yes\n')
+    f.write('PubkeyAuthentication yes\n')
+    f.write('\n')
+    f.write('IgnoreRhosts yes\n')
+    f.write('RhostsRSAAuthentication no\n')
+    f.write('HostbasedAuthentication no\n')
+    f.write('\n')
+    f.write('PermitEmptyPasswords no\n')
+    f.write('\n')
+    f.write('ChallengeResponseAuthentication no\n')
+    f.write('\n')
+
+    if 'disable-password-authentication' in ssh.keys():
+        f.write('PasswordAuthentication no\n')
+    else:
+        f.write('PasswordAuthentication yes\n')
+
+    f.write('\n')
+    f.write('X11Forwarding yes\n')
+    f.write('X11DisplayOffset 10\n')
+    f.write('PrintMotd no\n')
+    f.write('PrintLastLog yes\n')
+    f.write('TCPKeepAlive yes\n')
+    f.write('\n')
+    f.write('Banner /etc/issue.net\n')
+    f.write('\n')
+    f.write('Subsystem sftp /usr/lib/openssh/sftp-server\n')
+    f.write('\n')
+    f.write('UsePAM yes\n')
+    f.write('HostKey /etc/ssh/ssh_host_key\n')
+
+    if 'disable-host-validation' in ssh.keys():
+        f.write('UseDNS no\n')
+    else:
+        f.write('UseDNS yes\n')
+
+    if 'listen-address' in ssh.keys():
+        for addr in ssh['listen-address']:
+            f.write('ListenAddress {0}\n'.format(addr))
+
+    if 'ciphers' in ssh.keys():
+        f.write('Ciphers {0}\n'.format(ssh['ciphers']))
+
+    if 'key-exchange' in ssh.keys():
+        f.write('KexAlgorithms {0}\n'.format(ssh['key-exchange']))
+
+    if 'mac' in ssh.keys():
+        f.write('MACs {0}\n'.format(ssh['mac']))
+
+    if 'allowed-users' in ssh.keys():
+        print('AllowUsers {0}\n'.format(' '.join(str(usr) for usr in ssh['allowed-users'])))
+
+    if 'allowed-groups' in ssh.keys():
+        print('AllowGroups {0}\n'.format(' '.join(str(grp) for grp in ssh['allowed-groups'])))
+
+    if 'deny-users' in ssh.keys():
+        print('DenyUsers {0}\n'.format(' '.join(str(usr) for usr in ssh['deny-users'])))
+
+    if 'deny-groups' in ssh.keys():
+        print('DenyGroups {0}\n'.format(' '.join(str(grp) for grp in ssh['deny-groups'])))
+
     f.close()
     return None
 
 def apply(ssh):
-    if len(ssh) == 0:
-        cmd = "sudo systemctl stop ssh"
+    if 'port' in ssh.keys():
+        cmd = "sudo systemctl restart ssh"
     else:
-        cmd = "sudo systemctl start ssh"
+        cmd = "sudo systemctl stop ssh"
 
     os.system(cmd)
     return None
