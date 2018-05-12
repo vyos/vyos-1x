@@ -18,7 +18,6 @@
 
 import sys
 import os
-import time
 
 import netifaces
 import jinja2
