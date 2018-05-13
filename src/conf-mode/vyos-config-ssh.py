@@ -179,7 +179,7 @@ def get_config():
 
         ssh.setdefault('allow_groups', groups)
 
-    if conf.exists('access-control deny-groups'):
+    if conf.exists('access-control deny-users'):
         # Retrieve ',' separated list for denied users and convert it to a list.
         # The current VyOS CLI implementation should be improved to rather use multi nodes
         # instead of a ',' separated input.
