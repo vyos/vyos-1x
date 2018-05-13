@@ -13,7 +13,7 @@
         <children>
           <node name="access-control">
             <properties>
-              <help>SSH user/group access controls</help>
+                <help>SSH user/group access controls. Directives are processed in this: deny-users, allow-users, deny-groups and allow-groups</help>
             </properties>
             <children>
               <leafNode name="allow-groups">
