@@ -20,6 +20,9 @@ interface_definitions:
 	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/noselect/node.def
 	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/preempt/node.def
 	sed -i '/^type: txt/d' $(TMPL_DIR)/system/ntp/server/node.tag/prefer/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/service/ssh/allow-root/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/service/ssh/disable-host-validation/node.def
+	sed -i '/^type: txt/d' $(TMPL_DIR)/service/ssh/disable-password-authentication/node.def
 
 .PHONY: all
 all: interface_definitions
