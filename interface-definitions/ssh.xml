@@ -13,29 +13,41 @@
         <children>
           <node name="access-control">
             <properties>
-                <help>SSH user/group access controls. Directives are processed in this: deny-users, allow-users, deny-groups and allow-groups</help>
+              <help>SSH user/group access controls. Directives are processed in this: deny-users, allow-users, deny-groups and allow-groups</help>
             </properties>
             <children>
-              <leafNode name="allow-groups">
-                <properties>
-                  <help>Configure sshd_config access control for allowed groups</help>
-                </properties>
-              </leafNode>
-              <leafNode name="allow-users">
-                <properties>
-                  <help>Configure sshd_config access control for allowed users</help>
-                </properties>
-              </leafNode>
-              <leafNode name="deny-groups">
-                <properties>
-                  <help>Configure sshd_config access control for disallowed groups</help>
-                </properties>
-              </leafNode>
-              <leafNode name="deny-users">
-                <properties>
-                  <help>Configure sshd_config access control for disallowed users</help>
-                </properties>
-              </leafNode>
+              <node name="allow">
+                <children>
+                  <leafNode name="group">
+                    <properties>
+                      <help>Login is allowed for users whose primary or supplementary group matches</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="user">
+                    <properties>
+                      <help>Login is allowed only for user names that match</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="deny">
+                <children>
+                  <leafNode name="group">
+                    <properties>
+                      <help>Login is disallowed for users whose primary or supplementary group matches</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="user">
+                    <properties>
+                      <help>Login is disallowed for user names that match</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           <leafNode name="allow-root">

@@ -155,53 +155,21 @@ def get_config():
     else:
         conf.set_level('service ssh')
 
-    if conf.exists('access-control allow-users'):
-        # Retrieve ',' separated list for allowed users and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        allow_user = conf.return_value('access-control allow-users')
-        tmp = allow_user.split(',')
-        users = []
-        for u in tmp:
-            users.append(u)
+    if conf.exists('access-control allow user'):
+        allow_users = conf.return_values('access-control allow user')
+        ssh.setdefault('allow_users', allow_users)
 
-        ssh.setdefault('allow_users', users)
+    if conf.exists('access-control allow group'):
+        allow_groups = conf.return_values('access-control allow group')
+        ssh.setdefault('allow_groups', allow_groups)
 
-    if conf.exists('access-control allow-groups'):
-        # Retrieve ',' separated list for allowed groups and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        allow_group = conf.return_value('access-control allow-groups')
-        tmp = allow_group.split(',')
-        groups = []
-        for g in tmp:
-            groups.append(g)
+    if conf.exists('access-control deny user'):
+        deny_users = conf.return_values('access-control deny user')
+        ssh.setdefault('deny_users', deny_users)
 
-        ssh.setdefault('allow_groups', groups)
-
-    if conf.exists('access-control deny-users'):
-        # Retrieve ',' separated list for denied users and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        deny_user = conf.return_value('access-control deny-users')
-        tmp = deny_user.split(',')
-        users = []
-        for u in tmp:
-            users.append(u)
-
-        ssh.setdefault('deny_users', users)
-
-    if conf.exists('access-control deny-groups'):
-        # Retrieve ',' separated list for denied groups and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        deny_group = conf.return_value('access-control deny-groups')
-        tmp = deny_group.split(',')
-        groups = []
-        for g in tmp:
-            groups.append(g)
-
-        ssh.setdefault('deny_groups', groups)
+    if conf.exists('access-control deny group'):
+        deny_groups = conf.return_values('access-control deny group')
+        ssh.setdefault('deny_groups', deny_groups)
 
     if conf.exists('allow-root'):
         ssh['allow-root'] = 'yes'
