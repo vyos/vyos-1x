@@ -55,11 +55,13 @@
           <leafNode name="disable-host-validation">
             <properties>
               <help>Don't validate the remote host name with DNS</help>
+              <valueless/>
             </properties>
           </leafNode>
           <leafNode name="disable-password-authentication">
             <properties>
               <help>Don't allow unknown user to login with password</help>
+              <valueless/>
             </properties>
           </leafNode>
           <leafNode name="key-exchange">
