@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="version">
+        <properties>
+          <help>Show system version information</help>
+        </properties>
+        <command>${vyos_bindir}/vyos-show-version.py</command>
+        <children>
+          <leafNode name="funny">
+            <properties>
+              <help>Show system version and some fun stuff</help>
+            </properties>
+            <command>${vyos_bindir}/vyos-show-version.py --funny</command>
+          </leafNode>
+          <leafNode name="all">
+             <properties>
+               <help>Show system version and versions of all packages</help>
+             </properties>
+             <command>${vyos_bindir}/vyos-show-version.py --all</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
