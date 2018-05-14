@@ -52,8 +52,7 @@ tagNode = element tagNode
 leafNode = element leafNode
 {
     nodeNameAttr,
-    command,
-    properties
+    (command & properties)
 }
 
 # Normal and tag nodes may have children

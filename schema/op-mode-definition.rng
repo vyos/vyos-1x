@@ -67,7 +67,9 @@
         <optional>
           <ref name="properties"/>
         </optional>
-        <ref name="children"/>
+        <optional>
+          <ref name="children"/>
+        </optional>
         <optional>
           <ref name="command"/>
         </optional>
@@ -81,8 +83,10 @@
   <define name="leafNode">
     <element name="leafNode">
       <ref name="nodeNameAttr"/>
-      <ref name="command"/>
-      <ref name="properties"/>
+      <interleave>
+        <ref name="command"/>
+        <ref name="properties"/>
+      </interleave>
     </element>
   </define>
   <!-- Normal and tag nodes may have children -->
