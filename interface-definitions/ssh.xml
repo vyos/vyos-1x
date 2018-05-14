@@ -41,6 +41,7 @@
           <leafNode name="allow-root">
             <properties>
               <help>Enable root login over ssh</help>
+              <valueless/>
             </properties>
           </leafNode>
           <leafNode name="ciphers">
