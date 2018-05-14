@@ -89,7 +89,7 @@ ListenAddress {{ a }}
 # Specifies the ciphers allowed. Multiple ciphers must be comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'ciphers', thus we have only one :/
-Ciphers {{ ciphers }}
+Ciphers {{ ciphers | join(",") }}
 {% endif %}
 
 {% if mac -%}
@@ -98,7 +98,7 @@ Ciphers {{ ciphers }}
 # comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'mac', thus we have only one :/
-MACs {{ mac }}
+MACs {{ mac | join(",") }}
 {% endif %}
 
 {% if key_exchange -%}
@@ -106,7 +106,7 @@ MACs {{ mac }}
 # be comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'key-exchange', thus we have only one :/
-KexAlgorithms {{ key_exchange }}
+KexAlgorithms {{ key_exchange | join(",") }}
 {% endif %}
 
 {% if allow_users -%}
@@ -175,9 +175,7 @@ def get_config():
         ssh['allow-root'] = 'yes'
 
     if conf.exists('ciphers'):
-        # TODO: OpenSSH supports having multiple Ciphers configured. VyOS CLI
-        # yet has no multi node for this. See T632 in phabricator.
-        ciphers = conf.return_value('ciphers')
+        ciphers = conf.return_values('ciphers')
         ssh.setdefault('ciphers', ciphers)
 
     if conf.exists('disable-host-validation'):
@@ -187,9 +185,7 @@ def get_config():
         ssh['password_authentication'] = 'no'
 
     if conf.exists('key-exchange'):
-        # TODO: OpenSSH supports having multiple KEYX methods configured. VyOS CLI
-        # yet has no multi node for this. See T632 in phabricator.
-        kex = conf.return_value('key-exchange')
+        kex = conf.return_values('key-exchange')
         ssh.setdefault('key_exchange', kex)
 
     if conf.exists('listen-address'):
@@ -208,9 +204,7 @@ def get_config():
         ssh['log_level'] = conf.return_value('loglevel')
 
     if conf.exists('mac'):
-        # TODO: OpenSSH supports having multiple MACs configured. VyOS CLI
-        # yet has no multi node for this. See T632 in phabricator.
-        mac = conf.return_value('mac')
+        mac = conf.return_values('mac')
         ssh.setdefault('mac', mac)
 
     if conf.exists('port'):

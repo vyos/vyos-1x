@@ -57,10 +57,11 @@
           </leafNode>
           <leafNode name="ciphers">
             <properties>
-              <help>Allowed ciphers</help>
+              <help>Specifies allowed Ciphers</help>
               <completionHelp>
                 <script>ssh -Q cipher | tr '\n' ' '</script>
               </completionHelp>
+              <multi/>
             </properties>
           </leafNode>
           <leafNode name="disable-host-validation">
@@ -75,10 +76,11 @@
           </leafNode>
           <leafNode name="key-exchange">
             <properties>
-              <help>Key exchange algorithms</help>
+              <help>Specifies available KEX (Key Exchange) algorithms</help>
               <completionHelp>
                 <script>ssh -Q kex | tr '\n' ' '</script>
               </completionHelp>
+              <multi/>
             </properties>
           </leafNode>
           <leafNode name="listen-address">
@@ -126,10 +128,11 @@
           </leafNode>
           <leafNode name="mac">
             <properties>
-              <help>Allowed message authentication algorithms</help>
+                <help>Specifies available MAC (message authentication code) algorithms</help>
               <completionHelp>
                 <script>ssh -Q mac | tr '\n' ' '</script>
               </completionHelp>
+              <multi/>
             </properties>
           </leafNode>
           <leafNode name="port">
