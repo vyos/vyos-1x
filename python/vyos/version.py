@@ -19,10 +19,6 @@
 
 import json
 
-class ConfigError(Exception):
-    pass
-
-
 def get_version_data(file='/opt/vyatta/etc/version.json'):
     with open(file, 'r') as f:
         version_data = json.load(f)

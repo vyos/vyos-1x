@@ -22,7 +22,7 @@ import os
 import jinja2
 
 from vyos.config import Config
-from vyos.util import ConfigError
+from vyos import ConfigError
 
 config_file = r'/etc/ssh/sshd_config'
 

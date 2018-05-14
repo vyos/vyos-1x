@@ -21,7 +21,7 @@ import re
 import sys
 
 from vyos.config import Config
-from vyos.util import ConfigError
+from vyos import ConfigError
 
 
 crontab_file = "/etc/cron.d/vyos-crontab"
