@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="dns">
+        <children>
+          <node name="forwarding">
+            <properties>
+              <help>Show DNS forwarding information</help>
+            </properties>
+            <children>
+              <leafNode name="statistics">
+                <properties>
+                  <help>Show DNS forwarding statistics</help>
+                </properties>
+                <command>${vyos_bindir}/vyos-dns-forwarding-statistics.py</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="dns">
+        <children>
+          <leafNode name="forwarding">
+            <properties>
+              <help>Restart DNS forwarding service</help>
+            </properties>
+            <command>${vyos_bindir}/vyos-restart-dns-forwarding.sh</command>
+          </leafNode>
+         </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
