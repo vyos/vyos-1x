@@ -131,7 +131,7 @@ def get_properties(p):
                     pass
                 if v_argument is None:
                     v_argument = ""
-                vc.append("exec {0}/{1} {2} $VAR(@); {3}".format(validator_dir, v_name, v_argument, error_msg))
+                vc.append("exec \"{0}/{1} {2} $VAR(@)\"; \"{3}\"".format(validator_dir, v_name, v_argument, error_msg))
         props["constraints"] = vc
     except:
         props["constraints"] = []
@@ -165,15 +165,13 @@ def get_properties(p):
     except:
         pass
 
-    # Get type
-    try:
-        props["type"] = p.find("type").text
-    except:
-        pass
-
     # Get "multi"
     if p.find("multi") is not None:
         props["multi"] = True
+
+    # Get "valueless"
+    if p.find("valueless") is not None:
+        props["valueless"] = True
 
     return props
 
@@ -190,6 +188,7 @@ def make_node_def(props):
         node_def += "multi:\n"
 
     if "type" in props:
+        # Will always be txt in practice if it's set
         node_def += "type: {0}\n".format(props["type"])
 
     if "priority" in props:
@@ -238,8 +237,10 @@ def process_node(n, tmpl_dir):
     if owner:
         props["owner"] = owner
     # Type should not be set for non-tag, non-leaf nodes
+    # For non-valueless leaf nodes, set the type to txt: to make them have some type,
+    # actual value validation is handled by constraints translated to syntax:expression:
     if node_type != "node":
-        if "type" not in props.keys():
+        if "valueless" not in props.keys():
             props["type"] = "txt"
     if node_type == "tagNode":
         props["tag"] = "True"
