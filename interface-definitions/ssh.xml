@@ -80,8 +80,11 @@
                 <format>ipv6</format>
                 <description>IPv6 address to listen for incoming connections</description>
               </valueHelp>
-              <type>ipv4,ipv6</type>
               <multi/>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="loglevel">
@@ -121,10 +124,12 @@
             <properties>
               <help>Port for SSH service</help>
               <valueHelp>
-                <format>u32:1-65535</format>
+                <format>1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
-              <type>u32</type>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
             </properties>
           </leafNode>
         </children>

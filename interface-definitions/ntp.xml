@@ -55,7 +55,10 @@
                     <description>IPv6 address and prefix length</description>
                   </valueHelp>
                   <multi/>
-                  <type>ipv4net,ipv6net</type>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>

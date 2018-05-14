@@ -17,10 +17,12 @@
                 <properties>
                   <help>DNS forwarding cache size</help>
                   <valueHelp>
-                    <format>u32:0-10000</format>
+                    <format>0-10000</format>
                     <description>DNS forwarding cache size</description>
                   </valueHelp>
-                  <type>u32</type>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-10000"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="dhcp">
@@ -49,7 +51,10 @@
                         <description>Domain Name Server (DNS) IPv6 address</description>
                       </valueHelp>
                       <multi/>
-                      <type>ipv4,ipv6</type>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
+                      </constraint>
                     </properties>
                   </leafNode>
                 </children>
@@ -80,7 +85,10 @@
                     <description>Domain Name Server (DNS) IPv6 address</description>
                   </valueHelp>
                   <multi/>
-                  <type>ipv4,ipv6</type>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="system">
