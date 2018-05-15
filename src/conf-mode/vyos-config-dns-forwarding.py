@@ -51,9 +51,10 @@ local-address={{ listen_on | join(',') }}
 # domain ... server ...
 {% if domains -%}
 
-{% for d in domains -%}
-forward-zones={{ d.name }}={{ d.servers | join(";") }}
-{% endfor -%}
+forward-zones={% for d in domains %}
+{{ d.name }}={{ d.servers | join(";") }}
+{%- if loop.first %}, {% endif %}
+{% endfor %}
 
 {% endif %}
 
@@ -184,7 +185,7 @@ def generate(dns):
     if dns is None:
         return None
 
-    tmpl = jinja2.Template(config_tmpl)
+    tmpl = jinja2.Template(config_tmpl, trim_blocks=True)
 
     config_text = tmpl.render(dns)
     with open(config_file, 'w') as f:
