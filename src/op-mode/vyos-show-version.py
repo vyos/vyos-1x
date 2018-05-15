@@ -41,7 +41,7 @@ def read_file(name):
     try:
         with open (name, "r") as f:
             data = f.read()
-        return data.decode().strip()
+        return data.strip()
     except:
         # This works since we only read /sys/class/* stuff
         # with this function

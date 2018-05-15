@@ -45,7 +45,7 @@
                     <description>Execution interval in days</description>
                   </valueHelp>
                   <constraint>
-                    <regex>[1-9]([0-9]+)([mhd]{0,1})</regex>
+                    <regex>[1-9]([0-9]*)([mhd]{0,1})</regex>
                   </constraint>
                 </properties>
               </leafNode>
