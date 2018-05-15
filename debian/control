@@ -19,6 +19,7 @@ Depends: python3,
   ipaddrcheck,
   tcpdump,
   bmon,
+  hvinfo,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
