@@ -59,6 +59,7 @@ Banner /etc/issue.net
 Subsystem sftp /usr/lib/openssh/sftp-server
 UsePAM yes
 HostKey /etc/ssh/ssh_host_key
+PermitRootLogin no
 
 # Specifies whether sshd should look up the remote host name,
 # and to check that the resolved host name for the remote IP
@@ -71,9 +72,6 @@ Port {{ port }}
 
 # Gives the verbosity level that is used when logging messages from sshd
 LogLevel {{ log_level }}
-
-# Specifies whether root can log in using ssh
-PermitRootLogin {{ allow_root }}
 
 # Specifies whether password authentication is allowed
 PasswordAuthentication {{ password_authentication }}
@@ -142,7 +140,6 @@ DenyGroups {{ deny_groups | join(" ") }}
 default_config_data = {
     'port' : '22',
     'log_level': 'INFO',
-    'allow_root': 'no',
     'password_authentication': 'yes',
     'host_validation': 'yes'
 }
@@ -170,9 +167,6 @@ def get_config():
     if conf.exists('access-control deny group'):
         deny_groups = conf.return_values('access-control deny group')
         ssh.setdefault('deny_groups', deny_groups)
-
-    if conf.exists('allow-root'):
-        ssh['allow-root'] = 'yes'
 
     if conf.exists('ciphers'):
         ciphers = conf.return_values('ciphers')
