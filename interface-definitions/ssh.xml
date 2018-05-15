@@ -38,11 +38,6 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="allow-root">
-            <properties>
-              <help>Enable root login over ssh</help>
-            </properties>
-          </leafNode>
           <leafNode name="ciphers">
             <properties>
               <help>Allowed ciphers</help>
