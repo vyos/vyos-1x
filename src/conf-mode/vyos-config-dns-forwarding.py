@@ -52,7 +52,7 @@ local-address={{ listen_on | join(',') }}
 {% if domains -%}
 
 {% for d in domains -%}
-forward-zones={{ d.name }} = {{ d.servers | join(";") }}
+forward-zones={{ d.name }}={{ d.servers | join(";") }}
 {% endfor -%}
 
 {% endif %}
@@ -112,7 +112,7 @@ def get_config():
 
     if conf.exists('name-server'):
         name_servers = conf.return_values('name-server')
-        dns.setdefault('name_servers', name_servers)
+        dns['name_servers'] = dns['name_servers'] + name_servers
 
     if conf.exists('system'):
         conf.set_level('system')
