@@ -16,10 +16,12 @@ Depends: python3,
   ${python3:Depends},
   python3-netifaces,
   python3-jinja2,
+  python3-pystache,
   ipaddrcheck,
   tcpdump,
   bmon,
   hvinfo,
+  file,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
