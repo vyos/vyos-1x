@@ -89,7 +89,7 @@ ListenAddress {{ a }}
 # Specifies the ciphers allowed. Multiple ciphers must be comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'ciphers', thus we have only one :/
-Ciphers {{ ciphers }}
+Ciphers {{ ciphers | join(",") }}
 {% endif %}
 
 {% if mac -%}
@@ -98,7 +98,7 @@ Ciphers {{ ciphers }}
 # comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'mac', thus we have only one :/
-MACs {{ mac }}
+MACs {{ mac | join(",") }}
 {% endif %}
 
 {% if key_exchange -%}
@@ -106,7 +106,7 @@ MACs {{ mac }}
 # be comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'key-exchange', thus we have only one :/
-KexAlgorithms {{ key_exchange }}
+KexAlgorithms {{ key_exchange | join(",") }}
 {% endif %}
 
 {% if allow_users -%}
@@ -155,61 +155,27 @@ def get_config():
     else:
         conf.set_level('service ssh')
 
-    if conf.exists('access-control allow-users'):
-        # Retrieve ',' separated list for allowed users and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        allow_user = conf.return_value('access-control allow-users')
-        tmp = allow_user.split(',')
-        users = []
-        for u in tmp:
-            users.append(u)
+    if conf.exists('access-control allow user'):
+        allow_users = conf.return_values('access-control allow user')
+        ssh.setdefault('allow_users', allow_users)
 
-        ssh.setdefault('allow_users', users)
+    if conf.exists('access-control allow group'):
+        allow_groups = conf.return_values('access-control allow group')
+        ssh.setdefault('allow_groups', allow_groups)
 
-    if conf.exists('access-control allow-groups'):
-        # Retrieve ',' separated list for allowed groups and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        allow_group = conf.return_value('access-control allow-groups')
-        tmp = allow_group.split(',')
-        groups = []
-        for g in tmp:
-            groups.append(g)
+    if conf.exists('access-control deny user'):
+        deny_users = conf.return_values('access-control deny user')
+        ssh.setdefault('deny_users', deny_users)
 
-        ssh.setdefault('allow_groups', groups)
-
-    if conf.exists('access-control deny-users'):
-        # Retrieve ',' separated list for denied users and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        deny_user = conf.return_value('access-control deny-users')
-        tmp = deny_user.split(',')
-        users = []
-        for u in tmp:
-            users.append(u)
-
-        ssh.setdefault('deny_users', users)
-
-    if conf.exists('access-control deny-groups'):
-        # Retrieve ',' separated list for denied groups and convert it to a list.
-        # The current VyOS CLI implementation should be improved to rather use multi nodes
-        # instead of a ',' separated input.
-        deny_group = conf.return_value('access-control deny-groups')
-        tmp = deny_group.split(',')
-        groups = []
-        for g in tmp:
-            groups.append(g)
-
-        ssh.setdefault('deny_groups', groups)
+    if conf.exists('access-control deny group'):
+        deny_groups = conf.return_values('access-control deny group')
+        ssh.setdefault('deny_groups', deny_groups)
 
     if conf.exists('allow-root'):
         ssh['allow-root'] = 'yes'
 
     if conf.exists('ciphers'):
-        # TODO: OpenSSH supports having multiple Ciphers configured. VyOS CLI
-        # yet has no multi node for this. See T632 in phabricator.
-        ciphers = conf.return_value('ciphers')
+        ciphers = conf.return_values('ciphers')
         ssh.setdefault('ciphers', ciphers)
 
     if conf.exists('disable-host-validation'):
@@ -219,9 +185,7 @@ def get_config():
         ssh['password_authentication'] = 'no'
 
     if conf.exists('key-exchange'):
-        # TODO: OpenSSH supports having multiple KEYX methods configured. VyOS CLI
-        # yet has no multi node for this. See T632 in phabricator.
-        kex = conf.return_value('key-exchange')
+        kex = conf.return_values('key-exchange')
         ssh.setdefault('key_exchange', kex)
 
     if conf.exists('listen-address'):
@@ -240,9 +204,7 @@ def get_config():
         ssh['log_level'] = conf.return_value('loglevel')
 
     if conf.exists('mac'):
-        # TODO: OpenSSH supports having multiple MACs configured. VyOS CLI
-        # yet has no multi node for this. See T632 in phabricator.
-        mac = conf.return_value('mac')
+        mac = conf.return_values('mac')
         ssh.setdefault('mac', mac)
 
     if conf.exists('port'):
