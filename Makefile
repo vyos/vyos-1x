@@ -35,3 +35,11 @@ all: interface_definitions op_mode_definitions
 clean:
 	rm -rf $(TMPL_DIR)/*
 	rm -rf $(OP_TMPL_DIR)/*
+
+.PHONY: test
+test:
+	nosetests --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf-mode,src/op-mode --verbose
+
+.PHONY: sonar
+sonar:
+	sonar-scanner -X -Dsonar.login=${SONAR_TOKEN}
