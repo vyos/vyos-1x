@@ -93,7 +93,7 @@ def get_properties(p):
     try:
         props["help"] = p.find("help").text
     except:
-        pass
+        props["help"] = "No help available"
 
 
     # Get the completion help strings
@@ -113,7 +113,7 @@ def get_properties(p):
             for i in paths:
                 comp_exprs.append("/bin/cli-shell-api listNodes {0}".format(i.text))
             for i in scripts:
-                comp_exprs.append("sh -c \"{0}\"".format(i.text))
+                comp_exprs.append("{0}".format(i.text))
             comp_help = " && ".join(comp_exprs)
             props["comp_help"] = comp_help
     except:
@@ -127,14 +127,6 @@ def make_node_def(props, command):
     #      out of control
 
     node_def = ""
-
-    if "tag" in props:
-        node_def += "tag:\n"
-
-
-    if "type" in props:
-        node_def += "type: {0}\n".format(props["type"])
-
 
     if "help" in props:
         node_def += "help: {0}\n".format(props["help"])
@@ -173,32 +165,45 @@ def process_node(n, tmpl_dir):
 
     props = get_properties(props_elem)
 
-    # Type should not be set for non-tag, non-leaf nodes
-    if node_type != "node":
-        props["type"] = "txt"
-    if node_type == "tagNode":
-        props["tag"] = "True"
-    
-
-    with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
-        f.write(make_node_def(props, command))
-
-
     if node_type == "node":
-        inner_nodes = children.iterfind("*")
-        for inner_n in inner_nodes:
-            process_node(inner_n, my_tmpl_dir)
-    if node_type == "tagNode":
-        my_tmpl_dir.append("node.tag")
         if debug:
-            print("Created path for the tagNode:", end="")
+          print("Processing node {}".format(name))
+
+        with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
+            f.write(make_node_def(props, command))
+
+        if children is not None:
+            inner_nodes = children.iterfind("*")
+            for inner_n in inner_nodes:
+                process_node(inner_n, my_tmpl_dir)
+    if node_type == "tagNode":
+        if debug:
+          print("Processing tag node {}".format(name))
+
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
-        inner_nodes = children.iterfind("*")
-        for inner_n in inner_nodes:
-            process_node(inner_n, my_tmpl_dir)
+
+        with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
+            f.write('help: {0}\0'.format(props['help']))
+
+        my_tmpl_dir.append("node.tag")
+        os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
+        if debug:
+            print("Created path for the tagNode: {}".format(make_path(my_tmpl_dir)), end="")
+
+        with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
+            f.write(make_node_def(props, command))
+
+        if children is not None:
+            inner_nodes = children.iterfind("*")
+            for inner_n in inner_nodes:
+                process_node(inner_n, my_tmpl_dir)
     else:
         # This is a leaf node
-        pass
+        if debug:
+            print("Processing leaf node {}".format(name))
+
+        with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
+            f.write(make_node_def(props, command))
 
 
 root = xml.getroot()
