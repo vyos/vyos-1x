@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="bandwidth">
+        <properties>
+          <help>Monitor interface bandwidth in real time</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <command>bmon -p $4</command>
+            <properties>
+              <help>Monitor bandwidth usage on specified interface</help>
+              <completionHelp>
+                <script>${vyos_bindir}/vyos-list-interfaces.py</script>
+              </completionHelp>
+            </properties>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
