@@ -50,12 +50,6 @@
               </node>
             </children>
           </node>
-          <leafNode name="allow-root">
-            <properties>
-              <help>Enable root login over ssh</help>
-              <valueless/>
-            </properties>
-          </leafNode>
           <leafNode name="ciphers">
             <properties>
               <help>Specifies allowed Ciphers</help>
