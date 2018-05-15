@@ -62,6 +62,7 @@
               <leafNode name="ignore-hosts-file">
                 <properties>
                   <help>Do not use local /etc/hosts file in name resolution</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="listen-on">
@@ -94,6 +95,7 @@
               <leafNode name="system">
                 <properties>
                   <help>DNS forwarding to system nameservers</help>
+                  <valueless/>
                 </properties>
               </leafNode>
             </children>

@@ -26,6 +26,7 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/show/dns/node.def
 	rm -f $(OP_TMPL_DIR)/reset/node.def
 	rm -f $(OP_TMPL_DIR)/restart/node.def
+	rm -f $(OP_TMPL_DIR)/monitor/node.def
 
 .PHONY: all
 all: interface_definitions op_mode_definitions

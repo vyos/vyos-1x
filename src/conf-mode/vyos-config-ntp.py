@@ -23,7 +23,7 @@ import jinja2
 import ipaddress
 
 from vyos.config import Config
-from vyos.util import ConfigError
+from vyos import ConfigError
 
 config_file = r'/etc/ntp.conf'
 
