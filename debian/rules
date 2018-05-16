@@ -20,8 +20,8 @@ override_dh_auto_install:
 	# Install scripts
 	mkdir -p $(DIR)/$(VYOS_SBIN_DIR)
 	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
-	cp -r src/conf-mode/* $(DIR)/$(VYOS_SBIN_DIR)
-	cp -r src/op-mode/* $(DIR)/$(VYOS_BIN_DIR)
+	cp -r src/conf_mode/* $(DIR)/$(VYOS_SBIN_DIR)
+	cp -r src/op_mode/* $(DIR)/$(VYOS_BIN_DIR)
 
 	# Install validators
 	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
