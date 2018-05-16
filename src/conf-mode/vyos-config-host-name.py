@@ -19,64 +19,70 @@
 import os
 import re
 import sys
+import subprocess
 
 from vyos.config import Config
 from vyos.util import ConfigError
 
-hostname_config = "/etc/hostname"
-mailname_config = "/etc/mailname"
 hostname_regex = re.compile("^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$")
 
 def get_config():
     conf = Config()
-    conf.set_level("system")
-    
-	hostname = conf.return_value("host-name")
-	domain = conf.return_value("domain-name")
 
-    return {
-		"hostname": hostname,
-		"domain": domain
-	}
+    hostname = conf.return_value("system host-name")
+    domain = conf.return_value("system domain-name")
+
+    # No one likes fixups, but we really don't want VyOS fail to boot
+    # if hostname is not in the config
+    if not hostname:
+        hostname = "vyos"
+
+    if domain:
+        fqdn = "{0}.{1}".format(hostname, domain)
+    else:
+        fqdn = hostname
+
+    return {"hostname": hostname, "domain": domain, "fqdn": fqdn}
 
 def verify(config):
-	# check for invalid host
+    # check for invalid host
 	
-	# pattern $VAR(@) "^[[:alnum:]][-.[:alnum:]]*[[:alnum:]]$" ; "invalid host name $VAR(@)"
-	valid = hostname_regex.match(config.hostname)
-	if (!valid):
-		raise ConfigError('invalid host name' + config.hostname)
+    # pattern $VAR(@) "^[[:alnum:]][-.[:alnum:]]*[[:alnum:]]$" ; "invalid host name $VAR(@)"
+    if not hostname_regex.match(config["hostname"]):
+        raise ConfigError('Invalid host name ' + config["hostname"])
 
-	# pattern $VAR(@) "^.{1,63}$" ; "invalid host-name length"
-	length = len(config.hostname)
-	if length < 1 or length > 63:
-		raise ConfigError('invalid host-name length')
+    # pattern $VAR(@) "^.{1,63}$" ; "invalid host-name length"
+    length = len(config["hostname"])
+    if length < 1 or length > 63:
+        raise ConfigError('Invalid host-name length, must be less than 63 characters')
 
-	return None
+    return None
 
 
 def generate(config):
-	mailname = config.hostname
-	if config.domain != "":
-		mailname += '.' + config.domain
+    # read the hosts file
+    with open('/etc/hosts', 'r') as f:
+        hosts = f.read()
 
-	# update /etc/hostname
-	with open(hostname_config, 'w') as f:
-		f.write(config.hostname)
+    # get the current hostname
+    old_hostname = subprocess.check_output(['hostname']).decode().strip()
 
-	# update /etc/mailname
-	with open(mailname_config, 'w') as f:
-		f.write(mailname)
+    # replace the local host line
+    hosts = re.sub(r"(127.0.1.1\s+{0}.*)".format(old_hostname), r"127.0.1.1\t{0} # VyOS entry\n".format(config["fqdn"]), hosts)
 
-	return None
+    with open('/etc/hosts', 'w') as f:
+        f.write(hosts)
+
+    return None
 
 
 def apply(config):
-	# set hostname for the current session
-    cmd = "hostname " + config.hostname
-    os.system(cmd)
+    os.system("hostnamectl set-hostname {0}".format(config["fqdn"]))
 
-	return None
+    # restart services that use the hostname
+    os.system("systemctl restart rsyslog.service")
+
+    return None
 
 
 if __name__ == '__main__':
