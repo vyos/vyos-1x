@@ -45,6 +45,9 @@
           <node name="allow-clients">
             <properties>
               <help>Network Time Protocol (NTP) server options</help>
+              <constraint>
+                <validator name="ip-prefix"/>
+              </constraint>
             </properties>
             <children>
               <leafNode name="address">
@@ -60,8 +63,7 @@
                   </valueHelp>
                   <multi/>
                   <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
+                    <validator name="ip-address"/>
                   </constraint>
                 </properties>
               </leafNode>
