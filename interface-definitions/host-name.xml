@@ -5,18 +5,22 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <node name="host-name" owner="${vyos_sbindir}/vyos-config-host-name.py">
+      <leafNode name="host-name" owner="${vyos_sbindir}/vyos-config-host-name.py">
         <properties>
           <help>System host name (default: vyos)</help>
+          <constraint>
+            <regex>[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]</regex>
+          </constraint>
         </properties>
-        <children>
-          <leafNode name="hostname">
-            <properties>
-              <help>System host name (default: vyos)</help>
-            </properties>
-          </leafNode>
-        </children>
-      </node>
+      </leafNode>
+      <leafNode name="domain-name" owner="${vyos_sbindir}/vyos-config-host-name.py">
+        <properties>
+          <help>System domain name</help>
+          <constraint>
+            <regex>[A-Za-z0-9][-.A-Za-z0-9]*</regex>
+          </constraint>
+        </properties>
+      </leafNode>
     </children>
   </node>
 </interfaceDefinition>
