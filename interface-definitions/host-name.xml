@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+
+<!-- host-name configuration -->
+
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="host-name" owner="${vyos_sbindir}/vyos-config-host-name.py">
+        <properties>
+          <help>System host name (default: vyos)</help>
+        </properties>
+        <children>
+          <leafNode name="hostname">
+            <properties>
+              <help>System host name (default: vyos)</help>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
