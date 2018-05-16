@@ -14,7 +14,7 @@
                 <properties>
                   <help>Show DNS forwarding statistics</help>
                 </properties>
-                <command>${vyos_bindir}/vyos_dns_forwarding_statistics.py</command>
+                <command>${vyos_op_scripts_dir}/dns_forwarding_statistics.py</command>
               </leafNode>
             </children>
           </node>
@@ -30,7 +30,7 @@
             <properties>
               <help>Restart DNS forwarding service</help>
             </properties>
-            <command>${vyos_bindir}/vyos_restart_dns_forwarding.sh</command>
+            <command>${vyos_op_scripts_dir}/dns_forwarding_restart.sh</command>
           </leafNode>
          </children>
       </node>
