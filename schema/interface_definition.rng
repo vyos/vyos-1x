@@ -88,7 +88,12 @@
   -->
   <define name="leafNode">
     <element name="leafNode">
-      <ref name="nodeNameAttr"/>
+      <interleave>
+        <optional>
+          <ref name="ownerAttr"/>
+        </optional>
+        <ref name="nodeNameAttr"/>
+      </interleave>
       <ref name="properties"/>
     </element>
   </define>
