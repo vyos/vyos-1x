@@ -18,7 +18,7 @@ debug = False
 
 try:
     for r in args.regex:
-        if re.match(r, args.value):
+        if re.fullmatch(r, args.value):
             sys.exit(0)
 except Exception as exn:
     if debug:
