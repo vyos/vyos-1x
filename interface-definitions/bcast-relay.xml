@@ -10,7 +10,7 @@
           <help>UDP Broadcast Relay parameters</help>
         </properties>
         <children>
-          <tagNode name="id" owner="${vyos_sbindir}/vyos-config-bcast-relay.py">
+          <tagNode name="id" owner="${vyos_sbindir}/vyos-config_bcast_relay.py">
             <properties>
               <help>Unique ID for each UDP port to forward</help>
               <valueHelp>

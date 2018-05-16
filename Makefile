@@ -38,7 +38,7 @@ clean:
 
 .PHONY: test
 test:
-	python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf-mode,src/op-mode --verbose
+	python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode --verbose
 
 .PHONY: sonar
 sonar:

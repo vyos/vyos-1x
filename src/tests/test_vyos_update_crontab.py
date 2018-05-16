@@ -17,17 +17,16 @@
 #
 
 import os
-import sys
 import tempfile
 import unittest
 
 from vyos import ConfigError
-import helper
-
-file_path = 'src/conf-mode/vyos-update-crontab.py'
-module_name = 'vyos_update_crontab'
-helper.prepare_module(file_path, module_name)
-import vyos_update_crontab
+try:
+    from src.conf_mode import vyos_update_crontab
+except ModuleNotFoundError:  # for unittest.main()
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+    from src.conf_mode import vyos_update_crontab
 
 
 class TestUpdateCrontab(unittest.TestCase):

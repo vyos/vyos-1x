@@ -5,7 +5,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <node name="ntp" owner="${vyos_sbindir}/vyos-config-ntp.py">
+      <node name="ntp" owner="${vyos_sbindir}/vyos_config_ntp.py">
         <properties>
           <help>Network Time Protocol (NTP) configuration</help>
           <priority>400</priority>

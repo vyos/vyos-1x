@@ -7,7 +7,7 @@
     <children>
       <node name="dns">
         <children>
-          <node name="forwarding" owner="${vyos_sbindir}/vyos-config-dns-forwarding.py">
+          <node name="forwarding" owner="${vyos_sbindir}/vyos_config_dns_forwarding.py">
             <properties>
               <help>DNS forwarding</help>
               <priority>918</priority>

@@ -6,19 +6,19 @@
         <properties>
           <help>Show system version information</help>
         </properties>
-        <command>${vyos_bindir}/vyos-show-version.py</command>
+        <command>${vyos_bindir}/vyos_show_version.py</command>
         <children>
           <leafNode name="funny">
             <properties>
               <help>Show system version and some fun stuff</help>
             </properties>
-            <command>${vyos_bindir}/vyos-show-version.py --funny</command>
+            <command>${vyos_bindir}/vyos_show_version.py --funny</command>
           </leafNode>
           <leafNode name="all">
              <properties>
                <help>Show system version and versions of all packages</help>
              </properties>
-             <command>${vyos_bindir}/vyos-show-version.py --all</command>
+             <command>${vyos_bindir}/vyos_show_version.py --all</command>
           </leafNode>
         </children>
       </node>
