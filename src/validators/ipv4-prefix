@@ -1,0 +1,3 @@
+#!/bin/sh
+
+ipaddrcheck --is-ipv4-net $1
