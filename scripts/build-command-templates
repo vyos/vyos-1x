@@ -142,13 +142,13 @@ def get_properties(p):
                 if v_argument is None:
                     v_argument = ""
 
-                validators.append("{0} {1} \\\'$VAR(@)\\\'".format(v_name, v_argument))
+                validators.append("{0} {1}".format(v_name, v_argument))
 
 
         regex_args = " ".join(map(lambda s: "--regex \\\'{0}\\\'".format(s), regexes))
         validator_args = " ".join(map(lambda s: "--exec \\\"{0}\\\"".format(s), validators))
         validator_script = '${vyos_libexecdir}/validate-value.py'
-        validator_string = "exec \"{0} {1} {2}\"; \"{3}\"".format(validator_script, regex_args, validator_args, error_msg)
+        validator_string = "exec \"{0} {1} {2} --value \\\'$VAR(@)\\\'\"; \"{3}\"".format(validator_script, regex_args, validator_args, error_msg)
 
         props["constraint"] = validator_string
     except Exception as exn:
