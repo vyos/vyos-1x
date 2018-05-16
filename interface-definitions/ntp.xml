@@ -5,7 +5,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <node name="ntp" owner="${vyos_sbindir}/vyos_config_ntp.py">
+      <node name="ntp" owner="${vyos_conf_scripts_dir}/ntp.py">
         <properties>
           <help>Network Time Protocol (NTP) configuration</help>
           <priority>400</priority>
@@ -45,9 +45,6 @@
           <node name="allow-clients">
             <properties>
               <help>Network Time Protocol (NTP) server options</help>
-              <constraint>
-                <validator name="ip-prefix"/>
-              </constraint>
             </properties>
             <children>
               <leafNode name="address">
@@ -63,7 +60,7 @@
                   </valueHelp>
                   <multi/>
                   <constraint>
-                    <validator name="ip-address"/>
+                    <validator name="ip-prefix"/>
                   </constraint>
                 </properties>
               </leafNode>

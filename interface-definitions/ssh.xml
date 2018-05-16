@@ -5,7 +5,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="ssh" owner="${vyos_sbindir}/vyos_config_ssh.py">
+      <node name="ssh" owner="${vyos_conf_scripts_dir}/ssh.py">
         <properties>
           <help>Secure SHell (SSH) protocol</help>
           <priority>500</priority>

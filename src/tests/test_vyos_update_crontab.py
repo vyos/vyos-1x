@@ -22,11 +22,11 @@ import unittest
 
 from vyos import ConfigError
 try:
-    from src.conf_mode import vyos_update_crontab
+    from src.conf_mode import task_scheduler
 except ModuleNotFoundError:  # for unittest.main()
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-    from src.conf_mode import vyos_update_crontab
+    from src.conf_mode import task_scheduler
 
 
 class TestUpdateCrontab(unittest.TestCase):
@@ -74,9 +74,9 @@ class TestUpdateCrontab(unittest.TestCase):
             with self.subTest(msg=t['name'], tasks=t['tasks'], expected=t['expected']):
                 if t['expected'] is not None:
                     with self.assertRaises(t['expected']):
-                        vyos_update_crontab.verify(t['tasks'])
+                        task_scheduler.verify(t['tasks'])
                 else:
-                    vyos_update_crontab.verify(t['tasks'])
+                    task_scheduler.verify(t['tasks'])
 
     def test_generate(self):
         tests = [
@@ -114,16 +114,16 @@ class TestUpdateCrontab(unittest.TestCase):
         ]
         for t in tests:
             with self.subTest(msg=t['name'], tasks=t['tasks'], expected=t['expected']):
-                vyos_update_crontab.crontab_file = tempfile.mkstemp()[1]
-                vyos_update_crontab.generate(t['tasks'])
+                task_scheduler.crontab_file = tempfile.mkstemp()[1]
+                task_scheduler.generate(t['tasks'])
                 if len(t['expected']) > 0:
-                    self.assertTrue(os.path.isfile(vyos_update_crontab.crontab_file))
-                    with open(vyos_update_crontab.crontab_file) as f:
+                    self.assertTrue(os.path.isfile(task_scheduler.crontab_file))
+                    with open(task_scheduler.crontab_file) as f:
                         actual = f.read()
                         self.assertEqual(t['expected'], actual.splitlines())
-                    os.remove(vyos_update_crontab.crontab_file)
+                    os.remove(task_scheduler.crontab_file)
                 else:
-                    self.assertFalse(os.path.isfile(vyos_update_crontab.crontab_file))
+                    self.assertFalse(os.path.isfile(task_scheduler.crontab_file))
 
 
 if __name__ == "__main__":

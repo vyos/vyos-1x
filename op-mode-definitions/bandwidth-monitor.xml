@@ -12,7 +12,7 @@
             <properties>
               <help>Monitor bandwidth usage on specified interface</help>
               <completionHelp>
-                <script>${vyos_bindir}/vyos_list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
             </properties>
           </tagNode>

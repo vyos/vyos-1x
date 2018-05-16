@@ -5,7 +5,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <leafNode name="host-name" owner="${vyos_sbindir}/vyos_config_host_name.py">
+      <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
           <help>System host name (default: vyos)</help>
           <constraint>

@@ -10,7 +10,7 @@
           <help>Task scheduler settings</help>
         </properties>
         <children>
-          <tagNode name="task" owner="${vyos_sbindir}/vyos_update_crontab.py">
+          <tagNode name="task" owner="${vyos_conf_scripts_dir}/task_scheduler.py">
             <properties>
               <help>Scheduled task</help>
               <valueHelp>
