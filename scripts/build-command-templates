@@ -49,6 +49,8 @@ schema_file = args.SCHEMA_FILE
 output_dir = args.OUTPUT_DIR
 debug = args.debug
 
+debug = True
+
 ## Load and validate the inputs
 
 try:
@@ -114,27 +116,44 @@ def get_properties(p):
         except:
             pass
 
-        vce = p.findall("constraint")
+        vce = p.find("constraint")
         vc = []
-        for v in vce:
-            if v.find("regex") is not None:
-                vc.append("pattern $VAR(@) \"{0}\"; {1}".format(v.find("regex").text, error_msg))
-            else:
-                validator = v.find("validator")
-                v_name = validator.get("name")
+
+        # The old backend doesn't support multiple validators in OR mode
+        # so we emulate it
+
+        regex_elements = vce.findall("regex")
+        regexes = []
+        if regex_elements is not None:
+            regexes = list(map(lambda e: e.text, regex_elements))
+
+        validator_elements = vce.findall("validator")
+        validators = []
+        if validator_elements is not None:
+            for v in validator_elements:
+                v_name = os.path.join(validator_dir, v.get("name"))
 
                 # XXX: lxml returns None for empty arguments
                 v_argument = None
                 try:
-                    v_argument = validator.get("argument")
+                    v_argument = v.get("argument")
                 except:
                     pass
                 if v_argument is None:
                     v_argument = ""
-                vc.append("exec \"{0}/{1} {2} $VAR(@)\"; \"{3}\"".format(validator_dir, v_name, v_argument, error_msg))
-        props["constraints"] = vc
-    except:
-        props["constraints"] = []
+
+                validators.append("{0} {1} \\\'$VAR(@)\\\'".format(v_name, v_argument))
+
+
+        regex_args = " ".join(map(lambda s: "--regex \\\'{0}\\\'".format(s), regexes))
+        validator_args = " ".join(map(lambda s: "--exec \\\"{0}\\\"".format(s), validators))
+        validator_script = '${vyos_libexecdir}/validate-value.py'
+        validator_string = "exec \"{0} {1} {2}\"; \"{3}\"".format(validator_script, regex_args, validator_args, error_msg)
+
+        props["constraint"] = validator_string
+    except Exception as exn:
+        print(exn)
+        pass
 
     # Get the completion help strings
     try:
@@ -204,9 +223,8 @@ def make_node_def(props):
     if "comp_help" in props:
         node_def += "allowed: {0}\n".format(props["comp_help"])
 
-    if "constraints" in props:
-        for c in props["constraints"]:
-            node_def += "syntax:expression: {0}\n".format(c)
+    if "constraint" in props:
+        node_def += "syntax:expression: {0}\n".format(props["constraint"])
 
     if "owner" in props:
         node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])

@@ -27,6 +27,9 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 	cp -r src/validators/* $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 
+	# Install helper scripts
+	cp -r src/helpers/* $(DIR)/$(VYOS_LIBEXEC_DIR)/
+
 	mkdir -p $(DIR)/$(VYOS_CFG_TMPL_DIR)
 	cp -r templates-cfg/* $(DIR)/$(VYOS_CFG_TMPL_DIR)
 
