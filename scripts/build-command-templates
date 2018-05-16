@@ -30,7 +30,8 @@ from lxml import etree as ET
 
 # Defaults
 
-validator_dir = "/opt/vyatta/libexec/validators"
+#validator_dir = "/usr/libexec/vyos/validators"
+validator_dir = "${vyos_validators_dir}"
 default_constraint_err_msg = "Invalid value"
 
 
@@ -147,7 +148,7 @@ def get_properties(p):
 
         regex_args = " ".join(map(lambda s: "--regex \\\'{0}\\\'".format(s), regexes))
         validator_args = " ".join(map(lambda s: "--exec \\\"{0}\\\"".format(s), validators))
-        validator_script = '${vyos_libexecdir}/validate-value.py'
+        validator_script = '${vyos_libexec_dir}/validate-value.py'
         validator_string = "exec \"{0} {1} {2} --value \\\'$VAR(@)\\\'\"; \"{3}\"".format(validator_script, regex_args, validator_args, error_msg)
 
         props["constraint"] = validator_string
