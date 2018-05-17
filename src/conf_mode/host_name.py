@@ -16,17 +16,26 @@
 #
 #
 
+"""
+conf-mode script for 'system host-name' and 'system domain-name'.
+"""
+
 import os
 import re
 import sys
 import subprocess
 
 from vyos.config import Config
-from vyos.util import ConfigError
+from vyos import ConfigError
 
+
+hosts_file = '/etc/hosts'
 hostname_regex = re.compile("^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$")
+local_addr = '127.0.1.1' # NOSONAR
+
 
 def get_config():
+    """Get configuration"""
     conf = Config()
 
     hostname = conf.return_value("system host-name")
@@ -44,9 +53,11 @@ def get_config():
 
     return {"hostname": hostname, "domain": domain, "fqdn": fqdn}
 
+
 def verify(config):
+    """Verify configuration"""
     # check for invalid host
-	
+
     # pattern $VAR(@) "^[[:alnum:]][-.[:alnum:]]*[[:alnum:]]$" ; "invalid host name $VAR(@)"
     if not hostname_regex.match(config["hostname"]):
         raise ConfigError('Invalid host name ' + config["hostname"])
@@ -54,29 +65,33 @@ def verify(config):
     # pattern $VAR(@) "^.{1,63}$" ; "invalid host-name length"
     length = len(config["hostname"])
     if length < 1 or length > 63:
-        raise ConfigError('Invalid host-name length, must be less than 63 characters')
+        raise ConfigError(
+            'Invalid host-name length, must be less than 63 characters')
 
     return None
 
 
 def generate(config):
+    """Generate configuration files"""
     # read the hosts file
-    with open('/etc/hosts', 'r') as f:
+    with open(hosts_file, 'r') as f:
         hosts = f.read()
 
     # get the current hostname
     old_hostname = subprocess.check_output(['hostname']).decode().strip()
 
     # replace the local host line
-    hosts = re.sub(r"(127.0.1.1\s+{0}.*)".format(old_hostname), r"127.0.1.1\t{0} # VyOS entry\n".format(config["fqdn"]), hosts)
+    hosts = re.sub(r"({}\s+{}.*)".format(local_addr, old_hostname),
+                   r"{}\t{} # VyOS entry\n".format(local_addr, config["fqdn"]), hosts)
 
-    with open('/etc/hosts', 'w') as f:
+    with open(hosts_file, 'w') as f:
         f.write(hosts)
 
     return None
 
 
 def apply(config):
+    """Apply configuration"""
     os.system("hostnamectl set-hostname {0}".format(config["fqdn"]))
 
     # restart services that use the hostname
