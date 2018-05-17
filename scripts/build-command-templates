@@ -265,8 +265,13 @@ def process_node(n, tmpl_dir):
         props["tag"] = "True"
 
 
-    with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
-        f.write(make_node_def(props))
+    nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
+    if not os.path.exists(nodedef_path):
+        with open(nodedef_path, "w") as f:
+            f.write(make_node_def(props))
+    else:
+        # Something has already generated that file
+        pass
 
 
     if node_type == "node":

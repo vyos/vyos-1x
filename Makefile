@@ -29,7 +29,7 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 
 .PHONY: all
-all: interface_definitions op_mode_definitions
+all: clean interface_definitions op_mode_definitions
 
 .PHONY: clean
 clean:
