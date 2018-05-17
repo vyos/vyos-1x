@@ -81,8 +81,14 @@ def generate(config):
     old_hostname = subprocess.check_output(['hostname']).decode().strip()
 
     # replace the local host line
-    hosts = re.sub(r"({}\s+{}.*)".format(local_addr, old_hostname),
-                   r"{}\t{} # VyOS entry\n".format(local_addr, config["fqdn"]), hosts)
+    vyos_host_line_re = re.compile(r"({}\s+{}.*)".format(local_addr, old_hostname))
+    vyos_host_line = "{}\t{} # VyOS entry\n".format(local_addr, config["fqdn"])
+    if re.search(vyos_host_line_re, hosts):
+        hosts = re.sub(vyos_host_line_re, vyos_host_line, hosts)
+    else:
+        # On boot (or after errors), the /etc/hosts file has no line for vyos hostname,
+        # so we have to add it
+        hosts = "{0}\n{1}".format(hosts, vyos_host_line)
 
     with open(hosts_file, 'w') as f:
         f.write(hosts)
