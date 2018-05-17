@@ -169,8 +169,13 @@ def process_node(n, tmpl_dir):
         if debug:
           print("Processing node {}".format(name))
 
-        with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
-            f.write(make_node_def(props, command))
+        nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
+        if not os.path.exists(nodedef_path):
+            with open(nodedef_path, "w") as f:
+                f.write(make_node_def(props, command))
+        else:
+           # Something has already generated this file
+           pass
 
         if children is not None:
             inner_nodes = children.iterfind("*")
@@ -182,14 +187,21 @@ def process_node(n, tmpl_dir):
 
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
-        with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
-            f.write('help: {0}\0'.format(props['help']))
+        nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
+        if not os.path.exists(nodedef_path):
+            with open(nodedef_path, "w") as f:
+                f.write('help: {0}\n'.format(props['help']))
+        else:
+            # Something has already generated this file
+            pass
 
+        # Create the inner node.tag part
         my_tmpl_dir.append("node.tag")
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
         if debug:
             print("Created path for the tagNode: {}".format(make_path(my_tmpl_dir)), end="")
 
+        # Not sure if we want partially defined tag nodes, write the file unconditionally
         with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
             f.write(make_node_def(props, command))
 
