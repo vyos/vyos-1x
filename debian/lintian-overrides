@@ -1,0 +1,6 @@
+# It's FSH compliant!
+vyos-1x: file-in-unusual-dir usr/libexec/*
+vyos-1x: non-standard-dir-in-usr usr/libexec/
+
+# Nothing we can do about that right now
+vyos-1x: dir-or-file-in-opt
