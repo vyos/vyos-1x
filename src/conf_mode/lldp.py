@@ -21,12 +21,11 @@ import re
 import sys
 
 from vyos.config import Config
-from vyos.util import ConfigError
-
+from vyos import ConfigError
 
 
 def get_options(config):
-    options ={}
+    options = {}
     config.set_level('service lldp')
     options['listen_vlan'] = config.exists('listen-vlan')
 
