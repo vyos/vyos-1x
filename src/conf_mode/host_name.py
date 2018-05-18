@@ -98,7 +98,7 @@ def generate(config):
 
 def apply(config):
     """Apply configuration"""
-    os.system("hostnamectl set-hostname {0}".format(config["fqdn"]))
+    os.system("hostnamectl set-hostname --static {0}".format(config["fqdn"]))
 
     # restart services that use the hostname
     os.system("systemctl restart rsyslog.service")
