@@ -50,7 +50,7 @@ schema_file = args.SCHEMA_FILE
 output_dir = args.OUTPUT_DIR
 debug = args.debug
 
-debug = True
+#debug = True
 
 ## Load and validate the inputs
 
@@ -109,24 +109,25 @@ def get_properties(p):
         props["val_help"] = []
 
     # Get the constraint statements
+    error_msg = default_constraint_err_msg
+    # Get the error message if it's there
     try:
-        error_msg = default_constraint_err_msg
-        # Get the error message if it's there
-        try:
-            error_msg = p.find("constraintErrorMessage").text
-        except:
-            pass
+        error_msg = p.find("constraintErrorMessage").text
+    except:
+        pass
 
-        vce = p.find("constraint")
-        vc = []
-
+    vce = p.find("constraint")
+    vc = []
+    if vce is not None:
         # The old backend doesn't support multiple validators in OR mode
         # so we emulate it
 
-        regex_elements = vce.findall("regex")
         regexes = []
+        regex_elements = vce.findall("regex")
         if regex_elements is not None:
-            regexes = list(map(lambda e: e.text, regex_elements))
+            regexes = list(map(lambda e: e.text.strip(), regex_elements))
+        if "" in regexes:
+            print("Warning: empty regex, node will be accepting any value")
 
         validator_elements = vce.findall("validator")
         validators = []
@@ -152,9 +153,6 @@ def get_properties(p):
         validator_string = "exec \"{0} {1} {2} --value \\\'$VAR(@)\\\'\"; \"{3}\"".format(validator_script, regex_args, validator_args, error_msg)
 
         props["constraint"] = validator_string
-    except Exception as exn:
-        print(exn)
-        pass
 
     # Get the completion help strings
     try:
@@ -248,8 +246,7 @@ def process_node(n, tmpl_dir):
 
     my_tmpl_dir.append(name)
 
-    if debug:
-        print("Name of the node: {};\n Created directory: ".format(name), end="")
+    print("Name of the node: {0}. Created directory: {1}\n".format(name, "/".join(my_tmpl_dir)), end="")
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
     props = get_properties(props_elem)
