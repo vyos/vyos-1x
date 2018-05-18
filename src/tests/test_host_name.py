@@ -115,8 +115,8 @@ class TestHostName(TestCase):
     def test_apply(self):
         tests = [
             {'name': 'valid_hostname',
-             'config': {"hostname": 'router', "domain": 'localdomain', "fqdn": 'vyos.localdomain'},
-             'expected': [mock.call('hostnamectl set-hostname vyos.localdomain'),
+             'config': {"hostname": 'router', "domain": 'localdomain', "fqdn": 'router.localdomain'},
+             'expected': [mock.call('hostnamectl set-hostname --static router.localdomain'),
                           mock.call('systemctl restart rsyslog.service')]}
         ]
         for t in tests:
