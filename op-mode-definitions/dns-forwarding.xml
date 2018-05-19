@@ -25,6 +25,9 @@
   <node name="restart">
     <children>
       <node name="dns">
+        <properties>
+          <help>Restart a DNS service</help>
+        </properties>
         <children>
           <leafNode name="forwarding">
             <properties>
@@ -33,6 +36,30 @@
             <command>${vyos_op_scripts_dir}/dns_forwarding_restart.sh</command>
           </leafNode>
          </children>
+      </node>
+    </children>
+  </node>
+  <node name="reset">
+    <children>
+      <node name="dns">
+        <properties>
+          <help>Reset a DNS service state</help>
+        </properties>
+        <children>
+          <node name="forwarding">
+            <properties>
+              <help>Reset DNS forwarding cache</help>
+            </properties>
+            <children>
+              <tagNode name="domain">
+                <command>${vyos_op_scripts_dir}/dns_forwarding_reset.py $5</command>
+                <properties>
+                  <help>Reset DNS forwarding cache for a domain</help>
+                </properties>
+              </tagNode>
+            </children>
+          </node>
+        </children>
       </node>
     </children>
   </node>
