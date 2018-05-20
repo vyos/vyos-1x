@@ -65,9 +65,27 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="listen-address">
+                <properties>
+                  <help>Addresses to listen for DNS queries [REQUIRED]</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Domain Name Server (DNS) IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Domain Name Server (DNS) IPv6 address</description>
+                  </valueHelp>
+                  <multi/>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="listen-on">
                 <properties>
-                  <help>Interface to listen for DNS queries [REQUIRED]</help>
+                  <help>Interface to listen for DNS queries [DEPRECATED]</help>
                   <completionHelp>
                     <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
                   </completionHelp>

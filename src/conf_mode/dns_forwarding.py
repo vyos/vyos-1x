@@ -38,6 +38,7 @@ daemon=yes
 threads=1
 allow-from=0.0.0.0/0
 log-common-errors=yes
+non-local-bind=yes
 
 # cache-size
 max-cache-entries={{ cache_size }}
@@ -125,25 +126,42 @@ def get_config():
             dns['name_servers'] = dns['name_servers'] + system_name_servers
         conf.set_level('service dns forwarding')
 
+    if conf.exists('listen-address'):
+        dns['listen_on'] = conf.return_values('listen-address')
+
     ## Hacks and tricks
 
     # The old VyOS syntax that comes from dnsmasq was "listen-on $interface".
     # pdns wants addresses instead, so we emulate it by looking up all addresses
     # of a given interface and writing them to the config
     if conf.exists('listen-on'):
+        print("WARNING: since VyOS 1.2.0, \"service dns forwarding listen-on\" is a limited compatibility option.")
+        print("It will only make DNS forwarder listen on addresses assigned to the interface at the time of commit")
+        print("which means it will NOT work properly with VRRP/clustering or addresses received from DHCP.")
+        print("Please reconfigure your system with \"service dns forwarding listen-address\" instead.")
+
         interfaces = conf.return_values('listen-on')
 
         listen4 = []
         listen6 = []
         for interface in interfaces:
-            addrs = netifaces.ifaddresses(interface)
-            for ip4 in addrs[netifaces.AF_INET]:
-                listen4.append(ip4['addr'])
+            try:
+                addrs = netifaces.ifaddresses(interface)
+            except ValueError:
+                raise ConfigError("Invalid interface: {0}".format(interface))
 
-            for ip6 in addrs[netifaces.AF_INET6]:
-                listen6.append(ip6['addr'])
+            if netifaces.AF_INET in addrs.keys():
+                for ip4 in addrs[netifaces.AF_INET]:
+                    listen4.append(ip4['addr'])
 
-        dns['listen_on'] = listen4 + listen6
+            if netifaces.AF_INET6 in addrs.keys():
+                for ip6 in addrs[netifaces.AF_INET6]:
+                    listen6.append(ip6['addr'])
+
+            if (not listen4) and (not (listen6)):
+                print("WARNING: interface {0} has no configured addresses".format(interface))
+
+        dns['listen_on'] = dns['listen_on'] + listen4 + listen6
 
         # Save interfaces in the dict for the reference
         dns['interfaces'] = interfaces
@@ -164,14 +182,8 @@ def verify(dns):
     if dns is None:
         return None
 
-    if not dns['interfaces']:
-        raise ConfigError('Error: DNS forwarding requires a configured listen interface!')
-
-    for interface in dns['interfaces']:
-        try:
-            netifaces.ifaddresses(interface)[netifaces.AF_INET]
-        except KeyError as e:
-            raise ConfigError('Error: Interface {0} has no IP address assigned'.format(interface))
+    if not dns['listen_on']:
+        raise ConfigError("Error: DNS forwarding requires either a listen-address (preferred) or a listen-on option")
 
     if dns['domains']:
         for domain in dns['domains']:
