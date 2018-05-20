@@ -40,10 +40,10 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if args.all:
-        print("Unimplemented, broken in pdns 3.x")
+        os.system("rec_control wipe-cache \'.$\'")
         sys.exit(1)
     elif args.domain:
-        os.system("rec_control wipe-cache {0}".format(args.domain))
+        os.system("rec_control wipe-cache \'{0}$\'".format(args.domain))
     else:
         parser.print_help()
         sys.exit(1)
