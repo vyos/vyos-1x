@@ -20,11 +20,11 @@ import sys
 import os
 
 import jinja2
+import vyos.version
+import ipaddress
 
 from vyos.config import Config
 from vyos import ConfigError
-
-import vyos.version
 
 config_file_client = r'/etc/snmp/snmp.conf'
 config_file_daemon = r'/etc/snmp/snmpd.conf'
@@ -92,7 +92,7 @@ SysDescr {{ description }}
 {% endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% for ip in listen_on %},udp:{{ ip.addr }}:{{ ip.port }}{% endfor %}
+agentaddress unix:/run/snmpd.socket{% for ip in listen_on %},{{ ip.prot }}:{{ ip.addr }}:{{ ip.port }}{% endfor %}
 
 
 # SNMP communities
@@ -172,8 +172,15 @@ def get_config():
 
     if conf.exists('listen-address'):
         for addr in conf.list_nodes('listen-address'):
+            prot = "udp"
+            if ipaddress.ip_address(addr).version == 6:
+                # SNMP configuration file requires brackets on IPv6 addresses
+                addr = "[" + addr + "]"
+                prot = "udp6"
+
             listen = {
                 'addr': addr,
+                'prot': prot,
                 'port': '161'
             }
 
