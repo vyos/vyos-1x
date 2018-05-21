@@ -77,6 +77,14 @@
           <tagNode name="listen-address">
             <properties>
               <help>IP address to listen for incoming SNMP requests</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 address to listen for incoming SNMP requests</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address to listen for incoming SNMP requests</description>
+              </valueHelp>
               <constraint>
                 <validator name="ipv4-address"/>
                 <validator name="ipv6-address"/>
