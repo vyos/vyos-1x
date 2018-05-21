@@ -20,7 +20,15 @@
             <children>
               <leafNode name="authorization">
                 <properties>
-                  <help>Authorization type (rw or ro) (default: 'ro')</help>
+                  <help>Authorization type (default: 'ro')</help>
+                  <valueHelp>
+                    <format>ro</format>
+                    <description>read only</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rw</format>
+                    <description>read write</description>
+                  </valueHelp>
                   <constraint>
                     <regex>(ro|rw)</regex>
                   </constraint>
@@ -202,10 +210,17 @@
                   <leafNode name="seclevel">
                     <properties>
                       <help>Defines security level</help>
+                      <valueHelp>
+                        <format>auth</format>
+                        <description>Requests must be authenticated</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>priv</format>
+                        <description>Enforce use of encryption</description>
+                      </valueHelp>
                       <constraint>
                         <regex>(auth|priv)</regex>
                       </constraint>
-                      <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="view">
@@ -536,6 +551,42 @@
                       </leafNode>
                     </children>
                   </node>
+                </children>
+              </tagNode>
+              <tagNode name="view">
+                <properties>
+                  <help>Specifies the view with name viewname</help>
+                  <constraint>
+                    <regex>^[^\(\)\|\-]+$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
+                </properties>
+                <children>
+                  <tagNode name="oid">
+                    <properties>
+                      <help>Specifies the oid</help>
+                      <constraint>
+                        <regex>^[0-9]+(\\.[0-9]+)*$</regex>
+                      </constraint>
+                      <constraintErrorMessage>OID must start from a number</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      <leafNode name="exclude">
+                        <properties>
+                          <help>Exclude is an optional argument</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="mask">
+                        <properties>
+                          <help>Defines a bit-mask that is indicating which subidentifiers of the associated subtree OID should be regarded as significant</help>
+                          <constraint>
+                            <regex>^[0-9a-f]{2}([\\.:][0-9a-f]{2})*$</regex>
+                          </constraint>
+                          <constraintErrorMessage>MASK is a list of hex octets, separated by '.' or ':'</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
                 </children>
               </tagNode>
             </children>
