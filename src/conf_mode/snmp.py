@@ -92,7 +92,7 @@ SysDescr {{ description }}
 {% endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% for ip in listen_on %},{{ ip.prot }}:{{ ip.addr }}:{{ ip.port }}{% endfor %}
+agentaddress unix:/run/snmpd.socket{% for li in listen_on %},{{ li }}{% endfor %}
 
 
 # SNMP communities
@@ -172,20 +172,19 @@ def get_config():
 
     if conf.exists('listen-address'):
         for addr in conf.list_nodes('listen-address'):
-            prot = "udp"
-            if ipaddress.ip_address(addr).version == 6:
-                # SNMP configuration file requires brackets on IPv6 addresses
-                addr = "[" + addr + "]"
-                prot = "udp6"
-
-            listen = {
-                'addr': addr,
-                'prot': prot,
-                'port': '161'
-            }
-
+            listen = ''
+            port = '161'
             if conf.exists('listen-address {0} port'.format(addr)):
-                listen['port'] = conf.return_value('listen-address {0} port'.format(addr))
+                port = conf.return_value('listen-address {0} port'.format(addr))
+
+            if ipaddress.ip_address(addr).version == 4:
+                # udp:127.0.0.1:161
+                listen = 'udp:' + addr + ':' + port
+            elif ipaddress.ip_address(addr).version == 6:
+                # udp6:[::1]:161
+                listen = 'udp6:' + '[' + addr + ']' + ':' + port
+            else:
+                raise ConfigError('Invalid IP address version')
 
             snmp['listen_on'].append(listen)
 
