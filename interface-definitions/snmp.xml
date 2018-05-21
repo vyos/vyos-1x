@@ -1,0 +1,539 @@
+<?xml version="1.0"?>
+<!-- SNMP forwarder configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="snmp" owner="${vyos_conf_scripts_dir}/snmp.py">
+        <properties>
+          <help>Simple Network Management Protocol (SNMP)</help>
+          <priority>980</priority>
+        </properties>
+        <children>
+          <tagNode name="community">
+            <properties>
+              <help>Community name [REQUIRED]</help>
+              <constraint>
+                <regex>^[^%]+$</regex>
+              </constraint>
+              <constraintErrorMessage>Community string may not contain '%'</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="authorization">
+                <properties>
+                  <help>Authorization type (rw or ro) (default: 'ro')</help>
+                  <constraint>
+                    <regex>(ro|rw)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="client">
+                <properties>
+                  <help>IP address of SNMP client allowed to contact system</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="network">
+                <properties>
+                  <help>Subnet of SNMP client(s) allowed to contact system</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IP address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="contact">
+            <properties>
+              <help>Contact information</help>
+              <constraint>
+                <regex>.{1,255}</regex>
+              </constraint>
+              <constraintErrorMessage>Contact information is limited to 255 characters or less</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Description information</help>
+              <constraint>
+                <regex>.{1,255}</regex>
+              </constraint>
+              <constraintErrorMessage>Description is limited to 255 characters or less</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <tagNode name="listen-address">
+            <properties>
+              <help>IP address to listen for incoming SNMP requests</help>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="port">
+                <properties>
+                  <help>Port for SNMP service (default: '161')</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Numeric IP port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="location">
+            <properties>
+              <help>Location information</help>
+              <constraint>
+                <regex>.{1,255}</regex>
+              </constraint>
+              <constraintErrorMessage>Location is limited to 255 characters or less</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="smux-peer">
+            <properties>
+              <help>Register a subtree for SMUX-based processing</help>
+              <valueHelp>
+                <format>oid</format>
+                <description>Object Identifier</description>
+              </valueHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="trap-source">
+            <properties>
+              <help>SNMP trap source address</help>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <tagNode name="trap-target">
+            <properties>
+              <help>Address of trap target</help>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="community">
+                <properties>
+                  <help>Community used when sending trap information</help>
+                </properties>
+              </leafNode>
+              <leafNode name="port">
+                <properties>
+                  <help>Destination port used for trap notification</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Numeric IP port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="v3">
+            <properties>
+              <help>Simple Network Management Protocol (SNMP) v3</help>
+            </properties>
+            <children>
+              <leafNode name="engineid">
+                <properties>
+                  <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
+                  <constraint>
+                    <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
+                  </constraint>
+                  <constraintErrorMessage>ID must contain an even number (from 2 to 36) of hex digits</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <tagNode name="group">
+                <properties>
+                  <help>Specifies the group with name groupname</help>
+                </properties>
+                <children>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Define group access permission (default: 'ro')</help>
+                      <valueHelp>
+                        <format>ro</format>
+                        <description>read only</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>rw</format>
+                        <description>read write</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(ro|rw)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="seclevel">
+                    <properties>
+                      <help>Defines security level</help>
+                      <constraint>
+                        <regex>(auth|priv)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="view">
+                    <properties>
+                      <help>Defines the name of view</help>
+                      <completionHelp>
+                        <path>service snmp v3 view</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <tagNode name="trap-target">
+                <properties>
+                  <help>Defines SNMP target for inform or traps for IP</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address of trap target</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of trap target</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="auth">
+                    <properties>
+                      <help>Defines the privacy</help>
+                    </properties>
+                    <children>
+                      <leafNode name="encrypted-key">
+                        <properties>
+                          <help>Defines the encrypted key for authentication</help>
+                          <constraint>
+                            <regex>^0x[0-9a-f]*$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="plaintext-key">
+                        <properties>
+                          <help>Defines the clear text key for authentication</help>
+                          <constraint>
+                            <regex>^.{8,}$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="type">
+                        <properties>
+                          <help>Defines the protocol used for authentication (default: 'md5')</help>
+                          <valueHelp>
+                            <format>md5</format>
+                            <description>Message Digest 5</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>sha</format>
+                            <description>Secure Hash Algorithm</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(md5|sha)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="engineid">
+                    <properties>
+                      <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
+                      <constraint>
+                        <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>ID must contain from 2 to 36 hex digits</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="port">
+                    <properties>
+                      <help>Specifies TCP/UDP port of destination SNMP traps/informs (default: '162')</help>
+                      <valueHelp>
+                        <format>1-65535</format>
+                        <description>Numeric IP port</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <node name="privacy">
+                    <properties>
+                      <help>Defines the privacy</help>
+                    </properties>
+                    <children>
+                      <leafNode name="encrypted-key">
+                        <properties>
+                          <help>Defines the encrypted key for privacy protocol</help>
+                          <constraint>
+                            <regex>^0x[0-9a-f]*$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="plaintext-key">
+                        <properties>
+                          <help>Defines the clear text key for privacy protocol</help>
+                          <constraint>
+                            <regex>^.{8,}$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="type">
+                        <properties>
+                          <help>Defines the protocol for privacy (default: 'des')</help>
+                          <valueHelp>
+                            <format>des</format>
+                            <description>Data Encryption Standard</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>aes</format>
+                            <description>Advanced Encryption Standard</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(des|aes)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="protocol">
+                    <properties>
+                      <help>Defines protocol for notification between TCP and UDP</help>
+                      <valueHelp>
+                        <format>tcp</format>
+                        <description>Use Transmission Control Protocol for notifications</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>udp</format>
+                        <description>Use User Datagram Protocol for notifications</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(tcp|udp)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="type">
+                    <properties>
+                      <help>Specifies the type of notification between inform and trap (default: 'inform')</help>
+                      <valueHelp>
+                        <format>inform</format>
+                        <description>Use INFORM</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>trap</format>
+                        <description>Use TRAP</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(inform|trap)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="user">
+                    <properties>
+                      <help>Defines username for authentication</help>
+                      <completionHelp>
+                        <path>service snmp v3 user</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="tsm">
+                <properties>
+                  <help>Specifies that the snmpd uses encryption</help>
+                </properties>
+                <children>
+                  <leafNode name="local-key">
+                    <properties>
+                      <help>Defines the server certificate fingerprint or key-file name</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="port">
+                    <properties>
+                      <help>Defines the port for TSM (default: '10161')</help>
+                      <valueHelp>
+                        <format>1-65535</format>
+                        <description>Numeric IP port</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <tagNode name="user">
+                <properties>
+                  <help>Specifies the user with name username</help>
+                  <constraint>
+                    <regex>^[^\(\)\|\-]+$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
+                </properties>
+                <children>
+                  <node name="auth">
+                    <properties>
+                      <help>Specifies the auth</help>
+                    </properties>
+                    <children>
+                      <leafNode name="encrypted-key">
+                        <properties>
+                          <help>Defines the encrypted key for authentication</help>
+                          <constraint>
+                            <regex>^0x[0-9a-f]*$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="plaintext-key">
+                        <properties>
+                          <help>Defines the clear text key for authentication</help>
+                          <constraint>
+                            <regex>^.{8,}$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="type">
+                        <properties>
+                          <help>Defines the protocol used for authentication (default: 'md5')</help>
+                          <valueHelp>
+                            <format>md5</format>
+                            <description>Message Digest 5</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>sha</format>
+                            <description>Secure Hash Algorithm</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(md5|sha)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="engineid">
+                    <properties>
+                      <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
+                      <constraint>
+                        <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>ID must contain from 2 to 36 hex digits</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="group">
+                    <properties>
+                      <help>Specifies group for user name</help>
+                      <completionHelp>
+                        <path>service snmp v3 group</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Define users access permission (default: 'ro')</help>
+                      <valueHelp>
+                        <format>ro</format>
+                        <description>read only</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>rw</format>
+                        <description>read write</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(ro|rw)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <node name="privacy">
+                    <properties>
+                      <help>Defines the privacy</help>
+                    </properties>
+                    <children>
+                      <leafNode name="encrypted-key">
+                        <properties>
+                          <help>Defines the encrypted key for privacy protocol</help>
+                          <constraint>
+                            <regex>^0x[0-9a-f]*$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="plaintext-key">
+                        <properties>
+                          <help>Defines the clear text key for privacy protocol</help>
+                          <constraint>
+                            <regex>^.{8,}$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="type">
+                        <properties>
+                          <help>Defines the protocol for privacy (default: 'des')</help>
+                          <valueHelp>
+                            <format>des</format>
+                            <description>Data Encryption Standard</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>aes</format>
+                            <description>Advanced Encryption Standard</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(des|aes)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="tsm-key">
+                        <properties>
+                          <help>Specifies finger print or file name of TSM certificate</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
