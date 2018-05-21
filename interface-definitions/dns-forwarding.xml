@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
-
 <!-- DNS forwarder configuration -->
-
 <interfaceDefinition>
   <node name="service">
     <children>
@@ -90,6 +88,18 @@
                     <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
                   </completionHelp>
                   <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="negative-ttl">
+                <properties>
+                  <help>Maximum amount of time negative entries are cached</help>
+                  <valueHelp>
+                    <format>0-7200</format>
+                    <description>Seconds to cache NXDOMAIN entries</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-7200"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="name-server">

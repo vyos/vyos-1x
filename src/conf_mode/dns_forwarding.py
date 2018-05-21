@@ -43,6 +43,9 @@ non-local-bind=yes
 # cache-size
 max-cache-entries={{ cache_size }}
 
+# negative TTL for NXDOMAIN
+max-negative-ttl={{ negative_ttl }}
+
 # ignore-hosts-file
 export-etc-hosts={{ export_hosts_file }}
 
@@ -65,11 +68,12 @@ forward-zones-recurse=.={{ name_servers | join(';') }}
 """
 
 default_config_data = {
-    'cache_size' : 10000,
+    'cache_size': 10000,
     'export_hosts_file': 'yes',
     'listen_on': [],
     'interfaces': [],
     'name_servers': [],
+    'negative_ttl': 3600,
     'domains': []
 }
 
@@ -99,6 +103,10 @@ def get_config():
     if conf.exists('cache-size'):
         cache_size = conf.return_value('cache-size')
         dns['cache_size'] = cache_size
+
+    if conf.exists('negative-ttl'):
+        negative_ttl = conf.return_value('negative-ttl')
+        dns['negative_ttl'] = negative_ttl
 
     if conf.exists('domain'):
         for node in conf.list_nodes('domain'):
