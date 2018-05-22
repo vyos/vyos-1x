@@ -209,17 +209,21 @@
                   </leafNode>
                   <leafNode name="seclevel">
                     <properties>
-                      <help>Defines security level</help>
+                      <help>Security levels</help>
+                      <valueHelp>
+                        <format>noauth</format>
+                        <description>Messages not authenticated and not encrypted (noAuthNoPriv)</description>
+                      </valueHelp>
                       <valueHelp>
                         <format>auth</format>
-                        <description>Requests must be authenticated</description>
+                        <description>Messages are authenticated but not encrypted (AuthNoPriv)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>priv</format>
-                        <description>Enforce use of encryption</description>
+                        <description>Messages are authenticated and encrypted (AuthPriv)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(auth|priv)</regex>
+                        <regex>(noauth|auth|priv)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
