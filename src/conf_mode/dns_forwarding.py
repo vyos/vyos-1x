@@ -118,7 +118,7 @@ def get_config():
             dns['domains'].append(domain)
 
     if conf.exists('ignore-hosts-file'):
-        dns.setdefault('export_hosts_file', "no")
+        dns['export_hosts_file'] = "no"
 
     if conf.exists('name-server'):
         name_servers = conf.return_values('name-server')
