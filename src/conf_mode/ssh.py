@@ -157,26 +157,26 @@ def get_config():
 
     if conf.exists('access-control allow user'):
         allow_users = conf.return_values('access-control allow user')
-        ssh.setdefault('allow_users', allow_users)
+        ssh['allow_users'] = allow_users
 
     if conf.exists('access-control allow group'):
         allow_groups = conf.return_values('access-control allow group')
-        ssh.setdefault('allow_groups', allow_groups)
+        ssh['allow_groups'] = allow_groups
 
     if conf.exists('access-control deny user'):
         deny_users = conf.return_values('access-control deny user')
-        ssh.setdefault('deny_users', deny_users)
+        ssh['deny_users'] = deny_users
 
     if conf.exists('access-control deny group'):
         deny_groups = conf.return_values('access-control deny group')
-        ssh.setdefault('deny_groups', deny_groups)
+        ssh['deny_groups'] =  deny_groups
 
     if conf.exists('allow-root'):
         ssh['allow-root'] = 'yes'
 
     if conf.exists('ciphers'):
         ciphers = conf.return_values('ciphers')
-        ssh.setdefault('ciphers', ciphers)
+        ssh['ciphers'] =  ciphers
 
     if conf.exists('disable-host-validation'):
         ssh['host_validation'] = 'no'
@@ -186,7 +186,7 @@ def get_config():
 
     if conf.exists('key-exchange'):
         kex = conf.return_values('key-exchange')
-        ssh.setdefault('key_exchange', kex)
+        ssh['key_exchange'] = kex
 
     if conf.exists('listen-address'):
         # We can listen on both IPv4 and IPv6 addresses
@@ -198,18 +198,18 @@ def get_config():
         for addr in addresses:
             listen.append(addr)
 
-        ssh.setdefault('listen_on', listen)
+        ssh['listen_on'] = listen
 
     if conf.exists('loglevel'):
         ssh['log_level'] = conf.return_value('loglevel')
 
     if conf.exists('mac'):
         mac = conf.return_values('mac')
-        ssh.setdefault('mac', mac)
+        ssh['mac'] = mac
 
     if conf.exists('port'):
         port = conf.return_value('port')
-        ssh.setdefault('port', port)
+        ssh['port'] = port
 
     return ssh
 
