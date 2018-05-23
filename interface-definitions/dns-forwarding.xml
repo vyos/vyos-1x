@@ -25,7 +25,7 @@
               </leafNode>
               <leafNode name="dhcp">
                 <properties>
-                  <help>Use nameservers received from DHCP server for specified interface</help>
+                  <help>Use DNS servers received from DHCP server for specified interface</help>
                   <completionHelp>
                     <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
                   </completionHelp>
@@ -34,12 +34,12 @@
               </leafNode>
               <tagNode name="domain">
                 <properties>
-                  <help>DNS domain to forward to a local server</help>
+                  <help>Domain to forward to a custom DNS server</help>
                 </properties>
                 <children>
                   <leafNode name="server">
                     <properties>
-                      <help>Domain Name Server (DNS) to forward queries</help>
+                      <help>Domain Name Server (DNS) to forward queries to</help>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>Domain Name Server (DNS) IPv4 address</description>
@@ -104,7 +104,7 @@
               </leafNode>
               <leafNode name="name-server">
                 <properties>
-                  <help>Domain Name Server (DNS)</help>
+                  <help>Domain Name Servers (DNS) addresses</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>Domain Name Server (DNS) IPv4 address</description>
@@ -122,7 +122,7 @@
               </leafNode>
               <leafNode name="system">
                 <properties>
-                  <help>DNS forwarding to system nameservers</help>
+                  <help>Use system name servers</help>
                   <valueless/>
                 </properties>
               </leafNode>
