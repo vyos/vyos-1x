@@ -57,6 +57,12 @@
                   <help>Reset DNS forwarding cache for a domain</help>
                 </properties>
               </tagNode>
+              <leafNode name="all">
+                <command>${vyos_op_scripts_dir}/dns_forwarding_reset.py --all</command>
+                <properties>
+                  <help>Reset DNS forwarding cache</help>
+                </properties>
+              </leafNode>
             </children>
           </node>
         </children>
