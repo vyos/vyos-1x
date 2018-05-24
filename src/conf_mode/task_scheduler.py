@@ -47,7 +47,7 @@ def split_interval(s):
 
 def make_command(executable, arguments):
     if arguments:
-        return("{0} {1}".format(executable, arguments))
+        return("sg vyattacfg \"{0} {1}\"".format(executable, arguments))
     else:
         return(executable)
 
