@@ -13,20 +13,20 @@
         <children>
           <node name="access-control">
             <properties>
-              <help>SSH user/group access controls. Directives are processed in this: deny-users, allow-users, deny-groups and allow-groups</help>
+              <help>SSH user/group access controls. Directives are processed in this order: deny-users, allow-users, deny-groups and allow-groups</help>
             </properties>
             <children>
               <node name="allow">
                 <children>
                   <leafNode name="group">
                     <properties>
-                      <help>Login is allowed for users whose primary or supplementary group matches</help>
+                      <help>Allow members of a group to login</help>
                       <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="user">
                     <properties>
-                      <help>Login is allowed only for user names that match</help>
+                      <help>Allow specific users to login</help>
                       <multi/>
                     </properties>
                   </leafNode>
@@ -36,13 +36,13 @@
                 <children>
                   <leafNode name="group">
                     <properties>
-                      <help>Login is disallowed for users whose primary or supplementary group matches</help>
+                      <help>Disallow members of a group to login</help>
                       <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="user">
                     <properties>
-                      <help>Login is disallowed for user names that match</help>
+                      <help>Disallow specific users to login</help>
                       <multi/>
                     </properties>
                   </leafNode>
@@ -52,13 +52,13 @@
           </node>
           <leafNode name="allow-root">
             <properties>
-              <help>Enable root login over ssh</help>
+              <help>Allow the root user to login</help>
               <valueless/>
             </properties>
           </leafNode>
           <leafNode name="ciphers">
             <properties>
-              <help>Specifies allowed Ciphers</help>
+              <help>Allowed ciphers</help>
               <completionHelp>
                 <script>ssh -Q cipher | tr '\n' ' '</script>
               </completionHelp>
@@ -73,13 +73,13 @@
           </leafNode>
           <leafNode name="disable-password-authentication">
             <properties>
-              <help>Don't allow unknown user to login with password</help>
+              <help>Disable password-based authentication</help>
               <valueless/>
             </properties>
           </leafNode>
           <leafNode name="key-exchange">
             <properties>
-              <help>Specifies available KEX (Key Exchange) algorithms</help>
+              <help>Allowed key exchange (KEX) algorithms</help>
               <completionHelp>
                 <script>ssh -Q kex | tr '\n' ' '</script>
               </completionHelp>
@@ -131,7 +131,7 @@
           </leafNode>
           <leafNode name="mac">
             <properties>
-                <help>Specifies available MAC (message authentication code) algorithms</help>
+                <help>Allowed message authentication code (MAC) algorithms</help>
               <completionHelp>
                 <script>ssh -Q mac | tr '\n' ' '</script>
               </completionHelp>
