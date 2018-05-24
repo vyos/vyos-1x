@@ -156,8 +156,9 @@ def get_config():
             try:
                 addrs = netifaces.ifaddresses(interface)
             except ValueError:
-                raise ConfigError("Invalid interface: {0}".format(interface))
-
+                print("WARNING: interface {0} does not exist".format(interface))
+                continue
+                
             if netifaces.AF_INET in addrs.keys():
                 for ip4 in addrs[netifaces.AF_INET]:
                     listen4.append(ip4['addr'])
