@@ -22,6 +22,7 @@ Depends: python3,
   bmon,
   hvinfo,
   file,
+  libvyosconfig0,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
