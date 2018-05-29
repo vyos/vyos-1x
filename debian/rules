@@ -7,6 +7,8 @@ VYOS_LIBEXEC_DIR := usr/libexec/vyos
 VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := /opt/vyatta/share/vyatta-op/templates
 
+MIGRATION_SCRIPTS_DIR := /opt/vyatta/etc/config-migrate/migrate/
+
 %:
 	dh $@ --with python3, --with quilt
 
@@ -40,8 +42,14 @@ override_dh_auto_install:
 	# Install helper scripts
 	cp -r src/helpers/* $(DIR)/$(VYOS_LIBEXEC_DIR)/
 
+	# Install migration scripts
+	mkdir -p $(DIR)/$(MIGRATION_SCRIPTS_DIR)
+	cp -r src/migration-scripts/* $(DIR)/$(MIGRATION_SCRIPTS_DIR)
+
+	# Install configuration command definitions
 	mkdir -p $(DIR)/$(VYOS_CFG_TMPL_DIR)
 	cp -r templates-cfg/* $(DIR)/$(VYOS_CFG_TMPL_DIR)
 
+	# Install operational command definitions
 	mkdir -p $(DIR)/$(VYOS_OP_TMPL_DIR)
 	cp -r templates-op/* $(DIR)/$(VYOS_OP_TMPL_DIR)
