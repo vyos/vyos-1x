@@ -57,7 +57,7 @@ local-address={{ listen_on | join(',') }}
 
 forward-zones={% for d in domains %}
 {{ d.name }}={{ d.servers | join(";") }}
-{%- if not loop.last %}, {% endif %}
+{{- "," if not loop.last -}}
 {% endfor %}
 
 {% endif %}
