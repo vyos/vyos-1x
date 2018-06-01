@@ -62,11 +62,20 @@ restrict {{ n.address }} mask {{ n.netmask }} nomodify notrap nopeer
 {% endfor -%}
 {% endif %}
 
+{% if listen_address -%}
+# NTP should listen on configured addresses only
+interface ignore wildcard
+{% for a in listen_address -%}
+interface listen {{ a }}
+{% endfor -%}
+{% endif %}
+
 """
 
 default_config_data = {
     'servers': [],
-    'allowed_networks': []
+    'allowed_networks': [],
+    'listen_address': []
 }
 
 def get_config():
@@ -88,6 +97,9 @@ def get_config():
             }
 
             ntp['allowed_networks'].append(net)
+
+    if conf.exists('listen-address'):
+        ntp['listen_address'] = conf.return_values('listen-address')
 
     if conf.exists('server'):
         for node in conf.list_nodes('server'):

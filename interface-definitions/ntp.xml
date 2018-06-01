@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
-
 <!-- NTP configuration -->
-
 <interfaceDefinition>
   <node name="system">
     <children>
@@ -66,6 +64,24 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="listen-address">
+            <properties>
+              <help>Addresses to listen for NTP queries</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Network Time Protocol (NTP) IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Network Time Protocol (NTP) IPv6 address</description>
+              </valueHelp>
+              <multi/>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
