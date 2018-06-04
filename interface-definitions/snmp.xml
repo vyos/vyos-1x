@@ -402,17 +402,21 @@
               </tagNode>
               <node name="tsm">
                 <properties>
-                  <help>Specifies that the snmpd uses encryption</help>
+                  <help>Specifies that SNMPv3 uses the Transport Security Model (TSM)</help>
                 </properties>
                 <children>
                   <leafNode name="local-key">
                     <properties>
-                      <help>Defines the server certificate fingerprint or key-file name</help>
+                      <help>Fingerprint of a TSM server certificate</help>
+                      <constraint>
+                        <regex>^[0-9A-F]{2}(:[0-9A-F]{2}){19}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Value can be finger print key or filename in /config/snmp/tls/certs</constraintErrorMessage>
                     </properties>
                   </leafNode>
                   <leafNode name="port">
                     <properties>
-                      <help>Defines the port for TSM (default: '10161')</help>
+                      <help>Defines the port used for TSM (default: '10161')</help>
                       <valueHelp>
                         <format>1-65535</format>
                         <description>Numeric IP port</description>
