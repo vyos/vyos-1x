@@ -18,12 +18,14 @@
 
 import sys
 import os
+import stat
+import pwd
 
 import jinja2
 import ipaddress
 import random
 import binascii
-import os
+import re
 
 import vyos.version
 
@@ -104,7 +106,11 @@ monitor  -r 10 -e linkDownTrap "Generate linkDown" ifOperStatus == 2
 # configurable section #
 ########################
 
-# Version
+{% if v3_tsm_key %}
+[snmp] localCert {{ v3_tsm_key }}
+{% endif %}
+
+# Default system description is VyOS version
 sysDescr VyOS {{ version }}
 
 {% if description -%}
@@ -113,7 +119,7 @@ SysDescr {{ description }}
 {% endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% for li in listen_on %},{{ li }}{% endfor %}
+agentaddress unix:/run/snmpd.socket{% for li in listen_on %},{{ li }}{% endfor %}{% if v3_tsm_key %},tlstcp:{{ v3_tsm_port }},dtlsudp::{{ v3_tsm_port }}{% endif %}
 
 
 # SNMP communities
@@ -179,7 +185,7 @@ access {{ g.name }} "" tsm {{ g.seclevel }} exact {{ g.view }} none none
 # trap-target
 {% if v3_traps -%}
 {% for t in v3_traps %}
-trapsess -v 3 -e {{ t.engineID }} -u {{ t.secName }} -l {{ t.secLevel }} -a {{ t.authProtocol }} {% if t.authPassword %}-A {{ t.authPassword }}{% elif t.authMasterKey %}-3m {{ t.authMasterKey }}{% endif %} -x {{ t.privProtocol }} {% if t.privPassword %}-X {{ t.privPassword }}{% elif t.privMasterKey %}-3M {{ t.privMasterKey }}{% endif %} {{ t.ipProto }}:{{ t.ipAddr }}:{{ t.ipPort }}
+trapsess -v 3 {{ '-Ci' if t.type == 'inform' }} -e {{ t.engineID }} -u {{ t.secName }} -l {{ t.secLevel }} -a {{ t.authProtocol }} {% if t.authPassword %}-A {{ t.authPassword }}{% elif t.authMasterKey %}-3m {{ t.authMasterKey }}{% endif %} -x {{ t.privProtocol }} {% if t.privPassword %}-X {{ t.privPassword }}{% elif t.privMasterKey %}-3M {{ t.privMasterKey }}{% endif %} {{ t.ipProto }}:{{ t.ipAddr }}:{{ t.ipPort }}
 {% endfor -%}
 {% endif %}
 
@@ -216,6 +222,10 @@ default_config_data = {
     'v3_users': [],
     'v3_views': []
 }
+
+def rmfile(file):
+    if os.path.isfile(file):
+        os.unlink(file)
 
 def get_config():
     snmp = default_config_data
@@ -408,12 +418,7 @@ def get_config():
                 trap_cfg['ipPort'] = conf.return_value('v3 trap-target {0} port'.format(trap))
 
             if conf.exists('v3 trap-target {0} type'.format(trap)):
-                tmp = conf.return_value('v3 trap-target {0} type'.format(trap))
-                # see http://www.net-snmp.org/docs/man/snmpd.conf.html
-                # The option -Ci can be used (with -v2c or -v3) to generate an INFORM
-                # notification rather than an unacknowledged TRAP.
-                if tmp == 'inform':
-                    trap_cfg['type'] = ' -Ci'
+                trap_cfg['type'] = conf.return_value('v3 trap-target {0} type'.format(trap))
 
             # Determine securityLevel used for SNMPv3 messages (noAuthNoPriv|authNoPriv|authPriv).
             # Appropriate pass phrase(s) must provided when using any level higher than noAuthNoPriv.
@@ -444,14 +449,14 @@ def get_config():
                 'name': user,
                 'authMasterKey': '',
                 'authPassword': '',
-                'authProtocol': 'md5',
+                'authProtocol': '',
                 'engineID': '',
                 'group': '',
                 'mode': 'ro',
                 'privMasterKey': '',
                 'privPassword': '',
                 'privTsmKey': '',
-                'privProtocol': 'des'
+                'privProtocol': ''
             }
 
             #
@@ -525,24 +530,117 @@ def verify(snmp):
     if snmp is None:
         return None
 
+    # bail out early if SNMP v3 is not configured
+    if not snmp['v3_enabled']:
+        return None
+
+    tsmKeyPattern = re.compile('^[0-9A-F]{2}(:[0-9A-F]{2}){19}$', re.IGNORECASE)
+
+    if snmp['v3_tsm_key']:
+        if not tsmKeyPattern.match(snmp['v3_tsm_key']):
+            if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                    raise ConfigError('TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
+
+    if 'v3_groups' in snmp.keys():
+        for group in snmp['v3_groups']:
+            #
+            # A view must exist prior to mapping it into a group
+            #
+            if 'view' in group.keys():
+                error = True
+                if 'v3_views' in snmp.keys():
+                    for view in snmp['v3_views']:
+                        if view['name'] == group['view']:
+                            error = False
+                if error:
+                    raise ConfigError('You must create view "{0}" first'.format(group['view']))
+            else:
+                raise ConfigError('"view" must be specified')
+
+            if not 'mode' in group.keys():
+                raise ConfigError('"mode" must be specified')
+
+            if not 'seclevel' in group.keys():
+                raise ConfigError('"seclevel" must be specified')
+
+
     if 'v3_traps' in snmp.keys():
         for trap in snmp['v3_traps']:
             if trap['authPassword'] and trap['authMasterKey']:
-                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for trap auth')
+                raise ConfigError('Must specify only one of encrypted-key/plaintext-key for trap auth')
+
+            if trap['authPassword'] == '' and trap['authMasterKey'] == '':
+                raise ConfigError('Must specify encrypted-key or plaintext-key for trap auth')
+
             if trap['privPassword'] and trap['privMasterKey']:
-                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for trap privacy')
+                raise ConfigError('Must specify only one of encrypted-key/plaintext-key for trap privacy')
+
+            if trap['privPassword'] == '' and trap['privMasterKey'] == '':
+                raise ConfigError('Must specify encrypted-key or plaintext-key for trap privacy')
+
+            if not 'type' in trap.keys():
+                raise ConfigError('v3 trap: "type" must be specified')
+
+            if not 'authPassword' and 'authMasterKey' in trap.keys():
+                raise ConfigError('v3 trap: "auth" must be specified')
+
+            if not 'authProtocol' in trap.keys():
+                raise ConfigError('v3 trap: "protocol" must be specified')
+
+            if not 'privPassword' and 'privMasterKey' in trap.keys():
+                raise ConfigError('v3 trap: "user" must be specified')
+
+            if 'type' in trap.keys():
+                if trap['type'] == 'trap' and trap['engineID'] == '':
+                    raise ConfigError('must specify engineid if type is "trap"')
+            else:
+                raise ConfigError('"type" must be specified')
+
 
     if 'v3_users' in snmp.keys():
         for user in snmp['v3_users']:
             if user['authPassword'] and user['authMasterKey']:
                 raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
+
             if user['privPassword'] and user['privMasterKey']:
                 raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
 
-    if 'v3_group' in snmp.keys():
-        for group in snmp['v3_group']:
-            if not group['view']:
-                raise ConfigError('You must create a view first')
+            if user['privPassword'] == '' and user['privMasterKey'] == '':
+                raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
+
+            if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
+                raise ConfigError('Must specify auth or tsm-key for user auth')
+
+            if user['privProtocol'] == '':
+                raise ConfigError('Must specify privacy type')
+
+            if user['mode'] == '':
+                raise ConfigError('Must specify user mode ro/rw')
+
+            if user['privTsmKey']:
+                if not tsmKeyPattern.match(snmp['v3_tsm_key']):
+                    if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                        if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                            raise ConfigError('User TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
+
+            if user['group']:
+                #
+                # Group must exist prior to mapping it into a group
+                #
+                error = True
+                if 'v3_groups' in snmp.keys():
+                    for group in snmp['v3_groups']:
+                        if group['name'] == user['group']:
+                            error = False
+                if error:
+                    raise ConfigError('You must create group "{0}" first'.format(user['group']))
+
+
+    if 'v3_views' in snmp.keys():
+        for view in snmp['v3_views']:
+            if not view['oids']:
+                raise ConfigError('Must configure an oid')
 
     return None
 
@@ -551,10 +649,10 @@ def generate(snmp):
     # As we are manipulating the snmpd user database we have to stop it first!
     # This is even save if service is going to be removed
     os.system("sudo systemctl stop snmpd.service")
-    os.unlink(config_file_client)
-    os.unlink(config_file_daemon)
-    os.unlink(config_file_access)
-    os.unlink(config_file_user)
+    rmfile(config_file_client)
+    rmfile(config_file_daemon)
+    rmfile(config_file_access)
+    rmfile(config_file_user)
 
     if snmp is None:
         return None
@@ -587,6 +685,15 @@ def generate(snmp):
 
 def apply(snmp):
     if snmp is not None:
+
+        if not os.path.exists('/config/snmp/tls'):
+            os.makedirs('/config/snmp/tls')
+            os.chmod('/config/snmp/tls', stat.S_IWUSR | stat.S_IRUSR)
+            # get uid for user 'snmp'
+            snmp_uid = pwd.getpwnam('snmp').pw_uid
+            os.chown('/config/snmp/tls', snmp_uid, -1)
+
+        # start SNMP daemon
         os.system("sudo systemctl restart snmpd.service")
 
     return None
