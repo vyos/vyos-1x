@@ -2,6 +2,7 @@
 
 import subprocess
 import jinja2
+import sys
 
 from vyos.config import Config
 
