@@ -20,7 +20,7 @@ import sys
 import os
 import stat
 import pwd
-
+import time
 import jinja2
 import ipaddress
 import random
@@ -695,6 +695,37 @@ def apply(snmp):
 
         # start SNMP daemon
         os.system("sudo systemctl restart snmpd.service")
+
+        # the passwords are not available immediately so this is a workaround
+        # and should be changed to polling
+        time.sleep(2)
+
+        # Back in the Perl days the configuration was re-read and any
+        # plaintext password inside the configuration was replaced by
+        # the encrypted one which can be found in 'config_file_user'
+        with open(config_file_user, 'r') as f:
+            for line in f:
+                # we are only interested in the user database
+                if line.startswith('usmUser'):
+                    string = line.split(' ')
+                    cfg = {
+                        'user': string[4].replace(r'"', ''),
+                        'engineID': string[3],
+                        'auth_pw': string[8],
+                        'priv_pw': string[10]
+                    }
+                    # No need to take care about the VyOS internal user
+                    if cfg['user'] == snmp['vyos_user']:
+                        continue
+
+                    # Now update the running configuration
+                    #
+                    # Currently when executing os.system() the environment does not have the vyos_libexec_dir variable set, see T685
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1}'.format(cfg['user'], cfg['engineID']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1}'.format(cfg['user'], cfg['auth_pw']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1}'.format(cfg['user'], cfg['priv_pw']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key'.format(cfg['user']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key'.format(cfg['user']))
 
     return None
 
