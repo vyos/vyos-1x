@@ -2,6 +2,9 @@
 
 import subprocess
 import jinja2
+import sys
+
+from vyos.config import Config
 
 PDNS_CMD='/usr/bin/rec_control'
 
@@ -16,7 +19,7 @@ Cache size: {{ cache_size }} kbytes
 
 if __name__ == '__main__':
     # Do nothing if service is not configured
-    c = vyos.config.Config()
+    c = Config()
     if not c.exists_effective('service dns forwarding'):
         print("DNS forwarding is not configured")
         sys.exit(0)
