@@ -21,6 +21,7 @@ import os
 import stat
 import pwd
 import time
+
 import jinja2
 import ipaddress
 import random
@@ -119,7 +120,7 @@ SysDescr {{ description }}
 {% endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% for li in listen_on %},{{ li }}{% endfor %}{% if v3_tsm_key %},tlstcp:{{ v3_tsm_port }},dtlsudp::{{ v3_tsm_port }}{% endif %}
+agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161,udp6:161{% endif %}{% if v3_tsm_key %},tlstcp:{{ v3_tsm_port }},dtlsudp::{{ v3_tsm_port }}{% endif %}
 
 
 # SNMP communities
