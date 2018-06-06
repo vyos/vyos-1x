@@ -22,6 +22,7 @@ override_dh_auto_install:
 	# Install scripts
 	mkdir -p $(DIR)/$(VYOS_SBIN_DIR)
 	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
+	cp -r src/utils/* $(DIR)/$(VYOS_BIN_DIR)
 
 	# Install conf mode scripts
 	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/conf_mode
