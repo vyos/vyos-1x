@@ -722,11 +722,11 @@ def apply(snmp):
                     # Now update the running configuration
                     #
                     # Currently when executing os.system() the environment does not have the vyos_libexec_dir variable set, see T685
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1}'.format(cfg['user'], cfg['engineID']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1}'.format(cfg['user'], cfg['auth_pw']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1}'.format(cfg['user'], cfg['priv_pw']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key'.format(cfg['user']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key'.format(cfg['user']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1} > /dev/null'.format(cfg['user'], cfg['engineID']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['auth_pw']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['priv_pw']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
 
     return None
 
