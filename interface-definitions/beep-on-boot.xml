@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+
+<!-- beep when booted enable or disable -->
+
+<interfaceDefinition>
+  <node name="system/options">
+    <children>
+      <leafNode name="beep-if-fully-booted" owner="/bin/systemctl -q $VAR(@) beep">
+        <properties>
+          <help>plays sound via system speaker when you can login</help>
+          <valueHelp> 
+            <format>enable</format> 
+              <description> plays a sound via system speaker when logins are possible </description> 
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+              <description> disable playing a sound when logins are possible </description>
+          </valueHelp>
+          <constraint>
+            <regex>(enable|disable)</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
