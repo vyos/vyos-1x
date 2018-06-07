@@ -14,12 +14,12 @@
         </properties>
         <command>/bin/date -u</command>
         <children>
-          <node name="maya">
+          <leafNode name="maya">
             <properties>
               <help>Show UTC date in Maya calendar format</help>
             </properties>
             <command>${vyatta_bindir}/maya-date.py $(date +%s)</command>
-          </node>
+          </leafNode>
         </children>
       </node>
       </children>

@@ -2,12 +2,12 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-    <node name="arp">
+    <leafNode name="arp">
       <properties>
         <help>Show Address Resolution Protocol (ARP) information</help>
       </properties>
       <command>/usr/sbin/arp -e -n</command>
-    </node>
+    </leafNode>
     <tagNode name="arp">
       <properties>
         <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>

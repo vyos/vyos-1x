@@ -10,12 +10,12 @@
         </completionHelp>
       </properties>
       <children>
-        <node name="format">
+        <leafNode name="format">
           <properties>
             <help>Show disk drive formatting</help>
           </properties>
           <command>${vyos_op_scripts_dir}/show-disk-format.sh $3</command>
-        </node>
+        </leafNode>
       </children>
     </tagNode>
 
