@@ -191,8 +191,13 @@ view {{ v.name }} included .{{ oid.oid }}
 #             context sec.model sec.level match  read    write  notif
 {% if v3_groups -%}
 {% for g in v3_groups %}
+{% if g.mode == 'ro' %}
 access {{ g.name }} "" usm {{ g.seclevel }} exact {{ g.view }} none none
 access {{ g.name }} "" tsm {{ g.seclevel }} exact {{ g.view }} none none
+{% elif g.mode == 'rw' %}
+access {{ g.name }} "" usm {{ g.seclevel }} exact {{ g.view }} {{ g.view }} none
+access {{ g.name }} "" tsm {{ g.seclevel }} exact {{ g.view }} {{ g.view }} none
+{% endif %}
 {% endfor -%}
 {% endif %}
 
