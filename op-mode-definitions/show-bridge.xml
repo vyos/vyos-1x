@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="bridge">
+        <properties>
+          <help>Show bridging information</help>
+        </properties>
+        <command>/sbin/brctl show</command>
+      </node>
+      <tagNode name="bridge">
+        <properties>
+          <help>Show bridge information for a given bridge interface</help>
+          <completionHelp>
+            <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bridge</script>
+          </completionHelp>
+        </properties>
+        <command>/sbin/brctl show '$3'</command>
+        <children>
+          <node name="macs">
+            <properties>
+              <help>Show bridge Media Access Control (MAC) address table</help>
+            </properties>
+            <command>/sbin/brctl showmacs '$3'</command>
+          </node>
+          <node name="spanning-tree">
+            <properties>
+              <help>Show bridge spanning tree information</help>
+            </properties>
+            <command>/sbin/brctl showstp '$3'</command>
+          </node>
+        </children>
+    </tagNode>
+
+    </children>
+  </node>
+</interfaceDefinition>
