@@ -216,11 +216,11 @@
                       </valueHelp>
                       <valueHelp>
                         <format>auth</format>
-                        <description>Messages are authenticated but not encrypted (AuthNoPriv)</description>
+                        <description>Messages are authenticated but not encrypted (authNoPriv)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>priv</format>
-                        <description>Messages are authenticated and encrypted (AuthPriv)</description>
+                        <description>Messages are authenticated and encrypted (authPriv)</description>
                       </valueHelp>
                       <constraint>
                         <regex>(noauth|auth|priv)</regex>
