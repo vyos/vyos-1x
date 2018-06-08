@@ -17,7 +17,7 @@
                 <properties>
                   <help> Show system CPU details</help>
                 </properties>
-                <command>less $_vyatta_less_options --prompt='.cpu info' -- /proc/cpuinfo</command>
+                <command>cat /proc/cpuinfo</command>
               </node>
               <node name="summary">
                 <properties>
@@ -39,7 +39,7 @@
             <properties>
               <help>Show system RAM details</help>
             </properties>
-            <command>less $_vyatta_less_options --prompt='.mem info' -- /proc/meminfo</command>
+            <command>cat /proc/meminfo</command>
           </node>
 
           <node name="pci">
