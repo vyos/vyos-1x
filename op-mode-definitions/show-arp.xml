@@ -2,24 +2,25 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-    <leafNode name="arp">
+    <node name="arp">
       <properties>
         <help>Show Address Resolution Protocol (ARP) information</help>
       </properties>
       <command>/usr/sbin/arp -e -n</command>
-    </leafNode>
-    <tagNode name="arp">
-      <properties>
-        <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>
-        <completionHelp>
-          <script>${vyatta_sbindir}/vyatta-interfaces.pl --show ethernet</script>
-          <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bridge</script>
-          <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bonding</script>
-        </completionHelp>
-      </properties>
-      <command>/usr/sbin/arp -e -n -i '$3'</command>
-      
-    </tagNode>
+      <children>
+        <tagNode name="interface">
+          <properties>
+            <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>
+            <completionHelp>
+              <script>${vyatta_sbindir}/vyatta-interfaces.pl --show ethernet</script>
+              <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bridge</script>
+              <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bonding</script>
+            </completionHelp>
+          </properties>
+          <command>/usr/sbin/arp -e -n -i '$4'</command>
+        </tagNode>
+      </children>
+    </node>
 
     </children>
   </node>
