@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
-
 <!-- UDP broadcast relay configuration -->
-
 <interfaceDefinition>
   <node name="service">
     <children>
@@ -44,7 +42,7 @@
                 <properties>
                   <help>Interface to repeat UDP broadcasts to [REQUIRED]</help>
                   <completionHelp>
-                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                   <multi/>
                 </properties>
