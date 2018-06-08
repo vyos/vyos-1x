@@ -17,9 +17,14 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 #  IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import os
 import json
 
-def get_version_data(file='/opt/vyatta/etc/version.json'):
+import vyos.defaults
+
+version_file = os.path.join(vyos.defaults.directories['data'], 'version.json')
+  
+def get_version_data(file=version_file):
     with open(file, 'r') as f:
         version_data = json.load(f)
     return version_data
