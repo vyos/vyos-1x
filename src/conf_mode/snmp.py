@@ -634,6 +634,9 @@ def verify(snmp):
             if user['privPassword'] == '' and user['privMasterKey'] == '':
                 raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
 
+            if user['privMasterKey'] and user['engineID'] == '':
+                raise ConfigError('Can not have "encrypted-key" without engineid')
+
             if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
                 raise ConfigError('Must specify auth or tsm-key for user auth')
 
