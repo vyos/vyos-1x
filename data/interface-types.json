@@ -1,0 +1,17 @@
+{
+  "loopback":         "lo",
+  "dummy":            "dum",
+  "ethernet":         "eth",
+  "bonding":          "bond",
+  "bridge":           "br",
+  "pseudo-ethernet":  "peth",
+  "openvpn":          "vtun",
+  "tunnel":           "tun",
+  "vti":              "vti",
+  "l2tpv3":           "l2tpeth",
+  "vxlan":            "vxlan",
+  "wireless":         "wireless",
+  "wirelessmodem":    "wlm",
+  "input":            "ifb",
+  "pppoe":            "pppoe"
+}

@@ -4,6 +4,7 @@ DIR := debian/vyos-1x
 VYOS_SBIN_DIR := usr/sbin/
 VYOS_BIN_DIR := usr/bin/
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
+VYOS_DATA_DIR := /usr/share/vyos
 VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := /opt/vyatta/share/vyatta-op/templates
 
@@ -54,3 +55,7 @@ override_dh_auto_install:
 	# Install operational command definitions
 	mkdir -p $(DIR)/$(VYOS_OP_TMPL_DIR)
 	cp -r templates-op/* $(DIR)/$(VYOS_OP_TMPL_DIR)
+
+	# Install data files
+	mkdir -p $(DIR)/$(VYOS_DATA_DIR)
+	cp -r data/* $(DIR)/$(VYOS_DATA_DIR)
