@@ -27,7 +27,7 @@
                 <properties>
                   <help>Use DNS servers received from DHCP server for specified interface</help>
                   <completionHelp>
-                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                   <multi/>
                 </properties>
@@ -85,7 +85,7 @@
                 <properties>
                   <help>Interface to listen for DNS queries [DEPRECATED]</help>
                   <completionHelp>
-                    <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                   <multi/>
                 </properties>
