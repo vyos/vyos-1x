@@ -12,9 +12,7 @@
           <properties>
             <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>
             <completionHelp>
-              <script>${vyatta_sbindir}/vyatta-interfaces.pl --show ethernet</script>
-              <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bridge</script>
-              <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bonding</script>
+              <script>${vyos_completion_dir}/list_interfaces.py -b</script>
             </completionHelp>
           </properties>
           <command>/usr/sbin/arp -e -n -i '$4'</command>
