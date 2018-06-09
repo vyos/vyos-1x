@@ -12,7 +12,7 @@
         <properties>
           <help>Show bridge information for a given bridge interface</help>
           <completionHelp>
-            <script>${vyatta_sbindir}/vyatta-interfaces.pl --show bridge</script>
+            <script>${vyos_completion_dir}/list_interfaces.py --type bridge</script>
           </completionHelp>
         </properties>
         <command>/sbin/brctl show '$3'</command>
