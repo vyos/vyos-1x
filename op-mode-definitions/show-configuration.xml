@@ -8,7 +8,7 @@
       </properties>
       <!-- no admin check -->
       <command>cli-shell-api showCfg --show-active-only --show-hide-secrets</command>
-      
+
       <children>
         <node name="all">
           <properties>
@@ -22,7 +22,7 @@
             <help> Show running configuration as set commands </help>
           </properties>
           <!-- no admin check -->
-          <command>${vyatta_sbindir}/vyatta-config-gen-sets.pl</command>
+          <command>cli-shell-api showCfg --show-active-only | vyos-config-to-commands</command>
         </node>
         <node name="files">
           <properties>
