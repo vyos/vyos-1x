@@ -23,7 +23,7 @@
                 <properties>
                   <help>Show CPU's on system</help>
                 </properties>
-                <command>${vyatta_bindir}/vyatta-cpu-summary.pl</command>
+                <command>${vyos_op_scripts_dir}/cpu_summary.py</command>
               </node>
             </children>
           </node>
