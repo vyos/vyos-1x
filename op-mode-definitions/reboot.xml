@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reboot">
+    <properties>
+      <help>Reboot the system</help>
+    </properties>
+    <command>/opt/vyatta/bin/sudo-users/vyatta-reboot.pl --action reboot</command>
+    <children>
+      <leafNode name="now">
+        <properties>
+          <help>Reboot the system without confirmation</help>
+        </properties>
+        <command>/opt/vyatta/bin/sudo-users/vyatta-reboot.pl --action reboot --now</command>
+      </leafNode>
+      
+      <leafNode name="cancel">
+        <properties>
+          <help>Cancel a pending reboot</help>
+        </properties>
+        <command>/opt/vyatta/bin/sudo-users/vyatta-reboot.pl --action reboot_cancel</command>
+      </leafNode>
+
+
+    <tagNode name="at">
+      <properties>
+        <help>Reboot at a specific time</help>
+        <completionHelp>
+          <list>HH:MM</list>
+          <list>MMDDYY</list>
+          <list>midnight</list>
+          <list>noon</list>
+        </completionHelp>
+      </properties>
+      <command>/opt/vyatta/bin/sudo-users/vyatta-reboot.pl --action reboot_at --at_time '$3'</command>
+      
+    </tagNode>
+
+    </children>
+  </node>
+</interfaceDefinition>
