@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="snmp">
+        <properties>
+          <help>Show status of SNMP on localhost</help>
+        </properties>
+        <children>
+          <tagNode name="community">
+            <properties>
+              <help>Show status of SNMP community</help>
+              <completionHelp>
+                <script>${vyos_op_scripts_dir}/snmp.py --allowed</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/snmp.py --community="$4"</command>
+            <children>
+              <tagNode name="host">
+                <properties>
+                  <help>Show status of SNMP on remote host</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp.py --community="$4" --host "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <node name="mib">
+            <properties>
+              <help>Show SNMP MIB information</help>
+            </properties>
+            <children>
+              <node name="ifmib">
+                <properties>
+                  <help>Show all SNMP interfaces MIB information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp_ifmib.py</command>
+                <children>
+                  <tagNode name="ifAlias">
+                    <properties>
+                      <help>Show SNMP ifAlias for specified interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifalias="$6"</command>
+                  </tagNode>
+                  <tagNode name="ifDescr">
+                    <properties>
+                      <help>Show SNMP ifDescr for specified interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifdescr="$6"</command>
+                  </tagNode>
+                  <tagNode name="ifIndex">
+                    <properties>
+                      <help>Show SNMP ifDescr for specified interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifindex="$6"</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="v3">
+            <properties>
+              <help>Show SNMP v3 status on localhost</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/snmp_v3.py --all</command>
+            <children>
+              <leafNode name="certificates">
+                <properties>
+                  <help>Show TSM certificates</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp_v3_showcerts.sh</command>
+              </leafNode>
+              <leafNode name="group">
+                <properties>
+                  <help>Show the list of configured groups</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp_v3.py --group</command>
+              </leafNode>
+              <leafNode name="trap-target">
+                <properties>
+                  <help>Show the list of configured targets</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp_v3.py --trap</command>
+              </leafNode>
+              <leafNode name="user">
+                <properties>
+                  <help>Show the list of configured users</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp_v3.py --user</command>
+              </leafNode>
+              <leafNode name="view">
+                <properties>
+                  <help>Show the list of configured views</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/snmp_v3.py --view</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
