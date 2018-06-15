@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <leafNode name="bridge">
+        <properties>
+          <help>Show bridging information</help>
+        </properties>
+        <command>/sbin/brctl show</command>
+      </leafNode>
+      <tagNode name="bridge">
+        <properties>
+          <help>Show bridge information for a given bridge interface</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces.py --type bridge</script>
+          </completionHelp>
+        </properties>
+        <command>/sbin/brctl show '$3'</command>
+        <children>
+          <leafNode name="macs">
+            <properties>
+              <help>Show bridge Media Access Control (MAC) address table</help>
+            </properties>
+            <command>/sbin/brctl showmacs '$3'</command>
+          </leafNode>
+          <leafNode name="spanning-tree">
+            <properties>
+              <help>Show bridge spanning tree information</help>
+            </properties>
+            <command>/sbin/brctl showstp '$3'</command>
+          </leafNode>
+        </children>
+    </tagNode>
+
+    </children>
+  </node>
+</interfaceDefinition>

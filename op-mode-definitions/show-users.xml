@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+    <node name="users">
+      <properties>
+        <help>Show user information</help>
+      </properties>
+      <command>who -H</command>
+      <children>
+        <node name="recent">
+          <properties>
+            <help>Show 10 recently logged in users</help>
+          </properties>
+          <command>last -aF -n 10 | sed -e 's/^wtmp begins/Displaying logins since/'</command>
+        </node>
+        <tagNode name="recent">
+          <properties>
+            <help>Show specified number of recently logged in users</help>
+            <completionHelp>
+              <list>NUMBER</list>
+            </completionHelp>
+          </properties>
+          <command>last -aF -n $4 | sed -e 's/^wtmp begins/Displaying logins since/'</command>
+        </tagNode>
+      </children>
+    </node>
+    </children>
+  </node>
+</interfaceDefinition>

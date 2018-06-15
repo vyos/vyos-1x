@@ -1,0 +1,29 @@
+#!/usr/bin/python3
+
+import sys
+
+from signal import signal, SIGPIPE, SIG_DFL
+from vyos.configtree import ConfigTree
+
+signal(SIGPIPE,SIG_DFL)
+
+config_string = None
+if (len(sys.argv) == 1):
+    # If no argument given, act as a pipe
+    config_string = sys.stdin.read()
+else:
+    file_name = sys.argv[1]
+    try:
+        with open(file_name, 'r') as f:
+            config_string = f.read()
+    except OSError as e:
+        print("Could not read config file {0}: {1}".format(file_name, e), file=sys.stderr)
+
+try:
+    config = ConfigTree(config_string)
+    commands = config.to_commands()
+except ValueError as e:
+    print("Could not parse the config file: {0}".format(e), file=sys.stderr)
+    sys.exit(1)
+
+print(commands)

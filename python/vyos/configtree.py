@@ -96,6 +96,10 @@ class ConfigTree(object):
         self.__to_string.argtypes = [c_void_p]
         self.__to_string.restype = c_char_p
 
+        self.__to_commands = self.__lib.to_commands
+        self.__to_commands.argtypes = [c_void_p]
+        self.__to_commands.restype = c_char_p
+
         self.__set_add_value = self.__lib.set_add_value
         self.__set_add_value.argtypes = [c_void_p, c_char_p, c_char_p]
         self.__set_add_value.restype = c_int
@@ -161,6 +165,9 @@ class ConfigTree(object):
         config_string = self.__to_string(self.__config).decode()
         config_string = "{0}\n{1}".format(config_string, self.__comments)
         return config_string
+
+    def to_commands(self):
+        return self.__to_commands(self.__config).decode()
 
     def set(self, path, value=None, replace=True):
         check_path(path)
