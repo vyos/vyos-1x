@@ -7,15 +7,15 @@ setup(
     author = "VyOS maintainers and contributors",
     author_email = "maintainers@vyos.net",
     description = ("VyOS configuration libraries."),
-    license = "MIT",
+    license = "LGPLv2+",
     keywords = "vyos",
     url = "http://www.vyos.io",
     packages=['vyos'],
     long_description="VyOS configuration libraries",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Topic :: Utilities",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
     ],
 )
 
