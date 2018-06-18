@@ -25,33 +25,22 @@ from vyos import ConfigError
 def get_config():
  conf = Config()
  if not conf.exists('system options beep-if-fully-booted'):
-  print ("delete")
-  return None 
+  return 1 
  else:
   conf.set_level('system options beep-if-fully-booted')
- 
- if conf.exists('enable'):
-  print ("enable")
-  return 0
- elif conf.exists('disable'):
-  print ("disable")
-  return 1
+  if conf.exists('enable'):
+   return 0
+  elif conf.exists('disable'):
+   return 1
 
 def apply(status):
- if status == None:
-  # subprocess.call  should be enough.
-  print ("systemctl -q disable beep")
-  return 0
+ # not sure if a retcode is required (rc), haven't seen that anyone else is using it
+ if status == 1:
+  rc = subprocess.call(['/bin/systemctl -q disable beep'], shell=True)
+  return rc 
  elif status == 0:
-  print ("systemctl -q enable beep")
-  return 0
- elif status == 1:
-  print ("systemctl -q disable beep")
-  return 0
- # catch all
- print ("systemctl -q disable beep")
- return 2
-
+  rc = subprocess.call(['/bin/systemctl -q enable beep'], shell=True)
+  return rc
 
 if __name__ == '__main__':
 # None = delete
@@ -63,4 +52,3 @@ if __name__ == '__main__':
  except ConfigError as e:
   print(e)
   sys.exit(1)
-
