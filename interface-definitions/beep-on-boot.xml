@@ -8,17 +8,17 @@
       <leafNode name="beep-if-fully-booted" owner="${vyos_conf_scripts_dir}/beep_if_fully_booted.py">
         <properties>
           <help>plays sound via system speaker when you can login</help>
-          <valueHelp> 
-            <format>enable</format> 
+            <valueHelp> 
+              <format>enable</format> 
               <description> plays a sound via system speaker when logins are possible </description> 
-          </valueHelp>
-          <valueHelp>
-            <format>disable</format>
+            </valueHelp>
+            <valueHelp>
+              <format>disable</format>
               <description> disable playing a sound when logins are possible </description>
-          </valueHelp>
-          <constraint>
-            <regex>(enable|disable)</regex>
-          </constraint>
+            </valueHelp>
+            <constraint>
+              <regex>(enable|disable)</regex>
+            </constraint>
         </properties>
       </leafNode>
     </children>
