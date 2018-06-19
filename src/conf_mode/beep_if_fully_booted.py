@@ -23,32 +23,28 @@ from vyos.config import Config
 from vyos import ConfigError
 
 def get_config():
- conf = Config()
- if not conf.exists('system options beep-if-fully-booted'):
-  return 1 
- else:
-  conf.set_level('system options beep-if-fully-booted')
-  if conf.exists('enable'):
-   return 0
-  elif conf.exists('disable'):
-   return 1
+  conf = Config()
+  if not conf.exists('system options beep-if-fully-booted'):
+    return 1 
+  else:
+    conf.set_level('system options beep-if-fully-booted')
+    if conf.exists('enable'):
+      return 0
+    elif conf.exists('disable'):
+      return 1
 
 def apply(status):
- # not sure if a retcode is required (rc), haven't seen that anyone else is using it
- if status == 1:
-  rc = subprocess.call(['/bin/systemctl -q disable beep'], shell=True)
-  return rc 
- elif status == 0:
-  rc = subprocess.call(['/bin/systemctl -q enable beep'], shell=True)
-  return rc
+  if status == 1:
+    rc = subprocess.call(['/bin/systemctl -q disable beep'], shell=True)
+    return rc 
+  elif status == 0:
+    rc = subprocess.call(['/bin/systemctl -q enable beep'], shell=True)
+    return rc
 
 if __name__ == '__main__':
-# None = delete
-# 0 = enable
-# 1 = disable
- try:
-  c = get_config()
-  apply(c)
- except ConfigError as e:
-  print(e)
-  sys.exit(1)
+  try:
+    c = get_config()
+    apply(c)
+  except ConfigError as e:
+    print(e)
+    sys.exit(1)
