@@ -14,7 +14,7 @@
           <properties>
             <help>Show disk drive formatting</help>
           </properties>
-          <command>${vyos_op_scripts_dir}/show-disk-format.sh $3</command>
+          <command>${vyos_op_scripts_dir}/show_disk_format.sh $3</command>
         </leafNode>
       </children>
     </tagNode>
