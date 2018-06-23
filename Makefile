@@ -43,3 +43,10 @@ test:
 .PHONY: sonar
 sonar:
 	sonar-scanner -X -Dsonar.login=${SONAR_TOKEN}
+
+.PHONY: docs
+.ONESHELL:
+docs:
+	sphinx-apidoc -o sphinx/source/  python/
+	cd sphinx/
+	PYTHONPATH=../python make html

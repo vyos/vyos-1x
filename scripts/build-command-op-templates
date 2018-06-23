@@ -137,7 +137,7 @@ def make_node_def(props, command):
 
 
     if command is not None:
-        node_def += "run: sudo sh -c \"{0}\"\n".format(command.text)
+        node_def += "run: {0}\n".format(command.text)
 
 
     if debug:
