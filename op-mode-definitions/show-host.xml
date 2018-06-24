@@ -21,13 +21,6 @@
           <command>/bin/hostname</command>
         </leafNode>
 
-        <leafNode name="os">
-          <properties>
-            <help>Show host operating system details</help>
-          </properties>
-          <command>/bin/uname -a</command>
-        </leafNode>
-
         <tagNode name="lookup">
           <properties>
             <help>Lookup host information for hostname|IPv4 address</help>
