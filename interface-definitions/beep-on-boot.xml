@@ -11,6 +11,7 @@
             <properties>
               <help>plays sound via system speaker when you can login</help>
               <valueless/>
+              <priority>9999</priority>
             </properties>
           </leafNode>
         </children>
