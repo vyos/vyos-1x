@@ -7,13 +7,6 @@
         <help>Show host information</help>
       </properties>
       <children>
-        <leafNode name="date">
-          <properties>
-            <help>Show host current date</help>
-          </properties>
-          <command>/bin/date</command>
-        </leafNode>
-
         <leafNode name="domain">
           <properties>
             <help>Show domain name</help>
