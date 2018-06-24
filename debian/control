@@ -32,6 +32,7 @@ Depends: python3,
   ntp,
   iputils-arping,
   libvyosconfig0,
+  beep,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
