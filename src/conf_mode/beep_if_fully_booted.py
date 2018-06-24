@@ -17,30 +17,26 @@
 #
 
 import sys
-import subprocess
+import os
 
 from vyos.config import Config
 from vyos import ConfigError
 
 def get_config():
-  conf = Config()
-  if not conf.exists('system options beep-if-fully-booted'):
-    return 1
-  else:
-    return 0
+    conf = Config()
+    if not conf.exists('system options beep-if-fully-booted'):
+        return None
+
+    return True
 
 def apply(status):
-  if status == 1:
-    rc = subprocess.call(['/bin/systemctl -q disable beep'], shell=True)
-    return rc
-  elif status == 0:
-    rc = subprocess.call(['/bin/systemctl -q enable beep'], shell=True)
-    return rc
+    if status is not None:
+        os.system('/usr/bin/beep -f 130 -l 100 -n -f 262 -l 100 -n -f 330 -l 100 -n -f 392 -l 100 -n -f 523 -l 100 -n -f 660 -l 100 -n -f 784 -l 300 -n -f 660 -l 300')
 
 if __name__ == '__main__':
-  try:
-    c = get_config()
-    apply(c)
-  except ConfigError as e:
-    print(e)
-    sys.exit(1)
+    try:
+        c = get_config()
+        apply(c)
+    except ConfigError as e:
+        print(e)
+        sys.exit(1)
