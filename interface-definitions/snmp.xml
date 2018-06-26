@@ -13,9 +13,9 @@
             <properties>
               <help>Community name [REQUIRED]</help>
               <constraint>
-                <regex>^[^%]+$</regex>
+                <regex>^[a-zA-Z0-9\-_]{1,100}</regex>
               </constraint>
-              <constraintErrorMessage>Community string may not contain '%'</constraintErrorMessage>
+              <constraintErrorMessage>Community string is limited to alphanumerical characters only with a total lenght of 100</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="authorization">
