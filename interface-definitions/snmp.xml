@@ -13,7 +13,7 @@
             <properties>
               <help>Community name [REQUIRED]</help>
               <constraint>
-                <regex>^[a-zA-Z0-9\-_]{1,100}</regex>
+                <regex>^[a-zA-Z0-9]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Community string is limited to alphanumerical characters only with a total lenght of 100</constraintErrorMessage>
             </properties>
@@ -393,6 +393,10 @@
                   <leafNode name="user">
                     <properties>
                       <help>Defines username for authentication</help>
+                      <constraint>
+                        <regex>^[a-zA-Z0-9]{1,100}</regex>
+                      </constraint>
+                      <constraintErrorMessage>Illegal characters in usernamename</constraintErrorMessage>
                       <completionHelp>
                         <path>service snmp v3 user</path>
                       </completionHelp>
@@ -433,7 +437,7 @@
                 <properties>
                   <help>Specifies the user with name username</help>
                   <constraint>
-                    <regex>^[^\(\)\|\-]+$</regex>
+                    <regex>^[a-zA-Z0-9]{1,100}</regex>
                   </constraint>
                   <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
                 </properties>
@@ -491,6 +495,10 @@
                   <leafNode name="group">
                     <properties>
                       <help>Specifies group for user name</help>
+                      <constraint>
+                        <regex>^[a-zA-Z0-9]{1,100}</regex>
+                      </constraint>
+                      <constraintErrorMessage>Illegal characters in group</constraintErrorMessage>
                       <completionHelp>
                         <path>service snmp v3 group</path>
                       </completionHelp>
