@@ -750,13 +750,16 @@ def apply(snmp):
         # plaintext password inside the configuration was replaced by
         # the encrypted one which can be found in 'config_file_user'
         with open(config_file_user, 'r') as f:
+            engineID = ''
             for line in f:
-                # we are only interested in the user database
+                if line.startswith('oldEngineID'):
+                    string = line.split(' ')
+                    engineID = string[1]
+
                 if line.startswith('usmUser'):
                     string = line.split(' ')
                     cfg = {
                         'user': string[4].replace(r'"', ''),
-                        'engineID': string[3],
                         'auth_pw': string[8],
                         'priv_pw': string[10]
                     }
@@ -767,7 +770,7 @@ def apply(snmp):
                     # Now update the running configuration
                     #
                     # Currently when executing os.system() the environment does not have the vyos_libexec_dir variable set, see T685
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1} > /dev/null'.format(cfg['user'], cfg['engineID']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1} > /dev/null'.format(cfg['user'], engineID))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['auth_pw']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['priv_pw']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
