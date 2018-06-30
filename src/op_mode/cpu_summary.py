@@ -18,7 +18,7 @@ cpu_data['cpu_number'] = len(data['processor'])
 cpu_data['models'] = list(set(data['model name']))
 
 # Strip extra whitespace from CPU model names, /proc/cpuinfo is prone to that
-cpu_data['models'] = map(lambda s: re.sub('\s+', ' ', s), cpu_data['models'])
+cpu_data['models'] = map(lambda s: re.sub(r'\s+', ' ', s), cpu_data['models'])
 
 print("CPU(s): {0}".format(cpu_data['cpu_number']))
 print("CPU model(s): {0}".format(",".join(cpu_data['models'])))
