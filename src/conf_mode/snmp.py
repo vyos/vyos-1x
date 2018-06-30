@@ -651,6 +651,9 @@ def verify(snmp):
                 if user['authPassword'] == '' and user['authMasterKey'] == '':
                     raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
 
+                if user['authProtocol'] == '':
+                    raise ConfigError('Must specify auth type')
+
                 # seclevel 'priv' is more restrictive
                 if seclevel is 'priv':
                     if user['privPassword'] and user['privMasterKey']:
