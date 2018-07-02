@@ -137,7 +137,6 @@ SysDescr {{ description }}
 # Listen
 agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161,udp6:161{% endif %}{% if v3_tsm_key %},tlstcp:{{ v3_tsm_port }},dtlsudp::{{ v3_tsm_port }}{% endif %}
 
-
 # SNMP communities
 {% if communities -%}
 {% for c in communities %}
@@ -470,7 +469,7 @@ def get_config():
                 'name': user,
                 'authMasterKey': '',
                 'authPassword': '',
-                'authProtocol': '',
+                'authProtocol': 'md5',
                 'authOID': 'none',
                 'engineID': '',
                 'group': '',
@@ -479,7 +478,7 @@ def get_config():
                 'privPassword': '',
                 'privOID': '',
                 'privTsmKey': '',
-                'privProtocol': ''
+                'privProtocol': 'des'
             }
 
             #
@@ -491,10 +490,14 @@ def get_config():
             if conf.exists('v3 user {0} auth plaintext-key'.format(user)):
                 user_cfg['authPassword'] = conf.return_value('v3 user {0} auth plaintext-key'.format(user))
 
+            # load default value
+            type = user_cfg['authProtocol']
             if conf.exists('v3 user {0} auth type'.format(user)):
                 type = conf.return_value('v3 user {0} auth type'.format(user))
-                user_cfg['authProtocol'] = type
-                user_cfg['authOID'] = OIDs[type]
+
+            # (re-)update with either default value or value from CLI
+            user_cfg['authProtocol'] = type
+            user_cfg['authOID'] = OIDs[type]
 
             #
             # v3 user {0} engineid
@@ -526,10 +529,14 @@ def get_config():
             if conf.exists('v3 user {0} privacy tsm-key'.format(user)):
                 user_cfg['privTsmKey'] = conf.return_value('v3 user {0} privacy tsm-key'.format(user))
 
+            # load default value
+            type = user_cfg['privProtocol']
             if conf.exists('v3 user {0} privacy type'.format(user)):
                 type = conf.return_value('v3 user {0} privacy type'.format(user))
-                user_cfg['privProtocol'] = type
-                user_cfg['privOID'] = OIDs[type]
+
+            # (re-)update with either default value or value from CLI
+            user_cfg['privProtocol'] = type
+            user_cfg['privOID'] = OIDs[type]
 
             snmp['v3_users'].append(user_cfg)
 
@@ -651,9 +658,6 @@ def verify(snmp):
                 if user['authPassword'] == '' and user['authMasterKey'] == '':
                     raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
 
-                if user['authProtocol'] == '':
-                    raise ConfigError('Must specify auth type')
-
                 # seclevel 'priv' is more restrictive
                 if seclevel is 'priv':
                     if user['privPassword'] and user['privMasterKey']:
@@ -667,9 +671,6 @@ def verify(snmp):
 
                     if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
                         raise ConfigError('Must specify auth or tsm-key for user auth')
-
-                    if user['privProtocol'] == '':
-                        raise ConfigError('Must specify privacy type')
 
                     if user['mode'] == '':
                         raise ConfigError('Must specify user mode ro/rw')
