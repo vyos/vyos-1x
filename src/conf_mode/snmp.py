@@ -651,15 +651,15 @@ def verify(snmp):
 
             # Depending on the configured security level
             # the user has to provide additional info
-            if seclevel is 'auth' or seclevel is 'priv':
+            if seclevel in ('auth', 'priv'):
                 if user['authPassword'] and user['authMasterKey']:
                     raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
 
-                if user['authPassword'] == '' and user['authMasterKey'] == '':
+                if (not user['authPassword'] and not user['authMasterKey']):
                     raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
 
                 # seclevel 'priv' is more restrictive
-                if seclevel is 'priv':
+                if seclevel in ('priv'):
                     if user['privPassword'] and user['privMasterKey']:
                         raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
 
