@@ -85,6 +85,7 @@ usmUser 1 3 {{ u.engineID }} "{{ u.name }}" "{{ u.name }}" NULL {{ u.authOID }} 
 {% endif %}
 
 createUser {{ vyos_user }} MD5 "{{ vyos_user_pass }}" DES
+oldEngineID {{ v3_engineid }}
 """
 
 # SNMPS template - be careful if you edit the template.
