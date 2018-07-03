@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import argparse
+
+import vyos.configtree
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--ssh", help="Enable SSH", action="store_true")
+parser.add_argument("--ssh-port", help="SSH port", type=int, action="store", default=22)
+
+parser.add_argument("--intf-address", help="Set interface address", type=str, action="append")
+
+parser.add_argument("config_file", help="Configuration file to modify", type=str)
+
+args = parser.parse_args()
+
+# Load the config file
+with open(args.config_file, 'r') as f:
+    config_file = f.read()
+
+config = vyos.configtree.ConfigTree(config_file)
+
+
+# Interface names and addresses are comma-separated,
+# we need to split them
+intf_addrs = list(map(lambda s: s.split(","), args.intf_address))
+
+# Enable SSH, if requested
+if args.ssh:
+    config.set(["service",  "ssh", "port"], value=str(args.ssh_port))
+
+# Assign addresses to interfaces
+if intf_addrs:
+    for a in intf_addrs:
+        config.set(["interfaces", "ethernet", a[0], "address"], value=a[1])
+    config.set_tag(["interfaces", "ethernet"])
+
+print( config.to_string() )

@@ -74,7 +74,9 @@ user_config_tmpl = """
 # user
 {% if v3_users %}
 {% for u in v3_users %}
-{% if u.authPassword %}
+{% if u.authOID == 'none' %}
+createUser {{ u.name }}
+{% elif u.authPassword %}
 createUser {{ u.name }} {{ u.authProtocol | upper }} "{{ u.authPassword }}" {{ u.privProtocol | upper }} {{ u.privPassword }}
 {% else %}
 usmUser 1 3 {{ u.engineID }} "{{ u.name }}" "{{ u.name }}" NULL {{ u.authOID }} {{ u.authMasterKey }} {{ u.privOID }} {{ u.privMasterKey }} 0x
@@ -83,6 +85,7 @@ usmUser 1 3 {{ u.engineID }} "{{ u.name }}" "{{ u.name }}" NULL {{ u.authOID }} 
 {% endif %}
 
 createUser {{ vyos_user }} MD5 "{{ vyos_user_pass }}" DES
+oldEngineID {{ v3_engineid }}
 """
 
 # SNMPS template - be careful if you edit the template.
@@ -134,7 +137,6 @@ SysDescr {{ description }}
 
 # Listen
 agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161,udp6:161{% endif %}{% if v3_tsm_key %},tlstcp:{{ v3_tsm_port }},dtlsudp::{{ v3_tsm_port }}{% endif %}
-
 
 # SNMP communities
 {% if communities -%}
@@ -468,8 +470,8 @@ def get_config():
                 'name': user,
                 'authMasterKey': '',
                 'authPassword': '',
-                'authProtocol': '',
-                'authOID': '',
+                'authProtocol': 'md5',
+                'authOID': 'none',
                 'engineID': '',
                 'group': '',
                 'mode': 'ro',
@@ -477,7 +479,7 @@ def get_config():
                 'privPassword': '',
                 'privOID': '',
                 'privTsmKey': '',
-                'privProtocol': ''
+                'privProtocol': 'des'
             }
 
             #
@@ -489,10 +491,14 @@ def get_config():
             if conf.exists('v3 user {0} auth plaintext-key'.format(user)):
                 user_cfg['authPassword'] = conf.return_value('v3 user {0} auth plaintext-key'.format(user))
 
+            # load default value
+            type = user_cfg['authProtocol']
             if conf.exists('v3 user {0} auth type'.format(user)):
                 type = conf.return_value('v3 user {0} auth type'.format(user))
-                user_cfg['authProtocol'] = type
-                user_cfg['authOID'] = OIDs[type]
+
+            # (re-)update with either default value or value from CLI
+            user_cfg['authProtocol'] = type
+            user_cfg['authOID'] = OIDs[type]
 
             #
             # v3 user {0} engineid
@@ -524,10 +530,14 @@ def get_config():
             if conf.exists('v3 user {0} privacy tsm-key'.format(user)):
                 user_cfg['privTsmKey'] = conf.return_value('v3 user {0} privacy tsm-key'.format(user))
 
+            # load default value
+            type = user_cfg['privProtocol']
             if conf.exists('v3 user {0} privacy type'.format(user)):
                 type = conf.return_value('v3 user {0} privacy type'.format(user))
-                user_cfg['privProtocol'] = type
-                user_cfg['privOID'] = OIDs[type]
+
+            # (re-)update with either default value or value from CLI
+            user_cfg['privProtocol'] = type
+            user_cfg['privOID'] = OIDs[type]
 
             snmp['v3_users'].append(user_cfg)
 
@@ -625,45 +635,52 @@ def verify(snmp):
 
     if 'v3_users' in snmp.keys():
         for user in snmp['v3_users']:
-            if user['authPassword'] and user['authMasterKey']:
-                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
-
-            if user['privPassword'] and user['privMasterKey']:
-                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
-
-            if user['privPassword'] == '' and user['privMasterKey'] == '':
-                raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
-
-            if user['privMasterKey'] and user['engineID'] == '':
-                raise ConfigError('Can not have "encrypted-key" without engineid')
-
-            if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
-                raise ConfigError('Must specify auth or tsm-key for user auth')
-
-            if user['privProtocol'] == '':
-                raise ConfigError('Must specify privacy type')
-
-            if user['mode'] == '':
-                raise ConfigError('Must specify user mode ro/rw')
-
-            if user['privTsmKey']:
-                if not tsmKeyPattern.match(snmp['v3_tsm_key']):
-                    if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                        if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                            raise ConfigError('User TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
-
+            #
+            # Group must exist prior to mapping it into a group
+            # seclevel will be extracted from group
+            #
+            error = True
             if user['group']:
-                #
-                # Group must exist prior to mapping it into a group
-                #
-                error = True
                 if 'v3_groups' in snmp.keys():
                     for group in snmp['v3_groups']:
                         if group['name'] == user['group']:
+                            seclevel = group['seclevel']
                             error = False
-                if error:
-                    raise ConfigError('You must create group "{0}" first'.format(user['group']))
 
+            if error:
+                raise ConfigError('You must create group "{0}" first'.format(user['group']))
+
+            # Depending on the configured security level
+            # the user has to provide additional info
+            if seclevel in ('auth', 'priv'):
+                if user['authPassword'] and user['authMasterKey']:
+                    raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
+
+                if (not user['authPassword'] and not user['authMasterKey']):
+                    raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
+
+                # seclevel 'priv' is more restrictive
+                if seclevel in ('priv'):
+                    if user['privPassword'] and user['privMasterKey']:
+                        raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
+
+                    if user['privPassword'] == '' and user['privMasterKey'] == '':
+                        raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
+
+                    if user['privMasterKey'] and user['engineID'] == '':
+                        raise ConfigError('Can not have "encrypted-key" without engineid')
+
+                    if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
+                        raise ConfigError('Must specify auth or tsm-key for user auth')
+
+                    if user['mode'] == '':
+                        raise ConfigError('Must specify user mode ro/rw')
+
+                    if user['privTsmKey']:
+                        if not tsmKeyPattern.match(snmp['v3_tsm_key']):
+                            if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                                if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                                    raise ConfigError('User TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
 
     if 'v3_views' in snmp.keys():
         for view in snmp['v3_views']:
@@ -750,13 +767,16 @@ def apply(snmp):
         # plaintext password inside the configuration was replaced by
         # the encrypted one which can be found in 'config_file_user'
         with open(config_file_user, 'r') as f:
+            engineID = ''
             for line in f:
-                # we are only interested in the user database
+                if line.startswith('oldEngineID'):
+                    string = line.split(' ')
+                    engineID = string[1]
+
                 if line.startswith('usmUser'):
                     string = line.split(' ')
                     cfg = {
                         'user': string[4].replace(r'"', ''),
-                        'engineID': string[3],
                         'auth_pw': string[8],
                         'priv_pw': string[10]
                     }
@@ -767,7 +787,7 @@ def apply(snmp):
                     # Now update the running configuration
                     #
                     # Currently when executing os.system() the environment does not have the vyos_libexec_dir variable set, see T685
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1} > /dev/null'.format(cfg['user'], cfg['engineID']))
+                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1} > /dev/null'.format(cfg['user'], engineID))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['auth_pw']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['priv_pw']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
