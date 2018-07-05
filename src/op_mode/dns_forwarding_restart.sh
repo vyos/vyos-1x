@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if cli-shell-api exists service dns forwarding; then
+if cli-shell-api existsEffective service dns forwarding; then
     echo "Restarting the DNS forwarding service"
     systemctl restart pdns-recursor
 else
