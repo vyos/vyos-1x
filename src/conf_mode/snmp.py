@@ -144,6 +144,7 @@ agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{
 {% if c.network -%}
 {% for network in c.network %}
 {{ c.authorization }}community {{ c.name }} {{ network }}
+{{ c.authorization }}community6 {{ c.name }} {{ network }}
 {% endfor %}
 {% else %}
 {{ c.authorization }}community {{ c.name }}
