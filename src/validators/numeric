@@ -25,7 +25,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--float", action="store_true", help="Accept floating point values")
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-r", "--range", type=str, help="Check if the number is within range (inclusive), example: 1024-65535")
-group.add_argument("-n", "--non-negative", action="store_true", help="")
+group.add_argument("-n", "--non-negative", action="store_true", help="Check if the number is non-negative (>= 0)")
+group.add_argument("-p", "--positive", action="store_true", help="Check if the number is positive (> 0)")
 parser.add_argument("number", type=str, help="Number to validate")
 
 args = parser.parse_args()
@@ -60,3 +61,8 @@ elif args.non_negative:
     if number < 0:
         print("Number should be non-negative", file=sys.stderr)
         sys.exit(1)
+elif args.positive:
+    if number <= 0:
+        print("Number should be positive", file=sys.stderr)
+        sys.exit(1)
+
