@@ -6,7 +6,7 @@ OP_TMPL_DIR := templates-op
 interface_definitions:
 	mkdir -p $(TMPL_DIR)
 
-	find $(CURDIR)/interface-definitions/ -type f | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
+	find $(CURDIR)/interface-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/system/node.def
@@ -20,7 +20,7 @@ interface_definitions:
 op_mode_definitions:
 	mkdir -p $(OP_TMPL_DIR)
 
-	find $(CURDIR)/op-mode-definitions/ -type f | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
+	find $(CURDIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
 	# XXX: delete top level op mode node.def's that now live in other packages
 	rm -f $(OP_TMPL_DIR)/show/node.def
