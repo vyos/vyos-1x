@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import psutil
 
 
 def colon_separated_to_dict(data_string, uniquekeys=False):
@@ -63,3 +64,9 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
             pass
 
     return data
+
+def process_running(pid_file):
+    """ Checks if a process with PID in pid_file is running """
+    with open(pid_file, 'r') as f:
+        pid = f.read().strip()
+    return psutil.pid_exists(int(pid))
