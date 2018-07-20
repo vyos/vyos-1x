@@ -70,3 +70,43 @@ def process_running(pid_file):
     with open(pid_file, 'r') as f:
         pid = f.read().strip()
     return psutil.pid_exists(int(pid))
+
+def seconds_to_human(s, separator=""):
+    """ Converts number of seconds passed to a human-readable
+    interval such as 1w4d18h35m59s
+    """
+    s = int(s)
+
+    week = 60 * 60 * 24 * 7
+    day = 60 * 60 * 24
+    hour = 60 * 60
+
+    remainder = 0
+    result = ""
+
+    weeks = s // week
+    if weeks > 0:
+        result = "{0}w".format(weeks)
+        s = s % week
+
+    days = s // day
+    if days > 0:
+        result = "{0}{1}{2}d".format(result, separator, days)
+        s = s % day
+
+    hours = s // hour
+    if hours > 0:
+        result = "{0}{1}{2}h".format(result, separator, hours)
+        s = s % hour
+
+    minutes = s // 60
+    if minutes > 0:
+        result = "{0}{1}{2}m".format(result, separator, minutes)
+        s = s % 60
+    print(s)
+
+    seconds = s
+    if seconds > 0:
+        result = "{0}{1}{2}s".format(result, separator, seconds)
+
+    return result
