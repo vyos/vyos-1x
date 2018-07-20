@@ -29,7 +29,7 @@
             <help> Show available saved configurations </help>
           </properties>
           <!-- no admin check -->
-          <command>${vyos_op_scripts_dir}/show-configuration-files.sh</command>
+          <command>${vyos_op_scripts_dir}/show_configuration_files.sh</command>
         </node>
       </children>
     </node>
