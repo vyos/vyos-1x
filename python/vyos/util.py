@@ -16,6 +16,11 @@
 import re
 import psutil
 
+def read_file(path):
+    """ Read a file to string """
+    with open(path, 'r') as f:
+        data = f.read().strip()
+    return data
 
 def colon_separated_to_dict(data_string, uniquekeys=False):
     """ Converts a string containing newline-separated entries
