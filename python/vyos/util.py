@@ -108,7 +108,6 @@ def seconds_to_human(s, separator=""):
     if minutes > 0:
         result = "{0}{1}{2}m".format(result, separator, minutes)
         s = s % 60
-    print(s)
 
     seconds = s
     if seconds > 0:
