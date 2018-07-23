@@ -14,7 +14,11 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import grp
 import psutil
+
+import vyos.defaults
+
 
 def read_file(path):
     """ Read a file to string """
@@ -114,3 +118,7 @@ def seconds_to_human(s, separator=""):
         result = "{0}{1}{2}s".format(result, separator, seconds)
 
     return result
+
+def get_cfg_group_id():
+    group_data = grp.getgrnam(vyos.defaults.cfg_group)
+    return group_data.gr_gid
