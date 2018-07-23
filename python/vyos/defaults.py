@@ -17,3 +17,5 @@
 directories = {
   "data": "/usr/share/vyos/"
 }
+
+cfg_group = 'vyattacfg'
