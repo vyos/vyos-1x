@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import grp
 import psutil
@@ -122,3 +123,11 @@ def seconds_to_human(s, separator=""):
 def get_cfg_group_id():
     group_data = grp.getgrnam(vyos.defaults.cfg_group)
     return group_data.gr_gid
+
+def file_is_persistent(path):
+    if not re.match(r'^(/config|/opt/vyatta/etc/config)', os.path.dirname(path)):
+        warning = "Warning: file {0} is outside the /config directory\n".format(path)
+        warning += "It will not be automatically migrated to a new image on system update"
+        return (False, warning)
+    else:
+        return (True, None)
