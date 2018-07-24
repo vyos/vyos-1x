@@ -1,0 +1,859 @@
+<?xml version="1.0"?>
+
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="syslog" owner="${vyos_conf_scripts_dir}/syslog.py">
+        <properties>
+          <help>System logging</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+        <tagNode name="user">
+          <properties>
+            <help>Logging to specific user's terminal</help>
+            <constraint>
+              <regex>^[a-z_][a-z0-9_-]{1,31}[$]?</regex>
+            </constraint>
+            <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
+            <valueHelp>
+              <format>username</format>
+              <description>user login name</description>
+            </valueHelp>
+          </properties>
+          <children>
+            <tagNode name="facility">
+              <properties>
+                <help>Facility for logging</help>
+                <completionHelp>
+                  <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>all</format>
+                  <description>All facilities excluding "mark"</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>auth</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>authpriv</format>
+                  <description>Non-system authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>cron</format>
+                  <description>Cron daemon</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>daemon</format>
+                  <description>System daemons</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>kern</format>
+                  <description>Kernel</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>lpr</format>
+                  <description>Line printer spooler</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mail</format>
+                  <description>Mail subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mark</format>
+                  <description>Timestamp</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>news</format>
+                  <description>USENET subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>protocols</format>
+                  <description>depricated will be set to local7</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>security</format>
+                  <description>depricated will be set to auth</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>syslog</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>user</format>
+                  <description>Application processes</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>uucp</format>
+                  <description>UUCP subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local0</format>
+                  <description>Local facility 0</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local1</format>
+                  <description>Local facility 1</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local2</format>
+                  <description>Local facility 2</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local3</format>
+                  <description>Local facility 3</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local4</format>
+                  <description>Local facility 4</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local5</format>
+                  <description>Local facility 5</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local6</format>
+                  <description>Local facility 6</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local7</format>
+                  <description>Local facility 7</description>
+                </valueHelp>
+              </properties>
+              <children>
+                <leafNode name="level">
+                  <properties>
+                    <help>Logging level</help>
+                    <completionHelp>
+                      <list>emerg alert crit err warning notice info debug all</list>
+                    </completionHelp>
+                    <valueHelp>
+                      <format>emerg</format>
+                      <description>Emergency messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>alert</format>
+                      <description>Urgent messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>crit</format>
+                      <description>Critical messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>err</format>
+                      <description>Error messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>warning</format>
+                      <description>Warning messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>notice</format>
+                      <description>Messages for further investigation</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>info</format>
+                      <description>Informational messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>debug</format>
+                      <description>Debug messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>all</format>
+                      <description>Log everything</description>
+                    </valueHelp>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </tagNode>
+        <tagNode name="host">
+          <properties>
+            <help>Logging to a remote host</help>
+            <valueHelp>
+              <format>x.x.x.x or host.domain.tld</format>
+              <description>Remote host name or IP address</description>
+              <!-- regex host or IP check? -->
+            </valueHelp>
+          </properties>
+          <children>
+            <tagNode name="facility">
+              <properties>
+                <help>Facility for logging</help>
+                <completionHelp>
+                  <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>all</format>
+                  <description>All facilities excluding "mark"</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>auth</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>authpriv</format>
+                  <description>Non-system authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>cron</format>
+                  <description>Cron daemon</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>daemon</format>
+                  <description>System daemons</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>kern</format>
+                  <description>Kernel</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>lpr</format>
+                  <description>Line printer spooler</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mail</format>
+                  <description>Mail subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mark</format>
+                  <description>Timestamp</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>news</format>
+                  <description>USENET subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>protocols</format>
+                  <description>depricated will be set to local7</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>security</format>
+                  <description>depricated will be set to auth</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>syslog</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>user</format>
+                  <description>Application processes</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>uucp</format>
+                  <description>UUCP subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local0</format>
+                  <description>Local facility 0</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local1</format>
+                  <description>Local facility 1</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local2</format>
+                  <description>Local facility 2</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local3</format>
+                  <description>Local facility 3</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local4</format>
+                  <description>Local facility 4</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local5</format>
+                  <description>Local facility 5</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local6</format>
+                  <description>Local facility 6</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local7</format>
+                  <description>Local facility 7</description>
+                </valueHelp>
+              </properties>
+              <children>
+                <leafNode name="protocol">
+                  <properties>
+                    <help>syslog communication protocol</help>
+                    <valueHelp>
+                      <format>udp</format>
+                      <description>send log messages to remote syslog server over udp</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>tcp</format>
+                      <description>send log messages to remote syslog server over tdp</description>
+                    </valueHelp>
+                  </properties>
+                </leafNode>
+
+                <leafNode name="level">
+                  <properties>
+                    <help>Logging level</help>
+                    <completionHelp>
+                      <list>emerg alert crit err warning notice info debug all</list>
+                    </completionHelp>
+                    <valueHelp>
+                      <format>emerg</format>
+                      <description>Emergency messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>alert</format>
+                      <description>Urgent messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>crit</format>
+                      <description>Critical messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>err</format>
+                      <description>Error messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>warning</format>
+                      <description>Warning messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>notice</format>
+                      <description>Messages for further investigation</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>info</format>
+                      <description>Informational messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>debug</format>
+                      <description>Debug messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>all</format>
+                      <description>Log everything</description>
+                    </valueHelp>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>            
+          </children>
+        </tagNode>
+        <node name="global">
+          <children>
+            <node name="archive">
+              <properties>
+                <help>Log file size and rotation characteristics</help>
+              </properties>
+              <children>
+                <leafNode name="file">
+                  <properties>
+                    <help>Number of saved files (default is 5)</help>
+                    <constraint>
+                      <regex>^[0-9]+</regex>
+                    </constraint>
+                    <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+                <leafNode name="size">
+                  <properties>
+                    <help>Size of log files (in kbytes, default is 256)</help>
+                    <constraint>
+                      <regex>^[0-9]+</regex>
+                    </constraint>
+                    <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+              </children>
+            </node>
+            <tagNode name="facility">
+              <properties>
+                <help>Facility for logging</help>
+                <completionHelp>
+                  <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>all</format>
+                  <description>All facilities excluding "mark"</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>auth</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>authpriv</format>
+                  <description>Non-system authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>cron</format>
+                  <description>Cron daemon</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>daemon</format>
+                  <description>System daemons</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>kern</format>
+                  <description>Kernel</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>lpr</format>
+                  <description>Line printer spooler</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mail</format>
+                  <description>Mail subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mark</format>
+                  <description>Timestamp</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>news</format>
+                  <description>USENET subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>protocols</format>
+                  <description>depricated will be set to local7</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>security</format>
+                  <description>depricated will be set to auth</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>syslog</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>user</format>
+                  <description>Application processes</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>uucp</format>
+                  <description>UUCP subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local0</format>
+                  <description>Local facility 0</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local1</format>
+                  <description>Local facility 1</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local2</format>
+                  <description>Local facility 2</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local3</format>
+                  <description>Local facility 3</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local4</format>
+                  <description>Local facility 4</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local5</format>
+                  <description>Local facility 5</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local6</format>
+                  <description>Local facility 6</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local7</format>
+                  <description>Local facility 7</description>
+                </valueHelp>
+              </properties>
+              <children>
+                <leafNode name="level">
+                  <properties>
+                    <help>Logging level</help>
+                    <completionHelp>
+                      <list>emerg alert crit err warning notice info debug all</list>
+                    </completionHelp>
+                    <valueHelp>
+                      <format>emerg</format>
+                      <description>Emergency messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>alert</format>
+                      <description>Urgent messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>crit</format>
+                      <description>Critical messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>err</format>
+                      <description>Error messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>warning</format>
+                      <description>Warning messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>notice</format>
+                      <description>Messages for further investigation</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>info</format>
+                      <description>Informational messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>debug</format>
+                      <description>Debug messages</description>
+                    </valueHelp>
+                    <valueHelp>
+                      <format>all</format>
+                      <description>Log everything</description>
+                    </valueHelp>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+        <tagNode name="file">
+          <properties>
+            <help>Logging to a file</help>
+            <constraint>
+              <regex>^[a-zA-Z0-9\-_.]{1,255}</regex>
+              </constraint>
+              <constraintErrorMessage>illegal characters in filename or filename longer than 255 characters</constraintErrorMessage>
+          </properties>
+          <children>
+            <node name="archive">
+              <properties>
+                <help>Log file size and rotation characteristics</help>
+              </properties>
+              <children>
+                <leafNode name="file">
+                  <properties>
+                    <help>Number of saved files (default is 5)</help>
+                    <constraint>
+                      <regex>^[0-9]+</regex>
+                    </constraint>
+                    <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+                <leafNode name="size">
+                  <properties>
+                    <help>Size of log files (in kbytes, default is 256)</help>
+                    <constraint>
+                      <regex>^[0-9]+</regex>
+                    </constraint>
+                    <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+              </children>
+            </node>
+            <tagNode name="facility">
+              <properties>
+                <help>Facility for logging</help>
+                <completionHelp>
+                  <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>all</format>
+                  <description>All facilities excluding "mark"</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>auth</format>
+                  <description>Authentication and authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>authpriv</format>
+                  <description>Non-system authorization</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>cron</format>
+                  <description>Cron daemon</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>daemon</format>
+                  <description>System daemons</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>kern</format>
+                  <description>Kernel</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>lpr</format>
+                  <description>Line printer spooler</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mail</format>
+                  <description>Mail subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>mark</format>
+                  <description>Timestamp</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>news</format>
+                  <description>USENET subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>protocols</format>
+                  <description>depricated will be set to local7</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>security</format>
+                  <description>depricated will be set to auth</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>syslog</format>
+                    <description>Authentication and authorization</description>
+                  </valueHelp>
+                <valueHelp>
+                  <format>user</format>
+                  <description>Application processes</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>uucp</format>
+                  <description>UUCP subsystem</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local0</format>
+                  <description>Local facility 0</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local1</format>
+                  <description>Local facility 1</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local2</format>
+                  <description>Local facility 2</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local3</format>
+                  <description>Local facility 3</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local4</format>
+                  <description>Local facility 4</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local5</format>
+                  <description>Local facility 5</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local6</format>
+                  <description>Local facility 6</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>local7</format>
+                  <description>Local facility 7</description>
+                </valueHelp>
+              </properties>
+              <children>
+                <leafNode name="level">
+                  <properties>
+                    <help>Logging level</help>
+                    <completionHelp>
+                      <list>emerg alert crit err warning notice info debug all</list>
+                    </completionHelp>
+                    <valueHelp>
+                      <format>emerg</format>
+                        <description>Emergency messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>alert</format>
+                        <description>Urgent messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>crit</format>
+                        <description>Critical messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>err</format>
+                        <description>Error messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>warning</format>
+                        <description>Warning messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>notice</format>
+                        <description>Messages for further investigation</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>info</format>
+                        <description>Informational messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>debug</format>
+                        <description>Debug messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>all</format>
+                        <description>Log everything</description>
+                      </valueHelp>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </tagNode>
+          <node name="console">
+            <properties>
+              <help>logging to serial console</help>
+            </properties>
+            <children>
+              <tagNode name="facility">
+                <properties>
+                  <help>Facility for logging</help>
+                  <completionHelp>
+                    <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>all</format>
+                    <description>All facilities excluding "mark"</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>auth</format>
+                    <description>Authentication and authorization</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>authpriv</format>
+                    <description>Non-system authorization</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>cron</format>
+                    <description>Cron daemon</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>daemon</format>
+                    <description>System daemons</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>kern</format>
+                    <description>Kernel</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>lpr</format>
+                    <description>Line printer spooler</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mail</format>
+                    <description>Mail subsystem</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mark</format>
+                    <description>Timestamp</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>news</format>
+                    <description>USENET subsystem</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>protocols</format>
+                    <description>depricated will be set to local7</description>
+                  </valueHelp>                  
+                  <valueHelp>
+                    <format>security</format>
+                    <description>depricated will be set to auth</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>syslog</format>
+                    <description>Authentication and authorization</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>user</format>
+                    <description>Application processes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>uucp</format>
+                    <description>UUCP subsystem</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local0</format>
+                    <description>Local facility 0</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local1</format>
+                    <description>Local facility 1</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local2</format>
+                    <description>Local facility 2</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local3</format>
+                    <description>Local facility 3</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local4</format>
+                    <description>Local facility 4</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local5</format>
+                    <description>Local facility 5</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local6</format>
+                    <description>Local facility 6</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local7</format>
+                    <description>Local facility 7</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="level">
+                    <properties>
+                      <help>Logging level</help>
+                      <completionHelp>
+                        <list>emerg alert crit err warning notice info debug all</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>emerg</format>
+                        <description>Emergency messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>alert</format>
+                        <description>Urgent messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>crit</format>
+                        <description>Critical messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>err</format>
+                        <description>Error messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>warning</format>
+                        <description>Warning messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>notice</format>
+                        <description>Messages for further investigation</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>info</format>
+                        <description>Informational messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>debug</format>
+                        <description>Debug messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>all</format>
+                        <description>Log everything</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
