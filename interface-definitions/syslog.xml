@@ -173,10 +173,14 @@
         <tagNode name="host">
           <properties>
             <help>Logging to a remote host</help>
+            <constraint>
+              <!-- at least let's make sure whitespace isn't allowed, ideally it should be checked for IPv4/IPv6 address or fqdn/hostname -->
+              <regex>[^ ]{1,63}</regex>
+            </constraint>
+            <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
             <valueHelp>
               <format>x.x.x.x or host.domain.tld</format>
               <description>Remote host name or IP address</description>
-              <!-- regex host or IP check? -->
             </valueHelp>
           </properties>
           <children>
