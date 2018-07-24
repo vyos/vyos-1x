@@ -1,3 +1,9 @@
+vyos-1x (1.0.6) unstable; urgency=medium
+  
+  * T736: Rewrite remote logging (syslog) to XML/Python
+
+ -- hagbard <vyosdev@derith.de>  Tue, 24 Jul 2018 10:59:25 -0700
+
 vyos-1x (1.0.5) unstable; urgency=medium
 
   * T606: Error in DNS Forwarder listen-on
