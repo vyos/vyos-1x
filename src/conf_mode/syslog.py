@@ -18,8 +18,8 @@
 
 import sys
 import os
-import jinja2
 import re
+import jinja2
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -254,7 +254,7 @@ def apply(c):
   
   if os.path.exists('/etc/rsyslog.d/vyatta-log.conf'):
     os.remove('/etc/rsyslog.d/vyatta-log.conf')
-  os.system("sudo invoke-rc.d rsyslog restart >/dev/null")
+  os.system("sudo systemctl restart rsyslog >/dev/null")
 
 if __name__ == '__main__':
   try:
