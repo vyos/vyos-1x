@@ -153,13 +153,12 @@ def get_config():
     
   ## set system syslog host
   if c.exists('host'):
+    proto = 'udp'
     rhosts = c.list_nodes('host')
     for rhost in rhosts:
       for fac in c.list_nodes('host ' + rhost + ' facility'):
         if c.exists('host ' + rhost + ' facility ' + fac + ' protocol'):
           proto = c.return_value('host ' + rhost + ' facility ' + fac + ' protocol')
-        else:
-          proto = 'udp'
 
       config_data['hosts'].update(
         {
