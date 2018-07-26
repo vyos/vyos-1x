@@ -1,0 +1,255 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="high-availability">
+    <properties>
+      <help>High availability settings</help>
+    </properties>
+    <children>
+      <node name="vrrp" owner="${vyos_conf_scripts_dir}/vrrp.py">
+        <properties>
+          <priority>800</priority> <!-- after all interfaces and conntrack-sync -->
+          <help>Virtual Router Redundancy Protocol settings</help>
+        </properties>
+        <children>
+          <tagNode name="group">
+            <properties>
+              <help>VRRP group</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Network interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="advertise-interval">
+                <properties>
+                  <help>Advertise interval</help>
+                  <valueHelp>
+                    <format>1-255</format>
+                    <description>Advertise interval in seconds (default: 1)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="authentication">
+                <properties>
+                  <help>VRRP authentication</help>
+                </properties>
+                <children>
+                  <leafNode name="password">
+                    <properties>
+                      <help>VRRP password</help>
+                      <valueHelp>
+                        <format>text</format>
+                        <description>Password string (up to 8 characters)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>.{1,8}</regex>
+                      </constraint>
+                      <constraintErrorMessage>Password must not be longer than 8 characters</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="type">
+                    <properties>
+                      <help>Authentication type</help>
+                      <completionHelp>
+                        <list>plaintext-password ah</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(plaintext-password|ah)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Authentication type must be plaintext-password or ah</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="description">
+                <properties>
+                  <help>Group description</help>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <valueless/>
+                  <help>Disable VRRP group</help>
+                </properties>
+              </leafNode>
+              <node name="health-check">
+                <properties>
+                  <help>Health check script</help>
+                </properties>
+                <children>
+                  <leafNode name="failure-count">
+                    <properties>
+                      <help>Health check failure count required for transition to fault (default: 3)</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive" />
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>Health check execution interval in seconds (default: 60)</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="script">
+                    <properties>
+                      <help>Health check script file</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="hello-source-address">
+                <properties>
+                  <help>VRRP hello source address (IPv4 or IPv6)</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <valueHelp>
+                    <format>&lt;IPv4|IPv6&gt;</format>
+                    <description>IPv4 or IPv6 hello source address</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="peer-address">
+                <properties>
+                  <help>Unicast VRRP peer address (IPv4 or IPv6)</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <valueHelp>
+                    <format>&lt;IPv4|IPv6&gt;</format>
+                    <description>IPv4 or IPv6 unicast peer address</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="no-preempt">
+                <properties>
+                  <valueless/>
+                  <help>Disable master preemption</help>
+                </properties>
+              </leafNode>
+              <leafNode name="preempt-delay">
+                <properties>
+                  <help>Preempt delay (in seconds)</help>
+                  <constraint>
+                    <validator name="numeric" argument="--positive"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="priority">
+                <properties>
+                  <help>Router priority</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                  <valueHelp>
+                    <format>1-255</format>
+                    <description>Router priority (default: 100)</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="rfc3768-compatibility">
+                <properties>
+                  <valueless/>
+                  <help>Use VRRP virtual MAC address as per RFC3768</help>
+                </properties>
+              </leafNode>
+              <node name="transition-script">
+                <properties>
+                  <help>VRRP transition scripts</help>
+                </properties>
+                <children>
+                  <leafNode name="master">
+                    <properties>
+                      <help>Script to run on VRRP state transition to master</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="backup">
+                    <properties>
+                      <help>Script to run on VRRP state transition to backup</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="fault">
+                    <properties>
+                      <help>Script to run on VRRP state transition to fault</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="virtual-address">
+                <properties>
+                  <multi/>
+                  <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
+                  <constraint>
+                    <validator name="ipv4-host"/>
+                    <validator name="ipv6-host"/>
+                  </constraint>
+                  <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
+                  <valueHelp>
+                    <format>&lt;IPv4|IPv6&gt;</format>
+                    <description>IPv4 or IPv6 virtual address</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="vrid">
+                <properties>
+                  <help>Virtual router identifier</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                  <valueHelp>
+                    <format>1-255</format>
+                    <description>Virtual router identifier</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="sync-group">
+            <properties>
+              <help>VRRP sync group</help>
+            </properties>
+            <children>
+              <leafNode name="member">
+                <properties>
+                  <multi/>
+                  <help>Sync group member</help>
+                  <valueHelp>
+                    <format>text</format>
+                    <description>VRRP group name</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <path>high-availability vrrp group</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

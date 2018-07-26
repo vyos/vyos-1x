@@ -1,0 +1,270 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2018 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import re
+import sys
+
+from vyos.configtree import ConfigTree
+
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+# Convert the old VRRP syntax to the new syntax
+
+# The old approach was to put VRRP groups inside interfaces,
+# as in "interfaces ethernet eth0 vrrp vrrp-group 10 ...".
+# It was supported only under ethernet and bonding and their
+# respective vif, vif-s, and vif-c subinterfaces
+
+def get_vrrp_group(path):
+    group = {"preempt": True, "rfc_compatibility": False, "disable": False}
+
+    if config.exists(path + ["advertise-interval"]):
+        group["advertise_interval"] = config.return_value(path + ["advertise-interval"])
+
+    if config.exists(path + ["description"]):
+        group["description"] = config.return_value(path + ["description"])
+
+    if config.exists(path + ["disable"]):
+        group["disable"] = True
+
+    if config.exists(path + ["hello-source-address"]):
+        group["hello_source"] = config.return_value(path + ["hello-source-address"])
+
+    # 1.1.8 didn't have it, but earlier 1.2.0 did, we don't want to break
+    # configs of early adopters!
+    if config.exists(path + ["peer-address"]):
+        group["peer_address"] = config.return_value(path + ["peer-address"])
+
+    if config.exists(path + ["preempt"]):
+        preempt = config.return_value(path + ["preempt"])
+        if preempt == "false":
+            group["preempt"] = False
+
+    if config.exists(path + ["rfc3768-compatibility"]):
+        group["rfc_compatibility"] = True
+
+    if config.exists(path + ["preempt-delay"]):
+        group["preempt_delay"] = config.return_value(path + ["preempt-delay"])
+
+    if config.exists(path + ["priority"]):
+        group["priority"] = config.return_value(path + ["priority"])
+
+    if config.exists(path + ["sync-group"]):
+        group["sync_group"] = config.return_value(path + ["sync-group"])
+
+    if config.exists(path + ["authentication", "type"]):
+        group["auth_type"] = config.return_value(path + ["authentication", "type"])
+
+    if config.exists(path + ["authentication", "password"]):
+        group["auth_password"] = config.return_value(path + ["authentication", "password"])
+
+    if config.exists(path + ["virtual-address"]):
+        group["virtual_addresses"] = config.return_values(path + ["virtual-address"])
+
+    if config.exists(path + ["run-transition-scripts"]):
+        if config.exists(path + ["run-transition-scripts", "master"]):
+            group["master_script"] = config.return_value(path + ["run-transition-scripts", "master"])
+        if config.exists(path + ["run-transition-scripts", "backup"]):
+            group["backup_script"] = config.return_value(path + ["run-transition-scripts", "backup"])
+        if config.exists(path + ["run-transition-scripts", "fault"]):
+            group["fault_script"] = config.return_value(path + ["run-transition-scripts", "fault"])
+
+    # Also not present in 1.1.8, but supported by earlier 1.2.0
+    if config.exists(path + ["health-check"]):
+        if config.exists(path + ["health-check", "interval"]):
+            group["health_check_interval"] = config.return_value(path + ["health-check", "interval"])
+        if config.exists(path + ["health-check", "failure-count"]):
+            group["health_check_count"] = config.return_value(path + ["health-check", "failure-count"])
+        if config.exists(path + ["health-check", "script"]):
+            group["health_check_script"] = config.return_value(path + ["health-check", "script"])
+
+    return group
+
+# Since VRRP is all over the place, there's no way to just check a path and exit early
+# if it doesn't exist, we have to walk all interfaces and collect VRRP settings from them.
+# Only if no data is collected from any interface we can conclude that VRRP is not configured
+# and exit.
+
+groups = []
+base_paths = []
+
+if config.exists(["interfaces", "ethernet"]):
+    base_paths.append("ethernet")
+if config.exists(["interfaces", "bonding"]):
+    base_paths.append("bonding")
+
+for bp in base_paths:
+    parent_path = ["interfaces", bp]
+
+    parent_intfs = config.list_nodes(parent_path)
+
+    for pi in parent_intfs:
+        # Extract VRRP groups from the parent interface
+        vg_path =[pi, "vrrp", "vrrp-group"]
+        if config.exists(parent_path + vg_path):
+            pgroups = config.list_nodes(parent_path + vg_path)
+            for pg in pgroups:
+                g = get_vrrp_group(parent_path + vg_path + [pg])
+                g["interface"] = pi
+                g["vrid"] = pg
+                groups.append(g)
+
+            # Delete the VRRP subtree
+            # If left in place, configs will not load correctly
+            config.delete(parent_path + [pi, "vrrp"])
+
+        # Extract VRRP groups from 802.1q VLAN interfaces
+        if config.exists(parent_path + [pi, "vif"]):
+            vifs = config.list_nodes(parent_path + [pi, "vif"])
+            for vif in vifs:
+                vif_vg_path = [pi, "vif", vif, "vrrp", "vrrp-group"]
+                if config.exists(parent_path + vif_vg_path):
+                    vifgroups = config.list_nodes(parent_path + vif_vg_path)
+                    for vif_group in vifgroups:
+                        g = get_vrrp_group(parent_path + vif_vg_path + [vif_group])
+                        g["interface"] = "{0}.{1}".format(pi, vif)
+                        g["vrid"] = vif_group
+                        groups.append(g)
+
+                    config.delete(parent_path + [pi, "vif", vif, "vrrp"])
+
+        # Extract VRRP groups from 802.3ad QinQ service VLAN interfaces
+        if config.exists(parent_path + [pi, "vif-s"]):
+            vif_ss = config.list_nodes(parent_path + [pi, "vif-s"])
+            for vif_s in vif_ss:
+                vifs_vg_path = [pi, "vif-s", vif_s, "vrrp", "vrrp-group"]
+                if config.exists(parent_path + vifs_vg_path):
+                    vifsgroups = config.list_nodes(parent_path + vifs_vg_path)
+                    for vifs_group in vifsgroups:
+                        g = get_vrrp_group(parent_path + vifs_vg_path + [vifs_group])
+                        g["interface"] = "{0}.{1}".format(pi, vif_s)
+                        g["vrid"] = vifs_group
+                        groups.append(g)
+
+                    config.delete(parent_path + [pi, "vif-s", vif_s, "vrrp"])
+
+                # Extract VRRP groups from QinQ client VLAN interfaces nested in the vif-s
+                if config.exists(parent_path + [pi, "vif-s", vif_s, "vif-c"]):
+                    vif_cs = config.list_nodes(parent_path + [pi, "vif-s", vif_s, "vif-c"])
+                    for vif_c in vif_cs:
+                         vifc_vg_path = [pi, "vif-s", vif_s, "vif-c", vif_c, "vrrp", "vrrp-group"]
+                         vifcgroups = config.list_nodes(parent_path + vifc_vg_path)
+                         for vifc_group in vifcgroups:
+                              g = get_vrrp_group(parent_path + vifc_vg_path + [vifc_group])
+                              g["interface"] = "{0}.{1}.{2}".format(pi, vif_s, vif_c)
+                              g["vrid"] = vifc_group
+                              groups.append(g)
+
+                         config.delete(parent_path + [pi, "vif-s", vif_s, "vif-c", vif_c, "vrrp"])
+
+# If nothing was collected before this point, it means the config has no VRRP setup
+if not groups:
+    sys.exit(0)
+
+# Otherwise, there is VRRP to convert
+ 
+# Now convert the collected groups to the new syntax
+base_group_path = ["high-availability", "vrrp", "group"]
+sync_path = ["high-availability", "vrrp", "sync-group"]
+
+for g in groups:
+    group_name = "{0}-{1}".format(g["interface"], g["vrid"])
+    group_path = base_group_path + [group_name]
+
+    config.set(group_path + ["interface"], value=g["interface"])
+    config.set(group_path + ["vrid"], value=g["vrid"])
+
+    if "advertise_interval" in g:
+        config.set(group_path + ["advertise-interval"], value=g["advertise_interval"])
+
+    if "priority" in g:
+        config.set(group_path + ["priority"], value=g["priority"])
+
+    if not g["preempt"]:
+        config.set(group_path + ["no-preempt"], value=None)
+
+    if "preempt_delay" in g:
+        config.set(group_path + ["preempt-delay"], value=g["preempt_delay"])
+
+    if g["rfc_compatibility"]:
+        config.set(group_path + ["rfc3768-compatibility"], value=None)
+
+    if g["disable"]:
+        config.set(group_path + ["disable"], value=None)
+
+    if "hello_source" in g:
+        config.set(group_path + ["hello-source-address"], value=g["hello_source"])
+
+    if "peer_address" in g:
+        config.set(group_path + ["peer-address"], value=g["peer_address"])
+
+    if "auth_password" in g:
+        config.set(group_path + ["authentication", "password"], value=g["auth_password"])
+    if "auth_type" in g:
+        config.set(group_path + ["authentication", "type"], value=g["auth_type"])
+
+    if "master_script" in g:
+        config.set(group_path + ["transition-script", "master"], value=g["master_script"])
+    if "backup_script" in g:
+        config.set(group_path + ["transition-script", "backup"], value=g["backup_script"])
+    if "fault_script" in g:
+        config.set(group_path + ["transition-script", "fault"], value=g["fault_script"])
+
+    if "health_check_interval" in g:
+        config.set(group_path + ["health-check", "interval"], value=g["health_check_interval"])
+    if "health_check_count" in g:
+        config.set(group_path + ["health-check", "failure-count"], value=g["health_check_count"])
+    if "health_check_script" in g:
+        config.set(group_path + ["health-check", "script"], value=g["health_check_script"])
+
+    # Not that it should ever be absent...
+    if "virtual_addresses" in g:
+        # The new CLI disallows addresses without prefix length
+        # Pre-rewrite configs didn't support IPv6 VRRP, but handle it anyway
+        for va in g["virtual_addresses"]:
+            if not re.search(r'/', va):
+                if re.search(r':', va):
+                    va = "{0}/128".format(va)
+                else:
+                    va = "{0}/32".format(va)
+            config.set(group_path + ["virtual-address"], value=va, replace=False)
+
+    # Sync group
+    if "sync_group" in g:
+        config.set(sync_path + [g["sync_group"], "member"], value=group_name, replace=False)
+
+# Set the tag flag
+config.set_tag(base_group_path)
+if config.exists(sync_path):
+    config.set_tag(sync_path)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)
