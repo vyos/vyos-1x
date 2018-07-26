@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2018 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import sys
+import time
+import argparse
+
+import tabulate
+
+import vyos.keepalived
+import vyos.util
+
+
+def print_summary():
+    try:
+        vyos.keepalived.force_json_dump()
+        # Wait for keepalived to produce the data
+        # Replace with inotify or similar if it proves problematic
+        time.sleep(0.2)
+        json_data = vyos.keepalived.get_json_data()
+    except:
+        print("VRRP information is not available")
+
+    groups = []
+    for group in json_data:
+        data = group["data"]
+
+        name = data["iname"]
+
+        ltrans_timestamp = float(data["last_transition"])
+        ltrans_time = vyos.util.seconds_to_human(int(time.time() - ltrans_timestamp))
+
+        interface = data["ifp_ifname"]
+        vrid = data["vrid"]
+
+        state = vyos.keepalived.decode_state(data["state"])
+
+        row = [name, interface, vrid, state, ltrans_time]
+        groups.append(row)
+
+    headers = ["Name", "Interface", "VRID", "State", "Last Transition"]
+    output = tabulate.tabulate(groups, headers)
+    print(output)
+
+def print_statistics():
+    try:
+        vyos.keepalived.force_stats_dump()
+        time.sleep(0.2)
+        output = vyos.keepalived.get_statistics()
+        print(output)
+    except:
+        print("VRRP statistics are not available")
+
+def print_state_data():
+    try:
+        vyos.keepalived.force_state_data_dump()
+        time.sleep(0.2)
+        output = vyos.keepalived.get_state_data()
+        print(output)
+    except:
+        print("VRRP information is not available")
+
+parser = argparse.ArgumentParser()
+group = parser.add_mutually_exclusive_group()
+group.add_argument("-s", "--summary", action="store_true", help="Print VRRP summary")
+group.add_argument("-t", "--statistics", action="store_true", help="Print VRRP statistics")
+group.add_argument("-d", "--data", action="store_true", help="Print detailed VRRP data")
+
+args = parser.parse_args()
+
+# Exit early if VRRP is dead or not configured
+if not vyos.keepalived.vrrp_running():
+    print("VRRP is not running")
+    sys.exit(0)
+
+if args.summary:
+    print_summary()
+elif args.statistics:
+    print_statistics()
+elif args.data:
+    print_state_data()
+else:
+    parser.print_help()
+    sys.exit(1)

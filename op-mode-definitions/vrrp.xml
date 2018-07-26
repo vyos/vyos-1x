@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vrrp">
+        <properties>
+          <help>Show VRRP (Virtual Router Redundancy Protocol) information</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/vrrp.py --summary</command>
+        <children>
+          <node name="statistics">
+            <properties>
+              <help>Show VRRP statistics</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/vrrp.py --statistics</command>
+          </node>
+          <node name="detail">
+            <properties>
+              <help>Show detailed VRRP state information</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/vrrp.py --data</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="vrrp">
+        <properties>
+          <help>Restart the VRRP (Virtual Router Redundancy Protocol) process</help>
+        </properties>
+        <command>sudo systemctl restart keepalived.service</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
