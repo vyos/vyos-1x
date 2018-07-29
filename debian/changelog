@@ -1,3 +1,9 @@
+vyos-1x (1.2.0-1) unstable; urgency=medium
+
+  * T666, T616: new implementation of the VRRP CLI.
+
+ -- Daniil Baturin <daniil@baturin.org>  Fri, 27 Jul 2018 10:25:52 +0200
+
 vyos-1x (1.0.6) unstable; urgency=medium
   
   * T736: Rewrite remote logging (syslog) to XML/Python

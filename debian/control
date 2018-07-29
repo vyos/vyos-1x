@@ -35,7 +35,7 @@ Depends: python3,
   iputils-arping,
   libvyosconfig0,
   beep,
-  keepalived,
+  keepalived (>=2.0.5),
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
