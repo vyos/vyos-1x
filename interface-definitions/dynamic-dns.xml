@@ -1,0 +1,224 @@
+<?xml version="1.0"?>
+<!-- Dynamic DNS configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dns">
+        <children>
+          <node name="dynamic" owner="${vyos_conf_scripts_dir}/dynamic_dns.py">
+            <properties>
+              <help>Dynamic DNS</help>
+              <priority>919</priority>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Interface to send DDNS updates for [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="rfc2136">
+                    <properties>
+                      <help>RFC2136 Update name</help>
+                    </properties>
+                    <children>
+                      <leafNode name="key">
+                        <properties>
+                          <help>File containing the secret key shared with remote DNS server [REQUIRED]</help>
+                          <valueHelp>
+                            <format>file</format>
+                            <description>File in /config/auth directory</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="record">
+                        <properties>
+                          <help>Record to be updated [REQUIRED]</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="server">
+                        <properties>
+                          <help>Server to be updated [REQUIRED]</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ttl">
+                        <properties>
+                          <help>Time To Live (default: 600)</help>
+                          <valueHelp>
+                            <format>1-86400</format>
+                            <description>DNS forwarding cache size</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-86400"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="zone">
+                        <properties>
+                          <help>Zone to be updated [REQUIRED]</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="service">
+                    <properties>
+                      <help>Service being used for Dynamic DNS [REQUIRED]</help>
+                      <valueHelp>
+                        <format>custom</format>
+                        <description>Custom or predefined service</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>afraid</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>changeip</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>cloudflare</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dnspark</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dslreports</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dyndns</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>easydns</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>namecheap</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>noip</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>sitelutions</format>
+                        <description></description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>zoneedit</format>
+                        <description></description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="host-name">
+                        <properties>
+                          <help>Hostname registered with DDNS service [REQUIRED]</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="login">
+                        <properties>
+                          <help>Login for DDNS service [REQUIRED]</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="password">
+                        <properties>
+                          <help>Password for DDNS service [REQUIRED]</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="protocol">
+                        <properties>
+                          <help>ddclient protocol used for DDNS service [REQUIRED FOR CUSTOM]</help>
+                          <valueHelp>
+                            <format>protocol</format>
+                            <description>ddclient protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>changeip</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>cloudflare</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>dnspark</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>dslreports1</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>dyndns2</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>easydns</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>namecheap</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>noip</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>sitelutions</format>
+                            <description></description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>zoneedit1</format>
+                            <description></description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="server">
+                        <properties>
+                          <help>Server to send DDNS update to [REQUIRED FOR CUSTOM]</help>
+                          <valueHelp>
+                            <format>IPv4</format>
+                            <description>IP address of DDNS server</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>FQDN</format>
+                            <description>Hostname of DDNS server</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <node name="use-web">
+                    <properties>
+                      <help>Web check used for obtaining the external IP address</help>
+                    </properties>
+                    <children>
+                      <leafNode name="skip">
+                        <properties>
+                          <help>Skip everything before this on the given URL</help>
+                         </properties>
+                      </leafNode>
+                      <leafNode name="url">
+                        <properties>
+                          <help>URL to obtain the current external IP address</help>
+                         </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
