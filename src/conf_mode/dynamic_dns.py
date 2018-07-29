@@ -138,12 +138,15 @@ def get_config():
                 'login': '',
                 'password': '',
                 'protocol': '',
-                'server': ''
+                'server': '',
+                'custom' : False
             }
             
             # preload protocol from default service mapping
             if service in default_service_protocol.keys():
                 srv['protocol'] = default_service_protocol[service]
+            else:
+                srv['custom'] = True
 
             if conf.exists('service {0} login'.format(service)):
                 srv['login'] = conf.return_value('service {0} login'.format(service))
@@ -177,6 +180,44 @@ def verify(dyndns):
     # bail out early - looks like removal from running config
     if dyndns is None:
         return None
+
+    # A 'node' corresponds to an interface
+    for node in dyndns['interfaces']:
+
+        # RFC2136 - configuration validation
+        for rfc2136 in node['rfc2136']:
+            if not rfc2136['record']:
+                raise ConfigError('Set key for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+
+            if not rfc2136['zone']:
+                raise ConfigError('Set zone for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+
+            if not rfc2136['keyfile']:
+                raise ConfigError('Set keyfile for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+            else:
+                if not os.path.isfile(rfc2136['keyfile']):
+                    raise ConfigError('Keyfile for service "{0}" to send DDNS updates for interface "{1}" does not exist'.format(rfc2136['name'], node['interface']))
+
+            if not rfc2136['server']:
+                raise ConfigError('Set server for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+
+        # DynDNS service provider - configuration validation
+        for service in node['service']:
+            if not service['host']:
+                raise ConfigError('Set host-name for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+
+            if not service['login']:
+                raise ConfigError('Set login for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+
+            if not service['password']:
+                raise ConfigError('Set password for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+
+            if service['custom'] is True:
+                if not service['protocol']:
+                    raise ConfigError('Set protocol for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+
+                if not service['server']:
+                    raise ConfigError('Set server for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
 
     return None
 
