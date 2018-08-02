@@ -115,3 +115,4 @@ debian/vyos-1x.*
 
 # Sonar Cloud
 .scannerwork
+/.vs
