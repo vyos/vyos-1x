@@ -62,6 +62,9 @@ forward-zones={% for d in domains %}
 
 {% endif %}
 
+# dnssec
+dnssec={{ dnssec }}
+
 # name-server
 forward-zones-recurse=.={{ name_servers | join(';') }}
 
@@ -74,7 +77,8 @@ default_config_data = {
     'interfaces': [],
     'name_servers': [],
     'negative_ttl': 3600,
-    'domains': []
+    'domains': [],
+    'dnssec' : 'process-no-validate'
 }
 
 
@@ -136,6 +140,9 @@ def get_config():
 
     if conf.exists('listen-address'):
         dns['listen_on'] = conf.return_values('listen-address')
+
+    if conf.exists('dnssec'):
+        dns['dnssec'] = conf.return_value('dnssec')
 
     ## Hacks and tricks
 
