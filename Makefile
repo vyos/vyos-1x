@@ -12,6 +12,8 @@ interface_definitions:
 	rm -f $(TMPL_DIR)/system/node.def
 	rm -f $(TMPL_DIR)/system/options/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
+	rm -f $(TMPL_DIR)/vpn/node.def
+	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 
 .PHONY: op_mode_definitions
 .ONESHELL:

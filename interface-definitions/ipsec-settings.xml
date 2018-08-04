@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vpn">
+    <children>
+      <node name="ipsec">
+        <children>
+          <node name="settings" owner="${vyos_conf_scripts_dir}/ipsec-settings.py">
+            <properties>
+              <help>Global IPsec settings</help>
+            </properties>
+            <children>
+              <leafNode name="disable-route-autoinstall">
+                <properties>
+                  <valueless/>
+                  <help>Do not automatically install routes to remote networks</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
