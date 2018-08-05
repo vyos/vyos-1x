@@ -4,7 +4,7 @@
     <children>
       <node name="ipsec">
         <children>
-          <node name="settings" owner="${vyos_conf_scripts_dir}/ipsec-settings.py">
+          <node name="options" owner="${vyos_conf_scripts_dir}/ipsec-settings.py">
             <properties>
               <help>Global IPsec settings</help>
             </properties>

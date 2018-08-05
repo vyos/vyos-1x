@@ -31,7 +31,7 @@ def get_config():
     config = vyos.config.Config()
     data = {"install_routes": "yes"}
 
-    if config.exists("vpn ipsec settings disable-route-autoinstall"):
+    if config.exists("vpn ipsec options disable-route-autoinstall"):
         data["install_routes"] = "no"
 
     return data
