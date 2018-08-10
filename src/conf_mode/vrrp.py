@@ -255,7 +255,7 @@ def verify(data):
                     raise ConfigError("VRRP group {0} uses IPv4 but its hello-source-address is IPv6".format(group["name"]))
             if group["peer_address"]:
                 pa = ipaddress.ip_address(group["peer_address"])
-                if isinstance(hsa, ipaddress.IPv6Address):
+                if isinstance(pa, ipaddress.IPv6Address):
                     raise ConfigError("VRRP group {0} uses IPv4 but its peer-address is IPv6".format(group["name"]))
 
         if vaddrs6:
@@ -265,7 +265,7 @@ def verify(data):
                     raise ConfigError("VRRP group {0} uses IPv6 but its hello-source-address is IPv4".format(group["name"]))
             if group["peer_address"]:
                 pa = ipaddress.ip_address(group["peer_address"])
-                if isinstance(hsa, ipaddress.IPv4Address):
+                if isinstance(pa, ipaddress.IPv4Address):
                     raise ConfigError("VRRP group {0} uses IPv6 but its peer-address is IPv4".format(group["name"]))
 
     # Disallow same VRID on multiple interfaces
