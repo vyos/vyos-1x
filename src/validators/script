@@ -20,6 +20,7 @@
 import re
 import os
 import sys
+import shlex
 
 import vyos.util
 
@@ -28,7 +29,8 @@ if len(sys.argv) < 2:
     print("Please specify script file to check")
     sys.exit(1)
 
-script = sys.argv[1]
+#if the "script" is a script+ stowaway arugments, this removes the aguements
+script = shlex.split(sys.argv[1])[0]
 
 if not os.path.exists(script):
     print("File {0} does not exist".format(script))
