@@ -58,7 +58,7 @@ if (old_state is None) or (old_state != args.state):
 
     syslog.syslog(syslog.LOG_NOTICE, 'Running transition script {0} for VRRP group {1}'.format(args.script, args.group))
     try:
-       ret = subprocess.call([args.script, args.state, args.interface, args.group])
+       ret = subprocess.call("%s %s %s %s" % ( args.script, args.state, args.interface, args.group), shell=True)
        if ret != 0:
            syslog.syslog(syslog.LOG_ERR, "Transition script {0} failed, exit status: {1}".format(args.script, ret))
            exitcode = ret
