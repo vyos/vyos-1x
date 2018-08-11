@@ -34,6 +34,7 @@ def print_summary():
         json_data = vyos.keepalived.get_json_data()
     except:
         print("VRRP information is not available")
+        sys.exit(1)
 
     groups = []
     for group in json_data:
@@ -64,6 +65,7 @@ def print_statistics():
         print(output)
     except:
         print("VRRP statistics are not available")
+        sys.exit(1)
 
 def print_state_data():
     try:
@@ -73,6 +75,7 @@ def print_state_data():
         print(output)
     except:
         print("VRRP information is not available")
+        sys.exit(1)
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
