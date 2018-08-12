@@ -27,10 +27,10 @@ import vyos.keepalived
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-s", "--script", type=str, help="Script to run")
 parser.add_argument("-t", "--state", type=str, help="VRRP state")
 parser.add_argument("-g", "--group", type=str, help="VRRP group")
 parser.add_argument("-i", "--interface", type=str, help="Network interface")
+parser.add_argument("script", nargs='+')
 
 syslog.openlog('vyos-vrrp-wrapper')
 
@@ -39,6 +39,10 @@ if not args.script or not args.state or not args.group \
   or not args.interface:
     parser.print_usage()
     sys.exit(1)
+
+# Fixup: the reason we take multiple "script" arguments is that people may want
+# to pass arguments to the script
+args.script = " ".join(args.script)
 
 # Get the old state if it exists and compare it to the current state received
 # in command line options to avoid executing scripts if no real transition occured.

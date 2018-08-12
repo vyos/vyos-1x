@@ -100,15 +100,15 @@ vrrp_instance {{ group.name }} {
     {% endif -%}
 
     {% if group.master_script -%}
-        notify_master "/usr/libexec/vyos/system/vrrp-script-wrapper.py --script {{ group.master_script }} --state master --group {{ group.name }} --interface {{ group.interface }}"
+        notify_master "/usr/libexec/vyos/system/vrrp-script-wrapper.py --state master --group {{ group.name }} --interface {{ group.interface }} {{ group.master_script }}"
     {% endif -%}
 
     {% if group.backup_script -%}
-        notify_backup "/usr/libexec/vyos/system/vrrp-script-wrapper.py --script {{ group.backup_script }} --state backup --group {{ group.name }} --interface {{ group.interface }}"
+        notify_backup "/usr/libexec/vyos/system/vrrp-script-wrapper.py --state backup --group {{ group.name }} --interface {{ group.interface }} {{ group.backup_script }}"
     {% endif -%}
 
     {% if group.fault_script -%}
-        notify_fault "/usr/libexec/vyos/system/vrrp-script-wrapper.py --script {{ group.fault_script }} --state fault --group {{ group.name }} --interface {{ group.interface }}"
+        notify_fault "/usr/libexec/vyos/system/vrrp-script-wrapper.py --state fault --group {{ group.name }} --interface {{ group.interface }} {{ group.fault_script }}"
     {% endif -%}
 }
 
