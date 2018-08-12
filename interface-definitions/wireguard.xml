@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/wireguard.py">
+        <properties>
+          <help>WireGuard interface name</help>
+          <priority>459</priority> <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->
+          <constraint>
+            <regex>^wg[0-9]{1,4}</regex>
+          </constraint>
+          <constraintErrorMessage>illegal interface name</constraintErrorMessage>
+          <valueHelp>
+            <format>wgN</format>
+            <description>WireGuard interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help> 
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <multi/>
+              <constraint>
+                <validator name="interface-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>description</help>
+              <constraint>
+                <regex>.[^ ]{1,100}$</regex>
+              </constraint>
+              <constraintErrorMessage>interface description is too long (limit 100 characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="listen-port">
+            <properties>
+              <help>Local port number to accept connections</help>
+            </properties>
+          </leafNode>
+          <tagNode name="peer">
+            <properties>
+              <help>Base64 encoded public key</help>
+              <constraint>
+                <regex>^[0-9a-zA-Z\+/]{43}=$</regex>
+              </constraint>
+              <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="allowed-ips">
+                <properties>
+                  <help>IP addresses allowed to traverse the peer</help>
+                <multi/>
+                </properties>
+              </leafNode>
+              <!--  check format IP:port -->
+              <leafNode name="endpoint">
+                <properties>
+                  <help>Remote endpoint</help>
+                </properties>
+              </leafNode>
+
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
