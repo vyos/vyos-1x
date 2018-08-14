@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!-- wireguard key management -->
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="wireguard">
+        <properties>
+          <help>wireguard key generation utility</help>
+        </properties>
+        <children>
+          <leafNode name="keypair">
+            <properties>
+              <help>generate a wireguard keypair</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/wireguard_key.py --genkey</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="wireguard">
+        <children>
+          <leafNode name="pubkey">
+            <properties>
+              <help>show wireguard public key</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/wireguard_key.py --showpub</command>
+          </leafNode>
+          <leafNode name="privkey">
+            <properties>
+              <help>show wireguard private key</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/wireguard_key.py --showpriv</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
+

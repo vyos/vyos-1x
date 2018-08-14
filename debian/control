@@ -36,6 +36,7 @@ Depends: python3,
   libvyosconfig0,
   beep,
   keepalived (>=2.0.5),
+  wireguard,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
