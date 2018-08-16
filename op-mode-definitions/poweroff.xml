@@ -36,7 +36,7 @@
       <properties>
         <help>Poweroff at a specific time</help>
         <completionHelp>
-          <list>HH:MM</list>
+          <list>&lt;HH:MM&gt;</list>
         </completionHelp>
       </properties>
       <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff $3</command>
