@@ -23,10 +23,25 @@ def yn(msg, default=False):
 
 def valid_time(s):
     try:
-        a = datetime.strptime(s, "%H:%M")
-        return True
+        return datetime.strptime(s, "%H:%M").time()
     except ValueError:
-        return False
+        return None
+
+
+def valid_date(s):
+    try:
+        return datetime.strptime(s, "%d%m%Y").date()
+    except ValueError:
+        try:
+            return datetime.strptime(s, "%d/%m/%Y").date()
+        except ValueError:
+            try:
+                return datetime.strptime(s, "%d.%m.%Y").date()
+            except ValueError:
+                try:
+                    return datetime.strptime(s, "%d:%m:%Y").date()
+                except ValueError:
+                    return None
 
 
 def check_shutdown():
@@ -51,11 +66,36 @@ def execute_shutdown(time, reboot = True, ask=True):
         if not yn("Are you sure you want to %s this system?" % action):
             sys.exit(0)
 
-    if not (time.isdigit() or valid_time(time) or time.lower() == "now"):
-        sys.exit("minutes (45), valid time (12:34) or 'now' needs to be specified")
-
     action = "-r" if reboot else "-P"
-    cmd = check_output(["/sbin/shutdown",action,time],stderr=STDOUT)
+
+    if len(time) == 0:
+        cmd = check_output(["/sbin/shutdown",action,"now"],stderr=STDOUT)
+        print(cmd.decode().split(",",1)[0])
+        return
+
+    # Try to extract date from the first argument
+    if len(time) == 1:
+        time = time[0].split(" ",1)
+
+    if len(time) == 1:
+        ts=valid_time(time[0])
+        if time[0].isdigit() or valid_time(time[0]):
+            cmd = check_output(["/sbin/shutdown",action,time[0]],stderr=STDOUT)
+        else:
+            sys.exit("Timestamp needs to be in format of 12:34")
+
+    elif len(time) == 2:
+        ts = valid_time(time[0])
+        ds = valid_date(time[1])
+        if ts and ds:
+            t = datetime.combine(ds, ts)
+            td = t-datetime.now()
+            t2 = 1+int(td.total_seconds())//60 # Get total minutes
+            cmd = check_output(["/sbin/shutdown",action,str(t2)],stderr=STDOUT)
+        else:
+            sys.exit("Timestamp needs to be in format of 12:34\nDatestamp in the format of DD.MM.YY")
+    else:
+        sys.exit("Could not decode time and date")
 
     print(cmd.decode().split(",",1)[0])
 
@@ -68,12 +108,12 @@ def main():
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--reboot", "-r",
                         help="Reboot the system",
-                        nargs="?",
+                        nargs="*",
                         metavar="Minutes|HH:MM")
 
     action.add_argument("--poweroff", "-p",
                         help="Poweroff the system",
-                        nargs="?",
+                        nargs="*",
                         metavar="Minutes|HH:MM")
 
     action.add_argument("--cancel", "-c",

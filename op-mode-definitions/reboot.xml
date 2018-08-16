@@ -25,10 +25,10 @@
       <properties>
         <help>Reboot in X minutes</help>
         <completionHelp>
-          <list>Minutes</list>
+          <list>&lt;Minutes&gt;</list>
         </completionHelp>
       </properties>
-      <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot $3</command>
+      <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot $3 $4</command>
 
     </tagNode>
 
@@ -40,7 +40,17 @@
         </completionHelp>
       </properties>
       <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot $3</command>
-
+      <children>
+        <tagNode name="date">
+          <properties>
+            <help>Reboot at a specific date</help>
+            <completionHelp>
+              <list>&lt;DDMMYYYY&gt; &lt;DD/MM/YYYY&gt; &lt;DD.MM.YYYY&gt; &lt;DD:MM:YYYY&gt;</list>
+            </completionHelp>
+          </properties>
+          <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot $3 $5</command>
+        </tagNode>
+      </children>
     </tagNode>
 
     </children>
