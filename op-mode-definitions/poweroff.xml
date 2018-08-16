@@ -2,14 +2,14 @@
 <interfaceDefinition>
   <node name="poweroff">
     <properties>
-      <help>Shutdown the system</help>
+      <help>Poweroff the system</help>
     </properties>
     <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --poweroff now</command>
 
     <children>
       <leafNode name="now">
         <properties>
-          <help>Shutdown the system imidiently</help>
+          <help>Poweroff the system without confirmation</help>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff now</command>
       </leafNode>

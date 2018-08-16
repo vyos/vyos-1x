@@ -9,7 +9,7 @@
     <children>
       <leafNode name="now">
         <properties>
-          <help>Reboot the system imidiently</help>
+          <help>Reboot the system without confirmation</help>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot now</command>
       </leafNode>
