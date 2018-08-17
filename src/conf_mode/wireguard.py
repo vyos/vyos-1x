@@ -116,6 +116,10 @@ def get_config():
           if c.exists(cnf + ' peer ' + p + ' endpoint'):
             config_data['interfaces'][intfc]['peer'][p]['endpoint'] = c.return_value(cnf + ' peer ' + p + ' endpoint')
   
+      ### persistent-keepalive
+      if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
+        config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
+
   #print (config_data)
   return config_data
 
@@ -190,6 +194,14 @@ def apply(c):
         for addr in addr_add:
           add_addr(intf, addr)
 
+      ### persistent-keepalive 
+      for p in c_eff.list_nodes(intf + ' peer'):
+        pklv_eff = c_eff.return_effective_value(intf + ' peer ' + p + ' persistent-keepalive') 
+        pklv = c_eff.return_value(intf + ' peer ' + p + ' persistent-keepalive')
+        if pklv_eff == pklv:
+          del c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+      
+      ## wg command call
       configure_interface(c,intf)
 
     ### ifalias for snmp from description   
@@ -215,6 +227,9 @@ def configure_interface(c, intf):
   ## endpoint is only required if wg runs as client
   if c['interfaces'][intf]['peer'][p]['endpoint']:
     cmd += " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint']
+
+  if c['interfaces'][intf]['peer'][p]['persistent-keepalive']:
+    cmd += " persistent-keepalive " + str( c['interfaces'][intf]['peer'][p]['persistent-keepalive'])
 
   sl.syslog(sl.LOG_NOTICE, "sudo " + cmd)
   subprocess.call([ 'sudo ' + cmd], shell=True)
