@@ -196,11 +196,27 @@ def apply(c):
 
       ### persistent-keepalive 
       for p in c_eff.list_nodes(intf + ' peer'):
-        pklv_eff = c_eff.return_effective_value(intf + ' peer ' + p + ' persistent-keepalive') 
-        pklv = c_eff.return_value(intf + ' peer ' + p + ' persistent-keepalive')
-        if pklv_eff == pklv:
+        val_eff = ""
+        val = "" 
+
+        if c_eff.exists_effective(intf + ' peer ' + p + ' persistent-keepalive'):
+          val_eff = c_eff.return_effective_value(intf + ' peer ' + p + ' persistent-keepalive')
+
+        if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
+          val = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+        
+        ### disable keepalive
+        if val_eff and not val:
+          c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = 0 
+        
+        ### set ne keepalive value
+        if not val_eff and val:
+          c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = val
+  
+        ## config == effective config, no change
+        if val_eff == val:
           del c['interfaces'][intf]['peer'][p]['persistent-keepalive']
-      
+
       ## wg command call
       configure_interface(c,intf)
 
@@ -228,7 +244,7 @@ def configure_interface(c, intf):
   if c['interfaces'][intf]['peer'][p]['endpoint']:
     cmd += " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint']
 
-  if c['interfaces'][intf]['peer'][p]['persistent-keepalive']:
+  if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
     cmd += " persistent-keepalive " + str( c['interfaces'][intf]['peer'][p]['persistent-keepalive'])
 
   sl.syslog(sl.LOG_NOTICE, "sudo " + cmd)
