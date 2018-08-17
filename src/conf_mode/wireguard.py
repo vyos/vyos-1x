@@ -116,6 +116,10 @@ def get_config():
           if c.exists(cnf + ' peer ' + p + ' endpoint'):
             config_data['interfaces'][intfc]['peer'][p]['endpoint'] = c.return_value(cnf + ' peer ' + p + ' endpoint')
   
+      ### persistent-keepalive
+      if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
+        config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
+
   #print (config_data)
   return config_data
 
@@ -135,8 +139,6 @@ def verify(c):
         for p in c['interfaces'][i]['peer']:
           if not c['interfaces'][i]['peer'][p]['allowed-ips']:
             raise ConfigError("allowed-ips required on interface " + i + " for peer " + p)
-      if not c['interfaces'][i]['peer'][p]['endpoint']:
-        raise ConfigError("endpoint required on interface " + i + " for peer " + p)
 
     ### eventually check allowed-ips (if it's an ip and valid CIDR or so)
     ### endpoint needs to be IP:port
@@ -192,6 +194,14 @@ def apply(c):
         for addr in addr_add:
           add_addr(intf, addr)
 
+      ### persistent-keepalive 
+      for p in c_eff.list_nodes(intf + ' peer'):
+        pklv_eff = c_eff.return_effective_value(intf + ' peer ' + p + ' persistent-keepalive') 
+        pklv = c_eff.return_value(intf + ' peer ' + p + ' persistent-keepalive')
+        if pklv_eff == pklv:
+          del c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+      
+      ## wg command call
       configure_interface(c,intf)
 
     ### ifalias for snmp from description   
@@ -205,14 +215,22 @@ def configure_interface(c, intf):
     cmd = "wg set " + intf + \
           " listen-port " + c['interfaces'][intf]['lport'] + \
           " private-key " + pk + \
-          " peer " + p + \
-          " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint'] 
+          " peer " + p 
     cmd += " allowed-ips "
+
   for ap in c['interfaces'][intf]['peer'][p]['allowed-ips']:
     if ap != c['interfaces'][intf]['peer'][p]['allowed-ips'][-1]:
       cmd += ap + ","
     else:
       cmd += ap
+
+  ## endpoint is only required if wg runs as client
+  if c['interfaces'][intf]['peer'][p]['endpoint']:
+    cmd += " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint']
+
+  if c['interfaces'][intf]['peer'][p]['persistent-keepalive']:
+    cmd += " persistent-keepalive " + str( c['interfaces'][intf]['peer'][p]['persistent-keepalive'])
+
   sl.syslog(sl.LOG_NOTICE, "sudo " + cmd)
   subprocess.call([ 'sudo ' + cmd], shell=True)
 
