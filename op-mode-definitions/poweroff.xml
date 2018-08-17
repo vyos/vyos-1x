@@ -4,35 +4,53 @@
     <properties>
       <help>Poweroff the system</help>
     </properties>
-    <command>/opt/vyatta/bin/sudo-users/vyatta-poweroff.pl --action poweroff</command>
+    <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --poweroff now</command>
+
     <children>
       <leafNode name="now">
         <properties>
           <help>Poweroff the system without confirmation</help>
         </properties>
-        <command>/opt/vyatta/bin/sudo-users/vyatta-poweroff.pl --action poweroff --now</command>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff now</command>
       </leafNode>
-      
+
       <leafNode name="cancel">
         <properties>
           <help>Cancel a pending poweroff</help>
         </properties>
-        <command>/opt/vyatta/bin/sudo-users/vyatta-poweroff.pl --action poweroff_cancel</command>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --cancel</command>
       </leafNode>
 
+    <tagNode name="in">
+      <properties>
+        <help>Poweroff in X minutes</help>
+        <completionHelp>
+          <list>&lt;Minutes&gt;</list>
+        </completionHelp>
+      </properties>
+      <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff $3 $4</command>
+
+    </tagNode>
 
     <tagNode name="at">
       <properties>
         <help>Poweroff at a specific time</help>
         <completionHelp>
-          <list>HH:MM</list>
-          <list>MMDDYY</list>
-          <list>midnight</list>
-          <list>noon</list>
+          <list>&lt;HH:MM&gt;</list>
         </completionHelp>
       </properties>
-      <command>/opt/vyatta/bin/sudo-users/vyatta-poweroff.pl --action poweroff_at --at_time '$3'</command>
-      
+      <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff $3</command>
+      <children>
+        <tagNode name="date">
+          <properties>
+            <help>Poweroff at a specific date</help>
+            <completionHelp>
+              <list>&lt;DDMMYYYY&gt; &lt;DD/MM/YYYY&gt; &lt;DD.MM.YYYY&gt; &lt;DD:MM:YYYY&gt;</list>
+            </completionHelp>
+          </properties>
+          <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff $3 $5</command>
+        </tagNode>
+      </children>
     </tagNode>
 
     </children>
