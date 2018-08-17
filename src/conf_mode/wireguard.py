@@ -135,8 +135,8 @@ def verify(c):
         for p in c['interfaces'][i]['peer']:
           if not c['interfaces'][i]['peer'][p]['allowed-ips']:
             raise ConfigError("allowed-ips required on interface " + i + " for peer " + p)
-      if not c['interfaces'][i]['peer'][p]['endpoint']:
-        raise ConfigError("endpoint required on interface " + i + " for peer " + p)
+#      if not c['interfaces'][i]['peer'][p]['endpoint']:
+#        raise ConfigError("endpoint required on interface " + i + " for peer " + p)
 
     ### eventually check allowed-ips (if it's an ip and valid CIDR or so)
     ### endpoint needs to be IP:port
