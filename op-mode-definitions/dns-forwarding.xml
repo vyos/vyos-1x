@@ -4,6 +4,9 @@
   <node name="show">
     <children>
       <node name="dns">
+        <properties>
+          <help>Show DNS information</help>
+        </properties>
         <children>
           <node name="forwarding">
             <properties>
