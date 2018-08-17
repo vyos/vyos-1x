@@ -135,8 +135,6 @@ def verify(c):
         for p in c['interfaces'][i]['peer']:
           if not c['interfaces'][i]['peer'][p]['allowed-ips']:
             raise ConfigError("allowed-ips required on interface " + i + " for peer " + p)
-#      if not c['interfaces'][i]['peer'][p]['endpoint']:
-#        raise ConfigError("endpoint required on interface " + i + " for peer " + p)
 
     ### eventually check allowed-ips (if it's an ip and valid CIDR or so)
     ### endpoint needs to be IP:port
@@ -205,14 +203,19 @@ def configure_interface(c, intf):
     cmd = "wg set " + intf + \
           " listen-port " + c['interfaces'][intf]['lport'] + \
           " private-key " + pk + \
-          " peer " + p + \
-          " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint'] 
+          " peer " + p 
     cmd += " allowed-ips "
+
   for ap in c['interfaces'][intf]['peer'][p]['allowed-ips']:
     if ap != c['interfaces'][intf]['peer'][p]['allowed-ips'][-1]:
       cmd += ap + ","
     else:
       cmd += ap
+
+  ## endpoint is only required if wg runs as client
+  if c['interfaces'][intf]['peer'][p]['endpoint']:
+    cmd += " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint']
+
   sl.syslog(sl.LOG_NOTICE, "sudo " + cmd)
   subprocess.call([ 'sudo ' + cmd], shell=True)
 
