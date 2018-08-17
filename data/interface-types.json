@@ -10,6 +10,7 @@
   "vti":              "vti",
   "l2tpv3":           "l2tpeth",
   "vxlan":            "vxlan",
+  "wireguard":        "wg",
   "wireless":         "wireless",
   "wirelessmodem":    "wlm",
   "input":            "ifb",
