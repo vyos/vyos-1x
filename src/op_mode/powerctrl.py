@@ -74,9 +74,13 @@ def execute_shutdown(time, reboot = True, ask=True):
         return
 
     # Try to extract date from the first argument
+
     if len(time) == 1:
         time = time[0].split(" ",1)
 
+    if time[0] == 'now':
+      cmd = check_output(["/sbin/shutdown",action,time[0]],stderr=STDOUT)
+    
     if len(time) == 1:
         ts=valid_time(time[0])
         if time[0].isdigit() or valid_time(time[0]):
