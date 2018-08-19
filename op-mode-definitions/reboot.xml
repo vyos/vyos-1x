@@ -4,14 +4,14 @@
     <properties>
       <help>Reboot the system</help>
     </properties>
-    <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --reboot now</command>
+    <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --reboot</command>
 
     <children>
       <leafNode name="now">
         <properties>
           <help>Reboot the system without confirmation</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot now</command>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot</command>
       </leafNode>
 
       <leafNode name="cancel">

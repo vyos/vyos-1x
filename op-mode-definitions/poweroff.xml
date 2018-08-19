@@ -4,14 +4,14 @@
     <properties>
       <help>Poweroff the system</help>
     </properties>
-    <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --poweroff now</command>
+    <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --poweroff</command>
 
     <children>
       <leafNode name="now">
         <properties>
           <help>Poweroff the system without confirmation</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff now</command>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --poweroff</command>
       </leafNode>
 
       <leafNode name="cancel">
