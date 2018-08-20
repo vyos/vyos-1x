@@ -36,6 +36,40 @@
           </leafNode>
         </children>
       </node>
+      <node name="interfaces">
+        <children>
+          <tagNode name="wireguard">
+            <properties>
+              <help>show wireguard interface information</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py -t wireguard</script>
+              </completionHelp>
+            </properties>
+            <command>sudo wg show "$4"</command>
+            <children>
+              <leafNode name="allowed-ips">
+                <properties>
+                  <help>show all allowed-ips for the specified interface</help>
+                </properties>
+                <command>sudo wg show "$4" allowed-ips</command>
+              </leafNode>
+              <leafNode name="endpoints">
+                <properties>
+                  <help>show all endpoints for the specified interface</help>
+                </properties>
+                <command>sudo wg show "$4" endpoints</command>
+              </leafNode>
+              <leafNode name="peers">
+                <properties>
+                  <help>show all peer IDs for the specified interface</help>
+                </properties>
+                <command>sudo wg show "$4" peers</command>
+              </leafNode>
+             <!-- more commands upon request --> 
+            </children>
+          </tagNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>
