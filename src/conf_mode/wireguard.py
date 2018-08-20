@@ -209,13 +209,9 @@ def apply(c):
         if val_eff and not val:
           c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = 0 
         
-        ### set ne keepalive value
+        ### set new keepalive value
         if not val_eff and val:
           c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = val
-  
-        ## config == effective config, no change
-        if val_eff == val:
-          del c['interfaces'][intf]['peer'][p]['persistent-keepalive']
 
       ## wg command call
       configure_interface(c,intf)
