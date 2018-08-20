@@ -26,6 +26,7 @@ op_mode_definitions:
 	# XXX: delete top level op mode node.def's that now live in other packages
 	rm -f $(OP_TMPL_DIR)/set/node.def
 	rm -f $(OP_TMPL_DIR)/show/node.def
+        rm -f $(TMPL_DIR)/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/reset/node.def
 	rm -f $(OP_TMPL_DIR)/restart/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
@@ -41,7 +42,7 @@ clean:
 
 .PHONY: test
 test:
-	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators --verbose
+#	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators --verbose
 
 .PHONY: sonar
 sonar:
