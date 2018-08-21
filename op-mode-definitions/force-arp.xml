@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <properties>
+      <help>Force an operation</help>
+    </properties>
+    <children>
+      <node name="arp">
+        <properties>
+          <help>Send gratuitous ARP request or reply</help>
+        </properties>
+        <children>
+          <node name="reply">
+            <properties>
+              <help>Send gratuitous ARP reply</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Send gratuitous ARP reply on specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Send gratuitous ARP reply for specified address</help>
+                    </properties>
+                    <command>sudo arping -I $5 -c 1 -A $7</command>
+                    <children>
+                      <tagNode name="count">
+                        <properties>
+                          <help>Send specified number of ARP replies</help>
+                        </properties>
+                        <command>sudo arping -I $5 -c $9 -A $7</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <node name="request">
+            <properties>
+              <help>Send gratuitous ARP request</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Send gratuitous ARP request on specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Send gratuitous ARP request for specified address</help>
+                    </properties>
+                    <command>sudo arping -I $5 -c 1 -U $7</command>
+                    <children>
+                      <tagNode name="count">
+                        <properties>
+                          <help>Send specified number of ARP requests</help>
+                        </properties>
+                        <command>sudo arping -I $5 -c $9 -U $7</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
