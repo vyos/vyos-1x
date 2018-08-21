@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <properties>
+      <help>Clear system information</help>
+    </properties>
+    <children>
+      <node name="console">
+        <properties>
+          <help>Clear screen</help>
+        </properties>
+        <command>/usr/bin/clear</command>
+      </node>
+    </children>
+  </node>
+  <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
+    <children>
+      <node name="terminal">
+        <properties>
+          <help>Reset terminal</help>
+        </properties>
+        <command>/usr/bin/reset</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
