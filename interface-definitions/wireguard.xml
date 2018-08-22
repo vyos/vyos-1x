@@ -49,7 +49,6 @@
           </leafNode>
           <tagNode name="peer">
             <properties>
-<<<<<<< HEAD
               <help>peer alias</help>
               <constraint>
                 <regex>^[0-9a-zA-Z]{1,100}</regex>
@@ -66,32 +65,18 @@
                   <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
                 </properties>
               </leafNode>
-=======
-              <help>Base64 encoded public key</help>
-              <constraint>
-                <regex>^[0-9a-zA-Z\+/]{43}=$</regex>
-              </constraint>
-              <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
-            </properties>
-            <children>
->>>>>>> upstream/current
               <leafNode name="allowed-ips">
                 <properties>
                   <help>IP addresses allowed to traverse the peer</help>
                 <multi/>
                 </properties>
               </leafNode>
-<<<<<<< HEAD
-=======
               <!--  check format IP:port -->
->>>>>>> upstream/current
               <leafNode name="endpoint">
                 <properties>
                   <help>Remote endpoint</help>
                 </properties>
               </leafNode>
-<<<<<<< HEAD
-=======
               <leafNode name="persistent-keepalive">
                 <properties>
                   <help>how often send keep alives in seconds</help>
@@ -101,8 +86,6 @@
                   <constraintErrorMessage>keepliave timer has to be between 1 and 99999 seconds</constraintErrorMessage>
                 </properties>
               </leafNode>
->>>>>>> upstream/current
-
             </children>
           </tagNode>
         </children>
