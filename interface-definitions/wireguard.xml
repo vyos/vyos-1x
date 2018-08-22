@@ -56,7 +56,7 @@
               <constraintErrorMessage>input limited to 100 alphanumerical characters</constraintErrorMessage>
             </properties>
             <children>
-              <leafNode name="peer-pubkey">
+              <leafNode name="pubkey">
                 <properties>
                   <help>base64 encoded public key</help>
                   <constraint>
