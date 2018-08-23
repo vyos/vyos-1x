@@ -51,6 +51,9 @@
           <leafNode name="listen-port">
             <properties>
               <help>Local port number to accept connections</help>
+              <constraint>
+                <validator name="numeric" argument="--range 1024-65535"/>
+              </constraint>
             </properties>
           </leafNode>
           <tagNode name="peer">
