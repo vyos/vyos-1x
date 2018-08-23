@@ -262,9 +262,7 @@ def configure_interface(c, intf):
 
     ### assemble wg command
     cmd = "sudo wg set " + intf
-    if wg_config['listen-port'] !=0:
-      cmd += " listen-port " + str(wg_config['listen-port'])
-
+    cmd += " listen-port " + str(wg_config['listen-port'])
     cmd += " private-key " + wg_config['private-key']
     cmd += " peer " + wg_config['peer']['pubkey']
     cmd += " allowed-ips "
