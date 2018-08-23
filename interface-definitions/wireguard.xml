@@ -90,9 +90,8 @@
                 <properties>
                   <help>how often send keep alives in seconds</help>
                   <constraint>
-                    <regex>^(1|[1-9][0-9]{1,5})$</regex>
+                    <validator name="numeric" argument="--range 1-65535"/> 
                   </constraint>
-                  <constraintErrorMessage>keepliave timer has to be between 1 and 99999 seconds</constraintErrorMessage>
                 </properties>
               </leafNode>
             </children>
