@@ -18,6 +18,7 @@
 #### TODO:
 # fwmark
 # preshared key
+# mtu
 ####
 
 
@@ -71,7 +72,8 @@ def get_config():
           'status'      : 'exists',
           'state'       : 'enabled',
           'mtu'         : 1420,
-          'peer'        : {}
+          'peer'        : {},
+          'fwmark'      : 0
           }
         }
     ) 
@@ -104,6 +106,9 @@ def get_config():
       ### mtu
       if c.exists(cnf + ' mtu'):
         config_data['interfaces'][intfc]['mtu'] = c.return_value(cnf + ' mtu')
+      ### fwmark
+      if c.exists(cnf + ' fwmark'):
+        config_data['interfaces'][intfc]['fwmark'] = c.return_value(cnf + ' fwmark')
       
       ### peers
       if c.exists(cnf + ' peer'):
@@ -259,10 +264,14 @@ def configure_interface(c, intf):
     ## persistent-keepalive
     if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
       wg_config['keepalive']  = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+  
+    ## fwmark
+    wg_config['fwmark'] = hex(int(c['interfaces'][intf]['fwmark']))
 
     ### assemble wg command
     cmd = "sudo wg set " + intf
     cmd += " listen-port " + str(wg_config['listen-port'])
+    cmd += " fwmark " + wg_config['fwmark'] 
     cmd += " private-key " + wg_config['private-key']
     cmd += " peer " + wg_config['peer']['pubkey']
     cmd += " allowed-ips "
