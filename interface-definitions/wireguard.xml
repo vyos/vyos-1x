@@ -16,6 +16,12 @@
           </valueHelp>
         </properties>
         <children>
+  <!--
+          <leafNode name="mtu">
+            <properties>
+              <help>set interface mtu (default: 1420)</help>
+          </leafNode>
+  -->
           <leafNode name="address">
             <properties>
               <help>IP address</help> 
@@ -51,9 +57,9 @@
             <properties>
               <help>peer alias</help>
               <constraint>
-                <regex>^[0-9a-zA-Z]{1,100}</regex>
+                <regex>.[^ ]{1,100}$</regex>
               </constraint>
-              <constraintErrorMessage>input limited to 100 alphanumerical characters</constraintErrorMessage>
+              <constraintErrorMessage>peer alias too long (limit 100 characters)</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="pubkey">

@@ -15,6 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
+#### TODO:
+# fwmark
+# preshared key
+####
+
 
 import sys
 import os
@@ -107,20 +112,20 @@ def get_config():
             {
               p : {
                 'allowed-ips' : [],
-                'endpoint'  : '' 
+                'endpoint'  : '',
+                'pubkey'  : ''
               }
             }
           )
+          if c.exists(cnf + ' peer ' + p + ' pubkey'):
+            config_data['interfaces'][intfc]['peer'][p]['pubkey'] = c.return_value(cnf + ' peer ' + p + ' pubkey')
           if c.exists(cnf + ' peer ' + p + ' allowed-ips'):
             config_data['interfaces'][intfc]['peer'][p]['allowed-ips'] = c.return_values(cnf + ' peer ' + p + ' allowed-ips')
           if c.exists(cnf + ' peer ' + p + ' endpoint'):
             config_data['interfaces'][intfc]['peer'][p]['endpoint'] = c.return_value(cnf + ' peer ' + p + ' endpoint')
-  
-      ### persistent-keepalive
-      if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
-        config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
+          if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
+            config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
 
-  #print (config_data)
   return config_data
 
 def verify(c):
@@ -131,17 +136,16 @@ def verify(c):
     if c['interfaces'][i]['status'] != 'delete':
       if not c['interfaces'][i]['addr']:
         raise ConfigError("address required for interface " + i) 
-      if not c['interfaces'][i]['lport']:
-        raise ConfigError("listen-port required for interface " + i)
       if not c['interfaces'][i]['peer']:
         raise ConfigError("peer required on interface " + i)
       else:
         for p in c['interfaces'][i]['peer']:
           if not c['interfaces'][i]['peer'][p]['allowed-ips']:
             raise ConfigError("allowed-ips required on interface " + i + " for peer " + p)
+          if not c['interfaces'][i]['peer'][p]['pubkey']:
+            raise ConfigError("pubkey from your peer is mandatory on " + i + " for peer " + p)
 
-    ### eventually check allowed-ips (if it's an ip and valid CIDR or so)
-    ### endpoint needs to be IP:port
+    ### endpoint needs to be IP:port, mabey verify it here, but consider IPv6 in the pattern :)
 
 def apply(c):
   ### no wg config left, delete all wireguard devices on the os
@@ -175,9 +179,9 @@ def apply(c):
 
       subprocess.call(['ip l a dev ' + intf + ' type wireguard 2>/dev/null'], shell=True)
       for addr in c['interfaces'][intf]['addr']:
-        add_addr(intf, addr) 
-        configure_interface(c,intf)
+        add_addr(intf, addr)
       subprocess.call(['ip l set up dev ' + intf + ' &>/dev/null'], shell=True)
+      configure_interface(c,intf)
 
     ### config updates
     if c['interfaces'][intf]['status'] == 'exists':
@@ -194,7 +198,7 @@ def apply(c):
         for addr in addr_add:
           add_addr(intf, addr)
 
-      ### persistent-keepalive 
+      ### persistent-keepalive
       for p in c_eff.list_nodes(intf + ' peer'):
         val_eff = ""
         val = "" 
@@ -223,28 +227,63 @@ def apply(c):
       open('/sys/class/net/' + str(intf) + '/ifalias','w').write(str(cnf_descr))
 
 def configure_interface(c, intf):
+  wg_config = {
+    'interface'   : intf,
+    'listen-port' : 0,
+    'private-key' : '/config/auth/wireguard/private.key',
+    'peer'        :
+      {
+        'pubkey'  : ''
+      },
+    'allowed-ips' : [],
+    'fwmark'      : 0x00,
+    'endpoint'    : None,
+    'keepalive'   : 0
+
+  }
+
   for p in c['interfaces'][intf]['peer']:
-    cmd = "wg set " + intf + \
-          " listen-port " + c['interfaces'][intf]['lport'] + \
-          " private-key " + pk + \
-          " peer " + p 
+    ## mandatory settings
+    wg_config['peer']['pubkey'] = c['interfaces'][intf]['peer'][p]['pubkey']
+    wg_config['allowed-ips'] = c['interfaces'][intf]['peer'][p]['allowed-ips']
+
+    ## optional settings
+    # listen-port
+    if c['interfaces'][intf]['lport']:
+      wg_config['listen-port'] = c['interfaces'][intf]['lport']
+
+    ## endpoint
+    if c['interfaces'][intf]['peer'][p]['endpoint']:
+      wg_config['endpoint'] = c['interfaces'][intf]['peer'][p]['endpoint']
+
+    ## persistent-keepalive
+    if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
+      wg_config['keepalive']  = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+
+    ### assemble wg command
+    cmd = "sudo wg set " + intf
+    if wg_config['listen-port'] !=0:
+      cmd += " listen-port " + str(wg_config['listen-port'])
+
+    cmd += " private-key " + wg_config['private-key']
+    cmd += " peer " + wg_config['peer']['pubkey']
     cmd += " allowed-ips "
+    for ap in wg_config['allowed-ips']:
+      if ap != wg_config['allowed-ips'][-1]:
+        cmd += ap + ","
+      else:
+        cmd += ap
 
-  for ap in c['interfaces'][intf]['peer'][p]['allowed-ips']:
-    if ap != c['interfaces'][intf]['peer'][p]['allowed-ips'][-1]:
-      cmd += ap + ","
+    if wg_config['endpoint']:
+      cmd += " endpoint " + wg_config['endpoint']
+
+    if wg_config['keepalive'] !=0:
+      cmd += " persistent-keepalive " + wg_config['keepalive']
     else:
-      cmd += ap
+      cmd += " persistent-keepalive 0"
 
-  ## endpoint is only required if wg runs as client
-  if c['interfaces'][intf]['peer'][p]['endpoint']:
-    cmd += " endpoint " + c['interfaces'][intf]['peer'][p]['endpoint']
-
-  if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
-    cmd += " persistent-keepalive " + str( c['interfaces'][intf]['peer'][p]['persistent-keepalive'])
-
-  sl.syslog(sl.LOG_NOTICE, "sudo " + cmd)
-  subprocess.call([ 'sudo ' + cmd], shell=True)
+    sl.syslog(sl.LOG_NOTICE, cmd)
+    subprocess.call([cmd], shell=True)
 
 def add_addr(intf, addr):
   ret = subprocess.call(['ip a a dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)
@@ -265,7 +304,6 @@ if __name__ == '__main__':
     check_kmod()
     c = get_config()
     verify(c)
-    #generate(c)
     apply(c)
   except ConfigError as e:
     print(e)
