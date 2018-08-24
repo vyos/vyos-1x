@@ -133,14 +133,13 @@ def verify(c):
         raise ConfigError("address required for interface " + i) 
       if not c['interfaces'][i]['peer']:
         raise ConfigError("peer required on interface " + i)
-      else:
-        for p in c['interfaces'][i]['peer']:
-          if not c['interfaces'][i]['peer'][p]['allowed-ips']:
-            raise ConfigError("allowed-ips required on interface " + i + " for peer " + p)
-          if not c['interfaces'][i]['peer'][p]['pubkey']:
-            raise ConfigError("pubkey from your peer is mandatory on " + i + " for peer " + p)
 
-    ### endpoint needs to be IP:port, mabey verify it here, but consider IPv6 in the pattern
+      for p in c['interfaces'][i]['peer']:
+        if not c['interfaces'][i]['peer'][p]['allowed-ips']:
+          raise ConfigError("allowed-ips required on interface " + i + " for peer " + p)
+        if not c['interfaces'][i]['peer'][p]['pubkey']:
+          raise ConfigError("pubkey from your peer is mandatory on " + i + " for peer " + p)
+
 
 def apply(c):
   ### no wg config left, delete all wireguard devices on the os
