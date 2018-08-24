@@ -16,11 +16,8 @@
 #
 #
 #### TODO:
-# fwmark
 # preshared key
-# mtu
 ####
-
 
 import sys
 import os
@@ -35,8 +32,6 @@ dir = r'/config/auth/wireguard'
 pk  = dir + '/private.key'
 pub = dir + '/public.key'
 
-### check_kmod may be removed in the future, 
-### just want to have everything smoothly running after reboot
 def check_kmod():
   if not os.path.exists('/sys/module/wireguard'):
     sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod") 
@@ -45,21 +40,20 @@ def check_kmod():
       raise ConfigError("modprobe wireguard failed")
 
 def get_config():
-  config_data = {
-    'interfaces' : {}
-  }
-
   c = Config()
   if not c.exists('interfaces wireguard'):
     return None
-  
-  c.set_level('interfaces') 
+
+  c.set_level('interfaces')
   intfcs = c.list_nodes('wireguard')
   intfcs_eff = c.list_effective_nodes('wireguard')
-  new_lst = list( set(intfcs) - set(intfcs_eff) ) 
+  new_lst = list( set(intfcs) - set(intfcs_eff) )
   del_lst = list( set(intfcs_eff) - set(intfcs) )
 
-  ### setting deafult and determine status of the config 
+  config_data = {
+    'interfaces' : {}
+  }
+  ### setting defaults and determine status of the config 
   for intfc in intfcs:
     cnf = 'wireguard ' + intfc
     # default data struct
@@ -71,13 +65,13 @@ def get_config():
           'lport'       : '',
           'status'      : 'exists',
           'state'       : 'enabled',
-          'mtu'         : 1420,
-          'peer'        : {},
-          'fwmark'      : 0
+          'mtu'         : '1420',
+          'peer'        : {}
           }
         }
     ) 
-
+  
+  ### determine status either delete or create
   for i in new_lst:
     config_data['interfaces'][i]['status'] = 'create' 
 
@@ -90,11 +84,11 @@ def get_config():
       }
     )
 
-  ### based on the status, set real values
+  ### based on the status, setup conf values
   for intfc in intfcs:
     cnf = 'wireguard ' + intfc
     if config_data['interfaces'][intfc]['status'] != 'delete':
-      #### addresses
+      ### addresses
       if c.exists(cnf + ' address'):
         config_data['interfaces'][intfc]['addr'] = c.return_values(cnf + ' address')
       ### listen port
@@ -106,10 +100,6 @@ def get_config():
       ### mtu
       if c.exists(cnf + ' mtu'):
         config_data['interfaces'][intfc]['mtu'] = c.return_value(cnf + ' mtu')
-      ### fwmark
-      if c.exists(cnf + ' fwmark'):
-        config_data['interfaces'][intfc]['fwmark'] = c.return_value(cnf + ' fwmark')
-      
       ### peers
       if c.exists(cnf + ' peer'):
         for p in c.list_nodes(cnf + ' peer'):
@@ -150,7 +140,7 @@ def verify(c):
           if not c['interfaces'][i]['peer'][p]['pubkey']:
             raise ConfigError("pubkey from your peer is mandatory on " + i + " for peer " + p)
 
-    ### endpoint needs to be IP:port, mabey verify it here, but consider IPv6 in the pattern :)
+    ### endpoint needs to be IP:port, mabey verify it here, but consider IPv6 in the pattern
 
 def apply(c):
   ### no wg config left, delete all wireguard devices on the os
@@ -165,8 +155,7 @@ def apply(c):
     return None
   
   ###
-  ## to find the diffs between old config an new config
-  ## so we only configure/delete what was not previously configured
+  ## find the diffs between effective config an new config
   ###
   c_eff = Config()
   c_eff.set_level('interfaces wireguard')
@@ -185,7 +174,8 @@ def apply(c):
       subprocess.call(['ip l a dev ' + intf + ' type wireguard 2>/dev/null'], shell=True)
       for addr in c['interfaces'][intf]['addr']:
         add_addr(intf, addr)
-      subprocess.call(['ip l set up dev ' + intf + ' &>/dev/null'], shell=True)
+
+      subprocess.call(['ip l set up dev ' + intf + ' mtu ' + c['interfaces'][intf]['mtu'] + ' &>/dev/null'], shell=True)
       configure_interface(c,intf)
 
     ### config updates
@@ -202,6 +192,12 @@ def apply(c):
       if len(addr_add) !=0:
         for addr in addr_add:
           add_addr(intf, addr)
+
+      ## mtu update
+      mtu = c['interfaces'][intf]['mtu']
+      if mtu != 1420:
+        sl.syslog(sl.LOG_NOTICE, "setting mtu to " + mtu + " on " + intf)
+        subprocess.call(['ip l set mtu ' + mtu + ' dev ' + intf + ' &>/dev/null'], shell=True)
 
       ### persistent-keepalive
       for p in c_eff.list_nodes(intf + ' peer'):
@@ -229,7 +225,8 @@ def apply(c):
     descr_eff = c_eff.return_effective_value(intf + ' description')
     cnf_descr = c['interfaces'][intf]['descr']
     if descr_eff != cnf_descr:
-      open('/sys/class/net/' + str(intf) + '/ifalias','w').write(str(cnf_descr))
+      with open('/sys/class/net/' + str(intf) + '/ifalias','w') as fh:
+        fh.write(str(cnf_descr))
 
 def configure_interface(c, intf):
   wg_config = {
@@ -264,14 +261,10 @@ def configure_interface(c, intf):
     ## persistent-keepalive
     if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
       wg_config['keepalive']  = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
-  
-    ## fwmark
-    wg_config['fwmark'] = hex(int(c['interfaces'][intf]['fwmark']))
 
     ### assemble wg command
     cmd = "sudo wg set " + intf
     cmd += " listen-port " + str(wg_config['listen-port'])
-    cmd += " fwmark " + wg_config['fwmark'] 
     cmd += " private-key " + wg_config['private-key']
     cmd += " peer " + wg_config['peer']['pubkey']
     cmd += " allowed-ips "
