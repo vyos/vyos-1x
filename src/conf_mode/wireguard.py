@@ -15,9 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-#### TODO:
-# preshared key
-####
 
 import sys
 import os
@@ -29,12 +26,12 @@ from vyos.config import Config
 from vyos import ConfigError
 
 dir = r'/config/auth/wireguard'
-pk  = dir + '/private.key'
+pk = dir + '/private.key'
 pub = dir + '/public.key'
 
 def check_kmod():
   if not os.path.exists('/sys/module/wireguard'):
-    sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod") 
+    sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod")
     if  os.system('sudo modprobe wireguard') != 0:
       sl.syslog(sl.LOG_NOTICE, "modprobe wireguard failed")
       raise ConfigError("modprobe wireguard failed")
@@ -47,41 +44,41 @@ def get_config():
   c.set_level('interfaces')
   intfcs = c.list_nodes('wireguard')
   intfcs_eff = c.list_effective_nodes('wireguard')
-  new_lst = list( set(intfcs) - set(intfcs_eff) )
-  del_lst = list( set(intfcs_eff) - set(intfcs) )
+  new_lst = list(set(intfcs) - set(intfcs_eff))
+  del_lst = list(set(intfcs_eff) - set(intfcs))
 
   config_data = {
-    'interfaces' : {}
+      'interfaces' : {}
   }
-  ### setting defaults and determine status of the config 
+  ### setting defaults and determine status of the config
   for intfc in intfcs:
     cnf = 'wireguard ' + intfc
     # default data struct
-    config_data['interfaces'].update (
-      {
-        intfc : {
-          'addr'        : '',
-          'descr'       : intfc, ## snmp ifAlias
-          'lport'       : '',
-          'status'      : 'exists',
-          'state'       : 'enabled',
-          'mtu'         : '1420',
-          'peer'        : {}
-          }
+    config_data['interfaces'].update(
+        {
+            intfc : {
+                'addr'        : '',
+                'descr'       : intfc, ## snmp ifAlias
+                'lport'       : '',
+                'status'      : 'exists',
+                'state'       : 'enabled',
+                'mtu'         : '1420',
+                'peer'        : {}
+            }
         }
-    ) 
-  
+    )
+
   ### determine status either delete or create
   for i in new_lst:
-    config_data['interfaces'][i]['status'] = 'create' 
+    config_data['interfaces'][i]['status'] = 'create'
 
   for i in del_lst:
-    config_data['interfaces'].update (
-      {
-        i : {
-          'status': 'delete'
+    config_data['interfaces'].update(
+        {
+            i : {
+                'status': 'delete'
+            }
         }
-      }
     )
 
   ### based on the status, setup conf values
@@ -103,14 +100,14 @@ def get_config():
       ### peers
       if c.exists(cnf + ' peer'):
         for p in c.list_nodes(cnf + ' peer'):
-          config_data['interfaces'][intfc]['peer'].update  (
-            {
-              p : {
-                'allowed-ips' : [],
-                'endpoint'  : '',
-                'pubkey'  : ''
+          config_data['interfaces'][intfc]['peer'].update(
+              {
+                  p : {
+                      'allowed-ips' : [],
+                      'endpoint'  : '',
+                      'pubkey'  : ''
+                  }
               }
-            }
           )
           if c.exists(cnf + ' peer ' + p + ' pubkey'):
             config_data['interfaces'][intfc]['peer'][p]['pubkey'] = c.return_value(cnf + ' peer ' + p + ' pubkey')
@@ -130,7 +127,7 @@ def verify(c):
   for i in c['interfaces']:
     if c['interfaces'][i]['status'] != 'delete':
       if not c['interfaces'][i]['addr']:
-        raise ConfigError("address required for interface " + i) 
+        raise ConfigError("address required for interface " + i)
       if not c['interfaces'][i]['peer']:
         raise ConfigError("peer required on interface " + i)
 
@@ -146,13 +143,13 @@ def apply(c):
   if not c:
     net_devs = os.listdir('/sys/class/net/')
     for dev in net_devs:
-      buf = open('/sys/class/net/' + dev + '/uevent','r').read()
+      buf = open('/sys/class/net/' + dev + '/uevent', 'r').read()
       if re.search("DEVTYPE=wireguard", buf, re.I|re.M):
-        wg_intf = re.sub("INTERFACE=","", re.search("INTERFACE=.*", buf, re.I|re.M).group(0) ) 
+        wg_intf = re.sub("INTERFACE=", "", re.search("INTERFACE=.*", buf, re.I|re.M).group(0))
         sl.syslog(sl.LOG_NOTICE, "removing interface " + wg_intf)
         subprocess.call(['ip l d dev ' + wg_intf + ' >/dev/null'], shell=True)
     return None
-  
+
   ###
   ## find the diffs between effective config an new config
   ###
@@ -175,20 +172,20 @@ def apply(c):
         add_addr(intf, addr)
 
       subprocess.call(['ip l set up dev ' + intf + ' mtu ' + c['interfaces'][intf]['mtu'] + ' &>/dev/null'], shell=True)
-      configure_interface(c,intf)
+      configure_interface(c, intf)
 
     ### config updates
     if c['interfaces'][intf]['status'] == 'exists':
       ### IP address change
-      addr_eff  = re.sub("\'", "", c_eff.return_effective_values(intf + ' address')).split() 
-      addr_rem  = list( set(addr_eff) - set(c['interfaces'][intf]['addr']) )
-      addr_add  = list( set(c['interfaces'][intf]['addr']) - set(addr_eff) )
+      addr_eff = re.sub("\'", "", c_eff.return_effective_values(intf + ' address')).split()
+      addr_rem = list(set(addr_eff) - set(c['interfaces'][intf]['addr']))
+      addr_add = list(set(c['interfaces'][intf]['addr']) - set(addr_eff))
 
-      if len(addr_rem) !=0:
+      if len(addr_rem) != 0:
         for addr in addr_rem:
           del_addr(intf, addr)
 
-      if len(addr_add) !=0:
+      if len(addr_add) != 0:
         for addr in addr_add:
           add_addr(intf, addr)
 
@@ -201,45 +198,45 @@ def apply(c):
       ### persistent-keepalive
       for p in c_eff.list_nodes(intf + ' peer'):
         val_eff = ""
-        val = "" 
+        val = ""
 
         if c_eff.exists_effective(intf + ' peer ' + p + ' persistent-keepalive'):
           val_eff = c_eff.return_effective_value(intf + ' peer ' + p + ' persistent-keepalive')
 
         if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
           val = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
-        
+
         ### disable keepalive
         if val_eff and not val:
-          c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = 0 
-        
+          c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = 0
+
         ### set new keepalive value
         if not val_eff and val:
           c['interfaces'][intf]['peer'][p]['persistent-keepalive'] = val
 
       ## wg command call
-      configure_interface(c,intf)
+      configure_interface(c, intf)
 
-    ### ifalias for snmp from description   
+    ### ifalias for snmp from description
     descr_eff = c_eff.return_effective_value(intf + ' description')
     cnf_descr = c['interfaces'][intf]['descr']
     if descr_eff != cnf_descr:
-      with open('/sys/class/net/' + str(intf) + '/ifalias','w') as fh:
+      with open('/sys/class/net/' + str(intf) + '/ifalias', 'w') as fh:
         fh.write(str(cnf_descr))
 
 def configure_interface(c, intf):
   wg_config = {
-    'interface'   : intf,
-    'listen-port' : 0,
-    'private-key' : '/config/auth/wireguard/private.key',
-    'peer'        :
-      {
-        'pubkey'  : ''
-      },
-    'allowed-ips' : [],
-    'fwmark'      : 0x00,
-    'endpoint'    : None,
-    'keepalive'   : 0
+      'interface'   : intf,
+      'listen-port' : 0,
+      'private-key' : '/config/auth/wireguard/private.key',
+      'peer'        :
+          {
+              'pubkey'  : ''
+          },
+      'allowed-ips' : [],
+      'fwmark'      : 0x00,
+      'endpoint'    : None,
+      'keepalive'   : 0
 
   }
 
@@ -259,7 +256,7 @@ def configure_interface(c, intf):
 
     ## persistent-keepalive
     if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
-      wg_config['keepalive']  = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+      wg_config['keepalive'] = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
 
     ### assemble wg command
     cmd = "sudo wg set " + intf
@@ -276,7 +273,7 @@ def configure_interface(c, intf):
     if wg_config['endpoint']:
       cmd += " endpoint " + wg_config['endpoint']
 
-    if wg_config['keepalive'] !=0:
+    if wg_config['keepalive'] != 0:
       cmd += " persistent-keepalive " + wg_config['keepalive']
     else:
       cmd += " persistent-keepalive 0"
@@ -287,14 +284,14 @@ def configure_interface(c, intf):
 def add_addr(intf, addr):
   ret = subprocess.call(['ip a a dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)
   if ret != 0:
-    raise ConfigError('Can\'t set IP ' + addr + ' on ' + intf )
+    raise ConfigError('Can\'t set IP ' + addr + ' on ' + intf)
   else:
     sl.syslog(sl.LOG_NOTICE, "ip a a dev " + intf + " " + addr)
 
 def del_addr(intf, addr):
   ret = subprocess.call(['ip a d dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)
   if ret != 0:
-    raise ConfigError('Can\'t delete IP ' + addr + ' on ' + intf )
+    raise ConfigError('Can\'t delete IP ' + addr + ' on ' + intf)
   else:
     sl.syslog(sl.LOG_NOTICE, "ip a d dev " + intf + " " + addr)
 
@@ -307,4 +304,3 @@ if __name__ == '__main__':
   except ConfigError as e:
     print(e)
     sys.exit(1)
-
