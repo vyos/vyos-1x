@@ -156,7 +156,7 @@ def apply(ntp):
     if ntp is not None:
         os.system('sudo /usr/sbin/invoke-rc.d ntp force-reload')
     else:
-        # NTP suuport is removed in the commit
+        # NTP support is removed in the commit
         os.system('sudo /usr/sbin/invoke-rc.d ntp stop')
         os.unlink(config_file)
 

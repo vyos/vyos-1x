@@ -23,7 +23,7 @@ try:
 except Exception as exn:
     if debug:
         print(exn)
-    else:        
+    else:
         pass
 
 try:
