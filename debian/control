@@ -38,6 +38,7 @@ Depends: python3,
   beep,
   keepalived (>=2.0.5),
   wireguard,
+  tftpd-hpa,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data

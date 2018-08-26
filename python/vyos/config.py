@@ -280,8 +280,8 @@ class Config(object):
         else:
             try:
                 out = self._run(self._make_command('returnValues', full_path))
-                values = out.split()
-                return list(map(lambda x: re.sub(r'^\'(.*)\'$', r'\1',x), values))
+                values = re.findall(r"\'(.*?)\'", out)
+                return values
             except VyOSError:
                 return(default)
 
@@ -309,8 +309,8 @@ class Config(object):
         if self.is_tag(path):
             try:
                 out = self._run(self._make_command('listNodes', full_path))
-                values = out.split()
-                return list(map(lambda x: re.sub(r'^\'(.*)\'$', r'\1',x), values))
+                values = re.findall(r"\'(.*?)\'", out)
+                return values
             except VyOSError:
                 return(default)
         else:

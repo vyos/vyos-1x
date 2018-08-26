@@ -236,10 +236,10 @@ def generate(ssh):
 
 def apply(ssh):
     if ssh is not None and 'port' in ssh.keys():
-        os.system("sudo systemctl restart ssh")
+        os.system("sudo systemctl restart ssh.service")
     else:
         # SSH access is removed in the commit
-        os.system("sudo systemctl stop ssh")
+        os.system("sudo systemctl stop ssh.service")
         os.unlink(config_file)
 
     return None
