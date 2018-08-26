@@ -154,10 +154,10 @@ def generate(ntp):
 
 def apply(ntp):
     if ntp is not None:
-        os.system('sudo /usr/sbin/invoke-rc.d ntp force-reload')
+        os.system('sudo systemctl restart ntp.service')
     else:
         # NTP support is removed in the commit
-        os.system('sudo /usr/sbin/invoke-rc.d ntp stop')
+        os.system('sudo systemctl stop ntp.service')
         os.unlink(config_file)
 
     return None
