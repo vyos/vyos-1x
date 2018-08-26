@@ -59,12 +59,15 @@ default_config_data = {
 
 # Verify if an IP address is assigned to any interface, IPv4 and IPv6
 def addrok(ipaddr, ipversion):
+    # For every available interface on this system
     for interface in netifaces.interfaces():
-        # Retrieve IP address of network interfaces
-            if ipversion in netifaces.ifaddresses(interface).keys():
-                for addr in netifaces.ifaddresses(interface)[ipversion]:
-                    if addr['addr'] == ipaddr:
-                        return True
+        # If it has any IPv4 or IPv6 address (depending on ipversion) configured
+        if ipversion in netifaces.ifaddresses(interface).keys():
+            # For every configured IP address
+            for addr in netifaces.ifaddresses(interface)[ipversion]:
+                # Check if it matches to the address requested
+                if addr['addr'] == ipaddr:
+                    return True
 
     return False
 
