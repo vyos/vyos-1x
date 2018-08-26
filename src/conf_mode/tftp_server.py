@@ -46,7 +46,7 @@ TFTP_ADDRESS="{% for a in listen_ipv4 -%}{{ a }}:{{ port }}{{- " --address " if 
 TFTP_ADDRESS="{% for a in listen_ipv6 -%}[{{ a }}]:{{ port }}{{- " --address " if not loop.last -}}{% endfor %} -6"
 {%- endif %}
 
-TFTP_OPTIONS="--secure {% if allow_upload %}--create --umask 002{% endif %}"
+TFTP_OPTIONS="--secure {% if allow_upload %}--create --umask 000{% endif %}"
 """
 
 default_config_data = {
