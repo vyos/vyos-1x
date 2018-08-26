@@ -42,20 +42,52 @@
               <constraintErrorMessage>interface description is too long (limit 100 characters)</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="listen-port">
+          <leafNode name="port">
             <properties>
               <help>Local port number to accept connections</help>
+              <constraint>
+                <validator name="numeric" argument="--range 1024-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="mtu">
+            <properties>
+              <help>interface mtu size(default: 1420)</help>
+              <constraint>
+                <validator name="numeric" argument="--range 68-9000"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="fwmark">
+            <properties>
+              <help>A 32-bit fwmark value set on all outgoing packets</help>
+              <valueHelp>
+                <format>number</format>
+                <description>value which marks the packet for QoS/shaper</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-255"/>
+              </constraint>
             </properties>
           </leafNode>
           <tagNode name="peer">
             <properties>
-              <help>Base64 encoded public key</help>
+              <help>peer alias</help>
               <constraint>
-                <regex>^[0-9a-zA-Z\+/]{43}=$</regex>
+                <regex>.[^ ]{1,100}$</regex>
               </constraint>
-              <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
+              <constraintErrorMessage>peer alias too long (limit 100 characters)</constraintErrorMessage>
             </properties>
             <children>
+              <leafNode name="pubkey">
+                <properties>
+                  <help>base64 encoded public key</help>
+                  <constraint>
+                    <regex>^[0-9a-zA-Z\+/]{43}=$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <leafNode name="allowed-ips">
                 <properties>
                   <help>IP addresses allowed to traverse the peer</help>
@@ -72,12 +104,10 @@
                 <properties>
                   <help>how often send keep alives in seconds</help>
                   <constraint>
-                    <regex>^(1|[1-9][0-9]{1,5})$</regex>
+                    <validator name="numeric" argument="--range 1-65535"/> 
                   </constraint>
-                  <constraintErrorMessage>keepliave timer has to be between 1 and 99999 seconds</constraintErrorMessage>
                 </properties>
               </leafNode>
-
             </children>
           </tagNode>
         </children>
