@@ -89,8 +89,8 @@ def get_config():
       if c.exists(cnf + ' address'):
         config_data['interfaces'][intfc]['addr'] = c.return_values(cnf + ' address')
       ### listen port
-      if c.exists(cnf + ' listen-port'):
-        config_data['interfaces'][intfc]['lport'] = c.return_value(cnf + ' listen-port')
+      if c.exists(cnf + ' port'):
+        config_data['interfaces'][intfc]['lport'] = c.return_value(cnf + ' port')
       ### description
       if c.exists(cnf + ' description'):
         config_data['interfaces'][intfc]['descr'] = c.return_value(cnf + ' description')
@@ -227,7 +227,7 @@ def apply(c):
 def configure_interface(c, intf):
   wg_config = {
       'interface'   : intf,
-      'listen-port' : 0,
+      'port' : 0,
       'private-key' : '/config/auth/wireguard/private.key',
       'peer'        :
           {
@@ -248,7 +248,7 @@ def configure_interface(c, intf):
     ## optional settings
     # listen-port
     if c['interfaces'][intf]['lport']:
-      wg_config['listen-port'] = c['interfaces'][intf]['lport']
+      wg_config['port'] = c['interfaces'][intf]['lport']
 
     ## endpoint
     if c['interfaces'][intf]['peer'][p]['endpoint']:
@@ -260,7 +260,7 @@ def configure_interface(c, intf):
 
     ### assemble wg command
     cmd = "sudo wg set " + intf
-    cmd += " listen-port " + str(wg_config['listen-port'])
+    cmd += " listen-port " + str(wg_config['port'])
     cmd += " private-key " + wg_config['private-key']
     cmd += " peer " + wg_config['peer']['pubkey']
     cmd += " allowed-ips "

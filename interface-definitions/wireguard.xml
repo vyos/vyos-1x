@@ -42,7 +42,7 @@
               <constraintErrorMessage>interface description is too long (limit 100 characters)</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="listen-port">
+          <leafNode name="port">
             <properties>
               <help>Local port number to accept connections</help>
               <constraint>
