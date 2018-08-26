@@ -139,7 +139,7 @@ def apply(tftpd):
         if not os.path.exists(tftp_root):
             os.makedirs(tftp_root)
             os.chmod(tftp_root, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
-            # get uid for user 'snmp'
+            # get UNIX uid for user 'tftp'
             tftp_uid = pwd.getpwnam('tftp').pw_uid
             os.chown(tftp_root, tftp_uid, -1)
 
