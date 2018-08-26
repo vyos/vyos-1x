@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import os
+import argparse
 import jinja2
 import sys
 import time
@@ -18,7 +19,8 @@ update-status: {{ entry.status }}
 {% endfor -%}
 """
 
-if __name__ == '__main__':
+
+def show_status():
     # Do nothing if service is not configured
     c = Config()
     if not c.exists_effective('service dns dynamic'):
@@ -65,3 +67,26 @@ if __name__ == '__main__':
 
     tmpl = jinja2.Template(OUT_TMPL_SRC)
     print(tmpl.render(data))
+
+
+def update_ddns():
+    os.system('systemctl stop ddclient')
+    os.remove(cache_file)
+    os.system('systemctl start ddclient')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--status", help="Show DDNS status", action="store_true")
+    group.add_argument("--update", help="Update DDNS on a given interface", action="store_true")
+    args = parser.parse_args()
+
+    if args.status:
+        show_status()
+    elif args.update:
+        update_ddns()
+
+
+if __name__ == '__main__':
+    main()

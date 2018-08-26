@@ -126,9 +126,9 @@ def main():
     args = parser.parse_args()
 
     try:
-        if args.reboot:
+        if  args.reboot is not None:
             execute_shutdown(args.reboot, reboot=True, ask=args.yes)
-        if args.poweroff:
+        if args.poweroff is not None:
             execute_shutdown(args.poweroff, reboot=False,ask=args.yes)
         if args.cancel:
             cancel_shutdown()
