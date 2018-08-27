@@ -19,17 +19,16 @@
 import argparse
 import os
 import sys
-import syslog as sl
 import subprocess
+import syslog as sl
 
 from vyos import ConfigError
 
 dir = r'/config/auth/wireguard'
 pk  = dir + '/private.key'
 pub = dir + '/public.key'
+psk = dir + '/preshared.key'
 
-### check_kmod may be removed in the future, 
-### once it's loaded automatically 
 def check_kmod():
   if not os.path.exists('/sys/module/wireguard'):
     sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod") 
@@ -44,6 +43,13 @@ def generate_keypair():
   else:
     sl.syslog(sl.LOG_NOTICE, "new keypair wireguard key generated in " + dir)
 
+def generate_psk():
+  ret = subprocess.call(['wg genpsk >' + psk ], shell=True)
+  if ret != 0:
+    raise ConfigError("wireguard preshared-key generation failed")
+  else:
+    sl.syslog(sl.LOG_NOTICE, "wireguard preshared-key sucessfully generated in " + dir)
+
 def genkey():
   ### if umask 077 makes trouble, 027 will work
   old_umask = os.umask(0o077)
@@ -52,7 +58,8 @@ def genkey():
     if choice == 'y' or choice == 'Y':
       generate_keypair()
   else:
-    os.mkdir(dir)
+    if not os.path.exists(dir):
+      os.mkdir(dir)
     generate_keypair()
   os.umask(old_umask)
 
@@ -69,6 +76,24 @@ def showkey(key):
     else:
       print("no private key found")
 
+def genpsk():
+  old_umask = os.umask(0o077)
+  if os.path.exists(psk):
+    choice = input("You have a wireguard key-pair already, do you want to re-generate? [y/n] ")
+    if choice == 'y' or choice == 'Y':
+      generate_psk()
+  else:
+    if not os.path.exists(dir):
+      os.mkdir(dir)
+    generate_psk()
+  os.umask(old_umask)
+
+def showpsk():
+  if os.path.exists(psk):
+    print (open(psk).read().strip())
+  else:
+    print("no preshared key found")
+
 if __name__ == '__main__':
   check_kmod()
 
@@ -76,6 +101,8 @@ if __name__ == '__main__':
   parser.add_argument('--genkey', action="store_true", help='generate key-pair')
   parser.add_argument('--showpub', action="store_true", help='shows public key')
   parser.add_argument('--showpriv', action="store_true", help='shows private key')
+  parser.add_argument('--genpsk', action="store_true", help='generates preshared-key')
+  parser.add_argument('--showpsk', action="store_true", help='show preshared-key')
   args = parser.parse_args()
 
   try:
@@ -85,6 +112,10 @@ if __name__ == '__main__':
       showkey("pub")
     if args.showpriv:
       showkey("pk")
+    if args.genpsk:
+      genpsk()
+    if args.showpsk:
+      showpsk()
 
   except ConfigError as e:
     print(e)
