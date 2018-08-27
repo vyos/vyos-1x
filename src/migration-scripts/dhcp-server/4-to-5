@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+
+# Removes boolean operator from:
+#   - "set service dhcp-server shared-network-name <xyz> subnet 172.31.0.0/24 ip-forwarding enable (true|false)"
+#   - "set service dhcp-server shared-network-name <xyz> authoritative (true|false)"
+#   - "set service dhcp-server disabled (true|false)"
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['service', 'dhcp-server']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    base = ['service', 'dhcp-server']
+    # Make node "set service dhcp-server dynamic-dns-update enable (true|false)" valueless
+    if config.exists(base + ['dynamic-dns-update']):
+        bool_val = config.return_value(base + ['dynamic-dns-update', 'enable'])
+
+        # Delete the node with the old syntax
+        config.delete(base + ['dynamic-dns-update'])
+        if str(bool_val) == 'true':
+            # Enable dynamic-dns-update with new syntax
+            config.set(base + ['dynamic-dns-update'], value=None)
+
+    # Make node "set service dhcp-server disabled (true|false)" valueless
+    if config.exists(base + ['disabled']):
+        bool_val = config.return_value(base + ['disabled'])
+
+        # Delete the node with the old syntax
+        config.delete(base + ['disabled'])
+        if str(bool_val) == 'true':
+            # Now disable DHCP server with the new syntax
+            config.set(base + ['disable'], value=None)
+
+    # Make node "set service dhcp-server hostfile-update (enable|disable) valueless
+    if config.exists(base + ['hostfile-update']):
+        bool_val = config.return_value(base + ['hostfile-update'])
+
+        # Delete the node with the old syntax incl. all subnodes
+        config.delete(base + ['hostfile-update'])
+        if str(bool_val) == 'enable':
+            # Enable hostfile update with new syntax
+            config.set(base + ['hostfile-update'], value=None)
+
+    # Run this for every instance if 'shared-network-name'
+    for network in config.list_nodes(base + ['shared-network-name']):
+        base_network = base + ['shared-network-name', network]
+        # format as tag node to avoid loading problems
+        config.set_tag(base + ['shared-network-name'])
+
+        # Run this for every specified 'subnet'
+        for subnet in config.list_nodes(base_network + ['subnet']):
+            base_subnet = base_network + ['subnet', subnet]
+            # format as tag node to avoid loading problems
+            config.set_tag(base_network + ['subnet'])
+
+            # Make node "set service dhcp-server shared-network-name <xyz> subnet 172.31.0.0/24 ip-forwarding enable" valueless
+            if config.exists(base_subnet + ['ip-forwarding', 'enable']):
+                bool_val = config.return_value(base_subnet + ['ip-forwarding', 'enable'])
+                # Delete the node with the old syntax
+                config.delete(base_subnet + ['ip-forwarding'])
+                if str(bool_val) == 'true':
+                    # Recreate node with new syntax
+                    config.set(base_subnet + ['ip-forwarding'], value=None)
+
+            # Rename node "set service dhcp-server shared-network-name <xyz> subnet 172.31.0.0/24 start <172.16.0.4> stop <172.16.0.9>
+            if config.exists(base_subnet + ['start']):
+                # This is the new "range" id for DHCP lease ranges
+                r_id = 0
+                for range in config.list_nodes(base_subnet + ['start']):
+                    range_start = range
+                    range_stop = config.return_value(base_subnet + ['start', range_start, 'stop'])
+
+                    # Delete the node with the old syntax
+                    config.delete(base_subnet + ['start', range_start])
+
+                    # Create the node for the new syntax
+                    # Note: range is a tag node, counter is its child, not a value
+                    config.set(base_subnet + ['range', r_id])
+                    config.set(base_subnet + ['range', r_id, 'start'], value=range_start)
+                    config.set(base_subnet + ['range', r_id, 'stop'], value=range_stop)
+
+                    # format as tag node to avoid loading problems
+                    config.set_tag(base_subnet + ['range'])
+
+                    # increment range id for possible next range definition
+                    r_id += 1
+
+                # Delete the node with the old syntax
+                config.delete(['service', 'dhcp-server', 'shared-network-name', network, 'subnet', subnet, 'start'])
+
+
+        # Make node "set service dhcp-server shared-network-name <xyz> authoritative" valueless
+        if config.exists(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative']):
+            bool_val = config.return_value(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
+            # Delete the node with the old syntax
+            config.delete(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
+            if str(bool_val) == 'true':
+                # Recreate node with new syntax
+                config.set(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+
+    sys.exit(1)
