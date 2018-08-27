@@ -14,6 +14,12 @@
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard_key.py --genkey</command>
           </leafNode>
+          <leafNode name="preshared-key">
+            <properties>
+              <help>generate a wireguard preshared key</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/wireguard_key.py --genpsk</command>
+          </leafNode> 
         </children>
       </node>
     </children>
@@ -33,6 +39,12 @@
               <help>show wireguard private key</help>
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard_key.py --showpriv</command>
+          </leafNode>
+          <leafNode name="preshared-key">
+            <properties>
+              <help>show wireguard preshared key</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/wireguard_key.py --showpsk</command>
           </leafNode>
         </children>
       </node>

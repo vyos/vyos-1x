@@ -54,7 +54,7 @@ def genkey():
   ### if umask 077 makes trouble, 027 will work
   old_umask = os.umask(0o077)
   if os.path.exists(pk) and os.path.exists(pub):
-    choice = input("You have a wireguard key-pair already, do you want to re-generate? [y/n] ")
+    choice = input("You already have a wireguard key-pair already, do you want to re-generate? [y/n] ")
     if choice == 'y' or choice == 'Y':
       generate_keypair()
   else:
@@ -79,7 +79,7 @@ def showkey(key):
 def genpsk():
   old_umask = os.umask(0o077)
   if os.path.exists(psk):
-    choice = input("You have a wireguard key-pair already, do you want to re-generate? [y/n] ")
+    choice = input("You already have a preshared-key, do you want to re-generate? [y/n] ")
     if choice == 'y' or choice == 'Y':
       generate_psk()
   else:
