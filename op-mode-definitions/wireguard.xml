@@ -12,7 +12,7 @@
             <properties>
               <help>generate a wireguard keypair</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/wireguard_key.py --genkey</command>
+            <command>${vyos_op_scripts_dir}/wireguard.py --genkey</command>
           </leafNode>
           <leafNode name="preshared-key">
             <properties>
