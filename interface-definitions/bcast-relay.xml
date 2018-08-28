@@ -6,6 +6,7 @@
       <node name="broadcast-relay" owner="${vyos_conf_scripts_dir}/bcast_relay.py">
         <properties>
           <help>UDP broadcast relay service</help>
+          <priority>990</priority>
         </properties>
         <children>
           <leafNode name="disable">
@@ -21,7 +22,6 @@
                 <format>1-99</format>
                 <description>Numerical ID #</description>
               </valueHelp>
-              <priority>990</priority>
               <constraint>
                 <validator name="numeric" argument="--range 1-99"/>
               </constraint>
