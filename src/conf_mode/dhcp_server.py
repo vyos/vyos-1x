@@ -736,7 +736,10 @@ def verify(dhcp):
     return None
 
 def generate(dhcp):
-    if (dhcp is None) or (dhcp['disabled'] is True):
+    if dhcp is None:
+        return None
+
+    if dhcp['disabled'] is True:
         print('Warning: DHCP server will be deactivated because it is disabled')
         return None
 
@@ -753,11 +756,13 @@ def generate(dhcp):
     return None
 
 def apply(dhcp):
-    if (dhcp is None) or (dhcp['disabled'] is True):
+    if (dhcp is None) or dhcp['disabled']:
         # DHCP server is removed in the commit
         os.system('sudo systemctl stop isc-dhcp-server.service')
-        os.unlink(config_file)
-        os.unlink(daemon_config_file)
+        if os.path.exists(config_file):
+            os.unlink(config_file)
+        if os.path.exists(daemon_config_file):
+            os.unlink(daemon_config_file)
     else:
         os.system('sudo systemctl restart isc-dhcp-server.service')
 
