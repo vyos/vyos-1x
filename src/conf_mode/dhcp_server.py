@@ -79,7 +79,7 @@ option wpad-url code 252 = text;
 
 # Failover configuration
 {% for network in shared_network %}
-{%- if not network.disable -%}
+{%- if not network.disabled -%}
 {%- for subnet in network.subnet %}
 {%- if subnet.failover_name -%}
 failover peer "{{ subnet.failover_name }}" {
@@ -105,7 +105,7 @@ failover peer "{{ subnet.failover_name }}" {
 
 # Shared network configrations
 {% for network in shared_network %}
-{%- if not network.disable -%}
+{%- if not network.disabled -%}
 shared-network {{ network.name }} {
     {% if network.authoritative %}authoritative;{% endif %}
     {%- if network.network_parameters %}
@@ -177,7 +177,7 @@ shared-network {{ network.name }} {
         max-lease-time {{ subnet.lease }};
         {%- endif -%}
         {%- for host in subnet.static_mapping %}
-        {% if not host.disable -%}
+        {% if not host.disabled -%}
         host {{ network.name }}_{{ host.name }} {
             fixed-address {{ host.ip_address }};
             hardware ethernet {{ host.mac_address }};
@@ -222,7 +222,7 @@ INTERFACES=""
 """
 
 default_config_data = {
-    'disable': False,
+    'disabled': False,
     'ddns_enable': False,
     'global_parameters': [],
     'hostfile_update': False,
@@ -241,7 +241,7 @@ def get_config():
 
     # check for global disable of DHCP service
     if conf.exists('disable'):
-        dhcp['disable'] = True
+        dhcp['disabled'] = True
 
     # check for global dynamic DNS upste
     if conf.exists('dynamic-dns-update'):
@@ -266,7 +266,7 @@ def get_config():
                 'name': network,
                 'authoritative': False,
                 'description': '',
-                'disable': False,
+                'disabled': False,
                 'network_parameters': [],
                 'subnet': []
             }
@@ -281,7 +281,7 @@ def get_config():
             # If disabled, the shared-network configuration becomes inactive in
             # the running DHCP server instance
             if conf.exists('disable'):
-                config['disable'] = True
+                config['disabled'] = True
 
             # HACKS AND TRICKS
             #
@@ -485,7 +485,7 @@ def get_config():
                             conf.set_level('service dhcp-server shared-network-name {0} subnet {1} static-mapping {2}'.format(network, net, mapping))
                             mapping = {
                                 'name': mapping,
-                                'disable': False,
+                                'disabled': False,
                                 'ip_address': '',
                                 'mac_address': '',
                                 'static_parameters': []
@@ -493,7 +493,7 @@ def get_config():
 
                             # This static lease is disabled
                             if conf.exists('disable'):
-                                mapping['disable'] = True
+                                mapping['disabled'] = True
 
                             # IP address used for this DHCP client
                             if conf.exists('ip-address'):
