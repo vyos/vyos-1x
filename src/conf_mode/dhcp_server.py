@@ -601,7 +601,7 @@ def get_config():
     return dhcp
 
 def verify(dhcp):
-    if dhcp is None:
+    if (dhcp is None) or (dhcp['disabled'] is True):
         return None
 
     # If DHCP is enabled we need one share-network
@@ -736,7 +736,8 @@ def verify(dhcp):
     return None
 
 def generate(dhcp):
-    if dhcp is None:
+    if (dhcp is None) or (dhcp['disabled'] is True):
+        print('Warning: DHCP server will be deactivated because it is disabled')
         return None
 
     tmpl = jinja2.Template(config_tmpl)
@@ -752,13 +753,13 @@ def generate(dhcp):
     return None
 
 def apply(dhcp):
-    if dhcp is not None:
-        os.system('sudo systemctl restart isc-dhcp-server.service')
-    else:
+    if (dhcp is None) or (dhcp['disabled'] is True):
         # DHCP server is removed in the commit
         os.system('sudo systemctl stop isc-dhcp-server.service')
         os.unlink(config_file)
         os.unlink(daemon_config_file)
+    else:
+        os.system('sudo systemctl restart isc-dhcp-server.service')
 
     return None
 
