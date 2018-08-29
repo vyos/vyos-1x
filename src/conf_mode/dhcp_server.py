@@ -677,7 +677,7 @@ def verify(dhcp):
             if (len(subnet['range']) == 0):
                 for mapping in subnet['static_mapping']:
                     # we need at least one active mapping
-                    if (not active_mapping) and (not mapping['disable']):
+                    if (not active_mapping) and (not mapping['disabled']):
                         active_mapping = True
             else:
                 active_mapping = True
