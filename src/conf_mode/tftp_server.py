@@ -22,8 +22,7 @@ import stat
 import pwd
 
 import jinja2
-import ipaddress
-import netifaces
+import vyos.validate
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -47,6 +46,7 @@ TFTP_ADDRESS="{% for a in listen_ipv6 -%}[{{ a }}]:{{ port }}{{- " --address " i
 {%- endif %}
 
 TFTP_OPTIONS="--secure {% if allow_upload %}--create --umask 000{% endif %}"
+
 """
 
 default_config_data = {
@@ -56,20 +56,6 @@ default_config_data = {
     'listen_ipv4': [],
     'listen_ipv6': []
 }
-
-# Verify if an IP address is assigned to any interface, IPv4 and IPv6
-def addrok(ipaddr, ipversion):
-    # For every available interface on this system
-    for interface in netifaces.interfaces():
-        # If it has any IPv4 or IPv6 address (depending on ipversion) configured
-        if ipversion in netifaces.ifaddresses(interface).keys():
-            # For every configured IP address
-            for addr in netifaces.ifaddresses(interface)[ipversion]:
-                # Check if it matches to the address requested
-                if addr['addr'] == ipaddr:
-                    return True
-
-    return False
 
 def get_config():
     tftpd = default_config_data
@@ -90,10 +76,9 @@ def get_config():
 
     if conf.exists('listen-address'):
         for addr in conf.return_values('listen-address'):
-            if (ipaddress.ip_address(addr).version == 4):
+            if vyos.validate.is_ipv4(addr):
                 tftpd['listen_ipv4'].append(addr)
-
-            if (ipaddress.ip_address(addr).version == 6):
+            else:
                 tftpd['listen_ipv6'].append(addr)
 
     return tftpd
@@ -110,13 +95,13 @@ def verify(tftpd):
     if not (tftpd['listen_ipv4'] or tftpd['listen_ipv6']):
         raise ConfigError('TFTP server listen address must be configured!')
 
-    for address in tftpd['listen_ipv4']:
-        if not addrok(address, netifaces.AF_INET):
-            raise ConfigError('TFTP server listen address "{0}" not configured on this system.'.format(address))
+    for addr in tftpd['listen_ipv4']:
+        if not vyos.validate.is_addr_assigned(addr):
+            raise ConfigError('TFTP server IPv4 listen address "{0}" not configured!'.format(addr))
 
-    for address in tftpd['listen_ipv6']:
-        if not addrok(address, netifaces.AF_INET6):
-            raise ConfigError('TFTP server listen address "{0}" not configured on this system.'.format(address))
+    for addr in tftpd['listen_ipv6']:
+        if not vyos.validate.is_addr_assigned(addr):
+            raise ConfigError('TFTP server IPv6 listen address "{0}" not configured!'.format(addr))
 
     return None
 
