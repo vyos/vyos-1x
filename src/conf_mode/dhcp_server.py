@@ -703,10 +703,13 @@ def verify(dhcp):
             # There must be one subnet connected to a real interface
             #
             for interface in netifaces.interfaces():
-                # Retrieve IP address of network interface
-                ip = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
-                if ipaddress.ip_address(ip) in ipaddress.ip_network(subnet['network']):
-                    listen_ok = True
+                # Test if IPv4 addresses are configured at all
+                if netifaces.AF_INET in netifaces.ifaddresses(interface).keys():
+                    # An interface can have multiple addresses, but ISC DHCP only supports the first :(
+                    ip = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
+                    if ipaddress.ip_address(ip) in ipaddress.ip_network(subnet['network']):
+                        # Bingo! At least one subnet connected to an interface on this machine
+                        listen_ok = True
 
             #
             # Subnets must be non overlapping
