@@ -602,12 +602,14 @@ def verify(dhcp):
 
     # If DHCP is enabled we need one share-network
     if len(dhcp['shared_network']) == 0:
-        raise ConfigError('No DHCP shared networks configured. At least one DHCP shared network must be configured.')
+        raise ConfigError('No DHCP shared networks configured.\n'
+                          'At least one DHCP shared network must be configured.')
 
     # A shared-network requires a subnet definition
     for network in dhcp['shared_network']:
         if len(network['subnet']) == 0:
-            raise ConfigError('No DHCP lease subnets configured for "{0}". At least one DHCP lease subnet must be configured for each shared network.'.format(network['name']))
+            raise ConfigError('No DHCP lease subnets configured for "{0}". At least one\n'
+                              'lease subnet must be configured for each shared network.'.format(network['name']))
 
     # Inspect our subnet configuration
     failover_names = []
@@ -633,7 +635,7 @@ def verify(dhcp):
 
                 # Failover requires start/stop ranges for pool
                 if (len(subnet['range']) == 0):
-                    raise ConfigError('Atleast one start-stop range must be configured for $subnet to set up DHCP failover.')
+                    raise ConfigError('Atleast one start-stop range must be configured for "{0}" to set up DHCP failover.'.format(subnet['network']))
 
             # Check if DHCP address range is inside configured subnet declaration
             range_start = []
@@ -730,7 +732,9 @@ def verify(dhcp):
                         raise ConfigError('Conflicting subnet ranges: "{0}" overlaps "{1}"'.format(net, net2))
 
     if not listen_ok:
-        raise ConfigError('None of the DHCP lease subnets are inside any configured subnet on broadcast interfaces. At least one lease subnet must be set such that DHCP server listens on a one broadcast interface')
+        raise ConfigError('None of the DHCP lease subnets are inside any configured subnet on\n' \
+                          'broadcast interfaces. At least one lease subnet must be set such that\n' \
+                          'DHCP server listens on a one broadcast interface')
 
     return None
 
