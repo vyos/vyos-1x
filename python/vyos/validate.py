@@ -40,7 +40,8 @@ def is_ipv6(addr):
 
 def is_addr_assigned(addr):
     """
-    Verify if the given IPv4/IPv6 address is assigned to any interface on this system
+    Verify if the given IPv4/IPv6 address is assigned to any interface on this
+    system.
 
     Return True/False
     """
@@ -61,3 +62,38 @@ def is_addr_assigned(addr):
 
     return False
 
+def is_subnet_connected(subnet, primary=False):
+    """
+    Verify is the given IPv4/IPv6 subnet is connected to any interface on this
+    system.
+
+    primary check if the subnet is reachable via the primary IP address of this
+    interface. E.g. ISC DHCP can only listen on primary addresses.
+
+    Return True/False
+    """
+
+    # determine IP version (AF_INET or AF_INET6) depending on passed address
+    addr_type = netifaces.AF_INET
+    if is_ipv6(subnet):
+        addr_type = netifaces.AF_INET6
+
+    for interface in netifaces.interfaces():
+        # check if the requested address type is configured at all
+        if addr_type not in netifaces.ifaddresses(interface).keys():
+            return False
+
+        # An interface can have multiple addresses, but some software components
+        # only support the primary address :(
+        if primary:
+            ip = netifaces.ifaddresses(interface)[addr_type][0]['addr']
+            if ipaddress.ip_address(ip) in ipaddress.ip_network(subnet):
+                return True
+        else:
+            # Check every assigned IP address if it is connected to the subnet
+            # in question
+            for ip in netifaces.ifaddresses(interface)[addr_type]:
+                if ipaddress.ip_address(ip['addr']) in ipaddress.ip_network(subnet):
+                    return True
+
+    return False
