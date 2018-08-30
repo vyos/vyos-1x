@@ -146,7 +146,7 @@
                 <properties>
                   <help>Preempt delay (in seconds)</help>
                   <constraint>
-                    <validator name="numeric" argument="--positive"/>
+                    <validator name="numeric" argument="--range 0-1000"/>
                   </constraint>
                 </properties>
               </leafNode>
