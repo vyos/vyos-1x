@@ -68,7 +68,8 @@ def is_subnet_connected(subnet, primary=False):
     system.
 
     primary check if the subnet is reachable via the primary IP address of this
-    interface. E.g. ISC DHCP can only listen on primary addresses.
+    interface, or in other words has a broadcast address configured. ISC DHCP
+    for instance will complain if it should listen on non broadcast interfaces.
 
     Return True/False
     """
@@ -81,7 +82,7 @@ def is_subnet_connected(subnet, primary=False):
     for interface in netifaces.interfaces():
         # check if the requested address type is configured at all
         if addr_type not in netifaces.ifaddresses(interface).keys():
-            return False
+            continue
 
         # An interface can have multiple addresses, but some software components
         # only support the primary address :(
