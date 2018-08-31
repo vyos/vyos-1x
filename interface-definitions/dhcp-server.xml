@@ -1,0 +1,456 @@
+<?xml version="1.0"?>
+<!-- DHCP server configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dhcp-server" owner="${vyos_conf_scripts_dir}/dhcp_server.py">
+        <properties>
+          <help>Dynamic Host Configuration Protocol (DHCP) for DHCP server</help>
+          <priority>911</priority>
+        </properties>
+        <children>
+          <leafNode name="disable">
+            <properties>
+              <help>Option to disable DHCP server</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="dynamic-dns-update">
+            <properties>
+              <help>DHCP server to dynamically update the Domain Name System (DNS)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="global-parameters">
+            <properties>
+              <help>Additional global parameters for DHCP server. You must
+                use the syntax of dhcpd.conf in this text-field. Using this
+                without proper knowledge may result in a crashed DHCP server.
+                Check system log to look for errors.</help>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="hostfile-update">
+            <properties>
+              <help>Enable DHCP server updating /etc/hosts (per client lease)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <tagNode name="shared-network-name">
+            <properties>
+              <help>DHCP shared network name [REQUIRED]</help>
+              <constraint>
+                <regex>^[-_a-zA-Z0-9.]+$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid DHCP pool name</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="authoritative">
+                <properties>
+                  <help>Option to make DHCP server authoritative for this physical network</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="description">
+                <properties>
+                  <help>Shared-network-name description</help>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Option to disable DHCP configuration for shared-network</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="shared-network-parameters">
+                <properties>
+                  <help>Additional shared-network parameters for DHCP server.
+                You must use the syntax of dhcpd.conf in this text-field.
+                Using this without proper knowledge may result in a crashed
+                DHCP server. Check system log to look for errors.</help>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <tagNode name="subnet">
+                <properties>
+                  <help>DHCP subnet for shared network</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="bootfile-name">
+                    <properties>
+                      <help>Bootstrap file name</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bootfile-server">
+                    <properties>
+                      <help>Server (IP address or domain name) from which the initial
+                boot file is to be loaded</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="client-prefix-length">
+                    <properties>
+                      <help>Specifies the clients subnet mask as per RFC 950. If unset, subnet declaration is used.</help>
+                      <valueHelp>
+                        <format>0-32</format>
+                        <description>DHCP client prefix length must be 0 to 32</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-32"/>
+                      </constraint>
+                      <constraintErrorMessage>DHCP client prefix length must be 0 to 32</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="default-router">
+                    <properties>
+                      <help>IP address of default router</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Default router IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dns-server">
+                    <properties>
+                      <help>DNS server IPv4 address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>DNS server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="domain-name">
+                    <properties>
+                      <help>Client domain name</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="domain-search">
+                    <properties>
+                      <help>Client domain search</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="exclude">
+                    <properties>
+                      <help>IP address that needs to be excluded from DHCP lease range</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address to exclude from lease range</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <node name="failover">
+                    <properties>
+                      <help>DHCP failover parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="local-address">
+                        <properties>
+                          <help>IP address for failover peer to connect [REQUIRED]</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address to exclude from lease range</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="name">
+                        <properties>
+                          <help>DHCP failover peer name [REQUIRED]</help>
+                          <constraint>
+                            <regex>^[-_a-zA-Z0-9.]+$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid failover peer name</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="peer-address">
+                        <properties>
+                          <help>IP address of failover peer [REQUIRED]</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address to exclude from lease range</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="status">
+                        <properties>
+                          <help>DHCP failover peer status (primary|secondary) [REQUIRED]</help>
+                          <completionHelp>
+                            <list>primary secondary</list>
+                          </completionHelp>
+                          <constraint>
+                            <regex>(primary|secondary)</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="ip-forwarding">
+                    <properties>
+                      <help>Enable IP forwarding on client</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="lease">
+                    <properties>
+                      <help>Lease timeout in seconds (default: 86400)</help>
+                      <valueHelp>
+                        <format>0-2592000</format>
+                        <description>DHCP lease time must be 0 to 2592000 (30 days)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-2592000"/>
+                      </constraint>
+                      <constraintErrorMessage>DHCP lease time must be 0 to 2592000</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ntp-server">
+                    <properties>
+                      <help>IP address of NTP server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>NTP server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="pop-server">
+                    <properties>
+                      <help>IP address of POP3 server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>POP3 server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="server-identifier">
+                    <properties>
+                      <help>Address for DHCP server identifier</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>DHCP server identifier IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="smtp-server">
+                    <properties>
+                      <help>IP address of SMTP server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>SMTP server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="range">
+                    <properties>
+                      <help>DHCP lease range</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid DHCP lease range name</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      <leafNode name="start">
+                        <properties>
+                          <help>First IP address for DHCP lease range</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 start address of pool</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="stop">
+                        <properties>
+                          <help>Last IP address for DHCP lease range</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 end address of pool</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="static-mapping">
+                    <properties>
+                      <help>Static mapping for specified address type</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid static-mapping name</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      <leafNode name="disable">
+                        <properties>
+                          <help>Option to disable static-mapping</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ip-address">
+                        <properties>
+                          <help>Static mapping for specified IP address [REQUIRED]</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address used in static mapping</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="mac-address">
+                        <properties>
+                          <help>Static mapping for specified MAC address [REQUIRED]</help>
+                          <valueHelp>
+                            <format>h:h:h:h:h:h</format>
+                            <description>MAC address used in static mapping [REQUIRED]</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="static-mapping-parameters">
+                        <properties>
+                          <help>Additional static-mapping parameters for DHCP server.
+                You must use the syntax of dhcpd.conf in this text-field.
+                Using this without proper knowledge may result in a crashed
+                DHCP server. Check system log to look for errors.</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <node name="static-route">
+                    <properties>
+                      <help>Classless static route</help>
+                    </properties>
+                    <children>
+                      <leafNode name="destination-subnet">
+                        <properties>
+                          <help>Destination subnet [REQUIRED]</help>
+                          <valueHelp>
+                            <format>ipv4net</format>
+                            <description>IPv4 address and prefix length</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-prefix"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="router">
+                        <properties>
+                          <help>IP address of router to be used to reach the destination subnet [REQUIRED]</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address of router</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="subnet-parameters">
+                    <properties>
+                      <help>Additional subnet parameters for DHCP server. You must
+                use the syntax of dhcpd.conf in this text-field. Using this
+                without proper knowledge may result in a crashed DHCP server.
+                Check system log to look for errors.</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="tftp-server-name">
+                    <properties>
+                      <help>TFTP server name</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="time-offset">
+                    <properties>
+                      <help>Offset of the client's subnet in seconds from Coordinated Universal Time (UTC)</help>
+                      <constraint>
+                        <regex>^-?[0-9]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid time offset valuee</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="time-server">
+                    <properties>
+                      <help>IP address of time server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Time server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="wins-server">
+                    <properties>
+                      <help>IP address for Windows Internet Name Service (WINS) server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>WINS server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="wpad-url">
+                    <properties>
+                      <help>Web Proxy Autodiscovery (WPAD) URL</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

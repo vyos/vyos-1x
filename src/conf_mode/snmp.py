@@ -24,12 +24,12 @@ import pwd
 import time
 
 import jinja2
-import ipaddress
 import random
 import binascii
 import re
 
 import vyos.version
+import vyos.validate
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -65,7 +65,6 @@ access_config_tmpl = """
 {% endfor %}
 {% endif -%}
 rwuser {{ vyos_user }}
-
 """
 
 # SNMPS template - be careful if you edit the template.
@@ -85,7 +84,9 @@ usmUser 1 3 {{ u.engineID }} "{{ u.name }}" "{{ u.name }}" NULL {{ u.authOID }} 
 {% endif %}
 
 createUser {{ vyos_user }} MD5 "{{ vyos_user_pass }}" DES
+{% if v3_engineid %}
 oldEngineID {{ v3_engineid }}
+{%- endif -%}
 """
 
 # SNMPS template - be careful if you edit the template.
@@ -142,8 +143,10 @@ agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{
 {% if communities -%}
 {% for c in communities %}
 {% if c.network -%}
-{% for network in c.network %}
+{% for network in c.network_v4 %}
 {{ c.authorization }}community {{ c.name }} {{ network }}
+{% endfor %}
+{% for network in c.network_v6 %}
 {{ c.authorization }}community6 {{ c.name }} {{ network }}
 {% endfor %}
 {% else %}
@@ -271,14 +274,19 @@ def get_config():
             community = {
                 'name': name,
                 'authorization': 'ro',
-                'network': []
+                'network_v4': [],
+                'network_v6': []
             }
 
             if conf.exists('community {0} authorization'.format(name)):
                 community['authorization'] = conf.return_value('community {0} authorization'.format(name))
 
             if conf.exists('community {0} network'.format(name)):
-                community['network'] = conf.return_values('community {0} network'.format(name))
+                for addr in conf.return_values('community {0} network'.format(name)):
+                    if vyos.validate.is_ipv4(addr):
+                        community['network_v4'] = addr
+                    else:
+                        community['network_v6'] = addr
 
             snmp['communities'].append(community)
 
@@ -295,14 +303,12 @@ def get_config():
             if conf.exists('listen-address {0} port'.format(addr)):
                 port = conf.return_value('listen-address {0} port'.format(addr))
 
-            if ipaddress.ip_address(addr).version == 4:
+            if vyos.validate.is_ipv4(addr):
                 # udp:127.0.0.1:161
                 listen = 'udp:' + addr + ':' + port
-            elif ipaddress.ip_address(addr).version == 6:
+            else:
                 # udp6:[::1]:161
                 listen = 'udp6:' + '[' + addr + ']' + ':' + port
-            else:
-                raise ConfigError('Invalid IP address version')
 
             snmp['listen_on'].append(listen)
 

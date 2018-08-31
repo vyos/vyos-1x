@@ -273,7 +273,7 @@ def verify(data):
     count = len(_groups) - 1
     index = 0
     while (index < count):
-        if _groups[index]["vrid"] == _groups[index + 1]["vrid"]:
+        if (_groups[index]["vrid"] == _groups[index + 1]["vrid"]) and (_groups[index]["interface"] == _groups[index + 1]["interface"]):
             raise ConfigError("VRID {0} is used in groups {1} and {2} that both use interface {3}. Groups on the same interface must use different VRIDs".format(
               _groups[index]["vrid"], _groups[index]["name"], _groups[index + 1]["name"], _groups[index]["interface"]))
         else:
