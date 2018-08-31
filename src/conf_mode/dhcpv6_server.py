@@ -18,8 +18,11 @@
 
 import sys
 import os
+import ipaddress
 
 import jinja2
+
+import vyos.validate
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -46,7 +49,7 @@ option dhcp6.preference {{ preference }};
 shared-network {{ network.name }} {
     {%- for subnet in network.subnet %}
     subnet6 {{ subnet.network }} {
-        {%- for range in subnet.range6_temporary %}
+        {%- for range in subnet.range6_prefix %}
         range6 {{ range.prefix }}{{ " temporary" if range.temporary }};
         {%- endfor %}
         {%- for range in subnet.range6 %}
@@ -159,7 +162,7 @@ def get_config():
                     conf.set_level('service dhcpv6-server shared-network-name {0} subnet {1}'.format(network, net))
                     subnet = {
                         'network': net,
-                        'range6_temporary': [],
+                        'range6_prefix': [],
                         'range6': [],
                         'default_router': '',
                         'dns_server': [],
@@ -194,7 +197,7 @@ def get_config():
                                 range['temporary'] = True
 
                             # Append to subnet temporary range6 list
-                            subnet['range6_temporary'].append(range)
+                            subnet['range6_prefix'].append(range)
 
                     if conf.exists('address-range start'):
                         for range in conf.list_nodes('address-range start'):
@@ -249,11 +252,9 @@ def get_config():
                     if conf.exists('nisplus-server'):
                         subnet['nisp_server'] = conf.return_values('nisplus-server')
 
-                    #
                     # Prefix Delegation (RFC 3633)
-                    #
                     if conf.exists('prefix-delegation'):
-                        print("TODO")
+                        print('TODO: This option is actually not implemented right now!')
 
                     # Local SIP server that is to be used for all outbound SIP requests - IPv6 address
                     if conf.exists('sip-server-address'):
@@ -317,11 +318,87 @@ def verify(dhcpv6):
         raise ConfigError('No DHCPv6 shared networks configured.\n' \
                           'At least one DHCPv6 shared network must be configured.')
 
-    # A shared-network requires a subnet definition
+    # Inspect shared-network/subnet
+    subnets = []
+    listen_ok = False
+
     for network in dhcpv6['shared_network']:
+        # A shared-network requires a subnet definition
         if len(network['subnet']) == 0:
             raise ConfigError('No DHCPv6 lease subnets configured for {0}. At least one\n' \
                               'lease subnet must be configured for each shared network.'.format(network['name']))
+
+        range6_start = []
+        range6_stop = []
+        for subnet in network['subnet']:
+            # Ususal range declaration with a start and stop address
+            for range6 in subnet['range6']:
+                # shorten names
+                start = range6['start']
+                stop = range6['stop']
+
+                # DHCPv6 stop address is required
+                if start and not stop:
+                    raise ConfigError('DHCPv6 range stop address for start {0} is not defined!'.format(start))
+
+                # Start address must be inside network
+                if not ipaddress.ip_address(start) in ipaddress.ip_network(subnet['network']):
+                    raise ConfigError('DHCPv6 range start address {0} is not in subnet {1}\n' \
+                                      'specified for shared network {2}!'.format(start, subnet['network'], network['name']))
+
+                # Stop address must be inside network
+                if not ipaddress.ip_address(stop) in ipaddress.ip_network(subnet['network']):
+                     raise ConfigError('DHCPv6 range stop address {0} is not in subnet {1}\n' \
+                                       'specified for shared network {2}!'.format(stop, subnet['network'], network['name']))
+
+                # Stop address must be greater or equal to start address
+                if not ipaddress.ip_address(stop) >= ipaddress.ip_address(start):
+                    raise ConfigError('DHCPv6 range stop address {0} must be greater or equal\n' \
+                                      'to the range start address {1}!'.format(stop, start))
+
+                # DHCPv6 range start address must be unique - two ranges can't
+                # start with the same address - makes no sense
+                if start in range6_start:
+                    raise ConfigError('Conflicting DHCPv6 lease range:\n' \
+                                      'Pool start address {0} defined multipe times!'.format(start))
+                else:
+                    range6_start.append(start)
+
+                # DHCPv6 range stop address must be unique - two ranges can't
+                # end with the same address - makes no sense
+                if stop in range6_stop:
+                    raise ConfigError('Conflicting DHCPv6 lease range:\n' \
+                                      'Pool stop address {0} defined multipe times!'.format(stop))
+                else:
+                    range6_stop.append(stop)
+
+            # We also have prefixes that require checking
+            for prefix in subnet['range6_prefix']:
+                # If configured prefix does not match our subnet, we have to check that it's inside
+                if ipaddress.ip_network(prefix['prefix']) != ipaddress.ip_network(subnet['network']):
+                    # Configured prefixes must be inside our network
+                    if not ipaddress.ip_network(prefix['prefix']) in ipaddress.ip_network(subnet['network']):
+                        raise ConfigError('DHCPv6 prefix {0} is not in subnet {1}\n' \
+                                          'specified for shared network {2}!'.format(prefix['prefix'], subnet['network'], network['name']))
+
+        # DHCPv6 requires at least one configured address range or one static mapping
+        if not network['disabled']:
+            if vyos.validate.is_subnet_connected(subnet['network']):
+                listen_ok = True
+
+        # DHCPv6 subnet must not overlap. ISC DHCP also complains about overlapping
+        # subnets: "Warning: subnet 2001:db8::/32 overlaps subnet 2001:db8:1::/32"
+        net = ipaddress.ip_network(subnet['network'])
+        for n in subnets:
+            net2 = ipaddress.ip_network(n)
+            if (net != net2):
+                if net.overlaps(net2):
+                    raise ConfigError('DHCPv6 conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
+
+    if not listen_ok:
+        raise ConfigError('None of the DHCPv6 subnets are connected to a subnet6 on\n' \
+                          'this machine. At least one subnet6 must be connected such that\n' \
+                          'DHCPv6 listens on an interface!')
 
 
     return None
