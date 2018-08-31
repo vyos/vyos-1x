@@ -40,12 +40,6 @@
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard_key.py --showpriv</command>
           </leafNode>
-          <leafNode name="preshared-key">
-            <properties>
-              <help>show wireguard preshared key</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/wireguard_key.py --showpsk</command>
-          </leafNode>
         </children>
       </node>
       <node name="interfaces">

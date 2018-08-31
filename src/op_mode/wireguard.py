@@ -30,6 +30,7 @@ pub = dir + '/public.key'
 psk = dir + '/preshared.key'
 
 def check_kmod():
+  """ check if kmod is loaded, if not load it """
   if not os.path.exists('/sys/module/wireguard'):
     sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod") 
     if  os.system('sudo modprobe wireguard') != 0:
@@ -37,21 +38,15 @@ def check_kmod():
       raise ConfigError("modprobe wireguard failed")
 
 def generate_keypair():
+  """ generates a keypair which is stored in /config/auth/wireguard """
   ret = subprocess.call(['wg genkey | tee ' + pk + '|wg pubkey > ' + pub], shell=True)
   if ret != 0:
     raise ConfigError("wireguard key-pair generation failed")
   else:
     sl.syslog(sl.LOG_NOTICE, "new keypair wireguard key generated in " + dir)
 
-def generate_psk():
-  ret = subprocess.call(['wg genpsk >' + psk ], shell=True)
-  if ret != 0:
-    raise ConfigError("wireguard preshared-key generation failed")
-  else:
-    sl.syslog(sl.LOG_NOTICE, "wireguard preshared-key sucessfully generated in " + dir)
-
 def genkey():
-  ### if umask 077 makes trouble, 027 will work
+  """ helper function to check, regenerate the keypair """
   old_umask = os.umask(0o077)
   if os.path.exists(pk) and os.path.exists(pub):
     choice = input("You already have a wireguard key-pair already, do you want to re-generate? [y/n] ")
@@ -64,6 +59,7 @@ def genkey():
   os.umask(old_umask)
 
 def showkey(key):
+  """ helper function to show privkey or pubkey """
   if key == "pub":
     if os.path.exists(pub):
       print ( open(pub).read().strip() )
@@ -77,22 +73,8 @@ def showkey(key):
       print("no private key found")
 
 def genpsk():
-  old_umask = os.umask(0o077)
-  if os.path.exists(psk):
-    choice = input("You already have a preshared-key, do you want to re-generate? [y/n] ")
-    if choice == 'y' or choice == 'Y':
-      generate_psk()
-  else:
-    if not os.path.exists(dir):
-      os.mkdir(dir)
-    generate_psk()
-  os.umask(old_umask)
-
-def showpsk():
-  if os.path.exists(psk):
-    print (open(psk).read().strip())
-  else:
-    print("no preshared key found")
+  """ generates a preshared key and shows it on stdout, it's stroed only in the config """
+  subprocess.call(['wg genpsk'], shell=True)
 
 if __name__ == '__main__':
   check_kmod()
@@ -102,7 +84,6 @@ if __name__ == '__main__':
   parser.add_argument('--showpub', action="store_true", help='shows public key')
   parser.add_argument('--showpriv', action="store_true", help='shows private key')
   parser.add_argument('--genpsk', action="store_true", help='generates preshared-key')
-  parser.add_argument('--showpsk', action="store_true", help='show preshared-key')
   args = parser.parse_args()
 
   try:
@@ -114,8 +95,6 @@ if __name__ == '__main__':
       showkey("pk")
     if args.genpsk:
       genpsk()
-    if args.showpsk:
-      showpsk()
 
   except ConfigError as e:
     print(e)
