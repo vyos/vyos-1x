@@ -19,7 +19,6 @@
 import sys
 import os
 import fnmatch
-import subprocess
 import jinja2
 
 from vyos.config import Config
