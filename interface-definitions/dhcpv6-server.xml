@@ -1,0 +1,316 @@
+<?xml version="1.0"?>
+<!-- DHCPv6 server configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dhcpv6-server" owner="${vyos_conf_scripts_dir}/dhcpv6_server.py">
+        <properties>
+          <help>DHCP for IPv6 (DHCPv6) server</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          <leafNode name="disable">
+            <properties>
+              <help>Option to disable DHCPv6 server</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="preference">
+            <properties>
+              <help>Preference of this DHCPv6 server compared with others</help>
+              <valueHelp>
+                <format>0-255</format>
+                <description>DHCPv6 server preference (0-255)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-255"/>
+              </constraint>
+              <constraintErrorMessage>Preference must be between 0 and 255</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <tagNode name="shared-network-name">
+            <properties>
+              <help>DHCPv6 shared network name [REQUIRED]</help>
+              <constraint>
+                <regex>^[-_a-zA-Z0-9.]+$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid DHCPv6 pool name</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Option to disable DHCPv6 configuration for shared-network</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <tagNode name="subnet">
+                <properties>
+                  <help>IPv6 DHCP subnet for this shared network [REQUIRED]</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="address-range">
+                    <properties>
+                      <help>Parameters setting ranges for assigning IPv6 addresses</help>
+                    </properties>
+                    <children>
+                      <tagNode name="prefix">
+                        <properties>
+                          <help>IPv6 prefix defining range of addresses to assign</help>
+                          <valueHelp>
+                            <format>ipv6net</format>
+                            <description>IPv6 address and prefix length</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-prefix"/>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="temporary">
+                            <properties>
+                              <help>Address range will be used for temporary addresses</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="start">
+                        <properties>
+                          <help>First in range of consecutive IPv6 addresses to assign</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="stop">
+                            <properties>
+                              <help>Last in range of consecutive IPv6 addresses</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>IPv6 address</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <leafNode name="domain-search">
+                    <properties>
+                      <help>Domain name for client to search</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid domain name syntax</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <node name="lease-time">
+                    <properties>
+                      <help>Parameters relating to the lease time</help>
+                    </properties>
+                    <children>
+                      <leafNode name="default">
+                        <properties>
+                          <help>Default time (in seconds) that will be assigned to a lease</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="maximum">
+                        <properties>
+                          <help>Maximum time (in seconds) that will be assigned to a lease</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="minimum">
+                        <properties>
+                          <help>Minimum time (in seconds) that will be assigned to a lease</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="name-server">
+                    <properties>
+                      <help>IPv6 address of a Recursive DNS Server</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of DNS name server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nis-domain">
+                    <properties>
+                      <help>NIS domain name for client to use</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid NIS domain name syntax</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nis-server">
+                    <properties>
+                      <help>IPv6 address of a NIS Server</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of NIS server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nisplus-domain">
+                    <properties>
+                      <help>NIS+ domain name for client to use</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid NIS+ domain name syntax</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nisplus-server">
+                    <properties>
+                      <help>IPv6 address of a NIS+ Server</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of NIS+ server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <node name="prefix-delegation">
+                    <properties>
+                      <help>Parameters relating to IPv6 prefix delegation</help>
+                    </properties>
+                    <children>
+                      <tagNode name="start">
+                        <properties>
+                          <help>First in range of IPv6 addresses to be used in prefix delegation</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address used in prefix delegation</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="prefix-length">
+                            <properties>
+                              <help>Length in bits of prefixes to be delegated</help>
+                              <valueHelp>
+                                <format>0-255</format>
+                                <description>DHCPv6 server preference (0-255)</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 0-255"/>
+                              </constraint>
+                              <constraintErrorMessage>Preference must be between 0 and 255</constraintErrorMessage>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="stop">
+                            <properties>
+                              <help>Last in range of IPv6 addresses to be used in prefix delegation</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>IPv6 address used in prefix delegation</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <leafNode name="sip-server-address">
+                    <properties>
+                      <help>IPv6 address of SIP server</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of SIP server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="sip-server-name">
+                    <properties>
+                      <help>SIP server name</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid SIP server name syntax</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="sntp-server">
+                    <properties>
+                      <help>IPv6 address of an SNTP Server for client to use</help>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="static-mapping">
+                    <properties>
+                      <help>Name of static mapping</help>
+                    </properties>
+                    <children>
+                      <leafNode name="disable">
+                        <properties>
+                          <help>Option to disable static-mapping</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="identifier">
+                        <properties>
+                          <help>Client identifier for this static mapping</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ipv6-address">
+                        <properties>
+                          <help>Client IPv5 address for this static mapping</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address for this tatic mapping</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
