@@ -8,7 +8,7 @@
         </properties>
         <children>
           <tagNode name="interface">
-            <command>tcpdump -i $4</command>
+            <command>sudo tcpdump -i $4</command>
             <properties>
               <help>Monitor traffic dump from an interface</help>
               <completionHelp>
@@ -17,19 +17,19 @@
             </properties>
             <children>
               <tagNode name="filter">
-                <command>tcpdump -n -i $4 $6</command>
+                <command>sudo tcpdump -n -i $4 $6</command>
                 <properties>
                   <help>Monitor traffic matching filter conditions</help>
                 </properties>
               </tagNode>
               <tagNode name="save">
-                <command>tcpdump -n -i $4 -w $6</command>
+                <command>sudo tcpdump -n -i $4 -w $6</command>
                 <properties>
                   <help>Save traffic dump from an interface to a file</help>
                 </properties>
                 <children>
                   <tagNode name="filter">
-                    <command>tcpdump -n -i $4 -w $6 $8</command>
+                    <command>sudo tcpdump -n -i $4 -w $6 $8</command>
                     <properties>
                       <help>Save a dump of traffic matching filter conditions to a file</help>
                     </properties>
