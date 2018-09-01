@@ -273,9 +273,9 @@ def get_config():
             if conf.exists('community {0} network'.format(name)):
                 for addr in conf.return_values('community {0} network'.format(name)):
                     if vyos.validate.is_ipv4(addr):
-                        community['network_v4'] = addr
+                        community['network_v4'].append(addr)
                     else:
-                        community['network_v6'] = addr
+                        community['network_v6'].append(addr)
 
             snmp['communities'].append(community)
 
