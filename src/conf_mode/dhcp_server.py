@@ -38,8 +38,8 @@ config_tmpl = """
 
 # For options please consult the following website:
 # https://www.isc.org/wp-content/uploads/2017/08/dhcp43options.html
-
-log-facility local7;
+#
+# log-facility local7;
 
 {% if hostfile_update %}
 on commit {
@@ -112,12 +112,12 @@ failover peer "{{ subnet.failover_name }}" {
 {% for network in shared_network %}
 {%- if not network.disabled -%}
 shared-network {{ network.name }} {
-    {% if network.authoritative %}authoritative;{% endif %}
+    {{ "authoritative;" if network.authoritative }}
     {%- if network.network_parameters %}
     # The following {{ network.network_parameters | length }} line(s) were added as shared-network-parameters in the CLI and have not been validated
     {%- for param in network.network_parameters %}
     {{ param }}
-    {%- endfor -%}
+    {%- endfor %}
     {%- endif %}
     {%- for subnet in network.subnet %}
     subnet {{ subnet.address }} netmask {{ subnet.netmask }} {
@@ -195,9 +195,15 @@ shared-network {{ network.name }} {
         }
         {%- endif %}
         {%- endfor %}
-        {%- for range in subnet.range %}
-        range {{ range.start }} {{ range.stop }};
-        {%- endfor %}
+        pool {
+            {%- if subnet.failover_name %}
+            failover peer "{{ subnet.failover_name }}";
+            deny dynamic bootp clients;
+            {%- endif %}
+            {%- for range in subnet.range %}
+            range {{ range.start }} {{ range.stop }};
+            {%- endfor %}
+        }
     }
     {%- endfor %}
     on commit { set shared-networkname = "{{ network.name }}"; }
@@ -606,17 +612,17 @@ def verify(dhcp):
         raise ConfigError('No DHCP shared networks configured.\n' \
                           'At least one DHCP shared network must be configured.')
 
+    # Inspect shared-network/subnet
+    failover_names = []
+    listen_ok = False
+    subnets = []
+
     # A shared-network requires a subnet definition
     for network in dhcp['shared_network']:
         if len(network['subnet']) == 0:
             raise ConfigError('No DHCP lease subnets configured for {0}. At least one\n' \
                               'lease subnet must be configured for each shared network.'.format(network['name']))
 
-    # Inspect our subnet configuration
-    failover_names = []
-    listen_ok = False
-    subnets = []
-    for network in dhcp['shared_network']:
         for subnet in network['subnet']:
             # Subnet static route declaration requires destination and router
             if subnet['static_subnet'] or subnet['static_router']:
@@ -650,34 +656,34 @@ def verify(dhcp):
                 stop = range['stop']
                 # DHCP stop IP required after start IP
                 if start and not stop:
-                    raise ConfigError('Stop IP address in DHCP range for start {0} is not defined!'.format(start))
+                    raise ConfigError('DHCP range stop address for start {0} is not defined!'.format(start))
 
                 # Start address must be inside network
                 if not ipaddress.ip_address(start) in ipaddress.ip_network(subnet['network']):
-                    raise ConfigError('Start IP address {0} of DHCP range is not in subnet {1}\n' \
+                    raise ConfigError('DHCP range start address {0} is not in subnet {1}\n' \
                                       'specified for shared network {2}!'.format(start, subnet['network'], network['name']))
 
                 # Stop address must be inside network
                 if not ipaddress.ip_address(stop) in ipaddress.ip_network(subnet['network']):
-                    raise ConfigError('Stop IP address {0} of DHCP range is not in subnet {1}\n' \
+                    raise ConfigError('DHCP range stop address {0} is not in subnet {1}\n' \
                                       'specified for shared network {2}!'.format(stop, subnet['network'], network['name']))
 
                 # Stop address must be greater or equal to start address
                 if not ipaddress.ip_address(stop) >= ipaddress.ip_address(start):
-                    raise ConfigError('Stop IP address {0} of DHCP range should be greater or equal\n' \
-                                      'to the start IP address {1} of this range!'.format(stop, start))
+                    raise ConfigError('DHCP range stop address {0} must be greater or equal\n' \
+                                      'to the range start address {1}!'.format(stop, start))
 
                 # Range start address must be unique
                 if start in range_start:
                     raise ConfigError('Conflicting DHCP lease range:\n' \
-                                      'Pool start IP address {0} defined multipe times!'.format(range['start']))
+                                      'Pool start address {0} defined multipe times!'.format(start))
                 else:
                     range_start.append(start)
 
                 # Range stop address must be unique
                 if stop in range_stop:
                     raise ConfigError('Conflicting DHCP lease range:\n' \
-                                      'Pool stop IP address {0} defined multipe times!'.format(range['stop']))
+                                      'Pool stop address {0} defined multipe times!'.format(stop))
                 else:
                     range_stop.append(stop)
 
@@ -705,18 +711,18 @@ def verify(dhcp):
             for mapping in subnet['static_mapping']:
                 # Static IP address must be configured
                 if not mapping['ip_address']:
-                    raise ConfigError('No static lease IP address specified for static mapping {0}\n' \
-                                      'under shared network name {1}!'.format(mapping['name'], network['name']))
+                    raise ConfigError('DHCP static lease IP address not specified for static mapping\n' \
+                                      '{0} under shared network name {1}!'.format(mapping['name'], network['name']))
 
                 # Static IP address must be in bound
                 if not ipaddress.ip_address(mapping['ip_address']) in ipaddress.ip_network(subnet['network']):
-                    raise ConfigError('Static DHCP lease IP address {0} under static mapping {1}\n' \
-                                      'in shared network {2} is outside DHCP lease network {3}!' \
+                    raise ConfigError('DHCP static lease IP address {0} for static mapping {1}\n' \
+                                      'in shared network {2} is outside DHCP lease subnet {3}!' \
                                       .format(mapping['ip_address'], mapping['name'], network['name'], subnet['network']))
 
                 # Static mapping requires MAC address
                 if not mapping['mac_address']:
-                     raise ConfigError('No static lease MAC address specified for static mapping\n' \
+                     raise ConfigError('DHCP static lease MAC address not specified for static mapping\n' \
                                        '{0} under shared network name {1}!'.format(mapping['name'], network['name']))
 
             # There must be one subnet connected to a listen interface.
@@ -725,28 +731,24 @@ def verify(dhcp):
                 if vyos.validate.is_subnet_connected(subnet['network'], primary=True):
                     listen_ok = True
 
-            #
             # Subnets must be non overlapping
-            #
             if subnet['network'] in subnets:
-                raise ConfigError('Subnets must be unique! Subnet {0} defined multiple times!'.format(subnet))
+                raise ConfigError('DHCP subnets must be unique! Subnet {0} defined multiple times!'.format(subnet))
             else:
                 subnets.append(subnet['network'])
 
-            #
             # Check for overlapping subnets
-            #
             net = ipaddress.ip_network(subnet['network'])
             for n in subnets:
                 net2 = ipaddress.ip_network(n)
-                if (net.compare_networks(net2) != 0):
+                if (net != net2):
                     if net.overlaps(net2):
-                        raise ConfigError('Conflicting subnet ranges: {0} overlaps with {1}'.format(net, net2))
+                        raise ConfigError('DHCP conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
 
     if not listen_ok:
         raise ConfigError('None of the DHCP lease subnets are inside any configured subnet on\n' \
                           'broadcast interfaces. At least one lease subnet must be set such that\n' \
-                          'DHCP server listens on a one broadcast interface')
+                          'DHCP server listens on a one broadcast interface!')
 
     return None
 
