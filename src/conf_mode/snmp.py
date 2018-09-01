@@ -270,12 +270,21 @@ def get_config():
             if conf.exists('community {0} authorization'.format(name)):
                 community['authorization'] = conf.return_value('community {0} authorization'.format(name))
 
+            # Subnet of SNMP client(s) allowed to contact system
             if conf.exists('community {0} network'.format(name)):
                 for addr in conf.return_values('community {0} network'.format(name)):
                     if vyos.validate.is_ipv4(addr):
                         community['network_v4'].append(addr)
                     else:
                         community['network_v6'].append(addr)
+
+            # IP address of SNMP client allowed to contact system
+            if conf.exists('community {0} client'.format(name)):
+                for addr in conf.return_values('community {0} client'.format(name)):
+                    if vyos.validate.is_ipv4(addr):
+                        community['network_v4'].append(addr)
+                    else:
+                       community['network_v6'].append(addr)
 
             snmp['communities'].append(community)
 
