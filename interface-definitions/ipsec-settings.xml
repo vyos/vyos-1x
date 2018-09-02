@@ -9,10 +9,52 @@
               <help>Global IPsec settings</help>
             </properties>
             <children>
+              <leafNode name="unencrypted-mainmode">
+                <properties>
+                  <help>Accept unencrypted ID and Hash messages from legacy devices</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ikesa-sa-segments">
+                <properties>
+                  <help>The number of segments to breakup the IKE_SA hash table into</help>
+                  <constraint>
+                    <validator name="numeric" argument="--positive"/>
+                  </constraint>
+                  <constraintErrorMessage>must be positive integer</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="ikesa-sa-table-size">
+                <properties>
+                  <help>Size of the IKE_SA hash table</help>
+                  <constraint>
+                    <validator name="numeric" argument="--positive"/>
+                  </constraint>
+                  <constraintErrorMessage>table size must be positive integer</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <leafNode name="disable-route-autoinstall">
                 <properties>
                   <valueless/>
                   <help>Do not automatically install routes to remote networks</help>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-virtual-ip-autoinstall">
+                <properties>
+                  <valueless/>
+                  <help>Do not automatically install virtual ip addresses to outbound interface</help>
+                </properties>
+              </leafNode>
+              <leafNode name="cisco-unity">
+                <properties>
+                  <valueless/>
+                  <help>Send Cisco Unity vendor ID payload (IKEv1 only)</help>
+                </properties>
+              </leafNode>
+              <leafNode name="strongSwan-id">
+                <properties>
+                  <valueless/>
+                  <help>Send strongSwan vendor ID payload</help>
                 </properties>
               </leafNode>
             </children>

@@ -2,7 +2,7 @@
 charon {
 
     # Accept unencrypted ID and HASH payloads in IKEv1 Main Mode.
-    # accept_unencrypted_mainmode_messages = no
+    accept_unencrypted_mainmode_messages = {{ accept_unencrypted_mainmode_messages }}
 
     # Maximum number of half-open IKE_SAs for a single peer IP.
     # block_threshold = 5
@@ -18,7 +18,7 @@ charon {
     # cert_cache = yes
 
     # Send Cisco Unity vendor ID payload (IKEv1 only).
-    # cisco_unity = no
+    cisco_unity = {{ cisco_unity }}
 
     # Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
     # close_ike_on_child_failure = no
@@ -88,10 +88,10 @@ charon {
     # ikesa_limit = 0
 
     # Number of exclusively locked segments in the hash table.
-    # ikesa_table_segments = 1
+    ikesa_table_segments = {{ ikesa_sa_segments }}
 
     # Size of the IKE_SA hash table.
-    # ikesa_table_size = 1
+    ikesa_table_size = {{ ikesa_sa_table_size }}
 
     # Whether to close IKE_SA if the only CHILD_SA closed due to inactivity.
     # inactivity_close_ike = no
@@ -111,7 +111,7 @@ charon {
     install_routes = {{ install_routes }}
 
     # Install virtual IP addresses.
-    # install_virtual_ip = yes
+    install_virtual_ip = {{ install_virtual_ip }}
 
     # The name of the interface on which virtual IP addresses should be
     # installed.
@@ -228,7 +228,7 @@ charon {
     # send_delay_type = 0
 
     # Send strongSwan vendor ID payload
-    # send_vendor_id = no
+    send_vendor_id = {{ strongSwan_id }}
 
     # Whether to enable Signature Authentication as per RFC 7427.
     # signature_authentication = yes
@@ -339,4 +339,3 @@ charon {
     }
 
 }
-

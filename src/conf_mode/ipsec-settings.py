@@ -29,10 +29,36 @@ charon_conf_file = "/etc/strongswan.d/charon.conf"
 
 def get_config():
     config = vyos.config.Config()
-    data = {"install_routes": "yes"}
+    data = {
+        "accept_unencrypted_mainmode_messages": "no",
+        "ikesa_sa_segments": "1",
+        "ikesa_sa_table_size": "1",
+        "install_routes": "yes",
+        "install_virtual_ip": "yes",
+        "cisco_unity": "no",
+        "strongSwan_id": "no"
+    }
+
+    if config.exists("vpn ipsec options unencrypted-mainmode"):
+        data["accept_unencrypted_mainmode_messages"] = "yes"
 
     if config.exists("vpn ipsec options disable-route-autoinstall"):
         data["install_routes"] = "no"
+
+    if config.exists("vpn ipsec options disable-virtual-ip-autoinstall"):
+        data["install_virtual_ip"] = "no"
+
+    if config.exists("vpn ipsec options cisco-unity"):
+        data["cisco_unity"] = "yes"
+
+    if config.exists("vpn ipsec options strongSwan-id"):
+        data["strongSwan_id"] = "yes"
+
+    if config.exists("vpn ipsec options ikesa-sa-table-size"):
+        data["ikesa_sa_table_size"] = config.return_value("vpn ipsec options ikesa-sa-table-size")
+
+    if config.exists("vpn ipsec options ikesa-sa-segments"):
+        data["ikesa_sa_segments"] = config.return_value("vpn ipsec options ikesa-sa-segments")
 
     return data
 
