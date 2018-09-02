@@ -103,14 +103,10 @@
                 <multi/>
                 </properties>
               </leafNode>
-              <!--  check format IP:port -->
+              <!--  eventually check format IP:port -->
               <leafNode name="endpoint">
                 <properties>
-                  <help>Remote endpoint</help>
-                  <constraint>
-                    <regex>:[1-6][0-9]{3,4}$</regex>
-                  </constraint>
-                  <constraintErrorMessage>invalid endpoint setting (IP:port)</constraintErrorMessage>
+                  <help>Remote endpoint (IP:port)</help>
                 </properties>
               </leafNode>
               <leafNode name="persistent-keepalive">
