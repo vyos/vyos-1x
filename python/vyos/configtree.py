@@ -112,6 +112,10 @@ class ConfigTree(object):
         self.__delete.argtypes = [c_void_p, c_char_p]
         self.__delete.restype = c_int
 
+        self.__rename = self.__lib.rename_node
+        self.__rename.argtypes = [c_void_p, c_char_p, c_char_p]
+        self.__rename.restype = c_int
+
         self.__set_replace_value = self.__lib.set_replace_value
         self.__set_replace_value.argtypes = [c_void_p, c_char_p, c_char_p]
         self.__set_replace_value.restype = c_int
@@ -192,6 +196,13 @@ class ConfigTree(object):
         path_str = " ".join(map(str, path)).encode()
 
         self.__delete_value(self.__config, path_str, value.encode())
+
+    def rename(self, path, newname):
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+        newname_str = newname.encode()
+
+        self.__rename(self.__config, path_str, newname_str)
 
     def exists(self, path):
         check_path(path)
