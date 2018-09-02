@@ -14,9 +14,15 @@
               <priority>990</priority>
             </properties>
             <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable mDNS repeater service</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="interface">
                 <properties>
-                  <help>Interface to repeat mdns advertisements to [REQUIRED]</help>
+                  <help>Interface to repeat mDNS advertisements [REQUIRED]</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
