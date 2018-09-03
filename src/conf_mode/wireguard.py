@@ -28,6 +28,7 @@ from vyos import ConfigError
 dir = r'/config/auth/wireguard'
 pk = dir + '/private.key'
 pub = dir + '/public.key'
+psk_file = r'/tmp/psk'
 
 def check_kmod():
   if not os.path.exists('/sys/module/wireguard'):
@@ -117,7 +118,9 @@ def get_config():
             config_data['interfaces'][intfc]['peer'][p]['endpoint'] = c.return_value(cnf + ' peer ' + p + ' endpoint')
           if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
             config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
-
+          if c.exists(cnf + ' peer ' + p + ' preshared-key'):
+            config_data['interfaces'][intfc]['peer'][p]['psk'] = c.return_value(cnf + ' peer ' + p + ' preshared-key')
+  
   return config_data
 
 def verify(c):
@@ -225,24 +228,22 @@ def apply(c):
         fh.write(str(cnf_descr))
 
 def configure_interface(c, intf):
-  wg_config = {
+  for p in c['interfaces'][intf]['peer']:
+    ## config init for wg call
+    wg_config = {
       'interface'   : intf,
-      'port' : 0,
-      'private-key' : '/config/auth/wireguard/private.key',
-      'peer'        :
-          {
-              'pubkey'  : ''
-          },
+      'port'        : 0,
+      'private-key' : pk,
+      'pubkey'      : '',
+      'psk'         : '/dev/null',
       'allowed-ips' : [],
       'fwmark'      : 0x00,
       'endpoint'    : None,
       'keepalive'   : 0
-
   }
 
-  for p in c['interfaces'][intf]['peer']:
     ## mandatory settings
-    wg_config['peer']['pubkey'] = c['interfaces'][intf]['peer'][p]['pubkey']
+    wg_config['pubkey'] = c['interfaces'][intf]['peer'][p]['pubkey']
     wg_config['allowed-ips'] = c['interfaces'][intf]['peer'][p]['allowed-ips']
 
     ## optional settings
@@ -258,11 +259,19 @@ def configure_interface(c, intf):
     if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
       wg_config['keepalive'] = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
 
+    ## preshared-key - is only read from a file, it's called via sudo redirection doesn't work either
+    if 'psk' in c['interfaces'][intf]['peer'][p]:
+      old_umask = os.umask(0o077)
+      open(psk_file, 'w').write(str(c['interfaces'][intf]['peer'][p]['psk']))
+      os.umask(old_umask)
+      wg_config['psk'] = psk_file
+
     ### assemble wg command
     cmd = "sudo wg set " + intf
     cmd += " listen-port " + str(wg_config['port'])
     cmd += " private-key " + wg_config['private-key']
-    cmd += " peer " + wg_config['peer']['pubkey']
+    cmd += " peer " + wg_config['pubkey']
+    cmd += " preshared-key " + wg_config['psk']
     cmd += " allowed-ips "
     for ap in wg_config['allowed-ips']:
       if ap != wg_config['allowed-ips'][-1]:
@@ -279,7 +288,11 @@ def configure_interface(c, intf):
       cmd += " persistent-keepalive 0"
 
     sl.syslog(sl.LOG_NOTICE, cmd)
+    #print (cmd)
     subprocess.call([cmd], shell=True)
+    """ remove psk_file """
+    if os.path.exists(psk_file):
+      os.remove(psk_file)
 
 def add_addr(intf, addr):
   ret = subprocess.call(['ip a a dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)

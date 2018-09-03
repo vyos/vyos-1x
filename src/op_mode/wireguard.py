@@ -19,18 +19,18 @@
 import argparse
 import os
 import sys
-import syslog as sl
 import subprocess
+import syslog as sl
 
 from vyos import ConfigError
 
 dir = r'/config/auth/wireguard'
 pk  = dir + '/private.key'
 pub = dir + '/public.key'
+psk = dir + '/preshared.key'
 
-### check_kmod may be removed in the future, 
-### once it's loaded automatically 
 def check_kmod():
+  """ check if kmod is loaded, if not load it """
   if not os.path.exists('/sys/module/wireguard'):
     sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod") 
     if  os.system('sudo modprobe wireguard') != 0:
@@ -38,6 +38,7 @@ def check_kmod():
       raise ConfigError("modprobe wireguard failed")
 
 def generate_keypair():
+  """ generates a keypair which is stored in /config/auth/wireguard """
   ret = subprocess.call(['wg genkey | tee ' + pk + '|wg pubkey > ' + pub], shell=True)
   if ret != 0:
     raise ConfigError("wireguard key-pair generation failed")
@@ -45,18 +46,20 @@ def generate_keypair():
     sl.syslog(sl.LOG_NOTICE, "new keypair wireguard key generated in " + dir)
 
 def genkey():
-  ### if umask 077 makes trouble, 027 will work
+  """ helper function to check, regenerate the keypair """
   old_umask = os.umask(0o077)
   if os.path.exists(pk) and os.path.exists(pub):
-    choice = input("You have a wireguard key-pair already, do you want to re-generate? [y/n] ")
+    choice = input("You already have a wireguard key-pair already, do you want to re-generate? [y/n] ")
     if choice == 'y' or choice == 'Y':
       generate_keypair()
   else:
-    os.mkdir(dir)
+    if not os.path.exists(dir):
+      os.mkdir(dir)
     generate_keypair()
   os.umask(old_umask)
 
 def showkey(key):
+  """ helper function to show privkey or pubkey """
   if key == "pub":
     if os.path.exists(pub):
       print ( open(pub).read().strip() )
@@ -69,6 +72,10 @@ def showkey(key):
     else:
       print("no private key found")
 
+def genpsk():
+  """ generates a preshared key and shows it on stdout, it's stroed only in the config """
+  subprocess.call(['wg genpsk'], shell=True)
+
 if __name__ == '__main__':
   check_kmod()
 
@@ -76,6 +83,7 @@ if __name__ == '__main__':
   parser.add_argument('--genkey', action="store_true", help='generate key-pair')
   parser.add_argument('--showpub', action="store_true", help='shows public key')
   parser.add_argument('--showpriv', action="store_true", help='shows private key')
+  parser.add_argument('--genpsk', action="store_true", help='generates preshared-key')
   args = parser.parse_args()
 
   try:
@@ -85,6 +93,8 @@ if __name__ == '__main__':
       showkey("pub")
     if args.showpriv:
       showkey("pk")
+    if args.genpsk:
+      genpsk()
 
   except ConfigError as e:
     print(e)
