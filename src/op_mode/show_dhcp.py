@@ -15,7 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import json
 import argparse
+import ipaddress
 
 import tabulate
 
@@ -76,6 +78,24 @@ def show_leases(leases):
     
     print(output)
 
+def get_pool_size(config, pool):
+    size = 0
+    subnets = config.list_effective_nodes("service dhcp-server shared-network-name {0} subnet".format(pool))
+    for s in subnets:
+        ranges = config.list_effective_nodes("service dhcp-server shared-network-name {0} subnet {1} range".format(pool, s))
+        for r in ranges:
+            start = config.return_effective_value("service dhcp-server shared-network-name {0} subnet {1} range {2} start".format(pool, s, r))
+            stop = config.return_effective_value("service dhcp-server shared-network-name {0} subnet {1} range {2} stop".format(pool, s, r))
+
+            size += int(ipaddress.IPv4Address(stop)) - int(ipaddress.IPv4Address(start))
+
+    return size
+
+def show_pool_stats(stats):
+    headers = ["Pool", "Size", "Leases", "Available", "Usage"]
+    output = tabulate.tabulate(stats, headers)
+
+    print(output)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -86,6 +106,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-e", "--expired", action="store_true", help="Show expired leases")
     parser.add_argument("-p", "--pool", type=str, action="store", help="Show lease for specific pool")
+    parser.add_argument("-j", "--json", action="store_true", default=False, help="Product JSON output")
 
     args = parser.parse_args()
 
@@ -101,4 +122,39 @@ if __name__ == '__main__':
             else:
                 leases = get_leases(lease_file, state='active')
 
-        show_leases(leases)
+        if args.json:
+            print(json.dumps(leases, indent=4))
+        else:
+            show_leases(leases)
+    elif args.statistics:
+        config = vyos.config.Config()
+
+        pools = []
+
+        # Get relevant pools
+        if args.pool:
+            pools = [args.pool]
+        else:
+            pools = config.list_effective_nodes("service dhcp-server shared-network-name")
+
+        # Get pool usage stats
+        stats = []
+        for p in pools:
+            size = get_pool_size(config, p)
+            leases = len(get_leases(lease_file, state='active', pool=args.pool))
+            use_percentage = round(leases / size) * 100
+            if args.json:
+                pool_stats = {"pool": p, "size": size, "leases": leases,
+                              "available": (size - leases), "percentage": use_percentage}
+            else:
+                # For tabulate
+                pool_stats = [p, size, leases, size - leases, "{0}%".format(use_percentage)]
+            stats.append(pool_stats)
+
+        # Print stats
+        if args.json:
+            print(json.dumps(stats, indent=4))
+        else:
+            show_pool_stats(stats)
+    else:
+        print("Use either --leases or --statistics option")

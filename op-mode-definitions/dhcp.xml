@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="dhcp">
+        <properties>
+          <help>Show DHCP (Dynamic Host Configuration Protocol) information</help>
+        </properties>
+        <children>
+          <node name="server">
+            <properties>
+              <help>Show DHCP information</help>
+            </properties>
+            <children>
+              <node name="leases">
+                <properties>
+                  <help>Show DHCP server leases</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases</command>
+                <children>
+                  <tagNode name="pool">
+                    <properties>
+                      <help>Show DHCP leases for a specific pool</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --pool $4</command>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show DHCP server statistics</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --statistics</command>
+                <children>
+                  <tagNode name="pool">
+                    <properties>
+                      <help>Show DHCP server statistics for a specific pool</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --statistics --pool $4</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+      <node name="dhcpv6">
+        <properties>
+          <help>Show DHCPv6 (IPv6 Dynamic Host Configuration Protocol) information</help>
+        </properties>
+        <children>
+          <node name="server">
+            <properties>
+              <help>Show DHCPv6 server information</help>
+            </properties>
+            <children>
+              <node name="leases">
+                <properties>
+                  <help>Show DHCPv6 server leases</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="dhcp">
+        <properties>
+          <help>Restart DHCP processes</help>
+        </properties>
+        <children>
+          <node name="server">
+            <properties>
+              <help>Restart the DHCP server process</help>
+            </properties>
+            <command>sudo systemctl restart isc-dhcp-server.service</command>
+          </node>
+          <node name="relay-agent">
+            <properties>
+              <help>Restart the DHCP server process</help>
+            </properties>
+            <command>sudo /opt/vyatta/sbin/dhcrelay-starter.pl --op-mode --init='/opt/vyatta/sbin/dhcrelay.init'</command>
+          </node>
+        </children>
+      </node>
+      <node name="dhcpv6">
+        <properties>
+          <help>Restart DHCPv6 processes</help>
+        </properties>
+        <children>
+          <node name="server">
+            <properties>
+              <help>Restart the DHCPv6 server process</help>
+            </properties>
+            <command>sudo systemctl restart isc-dhcpv6-server.service</command>
+          </node>
+          <node name="relay-agent">
+            <properties>
+              <help>Restart the DHCP server process</help>
+            </properties>
+            <command>sudo /opt/vyatta/sbin/dhcv6relay-starter.pl --op_mode --config_action ACTIVE</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
