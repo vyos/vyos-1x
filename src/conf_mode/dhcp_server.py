@@ -195,15 +195,19 @@ shared-network {{ network.name }} {
         }
         {%- endif %}
         {%- endfor %}
+        {%- if subnet.failover_name %}
         pool {
-            {%- if subnet.failover_name %}
             failover peer "{{ subnet.failover_name }}";
             deny dynamic bootp clients;
-            {%- endif %}
             {%- for range in subnet.range %}
             range {{ range.start }} {{ range.stop }};
             {%- endfor %}
         }
+        {%- else %}
+        {%- for range in subnet.range %}
+        range {{ range.start }} {{ range.stop }};
+        {%- endfor %}
+        {%- endif %}
     }
     {%- endfor %}
     on commit { set shared-networkname = "{{ network.name }}"; }
