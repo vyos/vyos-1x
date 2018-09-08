@@ -93,7 +93,7 @@ def get_config():
   config_data['files'].update(
     {
       'global'  : {
-        'log-file' : '/var/log/vyos-rsyslog',
+        'log-file' : '/var/log/messages',
         'max-size'  : 262144,
         'action-on-max-size'  : '/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog',
         'selectors'  : '*.notice;local7.debug',
@@ -229,6 +229,18 @@ def generate(c):
     f.write(config_text)
 
 def verify(c):
+  #
+  # /etc/rsyslog.conf is generated somewhere and copied over the original (exists in /opt/vyatta/etc/rsyslog.conf)
+  # it interferes with the global logging, to make sure we are using a single base, template is enforced here 
+  #
+
+  if not os.path.islink('/etc/rsyslog.conf'):
+    os.remove('/etc/rsyslog.conf')
+    os.symlink('/usr/share/vyos/templates/rsyslog/rsyslog.conf', '/etc/rsyslog.conf')
+
+  # /var/log/vyos-rsyslog were the old files, we may want to clean those up, but currently there
+  # is a chance that someone still needs it, so I don't automatically remove them 
+
   if c == None:
     return None
 
