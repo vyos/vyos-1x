@@ -24,6 +24,7 @@ def strip_comments(s):
     IN_COMMENT = 1
 
     i = len(s) - 1
+
     state = INITIAL
 
     config_end = 0
@@ -42,14 +43,11 @@ def strip_comments(s):
                 break
         elif (state == INITIAL) and (c == '/'):
             # A comment begins, or it's a stray slash
-            try:
-                if (s[i-1] == '*'):
-                    state = IN_COMMENT
-                    i -= 2
-                else:
-                    raise ValueError("Invalid syntax")
-            except:
-                raise ValueError("Invalid syntax")
+            if (s[i-1] == '*'):
+                state = IN_COMMENT
+                i -= 2
+            else:
+                raise ValueError("Invalid syntax: stray slash at character {0}".format(i + 1))
         elif (state == INITIAL) and (c == '}'):
             # We are not inside a comment, that's the end of the last node
             config_end = i + 1
@@ -61,12 +59,12 @@ def strip_comments(s):
                     state = INITIAL
                     i -= 2
             except:
-                raise ValueError("Invalid syntax")
+                raise ValueError("Invalid syntax: malformed commend end at character {0}".format(i + 1))
         elif (state == IN_COMMENT) and (c != '*'):
             # Ignore everything inside comments, including braces
             i -= 1
         else:
-            raise ValueError("Invalid syntax")
+            raise ValueError("Invalid syntax at character {0}: invalid character {1}".format(i + 1, c))
 
     return (s[0:config_end], s[config_end+1:])
 
