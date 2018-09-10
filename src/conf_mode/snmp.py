@@ -138,6 +138,7 @@ agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{
 
 # SNMP communities
 {%- for c in communities %}
+{%- if c.authorization %}
 {%- for network in c.network_v4 %}
 {{ c.authorization }}community {{ c.name }} {{ network }}
 {%- endfor %}
@@ -147,6 +148,7 @@ agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{
 {%- else %}
 {{ c.authorization }}community {{ c.name }}
 {{ c.authorization }}community6 {{ c.name }}
+{%- endif %}
 {%- endfor %}
 
 {% if contact %}
