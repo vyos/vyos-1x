@@ -90,6 +90,10 @@ class ConfigTree(object):
         self.__from_string.argtypes = [c_char_p]
         self.__from_string.restype = c_void_p
 
+        self.__get_error = self.__lib.get_error
+        self.__get_error.argtypes = []
+        self.__get_error.restype = c_char_p
+
         self.__to_string = self.__lib.to_string
         self.__to_string.argtypes = [c_void_p]
         self.__to_string.restype = c_char_p
@@ -152,10 +156,12 @@ class ConfigTree(object):
         config_section, comments_section = strip_comments(config_string)
         config = self.__from_string(config_section.encode())
         if config is None:
-            raise ValueError("Parse error")
+            msg = self.__get_error().decode()
+            raise ValueError("Failed to parse config: {0}".format(msg))
         else:
             self.__config = config
             self.__comments = comments_section
+
     def __del__(self):
         if self.__config is not None:
             self.__destroy(self.__config)
