@@ -222,6 +222,7 @@ SNMPDOPTS='-LSed -u snmp -g snmp -p /run/snmpd.pid'
 
 default_config_data = {
     'listen_on': [],
+    'listen_address': [],
     'communities': [],
     'smux_peers': [],
     'location' : '',
@@ -300,19 +301,20 @@ def get_config():
 
     if conf.exists('listen-address'):
         for addr in conf.list_nodes('listen-address'):
-            listen = ''
             port = '161'
             if conf.exists('listen-address {0} port'.format(addr)):
                 port = conf.return_value('listen-address {0} port'.format(addr))
 
-            if vyos.validate.is_ipv4(addr):
-                # udp:127.0.0.1:161
-                listen = 'udp:' + addr + ':' + port
-            else:
-                # udp6:[::1]:161
-                listen = 'udp6:' + '[' + addr + ']' + ':' + port
+            snmp['listen_address'].append((addr, port))
 
-            snmp['listen_on'].append(listen)
+        # Always listen on localhost if an explicit address has been configured
+        # This is a safety measure to not end up with invalid listen addresses
+        # that are not configured on this system. See https://phabricator.vyos.net/T850
+        if not '127.0.0.1' in conf.list_nodes('listen-address'):
+            snmp['listen_address'].append(('127.0.0.1', '161'))
+
+        if not '::1' in conf.list_nodes('listen-address'):
+            snmp['listen_address'].append(('::1', '161'))
 
     if conf.exists('location'):
         snmp['location'] = conf.return_value('location')
@@ -586,6 +588,24 @@ def verify(snmp):
             if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
                 if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
                     raise ConfigError('TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
+
+    for listen in snmp['listen_address']:
+        addr = listen[0]
+        port = listen[1]
+
+        if vyos.validate.is_ipv4(addr):
+            # example: udp:127.0.0.1:161
+            listen = 'udp:' + addr + ':' + port
+        else:
+            # example: udp6:[::1]:161
+            listen = 'udp6:' + '[' + addr + ']' + ':' + port
+
+        # We only wan't to configure addresses that exist on the system.
+        # Hint the user if they don't exist
+        if vyos.validate.is_addr_assigned(addr):
+            snmp['listen_on'].append(listen)
+        else:
+            print('WARNING: SNMP listen address {0} not configured!'.format(addr))
 
     if 'v3_groups' in snmp.keys():
         for group in snmp['v3_groups']:
