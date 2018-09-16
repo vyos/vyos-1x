@@ -96,12 +96,20 @@ def verify(tftpd):
         raise ConfigError('TFTP server listen address must be configured!')
 
     for addr in tftpd['listen_ipv4']:
+        # we always bind to localhost
+        if '127.0.0.1' not in tftpd['listen_ipv4']:
+            tftpd['listen_ipv4'].append('127.0.0.1')
+
         if not vyos.validate.is_addr_assigned(addr):
-            raise ConfigError('TFTP server IPv4 listen address "{0}" not configured!'.format(addr))
+            print('WARNING: TFTP server listen address {0} not configured!'.format(addr))
 
     for addr in tftpd['listen_ipv6']:
+        # we always bind to localhost
+        if '::1' not in tftpd['listen_ipv6']:
+            tftpd['listen_ipv6'].append('::1')
+
         if not vyos.validate.is_addr_assigned(addr):
-            raise ConfigError('TFTP server IPv6 listen address "{0}" not configured!'.format(addr))
+            print('WARNING: TFTP server listen address {0} not configured!'.format(addr))
 
     return None
 
