@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2018 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+def migrate_neighbor(config, neighbor_path, neighbor):
+    if config.exists(neighbor_path):
+        neighbors = config.list_nodes(neighbor_path)
+        for neighbor in neighbors:
+            # Move the valueless options: as-override, next-hop-self, route-reflector-client, route-server-client,
+            # remove-private-as
+            for valueless_option in ['as-override', 'nexthop-self', 'route-reflector-client', 'route-server-client',
+                                     'remove-private-as']:
+                if config.exists(neighbor_path + [neighbor, valueless_option]):
+                    config.set(neighbor_path + [neighbor] + af_path + [valueless_option])
+                    config.delete(neighbor_path + [neighbor, valueless_option])
+
+            # Move filter options: distribute-list, filter-list, prefix-list, and route-map
+            # They share the same syntax inside so we can group them
+            for filter_type in ['distribute-list', 'filter-list', 'prefix-list', 'route-map']:
+                if config.exists(neighbor_path + [neighbor, filter_type]):
+                    for filter_dir in ['import', 'export']:
+                        if config.exists(neighbor_path + [neighbor, filter_type, filter_dir]):
+                            filter_name = config.return_value(neighbor_path + [neighbor, filter_type, filter_dir])
+                            config.set(neighbor_path + [neighbor] + af_path + [filter_type, filter_dir], value=filter_name)
+                    config.delete(neighbor_path + [neighbor, filter_type])
+
+            # Move simple leaf node options: maximum-prefix, unsuppress-map, weight
+            for leaf_option in ['maximum-prefix', 'unsuppress-map', 'weight']:
+                if config.exists(neighbor_path + [neighbor, leaf_option]):
+                    if config.exists(neighbor_path + [neighbor, leaf_option]):
+                        leaf_opt_value = config.return_value(neighbor_path + [neighbor, leaf_option])
+                        config.set(neighbor_path + [neighbor] + af_path + [leaf_option], value=leaf_opt_value)
+                        config.delete(neighbor_path + [neighbor, leaf_option])
+
+            # The rest is special cases, for better or worse
+
+            # Move allowas-in
+            if config.exists(neighbor_path + [neighbor, 'allowas-in']):
+                if config.exists(neighbor_path + [neighbor, 'allowas-in', 'number']):
+                    allowas_in = config.return_value(neighbor_path + [neighbor, 'allowas-in', 'number'])
+                    config.set(neighbor_path + [neighbor] + af_path + ['allowas-in', 'number'], value=allowas_in)
+                config.delete(neighbor_path + [neighbor, 'allowas-in'])
+
+            # Move attribute-unchanged options
+            if config.exists(neighbor_path + [neighbor, 'attribute-unchanged']):
+                for attr in ['as-path', 'med', 'next-hop']:
+                    if config.exists(neighbor_path + [neighbor, 'attribute-unchanged', attr]):
+                        config.set(neighbor_path + [neighbor] + af_path + ['attribute-unchanged', attr])
+                        config.delete(neighbor_path + [neighbor, 'attribute-unchanged', attr])
+                config.delete(neighbor_path + [neighbor, 'attribute-unchanged'])
+
+            # Move capability options
+            if config.exists(neighbor_path + [neighbor, 'capability']):
+                # "capability dynamic" is a peer-global option, we only migrate ORF
+                if config.exists(neighbor_path + [neighbor, 'capability', 'orf']):
+                    if config.exists(neighbor_path + [neighbor, 'capability', 'orf', 'prefix-list']):
+                        for orf in ['send', 'receive']:
+                            if config.exists(neighbor_path + [neighbor, 'capability', 'orf', 'prefix-list', orf]):
+                                config.set(neighbor_path + [neighbor] + af_path + ['capability', 'orf', 'prefix-list', orf])
+                                config.delete(neighbor_path + [neighbor, 'capability', 'orf', 'prefix-list', orf])
+                        config.delete(neighbor_path + [neighbor, 'capability', 'orf', 'prefix-list'])
+                    config.delete(neighbor_path + [neighbor, 'capability', 'orf'])
+
+            # Move default-originate
+            if config.exists(neighbor_path + [neighbor, 'default-originate']):
+                if config.exists(neighbor_path + [neighbor, 'default-originate', 'route-map']):
+                    route_map = config.return_value(neighbor_path + [neighbor, 'default-originate', 'route-map'])
+                    config.set(neighbor_path + [neighbor] + af_path + ['default-originate', 'route-map'], value=route_map)
+                else:
+                    # Empty default-originate node is meaningful so we re-create it
+                    config.set(neighbor_path + [neighbor] + af_path + ['default-originate'])
+                config.delete(neighbor_path + [neighbor, 'default-originate'])
+
+            # Move soft-reconfiguration
+            if config.exists(neighbor_path + [neighbor, 'soft-reconfiguration']):
+                if config.exists(neighbor_path + [neighbor, 'soft-reconfiguration', 'inbound']):
+                    config.set(neighbor_path + [neighbor] + af_path + ['soft-reconfiguration', 'inbound'])
+                # Empty soft-reconfiguration is meaningless, so we just remove it
+                config.delete(neighbor_path + [neighbor, 'soft-reconfiguration'])
+
+            # Move disable-send-community
+            if config.exists(neighbor_path + [neighbor, 'disable-send-community']):
+                for comm_type in ['standard', 'extended']:
+                    if config.exists(neighbor_path + [neighbor, 'disable-send-community', comm_type]):
+                        config.set(neighbor_path + [neighbor] + af_path + ['disable-send-community', comm_type])
+                        config.delete(neighbor_path + [neighbor, 'disable-send-community', comm_type])
+                config.delete(neighbor_path + [neighbor, 'disable-send-community'])
+
+
+if not config.exists(['protocols', 'bgp']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # Just to avoid writing it so many times
+    af_path = ['address-family', 'ipv4-unicast']
+
+    # Check if BGP is actually configured and obtain the ASN
+    asn_list = config.list_nodes(['protocols', 'bgp'])
+    if asn_list:
+        # There's always just one BGP node, if any
+        asn = asn_list[0]
+        bgp_path = ['protocols', 'bgp', asn]
+    else:
+        # There's actually no BGP, just its empty shell
+        sys.exit(0)
+
+    ## Move global IPv4-specific BGP options to "address-family ipv4-unicast"
+
+    # Move networks
+    network_path = ['protocols', 'bgp', asn, 'network']
+    if config.exists(network_path):
+        config.set(bgp_path + af_path + ['network'])
+        config.set_tag(bgp_path + af_path + ['network'])
+
+        networks = config.list_nodes(network_path)
+        for network in networks:
+            config.set(bgp_path + af_path + ['network', network])
+            if config.exists(network_path + [network, 'route-map']):
+                route_map = config.return_value(network_path + [network, 'route-map'])
+                config.set(bgp_path + af_path + ['network', network, 'route-map'], value=route_map)
+        config.delete(network_path)
+
+    # Move aggregate-address statements
+    aggregate_path = ['protocols', 'bgp', asn, 'aggregate-address']
+    if config.exists(aggregate_path):
+        print("Migrating aggregates")
+        config.set(bgp_path + af_path + ['aggregate-address'])
+        config.set_tag(bgp_path + af_path + ['aggregate-address'])
+
+        aggregates = config.list_nodes(aggregate_path)
+        for aggregate in aggregates:
+            config.set(bgp_path + af_path + ['aggregate-address', aggregate])
+            if config.exists(aggregate_path + [aggregate, 'as-set']):
+                config.set(bgp_path + af_path + ['aggregate-address', aggregate, 'as-set'])
+            if config.exists(aggregate_path + [aggregate, 'summary-only']):
+                config.set(bgp_path + af_path + ['aggregate-address', aggregate, 'summary-only'])
+        print("Deleting {0}".format(aggregate_path))
+        config.delete(aggregate_path)
+
+    ## Migrate neighbor options
+    neighbor_path = ['protocols', 'bgp', asn, 'neighbor']
+    if config.exists(neighbor_path):
+        neighbors = config.list_nodes(neighbor_path)
+        for neighbor in neighbors:
+            migrate_neighbor(config, neighbor_path, neighbor)
+
+    peer_group_path = ['protocols', 'bgp', asn, 'peer-group']
+    if config.exists(peer_group_path):
+        peer_groups = config.list_nodes(peer_group_path)
+        for peer_group in peer_groups:
+            migrate_neighbor(config, peer_group_path, peer_group)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+        #print(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
