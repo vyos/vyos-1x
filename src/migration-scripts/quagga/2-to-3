@@ -153,7 +153,6 @@ else:
     # Move aggregate-address statements
     aggregate_path = ['protocols', 'bgp', asn, 'aggregate-address']
     if config.exists(aggregate_path):
-        print("Migrating aggregates")
         config.set(bgp_path + af_path + ['aggregate-address'])
         config.set_tag(bgp_path + af_path + ['aggregate-address'])
 
@@ -164,7 +163,6 @@ else:
                 config.set(bgp_path + af_path + ['aggregate-address', aggregate, 'as-set'])
             if config.exists(aggregate_path + [aggregate, 'summary-only']):
                 config.set(bgp_path + af_path + ['aggregate-address', aggregate, 'summary-only'])
-        print("Deleting {0}".format(aggregate_path))
         config.delete(aggregate_path)
 
     ## Migrate neighbor options
@@ -183,7 +181,6 @@ else:
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
-        #print(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
         sys.exit(1)
