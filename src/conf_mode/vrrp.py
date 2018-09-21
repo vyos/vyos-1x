@@ -183,7 +183,7 @@ def get_config():
         if not group["priority"]:
             group["priority"] = 100
         if not group["preempt_delay"]:
-            group["preempt_delay"] = 5 * 60
+            group["preempt_delay"] = 0
         if not group["health_check_interval"]:
             group["health_check_interval"] = 60
         if not group["health_check_count"]:
