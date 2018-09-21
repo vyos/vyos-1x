@@ -1,6 +1,7 @@
 # vyos-1x: VyOS 1.2.0+ configuration scripts and data
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=vyos%3Avyos-1x&metric=coverage)](https://sonarcloud.io/component_measures?id=vyos%3Avyos-1x&metric=coverage)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x?ref=badge_shield)
 
 VyOS 1.1.x had its codebase split into way too many submodules for no good reason, which made it hard
 to navigate or write meaningful changelogs. As the code undergoes rewrite in the new style in VyOS 1.2.0+,
@@ -54,3 +55,7 @@ Tests are executed at build time, you can also execute them by hand with:
 ```
 make test
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x?ref=badge_large)
