@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Deletes "system package" option as it is deprecated
+# Deletes the deprecated "system package" and "service telnet" options
 
 import sys
 
@@ -17,12 +17,16 @@ with open(file_name, 'r') as f:
 
 config = ConfigTree(config_file)
 
-if not config.exists(['system', 'package']):
+if (not config.exists(['system', 'package'])) and (not config.exists(['service', 'telnet'])):
     # Nothing to do
     sys.exit(0)
 else:
-    # Delete the node with the old syntax
-    config.delete(['system', 'package'])
+    # Delete the "system package" subtree
+    if config.exists(['system', 'package']):
+        config.delete(['system', 'package'])
+
+    if config.exists(['service', 'telnet']):
+        config.delete(['service', 'telnet'])
 
     try:
         with open(file_name, 'w') as f:
