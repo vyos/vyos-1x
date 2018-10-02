@@ -1,0 +1,3 @@
+#!/bin/sh
+
+chown -R root:vyattacfg /config
