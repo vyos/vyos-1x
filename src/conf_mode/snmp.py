@@ -669,48 +669,45 @@ def verify(snmp):
             # Group must exist prior to mapping it into a group
             # seclevel will be extracted from group
             #
-            error = True
             if user['group']:
+                error = True
                 if 'v3_groups' in snmp.keys():
                     for group in snmp['v3_groups']:
                         if group['name'] == user['group']:
                             seclevel = group['seclevel']
                             error = False
 
-            if error:
-                raise ConfigError('You must create group "{0}" first'.format(user['group']))
+                if error:
+                    raise ConfigError('You must create group "{0}" first'.format(user['group']))
 
             # Depending on the configured security level
             # the user has to provide additional info
-            if seclevel in ('auth', 'priv'):
-                if user['authPassword'] and user['authMasterKey']:
-                    raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
+            if user['authPassword'] and user['authMasterKey']:
+                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
 
-                if (not user['authPassword'] and not user['authMasterKey']):
-                    raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
+            if (not user['authPassword'] and not user['authMasterKey']):
+                raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
 
-                # seclevel 'priv' is more restrictive
-                if seclevel in ('priv'):
-                    if user['privPassword'] and user['privMasterKey']:
-                        raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
+            if user['privPassword'] and user['privMasterKey']:
+                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
 
-                    if user['privPassword'] == '' and user['privMasterKey'] == '':
-                        raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
+            if user['privPassword'] == '' and user['privMasterKey'] == '':
+                raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
 
-                    if user['privMasterKey'] and user['engineID'] == '':
-                        raise ConfigError('Can not have "encrypted-key" without engineid')
+            if user['privMasterKey'] and user['engineID'] == '':
+                raise ConfigError('Can not have "encrypted-key" without engineid')
 
-                    if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
-                        raise ConfigError('Must specify auth or tsm-key for user auth')
+            if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
+                raise ConfigError('Must specify auth or tsm-key for user auth')
 
-                    if user['mode'] == '':
-                        raise ConfigError('Must specify user mode ro/rw')
+            if user['mode'] == '':
+                raise ConfigError('Must specify user mode ro/rw')
 
-                    if user['privTsmKey']:
-                        if not tsmKeyPattern.match(snmp['v3_tsm_key']):
-                            if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                                if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                                    raise ConfigError('User TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
+            if user['privTsmKey']:
+                if not tsmKeyPattern.match(snmp['v3_tsm_key']):
+                    if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                        if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
+                            raise ConfigError('User TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
 
     if 'v3_views' in snmp.keys():
         for view in snmp['v3_views']:
