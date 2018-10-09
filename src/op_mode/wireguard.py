@@ -49,9 +49,12 @@ def genkey():
   """ helper function to check, regenerate the keypair """
   old_umask = os.umask(0o077)
   if os.path.exists(pk) and os.path.exists(pub):
-    choice = input("You already have a wireguard key-pair already, do you want to re-generate? [y/n] ")
-    if choice == 'y' or choice == 'Y':
-      generate_keypair()
+    try:
+      choice = input("You already have a wireguard key-pair already, do you want to re-generate? [y/n] ")
+      if choice == 'y' or choice == 'Y':
+        generate_keypair()
+    except KeyboardInterrupt:
+        sys.exit(0)
   else:
     if not os.path.exists(dir):
       os.mkdir(dir)
