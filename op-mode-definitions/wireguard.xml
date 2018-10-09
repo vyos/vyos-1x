@@ -27,6 +27,9 @@
   <node name="show">
     <children>
       <node name="wireguard">
+        <properties>
+          <help>Show wireguard properties</help>
+        </properties>
         <children>
           <leafNode name="pubkey">
             <properties>
