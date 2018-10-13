@@ -142,7 +142,12 @@ if __name__ == '__main__':
         for p in pools:
             size = get_pool_size(config, p)
             leases = len(get_leases(lease_file, state='active', pool=args.pool))
-            use_percentage = round(leases / size) * 100
+
+            if size != 0:
+                use_percentage = round(leases / size) * 100
+            else:
+                use_percentage = 0
+
             if args.json:
                 pool_stats = {"pool": p, "size": size, "leases": leases,
                               "available": (size - leases), "percentage": use_percentage}
