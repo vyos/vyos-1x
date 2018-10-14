@@ -63,6 +63,7 @@ protocol={{ srv.protocol }}
 max-interval=28d
 login={{ srv.login }}
 password='{{ srv.password }}'
+server={{ srv.server }}
 {{ host }}
 {% endfor %}
 {% endfor %}
