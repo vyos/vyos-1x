@@ -29,7 +29,7 @@
               </valueHelp>
               <multi/>
               <constraint>
-                <validator name="ip-prefix"/>
+                <validator name="ip-host"/>
               </constraint>
             </properties>
           </leafNode>
