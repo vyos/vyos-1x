@@ -86,6 +86,9 @@ def verify(relay):
     if relay is None:
         return None
 
+    if len(relay['listen_addr']) == 0 or len(relay['upstream_addr']) == 0:
+        raise ConfigError('Must set at least one listen and upstream interface.')
+
     return None
 
 def generate(relay):
