@@ -95,15 +95,10 @@ daemon_config_tmpl = """
 sysObjectID 1.3.6.1.4.1.44641
 sysServices 14
 master agentx
-agentXPerms 0755 0755
+agentXPerms 0777 0777
 pass .1.3.6.1.2.1.31.1.1.1.18 /opt/vyatta/sbin/if-mib-alias
 smuxpeer .1.3.6.1.2.1.83
 smuxpeer .1.3.6.1.2.1.157
-smuxpeer .1.3.6.1.4.1.3317.1.2.2
-smuxpeer .1.3.6.1.4.1.3317.1.2.3
-smuxpeer .1.3.6.1.4.1.3317.1.2.5
-smuxpeer .1.3.6.1.4.1.3317.1.2.8
-smuxpeer .1.3.6.1.4.1.3317.1.2.9
 smuxsocket localhost
 
 # linkUp/Down configure the Event MIB tables to monitor
