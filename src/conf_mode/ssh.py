@@ -79,7 +79,7 @@ Port {{ port }}
 LogLevel {{ log_level }}
 
 # Specifies whether root can log in using ssh
-PermitRootLogin {{ allow_root }}
+PermitRootLogin no
 
 # Specifies whether password authentication is allowed
 PasswordAuthentication {{ password_authentication }}
@@ -164,7 +164,6 @@ ClientAliveInterval {{ client_keepalive }}
 default_config_data = {
     'port' : '22',
     'log_level': 'INFO',
-    'allow_root': 'no',
     'password_authentication': 'yes',
     'host_validation': 'yes'
 }
@@ -192,9 +191,6 @@ def get_config():
     if conf.exists('access-control deny group'):
         deny_groups = conf.return_values('access-control deny group')
         ssh['deny_groups'] =  deny_groups
-
-    if conf.exists('allow-root'):
-        ssh['allow-root'] = 'yes'
 
     if conf.exists('ciphers'):
         ciphers = conf.return_values('ciphers')
