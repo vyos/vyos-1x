@@ -94,7 +94,9 @@ def is_subnet_connected(subnet, primary=False):
             # Check every assigned IP address if it is connected to the subnet
             # in question
             for ip in netifaces.ifaddresses(interface)[addr_type]:
-                if ipaddress.ip_address(ip['addr']) in ipaddress.ip_network(subnet):
+                # remove interface extension (e.g. %eth0) that gets thrown on the end of _some_ addrs
+                addr = ip['addr'].split('%')[0]
+                if ipaddress.ip_address(addr) in ipaddress.ip_network(subnet):
                     return True
 
     return False
