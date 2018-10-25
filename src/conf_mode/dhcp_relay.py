@@ -43,14 +43,14 @@ SERVERS="{{ server | join(' ') }}"
 INTERFACES="{{ interface | join(' ') }}"
 
 # Additional options that are passed to the DHCP relay daemon?
-OPTIONS="-4 -p {{ port }} {{ options | join(' ') }}"
+OPTIONS="-4 {% if port -%} -p {{ port }}{%- endif %} {{ options | join(' ') }}"
 """
 
 default_config_data = {
     'interface': [],
     'server': [],
     'options': [],
-    'port': '67',
+    'port': '',
     'hop_count': '10',
     'relay_agent_packets': 'forward'
 }

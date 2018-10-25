@@ -31,13 +31,13 @@ config_tmpl = """
 
 # Defaults for isc-dhcpv6-relay initscript sourced by /etc/init.d/isc-dhcpv6-relay
 
-OPTIONS="-6 -l {{ listen_addr | join('-l ') }} -p {{ port }} {{ options | join(' ') }} -u {{ upstream_addr | join('-u ') }}"
+OPTIONS="-6 -l {{ listen_addr | join('-l ') }} {% if port -%} -p {{ port }}{%- endif %} {{ options | join(' ') }} -u {{ upstream_addr | join('-u ') }}"
 """
 
 default_config_data = {
     'listen_addr': [],
     'upstream_addr': [],
-    'port': '547',
+    'port': '',
     'options': [],
 }
 
