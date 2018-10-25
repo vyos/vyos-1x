@@ -1,3 +1,10 @@
+vyos-1x (1.2.0-3) unstable; urgency=medium
+
+  * T933: adding vmac_xmit_base if use_vmac has been chosen
+    to avoid split-brain
+
+ -- hagbard <vyosdev@derith.de>  Thu, 25 Oct 2018 11:14:44 -0700 
+
 vyos-1x (1.2.0-2) unstable; urgency=medium
   
   * T773: adding wireguard support
