@@ -67,7 +67,13 @@ UseDNS {{ host_validation }}
 
 # Specifies the port number that sshd listens on.  The default is 22.
 # Multiple options of this type are permitted.
+{% if mport|length != 0 %}
+{% for p in mport %}
+Port {{ p }}
+{% endfor %}
+{% else %}
 Port {{ port }}
+{% endif %}
 
 # Gives the verbosity level that is used when logging messages from sshd
 LogLevel {{ log_level }}
@@ -78,64 +84,80 @@ PermitRootLogin no
 # Specifies whether password authentication is allowed
 PasswordAuthentication {{ password_authentication }}
 
-{% if listen_on -%}
+{% if listen_on %}
 # Specifies the local addresses sshd should listen on
-{% for a in listen_on -%}
+{% for a in listen_on %}
 ListenAddress {{ a }}
-{% endfor -%}
+{% endfor %}
+{{ "\n" }}
 {% endif %}
 
-{% if ciphers -%}
+{%- if ciphers %}
 # Specifies the ciphers allowed. Multiple ciphers must be comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'ciphers', thus we have only one :/
 Ciphers {{ ciphers | join(",") }}
+{{ "\n" }}
 {% endif %}
 
-{% if mac -%}
+{%- if mac %}
 # Specifies the available MAC (message authentication code) algorithms. The MAC
 # algorithm is used for data integrity protection. Multiple algorithms must be
 # comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'mac', thus we have only one :/
 MACs {{ mac | join(",") }}
+{{ "\n" }}
 {% endif %}
 
-{% if key_exchange -%}
+{%- if key_exchange %}
 # Specifies the available KEX (Key Exchange) algorithms. Multiple algorithms must
 # be comma-separated.
 #
 # NOTE: As of now, there is no 'multi' node for 'key-exchange', thus we have only one :/
 KexAlgorithms {{ key_exchange | join(",") }}
+{{ "\n" }}
 {% endif %}
 
-{% if allow_users -%}
+{%- if allow_users %}
 # This keyword can be followed by a list of user name patterns, separated by spaces.
 # If specified, login is allowed only for user names that match one of the patterns. 
 # Only user names are valid, a numerical user ID is not recognized.
 AllowUsers {{ allow_users | join(" ") }}
+{{ "\n" }}
 {% endif %}
 
-{% if allow_groups -%}
+{%- if allow_groups %}
 # This keyword can be followed by a list of group name patterns, separated by spaces.
 # If specified, login is allowed only for users whose primary group or supplementary
 # group list matches one of the patterns. Only group names are valid, a numerical group
 # ID is not recognized.
 AllowGroups {{ allow_groups | join(" ") }}
+{{ "\n" }}
 {% endif %}
 
-{% if deny_users -%}
+{%- if deny_users %}
 # This keyword can be followed by a list of user name patterns, separated by spaces.
 # Login is disallowed for user names that match one of the patterns. Only user names
 # are valid, a numerical user ID is not	recognized.
 DenyUsers {{ deny_users | join(" ") }}
+{{ "\n" }}
 {% endif %}
 
-{% if deny_groups -%}
+{%- if deny_groups %}
 # This keyword can be followed by a list of group name patterns, separated by spaces.
 # Login is disallowed for users whose primary group or supplementary group list matches
 # one of the patterns. Only group names are valid, a numerical group ID is not recognized.
 DenyGroups {{ deny_groups | join(" ") }}
+{{ "\n" }}
+{% endif %}
+
+{%- if client_keepalive %}
+# Sets a timeout interval in seconds after which if no data has been received from the client,
+# sshd will send a message through the encrypted channel to request a response from the client.
+# The default is 0, indicating that these messages will not be sent to the client.
+# This option applies to protocol version 2 only. 
+ClientAliveInterval {{ client_keepalive }}
 {% endif %}
 """
 
@@ -204,8 +226,17 @@ def get_config():
         ssh['mac'] = mac
 
     if conf.exists('port'):
-        port = conf.return_value('port')
-        ssh['port'] = port
+        ports = conf.return_values('port')
+        mport = []
+
+        for prt in ports:
+            mport.append(prt)
+
+        ssh['mport'] = mport
+
+    if conf.exists('client-keepalive-interval'):
+        client_keepalive = conf.return_value('client-keepalive-interval')
+        ssh['client_keepalive'] = client_keepalive
 
     return ssh
 
@@ -224,7 +255,7 @@ def generate(ssh):
     if ssh is None:
         return None
 
-    tmpl = jinja2.Template(config_tmpl)
+    tmpl = jinja2.Template(config_tmpl, trim_blocks=True)
     config_text = tmpl.render(ssh)
     with open(config_file, 'w') as f:
         f.write(config_text)

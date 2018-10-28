@@ -35,26 +35,26 @@
               <leafNode name="dnssec">
                 <properties>
                   <help>DNSSEC mode</help>
-                    <valueHelp>
-                      <format>off</format>
-                      <description></description>
-                    </valueHelp>
-                    <valueHelp>
-                      <format>process-no-validate</format>
-                      <description></description>
-                    </valueHelp>
-                    <valueHelp>
-                      <format>process</format>
-                      <description></description>
-                    </valueHelp>
-                    <valueHelp>
-                      <format>log-fail</format>
-                      <description></description>
-                    </valueHelp>
-                    <valueHelp>
-                      <format>validate</format>
-                      <description></description>
-                    </valueHelp>
+                  <valueHelp>
+                    <format>off</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>process-no-validate</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>process</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>log-fail</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>validate</format>
+                    <description/>
+                  </valueHelp>
                   <constraint>
                     <regex>(off|process-no-validate|process|log-fail|validate)</regex>
                   </constraint>

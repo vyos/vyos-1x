@@ -9,7 +9,9 @@ Build-Depends: debhelper (>= 9),
   quilt,
   python3-lxml,
   python3-nose,
-  python3-coverage
+  python3-coverage,
+  whois,
+  libvyosconfig0
 Standards-Version: 3.9.6
 
 Package: vyos-1x
@@ -40,6 +42,7 @@ Depends: python3,
   libvyosconfig0,
   beep,
   isc-dhcp-server,
+  isc-dhcp-relay,
   keepalived (>=2.0.5),
   wireguard,
   tftpd-hpa,

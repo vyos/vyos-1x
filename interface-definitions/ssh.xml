@@ -161,8 +161,17 @@
                 <format>1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
+              <multi/>
               <constraint>
                 <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="client-keepalive-interval">
+            <properties>
+              <help>how often send keep alives in seconds</help>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/> 
               </constraint>
             </properties>
           </leafNode>

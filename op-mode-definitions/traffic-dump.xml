@@ -17,7 +17,7 @@
             </properties>
             <children>
               <tagNode name="filter">
-                <command>sudo tcpdump -n -i $4 $6</command>
+                <command>sudo tcpdump -n -i $4 "${@:6}"</command>
                 <properties>
                   <help>Monitor traffic matching filter conditions</help>
                 </properties>
@@ -29,7 +29,7 @@
                 </properties>
                 <children>
                   <tagNode name="filter">
-                    <command>sudo tcpdump -n -i $4 -w $6 $8</command>
+                    <command>sudo tcpdump -n -i $4 -w $6 "${@:8}"</command>
                     <properties>
                       <help>Save a dump of traffic matching filter conditions to a file</help>
                     </properties>
