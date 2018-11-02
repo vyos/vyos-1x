@@ -295,18 +295,13 @@ def configure_interface(c, intf):
       os.remove(psk_file)
 
 def add_addr(intf, addr):
+  # see https://phabricator.vyos.net/T949
   ret = subprocess.call(['ip a a dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)
-  if ret != 0:
-    raise ConfigError('Can\'t set IP ' + addr + ' on ' + intf)
-  else:
-    sl.syslog(sl.LOG_NOTICE, "ip a a dev " + intf + " " + addr)
+  sl.syslog(sl.LOG_NOTICE, "ip a a dev " + intf + " " + addr)
 
 def del_addr(intf, addr):
   ret = subprocess.call(['ip a d dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)
-  if ret != 0:
-    raise ConfigError('Can\'t delete IP ' + addr + ' on ' + intf)
-  else:
-    sl.syslog(sl.LOG_NOTICE, "ip a d dev " + intf + " " + addr)
+  sl.syslog(sl.LOG_NOTICE, "ip a d dev " + intf + " " + addr)
 
 if __name__ == '__main__':
   try:
