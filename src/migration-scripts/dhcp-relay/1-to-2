@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+# Delete "set service dhcp-relay relay-options port" option
+# Delete "set service dhcpv6-relay listen-port" option
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not (config.exists(['service', 'dhcp-relay', 'relay-options', 'port']) or config.exists(['service', 'dhcpv6-relay', 'listen-port'])):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # Delete abandoned node
+    config.delete(['service', 'dhcp-relay', 'relay-options', 'port'])
+    # Delete abandoned node
+    config.delete(['service', 'dhcpv6-relay', 'listen-port'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

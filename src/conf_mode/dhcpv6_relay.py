@@ -31,13 +31,12 @@ config_tmpl = """
 
 # Defaults for isc-dhcpv6-relay initscript sourced by /etc/init.d/isc-dhcpv6-relay
 
-OPTIONS="-6 -l {{ listen_addr | join('-l ') }} {% if port -%} -p {{ port }}{%- endif %} {{ options | join(' ') }} -u {{ upstream_addr | join('-u ') }}"
+OPTIONS="-6 -l {{ listen_addr | join('-l ') }} {{ options | join(' ') }} -u {{ upstream_addr | join('-u ') }}"
 """
 
 default_config_data = {
     'listen_addr': [],
     'upstream_addr': [],
-    'port': '',
     'options': [],
 }
 
@@ -64,11 +63,6 @@ def get_config():
             addr = conf.return_value('upstream-interface {0} address'.format(intf))
             server = addr + '%' + intf
             relay['upstream_addr'].append(server)
-
-    # Listen and transmit on port <xy>. This is mostly useful for debugging
-    # purposes. Default is port 67 for DHCPv4/BOOTP, or port 547 for DHCPv6.
-    if conf.exists('listen-port'):
-        relay['port'] = conf.return_value('listen-port')
 
     # Maximum hop count. When forwarding packets, dhcrelay discards packets
     # which have reached a hop count of COUNT. Default is 10. Maximum is 255.
