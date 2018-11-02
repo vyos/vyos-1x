@@ -43,14 +43,13 @@ SERVERS="{{ server | join(' ') }}"
 INTERFACES="{{ interface | join(' ') }}"
 
 # Additional options that are passed to the DHCP relay daemon?
-OPTIONS="-4 {% if port -%} -p {{ port }}{%- endif %} {{ options | join(' ') }}"
+OPTIONS="-4 {{ options | join(' ') }}"
 """
 
 default_config_data = {
     'interface': [],
     'server': [],
     'options': [],
-    'port': '',
     'hop_count': '10',
     'relay_agent_packets': 'forward'
 }
@@ -85,11 +84,6 @@ def get_config():
     if conf.exists('max-size'):
         size = '-A ' + conf.return_value('max-size')
         relay['options'].append(size)
-
-    # Listen and transmit on port <xy>. This is mostly useful for debugging
-    # purposes. Default is port 67 for DHCPv4/BOOTP, or port 547 for DHCPv6.
-    if conf.exists('port'):
-        relay['port'] = conf.return_value('port')
 
     # Control the handling of incoming DHCPv4 packets which already contain
     # relay agent options. If such a packet does not have giaddr set in its
