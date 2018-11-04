@@ -2,17 +2,15 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-    <tagNode name="raid">
-      <properties>
-        <help>Show statis of RAID set</help>
-        <completionHelp>
-          <script>${vyos_completion_dir}/list_raidset.sh</script>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/show_raid.sh $3</command>
-      
-    </tagNode>
-
+      <tagNode name="raid">
+        <properties>
+          <help>Show statis of RAID set</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_raidset.sh</script>
+          </completionHelp>
+        </properties>
+        <command>${vyos_op_scripts_dir}/show_raid.sh $3</command>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>
