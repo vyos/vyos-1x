@@ -46,6 +46,7 @@ Depends: python3,
   keepalived (>=2.0.5),
   wireguard,
   tftpd-hpa,
+  igmpproxy,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
