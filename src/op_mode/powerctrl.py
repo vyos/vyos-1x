@@ -1,11 +1,27 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2018 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import sys
 import argparse
 import subprocess
+import re
+
 from datetime import datetime, timedelta, time as type_time, date as type_date
 from subprocess import check_output, CalledProcessError, STDOUT
-import re
 
 def yn(msg, default=False):
   default_msg = "[Y/n]" if default else "[y/N]"
@@ -70,10 +86,10 @@ def execute_shutdown(time, reboot = True, ask=True):
   action = "-r" if reboot else "-P"
 
   if len(time) == 0:
-    ### T870 legacy reboot job support 
+    ### T870 legacy reboot job support
     chk_vyatta_based_reboots()
     ###
-    
+
     cmd = check_output(["/sbin/shutdown",action,"now"],stderr=STDOUT)
     print(cmd.decode().split(",",1)[0])
     return
