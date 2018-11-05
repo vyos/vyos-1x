@@ -49,19 +49,6 @@
                   <constraintErrorMessage>max-size must be a value between 64 and 1400</constraintErrorMessage>
                 </properties>
               </leafNode>
-              <leafNode name="port">
-                <properties>
-                  <help>Port number to listen on</help>
-                  <valueHelp>
-                    <format>1-65535</format>
-                    <description>Port to listen on</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                  <constraintErrorMessage>port must be a value between 1 and 65535</constraintErrorMessage>
-                </properties>
-              </leafNode>
               <leafNode name="relay-agents-packets">
                 <properties>
                   <help>Policy to handle incoming DHCPv4 packets which already contain relay agent options (default: forward)</help>
