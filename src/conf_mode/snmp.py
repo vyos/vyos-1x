@@ -830,8 +830,8 @@ def apply(snmp):
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
 
-    # Enable AgentX in FRR
-    os.system('vtysh -c "configure terminal" -c "agentx"')
+        # Enable AgentX in FRR
+        os.system('vtysh -c "configure terminal" -c "agentx" >/dev/null')
 
     return None
 
