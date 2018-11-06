@@ -221,11 +221,12 @@ def apply(c):
       configure_interface(c, intf)
 
     ### ifalias for snmp from description
-    descr_eff = c_eff.return_effective_value(intf + ' description')
-    cnf_descr = c['interfaces'][intf]['descr']
-    if descr_eff != cnf_descr:
-      with open('/sys/class/net/' + str(intf) + '/ifalias', 'w') as fh:
-        fh.write(str(cnf_descr))
+    if c['interfaces'][intf]['status'] != 'delete':
+      descr_eff = c_eff.return_effective_value(intf + ' description')
+      cnf_descr = c['interfaces'][intf]['descr']
+      if descr_eff != cnf_descr:
+        with open('/sys/class/net/' + str(intf) + '/ifalias', 'w') as fh:
+          fh.write(str(cnf_descr))
 
 def configure_interface(c, intf):
   for p in c['interfaces'][intf]['peer']:
