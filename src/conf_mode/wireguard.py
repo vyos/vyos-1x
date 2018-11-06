@@ -159,11 +159,37 @@ def apply(c):
   c_eff = Config()
   c_eff.set_level('interfaces wireguard')
 
-  ### deletion of specific interface
+  ### deletion of a specific interface
   for intf in c['interfaces']:
     if c['interfaces'][intf]['status'] == 'delete':
       sl.syslog(sl.LOG_NOTICE, "removing interface " + intf)
       subprocess.call(['ip l d dev ' + intf + ' &>/dev/null'], shell=True)
+      
+
+    ### peer deletion
+    peer_eff = c_eff.list_effective_nodes( intf + ' peer')
+    peer_cnf = []
+    try:
+      for p in c['interfaces'][intf]['peer']:
+        peer_cnf.append(p)
+    except KeyError:
+      pass
+
+    peer_rem = list(set(peer_eff) - set(peer_cnf))
+    for p in peer_rem:
+      pkey = c_eff.return_effective_value( intf + ' peer ' + p +' pubkey')
+      remove_peer(intf, pkey)
+
+    ### peer pubkey update
+    ### wg identifies peers by its pubky, so we have to remove the peer first
+    ### it will recreated it then below with the new key from the cli config
+    for p in peer_eff:
+      if p in peer_cnf:
+        ekey = c_eff.return_effective_value( intf + ' peer ' + p +' pubkey')
+        nkey = c['interfaces'][intf]['peer'][p]['pubkey']
+        if nkey != ekey:
+          sl.syslog(sl.LOG_NOTICE, "peer " + p + ' changed pubkey from ' + ekey + 'to key ' + nkey + ' on interface ' + intf)
+          remove_peer(intf, ekey)
 
     ### new config
     if c['interfaces'][intf]['status'] == 'create':
@@ -303,6 +329,11 @@ def add_addr(intf, addr):
 def del_addr(intf, addr):
   ret = subprocess.call(['ip a d dev ' + intf + ' ' + addr + ' &>/dev/null'], shell=True)
   sl.syslog(sl.LOG_NOTICE, "ip a d dev " + intf + " " + addr)
+
+def remove_peer(intf, peer_key):
+  cmd = 'sudo wg set ' + str(intf) + ' peer ' + peer_key + ' remove &>/dev/null'
+  ret = subprocess.call([cmd], shell=True)
+  sl.syslog(sl.LOG_NOTICE, "peer " + peer_key + " removed from " + intf)
 
 if __name__ == '__main__':
   try:
