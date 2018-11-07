@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<!-- IGMP Proxy  configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="igmp-proxy" owner="${vyos_conf_scripts_dir}/igmp_proxy.py">
+        <properties>
+          <help>Internet Group Management Protocol (IGMP) proxy parameters</help>
+          <priority>740</priority>
+        </properties>
+        <children>
+          <leafNode name="disable">
+            <properties>
+              <help>Option to disable IGMP proxy</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-quickleave">
+            <properties>
+              <help>Option to disable "quickleave"</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface for IGMP proxy [REQUIRED]</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="alt-subnet">
+                <properties>
+                  <help>Allowed unicast sources for multicast traffic to be proxy'ed</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 network</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="role">
+                <properties>
+                  <help>Role of this IGMP interface</help>
+                  <completionHelp>
+                    <list>upstream downstream disabled</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>upstream</format>
+                    <description>Upstream interface (only 1 allowed)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>downstream</format>
+                    <description>Downstream interface(s) (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disabled</format>
+                    <description>Disabled interface</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(upstream|downstream|disabled)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="threshold">
+                <properties>
+                  <help>TTL threshold</help>
+                  <valueHelp>
+                    <format>1-255</format>
+                    <description>TTL threshold for the interfaces (default: 1)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                  <constraintErrorMessage>threshold must be between 1 and 255</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="whitelist">
+                <properties>
+                  <help>Group to whitelist</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 network</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

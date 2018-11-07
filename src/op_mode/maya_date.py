@@ -27,17 +27,16 @@ class MayaDate(object):
         It represents the number of days passed
         since some date in the past the Maya believed is the day
         our world was created.
-          
+
         Tzolkin calendar is for religious purposes, it has
         two independent cycles of 13 and 20 days, where 13 day
         cycle days are numbered, and 20 day cycle days are named.
-      
+
         Haab calendar is for agriculture and daily life, it's a
         365 day calendar with 18 months 20 days each, and 5
         nameless days.
 
         The smallest unit of the long count calendar is one day (kin).
-     
     """
 
     """ The long count calendar uses five different base 18 or base 20
@@ -131,7 +130,7 @@ class MayaDate(object):
 
     """ Seconds in day, for conversion from timestamp """
     seconds_in_day = 60 * 60 * 24
-      
+
     def __init__(self, timestamp):
         if timestamp is None:
             self.days = self.start_days

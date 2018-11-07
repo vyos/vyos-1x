@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="multicast">
+            <properties>
+              <help>Show IP multicast</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Show multicast interfaces</help>
+                </properties>
+                <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show-igmpproxy.py --interface; else echo IGMP proxy not configured; fi</command>
+              </leafNode>
+              <leafNode name="mfc">
+                <properties>
+                  <help>Show multicast fowarding cache</help>
+                </properties>
+                <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show-igmpproxy.py --mfc; else echo IGMP proxy not configured; fi</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
