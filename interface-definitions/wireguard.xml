@@ -34,7 +34,7 @@
             <properties>
               <help>description</help>
               <constraint>
-                <regex>[^ ]{1,100}$</regex>
+                <regex>^.{1,100}$</regex>
               </constraint>
               <constraintErrorMessage>interface description is too long (limit 100 characters)</constraintErrorMessage>
             </properties>
