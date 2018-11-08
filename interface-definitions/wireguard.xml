@@ -18,7 +18,7 @@
         <children>
           <leafNode name="address">
             <properties>
-              <help>IP address</help> 
+              <help>IP address</help>
               <valueHelp>
                 <format>ipv4net</format>
                 <description>IPv4 address and prefix length</description>
@@ -34,7 +34,7 @@
             <properties>
               <help>description</help>
               <constraint>
-                <regex>[^ ]{1,100}$</regex>
+                <regex>^.{1,100}$</regex>
               </constraint>
               <constraintErrorMessage>interface description is too long (limit 100 characters)</constraintErrorMessage>
             </properties>
@@ -110,7 +110,7 @@
                 <properties>
                   <help>how often send keep alives in seconds</help>
                   <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/> 
+                    <validator name="numeric" argument="--range 1-65535"/>
                   </constraint>
                 </properties>
               </leafNode>
