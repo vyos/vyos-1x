@@ -36,7 +36,7 @@ config_tmpl = """
 # Non-configurable defaults
 daemon=yes
 threads=1
-allow-from=0.0.0.0/0
+allow-from=0.0.0.0/0, ::/0
 log-common-errors=yes
 non-local-bind=yes
 
