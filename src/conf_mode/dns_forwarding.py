@@ -39,6 +39,8 @@ threads=1
 allow-from=0.0.0.0/0, ::/0
 log-common-errors=yes
 non-local-bind=yes
+query-local-address=0.0.0.0
+query-local-address6=::
 
 # cache-size
 max-cache-entries={{ cache_size }}
@@ -114,10 +116,10 @@ def get_config():
 
     if conf.exists('domain'):
         for node in conf.list_nodes('domain'):
-            server = conf.return_values("domain {0} server".format(node))
+            servers = conf.return_values("domain {0} server".format(node))
             domain = {
                 "name": node,
-                "servers": server
+                "servers": bracketize_ipv6_addrs(servers)
             }
             dns['domains'].append(domain)
 
@@ -137,6 +139,8 @@ def get_config():
         else:
             dns['name_servers'] = dns['name_servers'] + system_name_servers
         conf.set_level('service dns forwarding')
+
+    dns['name_servers'] = bracketize_ipv6_addrs(dns['name_servers'])
 
     if conf.exists('listen-address'):
         dns['listen_on'] = conf.return_values('listen-address')
@@ -192,6 +196,10 @@ def get_config():
                 dns['name_servers'] = dns['name_servers'] + dhcp_resolvers
 
     return dns
+
+def bracketize_ipv6_addrs(addrs):
+    """Wraps each IPv6 addr in addrs in [], leaving IPv4 addrs untouched."""
+    return ['[{0}]'.format(a) if a.count(':') > 1 else a for a in addrs]
 
 def verify(dns):
     # bail out early - looks like removal from running config
