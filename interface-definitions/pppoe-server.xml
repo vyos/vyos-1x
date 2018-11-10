@@ -61,12 +61,28 @@
                   <valueHelp>
                     <format>radius</format>
                     <description>Use Radius server to autenticate users</description>
-                </valueHelp>
+                  </valueHelp>
                   <constraint>
                     <regex>^(local|radius)</regex>
                   </constraint>
                 </properties>
               </leafNode>
+              <tagNode name="radius-server">
+                <properties>
+                  <help>IP address of radius server</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                      <description>IP address of radius server</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="key">
+                    <properties>
+                      <help>Key for accessing the specified server</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
             </children>
           </node>
           <node name="client-ip-pool">
