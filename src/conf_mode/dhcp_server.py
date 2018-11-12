@@ -42,14 +42,6 @@ config_tmpl = """
 # log-facility local7;
 
 {% if hostfile_update %}
-on commit {
-    set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
-    set ClientIp = binary-to-ascii(10, 8, ".", leased-address);
-    set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
-    set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
-    execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "commit", ClientName, ClientIp, ClientMac, ClientDomain);
-}
-
 on release {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
     set ClientIp = binary-to-ascii(10, 8, ".",leased-address);
@@ -210,7 +202,16 @@ shared-network {{ network.name }} {
         {%- endif %}
     }
     {%- endfor %}
-    on commit { set shared-networkname = "{{ network.name }}"; }
+    on commit {
+        set shared-networkname = "{{ network.name }}";
+        {% if hostfile_update -%}
+        set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
+        set ClientIp = binary-to-ascii(10, 8, ".", leased-address);
+        set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
+        set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
+        execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "commit", ClientName, ClientIp, ClientMac, ClientDomain);
+        {% endif -%}
+    }
 }
 {%- endif %}
 {% endfor %}

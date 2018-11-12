@@ -1,8 +1,15 @@
+vyos-1x (1.2.0-5) unstable; urgency=medium
+
+  * T835: accel-ppp: pppoe implementation
+
+ -- hagbard <vyosdev@derith.de>  Fri, 09 Nov 2018 10:49:48 -0800
+
 vyos-1x (1.2.0-4) unstable; urgency=medium
 
   * T240 adds feature system integrity check
 
  -- hagbard <vyosdev@derith.de>  Mon, 29 Oct 2018 11:10:18 -0700
+
 vyos-1x (1.2.0-3) unstable; urgency=medium
 
   * T933: adding vmac_xmit_base if use_vmac has been chosen
