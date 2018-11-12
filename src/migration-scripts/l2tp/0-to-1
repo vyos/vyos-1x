@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-# Delete "set service dhcp-relay relay-options port" option
-# Delete "set service dhcpv6-relay listen-port" option
+# Unclutter L2TP VPN configuiration - move radius-server top level tag
+# nodes to a regular node which now also configures the radius source address
+# used when querying a radius server
 
 import sys
 
