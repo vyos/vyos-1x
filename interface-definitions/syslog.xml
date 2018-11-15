@@ -520,6 +520,21 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <node name="marker">
+                <properties>
+                  <help>mark messages sent to syslog</help>
+                </properties>
+                <children>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>time interval how often a mark message is being sent in seconds (default: 1200)</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint> 
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           <tagNode name="file">
