@@ -367,50 +367,49 @@ def get_config():
     config_data['snmp'] = 'enable-ma'
 
   #### authentication mode local
-  if c.exists('authentication'):
-    if c.return_value('authentication mode') == 'local':
-      if c.exists('authentication local-users username'):
-        for usr in c.list_nodes('authentication local-users username'):
-          config_data['authentication']['local-users'].update(
-            {
-              usr : {
-                'passwd' : '',
-                'state'  : 'enabled',
-                'ip'     : '*'
-              }
-            }
-          )
-          if c.exists('authentication local-users username ' + usr + ' password'):
-            config_data['authentication']['local-users'][usr]['passwd'] = c.return_value('authentication local-users username ' + usr + ' password')
-          if c.exists('authentication local-users username ' + usr + ' disable'):
-            config_data['authentication']['local-users'][usr]['state'] = 'disable'
-          if c.exists('authentication local-users username ' + usr + ' static-ip'):
-            config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
-   
-    ### authentication mode radius servers and settings
-    if c.return_value('authentication mode') == 'radius':
-      config_data['authentication']['mode'] = 'radius'
-      rsrvs = c.list_nodes('authentication radius-server')
-      for rsrv in rsrvs:
-        if c.return_value('authentication radius-server ' + rsrv + ' fail-time') == None:
-          ftime = '0'
-        else:
-          ftime = str(c.return_value('authentication radius-server ' + rsrv + ' fail-time'))
-        if c.return_value('authentication radius-server ' + rsrv + ' req-limit') == None:
-          reql = '0'
-        else:
-          reql = str(c.return_value('authentication radius-server ' + rsrv + ' req-limit'))
 
-        config_data['authentication']['radiussrv'].update(
+  if c.exists('authentication mode local'):
+    if c.exists('authentication local-users username'):
+      for usr in c.list_nodes('authentication local-users username'):
+        config_data['authentication']['local-users'].update(
           {
-            rsrv  : {
-              'secret'  : c.return_value('authentication radius-server ' + rsrv + ' secret'),
-              'fail-time' : ftime,
-              'req-limit' : reql 
-              }
-          
+            usr : {
+              'passwd' : '',
+              'state'  : 'enabled',
+              'ip'     : '*'
+            }
           }
         )
+        if c.exists('authentication local-users username ' + usr + ' password'):
+          config_data['authentication']['local-users'][usr]['passwd'] = c.return_value('authentication local-users username ' + usr + ' password')
+        if c.exists('authentication local-users username ' + usr + ' disable'):
+          config_data['authentication']['local-users'][usr]['state'] = 'disable'
+        if c.exists('authentication local-users username ' + usr + ' static-ip'):
+          config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
+   
+    ### authentication mode radius servers and settings
+
+  if c.exists('authentication mode radius'):
+    config_data['authentication']['mode'] = 'radius'
+    rsrvs = c.list_nodes('authentication radius-server')
+    for rsrv in rsrvs:
+      if c.return_value('authentication radius-server ' + rsrv + ' fail-time') == None:
+        ftime = '0'
+      else:
+        ftime = str(c.return_value('authentication radius-server ' + rsrv + ' fail-time'))
+      if c.return_value('authentication radius-server ' + rsrv + ' req-limit') == None:
+        reql = '0'
+      else:
+        reql = str(c.return_value('authentication radius-server ' + rsrv + ' req-limit'))
+      config_data['authentication']['radiussrv'].update(
+        {
+          rsrv  : {
+            'secret'  : c.return_value('authentication radius-server ' + rsrv + ' secret'),
+            'fail-time' : ftime,
+            'req-limit' : reql 
+            }
+        }
+      )
 
   #### advanced radius-setting
       if c.exists('authentication radius-settings'): 
