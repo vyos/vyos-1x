@@ -13,13 +13,13 @@
                 <properties>
                   <help>Show multicast interfaces</help>
                 </properties>
-                <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show-igmpproxy.py --interface; else echo IGMP proxy not configured; fi</command>
+                <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show_igmpproxy.py --interface; else echo IGMP proxy not configured; fi</command>
               </leafNode>
               <leafNode name="mfc">
                 <properties>
                   <help>Show multicast fowarding cache</help>
                 </properties>
-                <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show-igmpproxy.py --mfc; else echo IGMP proxy not configured; fi</command>
+                <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show_igmpproxy.py --mfc; else echo IGMP proxy not configured; fi</command>
               </leafNode>
             </children>
           </node>
