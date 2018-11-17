@@ -14,12 +14,6 @@
               <help>Network Time Protocol (NTP) server</help>
             </properties>
             <children>
-              <leafNode name="dynamic">
-                <properties>
-                  <help>Allow server to be configured even if not reachable</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
               <leafNode name="noselect">
                 <properties>
                   <help>Marks the server as unused</help>

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+# Delete "set system ntp server <n> dynamic" option
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['system', 'ntp']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # Delete abandoned leaf node if found inside tag node for
+    # "set system ntp server <n> dynamic"
+    base = ['system', 'ntp', 'server']
+    for server in config.list_nodes(base):
+        if config.exists(base + [server, 'dynamic']):
+            config.delete(base + [server, 'dynamic'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

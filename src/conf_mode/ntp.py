@@ -108,8 +108,6 @@ def get_config():
                 "name": node,
                 "options": []
             }
-            if conf.exists('server {0} dynamic'.format(node)):
-                options.append('dynamic')
             if conf.exists('server {0} noselect'.format(node)):
                 options.append('noselect')
             if conf.exists('server {0} preempt'.format(node)):
