@@ -2,23 +2,22 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-    <tagNode name="disk">
-      <properties>
-        <help>Show status of disk device</help>
-        <completionHelp>
-          <script>${vyos_completion_dir}/list_disks.sh</script>
-        </completionHelp>
-      </properties>
-      <children>
-        <leafNode name="format">
-          <properties>
-            <help>Show disk drive formatting</help>
-          </properties>
-          <command>${vyos_op_scripts_dir}/show_disk_format.sh $3</command>
-        </leafNode>
-      </children>
-    </tagNode>
-
+      <tagNode name="disk">
+        <properties>
+          <help>Show status of disk device</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_disks.sh</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <leafNode name="format">
+            <properties>
+              <help>Show disk drive formatting</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_disk_format.sh $3</command>
+          </leafNode>
+        </children>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

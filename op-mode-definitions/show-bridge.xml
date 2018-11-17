@@ -30,8 +30,7 @@
             <command>/sbin/brctl showstp $3</command>
           </leafNode>
         </children>
-    </tagNode>
-
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>
