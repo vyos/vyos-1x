@@ -27,21 +27,18 @@
               </node>
             </children>
           </node>
-
           <node name="dmi">
             <properties>
               <help>Show system DMI details</help>
             </properties>
             <command>${vyatta_bindir}/vyatta-show-dmi</command>
           </node>
-
           <node name="mem">
             <properties>
               <help>Show system RAM details</help>
             </properties>
             <command>cat /proc/meminfo</command>
           </node>
-
           <node name="pci">
             <properties>
               <help>Show system PCI bus details</help>
@@ -56,8 +53,6 @@
               </node>
             </children>
           </node>
-
-
           <node name="scsi">
             <properties>
               <help>Show SCSI device information</help>
@@ -72,7 +67,6 @@
               </node>
             </children>
           </node>
-
           <node name="usb">
             <properties>
               <help>Show peripherals connected to the USB bus</help>
@@ -87,7 +81,6 @@
               </node>
             </children>
           </node>
-
         </children>
       </node>
     </children>
