@@ -223,6 +223,7 @@ interface={{int}}
 {% if svc_name %}
 service-name={{svc_name}}
 {% endif %}
+pado-delay=0
 # maybe: called-sid, tr101, padi-limit etc.
 
 {% if limits %}
