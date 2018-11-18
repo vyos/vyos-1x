@@ -2,38 +2,36 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-    <node name="configuration">
-      <properties>
-        <help>Show available saved configurations</help>
-      </properties>
-      <!-- no admin check -->
-      <command>cli-shell-api showCfg --show-active-only --show-hide-secrets</command>
-
-      <children>
-        <node name="all">
-          <properties>
-            <help>Show running configuration (including default values)</help>
-          </properties>
-          <!-- no admin check -->
-          <command>cli-shell-api showCfg --show-show-defaults --show-active-only --show-hide-secrets</command>
-        </node>
-        <node name="commands">
-          <properties>
-            <help> Show running configuration as set commands </help>
-          </properties>
-          <!-- no admin check -->
-          <command>cli-shell-api showCfg --show-active-only | vyos-config-to-commands</command>
-        </node>
-        <node name="files">
-          <properties>
-            <help> Show available saved configurations </help>
-          </properties>
-          <!-- no admin check -->
-          <command>${vyos_op_scripts_dir}/show_configuration_files.sh</command>
-        </node>
-      </children>
-    </node>
-
+      <node name="configuration">
+        <properties>
+          <help>Show available saved configurations</help>
+        </properties>
+        <!-- no admin check -->
+        <command>cli-shell-api showCfg --show-active-only --show-hide-secrets</command>
+        <children>
+          <node name="all">
+            <properties>
+              <help>Show running configuration (including default values)</help>
+            </properties>
+            <!-- no admin check -->
+            <command>cli-shell-api showCfg --show-show-defaults --show-active-only --show-hide-secrets</command>
+          </node>
+          <node name="commands">
+            <properties>
+              <help> Show running configuration as set commands </help>
+            </properties>
+            <!-- no admin check -->
+            <command>cli-shell-api showCfg --show-active-only | vyos-config-to-commands</command>
+          </node>
+          <node name="files">
+            <properties>
+              <help> Show available saved configurations </help>
+            </properties>
+            <!-- no admin check -->
+            <command>${vyos_op_scripts_dir}/show_configuration_files.sh</command>
+          </node>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>

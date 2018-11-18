@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-
 <interfaceDefinition>
   <node name="show">
     <children>
@@ -38,7 +37,7 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_restart.sh</command>
           </leafNode>
-         </children>
+        </children>
       </node>
     </children>
   </node>

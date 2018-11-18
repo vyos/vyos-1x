@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# File: show-igmpproxy
+# File: show_igmpproxy.py
 # Purpose:
 #    Display istatistics from IPv4 IGMP proxy.
 #    Used by the "run show ip multicast" command tree.

@@ -83,7 +83,7 @@
             <properties>
               <help>Restart the DHCP server process</help>
             </properties>
-            <command>sudo /opt/vyatta/sbin/dhcrelay-starter.pl --op-mode --init='/opt/vyatta/sbin/dhcrelay.init'</command>
+            <command>sudo ${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv4</command>
           </node>
         </children>
       </node>
@@ -102,7 +102,7 @@
             <properties>
               <help>Restart the DHCP server process</help>
             </properties>
-            <command>sudo /opt/vyatta/sbin/dhcv6relay-starter.pl --op_mode --config_action ACTIVE</command>
+            <command>sudo ${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv6</command>
           </node>
         </children>
       </node>

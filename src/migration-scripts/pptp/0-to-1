@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Unclutter L2TP VPN configuiration - move radius-server top level tag
+# Unclutter PPTP VPN configuiration - move radius-server top level tag
 # nodes to a regular node which now also configures the radius source address
 # used when querying a radius server
 
@@ -19,13 +19,13 @@ with open(file_name, 'r') as f:
 
 config = ConfigTree(config_file)
 
-cfg_base = ['vpn', 'l2tp', 'remote-access', 'authentication']
+cfg_base = ['vpn', 'pptp', 'remote-access', 'authentication']
 if not config.exists(cfg_base):
     # Nothing to do
     sys.exit(0)
 else:
-    # Migrate "vpn l2tp authentication radius-source-address" to new
-    # "vpn l2tp authentication radius source-address"
+    # Migrate "vpn pptp authentication radius-source-address" to new
+    # "vpn pptp authentication radius source-address"
     if config.exists(cfg_base + ['radius-source-address']):
         address = config.return_value(cfg_base + ['radius-source-address'])
         # delete old configuration node
@@ -33,8 +33,8 @@ else:
         # write new configuration node
         config.set(cfg_base + ['radius', 'source-address'], value=address)
 
-    # Migrate "vpn l2tp authentication radius-server" tag node to new
-    # "vpn l2tp authentication radius server" tag node
+    # Migrate "vpn pptp authentication radius-server" tag node to new
+    # "vpn pptp authentication radius server" tag node
     for server in config.list_nodes(cfg_base + ['radius-server']):
         base_server = cfg_base + ['radius-server', server]
         key = config.return_value(base_server + ['key'])
