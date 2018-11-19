@@ -514,6 +514,9 @@ def generate(c):
   open(pppoe_conf,'w').write(config_text)
   sl.syslog(sl.LOG_NOTICE, pppoe_config + ' written')
 
+  if c['authentication']['local-users']:
+      write_chap_secrets(c)
+
   return c
 
 def apply(c):
