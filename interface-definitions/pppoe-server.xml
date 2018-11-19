@@ -64,25 +64,22 @@
                   </tagNode>
                 </children>
               </node>
-              <node name="mode">
+              <leafNode name="mode">
                 <properties>
                   <help>Authentication mode for PPPoE Server</help>
+                  <valueHelp>
+                    <format>local</format>
+                    <description>Use local username/password configuration</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>radius</format>
+                    <description>Use Radius server to autenticate users</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(local|radius)</regex>
+                  </constraint>
                 </properties>
-                <children>
-                  <leafNode name="local">
-                    <properties>
-                      <help>Use local username/password configuration</help>
-                      <valueless />
-                    </properties>
-                  </leafNode>
-                  <leafNode name="radius">
-                    <properties>
-                      <help>Use Radius server to autenticate users</help>
-                      <valueless />
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              </leafNode>
               <tagNode name="radius-server">
                 <properties>
                   <help>IP address of radius server</help>
