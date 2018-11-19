@@ -47,6 +47,10 @@ Depends: python3,
   wireguard,
   tftpd-hpa,
   igmpproxy,
+  vyos-accel-ppp,
+  mdns-repeater,
+  udp-broadcast-relay,
+  pdns-recursor,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
