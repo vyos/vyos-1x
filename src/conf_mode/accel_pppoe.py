@@ -45,15 +45,22 @@ pppoe_config = '''
 log_syslog
 pppoe
 ippool
+{% if client_ipv6_pool %}
+ipv6pool
+{% endif %}
 chap-secrets
 auth_pap
 auth_chap_md5
 auth_mschap_v1
 auth_mschap_v2
-pppd_compat
-shaper
+#pppd_compat
+#shaper
+{% if snmp == 'enable' or snmp == 'enable-ma' %}
 net-snmp
+{% endif %}
+{% if limits %}
 connlimit
+{% endif %}
 {% if authentication['mode'] == 'radius' %}
 radius
 {% endif %}
@@ -66,8 +73,10 @@ syslog=accel-pppoe,daemon
 copy=1
 level=5
 
+{% if snmp == 'enable-ma' %}
 [snmp]
 master=1
+{% endif %}
 
 [client-ip-range]
 disable
@@ -78,6 +87,16 @@ disable
 {% endif %}
 gw-ip-address={{ppp_gw}}
 
+{% if client_ipv6_pool %}
+[ipv6-pool]
+{% for prfx in client_ipv6_pool['prefix']: %}
+{{prfx}}
+{% endfor %}
+{% for prfx in client_ipv6_pool['delegate-prefix']: %}
+delegate={{prfx}}
+{% endfor %}
+{% endif %}
+
 {% if dns %}
 [dns]
 {% if dns[0] %}
@@ -86,6 +105,13 @@ dns1={{dns[0]}}
 {% if dns[1] %}
 dns2={{dns[1]}}
 {% endif %}
+{% endif %}
+
+{% if dnsv6 %}
+[dnsv6]
+{% for srv in dnsv6: %}
+dns={{srv}}
+{% endfor %}
 {% endif %}
 
 {% if wins %}
@@ -106,27 +132,83 @@ chap-secrets=/etc/accel-ppp/pppoe/chap-secrets
 {% if authentication['mode'] == 'radius' %}
 [radius]
 {% for rsrv in authentication['radiussrv']: %}
-server={{rsrv}},{{authentication['radiussrv'][rsrv]}}
+server={{rsrv}},{{authentication['radiussrv'][rsrv]['secret']}},\
+req-limit={{authentication['radiussrv'][rsrv]['req-limit']}},\
+fail-time={{authentication['radiussrv'][rsrv]['fail-time']}}
 {% endfor %}
-timeout=10
-acct-timeout=3
+{% if authentication['radiusopt']['timeout'] %}
+timeout={{authentication['radiusopt']['timeout']}}
+{% endif %}
+{% if authentication['radiusopt']['acct-timeout'] %}
+acct-timeout={{authentication['radiusopt']['acct-timeout']}}
+{% endif %}
+{% if authentication['radiusopt']['max-try'] %}
+max-try={{authentication['radiusopt']['max-try']}}
+{% endif %}
+{% if authentication['radiusopt']['nas-id'] %}
+nas-identifier={{authentication['radiusopt']['nas-id']}}
+{% endif %}
+{% if authentication['radiusopt']['nas-ip'] %}
+nas-ip-address={{authentication['radiusopt']['nas-ip']}}
+{% endif %}
+{% if authentication['radiusopt']['dae-srv'] %}
+dae-server={{authentication['radiusopt']['dae-srv']['ip-addr']}}:\
+{{authentication['radiusopt']['dae-srv']['port']}},\
+{{authentication['radiusopt']['dae-srv']['secret']}}
+{% endif %}
 gw-ip-address={{ppp_gw}}
 verbose=1
 {% endif %}
 
 [ppp]
 verbose=1
-min-mtu={{mtu}}
-mtu={{mtu}}
-mru=1400
-check-ip=1
-mppe=prefer
-ipv4=require
 check-ip=1
 single-session=replace
+{% if ppp_options['ccp'] %}
+ccp=1
+{% endif %}
+{% if ppp_options['min-mtu'] %}
+min-mtu={{ppp_options['min-mtu']}}
+{% else %}
+min-mtu={{mtu}}
+{% endif %}
+{% if ppp_options['mru'] %}
+mru={{ppp_options['mru']}}
+{% endif %}
+{% if ppp_options['mppe'] %}
+mppe={{ppp_options['mppe']}}
+{% else %}
 mppe=prefer
+{% endif %}
+{% if ppp_options['lcp-echo-interval'] %}
+lcp-echo-interval={{ppp_options['lcp-echo-interval']}}
+{% else %}
 lcp-echo-interval=30
+{% endif %}
+{% if ppp_options['lcp-echo-timeout'] %}
+lcp-echo-timeout={{ppp_options['lcp-echo-timeout']}}
+{% endif %}
+{% if ppp_options['lcp-echo-failure'] %}
+lcp-echo-failure={{ppp_options['lcp-echo-failure']}}
+{% else %}
 lcp-echo-failure=3
+{% endif %}
+{% if ppp_options['ipv4'] %}
+ipv4={{ppp_options['ipv4']}}
+{% endif %}
+{% if ppp_options['ipv6'] %}
+ipv6={{ppp_options['ipv6']}}
+{% if ppp_options['ipv6-intf-id'] %}
+ipv6-intf-id={{ppp_options['ipv6-intf-id']}}
+{% endif %}
+{% if ppp_options['ipv6-peer-intf-id'] %}
+ipv6-peer-intf-id={{ppp_options['ipv6-peer-intf-id']}}
+{% endif %}
+{% if ppp_options['ipv6-accept-peer-intf-id'] %}
+ipv6-accept-peer-intf-id={{ppp_options['ipv6-accept-peer-intf-id']}}
+{% endif %}
+{% endif %}
+mtu={{mtu}}
 
 [pppoe]
 verbose=1
@@ -141,12 +223,15 @@ interface={{int}}
 {% if svc_name %}
 service-name={{svc_name}}
 {% endif %}
+pado-delay=0
+# maybe: called-sid, tr101, padi-limit etc.
 
-
+{% if limits %}
 [connlimit]
-limit=10/min
-burst=3
-timeout=60
+limit={{limits['conn-limit']}}
+burst={{limits['burst']}}
+timeout={{limits['timeout']}}
+{% endif %}
 
 [cli]
 tcp=127.0.0.1:2001
@@ -210,24 +295,30 @@ def get_config():
     return None
 
   config_data = {
-    'concentrator'    : 'vyos-ac',
-    'authentication'  : {
-      'local-users'   : {
+    'concentrator'      : 'vyos-ac',
+    'authentication'    : {
+      'local-users'     : {
       },
-      'mode'          : 'local',
-      'radiussrv'     : {}
+      'mode'            : 'local',
+      'radiussrv'       : {},
+      'radiusopt'       : {}
     },
-    'client_ip_pool'  : '',
-    'interface'       : [],
-    'ppp_gw'          : '',
-    'svc_name'        : '',
-    'dns'             : [],
-    'wins'            : [],
-    'mtu'             : '1492'
+    'client_ip_pool'    : '',
+    'client_ipv6_pool'  : {},
+    'interface'         : [],
+    'ppp_gw'            : '',
+    'svc_name'          : '',
+    'dns'               : [],
+    'dnsv6'             : [],
+    'wins'              : [],
+    'mtu'               : '1492',
+    'ppp_options'       : {},
+    'limits'            : {},
+    'snmp'              : 'disable'
   }
 
   c.set_level('service pppoe-server')
-    
+  ### general options 
   if c.exists('access-concentrator'):
     config_data['concentrator'] = c.return_value('access-concentrator')
   if c.exists('service-name'):
@@ -241,6 +332,13 @@ def get_config():
       config_data['dns'].append(c.return_value('dns-servers server-1'))
     if c.return_value('dns-servers server-2'):
       config_data['dns'].append(c.return_value('dns-servers server-2'))
+  if c.exists('dnsv6-servers'):
+    if c.return_value('dnsv6-servers server-1'):
+      config_data['dnsv6'].append(c.return_value('dnsv6-servers server-1'))
+    if c.return_value('dnsv6-servers server-2'):
+      config_data['dnsv6'].append(c.return_value('dnsv6-servers server-2'))
+    if c.return_value('dnsv6-servers server-3'):
+      config_data['dnsv6'].append(c.return_value('dnsv6-servers server-3'))
   if c.exists('wins-servers'):
     if c.return_value('wins-servers server-1'):
       config_data['wins'].append(c.return_value('wins-servers server-1'))
@@ -253,41 +351,127 @@ def get_config():
       config_data['client_ip_pool'] += '-' + re.search('[0-9]+$', c.return_value('client-ip-pool stop')).group(0)
     else:
       raise ConfigError('client ip pool stop required')
+  if c.exists('client-ipv6-pool prefix'):
+    config_data['client_ipv6_pool']['prefix'] = c.return_values('client-ipv6-pool prefix')
+    if c.exists('client-ipv6-pool delegate-prefix'):
+      config_data['client_ipv6_pool']['delegate-prefix'] = c.return_values('client-ipv6-pool delegate-prefix')
+  if c.exists('limits'):
+    if c.exists('limits burst'):
+      config_data['limits']['burst'] = str(c.return_value('limits burst'))
+    if c.exists('limits timeout'):
+      config_data['limits']['timeout'] = str(c.return_value('limits timeout'))
+    if c.exists('limits connection-limit'):
+      config_data['limits']['conn-limit'] = str(c.return_value('limits connection-limit'))
+  if c.exists('snmp'):
+    config_data['snmp'] = 'enable'
+  if c.exists('snmp master-agent'):
+    config_data['snmp'] = 'enable-ma'
 
   #### authentication mode local
-  if c.exists('authentication'):
-    if c.return_value('authentication mode') == 'local':
-      if c.exists('authentication local-users username'):
-        for usr in c.list_nodes('authentication local-users username'):
-          config_data['authentication']['local-users'].update(
+
+  if c.exists('authentication mode local'):
+    if c.exists('authentication local-users username'):
+      for usr in c.list_nodes('authentication local-users username'):
+        config_data['authentication']['local-users'].update(
+          {
+            usr : {
+              'passwd' : '',
+              'state'  : 'enabled',
+              'ip'     : '*'
+            }
+          }
+        )
+        if c.exists('authentication local-users username ' + usr + ' password'):
+          config_data['authentication']['local-users'][usr]['passwd'] = c.return_value('authentication local-users username ' + usr + ' password')
+        if c.exists('authentication local-users username ' + usr + ' disable'):
+          config_data['authentication']['local-users'][usr]['state'] = 'disable'
+        if c.exists('authentication local-users username ' + usr + ' static-ip'):
+          config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
+   
+    ### authentication mode radius servers and settings
+
+  if c.exists('authentication mode radius'):
+    config_data['authentication']['mode'] = 'radius'
+    rsrvs = c.list_nodes('authentication radius-server')
+    for rsrv in rsrvs:
+      if c.return_value('authentication radius-server ' + rsrv + ' fail-time') == None:
+        ftime = '0'
+      else:
+        ftime = str(c.return_value('authentication radius-server ' + rsrv + ' fail-time'))
+      if c.return_value('authentication radius-server ' + rsrv + ' req-limit') == None:
+        reql = '0'
+      else:
+        reql = str(c.return_value('authentication radius-server ' + rsrv + ' req-limit'))
+      config_data['authentication']['radiussrv'].update(
+        {
+          rsrv  : {
+            'secret'  : c.return_value('authentication radius-server ' + rsrv + ' secret'),
+            'fail-time' : ftime,
+            'req-limit' : reql 
+            }
+        }
+      )
+
+  #### advanced radius-setting
+      if c.exists('authentication radius-settings'): 
+        if c.exists('authentication radius-settings acct-timeout'):
+          config_data['authentication']['radiusopt']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
+        if c.exists('authentication radius-settings max-try'):
+          config_data['authentication']['radiusopt']['max-try'] = c.return_value('authentication radius-settings max-try') 
+        if c.exists('authentication radius-settings timeout'):
+          config_data['authentication']['radiusopt']['timeout'] = c.return_value('authentication radius-settings timeout')
+        if c.exists('authentication radius-settings nas-identifier'):
+          config_data['authentication']['radiusopt']['nas-id'] = c.return_value('authentication radius-settings nas-identifier')
+        if c.exists('authentication radius-settings nas-ip-address'):
+          config_data['authentication']['radiusopt']['nas-ip'] = c.return_value('authentication radius-settings nas-ip-address')
+        if c.exists('authentication radius-settings dae-server'):
+          config_data['authentication']['radiusopt'].update(
             {
-              usr : {
-                'passwd' : '',
-                'state'  : 'enabled',
-                'ip'     : '*'
+              'dae-srv' : {
+                'ip-addr' : c.return_value('authentication radius-settings dae-server ip-address'),
+                'port'    : c.return_value('authentication radius-settings dae-server port'), 
+                'secret'  : str(c.return_value('authentication radius-settings dae-server secret'))
               }
             }
           )
-          if c.exists('authentication local-users username ' + usr + ' password'):
-            config_data['authentication']['local-users'][usr]['passwd'] = c.return_value('authentication local-users username ' + usr + ' password')
-          if c.exists('authentication local-users username ' + usr + ' disable'):
-            config_data['authentication']['local-users'][usr]['state'] = 'disable'
-          if c.exists('authentication local-users username ' + usr + ' static-ip'):
-            config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
-   
-    ### authentication mode radius
-    if c.return_value('authentication mode') == 'radius':
-      config_data['authentication']['mode'] = 'radius'
-      rsrvs = c.list_nodes('authentication radius-server')
-      for rsrv in rsrvs:
-        config_data['authentication']['radiussrv'].update(
-          {
-            rsrv  : str(c.return_value('authentication radius-server ' + rsrv + ' key')) 
-          }
-        )
 
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
+
+  ### ppp_options
+  ppp_options = {}
+  if c.exists('ppp-options'):
+    if c.exists('ppp-options ccp'):
+      ppp_options['ccp'] = c.return_value('ppp-options ccp')
+    if c.exists('ppp-options min-mtu'):
+      ppp_options['min-mtu'] = c.return_value('ppp-options min-mtu')
+    if c.exists('ppp-options mru'):
+      ppp_options['mru'] = c.return_value('ppp-options mru')
+    if c.exists('ppp-options mppe deny'):
+      ppp_options['mppe'] = 'deny'
+    if c.exists('ppp-options mppe require'):
+      ppp_options['mppe'] = 'requre'
+    if c.exists('ppp-options mppe prefer'):
+      ppp_options['mppe'] = 'prefer'
+    if c.exists('ppp-options lcp-echo-failure'):
+      ppp_options['lcp-echo-failure'] = c.return_value('ppp-options lcp-echo-failure')
+    if c.exists('ppp-options lcp-echo-interval'):
+      ppp_options['lcp-echo-interval'] = c.return_value('ppp-options lcp-echo-interval')
+    if c.exists('ppp-options ipv4'):
+      ppp_options['ipv4'] = c.return_value('ppp-options ipv4')
+    if c.exists('ppp-options ipv6'):
+      ppp_options['ipv6'] = c.return_value('ppp-options ipv6')
+    if c.exists('ppp-options ipv6-accept-peer-intf-id'):
+      ppp_options['ipv6-accept-peer-intf-id']= 1
+    if c.exists('ppp-options ipv6-intf-id'):
+      ppp_options['ipv6-intf-id'] = c.return_value('ppp-options ipv6-intf-id') 
+    if c.exists('ppp-options ipv6-peer-intf-id'):
+      ppp_options['ipv6-peer-intf-id'] = c.return_value('ppp-options ipv6-peer-intf-id')
+    if c.exists('ppp-options lcp-echo-timeout'):
+      ppp_options['lcp-echo-timeout'] = c.return_value('ppp-options lcp-echo-timeout')
+
+  if len(ppp_options) !=0:
+    config_data['ppp_options'] = ppp_options
 
   return config_data
 
@@ -305,6 +489,9 @@ def verify(c):
   if c['authentication']['mode'] == 'radius':
     if len(c['authentication']['radiussrv']) == 0:
       raise ConfigError('radius server required')
+    for rsrv in c['authentication']['radiussrv']:
+      if c['authentication']['radiussrv'][rsrv]['secret'] == None:
+        raise ConfigError('radius server ' + rsrv + ' needs a secret configured')
 
 def generate(c):
   if c == None:
@@ -346,11 +533,6 @@ def apply(c):
   else:
     accel_cmd('restart')
     sl.syslog(sl.LOG_NOTICE, "reloading config via daemon restart")
-
-  #if c['state'] == 'update':
-   # accel_cmd('restart')
-   # sl.syslog(sl.LOG_NOTICE, "reloading config via daemon restart") 
-   # ## check that config reload actually works
 
 if __name__ == '__main__':
   try:
