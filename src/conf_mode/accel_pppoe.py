@@ -512,7 +512,6 @@ def generate(c):
   tmpl = jinja2.Template(pppoe_config, trim_blocks=True)
   config_text = tmpl.render(c)
   open(pppoe_conf,'w').write(config_text)
-  sl.syslog(sl.LOG_NOTICE, pppoe_config + ' written')
 
   if c['authentication']['local-users']:
       write_chap_secrets(c)
