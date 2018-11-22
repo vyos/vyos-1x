@@ -368,7 +368,9 @@ def get_config():
     config_data['snmp'] = 'enable-ma'
 
   #### authentication mode local
-
+  if not c.exists('authentication mode'):
+    raise ConfigError('pppoe-server authentication mode required')
+    
   if c.exists('authentication mode local'):
     if c.exists('authentication local-users username'):
       for usr in c.list_nodes('authentication local-users username'):
@@ -478,13 +480,16 @@ def get_config():
 def verify(c):
   if c == None:
     return None
-
-  for usr in c['authentication']['local-users']:
-    if not c['authentication']['local-users'][usr]:
-      raise ConfigError('user ' + usr + ' has no password set')
+  if c['authentication']['mode'] == 'local':
+    if not c['authentication']['local-users']:
+      raise ConfigError('pppoe-server authentication local-users required')
+  
+    for usr in c['authentication']['local-users']:
+      if not c['authentication']['local-users'][usr]['passwd']:
+        raise ConfigError('user ' + usr + ' requires a password')
 
   if not c['ppp_gw']:
-    raise ConfigError('pppoe gateway-ip required')
+    raise ConfigError('pppoe-server local-ip required')
 
   if c['authentication']['mode'] == 'radius':
     if len(c['authentication']['radiussrv']) == 0:
