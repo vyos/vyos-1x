@@ -55,6 +55,14 @@ greeted friends with a three-way handshake
 and refused to proceed
 if they didn't complete it,
 that standards-compliant guy Drake.
+""",
+
+"""
+A network admin from Nantucket
+used hierarchy token buckets.
+Bandwidth limits he set
+slowed down his net,
+users drove him away from Nantucket.
 """
 
 ]
