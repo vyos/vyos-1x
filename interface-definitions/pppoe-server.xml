@@ -382,6 +382,9 @@
             </children>
           </node>
           <node name="ppp-options">
+            <properties>
+              <help>advanced protocol options</help>
+            </properties>
             <children>
               <leafNode name="min-mtu">
                 <properties>
