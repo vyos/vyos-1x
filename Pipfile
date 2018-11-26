@@ -1,0 +1,17 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+lxml = "*"
+pylint = "*"
+nose = "*"
+coverage = "*"
+
+[packages]
+vyos = {file = "file:///mnt/c/Media/git/vyos-1x/python"}
+jinja2 = "*"
+
+[requires]
+python_version = "3.6"
