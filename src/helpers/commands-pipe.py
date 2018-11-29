@@ -9,6 +9,7 @@ from vyos.configtree import ConfigTree
 signal(SIGPIPE,SIG_DFL)
 
 config_string = sys.stdin.read().strip()
+config_string = config_string.replace("\\", "\\\\")
 
 if not config_string:
     sys.exit(0)
