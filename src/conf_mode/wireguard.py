@@ -89,6 +89,9 @@ def get_config():
       ### addresses
       if c.exists(cnf + ' address'):
         config_data['interfaces'][intfc]['addr'] = c.return_values(cnf + ' address')
+      ### interface up/down
+      if c.exists(cnf + ' disable'):
+        config_data['interfaces'][intfc]['state'] = 'disable' 
       ### listen port
       if c.exists(cnf + ' port'):
         config_data['interfaces'][intfc]['lport'] = c.return_value(cnf + ' port')
@@ -121,6 +124,7 @@ def get_config():
           if c.exists(cnf + ' peer ' + p + ' preshared-key'):
             config_data['interfaces'][intfc]['peer'][p]['psk'] = c.return_value(cnf + ' peer ' + p + ' preshared-key')
   
+
   return config_data
 
 def verify(c):
@@ -159,12 +163,21 @@ def apply(c):
   c_eff = Config()
   c_eff.set_level('interfaces wireguard')
 
+  ### link status up/down aka interface disable
+
+  for intf in c['interfaces']:
+    if c['interfaces'][intf]['state'] == 'disable':
+      sl.syslog(sl.LOG_NOTICE, "disable interface " + intf)
+      subprocess.call(['ip l s dev ' + intf + ' down ' + ' &>/dev/null'], shell=True)
+    else:
+      sl.syslog(sl.LOG_NOTICE, "enable interface " + intf)
+      subprocess.call(['ip l s dev ' + intf + ' up ' + ' &>/dev/null'], shell=True)
+
   ### deletion of a specific interface
   for intf in c['interfaces']:
     if c['interfaces'][intf]['status'] == 'delete':
       sl.syslog(sl.LOG_NOTICE, "removing interface " + intf)
       subprocess.call(['ip l d dev ' + intf + ' &>/dev/null'], shell=True)
-      
 
     ### peer deletion
     peer_eff = c_eff.list_effective_nodes( intf + ' peer')

@@ -1,3 +1,9 @@
+vyos-1x (1.2.0-7) unstable; urgency=low
+
+  * T1061: Wireguard: Missing option to administrativly shutdown interface
+
+ -- hagbard <vyosdev@derith.de>  Fri, 30 Nov 2018 10:22:41 -0800
+
 vyos-1x (1.2.0-6) unstable; urgency=medium
 
   * adding vyos-accel-ppp-ipoe-kmod for T989
