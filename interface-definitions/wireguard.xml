@@ -39,6 +39,12 @@
               <constraintErrorMessage>interface description is too long (limit 100 characters)</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="disable">
+            <properties>
+              <help>disables the wireguard interface</help>
+              <valueless />
+            </properties>
+          </leafNode>
           <leafNode name="port">
             <properties>
               <help>Local port number to accept connections</help>
