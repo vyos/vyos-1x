@@ -10,11 +10,15 @@ def parse_conn_spec(s):
     return re.search(r'.*ESTABLISHED\s+(.*)ago,\s(.*)\[(.*)\]\.\.\.(.*)\[(.*)\].*', s).groups()
 
 def parse_ike_line(s):
-    # Example: 3DES_CBC/HMAC_MD5_96/MODP_1024, 0 bytes_i, 0 bytes_o, rekeying in 45 minutes
     try:
-        return re.search(r'.*:\s+(.*)\/(.*)\/(.*),\s+(\d+)\s+bytes_i,\s+(\d+)\s+bytes_o,\s+rekeying', s).groups()
+        # Example with traffic: AES_CBC_256/HMAC_SHA2_256_128/ECP_521, 2382660 bytes_i (1789 pkts, 2s ago), 2382660 bytes_o ...
+        return re.search(r'.*:\s+(.*)\/(.*)\/(.*),\s+(\d+)\s+bytes_i\s\(.*pkts,.*\),\s+(\d+)\s+bytes_o', s).groups()
     except AttributeError:
-        return (None, None, None, None, None)
+        try:
+            # Example without traffic: 3DES_CBC/HMAC_MD5_96/MODP_1024, 0 bytes_i, 0 bytes_o, rekeying in 45 minutes
+            return re.search(r'.*:\s+(.*)\/(.*)\/(.*),\s+(\d+)\s+bytes_i,\s+(\d+)\s+bytes_o,\s+rekeying', s).groups()
+        except AttributeError:
+            return (None, None, None, None, None)
 
 
 # Get a list of all configured connections
