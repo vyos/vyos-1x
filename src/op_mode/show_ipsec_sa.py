@@ -4,6 +4,7 @@ import re
 import subprocess
 
 import tabulate
+import hurry.filesize
 
 def parse_conn_spec(s):
     # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
@@ -39,6 +40,11 @@ for conn in connections:
             if ip == id:
                 id = None
             enc, hash, dh, bytes_in, bytes_out = parse_ike_line(status)
+
+            # Convert bytes to human-readable units
+            bytes_in = hurry.filesize.size(bytes_in)
+            bytes_out = hurry.filesize.size(bytes_out)
+
             status_line = [conn, "up", time, "{0}/{1}".format(bytes_in, bytes_out), ip, id, "{0}/{1}/{2}".format(enc, hash, dh)]
         except Exception as e:
             print(status)
