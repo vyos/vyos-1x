@@ -35,6 +35,9 @@
               <leafNode name="dnssec">
                 <properties>
                   <help>DNSSEC mode</help>
+                  <completionHelp>
+                    <list>off process-no-validate process log-fail validate</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>off</format>
                     <description/>
