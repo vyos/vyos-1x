@@ -73,6 +73,82 @@
               </constraint>
             </properties>
           </leafNode>
+          <node name="firewall" owner="${vyatta_sbindir}/vyatta-firewall-trap.pl --level='interfaces wireguard $VAR(../@) firewall'">
+            <properties>
+              <help>Firewall options</help>
+            </properties>
+            <children>
+              <node name="in">
+                <properties>
+                  <help>Ruleset for forwarded packets on inbound interface</help>
+                </properties>
+                <children>
+                  <leafNode name="name">
+                    <properties>
+                      <help>Inbound IPv4 firewall ruleset name for interface</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>Inbound IPv6 firewall ruleset name for interface</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="local">
+                <properties>
+                  <help>Ruleset for packets destined for this router</help>
+                </properties>
+                <children>
+                  <leafNode name="name">
+                    <properties>
+                      <help>Local IPv4 firewall ruleset name for interface</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>Local IPv4 firewall ruleset name for interface</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="out">
+                <properties>
+                  <help>Ruleset for forwarded packets on outbound interface</help>
+                </properties>
+                <children>
+                  <leafNode name="name">
+                    <properties>
+                      <help>Outbound IPv4 firewall ruleset name for interface</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>Outbound IPv6 firewall ruleset name for interface</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <tagNode name="peer">
             <properties>
               <help>peer alias</help>
