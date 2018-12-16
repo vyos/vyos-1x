@@ -35,25 +35,28 @@
               <leafNode name="dnssec">
                 <properties>
                   <help>DNSSEC mode</help>
+                  <completionHelp>
+                    <list>off process-no-validate process log-fail validate</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>off</format>
-                    <description/>
+                    <description>No DNSSEC processing whatsoever!</description>
                   </valueHelp>
                   <valueHelp>
                     <format>process-no-validate</format>
-                    <description/>
+                    <description>Respond with DNSSEC records to clients that ask for it. Don't do any validation.</description>
                   </valueHelp>
                   <valueHelp>
                     <format>process</format>
-                    <description/>
+                    <description>Respond with DNSSEC records to clients that ask for it. Validation for clients that request it.</description>
                   </valueHelp>
                   <valueHelp>
                     <format>log-fail</format>
-                    <description/>
+                    <description>Similar behaviour to process, but validate RRSIGs on responses and log bogus responses.</description>
                   </valueHelp>
                   <valueHelp>
                     <format>validate</format>
-                    <description/>
+                    <description>Full blown DNSSEC validation. Send SERVFAIL to clients on bogus responses.</description>
                   </valueHelp>
                   <constraint>
                     <regex>(off|process-no-validate|process|log-fail|validate)</regex>
