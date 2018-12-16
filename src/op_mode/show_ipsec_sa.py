@@ -42,8 +42,8 @@ for conn in connections:
             enc, hash, dh, bytes_in, bytes_out = parse_ike_line(status)
 
             # Convert bytes to human-readable units
-            bytes_in = hurry.filesize.size(bytes_in)
-            bytes_out = hurry.filesize.size(bytes_out)
+            bytes_in = hurry.filesize.size(int(bytes_in))
+            bytes_out = hurry.filesize.size(int(bytes_out))
 
             status_line = [conn, "up", time, "{0}/{1}".format(bytes_in, bytes_out), ip, id, "{0}/{1}/{2}".format(enc, hash, dh)]
         except Exception as e:
