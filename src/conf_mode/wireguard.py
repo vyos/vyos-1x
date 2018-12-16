@@ -64,17 +64,7 @@ def get_config():
                 'status'      : 'exists',
                 'state'       : 'enabled',
                 'mtu'         : '1420',
-                'peer'        : {},
-                'fw'          : {
-                    'in'      : None,
-                    'local'   : None,
-                    'out'     : None
-                },
-                'fwv6'          : {
-                    'in'      : None,
-                    'local'   : None,
-                    'out'     : None
-                }
+                'peer'        : {}
             }
         }
     )
@@ -111,21 +101,6 @@ def get_config():
       ### mtu
       if c.exists(cnf + ' mtu'):
         config_data['interfaces'][intfc]['mtu'] = c.return_value(cnf + ' mtu')
-      ### firewall name
-      if c.exists(cnf + ' firewall in name'):
-        config_data['interfaces'][intfc]['fw']['in'] = c.return_value(cnf + ' firewall in name')
-      if c.exists(cnf + ' firewall local name'):
-        config_data['interfaces'][intfc]['fw']['local'] = c.return_value(cnf + ' firewall local name')
-      if c.exists(cnf + ' firewall out name'):
-        config_data['interfaces'][intfc]['fw']['out'] = c.return_value(cnf + ' firewall out name')
-
-      if c.exists(cnf + ' firewall in ipv6-name'):
-        config_data['interfaces'][intfc]['fwv6']['in'] = c.return_value(cnf + ' firewall in ipv6-name')
-      if c.exists(cnf + ' firewall local ipv6-name'):
-        config_data['interfaces'][intfc]['fwv6']['local'] = c.return_value(cnf + ' firewall local ipv6-name')
-      if c.exists(cnf + ' firewall out ipv6-name'):
-        config_data['interfaces'][intfc]['fwv6']['out'] = c.return_value(cnf + ' firewall out ipv6-name')
-
       ### peers
       if c.exists(cnf + ' peer'):
         for p in c.list_nodes(cnf + ' peer'):
@@ -148,6 +123,7 @@ def get_config():
             config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
           if c.exists(cnf + ' peer ' + p + ' preshared-key'):
             config_data['interfaces'][intfc]['peer'][p]['psk'] = c.return_value(cnf + ' peer ' + p + ' preshared-key')
+  
 
   return config_data
 
@@ -290,67 +266,6 @@ def apply(c):
       if descr_eff != cnf_descr:
         with open('/sys/class/net/' + str(intf) + '/ifalias', 'w') as fh:
           fh.write(str(cnf_descr))
-
-    ### firewall v4
-    fw_eff_in = c_eff.return_effective_value(intf + ' firewall in name')
-    fw_eff_loc = c_eff.return_effective_value(intf + ' firewall local name')
-    fw_eff_out = c_eff.return_effective_value(intf + ' firewall out name')
-    
-    if fw_eff_in != c['interfaces'][intf]['fw']['in']:
-      if c['interfaces'][intf]['fw']['in'] == None:
-        update_firewall(intf, fw_eff_in, 'v4', 'delete', 'in')
-      else:
-        update_firewall(intf, c['interfaces'][intf]['fw']['in'], 'v4', 'update', 'in')
-
-    if fw_eff_loc != c['interfaces'][intf]['fw']['local']:
-      if c['interfaces'][intf]['fw']['local'] == None:
-        update_firewall(intf, fw_eff_loc, 'v4', 'delete', 'local')
-      else:
-        update_firewall(intf, c['interfaces'][intf]['fw']['local'], 'v4', 'update', 'local')
-
-    if fw_eff_out != c['interfaces'][intf]['fw']['out']:
-      if c['interfaces'][intf]['fw']['out'] == None:
-        update_firewall(intf, fw_eff_out, 'v4', 'delete', 'out')
-      else:
-        update_firewall(intf, c['interfaces'][intf]['fw']['out'], 'v4', 'update', 'out')
-
-    ### firewall v6
-    fwv6_eff_in = c_eff.return_effective_value(intf + ' firewall in ipv6-name')
-    fwv6_eff_loc = c_eff.return_effective_value(intf + ' firewall local ipv6-name')
-    fwv6_eff_out = c_eff.return_effective_value(intf + ' firewall out ipv6-name')
-
-    if fwv6_eff_in != c['interfaces'][intf]['fwv6']['in']:
-      if c['interfaces'][intf]['fwv6']['in'] == None:
-        update_firewall(intf, fwv6_eff_in, 'v6', 'delete', 'in')
-      else:
-        update_firewall(intf, c['interfaces'][intf]['fwv6']['in'], 'v6', 'update', 'in')
-
-    if fwv6_eff_loc != c['interfaces'][intf]['fwv6']['local']:
-      if c['interfaces'][intf]['fwv6']['local'] == None:
-        update_firewall(intf, fwv6_eff_loc, 'v6', 'delete', 'local')
-      else:
-        update_firewall(intf, c['interfaces'][intf]['fwv6']['local'], 'v6', 'update', 'local')
-
-    if fwv6_eff_out != c['interfaces'][intf]['fwv6']['out']:
-      if c['interfaces'][intf]['fwv6']['out'] == None:
-        update_firewall(intf, fwv6_eff_out, 'v6', 'delete', 'out')
-      else:
-        update_firewall(intf, c['interfaces'][intf]['fwv6']['out'], 'v6', 'update', 'out')
-
-  return 0
-
-
-def update_firewall(interf, fw_name, ver, action, table):
-  cmd = r'sudo /opt/vyatta/sbin/vyatta-firewall.pl --update-interfaces '
-  cmd += action + ' ' + interf + ' ' + table + ' ' + fw_name  
-  if ver == 'v4':
-    cmd += ' \"firewall name\"'
-  if ver == 'v6':
-    cmd += ' \"firewall ipv6-name\"'
-
-  sl.syslog(sl.LOG_NOTICE, "fw update executing: " + cmd)
-  subprocess.call([cmd], shell=True)
-  return 0
 
 def configure_interface(c, intf):
   for p in c['interfaces'][intf]['peer']:
