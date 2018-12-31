@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 
 import re
+import sys
 import subprocess
 
 import tabulate
 import hurry.filesize
 
 def parse_conn_spec(s):
-    # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
-    return re.search(r'.*ESTABLISHED\s+(.*)ago,\s(.*)\[(.*)\]\.\.\.(.*)\[(.*)\].*', s).groups()
+    try:
+        # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
+        return re.search(r'.*ESTABLISHED\s+(.*)ago,\s(.*)\[(.*)\]\.\.\.(.*)\[(.*)\].*', s).groups()
+    except AttributeError:
+        # No active SAs found, so we have nothing to display
+        print("No established security associations found.")
+        print("Use \"show vpn ipsec sa\" to view inactive and connecting tunnels.")
+        sys.exit(0)
 
 def parse_ike_line(s):
     try:
