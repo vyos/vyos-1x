@@ -178,6 +178,17 @@ else:
         for peer_group in peer_groups:
             migrate_neighbor(config, peer_group_path, peer_group)
 
+    ## Migrate redistribute statements
+    redistribute_path = ['protocols', 'bgp', asn, 'redistribute']
+    if config.exists(redistribute_path):
+        config.set(bgp_path + af_path + ['redistribute'])
+
+        redistributes = config.list_nodes(redistribute_path)
+        for redistribute in redistributes:
+            config.set(bgp_path + af_path + ['redistribute', redistribute])
+
+        config.delete(redistribute_path)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
