@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 
 import re
+import sys
 import subprocess
 
 import tabulate
 import hurry.filesize
 
 def parse_conn_spec(s):
-    # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
-    return re.search(r'.*ESTABLISHED\s+(.*)ago,\s(.*)\[(.*)\]\.\.\.(.*)\[(.*)\].*', s).groups()
+    try:
+        # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
+        return re.search(r'.*ESTABLISHED\s+(.*)ago,\s(.*)\[(.*)\]\.\.\.(.*)\[(.*)\].*', s).groups()
+    except AttributeError:
+        # No active SAs found, so we have nothing to display
+        print("No established security associations found.")
+        print("Use \"show vpn ipsec sa\" to view inactive and connecting tunnels.")
+        sys.exit(0)
 
 def parse_ike_line(s):
     try:
@@ -42,8 +49,8 @@ for conn in connections:
             enc, hash, dh, bytes_in, bytes_out = parse_ike_line(status)
 
             # Convert bytes to human-readable units
-            bytes_in = hurry.filesize.size(bytes_in)
-            bytes_out = hurry.filesize.size(bytes_out)
+            bytes_in = hurry.filesize.size(int(bytes_in))
+            bytes_out = hurry.filesize.size(int(bytes_out))
 
             status_line = [conn, "up", time, "{0}/{1}".format(bytes_in, bytes_out), ip, id, "{0}/{1}/{2}".format(enc, hash, dh)]
         except Exception as e:
