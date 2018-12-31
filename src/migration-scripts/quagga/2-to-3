@@ -186,6 +186,12 @@ else:
         redistributes = config.list_nodes(redistribute_path)
         for redistribute in redistributes:
             config.set(bgp_path + af_path + ['redistribute', redistribute])
+            if config.exists(redistribute_path + [redistribute, 'metric']):
+                redist_metric = config.return_value(redistribute_path + [redistribute, 'metric'])
+                config.set(bgp_path + af_path + ['redistribute', redistribute, 'metric'], value=redist_metric)
+            if config.exists(redistribute_path + [redistribute, 'route-map']):
+                redist_route_map = config.return_value(redistribute_path + [redistribute, 'route-map'])
+                config.set(bgp_path + af_path + ['redistribute', redistribute, 'route-map'], value=redist_route_map)
 
         config.delete(redistribute_path)
 
