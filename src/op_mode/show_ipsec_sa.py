@@ -32,7 +32,7 @@ def parse_ike_line(s):
 # Get a list of all configured connections
 with open('/etc/ipsec.conf', 'r') as f:
     config = f.read()
-    connections = re.findall(r'conn\s([^\s]+)\s*\n', config)
+    connections = set(re.findall(r'conn\s([^\s]+)\s*\n', config))
     connections = list(filter(lambda s: s != '%default', connections))
 
 status_data = []
