@@ -21,6 +21,7 @@ import os
 import shutil
 import stat
 import pwd
+import time
 
 import jinja2
 import random
@@ -793,6 +794,9 @@ def apply(snmp):
         # snmpd, which we see when a magic line appears in this file.
         snmpReady = False
         while not snmpReady:
+            while not os.path.exists(config_file_user):
+                time.sleep(1)
+
             with open(config_file_user, 'r') as f:
                 for line in f:
                     # Search for our magic string inside the file
