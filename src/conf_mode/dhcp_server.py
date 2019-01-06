@@ -150,6 +150,12 @@ shared-network {{ network.name }} {
         {%- if subnet.domain_name %}
         option domain-name "{{ subnet.domain_name }}";
         {%- endif -%}
+        {%- if subnet.subnet_parameters %}
+        # The following {{ subnet.subnet_parameters | length }} line(s) were added as subnet-parameters in the CLI and have not been validated
+        {%- for param in subnet.subnet_parameters %}
+        {{ param }}
+        {%- endfor -%}
+        {%- endif %}
         {%- if subnet.tftp_server %}
         option tftp-server-name "{{ subnet.tftp_server }}";
         {%- endif -%}
@@ -570,7 +576,7 @@ def get_config():
                     #
                     # deprecate this and issue a warning like we do for DNS forwarding?
                     if conf.exists('subnet-parameters'):
-                        config['subnet_parameters'] = conf.return_values('subnet-parameters')
+                        subnet['subnet_parameters'] = conf.return_values('subnet-parameters')
 
                     # This option is used to identify a TFTP server and, if supported by the client, should have
                     # the same effect as the server-name declaration. BOOTP clients are unlikely to support this
