@@ -20,11 +20,11 @@ def parse_conn_spec(s):
 def parse_ike_line(s):
     try:
         # Example with traffic: AES_CBC_256/HMAC_SHA2_256_128/ECP_521, 2382660 bytes_i (1789 pkts, 2s ago), 2382660 bytes_o ...
-        return re.search(r'.*:\s+(.*)\/(.*)\/(.*),\s+(\d+)\s+bytes_i\s\(.*pkts,.*\),\s+(\d+)\s+bytes_o', s).groups()
+        return re.search(r'.*:\s+(.*\/.*(?:\/.*)?),\s+(\d+)\s+bytes_i\s\(.*pkts,.*\),\s+(\d+)\s+bytes_o', s).groups()
     except AttributeError:
         try:
             # Example without traffic: 3DES_CBC/HMAC_MD5_96/MODP_1024, 0 bytes_i, 0 bytes_o, rekeying in 45 minutes
-            return re.search(r'.*:\s+(.*)\/(.*)\/(.*),\s+(\d+)\s+bytes_i,\s+(\d+)\s+bytes_o,\s+rekeying', s).groups()
+            return re.search(r'.*:\s+(.*\/.*(?:\/.*)?),\s+(\d+)\s+bytes_i,\s+(\d+)\s+bytes_o,\s+rekeying', s).groups()
         except AttributeError:
             return (None, None, None, None, None)
 
@@ -46,13 +46,13 @@ for conn in connections:
             time, _, _, ip, id = parse_conn_spec(status)
             if ip == id:
                 id = None
-            enc, hash, dh, bytes_in, bytes_out = parse_ike_line(status)
+            enc, bytes_in, bytes_out = parse_ike_line(status)
 
             # Convert bytes to human-readable units
             bytes_in = hurry.filesize.size(int(bytes_in))
             bytes_out = hurry.filesize.size(int(bytes_out))
 
-            status_line = [conn, "up", time, "{0}/{1}".format(bytes_in, bytes_out), ip, id, "{0}/{1}/{2}".format(enc, hash, dh)]
+            status_line = [conn, "up", time, "{0}/{1}".format(bytes_in, bytes_out), ip, id, enc]
         except Exception as e:
             print(status)
             raise e
