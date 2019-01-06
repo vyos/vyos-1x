@@ -773,6 +773,11 @@ def generate(dhcp):
 
     tmpl = jinja2.Template(config_tmpl)
     config_text = tmpl.render(dhcp)
+
+    # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw parameters
+    # we can pass to ISC DHCPd
+    config_text = config_text.replace("&quot;",'"')
+
     with open(config_file, 'w') as f:
         f.write(config_text)
 
