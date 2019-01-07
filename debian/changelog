@@ -1,3 +1,9 @@
+vyos-1x (1.2.0-8) unstable; urgency=low
+
+  * T1162: WireGuard: Unable to modify tunnels - KeyError: 'state'
+
+ -- hagbard <vyosdev@derith.de>  Sun, 06 Jan 2019 15:58:40 -0800
+
 vyos-1x (1.2.0-7) unstable; urgency=low
 
   * T1061: Wireguard: Missing option to administrativly shutdown interface
