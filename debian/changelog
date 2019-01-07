@@ -1,3 +1,10 @@
+vyos-1x (1.2.0-9) unstable; urgency=low
+
+  * T1168: Upgrade: 1,1,7 -> 1.2.0-epa2
+    - keyword change in config
+
+ -- hagbard <vyosdev@derith.de>  Mon, 07 Jan 2019 11:42:49 -0800
+
 vyos-1x (1.2.0-8) unstable; urgency=low
 
   * T1162: WireGuard: Unable to modify tunnels - KeyError: 'state'
