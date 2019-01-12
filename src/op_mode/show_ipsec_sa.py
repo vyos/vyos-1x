@@ -14,7 +14,7 @@ def parse_conn_spec(s):
     except AttributeError:
         # No active SAs found, so we have nothing to display
         print("No established security associations found.")
-        print("Use \"show vpn ipsec sa\" to view inactive and connecting tunnels.")
+        print("Use \"show vpn ipsec sa verbose\" to view inactive and connecting tunnels.")
         sys.exit(0)
 
 def parse_sa_counters(s):
