@@ -67,8 +67,12 @@ forward-zones={% for d in domains %}
 # dnssec
 dnssec={{ dnssec }}
 
+{% if name_servers -%}
 # name-server
 forward-zones-recurse=.={{ name_servers | join(';') }}
+{% else %}
+# no name-servers specified - start full recursor
+{% endif %}
 
 """
 
