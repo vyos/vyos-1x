@@ -27,7 +27,7 @@ from vyos import ConfigError
 crontab_file = "/etc/cron.d/vyos-crontab"
 
 
-def format_task(minute="*", hour="*", day="*", dayofweek="*", month="*", user="root", rawspec=None, command=""):
+def format_task(minute="*", hour="*", day="*", dayofweek="*", month="*", user="vyos", rawspec=None, command=""):
     fmt_full = "{minute} {hour} {day} {month} {dayofweek} {user} {command}\n"
     fmt_raw = "{spec} {user} {command}\n"
 
