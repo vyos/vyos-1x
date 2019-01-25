@@ -19,7 +19,7 @@ with open(file_name, 'r') as f:
 config = ConfigTree(config_file)
 
 cfg_webproxy_base = ['service', 'webproxy']
-if not config.exists(cfg_webproxy_base):
+if not config.exists(cfg_webproxy_base + ['proxy-bypass']):
     # Nothing to do
     sys.exit(0)
 else:
