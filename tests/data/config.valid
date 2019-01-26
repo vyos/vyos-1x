@@ -1,0 +1,29 @@
+/* top level leaf node */
+top-level-leaf-node foo
+
+top-level-valueless-node
+
+top-level-tag-node foo {
+    top-level-tag-node-child some-value
+}
+
+top-level-tag-node bar {
+    top-level-tag-node-child another-value
+}
+
+normal-node {
+    normal-node-child {
+        valueless-node
+        multi-node value1
+        /* valueless node comment */
+        another-valueless-node
+        multi-node value1
+        tag-node foo {
+        }
+        one-more-valueless-node
+        tag-node bar {
+            some-option some-value
+        }
+    }
+    option-with-quoted-value "some-value"
+}
