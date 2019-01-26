@@ -124,7 +124,6 @@ def get_config():
           if c.exists(cnf + ' peer ' + p + ' preshared-key'):
             config_data['interfaces'][intfc]['peer'][p]['psk'] = c.return_value(cnf + ' peer ' + p + ' preshared-key')
   
-
   return config_data
 
 def verify(c):
@@ -166,12 +165,13 @@ def apply(c):
   ### link status up/down aka interface disable
 
   for intf in c['interfaces']:
-    if c['interfaces'][intf]['state'] == 'disable':
-      sl.syslog(sl.LOG_NOTICE, "disable interface " + intf)
-      subprocess.call(['ip l s dev ' + intf + ' down ' + ' &>/dev/null'], shell=True)
-    else:
-      sl.syslog(sl.LOG_NOTICE, "enable interface " + intf)
-      subprocess.call(['ip l s dev ' + intf + ' up ' + ' &>/dev/null'], shell=True)
+    if not c['interfaces'][intf]['status'] == 'delete':
+      if c['interfaces'][intf]['state'] == 'disable':
+        sl.syslog(sl.LOG_NOTICE, "disable interface " + intf)
+        subprocess.call(['ip l s dev ' + intf + ' down ' + ' &>/dev/null'], shell=True)
+      else:
+        sl.syslog(sl.LOG_NOTICE, "enable interface " + intf)
+        subprocess.call(['ip l s dev ' + intf + ' up ' + ' &>/dev/null'], shell=True)
 
   ### deletion of a specific interface
   for intf in c['interfaces']:

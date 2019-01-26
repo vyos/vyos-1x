@@ -1,3 +1,22 @@
+vyos-1x (1.2.0-10) unstable; urgency=low
+
+  * T1178: Scheduled script breaks ability to modify configuration
+
+ -- hagbard <vyosdev@derith.de>  Tue, 22 Jan 2019 13:35:09 -0800
+
+vyos-1x (1.2.0-9) unstable; urgency=low
+
+  * T1168: Upgrade: 1,1,7 -> 1.2.0-epa2
+    - keyword change in config
+
+ -- hagbard <vyosdev@derith.de>  Mon, 07 Jan 2019 11:42:49 -0800
+
+vyos-1x (1.2.0-8) unstable; urgency=low
+
+  * T1162: WireGuard: Unable to modify tunnels - KeyError: 'state'
+
+ -- hagbard <vyosdev@derith.de>  Sun, 06 Jan 2019 15:58:40 -0800
+
 vyos-1x (1.2.0-7) unstable; urgency=low
 
   * T1061: Wireguard: Missing option to administrativly shutdown interface
