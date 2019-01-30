@@ -66,6 +66,9 @@
                   <tagNode name="service">
                     <properties>
                       <help>Service being used for Dynamic DNS [REQUIRED]</help>
+                      <completionHelp>
+                        <list>custom afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>custom</format>
                         <description>Custom or predefined service</description>
