@@ -53,6 +53,8 @@ The guidelines in a nutshell:
 Tests are executed at build time, you can also execute them by hand with:
 
 ```
+pipenv install
+pipenv shell
 make test
 ```
 

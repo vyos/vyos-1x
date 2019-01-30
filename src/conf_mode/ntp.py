@@ -21,6 +21,7 @@ import os
 
 import jinja2
 import ipaddress
+import copy
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -79,7 +80,7 @@ default_config_data = {
 }
 
 def get_config():
-    ntp = default_config_data
+    ntp = copy.deepcopy(default_config_data)
     conf = Config()
     if not conf.exists('system ntp'):
         return None
