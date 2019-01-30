@@ -49,7 +49,7 @@ def make_command(executable, arguments):
     if arguments:
         return("sg vyattacfg \"{0} {1}\"".format(executable, arguments))
     else:
-        return(executable)
+        return("sg vyattacfg \"{0}\"".format(executable))
 
 def get_config():
     conf = Config()

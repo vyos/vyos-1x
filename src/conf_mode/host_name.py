@@ -100,8 +100,12 @@ def apply(config):
     """Apply configuration"""
     os.system("hostnamectl set-hostname --static {0}".format(config["fqdn"]))
 
-    # restart services that use the hostname
+    # Restart services that use the hostname
     os.system("systemctl restart rsyslog.service")
+
+    # If SNMP is running, restart it too
+    if os.system("pgrep snmpd > /dev/null") == 0:
+        os.system("systemctl restart snmpd.service")
 
     return None
 

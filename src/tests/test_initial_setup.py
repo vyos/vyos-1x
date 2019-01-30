@@ -25,7 +25,7 @@ import vyos.configtree
 import vyos.initialsetup as vis
 
 
-class TestHostName(TestCase):
+class TestInitialSetup(TestCase):
     def setUp(self):
         with open('tests/data/config.boot.default', 'r') as f:
             config_string = f.read()

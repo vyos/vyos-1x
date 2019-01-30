@@ -73,19 +73,22 @@
                   </valueHelp>
                   <valueHelp>
                     <format>radius</format>
-                    <description>Use Radius server to autenticate users</description>
+                    <description>Use a RADIUS server to autenticate users</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(local|radius)</regex>
                   </constraint>
+                  <completionHelp>
+                    <list>local radius</list>
+                  </completionHelp>
                 </properties>
               </leafNode>
               <tagNode name="radius-server">
                 <properties>
-                  <help>IP address of radius server</help>
+                  <help>IP address of RADIUS server</help>
                   <valueHelp>
                     <format>ipv4</format>
-                      <description>IP address of radius server</description>
+                      <description>IP address of RADIUS server</description>
                   </valueHelp>
                 </properties>
                 <children>
@@ -96,44 +99,44 @@
                   </leafNode>
                   <leafNode name="req-limit">
                     <properties>
-                      <help>maximum number of simultaneous requests to server (default: unlimited)</help>
+                      <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
                     </properties>
                   </leafNode>
                   <leafNode name="fail-time">
                     <properties>
-                      <help>if server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                      <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
                     </properties>
                   </leafNode>
                 </children>
               </tagNode>
               <node name="radius-settings">
                 <properties>
-                  <help>radius settings</help>
+                  <help>RADIUS settings</help>
                 </properties>
                 <children>
                   <leafNode name="timeout">
                     <properties>
-                      <help>timeout to wait response from server (sec)</help>
+                      <help>Timeout to wait response from server (seconds)</help>
                     </properties>
                   </leafNode>
                   <leafNode name="acct-timeout">
                     <properties>
-                      <help>timeout to wait reply for Interim-Update packets. (default 3 sec)</help>
+                      <help>Timeout to wait reply for Interim-Update packets. (default 3 seconds)</help>
                     </properties>
                   </leafNode>
                   <leafNode name="max-try">
                     <properties>
-                      <help>maximum number of tries to send Access-Request/Accounting-Request queries</help>
+                      <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
                     </properties>
                   </leafNode>
                   <leafNode name="nas-identifier">
                     <properties>
-                      <help>value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
+                      <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
                     </properties>
                   </leafNode>
                   <leafNode name="nas-ip-address">
                     <properties>
-                      <help>value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
+                      <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
                     </properties>
                   </leafNode>
                   <node name="dae-server">
@@ -148,12 +151,12 @@
                       </leafNode>
                       <leafNode name="port">
                         <properties>
-                          <help>port for Dynamic Authorization Extension server (DM/CoA)</help>
+                          <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
                         </properties>
                       </leafNode>
                       <leafNode name="secret">
                         <properties>
-                          <help>secret for Dynamic Authorization Extension server (DM/CoA)</help>
+                          <help>Secret for Dynamic Authorization Extension server (DM/CoA)</help>
                         </properties>
                       </leafNode>
                     </children>
@@ -164,7 +167,7 @@
           </node>
           <node name="client-ip-pool">
             <properties>
-              <help>Pool of client IP address (must be within a /24)</help>
+              <help>Pool of client IP addresses (must be within a /24)</help>
             </properties>
             <children>
               <leafNode name="start">
@@ -188,18 +191,18 @@
 
           <node name="client-ipv6-pool">
             <properties>
-              <help>pool of client IP space</help>
+              <help>Pool of client IPv6 addresses</help>
             </properties>
             <children>
               <leafNode name="prefix">
                 <properties>
-                  <help>format: ipv6prefix/mask,prefix_len (e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients)</help>
+                  <help>Format: ipv6prefix/mask,prefix_len (e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients)</help>
                   <multi />
                 </properties>
               </leafNode>
               <leafNode name="delegate-prefix">
                 <properties>
-                  <help>format: ipv6prefix/mask,prefix_len (delegate to clients through DHCPv6 prefix delegation - rfc3633)</help>
+                  <help>Format: ipv6prefix/mask,prefix_len (delegate to clients through DHCPv6 prefix delegation - rfc3633)</help>
                   <multi />
                 </properties>
               </leafNode>
@@ -306,12 +309,12 @@
           </leafNode>
           <node name="limits">
             <properties>
-              <help>limits the connection rate from a single source</help>
+              <help>Limits the connection rate from a single source</help>
             </properties>
             <children>
               <leafNode name="connection-limit">
                 <properties>
-                  <help>acceptable rate of connections (e.g. 1/min, 60/sec)</help>
+                  <help>Acceptable rate of connections (e.g. 1/min, 60/sec)</help>
                   <constraint>
                     <regex>^[0-9]+\/(min|sec)$</regex>
                   </constraint>
@@ -320,12 +323,12 @@
               </leafNode>
               <leafNode name="burst">
                 <properties>
-                  <help>burst count</help>
+                  <help>Burst count</help>
                 </properties>
               </leafNode>
               <leafNode name="timeout">
                 <properties>
-                  <help>timeout in seconds</help>
+                  <help>Timeout in seconds</help>
                 </properties>
               </leafNode>
             </children>
@@ -355,7 +358,7 @@
               <constraint>
                 <regex>^[a-zA-Z0-9\-]{1,100}</regex>
               </constraint>
-              <constraintErrorMessage>servicename can contain aplhanumerical characters and dash only (max. 100)</constraintErrorMessage>
+              <constraintErrorMessage>servicename can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
             </properties>
           </leafNode>
           <node name="wins-servers">
@@ -383,12 +386,12 @@
           </node>
           <node name="ppp-options">
             <properties>
-              <help>advanced protocol options</help>
+              <help>Advanced protocol options</help>
             </properties>
             <children>
               <leafNode name="min-mtu">
                 <properties>
-                  <help>minimum acceptable MTU (68-65535)</help>
+                  <help>Minimum acceptable MTU (68-65535)</help>
                   <constraint>
                     <validator name="numeric" argument="--range 68-65535"/>
                   </constraint>
@@ -396,7 +399,7 @@
               </leafNode>
               <leafNode name="mru">
                 <properties>
-                  <help>preferred MRU (68-65535)</help>
+                  <help>Preferred MRU (68-65535)</help>
                   <constraint>
                     <validator name="numeric" argument="--range 68-65535"/>
                   </constraint>
@@ -404,30 +407,30 @@
               </leafNode>
               <leafNode name="ccp">
                 <properties>
-                  <help>ccp negotiation (default disabled)</help>
+                  <help>CCP negotiation (default disabled)</help>
                   <valueless />
                 </properties>
               </leafNode>
               <node name="mppe">
                 <properties>
-                  <help>specifies mppe negotiation preference. (default prefer mppe)</help>
+                  <help>Specifies MPPE negotiation preference. (default prefer mppe)</help>
                 </properties>
                 <children>
                   <leafNode name="require">
                     <properties>
-                      <help>ask client for mppe, if it rejects drop connection</help>
+                      <help>Ask client for MPPE, if it rejects then drop the connection</help>
                       <valueless />
                     </properties>
                   </leafNode>
                   <leafNode name="prefer">
                     <properties>
-                      <help>ask client for mppe, if it rejects don't fail</help>
+                      <help>Ask client for MPPE, if it rejects don't fail</help>
                       <valueless />
                     </properties>
                   </leafNode>
                   <leafNode name="deny">
                     <properties>
-                      <help>deny mppe</help>
+                      <help>Deny MPPE</help>
                       <valueless />
                     </properties>
                   </leafNode>
@@ -435,7 +438,7 @@
               </node>
               <leafNode name="lcp-echo-interval">
                 <properties>
-                  <help>lcp echo-requests/sec</help>
+                  <help>LCP echo-requests/sec</help>
                   <constraint>
                     <validator name="numeric" argument="--positive"/>
                   </constraint>
@@ -443,7 +446,7 @@
               </leafNode>
               <leafNode name="lcp-echo-failure">
                 <properties>
-                  <help>maximum number of Echo-Requests may be sent without valid reply</help>
+                  <help>Maximum number of Echo-Requests may be sent without valid reply</help>
                   <constraint>
                     <validator name="numeric" argument="--positive"/>
                   </constraint>
@@ -451,7 +454,7 @@
               </leafNode>
               <leafNode name="lcp-echo-timeout">
                 <properties>
-                  <help>timeout in seconds to wait for any peer activity. If this option specified it turns on adaptive lcp echo functionality and "lcp-echo-failure" is not used.</help>
+                  <help>Timeout in seconds to wait for any peer activity. If this option specified it turns on adaptive lcp echo functionality and "lcp-echo-failure" is not used.</help>
                   <constraint>
                     <validator name="numeric" argument="--positive"/>
                   </constraint>
@@ -459,60 +462,60 @@
               </leafNode>
               <leafNode name="ipv4">
                 <properties>
-                  <help>specify IPv4 (IPCP) negotiation algorithm</help>
+                  <help>IPv4 (IPCP) negotiation algorithm</help>
                   <constraint>
                     <regex>^(deny|allow|prefer|require)</regex>
                   </constraint>
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>
                     <format>deny</format>
-                    <description>don't negotiate IPv4</description>
+                    <description>Don't negotiate IPv4</description>
                   </valueHelp>
                   <valueHelp>
                     <format>allow</format>
-                    <description>negotiate IPv4 only if client requests</description>
+                    <description>Negotiate IPv4 only if client requests</description>
                   </valueHelp>
                   <valueHelp>
                     <format>prefer</format>
-                    <description>ask client for IPv4 negotiation, don't fail if he rejects</description>
+                    <description>Ask client for IPv4 negotiation, don't fail if it rejects</description>
                   </valueHelp>
                   <valueHelp>
                     <format>require</format>
-                    <description>require IPv4 negotiation</description>
+                    <description>Require IPv4 negotiation</description>
                   </valueHelp>
                 </properties>
               </leafNode>
               <leafNode name="ipv6">
                 <properties>
-                  <help>specify IPv6 (IPCP6) negotiation algorithm</help>
+                  <help>IPv6 (IPCP6) negotiation algorithm</help>
                   <constraint>
                     <regex>^(deny|allow|prefer|require)</regex>
                   </constraint>
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>
                     <format>deny</format>
-                    <description>don't negotiate IPv6</description>
+                    <description>Don't negotiate IPv6</description>
                   </valueHelp>
                   <valueHelp>
                     <format>allow</format>
-                    <description>negotiate IPv6 only if client requests</description>
+                    <description>Negotiate IPv6 only if client requests</description>
                   </valueHelp>
                   <valueHelp>
                     <format>prefer</format>
-                    <description>ask client for IPv6 negotiation, don't fail if he rejects</description>
+                    <description>Ask client for IPv6 negotiation, don't fail if it rejects</description>
                   </valueHelp>
                   <valueHelp>
                     <format>require</format>
-                    <description>require IPv6 negotiation</description>
+                    <description>Require IPv6 negotiation</description>
                   </valueHelp>
                 </properties>
               </leafNode>
               <leafNode name="ipv6-intf-id">
                 <properties>
-                  <help>Specify fixed or random interface identifier for IPv6</help>
+                  <help>Fixed or random interface identifier for IPv6</help>
                   <valueHelp>
                     <format>random</format>
-                    <description>specify random interface identifier for IPv6</description>
+                    <description>Random interface identifier for IPv6</description>
                   </valueHelp>
                   <valueHelp>
                     <format>x:x:x:x</format>
@@ -522,33 +525,31 @@
               </leafNode>
               <leafNode name="ipv6-peer-intf-id">
                 <properties>
-                  <help>specify peer interface identifier for IPv6</help>
+                  <help>Peer interface identifier for IPv6</help>
                   <valueHelp>
                     <format>x:x:x:x</format>
-                    <description>specify interface identifier for IPv6</description>
+                    <description>Interface identifier for IPv6</description>
                   </valueHelp>
                   <valueHelp>
                     <format>random</format>
-                    <description>specify a random interface identifier for IPv6</description>
+                    <description>Use a random interface identifier for IPv6</description>
                   </valueHelp>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>calculate interface identifier from IPv4 address, for example 192:168:0:1</description>
+                    <description>Calculate interface identifier from IPv4 address, for example 192:168:0:1</description>
                   </valueHelp>
                   <valueHelp>
                     <format>calling-sid</format>
-                    <description>calculate interface identifier from calling-station-Id</description>
+                    <description>Calculate interface identifier from calling-station-id</description>
                   </valueHelp>
                 </properties>
               </leafNode>
               <leafNode name="ipv6-accept-peer-intf-id">
                 <properties>
-                  <help>accept peer's interface identifier</help>
+                  <help>Accept peer's interface identifier</help>
                   <valueless /> 
                 </properties>
               </leafNode>
-
-
             </children>
           </node>
         </children>

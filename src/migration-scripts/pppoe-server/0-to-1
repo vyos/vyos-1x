@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# Delete "service ssh allow-root" option
+# Convert "service pppoe-server authentication radius-server  node key"
+# to:
+# "service pppoe-server authentication radius-server node secret"  
 
 import sys
 

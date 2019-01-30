@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+# migrate old style `webproxy proxy-bypass 1.2.3.4/24`
+# to new style `webproxy whitelist destination-address 1.2.3.4/24`
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 1:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+cfg_webproxy_base = ['service', 'webproxy']
+if not config.exists(cfg_webproxy_base + ['proxy-bypass']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    bypass_addresses = config.return_values(cfg_webproxy_base + ['proxy-bypass'])
+    # delete old configuration node
+    config.delete(cfg_webproxy_base + ['proxy-bypass'])
+    for bypass_address in bypass_addresses:
+        # add data to new configuration node
+        config.set(cfg_webproxy_base + ['whitelist', 'destination-address'], value=bypass_address, replace=False)
+
+    # save updated configuration
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
