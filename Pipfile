@@ -10,7 +10,7 @@ nose = "*"
 coverage = "*"
 
 [packages]
-vyos = {file = "file:///mnt/c/Media/git/vyos-1x/python"}
+vyos = {file = "./python"}
 jinja2 = "*"
 
 [requires]
