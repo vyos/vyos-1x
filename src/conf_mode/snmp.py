@@ -134,20 +134,23 @@ agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{
 
 # SNMP communities
 {%- for c in communities %}
+
 {%- if c.network_v4 %}
 {%- for network in c.network_v4 %}
 {{ c.authorization }}community {{ c.name }} {{ network }}
 {%- endfor %}
-{%- else %}
+{%- elif not c.has_source %}
 {{ c.authorization }}community {{ c.name }}
 {%- endif %}
+
 {%- if c.network_v6 %}
 {%- for network in c.network_v6 %}
 {{ c.authorization }}community6 {{ c.name }} {{ network }}
 {%- endfor %}
-{%- else %}
+{%- elif not c.has_source %}
 {{ c.authorization }}community6 {{ c.name }}
 {%- endif %}
+
 {%- endfor %}
 
 {% if contact %}
@@ -266,7 +269,8 @@ def get_config():
                 'name': name,
                 'authorization': 'ro',
                 'network_v4': [],
-                'network_v6': []
+                'network_v6': [],
+                'has_source' : False
             }
 
             if conf.exists('community {0} authorization'.format(name)):
@@ -287,6 +291,9 @@ def get_config():
                         community['network_v4'].append(addr)
                     else:
                         community['network_v6'].append(addr)
+
+            if (len(community['network_v4']) > 0) or (len(community['network_v6']) > 0):
+                 community['has_source'] = True
 
             snmp['communities'].append(community)
 
