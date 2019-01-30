@@ -150,11 +150,12 @@ def apply(c):
   if not c:
     net_devs = os.listdir('/sys/class/net/')
     for dev in net_devs:
-      buf = open('/sys/class/net/' + dev + '/uevent', 'r').read()
-      if re.search("DEVTYPE=wireguard", buf, re.I|re.M):
-        wg_intf = re.sub("INTERFACE=", "", re.search("INTERFACE=.*", buf, re.I|re.M).group(0))
-        sl.syslog(sl.LOG_NOTICE, "removing interface " + wg_intf)
-        subprocess.call(['ip l d dev ' + wg_intf + ' >/dev/null'], shell=True)
+      if os.path.isdir('/sys/class/net/' + dev):
+        buf = open('/sys/class/net/' + dev + '/uevent', 'r').read()
+        if re.search("DEVTYPE=wireguard", buf, re.I|re.M):
+          wg_intf = re.sub("INTERFACE=", "", re.search("INTERFACE=.*", buf, re.I|re.M).group(0))
+          sl.syslog(sl.LOG_NOTICE, "removing interface " + wg_intf)
+          subprocess.call(['ip l d dev ' + wg_intf + ' >/dev/null'], shell=True)
     return None
 
   ###
