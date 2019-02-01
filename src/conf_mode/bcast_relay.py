@@ -32,8 +32,9 @@ config_tmpl = """
 # UDP broadcast relay configuration for instance {{ id }}
 {%- if description %}
 # Comment: {{ description }}
-{% endif -%}
+{% endif %}
 DAEMON_ARGS="{% if address %}-s {{ address }} {% endif %}{{ id }} {{ port }} {{ interfaces | join(' ') }}"
+
 """
 
 default_config_data = {
