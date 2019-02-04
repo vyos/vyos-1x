@@ -104,26 +104,27 @@ def get_config():
       ### peers
       if c.exists(cnf + ' peer'):
         for p in c.list_nodes(cnf + ' peer'):
-          config_data['interfaces'][intfc]['peer'].update(
+          if not c.exists(cnf + ' peer ' + p + ' disable'):
+            config_data['interfaces'][intfc]['peer'].update(
               {
-                  p : {
+                p : {
                       'allowed-ips' : [],
                       'endpoint'  : '',
                       'pubkey'  : ''
-                  }
+                }
               }
-          )
-          if c.exists(cnf + ' peer ' + p + ' pubkey'):
-            config_data['interfaces'][intfc]['peer'][p]['pubkey'] = c.return_value(cnf + ' peer ' + p + ' pubkey')
-          if c.exists(cnf + ' peer ' + p + ' allowed-ips'):
-            config_data['interfaces'][intfc]['peer'][p]['allowed-ips'] = c.return_values(cnf + ' peer ' + p + ' allowed-ips')
-          if c.exists(cnf + ' peer ' + p + ' endpoint'):
-            config_data['interfaces'][intfc]['peer'][p]['endpoint'] = c.return_value(cnf + ' peer ' + p + ' endpoint')
-          if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
-            config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
-          if c.exists(cnf + ' peer ' + p + ' preshared-key'):
-            config_data['interfaces'][intfc]['peer'][p]['psk'] = c.return_value(cnf + ' peer ' + p + ' preshared-key')
-  
+            )
+            if c.exists(cnf + ' peer ' + p + ' pubkey'):
+              config_data['interfaces'][intfc]['peer'][p]['pubkey'] = c.return_value(cnf + ' peer ' + p + ' pubkey')
+            if c.exists(cnf + ' peer ' + p + ' allowed-ips'):
+              config_data['interfaces'][intfc]['peer'][p]['allowed-ips'] = c.return_values(cnf + ' peer ' + p + ' allowed-ips')
+            if c.exists(cnf + ' peer ' + p + ' endpoint'):
+              config_data['interfaces'][intfc]['peer'][p]['endpoint'] = c.return_value(cnf + ' peer ' + p + ' endpoint')
+            if c.exists(cnf + ' peer ' + p + ' persistent-keepalive'):
+              config_data['interfaces'][intfc]['peer'][p]['persistent-keepalive'] = c.return_value(cnf + ' peer ' + p + ' persistent-keepalive')
+            if c.exists(cnf + ' peer ' + p + ' preshared-key'):
+              config_data['interfaces'][intfc]['peer'][p]['psk'] = c.return_value(cnf + ' peer ' + p + ' preshared-key')
+
   return config_data
 
 def verify(c):
@@ -237,16 +238,19 @@ def apply(c):
         sl.syslog(sl.LOG_NOTICE, "setting mtu to " + mtu + " on " + intf)
         subprocess.call(['ip l set mtu ' + mtu + ' dev ' + intf + ' &>/dev/null'], shell=True)
 
+
       ### persistent-keepalive
-      for p in c_eff.list_nodes(intf + ' peer'):
+      for p in c['interfaces'][intf]['peer']:
         val_eff = ""
         val = ""
+      
+        try:
+          val = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
+        except KeyError:
+          pass
 
         if c_eff.exists_effective(intf + ' peer ' + p + ' persistent-keepalive'):
           val_eff = c_eff.return_effective_value(intf + ' peer ' + p + ' persistent-keepalive')
-
-        if 'persistent-keepalive' in c['interfaces'][intf]['peer'][p]:
-          val = c['interfaces'][intf]['peer'][p]['persistent-keepalive']
 
         ### disable keepalive
         if val_eff and not val:
