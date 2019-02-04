@@ -41,7 +41,7 @@
           </leafNode>
           <leafNode name="disable">
             <properties>
-              <help>disables peer</help>
+              <help>disables interface</help>
               <valueless />
             </properties>
           </leafNode>
