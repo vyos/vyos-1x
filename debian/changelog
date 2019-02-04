@@ -1,3 +1,9 @@
+vyos-1x (1.2.0-12) unstable; urgency=low
+
+  fixes T1225: wireguard implement 'set int wireguard wg0 peer name disable' to disable single peers 
+
+ -- hagbard <vyosdev@derith.de>  Mon, 04 Feb 2019 10:26:50 -0800
+
 vyos-1x (1.2.0-11) unstable; urgency=low
 
   * Fix: T1217 - cant delete wireguard wg0 interface
