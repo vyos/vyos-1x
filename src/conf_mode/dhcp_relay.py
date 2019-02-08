@@ -95,7 +95,7 @@ def get_config():
     #
     # Available in DHCPv4 mode only:
     if conf.exists('relay-agents-packets'):
-        pkt = '-m ' + conf.return_value('relay-agents-packets')
+        pkt = '-a -m ' + conf.return_value('relay-agents-packets')
         relay['options'].append(pkt)
 
     return relay
