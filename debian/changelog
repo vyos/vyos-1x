@@ -1,6 +1,12 @@
+vyos-1x (1.2.0-13) unstable; urgency=low
+
+  * fixes T1238 - Wireguard allows invalid IP's 
+
+ -- hagbard <vyosdev@derith.de>  Sat, 09 Feb 2019 14:42:13 -0800
+
 vyos-1x (1.2.0-12) unstable; urgency=low
 
-  fixes T1225: wireguard implement 'set int wireguard wg0 peer name disable' to disable single peers 
+  * fixes T1225: wireguard implement 'set int wireguard wg0 peer name disable' to disable single peers 
 
  -- hagbard <vyosdev@derith.de>  Mon, 04 Feb 2019 10:26:50 -0800
 
