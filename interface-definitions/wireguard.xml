@@ -19,8 +19,11 @@
           <leafNode name="address">
             <properties>
               <help>IP address</help> 
+              <constraint>
+                <validator name="ip-host"/>
+              </constraint>
               <valueHelp>
-                <format>ipv4net</format>
+                <format>ipv4-address</format>
                 <description>IPv4 address and prefix length</description>
               </valueHelp>
               <valueHelp>
@@ -103,6 +106,9 @@
               <leafNode name="allowed-ips">
                 <properties>
                   <help>IP addresses allowed to traverse the peer</help>
+                  <constraint>
+                    <validator name="ip-host"/>
+                  </constraint>
                 <multi/>
                 </properties>
               </leafNode>
