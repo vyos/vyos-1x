@@ -40,7 +40,7 @@ cache=/var/cache/ddclient/ddclient.cache
 # ddclient configuration for interface "{{ interface.interface }}":
 #
 {% if interface.web_url -%}
-use=web, web={{ interface.web_url}} {%- if interface.web_skip %}, web-skip={{ interface.web_skip }}{% endif %}
+use=web, web='{{ interface.web_url}}' {%- if interface.web_skip %}, web-skip='{{ interface.web_skip }}'{% endif %}
 {% else -%}
 use=if, if={{ interface.interface }}
 {% endif -%}
