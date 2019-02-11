@@ -113,7 +113,7 @@
                 <properties>
                   <help>IP addresses allowed to traverse the peer</help>
                   <constraint>
-                    <validator name="ip-host"/>
+                    <validator name="ip-prefix"/>
                   </constraint>
                 <multi/>
                 </properties>
