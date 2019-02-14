@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<!-- host-name configuration -->
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <leafNode name="name-server">
+        <properties>
+          <help>Domain Name Server (DNS)</help>
+          <priority>400</priority>
+          <valueHelp>
+            <format>ipv4</format>
+            <description>Domain Name Server (DNS) address</description>
+          </valueHelp>
+          <valueHelp>
+            <format>ipv6</format>
+            <description>Domain Name Server (DNS) address</description>
+          </valueHelp>
+          <multi/>
+          <constraint>
+            <validator name="ipv4-address"/>
+            <validator name="ipv6-address"/>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/host_name.py">
+        <properties>
+          <help>System host name (default: vyos)</help>
+          <constraint>
+            <regex>[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="domain-name" owner="${vyos_conf_scripts_dir}/host_name.py">
+        <properties>
+          <help>System domain name</help>
+          <constraint>
+            <regex>[A-Za-z0-9][-.A-Za-z0-9]*</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <node name="domain-search" owner="${vyos_conf_scripts_dir}/host_name.py">
+        <properties>
+          <help>Domain Name Server (DNS) domain completion order</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <leafNode name="domain">
+            <properties>
+              <help>DNS domain completion order</help>
+              <constraint>
+                <regex>^[-a-zA-Z0-9.]+$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid domain name</constraintErrorMessage>
+              <multi/>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+      <leafNode name="disable-dhcp-nameservers" owner="${vyos_conf_scripts_dir}/host_name.py">
+        <properties>
+          <help>Disable DHCP updates of DNS settings</help>
+          <priority>300</priority>
+          <valueless/>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
