@@ -118,6 +118,10 @@ class ConfigTree(object):
         self.__rename.argtypes = [c_void_p, c_char_p, c_char_p]
         self.__rename.restype = c_int
 
+        self.__copy = self.__lib.copy_node
+        self.__copy.argtypes = [c_void_p, c_char_p, c_char_p]
+        self.__copy.restype = c_int
+
         self.__set_replace_value = self.__lib.set_replace_value
         self.__set_replace_value.argtypes = [c_void_p, c_char_p, c_char_p]
         self.__set_replace_value.restype = c_int
@@ -201,12 +205,31 @@ class ConfigTree(object):
 
         self.__delete_value(self.__config, path_str, value.encode())
 
-    def rename(self, path, newname):
+    def rename(self, path, new_name):
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
-        newname_str = newname.encode()
+        newname_str = new_name.encode()
 
-        self.__rename(self.__config, path_str, newname_str)
+        # Check if a node with intended new name already exists
+        new_path = path[:-1] + [new_name]
+        if self.exists(new_path):
+            raise ConfigTreeError()
+        res = self.__rename(self.__config, path_str, newname_str)
+        if (res != 0):
+            raise ConfigTreeError("Path [{}] doesn't exist".format(oldpath))
+
+    def copy(self, old_path, new_path):
+        check_path(old_path)
+        check_path(new_path)
+        oldpath_str = " ".join(map(str, old_path)).encode()
+        newpath_str = " ".join(map(str, new_path)).encode()
+
+        # Check if a node with intended new name already exists
+        if self.exists(new_path):
+            raise ConfigTreeError()
+        res = self.__copy(self.__config, oldpath_str, newpath_str)
+        if (res != 0):
+            raise ConfigTreeError("Path [{}] doesn't exist".format(oldpath))
 
     def exists(self, path):
         check_path(path)

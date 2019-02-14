@@ -41,3 +41,21 @@ class TestConfigParser(TestCase):
         self.assertTrue(self.config.exists(["top-level-tag-node"]))
         # No sorting is intentional, child order must be preserved
         self.assertEqual(self.config.list_nodes(["top-level-tag-node"]), ["foo", "bar"])
+
+    def test_copy(self):
+        self.config.copy(["top-level-tag-node", "bar"], ["top-level-tag-node", "baz"])
+        print(self.config.to_string())
+        self.assertTrue(self.config.exists(["top-level-tag-node", "baz"]))
+
+    def test_copy_duplicate(self):
+        with self.assertRaises(vyos.configtree.ConfigTreeError):
+            self.config.copy(["top-level-tag-node", "foo"], ["top-level-tag-node", "bar"])
+
+    def test_rename(self):
+        self.config.rename(["top-level-tag-node", "bar"], "quux")
+        print(self.config.to_string())
+        self.assertTrue(self.config.exists(["top-level-tag-node", "quux"]))
+
+    def test_rename_duplicate(self):
+        with self.assertRaises(vyos.configtree.ConfigTreeError):
+            self.config.rename(["top-level-tag-node", "foo"], "bar")
