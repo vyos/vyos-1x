@@ -37,19 +37,19 @@ class TestHostName(TestCase):
             {'name': 'empty_hostname_and_domain',
              'host-name': '',
              'domain-name': '',
-             'expected': {"hostname": 'vyos', "domain": '', "fqdn": 'vyos'}},
+             'expected': {"hostname": 'vyos', "domain_name": '', "domain_search": ''}},
             {'name': 'empty_hostname',
              'host-name': '',
              'domain-name': 'localdomain',
-             'expected': {"hostname": 'vyos', "domain": 'localdomain', "fqdn": 'vyos.localdomain'}},
+             'expected': {"hostname": 'vyos', "domain_name": 'localdomain', "domain_search": ''}},
             {'name': 'has_hostname',
              'host-name': 'router',
              'domain-name': '',
-             'expected': {"hostname": 'router', "domain": '', "fqdn": 'router'}},
+             'expected': {"hostname": 'router', "domain_name": '', "domain_search": ''}},
             {'name': 'has_hostname_and_domain',
              'host-name': 'router',
              'domain-name': 'localdomain',
-             'expected': {"hostname": 'router', "domain": 'localdomain', "fqdn": 'router.localdomain'}},
+             'expected': {"hostname": 'router', "domain_name": 'localdomain', "domain_search": ''}},
         ]
         for t in tests:
             def mocked_return_value(path, default=None):
@@ -64,13 +64,13 @@ class TestHostName(TestCase):
     def test_verify(self):
         tests = [
             {'name': 'valid_hostname',
-             'config': {"hostname": 'vyos', "domain": 'localdomain', "fqdn": 'vyos.localdomain'},
+             'config': {"hostname": 'vyos', "domain_name": 'localdomain', "domain_search": ''},
              'expected': None},
             {'name': 'invalid_hostname',
-             'config': {"hostname": 'vyos..', "domain": '', "fqdn": ''},
+             'config': {"hostname": 'vyos..', "domain_name": '', "domain_search": ''},
              'expected': ConfigError},
             {'name': 'invalid_hostname_length',
-             'config': {"hostname": 'a'*64, "domain": '', "fqdn": ''},
+             'config': {"hostname": 'a'*64, "domain_name": '', "domain_search": ''},
              'expected': ConfigError}
         ]
         for t in tests:
@@ -85,11 +85,11 @@ class TestHostName(TestCase):
         tests = [
             {'name': 'has_old_entry',
              'has_old_entry': True,
-             'config': {"hostname": 'router', "domain": 'localdomain', "fqdn": 'router.localdomain'},
+             'config': {"hostname": 'router', "domain_name": 'localdomain', "domain_search": '', "no_dhcp_ns": False, "nameserver": []},
              'expected': ['127.0.1.1', 'router.localdomain']},
             {'name': 'no_old_entry',
              'has_old_entry': False,
-             'config': {"hostname": 'router', "domain": 'localdomain', "fqdn": 'router.localdomain'},
+             'config': {"hostname": 'router', "domain_name": 'localdomain', "domain_search": 'vyos.io', "no_dhcp_ns": False, "nameserver": []},
              'expected': ['127.0.1.1', 'router.localdomain']},
         ]
         for t in tests:
@@ -115,7 +115,7 @@ class TestHostName(TestCase):
     def test_apply(self):
         tests = [
             {'name': 'valid_hostname',
-             'config': {"hostname": 'router', "domain": 'localdomain', "fqdn": 'router.localdomain'},
+             'config': {"hostname": 'router', "domain_name": 'localdomain'},
              'expected': [mock.call('hostnamectl set-hostname --static router.localdomain'),
                           mock.call('systemctl restart rsyslog.service')]}
         ]
