@@ -19,6 +19,7 @@
 import os
 import tempfile
 import unittest
+import textwrap
 from unittest import TestCase, mock
 
 from vyos import ConfigError
@@ -86,30 +87,34 @@ class TestHostName(TestCase):
             {'name': 'has_old_entry',
              'has_old_entry': True,
              'config': {"hostname": 'router', "domain_name": 'localdomain', "domain_search": '', "no_dhcp_ns": False, "nameserver": []},
-             'expected': ['127.0.1.1', 'router.localdomain']},
+             'expected': ['127.0.0.1', 'localhost']
+            },
             {'name': 'no_old_entry',
              'has_old_entry': False,
              'config': {"hostname": 'router', "domain_name": 'localdomain', "domain_search": 'vyos.io', "no_dhcp_ns": False, "nameserver": []},
-             'expected': ['127.0.1.1', 'router.localdomain']},
+             'expected': ['127.0.0.1', 'localhost']
+            },
         ]
         for t in tests:
             with self.subTest(msg=t['name'], config=t['config'], has_old_entry=t['has_old_entry'],  expected=t['expected']):
                 m = mock.MagicMock(return_value=b'debian')
                 with mock.patch('subprocess.check_output', m):
-                    host_name.hosts_file = tempfile.mkstemp()[1]
+                    host_name.config_file_hosts = tempfile.mkstemp()[1]
+                    host_name.config_file_resolv = tempfile.mkstemp()[1]
                     if t['has_old_entry']:
-                        with open(host_name.hosts_file, 'w') as f:
+                        with open(host_name.config_file_hosts, 'w') as f:
                             f.writelines(['\n127.0.1.1 {} # VyOS entry'.format('debian')])
                     host_name.generate(t['config'])
                     if len(t['expected']) > 0:
-                        self.assertTrue(os.path.isfile(host_name.hosts_file))
-                        with open(host_name.hosts_file) as f:
+                        self.assertTrue(os.path.isfile(host_name.config_file_hosts))
+                        with open(host_name.config_file_hosts ) as f:
                             actual = f.read()
                             self.assertEqual(
                                 t['expected'], actual.splitlines()[1].split()[0:2])
-                        os.remove(host_name.hosts_file)
+                        os.remove(host_name.config_file_hosts )
+                        os.remove(host_name.config_file_resolv)
                     else:
-                        self.assertFalse(os.path.isfile(host_name.hosts_file))
+                        self.assertFalse(os.path.isfile(host_name.config_file_hosts ))
 
 
     def test_apply(self):
