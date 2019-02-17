@@ -94,7 +94,9 @@ def get_config():
     if hosts['domain_name']:
         hosts['domain_search'].append(hosts['domain_name'])
 
-    hosts['domain_search'] = conf.return_values("system domain-search domain")
+    for search in conf.return_values("system domain-search domain"):
+        hosts['domain_search'].append(search)
+
     hosts['nameserver'] = conf.return_values("system name-server")
     hosts['no_dhcp_ns'] = conf.exists('system disable-dhcp-nameservers')
 
