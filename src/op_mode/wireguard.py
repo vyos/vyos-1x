@@ -56,8 +56,12 @@ def genkey():
     except KeyboardInterrupt:
         sys.exit(0)
   else:
+    """ if keypair is bing executed from a running iso """
     if not os.path.exists(dir):
-      os.mkdir(dir)
+      os.umask(old_umask)
+      subprocess.call(['sudo mkdir -p ' + dir], shell=True)
+      subprocess.call(['sudo chgrp vyattacfg ' + dir], shell=True)
+      subprocess.call(['sudo chmod 770 ' + dir], shell=True)
     generate_keypair()
   os.umask(old_umask)
 
