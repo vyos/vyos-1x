@@ -149,10 +149,31 @@ def generate(config):
     if not config['no_dhcp_ns']:
         config['nameserver'] += dhcp_ns
 
+    # We have third party scripts altering /etc/hosts, too.
+    # One example are the DHCP hostname update scripts thus we need to cache in
+    # every modification first - so changing domain-name, domain-search or hostname
+    # during runtime works
+    old_hosts = ""
+    with open(config_file_hosts, 'r') as f:
+        # Skips text before the beginning of our marker.
+        # NOTE: Marker __MUST__ match the one specified in config_tmpl_hosts
+        for line in f:
+            if line.strip() == '### modifications from other scripts should be added below':
+                break
+
+        for line in f:
+            # This additional line.strip() filters empty lines
+            if line.strip():
+                old_hosts += line
+
+    # Add an additional newline
+    old_hosts += '\n'
+
     tmpl = jinja2.Template(config_tmpl_hosts)
     config_text = tmpl.render(config)
     with open(config_file_hosts, 'w') as f:
         f.write(config_text)
+        f.write(old_hosts)
 
     tmpl = jinja2.Template(config_tmpl_resolv)
     config_text = tmpl.render(config)
