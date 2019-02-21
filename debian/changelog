@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-2) unstable; urgency=low
+
+  fixes T1257 - implement 'set system static-host-mapping' in host_name.py and remove old function calls
+
+ -- hagbard <vyosdev@derith.de>  Thu, 21 Feb 2019 15:53:30 -0800 
+
 vyos-1x (1.3.0-1) unstable; urgency=medium
 
   * Changing version for the new branch.
