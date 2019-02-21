@@ -22,6 +22,11 @@ domain=$5
 file=/etc/hosts
 changes=0
 
+if [ -z "$client_name" ]; then
+    logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
+    client_name=$(echo "client-"$client_mac | tr : -)
+fi
+
 if [ "$domain" == "..YYZ!" ]; then
     client_fqdn_name=$client_name
     client_search_expr=$client_name
