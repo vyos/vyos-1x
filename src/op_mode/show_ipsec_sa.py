@@ -1,90 +1,100 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2019 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
 import sys
-import subprocess
 
+import vici
 import tabulate
 import hurry.filesize
 
-def parse_conn_spec(s):
-    try:
-        # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
-        return re.search(r'.*ESTABLISHED\s+(.*)ago,\s(.*)\[(.*)\]\.\.\.(.*)\[(.*)\].*', s).groups()
-    except AttributeError:
-        # No active SAs found, so we have nothing to display
-        print("No established security associations found.")
-        print("Use \"show vpn ipsec sa verbose\" to view inactive and connecting tunnels.")
-        sys.exit(0)
+import vyos.util
 
-def parse_sa_counters(s):
-    bytes_in, bytes_out = None, None
-    try:
-        # Example with traffic: AES_CBC_256/HMAC_SHA2_256_128/ECP_521, 2382660 bytes_i (1789 pkts, 2s ago), 2382660 bytes_o ...
-        bytes_in, bytes_out = re.search(r'\s+(\d+)\s+bytes_i\s\(.*pkts,.*\),\s+(\d+)\s+bytes_o', s).groups()
-    except AttributeError:
-        try:
-            # Example without traffic: 3DES_CBC/HMAC_MD5_96/MODP_1024, 0 bytes_i, 0 bytes_o, rekeying in 45 minutes
-            bytes_in, bytes_out = re.search(r'\s+(\d+)\s+bytes_i,\s+(\d+)\s+bytes_o,\s+rekeying', s).groups()
-        except AttributeError:
-            pass
-
-    if (bytes_in is not None) and (bytes_out is not None):
-        # Convert bytes to human-readable units
-        bytes_in = hurry.filesize.size(int(bytes_in))
-        bytes_out = hurry.filesize.size(int(bytes_out))
-
-        result = "{0}/{1}".format(bytes_in, bytes_out)
-    else:
-        result = "N/A"
-
-    return result
-
-def parse_ike_proposal(s):
-    result = re.search(r'IKE proposal:\s+(.*)\s', s)
-    if result:
-        return result.groups(0)[0]
-    else:
-        return "N/A"
-
-
-# Get a list of all configured connections
-with open('/etc/ipsec.conf', 'r') as f:
-    config = f.read()
-    connections = set(re.findall(r'conn\s([^\s]+)\s*\n', config))
-    connections = list(filter(lambda s: s != '%default', connections))
 
 try:
-    # DMVPN connections have to be handled separately
-    with open('/etc/swanctl/swanctl.conf', 'r') as f:
-        dmvpn_config = f.read()
-        dmvpn_connections = re.findall(r'\s+(dmvpn-.*)\s+{\n', dmvpn_config)
-    connections += dmvpn_connections
-except:
-    pass
+    session = vici.Session()
+    sas = session.list_sas()
+except PermissionError:
+    print("You do not have a permission to connect to the IPsec daemon")
+    sys.exit(1)
+except ConnectionRefusedError:
+    print("IPsec is not runing")
+    sys.exit(1)
+except Exception as e:
+    print("An error occured: {0}".format(e))
+    sys.exit(1)
 
-status_data = []
+sa_data = []
 
-for conn in connections:
-    status = subprocess.check_output("ipsec statusall {0}".format(conn), shell=True).decode()
-    if not re.search(r'ESTABLISHED', status):
-        status_line = [conn, "down", None, None, None, None, None]
-    else:
-        try:
-            time, _, _, ip, id = parse_conn_spec(status)
-            if ip == id:
-                id = None
-            counters = parse_sa_counters(status)
-            enc = parse_ike_proposal(status)
-            status_line = [conn, "up", time, counters, ip, id, enc]
-        except Exception as e:
-            print(status)
-            raise e
-            status_line = [conn, None, None, None, None, None]
+for sa in sas:
+    # list_sas() returns a list of single-item dicts
+    for peer in sa:
+        parent_sa = sa[peer]
 
-    status_line = list(map(lambda x: "N/A" if x is None else x, status_line))
-    status_data.append(status_line)
+        if parent_sa["state"] == b"ESTABLISHED":
+            state = "up"
+        else:
+            state = "down"
 
-headers = ["Connection", "State", "Up", "Bytes In/Out", "Remote address", "Remote ID", "Proposal"]
-output = tabulate.tabulate(status_data, headers)
+        if state == "up":
+            uptime = vyos.util.seconds_to_human(parent_sa["established"].decode())
+        else:
+            uptime = "N/A"
+
+        remote_host = parent_sa["remote-host"].decode()
+        remote_id = parent_sa["remote-id"].decode()
+
+        if remote_host == remote_id:
+            remote_id = "N/A"
+
+        # The counters can only be obtained from the child SAs
+        child_sas = parent_sa["child-sas"]
+        installed_sas = {k: v for k, v in child_sas.items() if v["state"] == b"INSTALLED"}
+
+        if not installed_sas:
+            data = [peer, state, "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"]
+            sa_data.append(data)
+        else:
+            for csa in installed_sas:
+                isa = installed_sas[csa]
+
+                bytes_in = hurry.filesize.size(int(isa["bytes-in"].decode()))
+                bytes_out = hurry.filesize.size(int(isa["bytes-out"].decode()))
+                bytes_str = "{0}/{1}".format(bytes_in, bytes_out)
+
+                pkts_in = hurry.filesize.size(int(isa["packets-in"].decode()), system=hurry.filesize.si)
+                pkts_out = hurry.filesize.size(int(isa["packets-out"].decode()), system=hurry.filesize.si)
+                pkts_str = "{0}/{1}".format(pkts_in, pkts_out)
+                # Remove B from <1K values
+                pkts_str = re.sub(r'B', r'', pkts_str)
+
+                enc = isa["encr-alg"].decode()
+                key_size = isa["encr-keysize"].decode()
+                hash = isa["integ-alg"].decode()
+                if "dh-group" in isa:
+                    dh_group = isa["dh-group"].decode()
+                else:
+                    dh_group = ""
+                proposal = "{0}_{1}/{2}".format(enc, key_size, hash)
+                if dh_group:
+                    proposal = "{0}/{1}".format(proposal, dh_group)
+
+                data = [peer, state, uptime, bytes_str, pkts_str, remote_host, remote_id, proposal]
+                sa_data.append(data)
+
+headers = ["Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out", "Remote address", "Remote ID", "Proposal"]
+output = tabulate.tabulate(sa_data, headers)
 print(output)
