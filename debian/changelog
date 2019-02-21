@@ -1,9 +1,16 @@
+vyos-1x (1.3.0-1) unstable; urgency=medium
+
+  * Changing version for the new branch.
+
+ -- Daniil Baturin <daniil@baturin.org>  Thu, 21 Feb 2019 22:52:26 +0100
+
 vyos-1x (1.2.0-14) unstable; urgency=low
 
   * fixes T1254 - generate wireguard keypair fails when executed on the iso
     - keypair can now be generated and used from a running iso
 
  -- hagbard <vyosdev@derith.de>  Tue, 19 Feb 2019 12:31:50 -0800
+
 vyos-1x (1.2.0-13) unstable; urgency=low
 
   * fixes T1238 - Wireguard allows invalid IP's 
