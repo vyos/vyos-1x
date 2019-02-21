@@ -67,7 +67,7 @@ status_data = []
 
 for conn in connections:
     status = subprocess.check_output("ipsec statusall {0}".format(conn), shell=True).decode()
-    if re.search(r'no match|CONNECTING', status):
+    if not re.search(r'ESTABLISHED', status):
         status_line = [conn, "down", None, None, None, None, None]
     else:
         try:
