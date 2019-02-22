@@ -54,6 +54,8 @@ Depends: python3,
   mdns-repeater,
   udp-broadcast-relay,
   pdns-recursor,
+  lcdproc,
+  lcdproc-extra-drivers,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
