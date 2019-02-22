@@ -153,7 +153,7 @@ def verify(config):
   if config['static_host_mapping']['hostnames']:
     for hn in config['static_host_mapping']['hostnames']:
       for hn_alias in config['static_host_mapping']['hostnames'][hn]['alias'].split(' '):
-        if not hostname_regex.match(hn_alias):
+        if not hostname_regex.match(hn_alias) and len (hn_alias) !=0:
           raise ConfigError('Invalid hostname alias ' + hn_alias)
 
   return None
