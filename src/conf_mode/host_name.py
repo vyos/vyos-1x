@@ -86,6 +86,18 @@ def get_resolvers(file):
   except IOError:
     return []
 
+def get_dhcp_search_doms(file):
+  search_doms = []
+  try:
+    with open(file, 'r') as resolvconf:
+      for line in resolvconf.readlines():
+        line = line.split('#',1)[0];
+        line = line.rstrip();
+        if 'search' in line:
+          return re.sub('^search','',line).lstrip().split()
+  except IOError:
+    return []
+
 default_config_data = {
     'hostname': 'vyos',
     'domain_name': '',
@@ -174,6 +186,8 @@ def generate(config):
 
   if not config['no_dhcp_ns']:
     config['nameserver'] += dhcp_ns
+    for file in glob.glob('/etc/resolv.conf.dhclient-new*'):
+      config['domain_search'] = get_dhcp_search_doms(file)
 
   # We have third party scripts altering /etc/hosts, too.
   # One example are the DHCP hostname update scripts thus we need to cache in
@@ -204,6 +218,7 @@ def generate(config):
 
   tmpl = jinja2.Template(config_tmpl_resolv)
   config_text = tmpl.render(config)
+  print (config_text)
   with open(config_file_resolv, 'w') as f:
     f.write(config_text)
 

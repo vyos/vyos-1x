@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-3) unstable; urgency=low
+
+  fixes T1262 - dhcp requested WAN ip address doesn't get search parameter in /etc/resolv.conf
+
+ -- hagbard <vyosdev@derith.de>  Fri, 22 Feb 2019 10:50:24 -0800
+
 vyos-1x (1.3.0-2) unstable; urgency=low
 
   fixes T1257 - implement 'set system static-host-mapping' in host_name.py and remove old function calls
