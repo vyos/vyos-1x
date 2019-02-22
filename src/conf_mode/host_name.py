@@ -218,7 +218,6 @@ def generate(config):
 
   tmpl = jinja2.Template(config_tmpl_resolv)
   config_text = tmpl.render(config)
-  print (config_text)
   with open(config_file_resolv, 'w') as f:
     f.write(config_text)
 
