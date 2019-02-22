@@ -227,7 +227,7 @@ def apply(config):
     os.system("systemctl restart snmpd.service")
   
   # restart pdns if it is used
-  if os.system("/usr/bin/rec_control ping >/dev/null") == 0:
+  if os.system("/usr/bin/rec_control ping >/dev/null 2>&1") == 0:
     os.system("/etc/init.d/pdns-recursor restart >/dev/null")
 
   return None
