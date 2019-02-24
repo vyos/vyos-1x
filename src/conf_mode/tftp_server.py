@@ -125,9 +125,18 @@ def apply(tftpd):
     if not os.path.exists(tftp_root):
         os.makedirs(tftp_root)
         os.chmod(tftp_root, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
-        # get UNIX uid for user 'tftp'
-        tftp_uid = pwd.getpwnam('tftp').pw_uid
-        os.chown(tftp_root, tftp_uid, -1)
+
+    # get UNIX uid for user 'tftp'
+    tftp_uid = pwd.getpwnam('tftp').pw_uid
+    tftp_gid = pwd.getpwnam('tftp').pw_gid
+
+    # get UNIX uid for tftproot directory
+    dir_uid = os.stat(tftp_root).st_uid
+    dir_gid = os.stat(tftp_root).st_gid
+
+    # adjust uid/gid of tftproot directory if files don't belong to user tftp
+    if (tftp_uid != dir_uid) or (tftp_gid != dir_gid):
+        os.chown(tftp_root, tftp_uid, tftp_gid)
 
     idx = 0
     for listen in tftpd['listen']:
