@@ -49,7 +49,7 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(MIGRATION_SCRIPTS_DIR)
 	cp -r src/migration-scripts/* $(DIR)/$(MIGRATION_SCRIPTS_DIR)
 
-        # Install system scripts
+	# Install system scripts
 	mkdir -p $(DIR)/$(SYSTEM_SCRIPTS_DIR)
 	cp -r src/system/* $(DIR)/$(SYSTEM_SCRIPTS_DIR)
 
