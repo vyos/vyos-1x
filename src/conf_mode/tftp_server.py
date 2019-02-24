@@ -57,7 +57,7 @@ def get_config():
     if conf.exists('directory'):
         tftpd['directory'] = conf.return_value('directory')
 
-    if conf.exists('allow_upload'):
+    if conf.exists('allow-upload'):
         tftpd['allow_upload'] = True
 
     if conf.exists('port'):
