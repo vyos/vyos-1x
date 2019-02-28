@@ -68,3 +68,7 @@ override_dh_auto_install:
 	# Install etc configuration files
 	mkdir -p $(DIR)/etc
 	cp -r src/etc/* $(DIR)/etc
+
+	# Install systemd service units
+	mkdir -p $(DIR)/lib/systemd/system
+	cp -r src/systemd/* $(DIR)/lib/systemd/system

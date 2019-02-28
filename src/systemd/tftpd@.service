@@ -1,0 +1,14 @@
+[Unit]
+Description=TFTP server
+After=network.target
+RequiresMountsFor=/run
+
+[Service]
+Type=forking
+#NotifyAccess=main
+EnvironmentFile=-/etc/default/tftpd%I
+ExecStart=/usr/sbin/in.tftpd "$DAEMON_ARGS"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
