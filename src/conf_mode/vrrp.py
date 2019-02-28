@@ -76,9 +76,11 @@ vrrp_instance {{ group.name }} {
       {%- endif %}
     {% endif -%}
 
-    {% if group.use_vmac -%}
+    {% if group.use_vmac and group.peer_address -%}
       use_vmac {{group.interface}}v{{group.vrid}}
       vmac_xmit_base
+    {% elif group.use_vmac -%}
+      use_vmac {{group.interface}}v{{group.vrid}}
     {% endif -%}
 
     {% if group.auth_password -%}
