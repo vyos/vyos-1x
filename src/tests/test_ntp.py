@@ -198,7 +198,7 @@ class TestNtp(TestCase):
                     #
                     driftfile /var/lib/ntp/ntp.drift
                     # By default, only allow ntpd to query time sources, ignore any incoming requests
-                    restrict default noquery nopeer notrap nomodify
+                    restrict default noquery nopeer notrap nomodify noquery notrust
                     # Local users have unrestricted access, allowing reconfiguration via ntpdc
                     restrict 127.0.0.1
                     restrict -6 ::1
