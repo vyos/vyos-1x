@@ -1,0 +1,231 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vpn">
+    <children>
+      <node name="pptp" owner="${vyos_conf_scripts_dir}/accel_pptp.py">
+        <properties>
+          <help>Point to Point Tunneling Protocol (PPTP) Virtual Private Network (VPN)</help>
+        </properties>
+        <children>
+          <node name="remote-access">
+            <properties>
+              <help>Remote access PPTP VPN</help>
+            </properties>
+            <children>
+              <leafNode name="mtu">
+                <properties>
+                  <help>Maximum Transmission Unit (MTU)</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 128-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="outside-address">
+                <properties>
+                  <help>External IP address to which VPN clients will connect</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="dns-servers">
+                <properties>
+                  <help>IPv4 Domain Name Service (DNS) server</help>
+                </properties>
+                <children>
+                  <leafNode name="server-1">
+                    <properties>
+                      <help>Primary DNS server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="server-2">
+                    <properties>
+                      <help>Secondary DNS server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node> 
+              <node name="wins-servers">
+                <properties>
+                  <help>Windows Internet Name Service (WINS) server settings</help>
+                </properties>
+                <children>
+                  <leafNode name="server-1">
+                    <properties>
+                      <help>Primary WINS server</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="server-2">
+                    <properties>
+                      <help>Secondary WINS server</help>
+                    <constraint>
+                      <validator name="ipv4-address"/>
+                    </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="client-ip-pool">
+                <properties>
+                  <help>Pool of client IP addresses (must be within a /24)</help>
+                </properties>
+                <children>
+                  <leafNode name="start">
+                    <properties>
+                      <help>First IP address in the pool (will be used as gateway address)</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="stop">
+                    <properties>
+                      <help>Last IP address in the pool</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="gateway-address">
+                <properties>
+                  <help>Gatway address uses as client tunnel termination point</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="authentication">
+                <properties>
+                  <help>Authentication for remote access PPTP VPN</help>
+                </properties>
+                <children>
+                  <leafNode name="require">
+                    <properties>
+                      <help>Authentication protocol for remote access peer PPTP VPN</help>
+                      <valueHelp>
+                        <format>pap</format>
+                        <description>Require the peer to authenticate itself using PAP [Password Authentication Protocol].</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>chap</format>
+                        <description>Require the peer to authenticate itself using CHAP [Challenge Handshake Authentication Protocol].</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>mschap</format>
+                        <description>Require the peer to authenticate itself using CHAP [Challenge Handshake Authentication Protocol].</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>mschap-v2</format>
+                        <description>Require the peer to authenticate itself using MS-CHAPv2 [Microsoft Challenge Handshake Authentication Protocol, Version 2].</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Authentication mode for remote access PPTP VPN</help>
+                      <valueHelp>
+                        <format>local</format>
+                        <description>Use local username/password configuration</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>radius</format>
+                        <description>Use a RADIUS server to autenticate users</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(local|radius)</regex>
+                      </constraint>
+                      <completionHelp>
+                        <list>local radius</list>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <node name="local-users">
+                    <properties>
+                      <help>Local user authentication for remote access PPTP VPN</help>
+                    </properties>
+                    <children>
+                      <tagNode name="username">
+                        <properties>
+                          <help>User name for authentication</help>
+                        </properties>
+                        <children>
+                          <leafNode name="disable">
+                            <properties>
+                              <help>Option to disable a PPTP Server user</help>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="password">
+                            <properties>
+                              <help>Password for authentication</help>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="static-ip">
+                            <properties>
+                              <help>Static client IP address</help>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="radius">
+                    <properties>
+                      <help>RADIUS specific configuration</help>
+                    </properties>
+                    <children>
+                      <tagNode name="server">
+                        <properties>
+                          <help>IP address of radius server</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IP address of RADIUS server</description>
+                          </valueHelp>
+                        </properties>
+                        <children>
+                          <leafNode name="key">
+                            <properties>
+                              <help>Key for accessing the specified server</help>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="req-limit">
+                            <properties>
+                              <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="fail-time">
+                            <properties>
+                              <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
