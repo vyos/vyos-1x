@@ -87,6 +87,10 @@ wins2={{wins[1]}}
 bind={{outside_addr}}
 verbose=5
 ppp-max-mtu={{mtu}}
+mppe={{authentication['mppe']}}
+echo-interval=10
+echo-failure=3
+
 
 [client-ip-range]
 0.0.0.0/0
@@ -185,7 +189,8 @@ def get_config():
         'local-users'   : {
         },
     'radiussrv'         : {},
-    'auth_proto'        : 'auth_mschap_v2' 
+    'auth_proto'        : 'auth_mschap_v2',
+    'mppe'              : 'require'
     },
     'outside_addr'    : '',
     'dns'             : [],
@@ -277,6 +282,9 @@ def get_config():
       config_data['authentication']['auth_proto'] = 'auth_mschap_v1'
     if c.return_value('authentication require') == 'mschap-v2':
       config_data['authentication']['auth_proto'] = 'auth_mschap_v2'
+  
+    if c.exists('authentication mppe'):
+      config_data['authentication']['mppe'] = c.return_value('authentication mppe')
   
   return config_data
 
