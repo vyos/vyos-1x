@@ -51,7 +51,9 @@ chap-secrets
 {% else %}
 auth_mschap_v2
 {% endif %}
+{% if authentication['mode'] == 'radius' %}
 radius
+{% endif -%}
 
 [core]
 thread-count={{thread_cnt}}
