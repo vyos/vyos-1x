@@ -139,6 +139,23 @@
                       </valueHelp>
                     </properties>
                   </leafNode>
+                  <leafNode name="mppe">
+                    <properties>
+                      <help>Specifies mppe negotioation preference. (default require mppe 128-bit stateless</help>
+                      <valueHelp>
+                        <format>deny</format>
+                        <description>deny mppe</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prefer</format>
+                        <description>ask client for mppe, if it rejects don't fail</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>require</format>
+                        <description>ask client for mppe, if it rejects drop connection</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
                   <leafNode name="mode">
                     <properties>
                       <help>Authentication mode for remote access PPTP VPN</help>
