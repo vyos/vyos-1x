@@ -52,6 +52,9 @@
               <leafNode name="relay-agents-packets">
                 <properties>
                   <help>Policy to handle incoming DHCPv4 packets which already contain relay agent options (default: forward)</help>
+                  <completionHelp>
+                    <list>append replace forward discard</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>append</format>
                     <description>append own relay options to packet</description>
