@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-7) unstable; urgency=low
+
+  * op-mode typo fixed
+
+ -- hagbard <vyosdev@derith.de>  Wed, 06 Mar 2019 12:33:16 -0800
+
 vyos-1x (1.3.0-6) unstable; urgency=low
 
   * version bump for bugfix radius config 
