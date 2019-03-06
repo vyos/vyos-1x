@@ -1,4 +1,4 @@
-vyos-1x (1.3.0-5) unstable; urgency=low
+vyos-1x (1.3.0-6) unstable; urgency=low
 
   * version bump for bugfix radius config 
 
