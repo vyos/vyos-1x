@@ -535,6 +535,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name ="preserve-fqdn">
+                <properties>
+                  <help>uses FQDN for logging</help>
+                  <valueless />
+                </properties>
+              </leafNode>
             </children>
           </node>
           <tagNode name="file">
