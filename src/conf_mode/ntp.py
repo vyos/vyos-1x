@@ -42,7 +42,6 @@ restrict default noquery nopeer notrap nomodify noquery notrust
 restrict 127.0.0.1
 restrict -6 ::1
 
-
 #
 # Configurable section
 #
@@ -51,6 +50,8 @@ restrict -6 ::1
 {% for s in servers -%}
 # Server configuration for: {{ s.name }}
 server {{ s.name }} iburst {{ s.options | join(" ") }}
+# allow server sync
+restrict {{ s.name }} nomodify notrap
 
 {% endfor -%}
 {% endif %}
