@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-10) unstable; urgency=low
+
+  * T1280 - allow-clients on NTP configuration
+
+ -- hagbard <vyosdev@derith.de>  Thu, 07 Mar 2019 12:08:50 -0800
+
 vyos-1x (1.3.0-9) unstable; urgency=low
 
   * mppe cfg options added
