@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-10) unstable; urgency=low
+
+  * adding extra server option so ntp can sync the time
+
+ -- hagbard <vyosdev@derith.de>  Thu, 07 Mar 2019 10:32:53 -0800
+
 vyos-1x (1.3.0-9) unstable; urgency=low
 
   * mppe cfg options added
