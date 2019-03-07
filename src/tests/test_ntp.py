@@ -210,18 +210,17 @@ class TestNtp(TestCase):
 
                     # Server configuration for: 1.example.com
                     server 1.example.com iburst noselect preempt prefer
+                    restrict  1.example.com nomodify notrap
 
                     # Server configuration for: 2.example.com
-                    server 2.example.com iburst 
-
-
+                    server 2.example.com iburst
+                    restrict  2.example.com nomodify notrap
 
                     # Client configuration for network: 192.0.2.0/24
                     restrict 192.0.2.1 mask 255.255.255.0 nomodify notrap nopeer
                     
                     # Client configuration for network: 198.51.100.0/24
                     restrict 198.51.100.1 mask 255.255.255.0 nomodify notrap nopeer
-
 
 
                     # NTP should listen on configured addresses only
