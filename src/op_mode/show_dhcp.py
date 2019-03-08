@@ -18,13 +18,11 @@
 import json
 import argparse
 import ipaddress
-
 import tabulate
+import sys
 
-import vyos.config
-
+from vyos.config import Config
 from isc_dhcp_leases import Lease, IscDhcpLeases
-
 
 lease_file = "/config/dhcpd.leases"
 pool_key = "shared-networkname"
@@ -110,6 +108,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Do nothing if service is not configured
+    config = Config()
+    if not config.exists_effective('service dhcp-server'):
+        print("DHCP service is not configured")
+        sys.exit(0)
+
     if args.leases:
         if args.expired:
             if args.pool:
@@ -127,8 +131,6 @@ if __name__ == '__main__':
         else:
             show_leases(leases)
     elif args.statistics:
-        config = vyos.config.Config()
-
         pools = []
 
         # Get relevant pools
