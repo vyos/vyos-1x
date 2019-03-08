@@ -58,6 +58,9 @@ on expiry {
     execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "release", ClientName, ClientIp, ClientMac, ClientDomain);
 }
 {% endif %}
+{%- if host_decl_name %}
+use-host-decl-names on;
+{%- endif %}
 ddns-update-style {% if ddns_enable -%} interim {%- else -%} none {%- endif %};
 {% if static_route -%}
 option rfc3442-static-route code 121 = array of integer 8;
@@ -240,6 +243,7 @@ default_config_data = {
     'ddns_enable': False,
     'global_parameters': [],
     'hostfile_update': False,
+    'host_decl_name': False,
     'static_route': False,
     'wpad': False,
     'shared_network': [],
@@ -271,6 +275,11 @@ def get_config():
     # check for global DHCP server updating /etc/host per lease
     if conf.exists('hostfile-update'):
         dhcp['hostfile_update'] = True
+
+    # If enabled every host declaration within that scope, the name provided
+    # for the host declaration will be supplied to the client as its hostname.
+    if conf.exists('host-decl-name'):
+        dhcp['host_decl_name'] = True
 
     # check for multiple, shared networks served with DHCP addresses
     if conf.exists('shared-network-name'):
