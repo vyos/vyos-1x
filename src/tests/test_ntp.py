@@ -198,7 +198,7 @@ class TestNtp(TestCase):
 			#
 			driftfile /var/lib/ntp/ntp.drift
 			# By default, only allow ntpd to query time sources, ignore any incoming requests
-			restrict default noquery nopeer notrap nomodify noquery notrust
+			restrict default noquery nopeer notrap nomodify
 			# Local users have unrestricted access, allowing reconfiguration via ntpdc
 			restrict 127.0.0.1
 			restrict -6 ::1
@@ -209,14 +209,8 @@ class TestNtp(TestCase):
 			
 			# Server configuration for: 1.example.com
 			server 1.example.com iburst noselect preempt prefer
-			# allow server sync
-			restrict 1.example.com nomodify notrap
-			
 			# Server configuration for: 2.example.com
 			server 2.example.com iburst 
-			# allow server sync
-			restrict 2.example.com nomodify notrap
-			
 			
 			
 			# Client configuration for network: 192.0.2.0/24
@@ -242,7 +236,7 @@ class TestNtp(TestCase):
 
                     ntp.generate(case['config'])
                     actual = fp.file.read().decode('ascii')
-                    # print(actual)
+                    print(actual)
                     self.assertEqual(case['expected'], actual)
 
     def test_apply(self):

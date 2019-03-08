@@ -37,7 +37,7 @@ config_tmpl = """
 #
 driftfile /var/lib/ntp/ntp.drift
 # By default, only allow ntpd to query time sources, ignore any incoming requests
-restrict default noquery nopeer notrap nomodify noquery notrust
+restrict default noquery nopeer notrap nomodify
 # Local users have unrestricted access, allowing reconfiguration via ntpdc
 restrict 127.0.0.1
 restrict -6 ::1
@@ -50,9 +50,6 @@ restrict -6 ::1
 {% for s in servers -%}
 # Server configuration for: {{ s.name }}
 server {{ s.name }} iburst {{ s.options | join(" ") }}
-# allow server sync
-restrict {{ s.name }} nomodify notrap
-
 {% endfor -%}
 {% endif %}
 
