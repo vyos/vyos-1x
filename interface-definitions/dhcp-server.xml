@@ -36,6 +36,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="host-decl-name">
+            <properties>
+              <help>Instruct server to use host declaration name for forward DNS name</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <tagNode name="shared-network-name">
             <properties>
               <help>DHCP shared network name [REQUIRED]</help>
