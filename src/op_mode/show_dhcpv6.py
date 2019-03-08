@@ -18,13 +18,11 @@
 import json
 import argparse
 import ipaddress
-
 import tabulate
+import sys
 
-import vyos.config
-
+from vyos.config import Config
 from isc_dhcp_leases import Lease, IscDhcpLeases
-
 
 lease_file = "/config/dhcpdv6.leases"
 
@@ -72,6 +70,12 @@ if __name__ == '__main__':
     parser.add_argument("-j", "--json", action="store_true", default=False, help="Product JSON output")
 
     args = parser.parse_args()
+
+    # Do nothing if service is not configured
+    c = Config()
+    if not c.exists_effective('service dhcpv6-server'):
+        print("DHCPv6 service is not configured")
+        sys.exit(0)
 
     if args.leases:
         leases = get_leases(lease_file, state='active')
