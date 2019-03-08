@@ -104,7 +104,9 @@ failover peer "{{ subnet.failover_name }}" {
 {% for network in shared_network %}
 {%- if not network.disabled -%}
 shared-network {{ network.name }} {
-    {{ "authoritative;" if network.authoritative }}
+    {%- if network.authoritative %}
+    authoritative;
+    {%- endif %}
     {%- if network.network_parameters %}
     # The following {{ network.network_parameters | length }} line(s) were added as shared-network-parameters in the CLI and have not been validated
     {%- for param in network.network_parameters %}
@@ -216,7 +218,7 @@ shared-network {{ network.name }} {
         set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
         set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
         execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "commit", ClientName, ClientIp, ClientMac, ClientDomain);
-        {% endif -%}
+        {%- endif %}
     }
 }
 {%- endif %}
