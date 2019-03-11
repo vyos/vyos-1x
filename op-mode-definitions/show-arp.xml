@@ -15,7 +15,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py -b</script>
               </completionHelp>
             </properties>
-            <command>/usr/sbin/arp -e -n -i '$4'</command>
+            <command>/usr/sbin/arp -e -n -i "$4"</command>
           </tagNode>
         </children>
       </node>
