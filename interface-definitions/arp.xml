@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="static">
+        <children>
+          <tagNode name="arp" owner="${vyos_conf_scripts_dir}/arp.py">
+            <properties>
+              <help>Static ARP translation</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 destination address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="hwaddr">
+                <properties>
+                  <help>mac address to translate to</help>
+                  <valueHelp>
+                    <format>h:h:h:h:h:h</format>
+                    <description>Hardware (MAC) address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
