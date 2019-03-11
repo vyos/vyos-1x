@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-14) unstable; urgency=low
+
+  * T1294 - Trying to delete 'system syslog' throws an exception/traceback
+
+ -- hagbard <vyosdev@derith.de>  Mon, 11 Mar 2019 15:06:39 -0700 
+
 vyos-1x (1.3.0-13) unstable; urgency=low
 
   * T1288 - python implementation of 'set protocols static arp '
