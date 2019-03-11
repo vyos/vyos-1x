@@ -231,6 +231,9 @@ def generate_selectors(c, config_node):
     return selectors
 
 def generate(c):
+  if c == None:
+    return None
+
   tmpl = jinja2.Template(configs, trim_blocks=True)
   config_text = tmpl.render(c)
   with open('/etc/rsyslog.d/vyos-rsyslog.conf', 'w') as f:
@@ -243,11 +246,12 @@ def generate(c):
     f.write(config_text)
 
 def verify(c):
+  if c == None:
+    return None
   #
   # /etc/rsyslog.conf is generated somewhere and copied over the original (exists in /opt/vyatta/etc/rsyslog.conf)
   # it interferes with the global logging, to make sure we are using a single base, template is enforced here 
   #
-
   if not os.path.islink('/etc/rsyslog.conf'):
     os.remove('/etc/rsyslog.conf')
     os.symlink('/usr/share/vyos/templates/rsyslog/rsyslog.conf', '/etc/rsyslog.conf')
@@ -277,10 +281,16 @@ def verify(c):
 def apply(c):
   ### vyatta-log.conf is being generated somewhere
   ### this is just a quick hack to remove the old configfile
-  
-  if os.path.exists('/etc/rsyslog.d/vyatta-log.conf'):
-    os.remove('/etc/rsyslog.d/vyatta-log.conf')
-  os.system("sudo systemctl restart rsyslog >/dev/null")
+
+  if c == None:
+    ### systemd restarts it, using kill
+    #os.system("sudo systemctl stop rsyslog >/dev/null 2>&1")
+    print ("systemd sends messages to rsyslog, rsyslog won't be stopped")
+  else:
+    if os.path.exists('/etc/rsyslog.d/vyatta-log.conf'):
+      os.remove('/etc/rsyslog.d/vyatta-log.conf')
+
+    os.system("sudo systemctl restart rsyslog >/dev/null")
 
 if __name__ == '__main__':
   try:
