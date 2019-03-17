@@ -27,3 +27,13 @@ normal-node {
     }
     option-with-quoted-value "some-value"
 }
+
+trailing-leaf-node-option some-value
+
+empty-node {
+}
+
+trailing-leaf-node-without-value
+
+/* Trailing commend */
+/* Another trailing comment */

@@ -41,6 +41,12 @@ def strip_comments(s):
             else:
                 config_end = 0
                 break
+        elif (state == INITIAL) and not re.match(r'(\s|\/)', c):
+            # Assume there are no (more) trailing comments,
+            # this is an end of a node: either a brace of the last character
+            # of a leaf node value
+            config_end = i + 1
+            break
         elif (state == INITIAL) and (c == '/'):
             # A comment begins, or it's a stray slash
             if (s[i-1] == '*'):
@@ -48,10 +54,6 @@ def strip_comments(s):
                 i -= 2
             else:
                 raise ValueError("Invalid syntax: stray slash at character {0}".format(i + 1))
-        elif (state == INITIAL) and (c == '}'):
-            # We are not inside a comment, that's the end of the last node
-            config_end = i + 1
-            break
         elif (state == IN_COMMENT) and (c == '*'):
             # A comment ends here
             try:
@@ -64,6 +66,7 @@ def strip_comments(s):
             # Ignore everything inside comments, including braces
             i -= 1
         else:
+            # Shouldn't happen
             raise ValueError("Invalid syntax at character {0}: invalid character {1}".format(i + 1, c))
 
     return (s[0:config_end], s[config_end+1:])
