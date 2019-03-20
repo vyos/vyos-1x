@@ -65,7 +65,7 @@ def generate(c):
       config_data['remove'].append(ip_addr)
   else:
     for ip_addr in c_eff_cnf:
-      if not ip_addr in c:
+      if not ip_addr in c or c[ip_addr] == None:
         config_data['remove'].append(ip_addr)
 
   ### add/update
@@ -74,7 +74,7 @@ def generate(c):
       if not ip_addr in c_eff_cnf:
         config_data['update'][ip_addr] = c[ip_addr]
       if  ip_addr in c_eff_cnf:
-        if c[ip_addr] != c_eff_cnf[ip_addr]:
+        if c[ip_addr] != c_eff_cnf[ip_addr] and c[ip_addr] != None:
           config_data['update'][ip_addr] = c[ip_addr]
 
   return config_data
