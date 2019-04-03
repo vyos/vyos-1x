@@ -60,9 +60,10 @@ def get_config():
     if conf.exists('upstream-interface'):
         interfaces = conf.list_nodes('upstream-interface')
         for intf in interfaces:
-            addr = conf.return_value('upstream-interface {0} address'.format(intf))
-            server = addr + '%' + intf
-            relay['upstream_addr'].append(server)
+            addresses = conf.return_values('upstream-interface {0} address'.format(intf))
+            for addr in addresses:
+                server = addr + '%' + intf
+                relay['upstream_addr'].append(server)
 
     # Maximum hop count. When forwarding packets, dhcrelay discards packets
     # which have reached a hop count of COUNT. Default is 10. Maximum is 255.
