@@ -54,7 +54,7 @@
             <children>
               <leafNode name="address">
                 <properties>
-                    <help>IPv6 address to forward requests to</help>
+                  <help>IPv6 address to forward requests to</help>
                   <valueHelp>
                     <format>ipv6</format>
                     <description>IPv6 address of the DHCP server</description>
@@ -62,6 +62,7 @@
                   <constraint>
                     <validator name="ipv6-address"/>
                   </constraint>
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
