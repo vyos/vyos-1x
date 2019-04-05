@@ -110,17 +110,21 @@ def get_config():
   conf = Config()
   hosts = copy.deepcopy(default_config_data)
 
-  hosts['hostname'] = conf.return_value("system host-name")
-  hosts['domain_name'] = conf.return_value("system domain-name")
+  if conf.exists("system host-name"):
+    hosts['hostname'] = conf.return_value("system host-name")
 
-  if hosts['domain_name']:
+  if conf.exists("system domain-name"):
+    hosts['domain_name'] = conf.return_value("system domain-name")
     hosts['domain_search'].append(hosts['domain_name'])
 
   for search in conf.return_values("system domain-search domain"):
     hosts['domain_search'].append(search)
 
-  hosts['nameserver'] = conf.return_values("system name-server")
-  hosts['no_dhcp_ns'] = conf.exists('system disable-dhcp-nameservers')
+  if conf.exists("system name-server"):
+    hosts['nameserver'] = conf.return_values("system name-server")
+
+  if conf.exists("system disable-dhcp-nameservers"):
+    hosts['no_dhcp_ns'] = conf.exists('system disable-dhcp-nameservers')
 
   ## system static-host-mapping
   hosts['static_host_mapping'] = { 'hostnames'  : {}}
