@@ -66,7 +66,7 @@ ddns-update-style {% if ddns_enable -%} interim {%- else -%} none {%- endif %};
 option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
 {%- endif %}
-{% if static_route -%}
+{% if wpad -%}
 option wpad-url code 252 = text;
 {% endif %}
 
