@@ -54,7 +54,7 @@ auth_chap_md5
 auth_mschap_v1
 auth_mschap_v2
 #pppd_compat
-#shaper
+shaper
 {% if snmp == 'enable' or snmp == 'enable-ma' %}
 net-snmp
 {% endif %}

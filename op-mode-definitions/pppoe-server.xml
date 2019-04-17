@@ -11,7 +11,7 @@
             <properties>
               <help>Show active PPPoE server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd 'show sessions'</command>
+            <command>/usr/bin/accel-cmd 'show sessions ifname,username,ip,calling-sid,rate-limit,state,uptime,rx-bytes,tx-bytes'</command>
           </leafNode>
           <leafNode name="statistics">
             <properties>
