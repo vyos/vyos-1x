@@ -67,7 +67,7 @@
                         <children>
                           <leafNode name="upload">
                             <properties>
-                              <help>Upload bandwidth limit in bits/sec</help>
+                              <help>Upload bandwidth limit in kbits/sec</help>
                               <constraint>
                                 <validator name="numeric" argument="--range 1-65535"/>
                               </constraint>
@@ -75,7 +75,7 @@
                           </leafNode>
                           <leafNode name="download">
                             <properties>
-                              <help>Download bandwidth limit in bits/sec</help>
+                              <help>Download bandwidth limit in kbits/sec</help>
                               <constraint>
                                 <validator name="numeric" argument="--range 1-65535"/>
                               </constraint>
