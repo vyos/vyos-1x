@@ -239,10 +239,15 @@ tcp=127.0.0.1:2001
 
 ### pppoe chap secrets
 chap_secrets_conf = '''
-# username  server  password  acceptable local IP addresses
+# username  server  password  acceptable local IP addresses   shaper
 {% for user in authentication['local-users'] %}
 {% if authentication['local-users'][user]['state'] == 'enabled' %}
+{% if (authentication['local-users'][user]['upload']) and (authentication['local-users'][user]['download']) %}
+{{user}}\t*\t{{authentication['local-users'][user]['passwd']}}\t{{authentication['local-users'][user]['ip']}}\t\
+{{authentication['local-users'][user]['download']}}/{{authentication['local-users'][user]['upload']}}
+{% else %}
 {{user}}\t*\t{{authentication['local-users'][user]['passwd']}}\t{{authentication['local-users'][user]['ip']}}
+{% endif %}
 {% endif %}
 {% endfor %}
 '''
@@ -377,9 +382,11 @@ def get_config():
         config_data['authentication']['local-users'].update(
           {
             usr : {
-              'passwd' : '',
-              'state'  : 'enabled',
-              'ip'     : '*'
+              'passwd'    : None,
+              'state'     : 'enabled',
+              'ip'        : '*',
+              'upload'    : None,
+              'download'  : None
             }
           }
         )
@@ -389,7 +396,11 @@ def get_config():
           config_data['authentication']['local-users'][usr]['state'] = 'disable'
         if c.exists('authentication local-users username ' + usr + ' static-ip'):
           config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
-   
+        if c.exists('authentication local-users username ' + usr + ' rate-limit download'):
+          config_data['authentication']['local-users'][usr]['download'] = c.return_value('authentication local-users username ' + usr + ' rate-limit download')
+        if c.exists('authentication local-users username ' + usr + ' rate-limit upload'):
+          config_data['authentication']['local-users'][usr]['upload'] = c.return_value('authentication local-users username ' + usr + ' rate-limit upload')
+
     ### authentication mode radius servers and settings
 
   if c.exists('authentication mode radius'):
@@ -483,10 +494,17 @@ def verify(c):
   if c['authentication']['mode'] == 'local':
     if not c['authentication']['local-users']:
       raise ConfigError('pppoe-server authentication local-users required')
-  
+
     for usr in c['authentication']['local-users']:
       if not c['authentication']['local-users'][usr]['passwd']:
         raise ConfigError('user ' + usr + ' requires a password')
+      ### if up/download is set, check that both have a value
+      if c['authentication']['local-users'][usr]['upload']:
+        if not c['authentication']['local-users'][usr]['download']:
+          raise ConfigError('user ' + usr + ' requires download speed value')
+      if c['authentication']['local-users'][usr]['download']:
+        if not c['authentication']['local-users'][usr]['upload']:
+          raise ConfigError('user ' + usr + ' requires upload speed value')
 
   if not c['ppp_gw']:
     raise ConfigError('pppoe-server local-ip required')
