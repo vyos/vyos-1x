@@ -76,7 +76,7 @@ level=5
 {% if snmp == 'enable-ma' %}
 [snmp]
 master=1
-{% endif %}
+{% endif -%}
 
 [client-ip-range]
 disable
@@ -95,24 +95,24 @@ gw-ip-address={{ppp_gw}}
 {% for prfx in client_ipv6_pool['delegate-prefix']: %}
 delegate={{prfx}}
 {% endfor %}
-{% endif %}
+{% endif -%}
 
 {% if dns %}
 [dns]
 {% if dns[0] %}
 dns1={{dns[0]}}
-{% endif %}
+{% endif -%}
 {% if dns[1] %}
 dns2={{dns[1]}}
-{% endif %}
-{% endif %}
+{% endif -%}
+{% endif -%}
 
 {% if dnsv6 %}
 [dnsv6]
 {% for srv in dnsv6: %}
 dns={{srv}}
 {% endfor %}
-{% endif %}
+{% endif -%}
 
 {% if wins %}
 [wins]
@@ -121,13 +121,13 @@ wins1={{wins[0]}}
 {% endif %}
 {% if wins[1] %}
 wins2={{wins[1]}}
-{% endif %}
-{% endif %}
+{% endif -%}
+{% endif -%}
 
 {% if authentication['mode'] == 'local' %}
 [chap-secrets]
 chap-secrets=/etc/accel-ppp/pppoe/chap-secrets
-{% endif %}
+{% endif -%}
 
 {% if authentication['mode'] == 'radius' %}
 [radius]
@@ -150,14 +150,20 @@ nas-identifier={{authentication['radiusopt']['nas-id']}}
 {% endif %}
 {% if authentication['radiusopt']['nas-ip'] %}
 nas-ip-address={{authentication['radiusopt']['nas-ip']}}
-{% endif %}
+{% endif -%}
 {% if authentication['radiusopt']['dae-srv'] %}
 dae-server={{authentication['radiusopt']['dae-srv']['ip-addr']}}:\
 {{authentication['radiusopt']['dae-srv']['port']}},\
 {{authentication['radiusopt']['dae-srv']['secret']}}
-{% endif %}
+{% endif -%}
 gw-ip-address={{ppp_gw}}
 verbose=1
+
+{% if authentication['radiusopt']['shaper'] %}
+[shaper]
+verbose=1
+attr={{authentication['radiusopt']['shaper']['attr']}}
+{% endif -%}
 {% endif %}
 
 [ppp]
@@ -425,28 +431,39 @@ def get_config():
         }
       )
 
-  #### advanced radius-setting
-      if c.exists('authentication radius-settings'): 
-        if c.exists('authentication radius-settings acct-timeout'):
-          config_data['authentication']['radiusopt']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
-        if c.exists('authentication radius-settings max-try'):
-          config_data['authentication']['radiusopt']['max-try'] = c.return_value('authentication radius-settings max-try') 
-        if c.exists('authentication radius-settings timeout'):
-          config_data['authentication']['radiusopt']['timeout'] = c.return_value('authentication radius-settings timeout')
-        if c.exists('authentication radius-settings nas-identifier'):
-          config_data['authentication']['radiusopt']['nas-id'] = c.return_value('authentication radius-settings nas-identifier')
-        if c.exists('authentication radius-settings nas-ip-address'):
-          config_data['authentication']['radiusopt']['nas-ip'] = c.return_value('authentication radius-settings nas-ip-address')
-        if c.exists('authentication radius-settings dae-server'):
-          config_data['authentication']['radiusopt'].update(
-            {
-              'dae-srv' : {
-                'ip-addr' : c.return_value('authentication radius-settings dae-server ip-address'),
-                'port'    : c.return_value('authentication radius-settings dae-server port'), 
-                'secret'  : str(c.return_value('authentication radius-settings dae-server secret'))
-              }
+    #### advanced radius-setting
+    if c.exists('authentication radius-settings'):
+      if c.exists('authentication radius-settings acct-timeout'):
+        config_data['authentication']['radiusopt']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
+      if c.exists('authentication radius-settings max-try'):
+        config_data['authentication']['radiusopt']['max-try'] = c.return_value('authentication radius-settings max-try')
+      if c.exists('authentication radius-settings timeout'):
+        config_data['authentication']['radiusopt']['timeout'] = c.return_value('authentication radius-settings timeout')
+      if c.exists('authentication radius-settings nas-identifier'):
+        config_data['authentication']['radiusopt']['nas-id'] = c.return_value('authentication radius-settings nas-identifier')
+      if c.exists('authentication radius-settings nas-ip-address'):
+        config_data['authentication']['radiusopt']['nas-ip'] = c.return_value('authentication radius-settings nas-ip-address')
+      if c.exists('authentication radius-settings dae-server'):
+        config_data['authentication']['radiusopt'].update(
+          {
+            'dae-srv' : {
+              'ip-addr' : c.return_value('authentication radius-settings dae-server ip-address'),
+              'port'    : c.return_value('authentication radius-settings dae-server port'),
+              'secret'  : str(c.return_value('authentication radius-settings dae-server secret'))
             }
-          )
+          }
+        )
+      #### filter-id is the internal accel default if attribute is empty
+      #### set here as default for visibility which may change in the future
+      if c.exists('authentication radius-settings rate-limit enable'):
+        if not c.exists('authentication radius-settings rate-limit attribute'):
+          config_data['authentication']['radiusopt']['shaper'] = {
+            'attr'  : 'Filter-ID'
+          }
+        else:
+          config_data['authentication']['radiusopt']['shaper'] = {
+          'attr'  : c.return_value('authentication radius-settings rate-limit attribute')
+          }
 
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
