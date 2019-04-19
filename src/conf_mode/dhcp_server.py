@@ -572,10 +572,9 @@ def get_config():
                         # add router bytes
                         bytes = subnet['static_router'].split('.')
                         for b in bytes:
-                            if b != '0':
-                                string += b
-                                if b is not bytes[-1]:
-                                    string += ','
+                            string += b
+                            if b is not bytes[-1]:
+                                string += ','
 
                         subnet['static_route'] = string
 
