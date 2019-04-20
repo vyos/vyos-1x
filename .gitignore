@@ -114,6 +114,7 @@ tests/templates/*
 debian/files
 debian/vyos-1x
 debian/vyos-1x.*
+debian/debhelper-build-stamp
 
 # Sonar Cloud
 .scannerwork
