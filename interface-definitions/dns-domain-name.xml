@@ -34,9 +34,8 @@
         <properties>
           <help>System domain name</help>
           <constraint>
-            <regex>^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$</regex>
+            <regex>[A-Za-z0-9][-.A-Za-z0-9]*</regex>
           </constraint>
-          <constraintErrorMessage>invalid domain name</constraintErrorMessage>
         </properties>
       </leafNode>
       <node name="domain-search" owner="${vyos_conf_scripts_dir}/host_name.py">
@@ -70,6 +69,7 @@
           <priority>400</priority>
         </properties>
         <children>
+
           <tagNode name="host-name">
             <properties>
               <help>Host name for static address mapping</help>
@@ -86,7 +86,7 @@
                     <regex>^.{1,63}$</regex>
                   </constraint>
                   <constraintErrorMessage>invalid alias hostname, needs to be between 1 and 63 charactes</constraintErrorMessage>
-                  <multi/>
+                  <multi />
                 </properties>
               </leafNode>
               <leafNode name="inet">
@@ -107,6 +107,7 @@
               </leafNode>
             </children>
           </tagNode>
+
         </children>
       </node>
     </children>
