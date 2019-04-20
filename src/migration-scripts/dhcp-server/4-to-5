@@ -105,11 +105,13 @@ else:
 
         # Make node "set service dhcp-server shared-network-name <xyz> authoritative" valueless
         if config.exists(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative']):
-            bool_val = config.return_value(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
+            authoritative = config.return_value(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
+
             # Delete the node with the old syntax
             config.delete(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
-            if str(bool_val) == 'true':
-                # Recreate node with new syntax
+
+            # Recreate node with new syntax - if required
+            if authoritative == "enable":
                 config.set(['service', 'dhcp-server', 'shared-network-name', network, 'authoritative'])
 
     try:
