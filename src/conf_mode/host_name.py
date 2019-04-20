@@ -237,7 +237,7 @@ def apply(config):
   if config['domain_name']:
     fqdn += '.' + config['domain_name']
 
-  os.system("hostnamectl set-hostname --static {0}".format(fqdn))
+  os.system("hostnamectl set-hostname --static {0}".format(fqdn.rstrip('.')))
 
   # Restart services that use the hostname
   os.system("systemctl restart rsyslog.service")
@@ -245,7 +245,7 @@ def apply(config):
   # If SNMP is running, restart it too
   if os.system("pgrep snmpd > /dev/null") == 0:
     os.system("systemctl restart snmpd.service")
-  
+
   # restart pdns if it is used
   if os.system("/usr/bin/rec_control ping >/dev/null 2>&1") == 0:
     os.system("/etc/init.d/pdns-recursor restart >/dev/null")
