@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="firewall">
+    <children>
+      <node name="options">
+        <properties>
+          <help>Firewall options/Packet manipulation</help>
+          <priority>990</priority>
+        </properties>
+        <children>
+          <tagNode name="interface" owner="sudo ${vyos_conf_scripts_dir}/firewall_options.py">
+            <properties>
+              <help>Interface clamping options</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable this rule</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="adjust-mss">
+                <properties>
+                  <help>Adjust MSS for IPv4 transit packets</help>
+                  <valueHelp>
+                    <format>500-1460</format>
+                    <description>TCP Maximum segment size in bytes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 500-1460"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="adjust-mss6">
+                <properties>
+                  <help>Adjust MSS for IPv6 transit packets</help>
+                  <valueHelp>
+                    <format>1280-1492</format>
+                    <description>TCP Maximum segment size in bytes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1280-1492"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
