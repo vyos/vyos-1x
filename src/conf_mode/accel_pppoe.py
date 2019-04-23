@@ -470,7 +470,7 @@ def get_config():
       if c.exists('authentication radius-settings rate-limit enable'):
         if not c.exists('authentication radius-settings rate-limit attribute'):
           config_data['authentication']['radiusopt']['shaper'] = {
-            'attr'  : 'Filter-ID'
+            'attr'  : 'Filter-Id'
           }
         else:
           config_data['authentication']['radiusopt']['shaper'] = {
