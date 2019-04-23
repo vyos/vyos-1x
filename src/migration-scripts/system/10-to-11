@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-# Unclutter RADIUS configuiration for 'system login radius-server'
+# Unclutter RADIUS configuration
+#
 # Move radius-server top level tag nodes to a regular node which allows us
-# to specify additional general features for the RADIUS client
+# to specify additional general features for the RADIUS client.
 
 import sys
-
 from vyos.configtree import ConfigTree
 
 if (len(sys.argv) < 1):
@@ -19,12 +19,24 @@ with open(file_name, 'r') as f:
 
 config = ConfigTree(config_file)
 cfg_base = ['system', 'login']
-if not config.exists(cfg_base + ['radius-server']):
+if not (config.exists(cfg_base + ['radius-server']) or config.exists(cfg_base + ['radius-source-address'])):
     # Nothing to do
     sys.exit(0)
 else:
+    #
+    # Migrate "system login radius-source-address" to "system login radius"
+    #
+    if config.exists(cfg_base + ['radius-source-address']):
+        address = config.return_value(cfg_base + ['radius-source-address'])
+        # delete old configuration node
+        config.delete(cfg_base + ['radius-source-address'])
+        # write new configuration node
+        config.set(cfg_base + ['radius', 'source-address'], value=address)
+
+    #
     # Migrate "system login radius-server" tag node to new
     # "system login radius server" tag node and also rename the "secret" node to "key"
+    #
     for server in config.list_nodes(cfg_base + ['radius-server']):
         base_server = cfg_base + ['radius-server', server]
         # "key" node is mandatory
