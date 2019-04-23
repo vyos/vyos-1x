@@ -191,7 +191,7 @@
                     <children>
                       <leafNode name="attribute">
                         <properties>
-                          <help>Specifies which radius attribute contains rate information. (default is Filter-ID)</help>
+                          <help>Specifies which radius attribute contains rate information. (default is Filter-Id)</help>
                         </properties>
                       </leafNode>
                       <leafNode name="enable">
