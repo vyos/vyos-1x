@@ -279,18 +279,11 @@ def verify(c):
             raise ConfigError('Invalid logging level ' + s + ' set in '+ conf + ' ' + item)
 
 def apply(c):
-  ### vyatta-log.conf is being generated somewhere
-  ### this is just a quick hack to remove the old configfile
-
-  if c == None:
-    ### systemd restarts it, using kill
-    #os.system("sudo systemctl stop rsyslog >/dev/null 2>&1")
-    print ("systemd sends messages to rsyslog, rsyslog won't be stopped")
+  if not os.path.exits('/var/run/rsyslogd.pid'):
+    os.system("sudo systemctl start rsyslog >/dev/null")
   else:
-    if os.path.exists('/etc/rsyslog.d/vyatta-log.conf'):
-      os.remove('/etc/rsyslog.d/vyatta-log.conf')
-
     os.system("sudo systemctl restart rsyslog >/dev/null")
+
 
 if __name__ == '__main__':
   try:
