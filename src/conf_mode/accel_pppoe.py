@@ -82,10 +82,16 @@ master=1
 disable
 
 [ip-pool]
+gw-ip-address={{ppp_gw}}
 {% if client_ip_pool %}
 {{client_ip_pool}}
+{% endif -%}
+
+{% if client_ip_subnets %}
+{% for sn in client_ip_subnets %}
+{{sn}}
+{% endfor %}
 {% endif %}
-gw-ip-address={{ppp_gw}}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
@@ -285,6 +291,9 @@ def accel_cmd(cmd=''):
   except:
     return 1
 
+#### check ig local-ip is in client pool subnet
+
+
 ### 
 # inline helper functions end
 ###
@@ -304,6 +313,7 @@ def get_config():
       'radiusopt'       : {}
     },
     'client_ip_pool'    : '',
+    'client_ip_subnets' : [],
     'client_ipv6_pool'  : {},
     'interface'         : [],
     'ppp_gw'            : '',
@@ -347,10 +357,12 @@ def get_config():
   if c.exists('client-ip-pool'):
     if c.exists('client-ip-pool start'):
       config_data['client_ip_pool'] = c.return_value('client-ip-pool start') 
-    if c.exists('client-ip-pool stop'):
-      config_data['client_ip_pool'] += '-' + re.search('[0-9]+$', c.return_value('client-ip-pool stop')).group(0)
-    else:
-      raise ConfigError('client ip pool stop required')
+      if c.exists('client-ip-pool stop'):
+        config_data['client_ip_pool'] += '-' + re.search('[0-9]+$', c.return_value('client-ip-pool stop')).group(0)
+      else:
+        raise ConfigError('client ip pool stop required')
+    if c.exists('client-ip-pool subnet'):
+      config_data['client_ip_subnets'] = c.return_values('client-ip-pool subnet')
   if c.exists('client-ipv6-pool prefix'):
     config_data['client_ipv6_pool']['prefix'] = c.return_values('client-ipv6-pool prefix')
     if c.exists('client-ipv6-pool delegate-prefix'):
@@ -480,6 +492,7 @@ def get_config():
 def verify(c):
   if c == None:
     return None
+  ### vertify auth settings
   if c['authentication']['mode'] == 'local':
     if not c['authentication']['local-users']:
       raise ConfigError('pppoe-server authentication local-users required')
@@ -488,15 +501,25 @@ def verify(c):
       if not c['authentication']['local-users'][usr]['passwd']:
         raise ConfigError('user ' + usr + ' requires a password')
 
-  if not c['ppp_gw']:
-    raise ConfigError('pppoe-server local-ip required')
-
   if c['authentication']['mode'] == 'radius':
     if len(c['authentication']['radiussrv']) == 0:
       raise ConfigError('radius server required')
     for rsrv in c['authentication']['radiussrv']:
       if c['authentication']['radiussrv'][rsrv]['secret'] == None:
         raise ConfigError('radius server ' + rsrv + ' needs a secret configured')
+
+  ### local ippool and gateway settings
+
+  if not c['ppp_gw']:
+    raise ConfigError('pppoe-server local-ip required')
+
+  if not c['client_ip_subnets'] and not c['client_ip_pool']:
+    print ("Warning: No pppoe client IP pool defined") 
+
+  ### activate as soon as it is clear what to do migrate or depricate. 
+  #if c['client_ip_pool']:
+  #  print ("Warning: client-ip-pool (start|stop) is depricated, please use client-ip-pool subnet")
+  #  sl.syslog(sl.LOG_NOTICE, "client-ip-pool start stop is depricated, please use client-ip-pool subnet")
 
 def generate(c):
   if c == None:
