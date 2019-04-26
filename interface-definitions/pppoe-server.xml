@@ -227,6 +227,16 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="subnet">
+                <properties>
+                  <help>Client IP subnet (CIDR notation)</help>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
+                  <multi />
+                </properties>
+              </leafNode>
             </children>
           </node>
           <node name="client-ipv6-pool">
