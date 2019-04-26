@@ -119,5 +119,4 @@ else:
             f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
-
-    sys.exit(1)
+        sys.exit(1)
