@@ -279,7 +279,7 @@ def verify(c):
             raise ConfigError('Invalid logging level ' + s + ' set in '+ conf + ' ' + item)
 
 def apply(c):
-  if not os.path.exits('/var/run/rsyslogd.pid'):
+  if not os.path.exists('/var/run/rsyslogd.pid'):
     os.system("sudo systemctl start rsyslog >/dev/null")
   else:
     os.system("sudo systemctl restart rsyslog >/dev/null")
