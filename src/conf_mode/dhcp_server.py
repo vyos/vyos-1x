@@ -186,7 +186,7 @@ shared-network {{ network.name }} {
         {%- endif -%}
         {%- for host in subnet.static_mapping %}
         {% if not host.disabled -%}
-        host {{ network.name }}_{{ host.name }} {
+        host {% if host_decl_name -%} {{ host.name }} {%- else -%} {{ network.name }}_{{ host.name }} {%- endif %} {
             fixed-address {{ host.ip_address }};
             hardware ethernet {{ host.mac_address }};
             {%- if host.static_parameters %}
