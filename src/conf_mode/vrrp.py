@@ -39,7 +39,7 @@ config_tmpl = """
 
 {% if group.health_check_script -%}
 vrrp_script healthcheck_{{ group.name }} {
-	script {{ group.health_check_script }}
+	script "{{ group.health_check_script }}"
 	interval {{ group.health_check_interval }}
 	fall {{ group.health_check_count }}
 	rise 1
