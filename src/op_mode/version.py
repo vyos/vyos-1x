@@ -51,7 +51,8 @@ version_output_tmpl = """
 Version:          VyOS {{version}}
 Built by:         {{built_by}}
 Built on:         {{built_on}}
-Build ID:         {{build_id}}
+Build UUID:       {{build_uuid}}
+Build Commit ID:  {{build_git}}
 
 Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
