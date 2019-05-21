@@ -47,6 +47,8 @@ pppoe
 ippool
 {% if client_ipv6_pool %}
 ipv6pool
+ipv6_nd
+ipv6_dhcp
 {% endif %}
 chap-secrets
 auth_pap
@@ -85,7 +87,7 @@ disable
 gw-ip-address={{ppp_gw}}
 {% if client_ip_pool %}
 {{client_ip_pool}}
-{% endif -%}
+{% endif %}
 
 {% if client_ip_subnets %}
 {% for sn in client_ip_subnets %}
@@ -101,7 +103,7 @@ gw-ip-address={{ppp_gw}}
 {% for prfx in client_ipv6_pool['delegate-prefix']: %}
 delegate={{prfx}}
 {% endfor %}
-{% endif -%}
+{% endif %}
 
 {% if dns %}
 [dns]
@@ -111,14 +113,14 @@ dns1={{dns[0]}}
 {% if dns[1] %}
 dns2={{dns[1]}}
 {% endif -%}
-{% endif -%}
+{% endif %}
 
 {% if dnsv6 %}
-[dnsv6]
+[ipv6-dns]
 {% for srv in dnsv6: %}
-dns={{srv}}
+{{srv}}
 {% endfor %}
-{% endif -%}
+{% endif %}
 
 {% if wins %}
 [wins]
@@ -208,6 +210,10 @@ lcp-echo-failure=3
 {% if ppp_options['ipv4'] %}
 ipv4={{ppp_options['ipv4']}}
 {% endif %}
+{% if client_ipv6_pool %}
+ipv6=allow
+{% endif %}
+
 {% if ppp_options['ipv6'] %}
 ipv6={{ppp_options['ipv6']}}
 {% if ppp_options['ipv6-intf-id'] %}
@@ -220,6 +226,7 @@ ipv6-peer-intf-id={{ppp_options['ipv6-peer-intf-id']}}
 ipv6-accept-peer-intf-id={{ppp_options['ipv6-accept-peer-intf-id']}}
 {% endif %}
 {% endif %}
+
 mtu={{mtu}}
 
 [pppoe]
