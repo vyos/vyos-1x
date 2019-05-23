@@ -169,6 +169,21 @@ class Config(object):
         except VyOSError:
             return False
 
+    def show_config(self, path='', default=None):
+        """
+        Args:
+            path (str): Configuration tree path, or empty
+            default (str): Default value to return
+
+        Returns:
+            str: working configuration
+        """
+        try:
+            out = self._run(self._make_command('showConfig', path))
+            return out
+        except VyOSError:
+            return(default)
+
     def is_multi(self, path):
         """
         Args:
