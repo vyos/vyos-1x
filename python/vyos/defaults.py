@@ -15,7 +15,8 @@
 
 
 directories = {
-  "data": "/usr/share/vyos/"
+  "data": "/usr/share/vyos/",
+  "config": "/opt/vyatta/etc/config"
 }
 
 cfg_group = 'vyattacfg'
