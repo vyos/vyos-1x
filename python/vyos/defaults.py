@@ -16,7 +16,11 @@
 
 directories = {
   "data": "/usr/share/vyos/",
-  "config": "/opt/vyatta/etc/config"
+  "config": "/opt/vyatta/etc/config",
+  "current": "/opt/vyatta/etc/config-migrate/current",
+  "migrate": "/opt/vyatta/etc/config-migrate/migrate",
 }
 
 cfg_group = 'vyattacfg'
+
+cfg_vintage = 'vyatta'
