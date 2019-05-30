@@ -55,15 +55,28 @@ def get_lease_data(lease):
     return data
 
 def get_leases(leases, state=None, pool=None):
+    # define variable for leases
+    leases_dict = {}
+
+    # get leases from file
     leases = IscDhcpLeases(lease_file).get()
 
-    if state is not None:
-        leases = list(filter(lambda x: x.binding_state == 'active', leases))
+    # convert leases list to dictionary to avoid records duplication - it's the fastest and easiest way to do this
+    for lease in leases:
+        leases_dict[lease.ip] = lease
 
+    # filter leases by state
+    if state is 'active':
+        leases = list(filter(lambda x: x.active and x.valid, leases_dict.values()))
+    if state is 'free':
+        leases = list(filter(lambda x: x.binding_state == 'free', leases_dict.values()))
+
+    # filter lease by pool name
     if pool is not None:
         leases = list(filter(lambda x: in_pool(x, pool), leases))
 
-    return list(map(get_lease_data, leases))
+    # return sorted leases list
+    return sorted(list(map(get_lease_data, leases)), key = lambda k: k['ip'])
 
 def show_leases(leases):
     headers = ["IP address", "Hardware address", "Lease expiration", "Pool", "Client Name"]
@@ -73,7 +86,7 @@ def show_leases(leases):
         lease_list.append([l["ip"], l["hardware_address"], l["expires"], l["pool"], l["hostname"]])
 
     output = tabulate.tabulate(lease_list, headers)
-    
+
     print(output)
 
 def get_pool_size(config, pool):
@@ -146,7 +159,7 @@ if __name__ == '__main__':
             leases = len(get_leases(lease_file, state='active', pool=args.pool))
 
             if size != 0:
-                use_percentage = round(leases / size) * 100
+                use_percentage = round(leases / size * 100)
             else:
                 use_percentage = 0
 
