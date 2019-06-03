@@ -26,6 +26,9 @@ def check_and_add_host_key(host_name):
     needed.
     """
     known_hosts = '{}/.ssh/known_hosts'.format(os.getenv('HOME'))
+    if not os.path.exists(known_hosts):
+        mode = 0o600
+        os.mknod(known_hosts, 0o600)
 
     keyscan_cmd = 'ssh-keyscan -t rsa {} 2>/dev/null'.format(host_name)
 
