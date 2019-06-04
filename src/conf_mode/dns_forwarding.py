@@ -19,11 +19,17 @@
 import sys
 import os
 
-import netifaces
+import argparse
 import jinja2
+import netifaces
 
 from vyos.config import Config
 from vyos import ConfigError
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dhclient", action="store_true",
+                    help="Started from dhclient-script")
 
 config_file = r'/etc/powerdns/recursor.conf'
 
@@ -84,31 +90,36 @@ default_config_data = {
     'name_servers': [],
     'negative_ttl': 3600,
     'domains': [],
-    'dnssec' : 'process-no-validate'
+    'dnssec': 'process-no-validate'
 }
 
 
 # borrowed from: https://github.com/donjajo/py-world/blob/master/resolvconfReader.py, THX!
 def get_resolvers(file):
-    resolvers = []
     try:
         with open(file, 'r') as resolvconf:
-            for line in resolvconf.readlines():
-                line = line.split('#',1)[0];
-                line = line.rstrip();
-                if 'nameserver' in line:
-                    resolvers.append(line.split()[1])
+            lines = [line.split('#', 1)[0].rstrip()
+                     for line in resolvconf.readlines()]
+            resolvers = [line.split()[1]
+                         for line in lines if 'nameserver' in line]
         return resolvers
     except IOError:
         return []
 
-def get_config():
+
+def get_config(arguments):
     dns = default_config_data
     conf = Config()
+
+    if arguments.dhclient:
+        conf.exists = conf.exists_effective
+        conf.return_value = conf.return_effective_value
+        conf.return_values = conf.return_effective_values
+
     if not conf.exists('service dns forwarding'):
         return None
-    else:
-        conf.set_level('service dns forwarding')
+
+    conf.set_level('service dns forwarding')
 
     if conf.exists('cache-size'):
         cache_size = conf.return_value('cache-size')
@@ -139,7 +150,8 @@ def get_config():
         system_name_servers = []
         system_name_servers = conf.return_values('name-server')
         if not system_name_servers:
-            print("DNS forwarding warning: No name-servers set under 'system name-server'\n")
+            print(
+                "DNS forwarding warning: No name-servers set under 'system name-server'\n")
         else:
             dns['name_servers'] = dns['name_servers'] + system_name_servers
         conf.set_level('service dns forwarding')
@@ -171,9 +183,10 @@ def get_config():
             try:
                 addrs = netifaces.ifaddresses(interface)
             except ValueError:
-                print("WARNING: interface {0} does not exist".format(interface))
+                print(
+                    "WARNING: interface {0} does not exist".format(interface))
                 continue
-                
+
             if netifaces.AF_INET in addrs.keys():
                 for ip4 in addrs[netifaces.AF_INET]:
                     listen4.append(ip4['addr'])
@@ -183,7 +196,8 @@ def get_config():
                     listen6.append(ip6['addr'])
 
             if (not listen4) and (not (listen6)):
-                print("WARNING: interface {0} has no configured addresses".format(interface))
+                print(
+                    "WARNING: interface {0} has no configured addresses".format(interface))
 
         dns['listen_on'] = dns['listen_on'] + listen4 + listen6
 
@@ -195,15 +209,18 @@ def get_config():
         interfaces = []
         interfaces = conf.return_values('dhcp')
         for interface in interfaces:
-            dhcp_resolvers = get_resolvers("/etc/resolv.conf.dhclient-new-{0}".format(interface))
+            dhcp_resolvers = get_resolvers(
+                "/etc/resolv.conf.dhclient-new-{0}".format(interface))
             if dhcp_resolvers:
                 dns['name_servers'] = dns['name_servers'] + dhcp_resolvers
 
     return dns
 
+
 def bracketize_ipv6_addrs(addrs):
     """Wraps each IPv6 addr in addrs in [], leaving IPv4 addrs untouched."""
     return ['[{0}]'.format(a) if a.count(':') > 1 else a for a in addrs]
+
 
 def verify(dns):
     # bail out early - looks like removal from running config
@@ -211,14 +228,17 @@ def verify(dns):
         return None
 
     if not dns['listen_on']:
-        raise ConfigError("Error: DNS forwarding requires either a listen-address (preferred) or a listen-on option")
+        raise ConfigError(
+            "Error: DNS forwarding requires either a listen-address (preferred) or a listen-on option")
 
     if dns['domains']:
         for domain in dns['domains']:
             if not domain['servers']:
-                raise ConfigError('Error: No server configured for domain {0}'.format(domain['name']))
+                raise ConfigError(
+                    'Error: No server configured for domain {0}'.format(domain['name']))
 
     return None
+
 
 def generate(dns):
     # bail out early - looks like removal from running config
@@ -232,19 +252,21 @@ def generate(dns):
         f.write(config_text)
     return None
 
+
 def apply(dns):
     if dns is not None:
         os.system("systemctl restart pdns-recursor")
     else:
         # DNS forwarding is removed in the commit
         os.system("systemctl stop pdns-recursor")
-        os.unlink(config_file)
+        if os.path.isfile(config_file):
+            os.unlink(config_file)
 
-    return None
 
 if __name__ == '__main__':
+    args = parser.parse_args()
     try:
-        c = get_config()
+        c = get_config(args)
         verify(c)
         generate(c)
         apply(c)
