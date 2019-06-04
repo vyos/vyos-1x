@@ -23,13 +23,18 @@ conf-mode script for 'system host-name' and 'system domain-name'.
 import os
 import re
 import sys
-import subprocess
 import copy
-import jinja2
 import glob
+import argparse
+import jinja2
 
 from vyos.config import Config
 from vyos import ConfigError
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dhclient", action="store_true",
+                    help="Started from dhclient-script")
 
 config_file_hosts = '/etc/hosts'
 config_file_resolv = '/etc/resolv.conf'
@@ -66,20 +71,6 @@ search {{ domain_search | join(" ") }}
 
 """
 
-# borrowed from: https://github.com/donjajo/py-world/blob/master/resolvconfReader.py, THX!
-def get_resolvers(file):
-    resolvers = []
-    try:
-        with open(file, 'r') as resolvconf:
-            for line in resolvconf.readlines():
-                line = line.split('#',1)[0];
-                line = line.rstrip();
-                if 'nameserver' in line:
-                    resolvers.append(line.split()[1])
-        return resolvers
-    except IOError:
-        return []
-
 default_config_data = {
     'hostname': 'vyos',
     'domain_name': '',
@@ -88,9 +79,32 @@ default_config_data = {
     'no_dhcp_ns': False
 }
 
-def get_config():
+
+# borrowed from: https://github.com/donjajo/py-world/blob/master/resolvconfReader.py, THX!
+def get_resolvers(file):
+    resolv = {}
+    try:
+        with open(file, 'r') as resolvconf:
+            lines = [line.split('#', 1)[0].rstrip()
+                     for line in resolvconf.readlines()]
+            resolvers = [line.split()[1]
+                         for line in lines if 'nameserver' in line]
+            domains = [line.split()[1] for line in lines if 'search' in line]
+            resolv['resolvers'] = resolvers
+            resolv['domains'] = domains
+        return resolv
+    except IOError:
+        return []
+
+
+def get_config(arguments):
     conf = Config()
     hosts = copy.deepcopy(default_config_data)
+
+    if arguments.dhclient:
+        conf.exists = conf.exists_effective
+        conf.return_value = conf.return_effective_value
+        conf.return_values = conf.return_effective_values
 
     hosts['hostname'] = conf.return_value("system host-name")
     hosts['domain_name'] = conf.return_value("system domain-name")
@@ -105,6 +119,7 @@ def get_config():
     hosts['no_dhcp_ns'] = conf.exists('system disable-dhcp-nameservers')
 
     return hosts
+
 
 def verify(config):
     if config is None:
@@ -124,13 +139,16 @@ def verify(config):
     # The search list is currently limited to six domains with a total of 256 characters.
     # https://linux.die.net/man/5/resolv.conf
     if len(config['domain_search']) > 6:
-        raise ConfigError('The search list is currently limited to six domains')
+        raise ConfigError(
+            'The search list is currently limited to six domains')
 
     tmp = ' '.join(config['domain_search'])
     if len(tmp) > 256:
-        raise ConfigError('The search list is currently limited to 256 characters')
+        raise ConfigError(
+            'The search list is currently limited to 256 characters')
 
     return None
+
 
 def generate(config):
     if config is None:
@@ -142,12 +160,17 @@ def generate(config):
     # We iterate over every resolver file and retrieve the received nameservers
     # for later adjustment of the system nameservers
     dhcp_ns = []
+    dhcp_sd = []
     for file in glob.glob('/etc/resolv.conf.dhclient-new*'):
-        for r in get_resolvers(file):
-            dhcp_ns.append(r)
+        for key, value in get_resolvers(file).items():
+            ns = [r for r in value if key == 'resolvers']
+            dhcp_ns.extend(ns)
+            sd = [d for d in value if key == 'domains']
+            dhcp_sd.extend(sd)
 
     if not config['no_dhcp_ns']:
         config['nameserver'] += dhcp_ns
+        config['domain_search'] += dhcp_sd
 
     tmpl = jinja2.Template(config_tmpl_hosts)
     config_text = tmpl.render(config)
@@ -160,6 +183,7 @@ def generate(config):
         f.write(config_text)
 
     return None
+
 
 def apply(config):
     if config is None:
@@ -180,9 +204,11 @@ def apply(config):
 
     return None
 
+
 if __name__ == '__main__':
+    args = parser.parse_args()
     try:
-        c = get_config()
+        c = get_config(args)
         verify(c)
         generate(c)
         apply(c)
