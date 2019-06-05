@@ -90,7 +90,6 @@ if values:
         print(json.dumps(values))
     else:
         if len(values) == 1:
-            print("one")
             print(values[0])
         else:
             # XXX: assuming values never contain quotes
