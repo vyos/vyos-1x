@@ -298,7 +298,7 @@ def configure_interface(c, intf):
     ## optional settings
     # listen-port
     if c['interfaces'][intf]['lport']:
-      wg_config['port'] = c['interfaces'][intf]['lport']     
+      wg_config['port'] = c['interfaces'][intf]['lport']
 
     ## fwmark
     if c['interfaces'][intf]['fwmark']:
