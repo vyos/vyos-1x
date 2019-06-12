@@ -165,6 +165,8 @@ class Migrator(object):
 
         self.write_config_file_versions(rev_versions)
 
+    def config_changed(self):
+        return self._changed
 
 class VirtualMigrator(Migrator):
     def __init__(self, config_file, vintage='vyos'):

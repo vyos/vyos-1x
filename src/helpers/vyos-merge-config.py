@@ -18,8 +18,10 @@
 import sys
 import os
 import subprocess
+import tempfile
 import vyos.defaults
 import vyos.remote
+import vyos.migrator
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 
@@ -58,6 +60,16 @@ else:
 path = None
 if (len(sys.argv) > 2):
     path = " ".join(sys.argv[2:])
+
+with tempfile.NamedTemporaryFile() as file_to_migrate:
+    with open(file_to_migrate.name, 'w') as fd:
+        fd.write(config_file)
+
+    migration = vyos.migrator.Migrator(file_to_migrate.name)
+    migration.run()
+    if migration.config_changed():
+        with open(file_to_migrate.name, 'r') as fd:
+            config_file = fd.read()
 
 merge_config_tree = ConfigTree(config_file)
 
