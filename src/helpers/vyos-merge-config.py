@@ -57,10 +57,6 @@ else:
             print(err)
             sys.exit(1)
 
-path = None
-if (len(sys.argv) > 2):
-    path = " ".join(sys.argv[2:])
-
 with tempfile.NamedTemporaryFile() as file_to_migrate:
     with open(file_to_migrate.name, 'w') as fd:
         fd.write(config_file)
@@ -91,12 +87,19 @@ merge_cmd_list =  merge_cmds.splitlines()
 effective_cmd_set = set(effective_cmd_list)
 add_cmds = [ cmd for cmd in merge_cmd_list if cmd not in effective_cmd_set ]
 
-if path:
-    if not effective_config.exists(path):
-        print("path {} does not exist in running config; will use "
-              "root.".format(path))
+path = None
+if (len(sys.argv) > 2):
+    path = sys.argv[2:]
+    if (not effective_config_tree.exists(path) and not
+            merge_config_tree.exists(path)):
+        print("path {} does not exist in either effective or merge"
+              " config; will use root.".format(path))
+        path = None
     else:
-        add_cmds = [ cmd for cmd in add_cmds if path in cmd ]
+        path = " ".join(path)
+
+if path:
+    add_cmds = [ cmd for cmd in add_cmds if path in cmd ]
 
 for cmd in add_cmds:
     cmd = "/opt/vyatta/sbin/my_" + cmd
