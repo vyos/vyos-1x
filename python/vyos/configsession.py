@@ -67,7 +67,7 @@ class ConfigSession(object):
         result = p.wait()
         output = p.stdout.read().decode()
         if result != 0:
-            raise VyOSAPIError(output)
+            raise ConfigSessionError(output)
 
     def set(self, path, value=None):
         if not value:
