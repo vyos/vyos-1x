@@ -69,6 +69,9 @@ class ConfigSession(object):
         if result != 0:
             raise ConfigSessionError(output)
 
+    def get_session_env(self):
+        return self.__session_env
+
     def set(self, path, value=None):
         if not value:
             value = []

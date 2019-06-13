@@ -87,9 +87,13 @@ class Config(object):
     the only state it keeps is relative *config path* for convenient access to config
     subtrees.
     """
-    def __init__(self):
+    def __init__(self, session_env=None):
         self._cli_shell_api = "/bin/cli-shell-api"
         self._level = ""
+        if session_env:
+            self.__session_env = session_env
+        else:
+            self.__session_env = None
 
     def _make_command(self, op, path):
         args = path.split()
@@ -97,7 +101,10 @@ class Config(object):
         return cmd
 
     def _run(self, cmd):
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        if self.__session_env:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
+        else:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         out = p.stdout.read()
         p.wait()
         if p.returncode != 0:
