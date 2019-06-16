@@ -298,7 +298,7 @@
                             <description>DUID: colon-separated hex list (as used by isc-dhcp option dhcpv6.client-id)</description>
                           </valueHelp>
                           <constraint>
-                            <validator name="dhcpv6-client-id"/>
+                            <regex>^([0-9A-Fa-f]{1,2}[:])*([0-9A-Fa-f]{1,2})$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
