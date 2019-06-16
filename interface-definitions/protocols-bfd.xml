@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!-- Bidirectional Forwarding Detection (BFD) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="bfd" owner="${vyos_conf_scripts_dir}/protocols_bfd.py">
+        <properties>
+          <help>Bidirectional Forwarding Detection (BFD)</help>
+          <priority>820</priority>
+        </properties>
+        <children>
+          <tagNode name="peer">
+            <properties>
+              <help>Configures a new BFD peer to listen and talk to</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>BFD peer IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>BFD peer IPv6 address</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="local-interface">
+                <properties>
+                  <help>Local interface to bind our peer listener to</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="local-address">
+                <properties>
+                  <help>Local address to bind our peer listener to</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Local IPv4 address used to connect to the peer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Local IPv6 address used to connect to the peer</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="shutdown">
+                <properties>
+                  <help>Disable this peer</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
