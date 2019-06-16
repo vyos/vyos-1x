@@ -15,7 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import sys
 import copy
+import vyos.validate
+
+from vyos import ConfigError
 from vyos.config import Config
 
 default_config_data = {
@@ -33,7 +37,7 @@ def get_config():
     for peer in conf.list_nodes('peer'):
         conf.set_level('protocols bfd peer {0}'.format(peer))
         bfd_peer = {
-            'peer': peer,
+            'remote': peer,
             'shutdown': False,
             'local-interface': '',
             'local-address': '',
@@ -53,16 +57,36 @@ def get_config():
 
         bfd['peers'].append(bfd_peer)
 
-    print(bfd)
     return bfd
 
 def verify(bfd):
+    if bfd is None:
+        return None
+
+    for peer in bfd['peers']:
+        # Bail out early if peer is shutdown
+        if peer['shutdown']:
+            continue
+
+        # IPv6 peers require an explicit local address/interface combination
+        if vyos.validate.is_ipv6(peer['remote']):
+            if not (peer['local-interface'] and peer['local-address']):
+                raise ConfigError("BFD IPv6 peers require explicit local address/interface setting")
+
+
     return None
 
 def generate(bfd):
+    if bfd is None:
+        return None
+
     return None
 
 def apply(bfd):
+    if bfd is None:
+        return None
+
+    print(bfd)
     return None
 
 if __name__ == '__main__':
