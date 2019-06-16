@@ -21,7 +21,9 @@ SET = '/opt/vyatta/sbin/my_set'
 DELETE = '/opt/vyatta/sbin/my_delete'
 COMMENT = '/opt/vyatta/sbin/my_comment'
 COMMIT = '/opt/vyatta/sbin/my_commit'
+DISCARD = '/opt/vyatta/sbin/my_discard'
 
+# Default "commit via" string
 APP = "vyos-api"
 
 
@@ -95,3 +97,6 @@ class ConfigSession(object):
 
     def commit(self):
         self.__run_command([COMMIT])
+
+    def discard(self):
+        self.__run_command([DISCARD])
