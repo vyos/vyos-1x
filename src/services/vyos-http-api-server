@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2019 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+import os
+import sys
+import grp
+import json
+import traceback
+import threading
+
+import vyos.config
+
+import bottle
+
+from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.config import VyOSError
+
+
+DEFAULT_CONFIG_FILE = '/etc/vyos/http-api.conf'
+
+CFG_GROUP = 'vyattacfg'
+
+app = bottle.default_app()
+
+# Giant lock!
+lock = threading.Lock()
+
+def load_server_config():
+    with open(DEFAULT_CONFIG_FILE) as f:
+        config = json.load(f)
+    return config
+
+def check_auth(key_list, key):
+    id = None
+    for k in key_list:
+        if k['key'] == key:
+            id = k['id']
+    return id
+
+def error(code, msg):
+    bottle.response.status = code
+    resp = {"success": False, "error": msg, "data": None}
+    return json.dumps(resp)
+
+def success(data):
+    resp = {"success": True, "data": data, "error": None}
+    return json.dumps(resp)
+
+@app.route('/configure', method='POST')
+def configure():
+    session = app.config['vyos_session']
+    config = app.config['vyos_config']
+    api_keys = app.config['vyos_keys']
+
+    key = bottle.request.forms.get("key")
+    id = check_auth(api_keys, key)
+    if not id:
+        return error(401, "Valid API key is required")
+
+    strict_field = bottle.request.forms.get("strict")
+    if strict_field == "true":
+        strict = True
+    else:
+        strict = False
+
+    commands = bottle.request.forms.get("data")
+    if not commands:
+        return error(400, "Non-empty data field is required")
+    else:
+        try:
+            commands = json.loads(commands)
+        except Exception as e:
+            return error(400, "Failed to parse JSON: {0}".format(e))
+
+    # We don't want multiple people/apps to be able to commit at once,
+    # or modify the shared session while someone else is doing the same,
+    # so the lock is really global
+    lock.acquire()
+
+    status = 200
+    error_msg = None
+    try:
+        for c in commands:
+            op = c['op']
+            path = c['path']
+            value = c['value']
+
+            # Account for null values
+            if not value:
+                value = ""
+
+            # For vyos.config calls
+            cfg_path = " ".join(path + [value]).strip()
+
+            if op == 'set':
+                # XXX: it would be nice to do a strict check for "path already exists",
+                # but there's probably no way to do that
+                session.set(path, value=value)
+            elif op == 'delete':
+                if strict and not config.exists(cfg_path):
+                    raise ConfigSessionError("Cannot delete [{0}]: path/value does not exist".format(cfg_path))
+                session.delete(path, value=value)
+            elif op == 'comment':
+                session.comment(path, value=value)
+            else:
+                raise ConfigSessionError("\"{0}\" is not a valid operation".format(op))
+        # end for
+        session.commit()
+        print("Configuration modified via HTTP API using key \"{0}\"".format(id))
+    except ConfigSessionError as e:
+        session.discard()
+        status = 400
+        if app.config['vyos_debug']:
+            print(traceback.format_exc(), file=sys.stderr)
+        error_msg = str(e)
+    except Exception as e:
+        session.discard()
+        print(traceback.format_exc(), file=sys.stderr)
+        status = 500
+
+        # Don't give the details away to the outer world
+        error_msg = "An internal error occured. Check the logs for details."
+
+    lock.release()
+    if status != 200:
+        return error(status, error_msg)
+    else:
+        return success(None)
+
+@app.route('/retrieve', method='POST')
+def get_value():
+    config = app.config['vyos_config']
+
+    api_keys = app.config['vyos_keys']
+
+    key = bottle.request.forms.get("key")
+    id = check_auth(api_keys, key)
+    if not id:
+        return error(401, "Valid API key is required")
+
+    command = bottle.request.forms.get("data")
+    command = json.loads(command)
+
+    op = command['op']
+    path = " ".join(command['path'])
+
+    try:
+        if op == 'returnValue':
+            res = config.return_value(path)
+        elif op == 'returnValues':
+            res = config.return_values(path)
+        elif op == 'exists':
+            res = config.exists(path)
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except VyOSError as e:
+        return error(400, str(e))
+    except Exception as e:
+        print(traceback.format_exc(), file=sys.stderr)
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+if __name__ == '__main__':
+    # systemd's user and group options don't work, do it by hand here,
+    # else no one else will be able to commit
+    cfg_group = grp.getgrnam(CFG_GROUP)
+    os.setgid(cfg_group.gr_gid)
+
+    # Need to set file permissions to 775 too so that every vyattacfg group member
+    # has write access to the running config
+    os.umask(0o002)
+
+    try:
+        server_config = load_server_config()
+    except Exception as e:
+        print("Failed to load the HTTP API server config: {0}".format(e))
+
+    session = ConfigSession(os.getpid())
+    env = session.get_session_env()
+    config = vyos.config.Config(session_env=env)
+
+    app.config['vyos_session'] = session
+    app.config['vyos_config'] = config
+    app.config['vyos_keys'] = server_config['api_keys']
+    app.config['vyos_debug'] = server_config['debug']
+
+    bottle.run(app, host=server_config["listen_address"], port=server_config["port"], debug=True)

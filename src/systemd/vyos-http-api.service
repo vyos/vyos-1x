@@ -1,0 +1,16 @@
+[Unit]
+Description=VyOS HTTP API service
+After=auditd.service systemd-user-sessions.service time-sync.target
+
+[Service]
+ExecStart=/usr/libexec/vyos/services/vyos-http-api-server
+ExecReload=/bin/kill -TERM $MAINPID
+KillMode=process
+
+# Does't work but leave it here
+User=root
+Group=vyattacfg
+
+[Install]
+WantedBy=multi-user.target
+
