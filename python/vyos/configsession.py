@@ -14,6 +14,7 @@
 
 import os
 import re
+import sys
 import subprocess
 
 CLI_SHELL_API = '/bin/cli-shell-api'
@@ -50,6 +51,7 @@ class ConfigSession(object):
         """
 
         env_str = subprocess.check_output([CLI_SHELL_API, 'getSessionEnv', str(session_id)])
+        self.__session_id = session_id
 
         # Extract actual variables from the chunk of shell it outputs
         # XXX: it's better to extend cli-shell-api to provide easily readable output
@@ -63,6 +65,14 @@ class ConfigSession(object):
         self.__session_env["COMMIT_VIA"] = app
 
         self.__run_command([CLI_SHELL_API, 'setupSession'])
+
+    def __del__(self):
+        try:
+            output = subprocess.check_output([CLI_SHELL_API, 'teardownSession'], env=self.__session_env).decode().strip()
+            if output:
+                print("cli-shell-api teardownSession output for sesion {0}: {1}".format(self.__session_id, output), file=sys.stderr)
+        except Exception as e:
+            print("Could not tear down session {0}: {1}".format(self.__session_id, e), file=sys.stderr)
 
     def __run_command(self, cmd_list):
         p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=self.__session_env)
