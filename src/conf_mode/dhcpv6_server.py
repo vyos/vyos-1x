@@ -28,7 +28,7 @@ from vyos.config import Config
 from vyos import ConfigError
 
 config_file = r'/etc/dhcp/dhcpd6.conf'
-lease_file = r'/config/dhcpd6.leases'
+lease_file = r'/config/dhcpdv6.leases'
 daemon_config_file = r'/etc/default/isc-dhcpv6-server'
 
 # Please be careful if you edit the template.
