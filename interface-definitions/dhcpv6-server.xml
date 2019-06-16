@@ -278,6 +278,10 @@
                   <tagNode name="static-mapping">
                     <properties>
                       <help>Name of static mapping</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid static-mapping name. May only contain letters, numbers and .-_</constraintErrorMessage>
                     </properties>
                     <children>
                       <leafNode name="disable">
@@ -288,7 +292,14 @@
                       </leafNode>
                       <leafNode name="identifier">
                         <properties>
-                          <help>Client identifier for this static mapping</help>
+                          <help>Client identifier (DUID) for this static mapping [REQUIRED]</help>
+                          <valueHelp>
+                            <format>h[[:h]...]</format>
+                            <description>DUID: colon-separated hex list (as used by isc-dhcp option dhcpv6.client-id)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="dhcpv6-client-id"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="ipv6-address">
