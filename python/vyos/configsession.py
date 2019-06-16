@@ -25,7 +25,42 @@ COMMIT = '/opt/vyatta/sbin/my_commit'
 DISCARD = '/opt/vyatta/sbin/my_discard'
 
 # Default "commit via" string
-APP = "vyos-api"
+APP = "vyos-http-api"
+
+# When started as a service rather than from a user shell,
+# the process lacks the VyOS-specific environment that comes
+# from bash configs, so we have to inject it
+# XXX: maybe it's better to do via a systemd environment file
+def inject_vyos_env(env):
+    env['VYATTA_CFG_GROUP_NAME'] = 'vyattacfg'
+    env['VYATTA_USER_LEVEL_DIR'] = '/opt/vyatta/etc/shell/level/admin'
+    env['vyatta_bindir']= '/opt/vyatta/bin'
+    env['vyatta_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
+    env['vyatta_configdir'] = '/opt/vyatta/config'
+    env['vyatta_datadir'] = '/opt/vyatta/share'
+    env['vyatta_datarootdir'] = '/opt/vyatta/share'
+    env['vyatta_libdir'] = '/opt/vyatta/lib'
+    env['vyatta_libexecdir'] = '/opt/vyatta/libexec'
+    env['vyatta_op_templates'] = '/opt/vyatta/share/vyatta-op/templates'
+    env['vyatta_prefix'] = '/opt/vyatta'
+    env['vyatta_sbindir'] = '/opt/vyatta/sbin'
+    env['vyatta_sysconfdir'] = '/opt/vyatta/etc'
+    env['vyos_bin_dir'] = '/usr/bin'
+    env['vyos_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
+    env['vyos_completion_dir'] = '/usr/libexec/vyos/completion'
+    env['vyos_configdir'] = '/opt/vyatta/config'
+    env['vyos_conf_scripts_dir'] = '/usr/libexec/vyos/conf_mode'
+    env['vyos_datadir'] = '/opt/vyatta/share'
+    env['vyos_datarootdir']= '/opt/vyatta/share'
+    env['vyos_libdir'] = '/opt/vyatta/lib'
+    env['vyos_libexec_dir'] = '/usr/libexec/vyos'
+    env['vyos_op_scripts_dir'] = '/usr/libexec/vyos/op_mode'
+    env['vyos_op_templates'] = '/opt/vyatta/share/vyatta-op/templates'
+    env['vyos_prefix'] = '/opt/vyatta'
+    env['vyos_sbin_dir'] = '/usr/sbin'
+    env['vyos_validators_dir'] = '/usr/libexec/vyos/validators'
+
+    return env
 
 
 class ConfigSessionError(Exception):
@@ -58,6 +93,7 @@ class ConfigSession(object):
         env_list = re.findall(r'([A-Z_]+)=([^;\s]+)', env_str.decode())
 
         session_env = os.environ
+        session_env = inject_vyos_env(session_env)
         for k, v in env_list:
             session_env[k] = v
 
