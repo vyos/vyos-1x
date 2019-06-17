@@ -83,17 +83,19 @@ master=1
 [client-ip-range]
 disable
 
+{% if ppp_gw %}
 [ip-pool]
 gw-ip-address={{ppp_gw}}
 {% if client_ip_pool %}
 {{client_ip_pool}}
-{% endif %}
+{% endif -%}
 
 {% if client_ip_subnets %}
 {% for sn in client_ip_subnets %}
 {{sn}}
 {% endfor %}
 {% endif %}
+{% endif -%}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
@@ -550,18 +552,14 @@ def verify(c):
       if c['authentication']['radiussrv'][rsrv]['secret'] == None:
         raise ConfigError('radius server ' + rsrv + ' needs a secret configured')
 
-  ### local ippool and gateway settings
+  ### local ippool and gateway settings config checks
 
-  if not c['ppp_gw']:
-    raise ConfigError('pppoe-server local-ip required')
-
-  if not c['client_ip_subnets'] and not c['client_ip_pool']:
-    print ("Warning: No pppoe client IP pool defined") 
-
-  ### activate as soon as it is clear what to do migrate or depricate. 
-  #if c['client_ip_pool']:
-  #  print ("Warning: client-ip-pool (start|stop) is depricated, please use client-ip-pool subnet")
-  #  sl.syslog(sl.LOG_NOTICE, "client-ip-pool start stop is depricated, please use client-ip-pool subnet")
+  if c['client_ip_subnets'] or c['client_ip_pool']:
+    if not c['ppp_gw']:
+      raise ConfigError('pppoe-server local-ip required')
+      
+  if c['ppp_gw'] and not c['client_ip_subnets'] and not c['client_ip_pool']:
+    print ("Warning: No pppoe client IPv4 pool defined") 
 
 def generate(c):
   if c == None:
