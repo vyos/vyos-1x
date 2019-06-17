@@ -135,8 +135,9 @@ def configure():
 
         # Don't give the details away to the outer world
         error_msg = "An internal error occured. Check the logs for details."
+    finally:
+        lock.release()
 
-    lock.release()
     if status != 200:
         return error(status, error_msg)
     else:
