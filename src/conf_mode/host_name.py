@@ -248,10 +248,15 @@ def apply(config):
     if config['domain_name']:
         fqdn += '.' + config['domain_name']
 
+    # rsyslog runs into a race condition at boot time with systemd
+    # restart rsyslog only if the hostname changed.
+    hn = subprocess.check_output(['hostnamectl','--static']).decode().strip()
+
     os.system("hostnamectl set-hostname --static {0}".format(fqdn.rstrip('.')))
 
     # Restart services that use the hostname
-    os.system("systemctl restart rsyslog.service")
+    if hn != fqdn:
+      os.system("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
     if os.system("pgrep snmpd > /dev/null") == 0:
