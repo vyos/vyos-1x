@@ -94,7 +94,7 @@ shared-network {{ network.name }} {
         {%- for host in subnet.static_mapping %}
         {% if not host.disabled -%}
         host {{ network.name }}_{{ host.name }} {
-            host-identifier option dhcp6.client-id "{{ host.client_identifier }}";
+            host-identifier option dhcp6.client-id {{ host.client_identifier }};
             fixed-address6 {{ host.ipv6_address }};
         }
         {%- endif %}

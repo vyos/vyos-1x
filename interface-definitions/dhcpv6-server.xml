@@ -268,7 +268,7 @@
                   </leafNode>
                   <leafNode name="sntp-server">
                     <properties>
-                      <help>IPv6 address of an SNTP Server for client to use</help>
+                      <help>IPv6 address of an SNTP server for client to use</help>
                       <constraint>
                         <validator name="ipv6-address"/>
                       </constraint>
@@ -278,25 +278,36 @@
                   <tagNode name="static-mapping">
                     <properties>
                       <help>Name of static mapping</help>
+                      <constraint>
+                        <regex>[-_a-zA-Z0-9.]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid static-mapping name. May only contain letters, numbers and .-_</constraintErrorMessage>
                     </properties>
                     <children>
                       <leafNode name="disable">
                         <properties>
-                          <help>Option to disable static-mapping</help>
+                          <help>Option to disable static mapping</help>
                           <valueless/>
                         </properties>
                       </leafNode>
                       <leafNode name="identifier">
                         <properties>
-                          <help>Client identifier for this static mapping</help>
+                          <help>Client identifier (DUID) for this static mapping [REQUIRED]</help>
+                          <valueHelp>
+                            <format>h[[:h]...]</format>
+                            <description>DUID: colon-separated hex list (as used by isc-dhcp option dhcpv6.client-id)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>([0-9A-Fa-f]{1,2}[:])*([0-9A-Fa-f]{1,2})</regex>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="ipv6-address">
                         <properties>
-                          <help>Client IPv5 address for this static mapping</help>
+                          <help>Client IPv6 address for this static mapping [REQUIRED]</help>
                           <valueHelp>
                             <format>ipv6</format>
-                            <description>IPv6 address for this tatic mapping</description>
+                            <description>IPv6 address for this static mapping [REQUIRED]</description>
                           </valueHelp>
                           <constraint>
                             <validator name="ipv6-address"/>
