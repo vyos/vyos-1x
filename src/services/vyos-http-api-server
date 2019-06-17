@@ -96,16 +96,36 @@ def configure():
     error_msg = None
     try:
         for c in commands:
+            # Missing op or path is a show stopper
+            if not ('op' in c):
+                raise ConfigSessionError("Malformed command \"{0}\": missing \"op\" field".format(json.dumps(c)))
+            if not ('path' in c):
+                raise ConfigSessionError("Malformed command \"{0}\": missing \"path\" field".format(json.dumps(c)))
+            # Missing value is fine, substitute for empty string
+            if not ('value' in c):
+                value = ""
+
             op = c['op']
             path = c['path']
             value = c['value']
 
-            # Account for null values
+            # Type checking
+            if not isinstance(path, list):
+                raise ConfigSessionError("Malformed command \"{0}\": \"path\" field must be a list".format(json.dumps(c)))
+
+            if not isinstance(value, str):
+                raise ConfigSessionError("Malformed command \"{0}\": \"value\" field must be a string".format(json.dumps(c)))
+
+            # Account for the case when value field is present and set to null
             if not value:
                 value = ""
 
-            # For vyos.config calls
-            cfg_path = " ".join(path + [value]).strip()
+            # For vyos.configsessios calls that have no separate value arguments,
+            # and for type checking too
+            try:
+                cfg_path = " ".join(path + [value]).strip()
+            except TypeError:
+                raise ConfigSessionError("Malformed command \"{0}\": \"path\" field must be a list of strings".format(json.dumps(c)))
 
             if op == 'set':
                 # XXX: it would be nice to do a strict check for "path already exists",
