@@ -87,6 +87,10 @@ def configure():
         except Exception as e:
             return error(400, "Failed to parse JSON: {0}".format(e))
 
+    # Allow users to pass just one command
+    if not isinstance(commands, list):
+        commands = [commands]
+
     # We don't want multiple people/apps to be able to commit at once,
     # or modify the shared session while someone else is doing the same,
     # so the lock is really global
@@ -96,6 +100,10 @@ def configure():
     error_msg = None
     try:
         for c in commands:
+            # What we've got may not even be a dict
+            if not isinstance(c, dict):
+                raise ConfigSessionError("Malformed command \"{0}\": any command must be a dict".format(json.dumps(c)))
+
             # Missing op or path is a show stopper
             if not ('op' in c):
                 raise ConfigSessionError("Malformed command \"{0}\": missing \"op\" field".format(json.dumps(c)))
