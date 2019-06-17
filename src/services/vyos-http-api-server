@@ -109,13 +109,15 @@ def configure():
                 raise ConfigSessionError("Malformed command \"{0}\": missing \"op\" field".format(json.dumps(c)))
             if not ('path' in c):
                 raise ConfigSessionError("Malformed command \"{0}\": missing \"path\" field".format(json.dumps(c)))
+
             # Missing value is fine, substitute for empty string
-            if not ('value' in c):
+            if 'value' in c:
+                value = c['value']
+            else:
                 value = ""
 
             op = c['op']
             path = c['path']
-            value = c['value']
 
             # Type checking
             if not isinstance(path, list):
