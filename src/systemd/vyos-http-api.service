@@ -9,6 +9,8 @@ KillMode=process
 SyslogIdentifier=vyos-http-api
 SyslogFacility=daemon
 
+Restart=on-failure
+
 # Does't work but leave it here
 User=root
 Group=vyattacfg
