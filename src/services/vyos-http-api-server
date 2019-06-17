@@ -119,6 +119,9 @@ def configure():
             op = c['op']
             path = c['path']
 
+            if not path:
+                raise ConfigSessionError("Malformed command \"{0}\": empty path".format(json.dumps(c)))
+
             # Type checking
             if not isinstance(path, list):
                 raise ConfigSessionError("Malformed command \"{0}\": \"path\" field must be a list".format(json.dumps(c)))
