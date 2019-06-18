@@ -173,6 +173,9 @@ verbose=1
 [shaper]
 verbose=1
 attr={{authentication['radiusopt']['shaper']['attr']}}
+{% if authentication['radiusopt']['shaper']['vendor'] %}
+vendor={{authentication['radiusopt']['shaper']['vendor']}}
+{% endif -%}
 {% endif -%}
 {% endif %}
 
@@ -485,6 +488,9 @@ def get_config():
           config_data['authentication']['radiusopt']['shaper'] = {
           'attr'  : c.return_value('authentication radius-settings rate-limit attribute')
           }
+        if c.exists('authentication radius-settings rate-limit vendor'):
+          config_data['authentication']['radiusopt']['shaper']['vendor'] = c.return_value('authentication radius-settings rate-limit vendor')
+
 
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
