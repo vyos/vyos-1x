@@ -25,6 +25,7 @@ import re
 import sys
 import copy
 import glob
+import subprocess
 import argparse
 import jinja2
 
@@ -250,13 +251,13 @@ def apply(config):
 
     # rsyslog runs into a race condition at boot time with systemd
     # restart rsyslog only if the hostname changed.
-    hn = subprocess.check_output(['hostnamectl','--static']).decode().strip()
+    hn = subprocess.check_output(['hostnamectl', '--static']).decode().strip()
 
     os.system("hostnamectl set-hostname --static {0}".format(fqdn.rstrip('.')))
 
     # Restart services that use the hostname
     if hn != fqdn:
-      os.system("systemctl restart rsyslog.service")
+        os.system("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
     if os.system("pgrep snmpd > /dev/null") == 0:
