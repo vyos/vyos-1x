@@ -32,7 +32,8 @@ def get_config():
     opts = copy.deepcopy(default_config_data)
     conf = Config()
     if not conf.exists('firewall options'):
-        return None
+        # bail out early
+        return opts
     else:
         conf.set_level('firewall options')
 
