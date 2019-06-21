@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="protocols">
+        <children>
+          <node name="bfd">
+            <children>
+              <node name="peer">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) Status</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bfd peers"</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
