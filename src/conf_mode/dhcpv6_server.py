@@ -112,8 +112,8 @@ daemon_tmpl = """
 
 # sourced by /etc/init.d/isc-dhcpv6-server
 
-DHCPD_CONF=/etc/dhcp/dhcpd6.conf
-DHCPD_PID=/var/run/dhcpd6.pid
+DHCPD_CONF=/etc/dhcp/dhcpdv6.conf
+DHCPD_PID=/var/run/dhcpdv6.pid
 OPTIONS="-6 -lf {{ lease_file }}"
 INTERFACES=""
 """
