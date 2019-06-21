@@ -35,7 +35,7 @@ bfd
 {% endfor -%}
 !
 {% for peer in new_peers -%}
- peer {{ peer.remote }}{% if peer.local_address %} local-address {{ peer.local_address }}{% endif %}{% if peer.local_interface %} interface {{ peer.local_interface }}{% endif %}
+ peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.local_address %} local-address {{ peer.local_address }}{% endif %}{% if peer.local_interface %} interface {{ peer.local_interface }}{% endif %}
  {% if not peer.shutdown %}no {% endif %}shutdown
 {% endfor -%}
 !
@@ -66,6 +66,7 @@ def get_config():
             'shutdown': False,
             'local_interface': '',
             'local_address': '',
+            'multihop': False
         }
 
         # Check if individual peer is disabled
@@ -79,6 +80,12 @@ def get_config():
         # Check if peer has a local source address configured - this is mandatory for IPv6
         if conf.exists('local-address'):
             bfd_peer['local_address'] = conf.return_value('local-address')
+
+        # Tell BFD daemon that we should expect packets with TTL less than 254
+        # (because it will take more than one hop) and to listen on the multihop
+        # port (4784)
+        if conf.exists('multihop'):
+            bfd_peer['multihop'] = True
 
         bfd['new_peers'].append(bfd_peer)
 

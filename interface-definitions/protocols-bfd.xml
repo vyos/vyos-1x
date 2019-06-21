@@ -49,6 +49,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="multihop">
+                <properties>
+                  <help>Allow this BFD peer to not be directly connected</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
         </children>
