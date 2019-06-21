@@ -16,31 +16,56 @@
 #
 
 import sys
+import jinja2
 import copy
+import os
 import vyos.validate
 
 from vyos import ConfigError
 from vyos.config import Config
 
+config_file = r'/tmp/bfd.frr'
+
+# Please be careful if you edit the template.
+config_tmpl = """
+!
+bfd
+{% for peer in old_peers -%}
+ no peer {{ peer }}
+{% endfor -%}
+!
+{% for peer in new_peers -%}
+ peer {{ peer.remote }}{% if peer.local_address %} local-address {{ peer.local_address }}{% endif %}{% if peer.local_interface %} interface {{ peer.local_interface }}{% endif %}
+ {% if not peer.shutdown %}no {% endif %}shutdown
+{% endfor -%}
+!
+"""
+
 default_config_data = {
-    'peers': []
+    'new_peers': [],
+    'old_peers' : []
 }
 
 def get_config():
     bfd = copy.deepcopy(default_config_data)
     conf = Config()
-    if not conf.exists('protocols bfd'):
+    if not (conf.exists('protocols bfd') or conf.exists_effective('protocols bfd')):
         return None
     else:
         conf.set_level('protocols bfd')
+
+    # as we have to use vtysh to talk to FRR we also need to know
+    # which peers are gone due to a config removal - thus we read in
+    # all peers (active or to delete)
+    bfd['old_peers'] = conf.list_effective_nodes('peer')
 
     for peer in conf.list_nodes('peer'):
         conf.set_level('protocols bfd peer {0}'.format(peer))
         bfd_peer = {
             'remote': peer,
             'shutdown': False,
-            'local-interface': '',
-            'local-address': '',
+            'local_interface': '',
+            'local_address': '',
         }
 
         # Check if individual peer is disabled
@@ -49,13 +74,13 @@ def get_config():
 
         # Check if peer has a local source interface configured
         if conf.exists('local-interface'):
-            bfd_peer['local-interface'] = conf.return_value('local-interface')
+            bfd_peer['local_interface'] = conf.return_value('local-interface')
 
         # Check if peer has a local source address configured - this is mandatory for IPv6
         if conf.exists('local-address'):
-            bfd_peer['local-address'] = conf.return_value('local-address')
+            bfd_peer['local_address'] = conf.return_value('local-address')
 
-        bfd['peers'].append(bfd_peer)
+        bfd['new_peers'].append(bfd_peer)
 
     return bfd
 
@@ -63,16 +88,15 @@ def verify(bfd):
     if bfd is None:
         return None
 
-    for peer in bfd['peers']:
+    for peer in bfd['new_peers']:
         # Bail out early if peer is shutdown
         if peer['shutdown']:
             continue
 
         # IPv6 peers require an explicit local address/interface combination
         if vyos.validate.is_ipv6(peer['remote']):
-            if not (peer['local-interface'] and peer['local-address']):
+            if not (peer['local_interface'] and peer['local_address']):
                 raise ConfigError("BFD IPv6 peers require explicit local address/interface setting")
-
 
     return None
 
@@ -86,7 +110,15 @@ def apply(bfd):
     if bfd is None:
         return None
 
-    print(bfd)
+    tmpl = jinja2.Template(config_tmpl)
+    config_text = tmpl.render(bfd)
+    with open(config_file, 'w') as f:
+        f.write(config_text)
+
+    os.system("sudo vtysh -d bfdd -f " + config_file)
+    if os.path.exists(config_file):
+        os.remove(config_file)
+
     return None
 
 if __name__ == '__main__':
