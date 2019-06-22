@@ -35,7 +35,7 @@ bfd
 {% endfor -%}
 !
 {% for peer in new_peers -%}
- peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.local_address %} local-address {{ peer.local_address }}{% endif %}{% if peer.local_interface %} interface {{ peer.local_interface }}{% endif %}
+ peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
  {% if not peer.shutdown %}no {% endif %}shutdown
 {% endfor -%}
 !
@@ -64,8 +64,8 @@ def get_config():
         bfd_peer = {
             'remote': peer,
             'shutdown': False,
-            'local_interface': '',
-            'local_address': '',
+            'src_if': '',
+            'src_addr': '',
             'multihop': False
         }
 
@@ -74,12 +74,12 @@ def get_config():
             bfd_peer['shutdown'] = True
 
         # Check if peer has a local source interface configured
-        if conf.exists('local-interface'):
-            bfd_peer['local_interface'] = conf.return_value('local-interface')
+        if conf.exists('source interface'):
+            bfd_peer['src_if'] = conf.return_value('source interface')
 
         # Check if peer has a local source address configured - this is mandatory for IPv6
-        if conf.exists('local-address'):
-            bfd_peer['local_address'] = conf.return_value('local-address')
+        if conf.exists('source address'):
+            bfd_peer['src_addr'] = conf.return_value('source address')
 
         # Tell BFD daemon that we should expect packets with TTL less than 254
         # (because it will take more than one hop) and to listen on the multihop
@@ -102,7 +102,7 @@ def verify(bfd):
 
         # IPv6 peers require an explicit local address/interface combination
         if vyos.validate.is_ipv6(peer['remote']):
-            if not (peer['local_interface'] and peer['local_address']):
+            if not (peer['src_if'] and peer['src_addr']):
                 raise ConfigError("BFD IPv6 peers require explicit local address/interface setting")
 
     return None

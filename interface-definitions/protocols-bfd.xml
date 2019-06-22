@@ -22,27 +22,34 @@
               </valueHelp>
             </properties>
             <children>
-              <leafNode name="local-interface">
+              <node name="source">
                 <properties>
-                  <help>Local interface to bind our peer listener to</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
+                  <help>Bind listener to specifid interface/address, mandatory for IPv6</help>
                 </properties>
-              </leafNode>
-              <leafNode name="local-address">
-                <properties>
-                  <help>Local address to bind our peer listener to</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Local IPv4 address used to connect to the peer</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>Local IPv6 address used to connect to the peer</description>
-                  </valueHelp>
-                </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Local interface to bind our peer listener to</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="address">
+                    <properties>
+                      <help>Local address to bind our peer listener to</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 address used to connect to the peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 address used to connect to the peer</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="shutdown">
                 <properties>
                   <help>Disable this peer</help>
