@@ -87,12 +87,6 @@ def get_config():
         if conf.exists('source address'):
             bfd_peer['src_addr'] = conf.return_value('source address')
 
-        # Configures the detection multiplier to determine packet loss. The remote
-        # transmission interval will be multiplied by this value to determine the
-        # connection loss detection timer. The default value is 3.
-        if conf.exists('multiplier'):
-            bfd_peer['multiplier'] = conf.return_value('multiplier')
-
         # Tell BFD daemon that we should expect packets with TTL less than 254
         # (because it will take more than one hop) and to listen on the multihop
         # port (4784)
@@ -108,6 +102,12 @@ def get_config():
         # to use to send BFD control packets.
         if conf.exists('interval transmit'):
             bfd_peer['tx_interval'] = conf.return_value('interval transmit')
+
+        # Configures the detection multiplier to determine packet loss. The remote
+        # transmission interval will be multiplied by this value to determine the
+        # connection loss detection timer. The default value is 3.
+        if conf.exists('interval multiplier'):
+            bfd_peer['multiplier'] = conf.return_value('interval multiplier')
 
         bfd['new_peers'].append(bfd_peer)
 

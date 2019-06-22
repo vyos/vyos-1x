@@ -50,18 +50,6 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="multiplier">
-                <properties>
-                  <help>Multiplier to determine packet loss</help>
-                  <valueHelp>
-                    <format>2-255</format>
-                    <description>Remote transmission interval will be multiplied by this value</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 2-255"/>
-                  </constraint>
-                </properties>
-              </leafNode>
               <node name="interval">
                 <properties>
                   <help>Configure timer intervals</help>
@@ -88,6 +76,18 @@
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 10-60000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="multiplier">
+                    <properties>
+                      <help>Multiplier to determine packet loss</help>
+                      <valueHelp>
+                        <format>2-255</format>
+                        <description>Remote transmission interval will be multiplied by this value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-255"/>
                       </constraint>
                     </properties>
                   </leafNode>
