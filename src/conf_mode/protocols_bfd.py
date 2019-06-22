@@ -36,6 +36,7 @@ bfd
 !
 {% for peer in new_peers -%}
  peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
+ detect-multiplier {{ peer.multiplier }}
  {% if not peer.shutdown %}no {% endif %}shutdown
 {% endfor -%}
 !
@@ -66,6 +67,7 @@ def get_config():
             'shutdown': False,
             'src_if': '',
             'src_addr': '',
+            'multiplier': '3',
             'multihop': False
         }
 
@@ -80,6 +82,12 @@ def get_config():
         # Check if peer has a local source address configured - this is mandatory for IPv6
         if conf.exists('source address'):
             bfd_peer['src_addr'] = conf.return_value('source address')
+
+        # Configures the detection multiplier to determine packet loss. The remote
+        # transmission interval will be multiplied by this value to determine the
+        # connection loss detection timer. The default value is 3.
+        if conf.exists('multiplier'):
+            bfd_peer['multiplier'] = conf.return_value('multiplier')
 
         # Tell BFD daemon that we should expect packets with TTL less than 254
         # (because it will take more than one hop) and to listen on the multihop

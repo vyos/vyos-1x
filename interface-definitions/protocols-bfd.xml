@@ -50,6 +50,18 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="multiplier">
+                <properties>
+                  <help>Multiplier to determine packet loss</help>
+                  <valueHelp>
+                    <format>2-255</format>
+                    <description>Remote transmission interval will be multiplied by this value</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 2-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="shutdown">
                 <properties>
                   <help>Disable this peer</help>
