@@ -111,7 +111,12 @@ def verify(bfd):
         # IPv6 peers require an explicit local address/interface combination
         if vyos.validate.is_ipv6(peer['remote']):
             if not (peer['src_if'] and peer['src_addr']):
-                raise ConfigError("BFD IPv6 peers require explicit local address/interface setting")
+                raise ConfigError('BFD IPv6 peers require explicit local address/interface setting')
+
+        # multihop doesn't accept interface names
+        if peer['multihop'] and peer['src_if']:
+            raise ConfigError('multihop does not accept interface names')
+
 
     return None
 
