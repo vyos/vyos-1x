@@ -62,6 +62,37 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <node name="interval">
+                <properties>
+                  <help>Configure timer intervals</help>
+                </properties>
+                <children>
+                  <leafNode name="receive">
+                    <properties>
+                      <help>Minimum interval of receiving control packets</help>
+                      <valueHelp>
+                        <format>10-60000</format>
+                        <description>Interval in milliseconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-60000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="transmit">
+                    <properties>
+                      <help>Minimum interval of transmitting control packets</help>
+                      <valueHelp>
+                        <format>10-60000</format>
+                        <description>Interval in milliseconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-60000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="shutdown">
                 <properties>
                   <help>Disable this peer</help>

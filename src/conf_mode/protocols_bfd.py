@@ -37,6 +37,8 @@ bfd
 {% for peer in new_peers -%}
  peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
  detect-multiplier {{ peer.multiplier }}
+ receive-interval {{ peer.rx_interval }}
+ transmit-interval {{ peer.tx_interval }}
  {% if not peer.shutdown %}no {% endif %}shutdown
 {% endfor -%}
 !
@@ -68,6 +70,8 @@ def get_config():
             'src_if': '',
             'src_addr': '',
             'multiplier': '3',
+            'rx_interval': '300',
+            'tx_interval': '300',
             'multihop': False
         }
 
@@ -94,6 +98,16 @@ def get_config():
         # port (4784)
         if conf.exists('multihop'):
             bfd_peer['multihop'] = True
+
+        # Configures the minimum interval that this system is capable of receiving
+        # control packets. The default value is 300 milliseconds.
+        if conf.exists('interval receive'):
+            bfd_peer['rx_interval'] = conf.return_value('interval receive')
+
+        # The minimum transmission interval (less jitter) that this system wants
+        # to use to send BFD control packets.
+        if conf.exists('interval transmit'):
+            bfd_peer['tx_interval'] = conf.return_value('interval transmit')
 
         bfd['new_peers'].append(bfd_peer)
 
