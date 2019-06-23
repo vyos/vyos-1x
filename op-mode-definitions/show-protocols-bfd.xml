@@ -8,10 +8,19 @@
             <children>
               <node name="peer">
                 <properties>
-                  <help>Show Bidirectional Forwarding Detection (BFD) Status</help>
+                  <help>Show all Bidirectional Forwarding Detection (BFD) peer status</help>
                 </properties>
                 <command>/usr/bin/vtysh -c "show bfd peers"</command>
               </node>
+              <tagNode name="peer">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) peer status</help>
+                  <completionHelp>
+                    <script>/usr/bin/vtysh -c "show bfd peer" | grep peer | awk '{print $2}'</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bfd peer $5"</command>
+              </tagNode>
             </children>
           </node>
         </children>
