@@ -101,6 +101,9 @@ shared-network {{ network.name }} {
         {%- endfor %}
     }
     {%- endfor %}
+    on commit {
+        set shared-networkname = "{{ network.name }}";
+    }
 }
 {%- endif %}
 {% endfor %}
