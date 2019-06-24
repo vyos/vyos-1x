@@ -1,0 +1,279 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="ipoe-server" owner="${vyos_conf_scripts_dir}/ipoe_server.py">
+        <properties>
+          <help>Internet Protocol over Ethernet (IPoE) Server</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Network interface to server IPoE</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="network-mode">
+                <properties>
+                  <help>Network Layer IPoE serves on</help>
+                  <completionHelp>
+                    <list>L2 L3</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>^(L2|L3)</regex>
+                  </constraint>
+                  <valueHelp>
+                    <format>L2</format>
+                    <description>client share the same subnet</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>L3</format>
+                    <description>clients are behind this router</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="network">
+                <properties>
+                  <help>Enables clients to share the same network or each client has its own vlan</help>
+                  <completionHelp>
+                    <list>shared vlan</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>^(shared|vlan)</regex>
+                  </constraint>
+                  <valueHelp>
+                    <format>shared</format>
+                    <description>Multiple clients share the same network</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>vlan</format>
+                    <description>One VLAN per client</description>    
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="client-subnet">
+                <properties>
+                  <help>Client address pool</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="external-dhcp">
+                <properties>
+                  <help>DHCP requests will be forwarded</help>
+                </properties>
+                <children>
+                  <leafNode name="dhcp-relay">
+                    <properties>
+                      <help>DHCP Server the request will be redirected to.</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address of the DHCP Server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="giaddr">
+                    <properties>
+                      <help>address of the relay agent (Relay Agent IP Address)</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="dns-server">
+            <properties>
+              <help>DNS servers offered via internal DHCP</help>
+            </properties>
+            <children>
+              <leafNode name="server-1">
+                <properties>
+                  <help>IP address of the primary DNS server</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="server-2">
+                <properties>
+                  <help>IP address of the primary DNS server</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="authentication">
+            <properties>
+              <help>Client authentication methods</help>
+            </properties>
+            <children>
+              <leafNode name="mode">
+                <properties>
+                  <help>Authetication mode</help>
+                  <completionHelp>
+                    <list>local radius noauth</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>^(local|radius|noauth)</regex>
+                  </constraint>
+                  <valueHelp>
+                    <format>local</format>
+                    <description>Authentication based on local definition</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>radius</format>
+                    <description>Authentication based on a RADIUS server</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>noauth</format>
+                    <description>Authentication disabled</description>
+                  </valueHelp>
+                </properties>
+                </leafNode>
+                <tagNode name="interface">
+                  <properties>
+                    <help>Network interface the client mac will appear on</help>
+                    <completionHelp>
+                      <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    </completionHelp>
+                  </properties>
+                  <children>
+                    <tagNode name="mac-address">
+                      <properties>
+                        <help>Client mac address allowed to receive an IP address</help>
+                        <valueHelp>
+                          <format>h:h:h:h:h:h</format>
+                          <description>Hardware (MAC) address</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="mac-address"/>
+                        </constraint>
+                      </properties>
+                      <children>
+                        <node name="rate-limit">
+                          <properties>
+                            <help>Upload/Download speed limits</help>
+                          </properties>
+                          <children>
+                            <leafNode name="upload">
+                              <properties>
+                                <help>Upload bandwidth limit in kbits/sec</help>
+                                <constraint>
+                                  <validator name="numeric" argument="--range 1-65535"/>
+                                </constraint>
+                              </properties>
+                            </leafNode>
+                            <leafNode name="download">
+                              <properties>
+                                <help>Download bandwidth limit in kbits/sec</help>
+                                <constraint>
+                                  <validator name="numeric" argument="--range 1-65535"/>
+                                </constraint>
+                              </properties>
+                            </leafNode>
+                          </children>
+                        </node>
+                      </children>
+                    </tagNode>
+                  </children>
+                </tagNode> 
+                <tagNode name="radius-server">
+                  <properties>
+                    <help>IP address of RADIUS server</help>
+                    <valueHelp>
+                      <format>ipv4</format>
+                        <description>IP address of RADIUS server</description>
+                    </valueHelp>
+                  </properties>
+                  <children>
+                    <leafNode name="secret">
+                      <properties>
+                        <help>Key for accessing the specified server</help>
+                      </properties>
+                    </leafNode>
+                   <leafNode name="req-limit">
+                      <properties>
+                        <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="fail-time">
+                      <properties>
+                        <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                      </properties>
+                    </leafNode>
+                  </children>
+                </tagNode>
+                <node name="radius-settings">
+                  <properties>
+                    <help>RADIUS settings</help>
+                  </properties>
+                  <children>
+                    <leafNode name="timeout">
+                      <properties>
+                        <help>Timeout to wait response from server (seconds)</help>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="acct-timeout">
+                      <properties>
+                        <help>Timeout to wait reply for Interim-Update packets. (default 3 seconds)</help>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="max-try">
+                      <properties>
+                        <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="nas-identifier">
+                      <properties>
+                        <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="nas-ip-address">
+                      <properties>
+                        <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
+                      </properties>
+                    </leafNode>
+                    <node name="dae-server">
+                      <properties>
+                        <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
+                      </properties>
+                      <children>
+                        <leafNode name="ip-address">
+                          <properties>
+                            <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
+                          </properties>
+                        </leafNode>
+                        <leafNode name="port">
+                          <properties>
+                            <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
+                          </properties>
+                        </leafNode>
+                        <leafNode name="secret">
+                          <properties>
+                            <help>Secret for Dynamic Authorization Extension server (DM/CoA)</help>
+                          </properties>
+                        </leafNode>
+                      </children>
+                    </node>
+                  </children>
+                </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
