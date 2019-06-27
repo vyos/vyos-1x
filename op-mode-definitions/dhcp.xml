@@ -59,6 +59,35 @@
                   <help>Show DHCPv6 server leases</help>
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases</command>
+                <children>
+                  <tagNode name="pool">
+                    <properties>
+                      <help>Show DHCPv6 server leases for a specific pool</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed pool</script>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --pool $6</command>
+                  </tagNode>
+                  <tagNode name="sort">
+                    <properties>
+                      <help>Show DHCPv6 server leases sorted by the specified key</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed sort</script>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --sort $6</command>
+                  </tagNode>
+                  <tagNode name="state">
+                    <properties>
+                      <help>Show DHCPv6 server leases with a specific state</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed state</script>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --state $6</command>
+                  </tagNode>
+                </children>
               </node>
             </children>
           </node>
