@@ -44,10 +44,10 @@ log_syslog
 ippool
 ipoe
 shaper
-{% if auth == 'radius' %}
+{% if auth['mech'] == 'radius' %}
 radius
 {% endif -%}
-{% if auth == 'local' %}
+{% if auth['mech'] == 'local' %}
 chap-secrets
 {% endif %}
 
@@ -69,10 +69,10 @@ ifcfg={{interfaces[intfc]['ifcfg']}},\
 range={{interfaces[intfc]['range']}},\
 start={{interfaces[intfc]['sess_start']}}
 {% endfor %}
-{% if auth == 'noauth' %}
+{% if auth['mech'] == 'noauth' %}
 noauth=1
 {% endif %}
-{% if auth == 'local' %}
+{% if auth['mech'] == 'local' %}
 username=ifname
 password=csid
 {% endif %}
@@ -85,35 +85,40 @@ dns1={{dns['server1']}}
 {% if dns['server2'] %}
 dns2={{dns['server2']}}
 {% endif -%}
-{% endif %}
+{% endif -%}
 
-{% if auth == 'local' %}
+{% if auth['mech'] == 'local' %}
 [chap-secrets]
 chap-secrets=/etc/accel-ppp/ipoe/chap-secrets 
 {% endif %}
 
-{% if auth == 'radius' %}
+{% if auth['mech'] == 'radius' %}
 [radius]
 verbose=1
-{% for srv in radius %}
-server={{srv}},{{radius[srv]['secret']}},\
-req-limit={{radius[srv]['req-limit']}},\
-fail-time={{radius[srv]['fail-time']}}
+{% for srv in auth['radius'] %}
+server={{srv}},{{auth['radius'][srv]['secret']}},\
+req-limit={{auth['radius'][srv]['req-limit']}},\
+fail-time={{auth['radius'][srv]['fail-time']}}
 {% endfor %}
-{% if radsettings['dae-server']['ip-address'] %}
-dae-server={{radsettings['dae-server']['ip-address']}}:{{radsettings['dae-server']['port']}},{{radsettings['dae-server']['secret']}}
+{% if auth['radsettings']['dae-server']['ip-address'] %}
+dae-server={{auth['radsettings']['dae-server']['ip-address']}}:\
+{{auth['radsettings']['dae-server']['port']}},\
+{{auth['radsettings']['dae-server']['secret']}}
 {% endif -%}
-{% if radsettings['acct-timeout'] %}
-acct-timeout={{radsettings['acct-timeout']}}
+{% if auth['radsettings']['acct-timeout'] %}
+acct-timeout={{auth['radsettings']['acct-timeout']}}
 {% endif -%}
-{% if radsettings['max-try'] %}
-max-try={{radsettings['max-try']}}
+{% if auth['radsettings']['max-try'] %}
+max-try={{auth['radsettings']['max-try']}}
 {% endif -%}
-{% if radsettings['nas-ip-address'] %}
-nas-ip-address={{radsettings['nas-ip-address']}}
+{% if auth['radsettings']['timeout'] %}
+timeout={{auth['radsettings']['timeout']}}
 {% endif -%}
-{% if radsettings['nas-identifier'] %}
-nas-identifier={{radsettings['nas-identifier']}}
+{% if auth['radsettings']['nas-ip-address'] %}
+nas-ip-address={{auth['radsettings']['nas-ip-address']}}
+{% endif -%}
+{% if auth['radsettings']['nas-identifier'] %}
+nas-identifier={{auth['radsettings']['nas-identifier']}}
 {% endif -%}
 {% endif %}
 
@@ -124,12 +129,12 @@ tcp=127.0.0.1:2002
 ### pppoe chap secrets
 chap_secrets_conf = '''
 # username  server  password  acceptable local IP addresses   shaper
-{% for aifc in auth_if %}
-{% for mac in auth_if[aifc] %}
-{% if (auth_if[aifc][mac]['up']) and (auth_if[aifc][mac]['down']) %}
-{{aifc}}\t*\t{{mac}}\t*\t{{auth_if[aifc][mac]['down']}}/{{auth_if[aifc][mac]['up']}}
+{% for aifc in auth['auth_if'] %}
+{% for mac in auth['auth_if'][aifc] %}
+{% if (auth['auth_if'][aifc][mac]['up']) and (auth['auth_if'][aifc][mac]['down']) %}
+{{aifc}}\t*\t{{mac.lower()}}\t*\t{{auth['auth_if'][aifc][mac]['down']}}/{{auth['auth_if'][aifc][mac]['up']}}
 {% else %}
-{{aifc}}\t*\t{{mac}}\t*
+{{aifc}}\t*\t{{mac.lower()}}\t*
 {% endif %}
 {% endfor %}
 {% endfor %}
@@ -191,30 +196,27 @@ def get_config():
   config_data = {}
 
   c.set_level('service ipoe-server')
+  config_data['interfaces'] = {}
   for intfc in c.list_nodes('interface'):
-    config_data.update(
-      {
-        'interfaces'  : {
-          intfc : {
-            'mode'        : 'L2',
-            'shared'      : '1',
-            'sess_start'  : 'dhcpv4',  ### may need a conifg option, can be dhcpv4 or up for unclassified pkts
-            'range'       : '',
-            'ifcfg'       : '1'
-          }
-        },
-        'dns' : {
-          'server1'     : None,
-          'server2'     : None
-        },
-        'auth'          : 'noauth',
-        'auth_if'       : {},
-        'radius'        : {},
-        'radsettings'   : {
-          'dae-server'  : {}
-        } 
+    config_data['interfaces'][intfc] = {
+      'mode'        : 'L2',
+      'shared'      : '1',
+      'sess_start'  : 'dhcpv4',  ### may need a conifg option, can be dhcpv4 or up for unclassified pkts
+      'range'       : None,
+      'ifcfg'       : '1'
+    }
+    config_data['dns'] = {
+      'server1'     : None,
+      'server2'     : None
+    }
+    config_data['auth'] = {
+      'auth_if'       : {},
+      'mech'          : 'noauth',
+      'radius'        : {},
+      'radsettings'   : {
+        'dae-server'  : {}
       }
-    )
+    }
 
     if c.exists('interface ' + intfc + ' network-mode'):
       config_data['interfaces'][intfc]['mode'] = c.return_value('interface ' + intfc + ' network-mode')
@@ -227,50 +229,51 @@ def get_config():
     if c.exists('dns-server server-2'):
       config_data['dns']['server2'] = c.return_value('dns-server server-2')
     if not c.exists('authentication mode noauth'):
-      config_data['auth'] = c.return_value('authentication mode')
+      config_data['auth']['mech'] = c.return_value('authentication mode')
     if c.exists('authentication mode local'):
       for auth_int in c.list_nodes('authentication interface'):
         for mac in c.list_nodes('authentication interface ' + auth_int + ' mac-address'):
-          mac = mac.lower()
-          config_data['auth_if'][auth_int] = {}
+          config_data['auth']['auth_if'][auth_int] = {}
           if c.exists('authentication interface ' + auth_int + ' mac-address ' + mac + ' rate-limit'):
-            config_data['auth_if'][auth_int][mac] = {}
-            config_data['auth_if'][auth_int][mac]['up'] = c.return_value('authentication interface ' + auth_int + ' mac-address ' + mac + ' rate-limit upload') 
-            config_data['auth_if'][auth_int][mac]['down'] = c.return_value('authentication interface ' + auth_int + ' mac-address ' + mac + ' rate-limit download')
+            config_data['auth']['auth_if'][auth_int][mac] = {}
+            config_data['auth']['auth_if'][auth_int][mac]['up'] = c.return_value('authentication interface ' + auth_int + ' mac-address ' + mac + ' rate-limit upload') 
+            config_data['auth']['auth_if'][auth_int][mac]['down'] = c.return_value('authentication interface ' + auth_int + ' mac-address ' + mac + ' rate-limit download')
           else:
-            config_data['auth_if'][auth_int][mac] = {}
-            config_data['auth_if'][auth_int][mac]['up'] = None
-            config_data['auth_if'][auth_int][mac]['down'] = None
+            config_data['auth']['auth_if'][auth_int][mac] = {}
+            config_data['auth']['auth_if'][auth_int][mac]['up'] = None
+            config_data['auth']['auth_if'][auth_int][mac]['down'] = None
     if c.exists('authentication mode radius'):
       for rsrv in c.list_nodes('authentication radius-server'):
-        config_data['radius'][rsrv] = {}
+        config_data['auth']['radius'][rsrv] = {}
         if c.exists('authentication radius-server ' + rsrv + ' secret'):
-          config_data['radius'][rsrv]['secret'] = c.return_value('authentication radius-server ' + rsrv + ' secret')
+          config_data['auth']['radius'][rsrv]['secret'] = c.return_value('authentication radius-server ' + rsrv + ' secret')
+        else:
+          config_data['auth']['radius'][rsrv]['secret'] = None
         if c.exists('authentication radius-server ' + rsrv + ' fail-time'):
-          config_data['radius'][rsrv]['fail-time'] = c.return_value('authentication radius-server ' + rsrv + ' fail-time')
+          config_data['auth']['radius'][rsrv]['fail-time'] = c.return_value('authentication radius-server ' + rsrv + ' fail-time')
         else:
-          config_data['radius'][rsrv]['fail-time'] = '0'
+          config_data['auth']['radius'][rsrv]['fail-time'] = '0'
         if c.exists('authentication radius-server ' + rsrv + ' req-limit'):
-          config_data['radius'][rsrv]['req-limit'] = c.return_value('authentication radius-server ' + rsrv + ' req-limit')
+          config_data['auth']['radius'][rsrv]['req-limit'] = c.return_value('authentication radius-server ' + rsrv + ' req-limit')
         else:
-          config_data['radius'][rsrv]['req-limit'] = '0'
+          config_data['auth']['radius'][rsrv]['req-limit'] = '0'
       if c.exists('authentication radius-settings'):
         if c.exists('authentication radius-settings timeout'):
-          config_data['radsettings']['timeout'] = c.return_value('authentication radius-settings timeout')
+          config_data['auth']['radsettings']['timeout'] = c.return_value('authentication radius-settings timeout')
         if c.exists('authentication radius-settings nas-ip-address'):
-           config_data['radsettings']['nas-ip-address'] = c.return_value('authentication radius-settings nas-ip-address')
+           config_data['auth']['radsettings']['nas-ip-address'] = c.return_value('authentication radius-settings nas-ip-address')
         if c.exists('authentication radius-settings nas-identifier'):
-          config_data['radsettings']['nas-identifier'] = c.return_value('authentication radius-settings nas-identifier')
+          config_data['auth']['radsettings']['nas-identifier'] = c.return_value('authentication radius-settings nas-identifier')
         if c.exists('authentication radius-settings max-try'):
-          config_data['radsettings']['max-try'] = c.return_value('authentication radius-settings max-try')
+          config_data['auth']['radsettings']['max-try'] = c.return_value('authentication radius-settings max-try')
         if c.exists('authentication radius-settings acct-timeout'):
-          config_data['radsettings']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
+          config_data['auth']['radsettings']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
         if c.exists('authentication radius-settings dae-server ip-address'):
-          config_data['radsettings']['dae-server']['ip-address'] = c.return_value('authentication radius-settings dae-server ip-address')
+          config_data['auth']['radsettings']['dae-server']['ip-address'] = c.return_value('authentication radius-settings dae-server ip-address')
         if c.exists('authentication radius-settings dae-server port'):
-          config_data['radsettings']['dae-server']['port'] = c.return_value('authentication radius-settings dae-server port')
+          config_data['auth']['radsettings']['dae-server']['port'] = c.return_value('authentication radius-settings dae-server port')
         if c.exists('authentication radius-settings dae-server secret'):
-           config_data['radsettings']['dae-server']['secret'] = c.return_value('authentication radius-settings dae-server secret')
+           config_data['auth']['radsettings']['dae-server']['secret'] = c.return_value('authentication radius-settings dae-server secret')
   
   return config_data
 
@@ -280,7 +283,7 @@ def generate(c):
   
   c['thread_cnt'] = get_cpu()
 
-  if c['auth'] == 'local':
+  if c['auth']['mech'] == 'local':
     gen_chap_secrets(c)
 
   tmpl = jinja2.Template(ipoe_config, trim_blocks=True)
@@ -295,7 +298,35 @@ def verify(c):
 
   for intfc in c['interfaces']:
     if not c['interfaces'][intfc]['range']:
-     raise ConfigError("service ipoe-server interface " + intfc + " client-subnet needs a value") 
+      raise ConfigError("service ipoe-server interface " + intfc + " client-subnet needs a value") 
+
+  if c['auth']['mech'] == 'radius':
+    if not c['auth']['radius']:
+      raise ConfigError("service ipoe-server authentication radius-server requires a value for authentication mode radius")
+    else:
+      for radsrv in c['auth']['radius']:
+        if not c['auth']['radius'][radsrv]['secret']:
+          raise ConfigError("service ipoe-server authentication radius-server " + radsrv + " secret requires a value")
+
+  if c['auth']['radsettings']['dae-server']:
+    try:
+      if c['auth']['radsettings']['dae-server']['ip-address']:
+        pass
+    except:
+      raise ConfigError("service ipoe-server authentication radius-settings dae-server ip-address value required") 
+    try:
+      if c['auth']['radsettings']['dae-server']['secret']:
+        pass
+    except:
+      raise ConfigError("service ipoe-server authentication radius-settings dae-server secret value required")
+    try:
+      if c['auth']['radsettings']['dae-server']['port']:
+        pass
+    except:
+      raise ConfigError("service ipoe-server authentication radius-settings dae-server port value required")
+
+
+  return c
 
 def apply(c):
   if c == None:

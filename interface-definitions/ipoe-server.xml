@@ -244,6 +244,13 @@
                     <leafNode name="nas-ip-address">
                       <properties>
                         <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
+                        <valueHelp>
+                          <format>ipv4</format>
+                          <description>IPv4 address of the DAE Server</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="ipv4-address"/>
+                        </constraint>
                       </properties>
                     </leafNode>
                     <node name="dae-server">
@@ -254,11 +261,25 @@
                         <leafNode name="ip-address">
                           <properties>
                             <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
+                            <valueHelp>
+                              <format>ipv4</format>
+                              <description>IPv4 address of the DAE Server</description>
+                            </valueHelp>
+                            <constraint>
+                              <validator name="ipv4-address"/>
+                            </constraint>
                           </properties>
                         </leafNode>
                         <leafNode name="port">
                           <properties>
                             <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
+                            <valueHelp>
+                              <format>number</format>
+                                <description>port number</description>
+                            </valueHelp>
+                            <constraint>
+                              <validator name="numeric" argument="--range 1-65535"/>
+                            </constraint>
                           </properties>
                         </leafNode>
                         <leafNode name="secret">
