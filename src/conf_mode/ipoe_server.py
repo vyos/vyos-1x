@@ -295,7 +295,7 @@ def verify(c):
 
   for intfc in c['interfaces']:
     if not c['interfaces'][intfc]['range']:
-     raise ConfigError("service ipoe-server interface eth2 client-subnet needs a value") 
+     raise ConfigError("service ipoe-server interface " + intfc + " client-subnet needs a value") 
 
 def apply(c):
   if c == None:
