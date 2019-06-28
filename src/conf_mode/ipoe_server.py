@@ -231,6 +231,7 @@ def get_config():
     if c.exists('authentication mode local'):
       for auth_int in c.list_nodes('authentication interface'):
         for mac in c.list_nodes('authentication interface ' + auth_int + ' mac-address'):
+          mac = mac.lower()
           config_data['auth_if'][auth_int] = {}
           if c.exists('authentication interface ' + auth_int + ' mac-address ' + mac + ' rate-limit'):
             config_data['auth_if'][auth_int][mac] = {}
