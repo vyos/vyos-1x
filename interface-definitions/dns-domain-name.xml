@@ -3,7 +3,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <leafNode name="name-server">
+      <leafNode name="name-server" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
           <help>Domain Name Server (DNS)</help>
           <priority>400</priority>
