@@ -77,3 +77,6 @@ override_dh_auto_install:
 	# Install systemd service units
 	mkdir -p $(DIR)/lib/systemd/system
 	cp -r src/systemd/* $(DIR)/lib/systemd/system
+
+	# Make directory for generated configuration file
+	mkdir -p $(DIR)/etc/vyos
