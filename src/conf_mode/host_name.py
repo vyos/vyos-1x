@@ -124,7 +124,10 @@ def get_config(arguments):
         hosts['domain_search'].append(search)
 
     if conf.exists("system name-server"):
-        hosts['nameserver'] = conf.return_values("system name-server")
+        if not isinstance(conf.return_values("system name-server"), list):
+            hosts['nameserver'] = conf.return_values("system name-server").replace("'", "").split()
+        else:
+            hosts['nameserver'] = conf.return_values("system name-server")
 
     if conf.exists("system disable-dhcp-nameservers"):
         hosts['no_dhcp_ns'] = conf.exists('system disable-dhcp-nameservers')
