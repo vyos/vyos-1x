@@ -107,10 +107,60 @@
               </leafNode>
               <leafNode name="server-2">
                 <properties>
-                  <help>IP address of the primary DNS server</help>
+                  <help>IP address of the secondary DNS server</help>
                   <constraint>
                     <validator name="ipv4-address"/>
                   </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="dnsv6-server">
+            <properties>
+              <help>DNSv6 servers offered via internal DHCPv6</help>
+            </properties>
+            <children>
+              <leafNode name="server-1">
+                <properties>
+                  <help>IP address of the primary DNS server</help>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="server-2">
+                <properties>
+                  <help>IP address of the secondary DNS server</help>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="server-3">
+                <properties>
+                  <help>IP address of the tertiary DNS server</help>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="client-ipv6-pool">
+            <properties>
+              <help>Pool of client IPv6 addresses</help>
+            </properties>
+            <children>
+              <leafNode name="prefix">
+                <properties>
+                  <help>Format: ipv6prefix/mask,prefix_len (e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients)</help>
+                  <multi />
+                </properties>
+              </leafNode>
+              <leafNode name="delegate-prefix">
+                <properties>
+                  <help>Format: ipv6prefix/mask,prefix_len (delegates prefix  to clients via DHCPv6 prefix delegation</help>
+                  <multi />
                 </properties>
               </leafNode>
             </children>

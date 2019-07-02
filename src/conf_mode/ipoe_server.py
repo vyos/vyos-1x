@@ -44,6 +44,9 @@ log_syslog
 ippool
 ipoe
 shaper
+ipv6pool
+ipv6_nd
+ipv6_dhcp
 {% if auth['mech'] == 'radius' %}
 radius
 {% endif -%}
@@ -67,7 +70,8 @@ shared={{interfaces[intfc]['shared']}},\
 mode={{interfaces[intfc]['mode']}},\
 ifcfg={{interfaces[intfc]['ifcfg']}},\
 range={{interfaces[intfc]['range']}},\
-start={{interfaces[intfc]['sess_start']}}
+start={{interfaces[intfc]['sess_start']}},\
+ipv6=1
 {% endfor %}
 {% if auth['mech'] == 'noauth' %}
 noauth=1
@@ -86,6 +90,29 @@ dns1={{dns['server1']}}
 dns2={{dns['server2']}}
 {% endif -%}
 {% endif -%}
+
+{% if (dnsv6['server1']) or (dnsv6['server2']) or (dnsv6['server3']) %}
+[dnsv6]
+dns={{dnsv6['server1']}}
+dns={{dnsv6['server2']}}
+dns={{dnsv6['server3']}}
+{% endif %}
+
+[ipv6-nd]
+verbose=1
+
+[ipv6-dhcp]
+verbose=1
+
+{% if ipv6['prfx'] %}
+[ipv6-pool]
+{% for prfx in ipv6['prfx'] %}
+{{prfx}}
+{% endfor %}
+{% for pd in ipv6['pd'] %}
+delegate={{pd}}
+{% endfor %}
+{% endif %}
 
 {% if auth['mech'] == 'local' %}
 [chap-secrets]
@@ -209,6 +236,15 @@ def get_config():
       'server1'     : None,
       'server2'     : None
     }
+    config_data['dnsv6'] = {
+      'server1'     : None,
+      'server2'     : None,
+      'server3'     : None
+    }
+    config_data['ipv6'] = {
+      'prfx'        : [],
+      'pd'     : [],
+    }
     config_data['auth'] = {
       'auth_if'       : {},
       'mech'          : 'noauth',
@@ -228,6 +264,12 @@ def get_config():
       config_data['dns']['server1'] = c.return_value('dns-server server-1')
     if c.exists('dns-server server-2'):
       config_data['dns']['server2'] = c.return_value('dns-server server-2')
+    if c.exists('dnsv6-server server-1'):
+      config_data['dnsv6']['server1'] = c.return_value('dnsv6-server server-1')
+    if c.exists('dnsv6-server server-2'):
+      config_data['dnsv6']['server2'] = c.return_value('dnsv6-server server-2')
+    if c.exists('dnsv6-server server-3'):
+      config_data['dnsv6']['server3'] = c.return_value('dnsv6-server server-3')
     if not c.exists('authentication mode noauth'):
       config_data['auth']['mech'] = c.return_value('authentication mode')
     if c.exists('authentication mode local'):
@@ -274,6 +316,11 @@ def get_config():
           config_data['auth']['radsettings']['dae-server']['port'] = c.return_value('authentication radius-settings dae-server port')
         if c.exists('authentication radius-settings dae-server secret'):
            config_data['auth']['radsettings']['dae-server']['secret'] = c.return_value('authentication radius-settings dae-server secret')
+
+    if c.exists('client-ipv6-pool prefix'):
+      config_data['ipv6']['prfx'] = c.return_values('client-ipv6-pool prefix')
+    if c.exists('client-ipv6-pool delegate-prefix'):
+      config_data['ipv6']['pd'] = c.return_values('client-ipv6-pool delegate-prefix')
   
   return config_data
 
@@ -288,7 +335,6 @@ def generate(c):
 
   tmpl = jinja2.Template(ipoe_config, trim_blocks=True)
   config_text = tmpl.render(c)
-
   open(ipoe_cnf,'w').write(config_text)
   return c
 
@@ -325,6 +371,8 @@ def verify(c):
     except:
       raise ConfigError("service ipoe-server authentication radius-settings dae-server port value required")
 
+  if len(c['ipv6']['pd']) != 0 and len(c['ipv6']['prfx']) == 0:
+    raise ConfigError("service ipoe-server client-ipv6-pool prefix needs a value")
 
   return c
 
