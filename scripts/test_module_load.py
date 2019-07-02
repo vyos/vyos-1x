@@ -3,10 +3,6 @@
 import sys
 import os
 
-MODULES_INTEL = "e1000 e1000e igb ixgb ixgbe ixgbevf i40e i40evf"
-MODULES_ACCEL_PPP = "ipoe"
-MODULES_MISC = "wireguard"
-
 modules = {
   "intel": ["e1000", "e1000e", "igb", "ixgb", "ixgbe", "ixgbevf", "i40e", "i40evf"],
   "accel_ppp": ["ipoe"],
