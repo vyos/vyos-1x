@@ -5,7 +5,7 @@ import sys
 
 test_dir = '/usr/libexec/vyos/tests/smoke'
 
-tests = ['test_load_modules.py']
+tests = ['test_module_load.py']
 
 success = True
 

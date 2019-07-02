@@ -1,0 +1,5 @@
+vyos-smoketest (1.0.0) unstable; urgency=medium
+
+  * Initial release
+
+ -- Daniil Baturin <daniil@baturin.org>  Tue, 02 Jul 2019 22:29:53 +0200
