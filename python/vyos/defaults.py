@@ -25,3 +25,5 @@ directories = {
 cfg_group = 'vyattacfg'
 
 cfg_vintage = 'vyatta'
+
+commit_lock = '/opt/vyatta/config/.lock'
