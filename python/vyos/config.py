@@ -383,7 +383,8 @@ class Config(object):
         else:
             try:
                 out = self._run(self._make_command('returnEffectiveValues', full_path))
-                return out
+                values = re.findall(r"\'(.*?)\'", out)
+                return values
             except VyOSError:
                 return(default)
 
