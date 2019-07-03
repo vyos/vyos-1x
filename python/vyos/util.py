@@ -1,4 +1,4 @@
-# Copyright 2018 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,6 +16,9 @@
 import os
 import re
 import grp
+import time
+import subprocess
+
 import psutil
 
 import vyos.defaults
@@ -131,3 +134,45 @@ def file_is_persistent(path):
         return (False, warning)
     else:
         return (True, None)
+
+def commit_in_progress():
+    """ Not to be used in normal op mode scripts! """
+
+    # The CStore backend locks the config by opening a file
+    # The file is not removed after commit, so just checking
+    # if it exists is insufficient, we need to know if it's open by anyone
+
+    # There are two ways to check if any other process keeps a file open.
+    # The first one is to try opening it and see if the OS objects.
+    # That's faster but prone to race conditions and can be intrusive.
+    # The other one is to actually check if any process keeps it open.
+    # It's non-intrusive but needs root permissions, else you can't check
+    # processes of other users.
+    #
+    # Since this will be used in scripts that modify the config outside of the CLI
+    # framework, those knowingly have root permissions.
+    # For everything else, we add a safeguard.
+    id = subprocess.check_output(['/usr/bin/id', '-u']).decode().strip()
+    if id != '0':
+        raise OSError("This functions needs root permissions to return correct results")
+
+    for proc in psutil.process_iter():
+        try:
+            files = proc.open_files()
+            if files:
+                for f in files:
+                    if f.path == vyos.defaults.commit_lock:
+                        return True
+        except psutil.NoSuchProcess as err:
+            # Process died before we could examine it
+            pass
+    # Default case
+    return False
+
+def wait_for_commit_lock():
+    """ Not to be used in normal op mode scripts! """
+
+    # Very synchronous approach to multiprocessing
+    while commit_in_progress():
+        time.sleep(1)
+
