@@ -23,6 +23,8 @@ import argparse
 import jinja2
 import netifaces
 
+import vyos.util
+
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -265,6 +267,12 @@ def apply(dns):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    if args.dhclient:
+        # There's a big chance it was triggered by a commit still in progress
+        # so we need to wait until the new values are in the running config
+        vyos.util.wait_for_commit_lock()
+
     try:
         c = get_config(args)
         verify(c)
