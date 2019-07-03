@@ -62,16 +62,6 @@ export-etc-hosts={{ export_hosts_file }}
 # listen-on
 local-address={{ listen_on | join(',') }}
 
-# domain ... server ...
-{% if domains -%}
-
-forward-zones-recurse={% for d in domains %}
-{{ d.name }}={{ d.servers | join(";") }}
-{{- "," if not loop.last -}}
-{% endfor %}
-
-{% endif %}
-
 # dnssec
 dnssec={{ dnssec }}
 
@@ -80,6 +70,16 @@ dnssec={{ dnssec }}
 forward-zones-recurse=.={{ name_servers | join(';') }}
 {% else %}
 # no name-servers specified - start full recursor
+{% endif %}
+
+# domain ... server ...
+{% if domains -%}
+
+forward-zones-recurse={% for d in domains %}
+{{ d.name }}={{ d.servers | join(";") }}
+{{- "," if not loop.last -}}
+{% endfor %}
+
 {% endif %}
 
 """
