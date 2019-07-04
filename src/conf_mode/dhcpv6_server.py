@@ -94,8 +94,12 @@ shared-network {{ network.name }} {
         {%- for host in subnet.static_mapping %}
         {% if not host.disabled -%}
         host {{ network.name }}_{{ host.name }} {
+            {%- if host.client_identifier %}
             host-identifier option dhcp6.client-id {{ host.client_identifier }};
+            {%- endif %}
+            {%- if host.ipv6_address %}
             fixed-address6 {{ host.ipv6_address }};
+            {%- endif %}
         }
         {%- endif %}
         {%- endfor %}
@@ -384,7 +388,19 @@ def verify(dhcpv6):
                         raise ConfigError('DHCPv6 prefix {0} is not in subnet {1}\n' \
                                           'specified for shared network {2}!'.format(prefix['prefix'], subnet['network'], network['name']))
 
+            # Static mappings don't require anything (but check if IP is in subnet if it's set)
+            for mapping in subnet['static_mapping']:
+                if mapping['ipv6_address']:
+                    # Static address must be in subnet
+                    if not ipaddress.ip_address(mapping['ipv6_address']) in ipaddress.ip_network(subnet['network']):
+                        raise ConfigError('DHCPv6 static mapping IPv6 address {0} for static mapping {1}\n' \
+                                          'in shared network {2} is outside subnet {3}!' \
+                                          .format(mapping['ipv6_address'], mapping['name'], network['name'], subnet['network']))
+
         # DHCPv6 requires at least one configured address range or one static mapping
+        # (FIXME: is not actually checked right now?)
+
+        # There must be one subnet connected to a listen interface if network is not disabled.
         if not network['disabled']:
             if vyos.validate.is_subnet_connected(subnet['network']):
                 listen_ok = True
