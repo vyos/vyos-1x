@@ -242,13 +242,16 @@ ac-name={{concentrator}}
 {% if interface %}
 {% for int in interface %}
 interface={{int}}
-{% endfor %}
+{% if interface[int]['vlans'] %}
+vlan_mon={{interface[int]['vlans']|join(',')}}
+interface=re:{{int}}\.(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})
 {% endif %}
+{% endfor -%}
+{% endif -%}
 {% if svc_name %}
 service-name={{svc_name}}
-{% endif %}
+{% endif -%}
 pado-delay=0
-# maybe: called-sid, tr101, padi-limit etc.
 
 {% if limits %}
 [connlimit]
@@ -338,7 +341,7 @@ def get_config():
     'client_ip_pool'    : '',
     'client_ip_subnets' : [],
     'client_ipv6_pool'  : {},
-    'interface'         : [],
+    'interface'         : {},
     'ppp_gw'            : '',
     'svc_name'          : '',
     'dns'               : [],
@@ -357,7 +360,12 @@ def get_config():
   if c.exists('service-name'):
     config_data['svc_name'] = c.return_value('service-name')
   if c.exists('interface'):
-    config_data['interface'] = c.return_values('interface')
+    for intfc in c.list_nodes('interface'):
+      config_data['interface'][intfc] = {'vlans' : []}
+      if c.exists('interface ' + intfc + ' vlan-id'):
+        config_data['interface'][intfc]['vlans'] += c.return_values('interface ' + intfc + ' vlan-id')
+      if c.exists('interface ' + intfc + ' vlan-range'):
+        config_data['interface'][intfc]['vlans'] +=c.return_values('interface ' + intfc + ' vlan-range')
   if c.exists('local-ip'):
     config_data['ppp_gw'] = c.return_value('local-ip')
   if c.exists('dns-servers'):
@@ -490,7 +498,6 @@ def get_config():
           }
         if c.exists('authentication radius-settings rate-limit vendor'):
           config_data['authentication']['radiusopt']['shaper']['vendor'] = c.return_value('authentication radius-settings rate-limit vendor')
-
 
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
