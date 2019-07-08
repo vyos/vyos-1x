@@ -81,6 +81,13 @@ username=ifname
 password=csid
 {% endif %}
 
+{%- for intfc in interfaces %}
+{% if (interfaces[intfc]['shared'] == '0') and (interfaces[intfc]['vlan_mon']) %}
+vlan_mon={{interfaces[intfc]['vlan_mon']|join(',')}}
+interface=re:{{intfc}}\.(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})
+{% endif %}
+{% endfor %}
+
 {% if (dns['server1']) or (dns['server2']) %}
 [dns]
 {% if dns['server1'] %}
@@ -230,7 +237,8 @@ def get_config():
       'shared'      : '1',
       'sess_start'  : 'dhcpv4',  ### may need a conifg option, can be dhcpv4 or up for unclassified pkts
       'range'       : None,
-      'ifcfg'       : '1'
+      'ifcfg'       : '1',
+      'vlan_mon'    : []
     }
     config_data['dns'] = {
       'server1'     : None,
@@ -258,6 +266,10 @@ def get_config():
       config_data['interfaces'][intfc]['mode'] = c.return_value('interface ' + intfc + ' network-mode')
     if c.return_value('interface ' + intfc + ' network') == 'vlan':
       config_data['interfaces'][intfc]['shared'] = '0'
+      if c.exists('interface ' + intfc + ' vlan-id'):
+        config_data['interfaces'][intfc]['vlan_mon'] += c.return_values('interface ' + intfc + ' vlan-id')
+      if c.exists('interface ' + intfc + ' vlan-range'):
+        config_data['interfaces'][intfc]['vlan_mon'] += c.return_values('interface ' + intfc + ' vlan-range')
     if c.exists('interface ' + intfc + ' client-subnet'):
       config_data['interfaces'][intfc]['range'] = c.return_value('interface ' + intfc + ' client-subnet')
     if c.exists('dns-server server-1'):
@@ -321,7 +333,7 @@ def get_config():
       config_data['ipv6']['prfx'] = c.return_values('client-ipv6-pool prefix')
     if c.exists('client-ipv6-pool delegate-prefix'):
       config_data['ipv6']['pd'] = c.return_values('client-ipv6-pool delegate-prefix')
-  
+
   return config_data
 
 def generate(c):
