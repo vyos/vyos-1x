@@ -225,7 +225,7 @@ def apply(c):
     ### config updates
     if c['interfaces'][intf]['status'] == 'exists':
       ### IP address change
-      addr_eff = re.sub("\'", "", c_eff.return_effective_values(intf + ' address')).split()
+      addr_eff = c_eff.return_effective_values(intf + ' address')
       addr_rem = list(set(addr_eff) - set(c['interfaces'][intf]['addr']))
       addr_add = list(set(c['interfaces'][intf]['addr']) - set(addr_eff))
 
