@@ -209,6 +209,12 @@ def generate(config):
         config['nameserver'] += dhcp_ns
         config['domain_search'] += dhcp_sd
 
+    # Prune duplicate values
+    # Not order preserving, but then when multiple DHCP clients are used,
+    # there can't be guarantees about the order anyway
+    dhcp_ns = list(set(dhcp_ns))
+    dhcp_sd = list(set(dhcp_sd))
+
     # We have third party scripts altering /etc/hosts, too.
     # One example are the DHCP hostname update scripts thus we need to cache in
     # every modification first - so changing domain-name, domain-search or hostname
