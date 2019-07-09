@@ -172,6 +172,11 @@ def generate(config):
             dhcp_ns.extend(ns)
             sd = [d for d in value if key == 'domains']
             dhcp_sd.extend(sd)
+    # Prune duplicate values
+    # Not order preserving, but then when multiple DHCP clients are used,
+    # there can't be guarantees about the order anyway
+    dhcp_ns = list(set(dhcp_ns))
+    dhcp_sd = list(set(dhcp_sd))
 
     if not config['no_dhcp_ns']:
         config['nameserver'] += dhcp_ns
