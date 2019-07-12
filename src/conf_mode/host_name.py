@@ -117,6 +117,10 @@ def get_config(arguments):
 
     if conf.exists("system host-name"):
         hosts['hostname'] = conf.return_value("system host-name")
+        # This may happen if the config is not loaded yet,
+        # e.g. if run by cloud-init
+        if not hosts['hostname']:
+            hosts['hostname'] = default_config_data['hostname']
 
     if conf.exists("system domain-name"):
         hosts['domain_name'] = conf.return_value("system domain-name")
@@ -290,7 +294,12 @@ if __name__ == '__main__':
 
     try:
         c = get_config(args)
-        verify(c)
+        # If it's called from dhclient, then either:
+        # a) verification was already done at commit time
+        # b) it's run on an unconfigured system, e.g. by cloud-init
+        # Therefore, verification is either redundant or useless
+        if not args.dhclient:
+            verify(c)
         generate(c)
         apply(c)
     except ConfigError as e:
