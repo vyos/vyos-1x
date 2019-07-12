@@ -110,6 +110,8 @@ def get_config(arguments):
         conf.return_values = conf.return_effective_values
 
     hosts['hostname'] = conf.return_value("system host-name")
+    if not hosts['hostname']:
+        hosts['hostname'] = default_config_data['hostname']
     hosts['domain_name'] = conf.return_value("system domain-name")
 
     if hosts['domain_name']:
@@ -226,7 +228,8 @@ if __name__ == '__main__':
 
     try:
         c = get_config(args)
-        verify(c)
+        if not args.dhclient:
+            verify(c)
         generate(c)
         apply(c)
     except ConfigError as e:
