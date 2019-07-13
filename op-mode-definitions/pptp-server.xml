@@ -9,7 +9,7 @@
         <children>
           <leafNode name="sessions">
             <properties>
-              <help>Show active PPPoE server sessions</help>
+              <help>Show active PPTP server sessions</help>
             </properties>
             <command>/usr/bin/accel-cmd -p 2003 'show sessions'</command>
           </leafNode>
