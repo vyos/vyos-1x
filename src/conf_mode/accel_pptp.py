@@ -84,7 +84,9 @@ wins2={{wins[1]}}
 {% endif %}
 
 [pptp]
+{% if outside_addr %}
 bind={{outside_addr}}
+{% endif %}
 verbose=5
 ppp-max-mtu={{mtu}}
 mppe={{authentication['mppe']}}
