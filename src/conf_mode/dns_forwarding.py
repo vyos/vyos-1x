@@ -65,21 +65,19 @@ local-address={{ listen_on | join(',') }}
 # dnssec
 dnssec={{ dnssec }}
 
-{% if name_servers -%}
-# name-server
-forward-zones-recurse=.={{ name_servers | join(';') }}
-{% else %}
-# no name-servers specified - start full recursor
-{% endif %}
-
-# domain ... server ...
-{% if domains -%}
-
-forward-zones-recurse={% for d in domains %}
+# forward-zones / recursion
+#
+# statement is only inserted if either one forwarding domain or nameserver is configured
+# if nothing is given at all, powerdns will act as a real recursor and resolve all requests by its own
+#
+{% if name_servers or domains %}forward-zones-recurse=
+{%- for d in domains %}
 {{ d.name }}={{ d.servers | join(";") }}
-{{- "," if not loop.last -}}
-{% endfor %}
-
+{{- ", " if not loop.last -}}
+{%- endfor -%}
+{%- if name_servers -%}
+{%- if domains -%}, {% endif -%}.={{ name_servers | join(';') }}
+{% endif %}
 {% endif %}
 
 """
@@ -248,7 +246,6 @@ def generate(dns):
         return None
 
     tmpl = jinja2.Template(config_tmpl, trim_blocks=True)
-
     config_text = tmpl.render(dns)
     with open(config_file, 'w') as f:
         f.write(config_text)
