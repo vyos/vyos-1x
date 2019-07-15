@@ -296,7 +296,7 @@ def verify(c):
 
   if c['authentication']['mode'] == 'local':
     if not c['authentication']['local-users']:
-      raise ConfigError('pppoe-server authentication local-users required')
+      raise ConfigError('pptp-server authentication local-users required')
     for usr in c['authentication']['local-users']:
       if not c['authentication']['local-users'][usr]['passwd']:
         raise ConfigError('user ' + usr + ' requires a password')
