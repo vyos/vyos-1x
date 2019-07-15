@@ -197,6 +197,13 @@ trapsess -v 3 {{ '-Ci' if t.type == 'inform' }} -e {{ v3_engineid }} -u {{ t.sec
 group {{ u.group }} usm {{ u.name }}
 {% endfor %}
 {%- endif %}
+
+{% if script_ext %}
+# extension scripts
+{%- for ext in script_ext|sort %}
+extend\t{{ext}}\t{{script_ext[ext]}}
+{%- endfor %}
+{% endif %}
 """
 
 # SNMP template (/etc/default/snmpd) - be careful if you edit the template.
@@ -229,7 +236,8 @@ default_config_data = {
     'v3_groups': [],
     'v3_traps': [],
     'v3_users': [],
-    'v3_views': []
+    'v3_views': [],
+    'script_ext': {}
 }
 
 def rmfile(file):
@@ -333,6 +341,14 @@ def get_config():
                 trap_tgt['port'] = conf.return_value('trap-target {0} port'.format(target))
 
             snmp['trap_targets'].append(trap_tgt)
+
+    #
+    # 'set service snmp script-extensions'
+    #
+    if conf.exists('script-extensions'):
+      for extname in conf.list_nodes('script-extensions extension-name'):
+        snmp['script_ext'][extname] = '/config/user-data/' + conf.return_value('script-extensions extension-name ' + extname + ' script')
+
 
     #########################################################################
     #                ____  _   _ __  __ ____          _____                 #
@@ -525,6 +541,14 @@ def verify(snmp):
     if snmp is None:
         return None
 
+    ### check if the configured script actually exist under /config/user-data
+    if snmp['script_ext']:
+        for ext in snmp['script_ext']:
+            if not os.path.isfile(snmp['script_ext'][ext]):
+                print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")
+            else:
+                os.chmod(snmp['script_ext'][ext], 0o555)
+
     for listen in snmp['listen_address']:
         addr = listen[0]
         port = listen[1]
@@ -568,7 +592,6 @@ def verify(snmp):
 
             if not 'seclevel' in group.keys():
                 raise ConfigError('"seclevel" must be specified')
-
 
     if 'v3_traps' in snmp.keys():
         for trap in snmp['v3_traps']:
