@@ -25,6 +25,7 @@ import re
 import sys
 import copy
 import glob
+import subprocess
 import argparse
 import jinja2
 
@@ -201,18 +202,26 @@ def apply(config):
     if config is None:
         return None
 
-    fqdn = config['hostname']
-    if config['domain_name']:
-        fqdn += '.' + config['domain_name']
+    # No domain name -- the Debian way.
+    hostname_new = config['hostname']
 
-    os.system("hostnamectl set-hostname --static {0}".format(fqdn))
+    # rsyslog runs into a race condition at boot time with systemd
+    # restart rsyslog only if the hostname changed.
+    hostname_old = subprocess.check_output(['hostnamectl', '--static']).decode().strip()
+
+    os.system("hostnamectl set-hostname --static {0}".format(hostname_new))
 
     # Restart services that use the hostname
-    os.system("systemctl restart rsyslog.service")
+    if hostname_new != hostname_old:
+        os.system("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
     if os.system("pgrep snmpd > /dev/null") == 0:
         os.system("systemctl restart snmpd.service")
+
+    # restart pdns if it is used
+    if os.system("/usr/bin/rec_control ping >/dev/null 2>&1") == 0:
+        os.system("/etc/init.d/pdns-recursor restart >/dev/null")
 
     return None
 
