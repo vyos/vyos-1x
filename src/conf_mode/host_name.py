@@ -258,18 +258,17 @@ def apply(config):
     if config is None:
         return None
 
-    fqdn = config['hostname']
-    if config['domain_name']:
-        fqdn += '.' + config['domain_name']
+    # No domain name -- the Debian way.
+    hostname_new = config['hostname']
 
     # rsyslog runs into a race condition at boot time with systemd
     # restart rsyslog only if the hostname changed.
-    hn = subprocess.check_output(['hostnamectl', '--static']).decode().strip()
+    hostname_old = subprocess.check_output(['hostnamectl', '--static']).decode().strip()
 
-    os.system("hostnamectl set-hostname --static {0}".format(fqdn.rstrip('.')))
+    os.system("hostnamectl set-hostname --static {0}".format(hostname_new))
 
     # Restart services that use the hostname
-    if hn != fqdn:
+    if hostname_new != hostname_old:
         os.system("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
