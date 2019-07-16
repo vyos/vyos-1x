@@ -72,8 +72,8 @@ logrotate_configs = '''
   missingok
   notifempty
   create
-  rotate  {{files[file]['max-files']}}
-  size={{ files[file]['max-size']//1024}}k
+  rotate {{files[file]['max-files']}}
+  size={{files[file]['max-size']//1024}}k
   postrotate
     invoke-rc.d rsyslog rotate > /dev/null
   endscript
@@ -120,8 +120,8 @@ def get_config():
     config_data['files']['global']['selectors'] = generate_selectors(c, 'global facility')
   if c.exists('global archive size'):
     config_data['files']['global']['max-size'] = int(c.return_value('global archive size'))* 1024
-  if c.exists('global archive files'):
-    config_data['files']['global']['max-files'] = c.return_value('global archive files')
+  if c.exists('global archive file'):
+    config_data['files']['global']['max-files'] = c.return_value('global archive file')
   if c.exists('global preserve-fqdn'):
     config_data['files']['global']['preserver_fqdn'] = True
 
@@ -196,7 +196,7 @@ def get_config():
           }
         }
       )
-
+  
   return config_data
 
 def generate_selectors(c, config_node):
