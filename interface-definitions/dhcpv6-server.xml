@@ -293,7 +293,7 @@
                       </leafNode>
                       <leafNode name="ipv6-address">
                         <properties>
-                          <help>Client IPv5 address for this static mapping</help>
+                          <help>Client IPv6 address for this static mapping</help>
                           <valueHelp>
                             <format>ipv6</format>
                             <description>IPv6 address for this tatic mapping</description>
