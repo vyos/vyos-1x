@@ -752,7 +752,7 @@ def verify(dhcp):
 
             # Subnets must be non overlapping
             if subnet['network'] in subnets:
-                raise ConfigError('DHCP subnets must be unique! Subnet {0} defined multiple times!'.format(subnet))
+                raise ConfigError('DHCP subnets must be unique! Subnet {0} defined multiple times!'.format(subnet['network']))
             else:
                 subnets.append(subnet['network'])
 
