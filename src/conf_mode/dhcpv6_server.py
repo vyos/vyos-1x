@@ -397,6 +397,12 @@ def verify(dhcpv6):
                                           'in shared network {2} is outside subnet {3}!' \
                                           .format(mapping['ipv6_address'], mapping['name'], network['name'], subnet['network']))
 
+            # Subnets must be unique
+            if subnet['network'] in subnets:
+                raise ConfigError('DHCPv6 subnets must be unique! Subnet {0} defined multiple times!'.format(subnet['network']))
+            else:
+                subnets.append(subnet['network'])
+
         # DHCPv6 requires at least one configured address range or one static mapping
         # (FIXME: is not actually checked right now?)
 
