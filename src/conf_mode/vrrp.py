@@ -85,7 +85,7 @@ vrrp_instance {{ group.name }} {
 
     {% if group.auth_password -%}
       authentication {
-        auth_pass {{ group.auth_password }}
+        auth_pass "{{ group.auth_password }}"
         auth_type {{ group.auth_type }}
       }
     {% endif -%}
