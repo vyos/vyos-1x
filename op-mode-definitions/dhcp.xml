@@ -9,7 +9,7 @@
         <children>
           <node name="server">
             <properties>
-              <help>Show DHCP information</help>
+              <help>Show DHCP server information</help>
             </properties>
             <children>
               <node name="leases">
@@ -20,9 +20,30 @@
                 <children>
                   <tagNode name="pool">
                     <properties>
-                      <help>Show DHCP leases for a specific pool</help>
+                      <help>Show DHCP server leases for a specific pool</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed pool</script>
+                      </completionHelp>
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --pool $6</command>
+                  </tagNode>
+                  <tagNode name="sort">
+                    <properties>
+                      <help>Show DHCP server leases sorted by the specified key</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed sort</script>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --sort $6</command>
+                  </tagNode>
+                  <tagNode name="state">
+                    <properties>
+                      <help>Show DHCP server leases with a specific state (can be multiple, comma-separated)</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed state</script>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --state $(echo $6 | tr , " ")</command>
                   </tagNode>
                 </children>
               </node>
@@ -35,6 +56,9 @@
                   <tagNode name="pool">
                     <properties>
                       <help>Show DHCP server statistics for a specific pool</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed pool</script>
+                      </completionHelp>
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --statistics --pool $6</command>
                   </tagNode>
@@ -80,12 +104,12 @@
                   </tagNode>
                   <tagNode name="state">
                     <properties>
-                      <help>Show DHCPv6 server leases with a specific state</help>
+                      <help>Show DHCPv6 server leases with a specific state (can be multiple, comma-separated)</help>
                       <completionHelp>
                         <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed state</script>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --state $6</command>
+                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --state $(echo $6 | tr , " ")</command>
                   </tagNode>
                 </children>
               </node>
