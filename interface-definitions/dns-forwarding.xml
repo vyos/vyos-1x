@@ -4,6 +4,9 @@
   <node name="service">
     <children>
       <node name="dns">
+        <properties>
+          <help>Domain Name System related services</help>
+        </properties>
         <children>
           <node name="forwarding" owner="${vyos_conf_scripts_dir}/dns_forwarding.py">
             <properties>
