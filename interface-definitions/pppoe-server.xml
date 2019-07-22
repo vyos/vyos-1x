@@ -27,7 +27,7 @@
               <constraint>
                 <regex>^[a-zA-Z0-9]{1,100}</regex>
               </constraint>
-              <constraintErrorMessage>access-concentrator name limited to aplhanumerical characters only (max. 100)</constraintErrorMessage>
+              <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
             </properties>  
           </leafNode>
           <node name="authentication">
