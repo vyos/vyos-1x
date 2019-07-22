@@ -4,6 +4,9 @@
   <node name="service">
     <children>
       <node name="dns">
+        <properties>
+          <help>Domain Name System related services</help>
+        </properties>
         <children>
           <node name="dynamic" owner="${vyos_conf_scripts_dir}/dynamic_dns.py">
             <properties>
@@ -75,47 +78,47 @@
                       </valueHelp>
                       <valueHelp>
                         <format>afraid</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>changeip</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>cloudflare</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>dnspark</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>dslreports</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>dyndns</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>easydns</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>namecheap</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>noip</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>sitelutions</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                       <valueHelp>
                         <format>zoneedit</format>
-                        <description></description>
+                        <description/>
                       </valueHelp>
                     </properties>
                     <children>
@@ -144,43 +147,43 @@
                           </valueHelp>
                           <valueHelp>
                             <format>changeip</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>cloudflare</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>dnspark</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>dslreports1</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>dyndns2</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>easydns</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>namecheap</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>noip</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>sitelutions</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                           <valueHelp>
                             <format>zoneedit1</format>
-                            <description></description>
+                            <description/>
                           </valueHelp>
                         </properties>
                       </leafNode>
@@ -207,12 +210,12 @@
                       <leafNode name="skip">
                         <properties>
                           <help>Skip everything before this on the given URL</help>
-                         </properties>
+                        </properties>
                       </leafNode>
                       <leafNode name="url">
                         <properties>
                           <help>URL to obtain the current external IP address</help>
-                         </properties>
+                        </properties>
                       </leafNode>
                     </children>
                   </node>

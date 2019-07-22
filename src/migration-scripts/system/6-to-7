@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+# Change smp_affinity to smp-affinity
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+update_required = False
+
+intf_types = config.list_nodes(["interfaces"])
+
+for intf_type in intf_types:
+    intf_type_path = ["interfaces", intf_type]
+    intfs = config.list_nodes(intf_type_path)
+
+    for intf in intfs:
+        intf_path = intf_type_path + [intf]
+        if not config.exists(intf_path + ["smp_affinity"]):
+            # Nothing to do.
+            continue
+        else:
+            # Rename the node.
+            old_smp_affinity_path = intf_path + ["smp_affinity"]
+            config.rename(old_smp_affinity_path, "smp-affinity")
+            update_required = True
+
+if update_required:
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("failed to save the modified config: {}".format(e))
+        sys.exit(1)
+
+
+

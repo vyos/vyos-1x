@@ -47,6 +47,8 @@ pppoe
 ippool
 {% if client_ipv6_pool %}
 ipv6pool
+ipv6_nd
+ipv6_dhcp
 {% endif %}
 chap-secrets
 auth_pap
@@ -81,6 +83,7 @@ master=1
 [client-ip-range]
 disable
 
+{% if ppp_gw %}
 [ip-pool]
 gw-ip-address={{ppp_gw}}
 {% if client_ip_pool %}
@@ -92,6 +95,7 @@ gw-ip-address={{ppp_gw}}
 {{sn}}
 {% endfor %}
 {% endif %}
+{% endif -%}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
@@ -101,7 +105,7 @@ gw-ip-address={{ppp_gw}}
 {% for prfx in client_ipv6_pool['delegate-prefix']: %}
 delegate={{prfx}}
 {% endfor %}
-{% endif -%}
+{% endif %}
 
 {% if dns %}
 [dns]
@@ -111,14 +115,14 @@ dns1={{dns[0]}}
 {% if dns[1] %}
 dns2={{dns[1]}}
 {% endif -%}
-{% endif -%}
+{% endif %}
 
 {% if dnsv6 %}
-[dnsv6]
+[ipv6-dns]
 {% for srv in dnsv6: %}
-dns={{srv}}
+{{srv}}
 {% endfor %}
-{% endif -%}
+{% endif %}
 
 {% if wins %}
 [wins]
@@ -169,6 +173,9 @@ verbose=1
 [shaper]
 verbose=1
 attr={{authentication['radiusopt']['shaper']['attr']}}
+{% if authentication['radiusopt']['shaper']['vendor'] %}
+vendor={{authentication['radiusopt']['shaper']['vendor']}}
+{% endif -%}
 {% endif -%}
 {% endif %}
 
@@ -208,6 +215,10 @@ lcp-echo-failure=3
 {% if ppp_options['ipv4'] %}
 ipv4={{ppp_options['ipv4']}}
 {% endif %}
+{% if client_ipv6_pool %}
+ipv6=allow
+{% endif %}
+
 {% if ppp_options['ipv6'] %}
 ipv6={{ppp_options['ipv6']}}
 {% if ppp_options['ipv6-intf-id'] %}
@@ -220,6 +231,7 @@ ipv6-peer-intf-id={{ppp_options['ipv6-peer-intf-id']}}
 ipv6-accept-peer-intf-id={{ppp_options['ipv6-accept-peer-intf-id']}}
 {% endif %}
 {% endif %}
+
 mtu={{mtu}}
 
 [pppoe]
@@ -230,13 +242,16 @@ ac-name={{concentrator}}
 {% if interface %}
 {% for int in interface %}
 interface={{int}}
-{% endfor %}
+{% if interface[int]['vlans'] %}
+vlan_mon={{interface[int]['vlans']|join(',')}}
+interface=re:{{int}}\.(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})
 {% endif %}
+{% endfor -%}
+{% endif -%}
 {% if svc_name %}
 service-name={{svc_name}}
-{% endif %}
+{% endif -%}
 pado-delay=0
-# maybe: called-sid, tr101, padi-limit etc.
 
 {% if limits %}
 [connlimit]
@@ -326,7 +341,7 @@ def get_config():
     'client_ip_pool'    : '',
     'client_ip_subnets' : [],
     'client_ipv6_pool'  : {},
-    'interface'         : [],
+    'interface'         : {},
     'ppp_gw'            : '',
     'svc_name'          : '',
     'dns'               : [],
@@ -345,7 +360,12 @@ def get_config():
   if c.exists('service-name'):
     config_data['svc_name'] = c.return_value('service-name')
   if c.exists('interface'):
-    config_data['interface'] = c.return_values('interface')
+    for intfc in c.list_nodes('interface'):
+      config_data['interface'][intfc] = {'vlans' : []}
+      if c.exists('interface ' + intfc + ' vlan-id'):
+        config_data['interface'][intfc]['vlans'] += c.return_values('interface ' + intfc + ' vlan-id')
+      if c.exists('interface ' + intfc + ' vlan-range'):
+        config_data['interface'][intfc]['vlans'] +=c.return_values('interface ' + intfc + ' vlan-range')
   if c.exists('local-ip'):
     config_data['ppp_gw'] = c.return_value('local-ip')
   if c.exists('dns-servers'):
@@ -476,6 +496,8 @@ def get_config():
           config_data['authentication']['radiusopt']['shaper'] = {
           'attr'  : c.return_value('authentication radius-settings rate-limit attribute')
           }
+        if c.exists('authentication radius-settings rate-limit vendor'):
+          config_data['authentication']['radiusopt']['shaper']['vendor'] = c.return_value('authentication radius-settings rate-limit vendor')
 
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
@@ -543,18 +565,14 @@ def verify(c):
       if c['authentication']['radiussrv'][rsrv]['secret'] == None:
         raise ConfigError('radius server ' + rsrv + ' needs a secret configured')
 
-  ### local ippool and gateway settings
+  ### local ippool and gateway settings config checks
 
-  if not c['ppp_gw']:
-    raise ConfigError('pppoe-server local-ip required')
-
-  if not c['client_ip_subnets'] and not c['client_ip_pool']:
-    print ("Warning: No pppoe client IP pool defined") 
-
-  ### activate as soon as it is clear what to do migrate or depricate. 
-  #if c['client_ip_pool']:
-  #  print ("Warning: client-ip-pool (start|stop) is depricated, please use client-ip-pool subnet")
-  #  sl.syslog(sl.LOG_NOTICE, "client-ip-pool start stop is depricated, please use client-ip-pool subnet")
+  if c['client_ip_subnets'] or c['client_ip_pool']:
+    if not c['ppp_gw']:
+      raise ConfigError('pppoe-server local-ip required')
+      
+  if c['ppp_gw'] and not c['client_ip_subnets'] and not c['client_ip_pool']:
+    print ("Warning: No pppoe client IPv4 pool defined") 
 
 def generate(c):
   if c == None:

@@ -194,6 +194,11 @@
                           <help>Specifies which radius attribute contains rate information. (default is Filter-Id)</help>
                         </properties>
                       </leafNode>
+                      <leafNode name="vendor">
+                        <properties>
+                          <help>Specifies the vendor dictionary. (dictionary needs to be in /usr/share/accel-ppp/radius)</help>
+                        </properties>
+                      </leafNode>
                       <leafNode name="enable">
                         <properties>
                           <help>Enables Bandwidth shaping via RADIUS</help>
@@ -332,15 +337,36 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="interface">
+
+          <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
-              <multi/>
             </properties>
-          </leafNode>
+            <children>
+              <leafNode name="vlan-id">
+                <properties>
+                  <help>VLAN monitor for the automatic creation of vlans (user per vlan)</help>
+                  <constraint>
+                        <validator name="numeric" argument="--range 1-4096"/>
+                      </constraint>
+                      <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
+                      <multi />
+                </properties>
+              </leafNode>
+              <leafNode name="vlan-range">
+                <properties>
+                  <help>VLAN monitor for the automatic creation of vlans (user per vlan)</help>
+                  <constraint>
+                    <regex>(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})-(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})</regex>
+                  </constraint>
+                  <multi />
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
           <leafNode name="local-ip">
             <properties>
               <help>local gateway address</help>

@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<!-- HTTPS configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="https" owner="${vyos_conf_scripts_dir}/https.py">
+        <properties>
+          <help>HTTPS configuration</help>
+          <priority>1001</priority>
+        </properties>
+        <children>
+          <leafNode name="listen-address">
+            <properties>
+              <help>Addresses to listen for HTTPS requests</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>HTTPS IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>HTTPS IPv6 address</description>
+              </valueHelp>
+              <multi/>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="api" owner="${vyos_conf_scripts_dir}/http-api.py">
+            <properties>
+              <help>VyOS HTTP API configuration</help>
+              <priority>1002</priority>
+            </properties>
+            <children>
+              <leafNode name="port">
+                <properties>
+                  <help>Port for HTTP API service</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Numeric IP port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="keys">
+                <properties>
+                  <help>HTTP API keys</help>
+                </properties>
+                <children>
+                  <tagNode name="id">
+                    <properties>
+                      <help>HTTP API id</help>
+                    </properties>
+                    <children>
+                      <leafNode name="key">
+                        <properties>
+                          <help>HTTP API plaintext key</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <leafNode name="strict">
+                <properties>
+                  <help>Enforce strict path checking</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="debug">
+                <properties>
+                  <help>Debug</help>
+                  <valueless/>
+                  <hidden/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
+

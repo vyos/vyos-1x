@@ -599,6 +599,28 @@
               </tagNode>
             </children>
           </node>
+          <node name="script-extensions">
+            <properties>
+              <help>SNMP script extensions</help>
+            </properties>
+            <children>
+              <tagNode name="extension-name">
+                <properties>
+                  <help>Extension name</help>
+                </properties>
+                <children>
+                  <leafNode name="script">
+                  <properties>
+                    <help>Script location and name</help>
+                    <completionHelp>
+                      <script>ls /config/user-data</script>
+                    </completionHelp>
+                  </properties>
+                </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

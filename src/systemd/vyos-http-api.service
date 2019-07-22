@@ -1,0 +1,24 @@
+[Unit]
+Description=VyOS HTTP API service
+After=auditd.service systemd-user-sessions.service time-sync.target vyos-router.service
+Requires=vyos-router.service
+
+[Service]
+ExecStartPre=/usr/libexec/vyos/init/vyos-config
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-http-api-server
+Type=idle
+KillMode=process
+
+SyslogIdentifier=vyos-http-api
+SyslogFacility=daemon
+
+Restart=on-failure
+
+# Does't work but leave it here
+User=root
+Group=vyattacfg
+
+[Install]
+# Installing in a earlier target leaves ExecStartPre waiting
+WantedBy=getty.target
+

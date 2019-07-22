@@ -186,8 +186,10 @@ shared-network {{ network.name }} {
         {%- endif -%}
         {%- for host in subnet.static_mapping %}
         {% if not host.disabled -%}
-        host {{ network.name }}_{{ host.name }} {
+        host {% if host_decl_name -%} {{ host.name }} {%- else -%} {{ network.name }}_{{ host.name }} {%- endif %} {
+            {%- if host.ip_address %}
             fixed-address {{ host.ip_address }};
+            {%- endif %}
             hardware ethernet {{ host.mac_address }};
             {%- if host.static_parameters %}
             # The following {{ host.static_parameters | length }} line(s) were added as static-mapping-parameters in the CLI and have not been validated
@@ -728,22 +730,19 @@ def verify(dhcp):
                 raise ConfigError('No DHCP address range or active static-mapping set\n' \
                                   'for subnet {0}!'.format(subnet['network']))
 
-            # Static IP address mappings require both an IP address and MAC address
+            # Static mappings require just a MAC address (will use an IP from the dynamic pool if IP is not set)
             for mapping in subnet['static_mapping']:
-                # Static IP address must be configured
-                if not mapping['ip_address']:
-                    raise ConfigError('DHCP static lease IP address not specified for static mapping\n' \
-                                      '{0} under shared network name {1}!'.format(mapping['name'], network['name']))
 
-                # Static IP address must be in bound
-                if not ipaddress.ip_address(mapping['ip_address']) in ipaddress.ip_network(subnet['network']):
-                    raise ConfigError('DHCP static lease IP address {0} for static mapping {1}\n' \
-                                      'in shared network {2} is outside DHCP lease subnet {3}!' \
-                                      .format(mapping['ip_address'], mapping['name'], network['name'], subnet['network']))
+                if mapping['ip_address']:
+                    # Static IP address must be in bound
+                    if not ipaddress.ip_address(mapping['ip_address']) in ipaddress.ip_network(subnet['network']):
+                        raise ConfigError('DHCP static lease IP address {0} for static mapping {1}\n' \
+                                          'in shared network {2} is outside DHCP lease subnet {3}!' \
+                                          .format(mapping['ip_address'], mapping['name'], network['name'], subnet['network']))
 
                 # Static mapping requires MAC address
                 if not mapping['mac_address']:
-                     raise ConfigError('DHCP static lease MAC address not specified for static mapping\n' \
+                    raise ConfigError('DHCP static lease MAC address not specified for static mapping\n' \
                                        '{0} under shared network name {1}!'.format(mapping['name'], network['name']))
 
             # There must be one subnet connected to a listen interface.
@@ -754,7 +753,7 @@ def verify(dhcp):
 
             # Subnets must be non overlapping
             if subnet['network'] in subnets:
-                raise ConfigError('DHCP subnets must be unique! Subnet {0} defined multiple times!'.format(subnet))
+                raise ConfigError('DHCP subnets must be unique! Subnet {0} defined multiple times!'.format(subnet['network']))
             else:
                 subnets.append(subnet['network'])
 

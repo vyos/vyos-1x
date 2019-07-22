@@ -10,6 +10,7 @@ VYOS_OP_TMPL_DIR := /opt/vyatta/share/vyatta-op/templates
 
 MIGRATION_SCRIPTS_DIR := /opt/vyatta/etc/config-migrate/migrate/
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
+SERVICES_DIR := usr/libexec/vyos/services
 
 %:
 	dh $@ --with python3, --with quilt
@@ -53,6 +54,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(SYSTEM_SCRIPTS_DIR)
 	cp -r src/system/* $(DIR)/$(SYSTEM_SCRIPTS_DIR)
 
+	# Install system services
+	mkdir -p $(DIR)/$(SERVICES_DIR)
+	cp -r src/services/* $(DIR)/$(SERVICES_DIR)
+
 	# Install configuration command definitions
 	mkdir -p $(DIR)/$(VYOS_CFG_TMPL_DIR)
 	cp -r templates-cfg/* $(DIR)/$(VYOS_CFG_TMPL_DIR)
@@ -72,3 +77,6 @@ override_dh_auto_install:
 	# Install systemd service units
 	mkdir -p $(DIR)/lib/systemd/system
 	cp -r src/systemd/* $(DIR)/lib/systemd/system
+
+	# Make directory for generated configuration file
+	mkdir -p $(DIR)/etc/vyos

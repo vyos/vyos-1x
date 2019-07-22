@@ -1,0 +1,148 @@
+# configsession -- the write API for the VyOS running config
+# Copyright (C) 2019 VyOS maintainers and contributors
+#
+# This library is free software; you can redistribute it and/or modify it under the terms of
+# the GNU Lesser General Public License as published by the Free Software Foundation;
+# either version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with this library;
+# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+
+import os
+import re
+import sys
+import subprocess
+
+CLI_SHELL_API = '/bin/cli-shell-api'
+SET = '/opt/vyatta/sbin/my_set'
+DELETE = '/opt/vyatta/sbin/my_delete'
+COMMENT = '/opt/vyatta/sbin/my_comment'
+COMMIT = '/opt/vyatta/sbin/my_commit'
+DISCARD = '/opt/vyatta/sbin/my_discard'
+
+# Default "commit via" string
+APP = "vyos-http-api"
+
+# When started as a service rather than from a user shell,
+# the process lacks the VyOS-specific environment that comes
+# from bash configs, so we have to inject it
+# XXX: maybe it's better to do via a systemd environment file
+def inject_vyos_env(env):
+    env['VYATTA_CFG_GROUP_NAME'] = 'vyattacfg'
+    env['VYATTA_USER_LEVEL_DIR'] = '/opt/vyatta/etc/shell/level/admin'
+    env['vyatta_bindir']= '/opt/vyatta/bin'
+    env['vyatta_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
+    env['vyatta_configdir'] = '/opt/vyatta/config'
+    env['vyatta_datadir'] = '/opt/vyatta/share'
+    env['vyatta_datarootdir'] = '/opt/vyatta/share'
+    env['vyatta_libdir'] = '/opt/vyatta/lib'
+    env['vyatta_libexecdir'] = '/opt/vyatta/libexec'
+    env['vyatta_op_templates'] = '/opt/vyatta/share/vyatta-op/templates'
+    env['vyatta_prefix'] = '/opt/vyatta'
+    env['vyatta_sbindir'] = '/opt/vyatta/sbin'
+    env['vyatta_sysconfdir'] = '/opt/vyatta/etc'
+    env['vyos_bin_dir'] = '/usr/bin'
+    env['vyos_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
+    env['vyos_completion_dir'] = '/usr/libexec/vyos/completion'
+    env['vyos_configdir'] = '/opt/vyatta/config'
+    env['vyos_conf_scripts_dir'] = '/usr/libexec/vyos/conf_mode'
+    env['vyos_datadir'] = '/opt/vyatta/share'
+    env['vyos_datarootdir']= '/opt/vyatta/share'
+    env['vyos_libdir'] = '/opt/vyatta/lib'
+    env['vyos_libexec_dir'] = '/usr/libexec/vyos'
+    env['vyos_op_scripts_dir'] = '/usr/libexec/vyos/op_mode'
+    env['vyos_op_templates'] = '/opt/vyatta/share/vyatta-op/templates'
+    env['vyos_prefix'] = '/opt/vyatta'
+    env['vyos_sbin_dir'] = '/usr/sbin'
+    env['vyos_validators_dir'] = '/usr/libexec/vyos/validators'
+
+    return env
+
+
+class ConfigSessionError(Exception):
+    pass
+
+
+class ConfigSession(object):
+    """
+    The write API of VyOS.
+    """
+    def __init__(self, session_id, app=APP):
+        """
+         Creates a new config session.
+
+         Args:
+              session_id (str): Session identifier
+              app (str): Application name, purely informational
+
+        Note:
+            The session identifier MUST be globally unique within the system.
+            The best practice is to only have one ConfigSession object per process
+            and used the PID for the session identifier.
+        """
+
+        env_str = subprocess.check_output([CLI_SHELL_API, 'getSessionEnv', str(session_id)])
+        self.__session_id = session_id
+
+        # Extract actual variables from the chunk of shell it outputs
+        # XXX: it's better to extend cli-shell-api to provide easily readable output
+        env_list = re.findall(r'([A-Z_]+)=([^;\s]+)', env_str.decode())
+
+        session_env = os.environ
+        session_env = inject_vyos_env(session_env)
+        for k, v in env_list:
+            session_env[k] = v
+
+        self.__session_env = session_env
+        self.__session_env["COMMIT_VIA"] = app
+
+        self.__run_command([CLI_SHELL_API, 'setupSession'])
+
+    def __del__(self):
+        try:
+            output = subprocess.check_output([CLI_SHELL_API, 'teardownSession'], env=self.__session_env).decode().strip()
+            if output:
+                print("cli-shell-api teardownSession output for sesion {0}: {1}".format(self.__session_id, output), file=sys.stderr)
+        except Exception as e:
+            print("Could not tear down session {0}: {1}".format(self.__session_id, e), file=sys.stderr)
+
+    def __run_command(self, cmd_list):
+        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=self.__session_env)
+        result = p.wait()
+        output = p.stdout.read().decode()
+        if result != 0:
+            raise ConfigSessionError(output)
+
+    def get_session_env(self):
+        return self.__session_env
+
+    def set(self, path, value=None):
+        if not value:
+            value = []
+        else:
+            value = [value]
+        self.__run_command([SET] + path + value)
+
+    def delete(self, path, value=None):
+        if not value:
+            value = []
+        else:
+            value = [value]
+        self.__run_command([DELETE] + path + value)
+
+    def comment(self, path, value=None):
+        if not value:
+            value = [""]
+        else:
+            value = [value]
+        self.__run_command([COMMENT] + path + value)
+
+    def commit(self):
+        self.__run_command([COMMIT])
+
+    def discard(self):
+        self.__run_command([DISCARD])

@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2019 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import re
+import os
+import sys
+import json
+import argparse
+
+import vyos.configtree
+
+
+arg_parser = argparse.ArgumentParser()
+arg_parser.add_argument('-p', '--path', type=str,
+    help="VyOS config node, e.g. \"system config-management commit-revisions\"", required=True)
+arg_parser.add_argument('-f', '--file', type=str, help="VyOS config file, e.g. /config/config.boot", required=True)
+
+arg_parser.add_argument('-s', '--separator', type=str, default=' ', help="Value separator for the plain format")
+arg_parser.add_argument('-j', '--json', action='store_true')
+
+op_group = arg_parser.add_mutually_exclusive_group(required=True)
+op_group.add_argument('--return-value', action='store_true', help="Return a single node value")
+op_group.add_argument('--return-values', action='store_true', help="Return all values of a multi-value node")
+op_group.add_argument('--list-nodes', action='store_true', help="List children of a node")
+op_group.add_argument('--exists', action='store_true', help="Check if a node exists")
+
+args = arg_parser.parse_args()
+
+
+try:
+    with open(args.file, 'r') as f:
+        config_file = f.read()
+except OSError as e:
+    print("Could not read the config file: {0}".format(e))
+    sys.exit(1)
+
+try:
+    config = vyos.configtree.ConfigTree(config_file)
+except Exception as e:
+    print(e)
+    sys.exit(1)
+
+
+path = re.split(r'\s+', args.path)
+values = None
+
+if args.exists:
+    if config.exists(path):
+        sys.exit(0)
+    else:
+        sys.exit(1)
+elif args.return_value:
+    try:
+        values = [config.return_value(path)]
+    except vyos.configtree.ConfigTreeError as e:
+        print(e)
+        sys.exit(1)
+elif args.return_values:
+    try:
+        values = config.return_values(path)
+    except vyos.configtree.ConfigTreeError as e:
+        print(e)
+        sys.exit(1)
+elif args.list_nodes:
+    values = config.list_nodes(path)
+    if not values:
+        values = []
+else:
+    # Can't happen
+    print("Operation required")
+    sys.exit(1)
+
+
+if values:
+    if args.json:
+        print(json.dumps(values))
+    else:
+        if len(values) == 1:
+            print(values[0])
+        else:
+            # XXX: assuming values never contain quotes
+            values = list(map(lambda s: "\'{0}\'".format(s), values))
+            values_str = args.separator.join(values)
+            print(values_str)
+
+sys.exit(0)

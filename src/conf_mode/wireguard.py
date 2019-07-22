@@ -63,6 +63,7 @@ def get_config():
                 'lport'       : '',
                 'status'      : 'exists',
                 'state'       : 'enabled',
+                'fwmark'         : 0x00,
                 'mtu'         : '1420',
                 'peer'        : {}
             }
@@ -95,6 +96,9 @@ def get_config():
       ### listen port
       if c.exists(cnf + ' port'):
         config_data['interfaces'][intfc]['lport'] = c.return_value(cnf + ' port')
+      ### fwmark
+      if c.exists(cnf + ' fwmark'):
+        config_data['interfaces'][intfc]['fwmark'] = c.return_value(cnf + ' fwmark')
       ### description
       if c.exists(cnf + ' description'):
         config_data['interfaces'][intfc]['descr'] = c.return_value(cnf + ' description')
@@ -221,7 +225,7 @@ def apply(c):
     ### config updates
     if c['interfaces'][intf]['status'] == 'exists':
       ### IP address change
-      addr_eff = re.sub("\'", "", c_eff.return_effective_values(intf + ' address')).split()
+      addr_eff = c_eff.return_effective_values(intf + ' address')
       addr_rem = list(set(addr_eff) - set(c['interfaces'][intf]['addr']))
       addr_add = list(set(c['interfaces'][intf]['addr']) - set(addr_eff))
 
@@ -296,6 +300,10 @@ def configure_interface(c, intf):
     if c['interfaces'][intf]['lport']:
       wg_config['port'] = c['interfaces'][intf]['lport']
 
+    ## fwmark
+    if c['interfaces'][intf]['fwmark']:
+      wg_config['fwmark'] = c['interfaces'][intf]['fwmark']
+      
     ## endpoint
     if c['interfaces'][intf]['peer'][p]['endpoint']:
       wg_config['endpoint'] = c['interfaces'][intf]['peer'][p]['endpoint']
@@ -314,6 +322,7 @@ def configure_interface(c, intf):
     ### assemble wg command
     cmd = "sudo wg set " + intf
     cmd += " listen-port " + str(wg_config['port'])
+    cmd += " fwmark " + str(wg_config['fwmark'])
     cmd += " private-key " + wg_config['private-key']
     cmd += " peer " + wg_config['pubkey']
     cmd += " preshared-key " + wg_config['psk']

@@ -72,8 +72,8 @@ logrotate_configs = '''
   missingok
   notifempty
   create
-  rotate  {{files[file]['max-files']}}
-  size={{ files[file]['max-size']//1024}}k
+  rotate {{files[file]['max-files']}}
+  size={{files[file]['max-size']//1024}}k
   postrotate
     invoke-rc.d rsyslog rotate > /dev/null
   endscript
@@ -120,8 +120,8 @@ def get_config():
     config_data['files']['global']['selectors'] = generate_selectors(c, 'global facility')
   if c.exists('global archive size'):
     config_data['files']['global']['max-size'] = int(c.return_value('global archive size'))* 1024
-  if c.exists('global archive files'):
-    config_data['files']['global']['max-files'] = c.return_value('global archive files')
+  if c.exists('global archive file'):
+    config_data['files']['global']['max-files'] = c.return_value('global archive file')
   if c.exists('global preserve-fqdn'):
     config_data['files']['global']['preserver_fqdn'] = True
 
@@ -196,7 +196,7 @@ def get_config():
           }
         }
       )
-
+  
   return config_data
 
 def generate_selectors(c, config_node):
@@ -279,7 +279,7 @@ def verify(c):
             raise ConfigError('Invalid logging level ' + s + ' set in '+ conf + ' ' + item)
 
 def apply(c):
-  if not os.path.exits('/var/run/rsyslogd.pid'):
+  if not os.path.exists('/var/run/rsyslogd.pid'):
     os.system("sudo systemctl start rsyslog >/dev/null")
   else:
     os.system("sudo systemctl restart rsyslog >/dev/null")
