@@ -52,9 +52,10 @@ def get_config():
     if conf.exists('listen-interface'):
         interfaces = conf.list_nodes('listen-interface')
         for intf in interfaces:
-            addr = conf.return_value('listen-interface {0} address'.format(intf))
-            listen = addr + '%' + intf
-            relay['listen_addr'].append(listen)
+            if conf.exists('listen-interface {0} address'.format(intf)):
+                addr = conf.return_value('listen-interface {0} address'.format(intf))
+                listen = addr + '%' + intf
+                relay['listen_addr'].append(listen)
 
     # Upstream interface/address for remote DHCPv6 server
     if conf.exists('upstream-interface'):
@@ -82,7 +83,7 @@ def verify(relay):
         return None
 
     if len(relay['listen_addr']) == 0 or len(relay['upstream_addr']) == 0:
-        raise ConfigError('Must set at least one listen and upstream interface.')
+        raise ConfigError('Must set at least one listen and upstream interface addresses.')
 
     return None
 
