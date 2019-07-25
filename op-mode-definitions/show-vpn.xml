@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpn">
+       <properties>
+          <help>Show active remote access Virtual Private Network (VPN) sessions</help>
+       </properties>
+       <children>
+         <leafNode name="remote-access">
+            <properties>
+              <help>Show active VPN server sessions</help>
+            </properties>
+           <command>${vyos_op_scripts_dir}/show_vpn_ra.py</command> 
+         </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

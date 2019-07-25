@@ -35,6 +35,7 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/restart/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
+	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
 
 .PHONY: all
 all: clean interface_definitions op_mode_definitions
