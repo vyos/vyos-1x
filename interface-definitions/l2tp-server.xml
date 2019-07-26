@@ -417,13 +417,15 @@
                           </leafNode>
                         </children>
                       </tagNode>
-                    </children>
-                  </node>
-                  <node name="radius-settings">
-                    <properties>
-                      <help>RADIUS settings</help>
-                    </properties>
-                    <children>
+                      <leafNode name="source-address">
+                        <properties>
+                          <help>Local RADIUS client address from which packets are sent.</help>
+                          <valueHelp>
+                            <format>&lt;x.x.x.x&gt;</format>
+                            <description>Local RADIUS client address from which packets are sent</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
                       <leafNode name="timeout">
                         <properties>
                           <help>Timeout to wait response from server (seconds)</help>
@@ -442,11 +444,6 @@
                       <leafNode name="nas-identifier">
                         <properties>
                           <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="nas-ip-address">
-                        <properties>
-                          <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
                         </properties>
                       </leafNode>
                       <node name="dae-server">
