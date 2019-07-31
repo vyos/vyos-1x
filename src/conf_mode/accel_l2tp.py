@@ -89,6 +89,9 @@ mppe={{authentication['mppe']}}
 {% if outside_addr %}
 bind={{outside_addr}}
 {% endif %}
+{% if lns_shared_secret %}
+secret={{lns_shared_secret}}
+{% endif %}
 
 [client-ip-range]
 0.0.0.0/0
@@ -117,10 +120,13 @@ chap-secrets=/etc/accel-ppp/l2tp/chap-secrets
 verbose=1
 check-ip=1
 single-session=replace
-{% if idle_timeout%}
+{% if idle_timeout %}
 lcp-echo-timeout={{idle_timeout}}
 {% endif %}
 lcp-echo-interval=30
+{% if ccp_disable %}
+ccp=0
+{% endif %}
 
 {% if authentication['mode'] == 'radius' %}
 [radius]
@@ -382,6 +388,13 @@ def get_config():
 
   if c.exists('idle'):
     config_data['idle_timeout'] = c.return_value('idle')
+
+  ### LNS secret
+  if c.exists('lns shared-secret'):
+    config_data['lns_shared_secret'] = c.return_value('lns shared-secret')
+
+  if c.exists('ccp-disable'):
+    config_data['ccp_disable'] = True
 
   return config_data
 
