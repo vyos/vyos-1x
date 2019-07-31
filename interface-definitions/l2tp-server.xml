@@ -67,6 +67,24 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="lns">
+                <properties>
+                  <help>L2TP Network Server (LNS)</help>
+                </properties>
+                <children>
+                  <leafNode name="shared-secret">
+                    <properties>
+                      <help>Tunnel password used to authenticate the client (LAC)</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="ccp-disable">
+                <properties>
+                  <help>Disable Compression Control Protocol (CCP)</help>
+                  <valueless />
+                </properties>
+              </leafNode>
               <node name="ipsec-settings">
                 <properties>
                   <help>Internet Protocol Security (IPsec) for remote access L2TP VPN</help>
