@@ -227,7 +227,7 @@ def make_node_def(props):
 
     if "owner" in props:
         if "tag" in props:
-            node_def += "end: sudo sh -c \"VALUE='$VAR(@)' {0}\"\n".format(props["owner"])
+            node_def += "end: sudo sh -c \"VYOS_TAGNODE_VALUE='$VAR(@)' {0}\"\n".format(props["owner"])
         else:
             node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
 
