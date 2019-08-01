@@ -58,6 +58,9 @@ Depends: python3,
   pdns-recursor,
   lcdproc,
   lcdproc-extra-drivers,
+  openvpn,
+  openvpn-auth-ldap,
+  openvpn-auth-radius,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
