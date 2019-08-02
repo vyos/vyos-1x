@@ -15,6 +15,14 @@
 
 import os
 
+def set_mac_address(intf, addr):
+    """
+    Configure interface mac address using iproute2 command
+
+    NOTE: mac address should be validated here???
+    """
+    os.system('ip link set {} address {}'.format(intf, addr))
+
 def set_description(intf, desc):
     """
     Sets the interface secription reported usually by SNMP

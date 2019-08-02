@@ -44,6 +44,8 @@ default_config_data = {
     'arp_cache_timeout_ms': '30000',
     'mac' : '',
     'max_age': '20',
+    'member': [],
+    'member_remove': [],
     'priority': '32768',
     'stp': 'off'
 }
@@ -53,6 +55,10 @@ def subprocess_cmd(command):
     proc_stdout = process.communicate()[0].strip()
     print(proc_stdout)
 
+def diff(first, second):
+    second = set(second)
+    return [item for item in first if item not in second]
+
 def get_config():
     bridge = copy.deepcopy(default_config_data)
     conf = Config()
@@ -60,7 +66,6 @@ def get_config():
     # determine tagNode instance
     try:
         bridge['br_name'] = os.environ['VYOS_TAGNODE_VALUE']
-        print("Executing script for interface: " + bridge['br_name'])
     except KeyError as E:
         print("Interface not specified")
 
@@ -118,9 +123,7 @@ def get_config():
 
     # Enable or disable IGMP querier
     if conf.exists('igmp-snooping querier'):
-        tmp = conf.return_value('igmp-snooping querier')
-        if tmp == "enable":
-            bridge['igmp_querier'] = 1
+        bridge['igmp_querier'] = 1
 
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
@@ -135,21 +138,44 @@ def get_config():
     if conf.exists('max-age'):
         bridge['max_age'] = conf.return_value('max-age')
 
+    # Determine bridge member interface (currently configured)
+    for intf in conf.list_nodes('member interface'):
+        iface = {
+            'name': intf,
+            'cost': '',
+            'priority': ''
+        }
+
+        if conf.exists('member interface {} cost'.format(intf)):
+            iface['cost'] = conf.return_value('member interface {} cost'.format(intf))
+
+        if conf.exists('member interface {} priority'.format(intf)):
+            iface['priority'] = conf.return_value('member interface {} priority'.format(intf))
+
+        bridge['member'].append(iface)
+
+    # Determine bridge member interface (currently effective) - to determine which interfaces
+    # need to be removed from the bridge
+    eff_intf = conf.list_effective_nodes('member interface')
+    act_intf = conf.list_nodes('member interface')
+    bridge['member_remove'] = diff(eff_intf, act_intf)
+
     # Priority for this bridge
     if conf.exists('priority'):
         bridge['priority'] = conf.return_value('priority')
 
     # Enable spanning tree protocol
     if conf.exists('stp'):
-        tmp = conf.return_value('stp')
-        if tmp == "true":
-            bridge['stp'] = 'on'
+        bridge['stp'] = 'on'
 
     return bridge
 
 def verify(bridge):
     if bridge is None:
         return None
+
+    # validate agains other bridge interfaces that the interface is not assigned
+    # to another bridge
 
     return None
 
@@ -165,42 +191,70 @@ def apply(bridge):
 
     if bridge['deleted']:
         # bridges need to be shutdown first
-        os.system("ip link set dev {0} down".format(bridge['br_name']))
+        os.system("ip link set dev {} down".format(bridge['br_name']))
         # delete bridge
-        os.system("brctl delbr {0}".format(bridge['br_name']))
+        os.system("brctl delbr {}".format(bridge['br_name']))
     else:
         # create bridge if it does not exist
         if not os.path.exists("/sys/class/net/" + bridge['br_name']):
-            os.system("brctl addbr {0}".format(bridge['br_name']))
+            os.system("brctl addbr {}".format(bridge['br_name']))
 
         # assemble bridge configuration
         # configuration is passed via subprocess to brctl
         cmd = ''
 
         # set ageing time
-        cmd += 'brctl setageing {0} {1}'.format(bridge['br_name'], bridge['aging'])
+        cmd += 'brctl setageing {} {}'.format(bridge['br_name'], bridge['aging'])
         cmd += ' && '
 
         # set bridge forward delay
-        cmd += 'brctl setfd {0} {1}'.format(bridge['br_name'], bridge['forwarding_delay'])
+        cmd += 'brctl setfd {} {}'.format(bridge['br_name'], bridge['forwarding_delay'])
         cmd += ' && '
 
         # set hello time
-        cmd += 'brctl sethello {0} {1}'.format(bridge['br_name'], bridge['hello_time'])
+        cmd += 'brctl sethello {} {}'.format(bridge['br_name'], bridge['hello_time'])
         cmd += ' && '
 
         # set max message age
-        cmd += 'brctl setmaxage {0} {1}'.format(bridge['br_name'], bridge['max_age'])
+        cmd += 'brctl setmaxage {} {}'.format(bridge['br_name'], bridge['max_age'])
         cmd += ' && '
 
         # set bridge priority
-        cmd += 'brctl setbridgeprio {0} {1}'.format(bridge['br_name'], bridge['priority'])
+        cmd += 'brctl setbridgeprio {} {}'.format(bridge['br_name'], bridge['priority'])
         cmd += ' && '
 
         # turn stp on/off
-        cmd += 'brctl stp {0} {1}'.format(bridge['br_name'], bridge['stp'])
+        cmd += 'brctl stp {} {}'.format(bridge['br_name'], bridge['stp'])
+
+        for intf in bridge['member_remove']:
+            # remove interface from bridge
+            cmd += ' && '
+            cmd += 'brctl delif {} {}'.format(bridge['br_name'], intf)
+
+        for intf in bridge['member']:
+            # add interface to bridge
+            # but only if it is not yet member of this bridge
+            if not os.path.exists('/sys/devices/virtual/net/' + bridge['br_name'] + '/brif/' + intf['name']):
+                cmd += ' && '
+                cmd += 'brctl addif {} {}'.format(bridge['br_name'], intf['name'])
+
+            # set bridge port cost
+            if intf['cost']:
+                cmd += ' && '
+                cmd += 'brctl setpathcost {} {} {}'.format(bridge['br_name'], intf['name'], intf['cost'])
+
+            # set bridge port priority
+            if intf['priority']:
+                cmd += ' && '
+                cmd += 'brctl setportprio {} {} {}'.format(bridge['br_name'], intf['name'], intf['priority'])
 
         subprocess_cmd(cmd)
+
+        # Change interface MAC address
+        if bridge['mac']:
+            VyIfconfig.set_mac_address(bridge['br_name'], bridge['mac'])
+        else:
+            print("TODO: change mac mac address to the autoselected one based on member interfaces"
 
         # update interface description used e.g. within SNMP
         VyIfconfig.set_description(bridge['br_name'], bridge['description'])
