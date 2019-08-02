@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+
+# Change syntax of bridge interface
+# - move interface based bridge-group to actual bridge (de-nest)
+# - make stp and igmp-snooping nodes valueless
+# https://phabricator.vyos.net/T1556
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['interfaces', 'bridge']
+
+#
+# make stp and igmp-snooping nodes valueless
+#
+for br in config.list_nodes(base):
+    # STP: check if enabled
+    stp_val = config.return_value(base + [br, 'stp'])
+    # STP: delete node with old syntax
+    config.delete(base + [br, 'stp'])
+    # STP: set new node - if enabled
+    if stp_val == "true":
+        config.set(base + [br, 'stp'], value=None)
+
+
+    # igmp-snooping: check if enabled
+    igmp_val = config.return_value(base + [br, 'igmp-snooping', 'querier'])
+    # igmp-snooping: delete node with old syntax
+    config.delete(base + [br, 'igmp-snooping', 'querier'])
+    # igmp-snooping: set new node - if enabled
+    if igmp_val == "enable":
+        config.set(base + [br, 'igmp-snooping', 'querier'], value=None)
+
+#
+# move interface based bridge-group to actual bridge (de-nest)
+#
+bridge_types = ['bonding', 'ethernet', 'l2tpv3', 'openvpn', 'vxlan', 'wireless']
+for type in bridge_types:
+    if not config.exists(['interfaces', type]):
+        continue
+
+    for intf in config.list_nodes(['interfaces', type]):
+        # check if bridge-group exists
+        if config.exists(['interfaces', type, intf, 'bridge-group']):
+            bridge = config.return_value(['interfaces', type, intf, 'bridge-group', 'bridge'])
+
+            # create new bridge member interface
+            config.set(base + [bridge, 'member', 'interface', intf])
+            # format as tag node to avoid loading problems
+            config.set_tag(base + [bridge, 'member', 'interface'])
+
+            # cost: migrate if configured
+            if config.exists(['interfaces', type, intf, 'bridge-group', 'cost']):
+                cost = config.return_value(['interfaces', type, intf, 'bridge-group', 'cost'])
+                # set new node 
+                config.set(base + [bridge, 'member', 'interface', intf, 'cost'], value=cost)
+
+            if config.exists(['interfaces', type, intf, 'bridge-group', 'priority']):
+                priority = config.return_value(['interfaces', type, intf, 'bridge-group', 'priority'])
+                # set new node
+                config.set(base + [bridge, 'member', 'interface', intf, 'priority'], value=priority)
+
+            # Delete the old bridge-group assigned to an interface
+            config.delete(['interfaces', type, intf, 'bridge-group'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
