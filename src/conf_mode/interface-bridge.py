@@ -174,8 +174,16 @@ def verify(bridge):
     if bridge is None:
         return None
 
-    # validate agains other bridge interfaces that the interface is not assigned
-    # to another bridge
+    conf = Config()
+    for br in conf.list_nodes('interfaces bridge'):
+        # it makes no sense to verify ourself in this case
+        if br == bridge['br_name']:
+            continue
+
+        for intf in bridge['member']:
+            tmp = conf.list_nodes('interfaces bridge {} member interface'.format(br))
+            if intf['name'] in tmp:
+                raise ConfigError('{} can be assigned to any one bridge only'.format(intf['name']))
 
     return None
 
