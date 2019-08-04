@@ -18,22 +18,24 @@ import ipaddress
 
 def is_ipv4(addr):
     """
-    Check addr if it is an IPv4 address/network.
-
-    Return True/False
+    Check addr if it is an IPv4 address/network. Returns True/False
     """
-    if ipaddress.ip_network(addr).version == 4:
+
+    # With the below statement we can check for IPv4 networks and host
+    # addresses at the same time
+    if ipaddress.ip_address(addr.split(r'/')[0]).version == 4:
         return True
     else:
         return False
 
 def is_ipv6(addr):
     """
-    Check addr if it is an IPv6 address/network.
-
-    Return True/False
+    Check addr if it is an IPv6 address/network. Returns True/False
     """
-    if ipaddress.ip_network(addr).version == 6:
+
+    # With the below statement we can check for IPv4 networks and host
+    # addresses at the same time
+    if ipaddress.ip_network(addr.split(r'/')[0]).version == 6:
         return True
     else:
         return False
