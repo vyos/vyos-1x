@@ -42,6 +42,7 @@ def set_mac_address(intf, addr):
     validate_mac_address(addr)
 
     os.system('ip link set {} address {}'.format(intf, addr))
+    pass
 
 def set_description(intf, desc):
     """
@@ -50,6 +51,7 @@ def set_description(intf, desc):
     with open('/sys/class/net/' + intf + '/ifalias', 'w') as f:
       f.write(desc)
 
+    pass
 
 def set_arp_cache_timeout(intf, tmoMS):
     """
@@ -57,6 +59,8 @@ def set_arp_cache_timeout(intf, tmoMS):
     """
     with open('/proc/sys/net/ipv4/neigh/' + intf + '/base_reachable_time_ms', 'w') as f:
       f.write(tmoMS)
+
+    pass
 
 def set_multicast_querier(intf, enable):
     """
@@ -73,6 +77,8 @@ def set_multicast_querier(intf, enable):
         f.write(str(enable))
     else:
       raise ValueError("malformed configuration string on interface {}: enable={}".format(intf, enable))
+
+    pass
 
 def set_link_detect(intf, enable):
     """
@@ -103,3 +109,5 @@ def set_link_detect(intf, enable):
         f.write('1')
         if os.path.isfile('/usr/bin/vtysh'):
           os.system('/usr/bin/vtysh -c "configure terminal" -c "interface {}" -c "no link-detect"'.format(intf))
+
+    pass
