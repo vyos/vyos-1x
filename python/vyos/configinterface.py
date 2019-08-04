@@ -15,12 +15,32 @@
 
 import os
 
+def validate_mac_address(addr):
+    # a mac address consits out of 6 octets
+    octets = len(addr.split(':'))
+    if octets != 6:
+        raise ValueError('wrong number of MAC octets: {} '.format(octets))
+
+    # validate against the first mac address byte if it's a multicast address
+    if int(addr.split(':')[0]) & 1:
+        raise ValueError('{} is a multicast MAC address'.format(addr))
+
+    # overall mac address is not allowed to be 00:00:00:00:00:00
+    if sum(int(i, 16) for i in addr.split(':')) == 0:
+        raise ValueError('00:00:00:00:00:00 is not a valid MAC address')
+
+    # check for VRRP mac address
+    if addr.split(':')[0] == '0' and addr.split(':')[1] == '0' and addr.split(':')[2] == '94' and addr.split(':')[3] == '0' and addr.split(':')[4] == '1':
+        raise ValueError('{} is a VRRP MAC address')
+
+    pass
+
 def set_mac_address(intf, addr):
     """
     Configure interface mac address using iproute2 command
-
-    NOTE: mac address should be validated here???
     """
+    validate_mac_address(addr)
+
     os.system('ip link set {} address {}'.format(intf, addr))
 
 def set_description(intf, desc):
