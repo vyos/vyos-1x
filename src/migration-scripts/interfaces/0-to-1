@@ -33,14 +33,13 @@ for br in config.list_nodes(base):
     if stp_val == "true":
         config.set(base + [br, 'stp'], value=None)
 
-
     # igmp-snooping: check if enabled
     igmp_val = config.return_value(base + [br, 'igmp-snooping', 'querier'])
     # igmp-snooping: delete node with old syntax
     config.delete(base + [br, 'igmp-snooping', 'querier'])
     # igmp-snooping: set new node - if enabled
     if igmp_val == "enable":
-        config.set(base + [br, 'igmp-snooping', 'querier'], value=None)
+        config.set(base + [br, 'igmp', 'querier'], value=None)
 
 #
 # move interface based bridge-group to actual bridge (de-nest)

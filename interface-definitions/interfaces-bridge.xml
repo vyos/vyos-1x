@@ -139,14 +139,14 @@
               <constraintErrorMessage>Bridge Hello interval must be between 1 and 10 seconds</constraintErrorMessage>
             </properties>
           </leafNode>
-          <node name="igmp-snooping">
+          <node name="igmp">
             <properties>
-              <help>IGMP snooping settings</help>
+              <help>Internet Group Management Protocol (IGMP) settings</help>
             </properties>
             <children>
               <leafNode name="querier">
                 <properties>
-                  <help>Enable or disable IGMP querier</help>
+                  <help>Enable IGMP querier</help>
                   <valueless/>
                 </properties>
               </leafNode>

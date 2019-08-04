@@ -121,8 +121,8 @@ def get_config():
     if conf.exists('hello-time'):
         bridge['hello_time'] = conf.return_value('hello-time')
 
-    # Enable or disable IGMP querier
-    if conf.exists('igmp-snooping querier'):
+    # Enable Internet Group Management Protocol (IGMP) querier
+    if conf.exists('igmp querier'):
         bridge['igmp_querier'] = 1
 
     # ARP cache entry timeout in seconds
