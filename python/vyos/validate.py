@@ -40,12 +40,9 @@ def is_ipv6(addr):
     else:
         return False
 
-def is_addr_assigned(addr):
+def is_intf_addr_assigned(intf, addr):
     """
-    Verify if the given IPv4/IPv6 address is assigned to any interface on this
-    system.
-
-    Return True/False
+    Verify if the given IPv4/IPv6 address is assigned to specific interface
     """
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
@@ -53,14 +50,31 @@ def is_addr_assigned(addr):
     if is_ipv6(addr):
         addr_type = netifaces.AF_INET6
 
-    for interface in netifaces.interfaces():
-        # check if the requested address type is configured at all
-        if addr_type in netifaces.ifaddresses(interface).keys():
-            # Check every IP address on this interface for a match
-            for ip in netifaces.ifaddresses(interface)[addr_type]:
-                # Check if it matches to the address requested
-                if ip['addr'] == addr:
-                    return True
+    # check if the requested address type is configured at all
+    try:
+        netifaces.ifaddresses(intf)
+    except ValueError as e:
+        print(e)
+        return False
+
+    if addr_type in netifaces.ifaddresses(intf).keys():
+        # Check every IP address on this interface for a match
+        for ip in netifaces.ifaddresses(intf)[addr_type]:
+            # Check if it matches to the address requested
+            if ip['addr'] == addr:
+                return True
+
+    return False
+
+def is_addr_assigned(addr):
+    """
+    Verify if the given IPv4/IPv6 address is assigned to any interface
+    """
+
+    for intf in netifaces.interfaces():
+        tmp = is_intf_addr_assigned(intf, addr)
+        if tmp == True:
+            return True
 
     return False
 
