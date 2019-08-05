@@ -35,6 +35,10 @@
                 <format>dhcpv6</format>
                 <description>Dynamic Host Configuration Protocol for IPv6</description>
               </valueHelp>
+              <constraint>
+                <validator name="cidr"/>
+                <regex>(dhcp|dhcpv6)</regex>
+              </constraint>
               <multi/>
             </properties>
           </leafNode>
