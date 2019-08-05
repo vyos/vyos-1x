@@ -28,6 +28,7 @@ from vyos import ConfigError
 
 default_config_data = {
     'address': [],
+    'address_remove': [],
     'aging': '300',
     'br_name': '',
     'description': '',
@@ -53,7 +54,7 @@ default_config_data = {
 def subprocess_cmd(command):
     process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
     proc_stdout = process.communicate()[0].strip()
-    print(proc_stdout)
+    pass
 
 def diff(first, second):
     second = set(second)
@@ -154,11 +155,17 @@ def get_config():
 
         bridge['member'].append(iface)
 
-    # Determine bridge member interface (currently effective) - to determine which interfaces
-    # need to be removed from the bridge
+    # Determine bridge member interface (currently effective) - to determine which
+    # interfaces is no longer assigend to the bridge and thus can be removed
     eff_intf = conf.list_effective_nodes('member interface')
     act_intf = conf.list_nodes('member interface')
     bridge['member_remove'] = diff(eff_intf, act_intf)
+
+    # Determine interface addresses (currently effective) - to determine which
+    # address is no longer valid and needs to be removed from the bridge
+    eff_addr = conf.return_effective_values('address')
+    act_addr = conf.return_values('address')
+    bridge['address_remove'] = diff(eff_addr, act_addr)
 
     # Priority for this bridge
     if conf.exists('priority'):
@@ -197,72 +204,75 @@ def apply(bridge):
     if bridge is None:
         return None
 
+    cmd = ''
     if bridge['deleted']:
         # bridges need to be shutdown first
-        os.system("ip link set dev {} down".format(bridge['br_name']))
+        cmd += 'ip link set dev "{}" down'.format(bridge['br_name'])
+        cmd += ' && '
         # delete bridge
-        os.system("brctl delbr {}".format(bridge['br_name']))
+        cmd += 'brctl delbr "{}"'.format(bridge['br_name'])
+        subprocess_cmd(cmd)
+
     else:
         # create bridge if it does not exist
         if not os.path.exists("/sys/class/net/" + bridge['br_name']):
-            os.system("brctl addbr {}".format(bridge['br_name']))
-
-        # assemble bridge configuration
-        # configuration is passed via subprocess to brctl
-        cmd = ''
+            # create bridge interface
+            cmd += 'brctl addbr "{}"'.format(bridge['br_name'])
+            cmd += ' && '
+            # activate "UP" the interface
+            cmd += 'ip link set dev "{}" up'.format(bridge['br_name'])
+            cmd += ' && '
 
         # set ageing time
-        cmd += 'brctl setageing {} {}'.format(bridge['br_name'], bridge['aging'])
+        cmd += 'brctl setageing "{}" "{}"'.format(bridge['br_name'], bridge['aging'])
         cmd += ' && '
 
         # set bridge forward delay
-        cmd += 'brctl setfd {} {}'.format(bridge['br_name'], bridge['forwarding_delay'])
+        cmd += 'brctl setfd "{}" "{}"'.format(bridge['br_name'], bridge['forwarding_delay'])
         cmd += ' && '
 
         # set hello time
-        cmd += 'brctl sethello {} {}'.format(bridge['br_name'], bridge['hello_time'])
+        cmd += 'brctl sethello "{}" "{}"'.format(bridge['br_name'], bridge['hello_time'])
         cmd += ' && '
 
         # set max message age
-        cmd += 'brctl setmaxage {} {}'.format(bridge['br_name'], bridge['max_age'])
+        cmd += 'brctl setmaxage "{}" "{}"'.format(bridge['br_name'], bridge['max_age'])
         cmd += ' && '
 
         # set bridge priority
-        cmd += 'brctl setbridgeprio {} {}'.format(bridge['br_name'], bridge['priority'])
+        cmd += 'brctl setbridgeprio "{}" "{}"'.format(bridge['br_name'], bridge['priority'])
         cmd += ' && '
 
         # turn stp on/off
-        cmd += 'brctl stp {} {}'.format(bridge['br_name'], bridge['stp'])
+        cmd += 'brctl stp "{}" "{}"'.format(bridge['br_name'], bridge['stp'])
 
         for intf in bridge['member_remove']:
             # remove interface from bridge
             cmd += ' && '
-            cmd += 'brctl delif {} {}'.format(bridge['br_name'], intf)
+            cmd += 'brctl delif "{}" "{}"'.format(bridge['br_name'], intf)
 
         for intf in bridge['member']:
             # add interface to bridge
             # but only if it is not yet member of this bridge
             if not os.path.exists('/sys/devices/virtual/net/' + bridge['br_name'] + '/brif/' + intf['name']):
                 cmd += ' && '
-                cmd += 'brctl addif {} {}'.format(bridge['br_name'], intf['name'])
+                cmd += 'brctl addif "{}" "{}"'.format(bridge['br_name'], intf['name'])
 
             # set bridge port cost
             if intf['cost']:
                 cmd += ' && '
-                cmd += 'brctl setpathcost {} {} {}'.format(bridge['br_name'], intf['name'], intf['cost'])
+                cmd += 'brctl setpathcost "{}" "{}" "{}"'.format(bridge['br_name'], intf['name'], intf['cost'])
 
             # set bridge port priority
             if intf['priority']:
                 cmd += ' && '
-                cmd += 'brctl setportprio {} {} {}'.format(bridge['br_name'], intf['name'], intf['priority'])
+                cmd += 'brctl setportprio "{}" "{}" "{}"'.format(bridge['br_name'], intf['name'], intf['priority'])
 
         subprocess_cmd(cmd)
 
         # Change interface MAC address
         if bridge['mac']:
             VyIfconfig.set_mac_address(bridge['br_name'], bridge['mac'])
-        else:
-            print("TODO: change mac mac address to the autoselected one based on member interfaces"
 
         # update interface description used e.g. within SNMP
         VyIfconfig.set_description(bridge['br_name'], bridge['description'])
@@ -275,6 +285,13 @@ def apply(bridge):
 
         # ARP cache entry timeout in seconds
         VyIfconfig.set_arp_cache_timeout(bridge['br_name'], bridge['arp_cache_timeout_ms'])
+
+        # Configure interface address(es)
+        for addr in bridge['address_remove']:
+            VyIfconfig.remove_interface_address(bridge['br_name'], addr)
+
+        for addr in bridge['address']:
+            VyIfconfig.add_interface_address(bridge['br_name'], addr)
 
     return None
 

@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import vyos.validate
 
 def validate_mac_address(addr):
     # a mac address consits out of 6 octets
@@ -109,5 +110,44 @@ def set_link_detect(intf, enable):
         f.write('1')
         if os.path.isfile('/usr/bin/vtysh'):
           os.system('/usr/bin/vtysh -c "configure terminal" -c "interface {}" -c "no link-detect"'.format(intf))
+
+    pass
+
+def add_interface_address(intf, addr):
+    """
+    Configure an interface IPv4/IPv6 address
+    """
+    if addr == "dhcp":
+        os.system('/opt/vyatta/sbin/vyatta-interfaces.pl --dev="{}" --dhcp=start'.format(intf))
+    elif addr == "dhcpv6":
+        os.system('/opt/vyatta/sbin/vyatta-dhcpv6-client.pl --start -ifname "{}"'.format(intf))
+    elif vyos.validate.is_ipv4(addr):
+        if not vyos.validate.is_intf_addr_assigned(intf, addr):
+            print("Assigning {} to {}".format(addr, intf))
+            os.system('sudo ip -4 addr add "{}" broadcast + dev "{}"'.format(addr, intf))
+    elif vyos.validate.is_ipv6(addr):
+        if not vyos.validate.is_intf_addr_assigned(intf, addr):
+            print("Assigning {} to {}".format(addr, intf))
+            os.system('sudo ip -6 addr add "{}" dev "{}"'.format(addr, intf))
+    else:
+        raise ConfigError('{} is not a valid interface address'.format(addr))
+
+    pass
+
+def remove_interface_address(intf, addr):
+    """
+    Remove IPv4/IPv6 address from given interface
+    """
+
+    if addr == "dhcp":
+        os.system('/opt/vyatta/sbin/vyatta-interfaces.pl --dev="{}" --dhcp=stop'.format(intf))
+    elif addr == "dhcpv6":
+        os.system('/opt/vyatta/sbin/vyatta-dhcpv6-client.pl --stop -ifname "{}"'.format(intf))
+    elif vyos.validate.is_ipv4(addr):
+        os.system('ip -4 addr del "{}" dev "{}"'.format(addr, intf))
+    elif vyos.validate.is_ipv6(addr):
+        os.system('ip -6 addr del "{}" dev "{}"'.format(addr, intf))
+    else:
+        raise ConfigError('{} is not a valid interface address'.format(addr))
 
     pass
