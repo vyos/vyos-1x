@@ -42,7 +42,9 @@ def is_ipv6(addr):
 
 def is_intf_addr_assigned(intf, addr):
     """
-    Verify if the given IPv4/IPv6 address is assigned to specific interface
+    Verify if the given IPv4/IPv6 address is assigned to specific interface.
+    It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
+    address 192.0.2.1/24.
     """
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
@@ -61,8 +63,28 @@ def is_intf_addr_assigned(intf, addr):
         # Check every IP address on this interface for a match
         for ip in netifaces.ifaddresses(intf)[addr_type]:
             # Check if it matches to the address requested
-            if ip['addr'] == addr:
-                return True
+            # If passed address contains a '/' indicating a normalized IP
+            # address we have to take this into account, too
+            if r'/' in addr:
+                prefixlen = ''
+                if is_ipv6(addr):
+                     # Note that currently expanded netmasks are not supported. That means
+                     # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
+                     # see https://docs.python.org/3/library/ipaddress.html
+                     bits =  bin( int(ip['netmask'].replace(':',''), 16) ).count('1')
+                     prefixlen = '/' + str(bits)
+
+                else:
+                     prefixlen = '/' + str(ipaddress.IPv4Network('0.0.0.0/' + ip['netmask']).prefixlen)
+
+                # construct temporary variable holding IPv6 address and netmask
+                # in CIDR notation
+                tmp = ip['addr'] + prefixlen
+                if addr == tmp:
+                    return True
+
+            elif ip['addr'] == addr:
+                    return True
 
     return False
 
