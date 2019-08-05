@@ -19,7 +19,6 @@
           <leafNode name="address">
             <properties>
               <help>IP address</help>
-              <priority>320</priority>
               <valueHelp>
                 <format>ipv4net</format>
                 <description>IPv4 address and prefix length</description>
