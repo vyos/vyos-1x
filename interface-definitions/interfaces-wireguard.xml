@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/wireguard.py">
+      <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/interface-wireguard.py">
         <properties>
           <help>WireGuard interface name</help>
           <priority>459</priority> <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->

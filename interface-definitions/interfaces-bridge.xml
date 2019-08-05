@@ -1,0 +1,269 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/interface-bridge.py">
+        <properties>
+          <help>Bridge interface name</help>
+          <priority>310</priority>
+          <constraint>
+            <regex>^br[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Bridge interface must be named brN</constraintErrorMessage>
+          <valueHelp>
+            <format>brN</format>
+            <description>Bridge interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help>
+              <completionHelp>
+                <list>dhcp dhcpv6</list>
+              </completionHelp>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dhcp</format>
+                <description>Dynamic Host Configuration Protocol</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dhcpv6</format>
+                <description>Dynamic Host Configuration Protocol for IPv6</description>
+              </valueHelp>
+              <constraint>
+                <validator name="cidr"/>
+                <regex>(dhcp|dhcpv6)</regex>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="aging">
+            <properties>
+              <help>Interval addresses are retained</help>
+              <valueHelp>
+                <format>0</format>
+                <description>Disable retaining address in bridge (always flood)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>10-1000000</format>
+                <description>Address aging time for bridge seconds (default 300)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-0"/>
+                <validator name="numeric" argument="--range 10-1000000"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Interface description</help>
+              <constraint>
+                <regex>^.{1,256}$</regex>
+              </constraint>
+              <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="dhcp-options">
+            <properties>
+              <help>DHCP options</help>
+            </properties>
+            <children>
+              <leafNode name="client-id">
+                <properties>
+                  <help>DHCP client identifier</help>
+                </properties>
+              </leafNode>
+              <leafNode name="host-name">
+                <properties>
+                  <help>DHCP client host name (overrides the system host name)</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="dhcpv6-options">
+            <properties>
+              <help>DHCPv6 options</help>
+              <priority>319</priority>
+            </properties>
+            <children>
+              <leafNode name="parameters-only">
+                <properties>
+                  <help>Acquire only config parameters, no address</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="temporary">
+                <properties>
+                  <help>IPv6 "temporary" address</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="disable-link-detect">
+            <properties>
+              <help>Ignore link state changes</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable this bridge interface</help>
+            </properties>
+          </leafNode>
+          <leafNode name="forwarding-delay">
+            <properties>
+              <help>Forwarding delay</help>
+              <valueHelp>
+                <format>0-200</format>
+                <description>Spanning Tree Protocol forwarding delay in seconds (default 15)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-200"/>
+              </constraint>
+              <constraintErrorMessage>Forwarding delay must be between 0 and 200 seconds</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="hello-time">
+            <properties>
+              <help>Hello packet advertisment interval</help>
+              <valueHelp>
+                <format>1-10</format>
+                <description>Spanning Tree Protocol hello advertisement interval in seconds (default 2)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-10"/>
+              </constraint>
+              <constraintErrorMessage>Bridge Hello interval must be between 1 and 10 seconds</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="igmp">
+            <properties>
+              <help>Internet Group Management Protocol (IGMP) settings</help>
+            </properties>
+            <children>
+              <leafNode name="querier">
+                <properties>
+                  <help>Enable IGMP querier</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="ip">
+            <children>
+              <leafNode name="arp-cache-timeout">
+                <properties>
+                  <help>ARP cache entry timeout in seconds</help>
+                  <valueHelp>
+                    <format>1-86400</format>
+                    <description>ARP cache entry timout in seconds (default 30)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-86400"/>
+                  </constraint>
+                  <constraintErrorMessage>Bridge max aging value must be between 6 and 86400 seconds</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="mac">
+            <properties>
+              <help>Media Access Control (MAC) address</help>
+              <valueHelp>
+                <format>h:h:h:h:h:h</format>
+                <description>Hardware (MAC) address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="mac-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="max-age">
+            <properties>
+              <help>Interval at which neighbor bridges are removed</help>
+              <valueHelp>
+                <format>1-40</format>
+                <description>Bridge maximum aging time in seconds (default 20)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-40"/>
+              </constraint>
+              <constraintErrorMessage>Bridge max aging value must be between 1 and 40 seconds</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="member">
+            <properties>
+              <help>Bridge member interfaces</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Member interface name</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="cost">
+                    <properties>
+                      <help>Bridge port cost</help>
+                      <valueHelp>
+                        <format>1-65535</format>
+                        <description>Path cost value for Spanning Tree Protocol</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>Path cost value must be between 1 and 65535</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="priority">
+                    <properties>
+                      <help>Bridge port priority</help>
+                      <valueHelp>
+                        <format>0-63</format>
+                        <description>Bridge port priority</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-63"/>
+                      </constraint>
+                      <constraintErrorMessage>Port priority value must be between 0 and 63</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <leafNode name="priority">
+            <properties>
+              <help>Priority for this bridge</help>
+              <valueHelp>
+                <format>0-65535</format>
+                <description>Bridge priority (default 32768)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-65535"/>
+              </constraint>
+              <constraintErrorMessage>Bridge priority must be between 0 and 65535 (multiples of 4096)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="stp">
+            <properties>
+              <help>Enable spanning tree protocol</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
