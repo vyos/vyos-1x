@@ -116,6 +116,7 @@ class ConfigSession(object):
         output = p.stdout.read().decode()
         if result != 0:
             raise ConfigSessionError(output)
+        return output
 
     def get_session_env(self):
         return self.__session_env
