@@ -19,6 +19,9 @@
           <leafNode name="address">
             <properties>
               <help>IP address</help>
+              <completionHelp>
+                <list>dhcp dhcpv6</list>
+              </completionHelp>
               <valueHelp>
                 <format>ipv4net</format>
                 <description>IPv4 address and prefix length</description>
