@@ -55,10 +55,13 @@ server {
         server_name {{ l_addr }};
 {% endfor %}
 
-        location / {
+        # proxy settings for HTTP API, if enabled; 503, if not
+        location ~ /(retrieve|configure) {
 {% if api %}
                 proxy_pass http://localhost:{{ api.port }};
                 proxy_buffering off;
+{% else %}
+                return 503;
 {% endif %}
         }
 

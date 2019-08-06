@@ -84,14 +84,15 @@ def generate(http_api):
 def apply(http_api):
     if http_api is not None:
         os.system('sudo systemctl restart vyos-http-api.service')
-        for dep in dependencies:
-            cmd = '{0}/{1}'.format(vyos_conf_scripts_dir, dep)
-            try:
-                subprocess.check_call(cmd, shell=True)
-            except subprocess.CalledProcessError as err:
-                raise ConfigError("{}.".format(err))
     else:
         os.system('sudo systemctl stop vyos-http-api.service')
+
+    for dep in dependencies:
+        cmd = '{0}/{1}'.format(vyos_conf_scripts_dir, dep)
+        try:
+            subprocess.check_call(cmd, shell=True)
+        except subprocess.CalledProcessError as err:
+            raise ConfigError("{}.".format(err))
 
 if __name__ == '__main__':
     try:
