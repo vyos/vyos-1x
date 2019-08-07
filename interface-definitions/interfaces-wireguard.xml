@@ -20,7 +20,7 @@
             <properties>
               <help>IP address</help> 
               <constraint>
-                <validator name="cidr"/>
+                <validator name="ip-cidr"/>
               </constraint>
               <valueHelp>
                 <format>ipv4net</format>

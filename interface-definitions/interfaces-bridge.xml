@@ -39,7 +39,7 @@
                 <description>Dynamic Host Configuration Protocol for IPv6</description>
               </valueHelp>
               <constraint>
-                <validator name="cidr"/>
+                <validator name="ip-cidr"/>
                 <regex>(dhcp|dhcpv6)</regex>
               </constraint>
               <multi/>
