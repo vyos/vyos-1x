@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2019 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Description:
+# Check if a given file exists on the system. Used for files that
+# are referenced from the CLI and need to be preserved during an image upgrade.
+# Warn the user if these aren't under /config
+
+import os
+import sys
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--directory", type=str, help="File must be present in this directory.")
+parser.add_argument("-e", "--error", action="store_true", help="Tread warnings as errors - change exit code to '1'")
+parser.add_argument("file", type=str, help="Path of file to validate")
+
+args = parser.parse_args()
+
+msg_prefix = "WARNING: "
+if args.error:
+    msg_prefix = "ERROR: "
+
+#
+# Always check if the given file exists
+#
+if not os.path.exists(args.file):
+    print(msg_prefix + "File '{}' not found".format(args.file))
+    if args.error:
+        sys.exit(1)
+    else:
+        sys.exit(0)
+
+#
+# Optional check if the file is under a certain directory path
+#
+if args.directory:
+    # remove directory path from path to verify
+    rel_filename = args.file.replace(args.directory, '').lstrip('/')
+
+    if not os.path.exists(args.directory + '/' + rel_filename):
+        print(msg_prefix + "'{}' lies outside of '{}' directory.\n" \
+              "It will not get preserved during image upgrade!".format(args.file, args.directory))
+        if args.error:
+            sys.exit(1)
+        else:
+            sys.exit(0)
+
+sys.exit(0)
