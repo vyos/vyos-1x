@@ -67,6 +67,19 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="dnsv6-servers">
+                <properties>
+                  <help>IPv6 Domain Name Service (DNS) server</help>
+                  <valueHelp>
+                  <format>ipv6</format>
+                    <description>IPv6 DNS address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi />
+                </properties>
+              </leafNode>
               <node name="lns">
                 <properties>
                   <help>L2TP Network Server (LNS)</help>
@@ -249,6 +262,33 @@
                       <valueHelp>
                         <format>ipv4net</format>
                         <description>IPv4 subnet address</description>
+                      </valueHelp>
+                      <multi />
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="client-ipv6-pool">
+                <properties>
+                  <help>Pool of client IPv6 addresses</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPV6 prefix delegation</help>
+                      <valueHelp>
+                        <format>ipv6prefix/mask,prefix_len</format>
+                        <description>e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients</description>
+                      </valueHelp>
+                      <multi />
+                    </properties>
+                  </leafNode>
+                  <leafNode name="delegate-prefix">
+                    <properties>
+                      <help>DHCPv6 prefix delegation - rfc3633</help>
+                      <valueHelp>
+                        <format>ipv6prefix/mask,prefix_len</format>
+                        <description>Delegate to clients through DHCPv6 prefix delegation - rfc3633</description>
                       </valueHelp>
                       <multi />
                     </properties>
