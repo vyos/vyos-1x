@@ -53,6 +53,9 @@ radius
 {% endif -%}
 ippool
 shaper
+ipv6pool
+ipv6_nd
+ipv6_dhcp
 
 [core]
 thread-count={{thread_cnt}}
@@ -71,6 +74,13 @@ dns1={{dns[0]}}
 dns2={{dns[1]}}
 {% endif %}
 {% endif -%}
+
+{% if dnsv6 %}
+[ipv6-dns]
+{% for srv in dnsv6: %}
+{{srv}}
+{% endfor %}
+{% endif %}
 
 {% if wins %}
 [wins]
@@ -127,6 +137,9 @@ lcp-echo-interval=30
 {% if ccp_disable %}
 ccp=0
 {% endif %}
+{% if client_ipv6_pool %}
+ipv6=allow
+{% endif %}
 
 {% if authentication['mode'] == 'radius' %}
 [radius]
@@ -159,6 +172,21 @@ gw-ip-address={{outside_nexthop}}
 verbose=1
 {% endif -%}
 
+{% if client_ipv6_pool %}
+[ipv6-pool]
+{% for prfx in client_ipv6_pool.prefix: %}
+{{prfx}}
+{% endfor %}
+{% for prfx in client_ipv6_pool.delegate_prefix: %}
+delegate={{prfx}}
+{% endfor %}
+{% endif %}
+
+{% if client_ipv6_pool['delegate_prefix'] %}
+[ipv6-dhcp]
+verbose=1
+{% endif %}
+
 {% if authentication['radiusopt']['shaper'] %}
 [shaper]
 verbose=1
@@ -170,6 +198,7 @@ vendor={{authentication['radiusopt']['shaper']['vendor']}}
 
 [cli]
 tcp=127.0.0.1:2004
+sessions-columns=ifname,username,calling-sid,ip,{{ip6_column}}{{ip6_dp_column}}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
 
 '''
 
@@ -250,10 +279,14 @@ def get_config():
     'outside_addr'        : '',
     'outside_nexthop'     : '',
     'dns'                 : [],
+    'dnsv6'               : [],
     'wins'                : [],
     'client_ip_pool'      : None,
     'client_ip_subnets'   : [],
-    'mtu'              : '1436',
+    'client_ipv6_pool'    : {},
+    'mtu'                 : '1436',
+    'ip6_column'          : '',
+    'ip6_dp_column'       : '',
   }
 
   ### general options ###
@@ -262,6 +295,9 @@ def get_config():
     config_data['dns'].append( c.return_value('dns-servers server-1'))
   if c.exists('dns-servers server-2'):
     config_data['dns'].append( c.return_value('dns-servers server-2'))
+  if c.exists('dnsv6-servers'):
+    for dns6_server in c.return_values('dnsv6-servers'):
+      config_data['dnsv6'].append(dns6_server)
   if c.exists('wins-servers server-1'):
     config_data['wins'].append( c.return_value('wins-servers server-1'))
   if c.exists('wins-servers server-2'):
@@ -369,6 +405,13 @@ def get_config():
   if c.exists('client-ip-pool subnet'):
     config_data['client_ip_subnets'] = c.return_values('client-ip-pool subnet')
 
+  if c.exists('client-ipv6-pool prefix'):
+    config_data['client_ipv6_pool']['prefix'] = c.return_values('client-ipv6-pool prefix')
+    config_data['ip6_column'] = 'ip6,'
+  if c.exists('client-ipv6-pool delegate-prefix'):
+    config_data['client_ipv6_pool']['delegate_prefix'] = c.return_values('client-ipv6-pool delegate-prefix')
+    config_data['ip6_dp_column'] = 'ip6-dp,'
+
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
 
@@ -423,6 +466,13 @@ def verify(c):
   if not c['outside_nexthop']:
     #raise ConfigError('set vpn l2tp remote-access outside-nexthop required')
     print ("WARMING: set vpn l2tp remote-access outside-nexthop required")
+
+  ## check ipv6
+  if 'delegate_prefix' in c['client_ipv6_pool'] and not 'prefix' in c['client_ipv6_pool']:
+    raise ConfigError("\"set vpn l2tp remote-access client-ipv6-pool prefix\" required for delegate-prefix ")
+
+  if len(c['dnsv6']) > 3:
+    raise ConfigError("Maximum allowed dnsv6-servers addresses is 3")
 
 def generate(c):
   if c == None:
