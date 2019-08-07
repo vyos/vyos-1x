@@ -5,7 +5,8 @@
       <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/interface-wireguard.py">
         <properties>
           <help>WireGuard interface name</help>
-          <priority>459</priority> <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->
+          <priority>459</priority>
+          <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->
           <constraint>
             <regex>^wg[0-9]{1,4}</regex>
           </constraint>
@@ -18,7 +19,7 @@
         <children>
           <leafNode name="address">
             <properties>
-              <help>IP address</help> 
+              <help>IP address</help>
               <constraint>
                 <validator name="ip-cidr"/>
               </constraint>
@@ -45,7 +46,7 @@
           <leafNode name="disable">
             <properties>
               <help>disables interface</help>
-              <valueless />
+              <valueless/>
             </properties>
           </leafNode>
           <leafNode name="port">
@@ -88,7 +89,7 @@
               <leafNode name="disable">
                 <properties>
                   <help>disables peer</help>
-                  <valueless />
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="pubkey">
@@ -100,7 +101,7 @@
                   <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
                 </properties>
               </leafNode>
-                <leafNode name="preshared-key">
+              <leafNode name="preshared-key">
                 <properties>
                   <help>base64 encoded preshared key</help>
                   <constraint>
@@ -115,7 +116,7 @@
                   <constraint>
                     <validator name="ip-prefix"/>
                   </constraint>
-                <multi/>
+                  <multi/>
                 </properties>
               </leafNode>
               <!--  eventually check format IP:port -->
@@ -128,7 +129,7 @@
                 <properties>
                   <help>how often send keep alives in seconds</help>
                   <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/> 
+                    <validator name="numeric" argument="--range 1-65535"/>
                   </constraint>
                 </properties>
               </leafNode>
