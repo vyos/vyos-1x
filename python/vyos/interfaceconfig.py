@@ -17,13 +17,14 @@
 
 import sys
 import os
+import re
 import json
 import socket
 import subprocess
 
 dhclient_conf_dir = r'/var/lib/dhcp/dhclient_'
 
-class Interface():
+class Interface:
   def __init__(self, ifname=None, type=None):
     if not ifname:
       raise Exception("interface name required")
@@ -40,7 +41,69 @@ class Interface():
             print(str(e.output.decode()))
             sys.exit(0)
 
-    self.ifname = str(ifname)
+    self._ifname = str(ifname)
+
+
+  @property
+  def mtu(self):
+    return self._mtu
+
+  @mtu.setter
+  def mtu(self, mtu=None):
+    if mtu < 68 or mtu > 9000:
+      raise ValueError("mtu size invalid value")
+    self._mtu = mtu
+    try:
+      ret = subprocess.check_output(['ip link set mtu ' + str(mtu) + ' dev ' + self._ifname], shell=True).decode()
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+
+
+  @property
+  def macaddr(self):
+    return self._macaddr
+
+  @macaddr.setter
+  def macaddr(self, mac=None):
+    if not re.search('^[a-f0-9:]{17}$', str(mac)):
+      raise ValueError("mac address invalid")
+    self._macaddr = str(mac)
+    try:
+      ret = subprocess.check_output(['ip link set address ' + mac + ' ' + self._ifname], shell=True).decode()
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+
+  @property
+  def ifalias(self):
+    return self._ifalias
+
+  @ifalias.setter
+  def ifalias(self, ifalias=None):
+    if not ifalias:
+      self._ifalias = self._ifname
+    else:
+      self._ifalias = str(ifalias)      
+    open('/sys/class/net/{0}/ifalias'.format(self._ifname),'w').write(self._ifalias)
+
+  @property
+  def linkstate(self):
+    return self._linkstate
+
+  @linkstate.setter
+  def linkstate(self, state='up'):
+    if str(state).lower() == 'up' or str(state).lower() == 'down':
+      self._linkstate = str(state).lower()
+    else:
+      self._linkstate = 'up'
+    try:
+      ret = subprocess.check_output(['ip link set dev ' + self._ifname + ' ' + state], shell=True).decode()
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+
+
 
   def _debug(self, e=None):
     """ 
@@ -52,68 +115,19 @@ class Interface():
       return True
     return False
 
-
-  def set_alias(self, alias=None):
-    if not alias:
-      open('/sys/class/net/{0}/ifalias'.format(self.ifname),'w').write(self.ifname)
-    else:
-      open('/sys/class/net/{0}/ifalias'.format(self.ifname),'w').write(str(alias))
-
-  def get_alias(self):
-    return open('/sys/class/net/{0}/ifalias'.format(self.ifname),'r').read()
-
-  def del_alias(self):
-    open('/sys/class/net/{0}/ifalias'.format(self.ifname),'w').write()  
-
-
-  def set_link_state(self, state="up"):
-    if state.lower() == 'up' or state.lower() == 'down':
-      try:
-        ret = subprocess.check_output(['ip link set dev ' + self.ifname + ' ' + state], shell=True).decode()
-        return 0 
-      except subprocess.CalledProcessError as e:
+  def get_mtu(self):
+    try:
+      ret = subprocess.check_output(['ip -j link list dev ' + self._ifname], shell=True).decode()
+      a = json.loads(ret)[0]
+      return a['mtu']
+    except subprocess.CalledProcessError as e:
         if self._debug():
           self._debug(e)
-        return 1 
-    else:
-      raise ValueError("value can only be up or down")
-
-  def get_link_state(self):
-    """
-        returns either up/down or None if it can't find the state
-    """
-    try:
-      ret = subprocess.check_output(['ip -j link show ' + self.ifname], shell=True).decode()
-      s = json.loads(ret)
-      return s[0]['operstate'].lower()
-    except subprocess.CalledProcessError as e:
-      if self._debug():
-        self._debug(e)
-      return None
-
-
-  def remove_interface(self):
-    try:
-      ret = subprocess.check_output(['ip link del dev ' + self.ifname], shell=True).decode()
-      return 0
-    except subprocess.CalledProcessError as e:
-      if self._debug():
-        self._debug(e)
-      return None
-
-
-  def set_macaddr(self, mac=None):
-    # ip will give us an error if the mac is invalid
-    try:
-      ret = subprocess.check_output(['ip link set address ' + mac + ' ' + self.ifname], shell=True).decode()
-    except subprocess.CalledProcessError as e:
-      if self._debug():
-        self._debug(e)
-      return None
+        return None
 
   def get_macaddr(self):
     try:
-      ret = subprocess.check_output(['ip -j -4 link show dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      ret = subprocess.check_output(['ip -j -4 link show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       j = json.loads(ret)
       return j[0]['address']
     except subprocess.CalledProcessError as e:
@@ -121,6 +135,33 @@ class Interface():
         self._debug(e)
       return None
 
+  def get_alias(self):
+    return open('/sys/class/net/{0}/ifalias'.format(self._ifname),'r').read()
+
+  def del_alias(self):
+    open('/sys/class/net/{0}/ifalias'.format(self._ifname),'w').write()
+
+  def get_link_state(self):
+    """
+        returns either up/down or None if it can't find the state
+    """
+    try:
+      ret = subprocess.check_output(['ip -j link show ' + self._ifname], shell=True).decode()
+      s = json.loads(ret)
+      return s[0]['operstate'].lower()
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+      return None
+
+  def remove_interface(self):
+    try:
+      ret = subprocess.check_output(['ip link del dev ' + self._ifname], shell=True).decode()
+      return 0
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+      return None
 
   def get_ipv4_addr(self):
     """
@@ -129,7 +170,7 @@ class Interface():
     """
     ips = []
     try:
-      ret = subprocess.check_output(['ip -j -4 addr show dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      ret = subprocess.check_output(['ip -j -4 addr show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       j = json.loads(ret)
       for i in j:
         if len(i) != 0:
@@ -149,7 +190,7 @@ class Interface():
     """
     ips = []
     try:
-      ret = subprocess.check_output(['ip -j -6 addr show dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      ret = subprocess.check_output(['ip -j -6 addr show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       j = json.loads(ret)
       for i in j:
         if len(i) != 0:
@@ -168,7 +209,7 @@ class Interface():
     """
     for ip in ipaddr:
       try:
-        ret = subprocess.check_output(['ip -4 address add ' + ip + ' dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+        ret = subprocess.check_output(['ip -4 address add ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       except subprocess.CalledProcessError as e:
         if self._debug():
           self._debug(e)
@@ -182,7 +223,7 @@ class Interface():
     """
     for ip in ipaddr:
       try:
-        ret = subprocess.check_output(['ip -4 address del ' + ip + ' dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+        ret = subprocess.check_output(['ip -4 address del ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       except subprocess.CalledProcessError as e:
         if self._debug():
           self._debug(e)
@@ -196,7 +237,7 @@ class Interface():
     """
     for ip in ipaddr:
       try:
-        ret = subprocess.check_output(['ip -6 address add ' + ip + ' dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+        ret = subprocess.check_output(['ip -6 address add ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       except subprocess.CalledProcessError as e:
         if self._debug():
           self._debug(e)
@@ -210,7 +251,7 @@ class Interface():
     """
     for ip in ipaddr:
       try:
-        ret = subprocess.check_output(['ip -6 address del ' + ip + ' dev ' + self.ifname], stderr=subprocess.STDOUT, shell=True).decode()
+        ret = subprocess.check_output(['ip -6 address del ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       except subprocess.CalledProcessError as e:
         if self._debug():
           self._debug(e)
@@ -218,38 +259,16 @@ class Interface():
     return True
 
 
-  def get_mtu(self):
-    try:
-      ret = subprocess.check_output(['ip -j link list dev ' + self.ifname], shell=True).decode()
-      a = json.loads(ret)[0]
-      return a['mtu']
-    except subprocess.CalledProcessError as e:
-        if self._debug():
-          self._debug(e)
-        return None
-
-  def set_mtu(self, mtu=None):
-    if not mtu:
-      return None
-    try:
-      ret = subprocess.check_output(['ip link set mtu ' + str(mtu) + ' dev ' + self.ifname], shell=True).decode()
-      return True
-    except subprocess.CalledProcessError as e:
-      if self._debug():
-        self._debug(e)
-      return None
-
-
   #### replace dhcpv4/v6 with systemd.networkd?
   def set_dhcpv4(self):
-    conf_file = dhclient_conf_dir + self.ifname + '.conf'
-    pidfile   = dhclient_conf_dir + self.ifname + '.pid'
-    leasefile = dhclient_conf_dir + self.ifname + '.leases'
+    conf_file = dhclient_conf_dir + self._ifname + '.conf'
+    pidfile   = dhclient_conf_dir + self._ifname + '.pid'
+    leasefile = dhclient_conf_dir + self._ifname + '.leases'
 
     a = [ 
           '# generated by interface_config.py',
           'option rfc3442-classless-static-routes code 121 = array of unsigned integer 8;',
-          'interface \"' + self.ifname + '\" {',
+          'interface \"' + self._ifname + '\" {',
           '\tsend host-name \"' + socket.gethostname() +'\";',
           '\trequest subnet-mask, broadcast-address, routers, domain-name-servers, rfc3442-classless-static-routes, domain-name, interface-mtu;',
           '}' 
@@ -259,14 +278,14 @@ class Interface():
     for ln in a:
       cnf +=str(ln + "\n")
     open(conf_file, 'w').write(cnf)
-    if os.path.exists(dhclient_conf_dir + self.ifname + '.pid'):
+    if os.path.exists(dhclient_conf_dir + self._ifname + '.pid'):
       try:
         ret = subprocess.check_output(['/sbin/dhclient -4 -r -pf ' + pidfile], shell=True).decode()
       except subprocess.CalledProcessError as e:
         if self._debug():
           self._debug(e)
     try:
-      ret = subprocess.check_output(['/sbin/dhclient -4 -q -nw -cf ' + conf_file + ' -pf ' + pidfile + ' -lf ' + leasefile + ' ' + self.ifname], shell=True).decode()
+      ret = subprocess.check_output(['/sbin/dhclient -4 -q -nw -cf ' + conf_file + ' -pf ' + pidfile + ' -lf ' + leasefile + ' ' + self._ifname], shell=True).decode()
       return True
     except subprocess.CalledProcessError as e:
       if self._debug():
@@ -274,9 +293,9 @@ class Interface():
       return None
 
   def del_dhcpv4(self):
-    conf_file = dhclient_conf_dir + self.ifname + '.conf'
-    pidfile   = dhclient_conf_dir + self.ifname + '.pid'
-    leasefile = dhclient_conf_dir + self.ifname + '.leases'
+    conf_file = dhclient_conf_dir + self._ifname + '.conf'
+    pidfile   = dhclient_conf_dir + self._ifname + '.pid'
+    leasefile = dhclient_conf_dir + self._ifname + '.leases'
     if not os.path.exists(pidfile):
       return 1 
     try:
@@ -288,23 +307,23 @@ class Interface():
       return None
 
   def get_dhcpv4(self):
-    pidfile = dhclient_conf_dir + self.ifname + '.pid'
+    pidfile = dhclient_conf_dir + self._ifname + '.pid'
     if not os.path.exists(pidfile):
-      print ("no dhcp client running on interface {0}".format(self.ifname))
+      print ("no dhcp client running on interface {0}".format(self._ifname))
       return False
     else:
       pid = open(pidfile, 'r').read()
-      print("dhclient running on {0} with pid {1}".format(self.ifname, pid))
+      print("dhclient running on {0} with pid {1}".format(self._ifname, pid))
       return True
 
 
   def set_dhcpv6(self):
-    conf_file = dhclient_conf_dir +  self.ifname + '.v6conf'
-    pidfile   = dhclient_conf_dir + self.ifname + '.v6pid'
-    leasefile = dhclient_conf_dir + self.ifname + '.v6leases'
+    conf_file = dhclient_conf_dir +  self._ifname + '.v6conf'
+    pidfile   = dhclient_conf_dir + self._ifname + '.v6pid'
+    leasefile = dhclient_conf_dir + self._ifname + '.v6leases'
     a = [
           '# generated by interface_config.py',
-          'interface \"' + self.ifname + '\" {',
+          'interface \"' + self._ifname + '\" {',
           '\trequest routers, domain-name-servers, domain-name;',
           '}'
         ]
@@ -312,7 +331,7 @@ class Interface():
     for ln in a:
       cnf +=str(ln + "\n")
     open(conf_file, 'w').write(cnf)
-    subprocess.call(['sysctl', '-q', '-w', 'net.ipv6.conf.' + self.ifname + '.accept_ra=0'])
+    subprocess.call(['sysctl', '-q', '-w', 'net.ipv6.conf.' + self._ifname + '.accept_ra=0'])
     if os.path.exists(pidfile):
       try:
         ret = subprocess.check_output(['/sbin/dhclient -6 -q -x -pf ' + pidfile], shell=True).decode()
@@ -320,7 +339,7 @@ class Interface():
         if self._debug():
           self._debug(e)
     try:
-      ret = subprocess.check_output(['/sbin/dhclient -6 -q -nw -cf ' + conf_file + ' -pf ' + pidfile + ' -lf ' + leasefile + ' ' + self.ifname], shell=True).decode()
+      ret = subprocess.check_output(['/sbin/dhclient -6 -q -nw -cf ' + conf_file + ' -pf ' + pidfile + ' -lf ' + leasefile + ' ' + self._ifname], shell=True).decode()
       return True
     except subprocess.CalledProcessError as e:
       if self._debug():
@@ -328,14 +347,14 @@ class Interface():
       return None
 
   def del_dhcpv6(self):
-    conf_file = dhclient_conf_dir +  self.ifname + '.v6conf'
-    pidfile   = dhclient_conf_dir + self.ifname + '.v6pid'
-    leasefile = dhclient_conf_dir + self.ifname + '.v6leases'
+    conf_file = dhclient_conf_dir +  self._ifname + '.v6conf'
+    pidfile   = dhclient_conf_dir + self._ifname + '.v6pid'
+    leasefile = dhclient_conf_dir + self._ifname + '.v6leases'
     if not os.path.exists(pidfile):
       return 1
     try:
       ret = subprocess.check_output(['/sbin/dhclient -6 -q -x -pf ' + pidfile], shell=True).decode()
-      subprocess.call(['sysctl', '-q', '-w', 'net.ipv6.conf.' + self.ifname + '.accept_ra=1'])
+      subprocess.call(['sysctl', '-q', '-w', 'net.ipv6.conf.' + self._ifname + '.accept_ra=1'])
       return True
     except subprocess.CalledProcessError as e:
       if self._debug():
@@ -343,13 +362,13 @@ class Interface():
       return None
 
   def get_dhcpv6(self):
-    pidfile = dhclient_conf_dir + self.ifname + '.v6pid'
+    pidfile = dhclient_conf_dir + self._ifname + '.v6pid'
     if not os.path.exists(pidfile):
-      print ("no dhcpv6 client running on interface {0}".format(self.ifname))
+      print ("no dhcpv6 client running on interface {0}".format(self._ifname))
       return False
     else:
       pid = open(pidfile, 'r').read()
-      print("dhclientv6 running on {0} with pid {1}".format(self.ifname, pid))
+      print("dhclientv6 running on {0} with pid {1}".format(self._ifname, pid))
       return True
 
 
