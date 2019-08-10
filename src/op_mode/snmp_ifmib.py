@@ -77,10 +77,16 @@ def show_ifdescr(i):
     proc = subprocess.Popen(['/usr/bin/lspci', '-mm', '-d', device], stdout=subprocess.PIPE)
     (out, err) = proc.communicate()
 
+    vendor = ""
+    device = ""
+
     # convert output to string
     string = out.decode("utf-8").split('"')
-    vendor = string[3]
-    device = string[5]
+    if len(string) > 3:
+      vendor = string[3]
+
+    if len(string) > 5:
+      device = string[5]
 
     ret = 'ifDescr = {0} {1}'.format(vendor, device)
     return ret.replace('\n', '')
