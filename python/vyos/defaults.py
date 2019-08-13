@@ -27,3 +27,15 @@ cfg_group = 'vyattacfg'
 cfg_vintage = 'vyatta'
 
 commit_lock = '/opt/vyatta/config/.lock'
+
+https_data = {
+    'listen_address' : [ '127.0.0.1' ]
+}
+
+api_data = {
+    'listen_address' : '127.0.0.1',
+    'port' : '8080',
+    'strict' : 'false',
+    'debug' : 'false',
+    'api_keys' : [ {"id": "testapp", "key": "qwerty"} ]
+}

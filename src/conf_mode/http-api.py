@@ -27,14 +27,6 @@ from vyos import ConfigError
 
 config_file = '/etc/vyos/http-api.conf'
 
-default_config_data = {
-    'listen_address' : '127.0.0.1',
-    'port' : '8080',
-    'strict' : 'false',
-    'debug' : 'false',
-    'api_keys' : [ {"id": "testapp", "key": "qwerty"} ]
-}
-
 vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
 
 # XXX: this model will need to be extended for tag nodes
@@ -43,7 +35,8 @@ dependencies = [
 ]
 
 def get_config():
-    http_api = default_config_data
+    http_api = vyos.defaults.api_data
+
     conf = Config()
     if not conf.exists('service https api'):
         return None

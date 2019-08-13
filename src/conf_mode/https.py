@@ -21,6 +21,7 @@ import os
 
 import jinja2
 
+import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -75,16 +76,8 @@ server {
 }
 """
 
-default_config_data = {
-    'listen_address' : [ '127.0.0.1' ]
-}
-
-default_api_config_data = {
-    'port' : '8080',
-}
-
 def get_config():
-    https = default_config_data
+    https = vyos.defaults.https_data
     conf = Config()
     if not conf.exists('service https'):
         return None
@@ -96,7 +89,7 @@ def get_config():
         https['listen_address'] = addrs[:]
 
     if conf.exists('api'):
-        https['api'] = default_api_config_data
+        https['api'] = vyos.defaults.api_data
 
     if conf.exists('api port'):
         port = conf.return_value('api port')
