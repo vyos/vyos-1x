@@ -1,0 +1,167 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="system">
+        <properties>
+          <help>Show system information</help>
+        </properties>
+        <children>
+
+          <node name="connections">
+            <properties>
+              <help>Show active network connections on the system</help>
+            </properties>
+            <command>netstat -an</command>
+            <children>
+              <node name="tcp">
+                <properties>
+                  <help>Show TCP connection information</help>
+                </properties>
+                <command>ss -t -r</command>
+                <children>
+                  <leafNode name="all">
+                    <properties>
+                      <help>Show all TCP connections</help>
+                    </properties>
+                    <command>ss -t -a</command>
+                  </leafNode>
+                  <leafNode name="numeric">
+                    <properties>
+                      <help>Show TCP connection without resolving names</help>
+                    </properties>
+                    <command>ss -t -n</command>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="udp">
+                <properties>
+                  <help>Show UDP socket information</help>
+                </properties>
+                <command>ss -u -a -r</command>
+                <children>
+                  <leafNode name="numeric">
+                    <properties>
+                      <help>Show UDP socket information without resolving names</help>
+                    </properties>
+                    <command>ss -u -a -n</command>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+
+          <leafNode name="kernel-messages">
+            <properties>
+              <help>Show messages in kernel ring buffer</help>
+            </properties>
+            <command>sudo dmesg</command>
+          </leafNode>
+
+          <node name="login">
+            <properties>
+              <help>Show user accounts</help>
+            </properties>
+            <children>
+              <node name="users">
+                <properties>
+                  <help>Show user account information</help>
+                </properties>
+                <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py</command>
+                <children>
+                  <leafNode name="all">
+                    <properties>
+                      <help>Show information about all accounts</help>
+                    </properties>
+                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py all</command>
+                  </leafNode>
+                  <leafNode name="locked">
+                    <properties>
+                      <help>Show information about locked accounts</help>
+                    </properties>
+                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py locked</command>
+                  </leafNode>
+                  <leafNode name="other">
+                    <properties>
+                      <help>Show information about non VyOS user accounts</help>
+                    </properties>
+                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py other</command>
+                  </leafNode>
+                  <leafNode name="vyos">
+                    <properties>
+                      <help>Show information about VyOS user accounts</help>
+                    </properties>
+                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py vyos</command>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+
+          <node name="memory">
+            <properties>
+              <help>Show system memory usage</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_ram.sh</command>
+            <children>
+              <leafNode name="cache">
+                <properties>
+                  <help>Show kernel cache information</help>
+                </properties>
+                <command>sudo slabtop -o</command>
+              </leafNode>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed system memory usage</help>
+                </properties>
+                <command>cat /proc/meminfo</command>
+              </leafNode>
+            </children>
+          </node>
+
+          <node name="processes">
+            <properties>
+              <help>Show system processes</help>
+            </properties>
+            <command>ps ax</command>
+            <children>
+              <leafNode name="extensive">
+                <properties>
+                  <help>Show extensive process info</help>
+                </properties>
+                <command>top -b -n1</command>
+              </leafNode>
+              <leafNode name="summary">
+                <properties>
+                  <help>Show summary of system processes</help>
+                </properties>
+                <command>uptime</command>
+              </leafNode>
+              <leafNode name="tree">
+                <properties>
+                  <help>Show process tree</help>
+                </properties>
+                <command>ps -ejH</command>
+              </leafNode>
+            </children>
+          </node>
+
+          <leafNode name="storage">
+            <properties>
+              <help>Show filesystem usage</help>
+            </properties>
+            <command>df -h -x squashfs</command>
+          </leafNode>
+
+          <leafNode name="uptime">
+            <properties>
+              <help>Show how long the system has been up</help>
+            </properties>
+            <command>uptime</command>
+          </leafNode>
+
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
