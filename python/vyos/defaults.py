@@ -39,3 +39,10 @@ api_data = {
     'debug' : 'false',
     'api_keys' : [ {"id": "testapp", "key": "qwerty"} ]
 }
+
+vyos_cert_data = {
+    "conf": "/etc/nginx/snippets/vyos-cert.conf",
+    "crt": "/etc/ssl/certs/vyos-selfsigned.crt",
+    "key": "/etc/ssl/private/vyos-selfsign",
+    "lifetime": "365",
+}
