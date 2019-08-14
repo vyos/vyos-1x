@@ -27,3 +27,22 @@ cfg_group = 'vyattacfg'
 cfg_vintage = 'vyatta'
 
 commit_lock = '/opt/vyatta/config/.lock'
+
+https_data = {
+    'listen_address' : [ '127.0.0.1' ]
+}
+
+api_data = {
+    'listen_address' : '127.0.0.1',
+    'port' : '8080',
+    'strict' : 'false',
+    'debug' : 'false',
+    'api_keys' : [ {"id": "testapp", "key": "qwerty"} ]
+}
+
+vyos_cert_data = {
+    "conf": "/etc/nginx/snippets/vyos-cert.conf",
+    "crt": "/etc/ssl/certs/vyos-selfsigned.crt",
+    "key": "/etc/ssl/private/vyos-selfsign",
+    "lifetime": "365",
+}
