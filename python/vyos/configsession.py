@@ -23,6 +23,7 @@ DELETE = '/opt/vyatta/sbin/my_delete'
 COMMENT = '/opt/vyatta/sbin/my_comment'
 COMMIT = '/opt/vyatta/sbin/my_commit'
 DISCARD = '/opt/vyatta/sbin/my_discard'
+SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -116,6 +117,7 @@ class ConfigSession(object):
         output = p.stdout.read().decode()
         if result != 0:
             raise ConfigSessionError(output)
+        return output
 
     def get_session_env(self):
         return self.__session_env
@@ -146,3 +148,10 @@ class ConfigSession(object):
 
     def discard(self):
         self.__run_command([DISCARD])
+
+    def show_config(self, path, format='raw'):
+        config_data = self.__run_command(SHOW_CONFIG + path)
+
+        if format == 'raw':
+            return config_data
+

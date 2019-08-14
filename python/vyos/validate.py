@@ -18,32 +18,33 @@ import ipaddress
 
 def is_ipv4(addr):
     """
-    Check addr if it is an IPv4 address/network.
-
-    Return True/False
+    Check addr if it is an IPv4 address/network. Returns True/False
     """
-    if ipaddress.ip_network(addr).version == 4:
+
+    # With the below statement we can check for IPv4 networks and host
+    # addresses at the same time
+    if ipaddress.ip_address(addr.split(r'/')[0]).version == 4:
         return True
     else:
         return False
 
 def is_ipv6(addr):
     """
-    Check addr if it is an IPv6 address/network.
-
-    Return True/False
+    Check addr if it is an IPv6 address/network. Returns True/False
     """
-    if ipaddress.ip_network(addr).version == 6:
+
+    # With the below statement we can check for IPv4 networks and host
+    # addresses at the same time
+    if ipaddress.ip_network(addr.split(r'/')[0]).version == 6:
         return True
     else:
         return False
 
-def is_addr_assigned(addr):
+def is_intf_addr_assigned(intf, addr):
     """
-    Verify if the given IPv4/IPv6 address is assigned to any interface on this
-    system.
-
-    Return True/False
+    Verify if the given IPv4/IPv6 address is assigned to specific interface.
+    It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
+    address 192.0.2.1/24.
     """
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
@@ -51,14 +52,51 @@ def is_addr_assigned(addr):
     if is_ipv6(addr):
         addr_type = netifaces.AF_INET6
 
-    for interface in netifaces.interfaces():
-        # check if the requested address type is configured at all
-        if addr_type in netifaces.ifaddresses(interface).keys():
-            # Check every IP address on this interface for a match
-            for ip in netifaces.ifaddresses(interface)[addr_type]:
-                # Check if it matches to the address requested
-                if ip['addr'] == addr:
+    # check if the requested address type is configured at all
+    try:
+        netifaces.ifaddresses(intf)
+    except ValueError as e:
+        print(e)
+        return False
+
+    if addr_type in netifaces.ifaddresses(intf).keys():
+        # Check every IP address on this interface for a match
+        for ip in netifaces.ifaddresses(intf)[addr_type]:
+            # Check if it matches to the address requested
+            # If passed address contains a '/' indicating a normalized IP
+            # address we have to take this into account, too
+            if r'/' in addr:
+                prefixlen = ''
+                if is_ipv6(addr):
+                     # Note that currently expanded netmasks are not supported. That means
+                     # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
+                     # see https://docs.python.org/3/library/ipaddress.html
+                     bits =  bin( int(ip['netmask'].replace(':',''), 16) ).count('1')
+                     prefixlen = '/' + str(bits)
+
+                else:
+                     prefixlen = '/' + str(ipaddress.IPv4Network('0.0.0.0/' + ip['netmask']).prefixlen)
+
+                # construct temporary variable holding IPv6 address and netmask
+                # in CIDR notation
+                tmp = ip['addr'] + prefixlen
+                if addr == tmp:
                     return True
+
+            elif ip['addr'] == addr:
+                    return True
+
+    return False
+
+def is_addr_assigned(addr):
+    """
+    Verify if the given IPv4/IPv6 address is assigned to any interface
+    """
+
+    for intf in netifaces.interfaces():
+        tmp = is_intf_addr_assigned(intf, addr)
+        if tmp == True:
+            return True
 
     return False
 

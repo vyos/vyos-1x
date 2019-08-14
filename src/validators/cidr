@@ -1,3 +1,0 @@
-#!/bin/sh
-
-ipaddrcheck --is-any-cidr $1 

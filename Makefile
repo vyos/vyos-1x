@@ -11,6 +11,7 @@ interface_definitions:
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/interfaces/node.def
+	rm -f $(TMPL_DIR)/interfaces/bridge/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -f $(TMPL_DIR)/protocols/static/node.def
 	rm -f $(TMPL_DIR)/system/node.def
@@ -35,6 +36,7 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/restart/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
+	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
 
 .PHONY: all
 all: clean interface_definitions op_mode_definitions

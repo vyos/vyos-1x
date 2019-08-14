@@ -179,6 +179,7 @@ def configure():
 @app.route('/retrieve', method='POST')
 def get_value():
     config = app.config['vyos_config']
+    session = app.config['vyos_session']
 
     api_keys = app.config['vyos_keys']
 
@@ -190,8 +191,11 @@ def get_value():
     command = bottle.request.forms.get("data")
     command = json.loads(command)
 
-    op = command['op']
-    path = " ".join(command['path'])
+    try:
+        op = command['op']
+        path = " ".join(command['path'])
+    except KeyError:
+        return error(400, "Missing required field. \"op\" and \"path\" fields are required")
 
     try:
         if op == 'returnValue':
@@ -200,6 +204,12 @@ def get_value():
             res = config.return_values(path)
         elif op == 'exists':
             res = config.exists(path)
+        elif op == 'showConfig':
+            config_format = 'raw'
+            if 'configFormat' in command:
+                config_format = command['configFormat']
+
+            res = session.show_config(command['path'], format=config_format)
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
     except VyOSError as e:
