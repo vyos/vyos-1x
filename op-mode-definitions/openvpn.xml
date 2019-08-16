@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+    <node name="openvpn">
+      <properties>
+        <help>OpenVPN key generation tool</help>
+      </properties>
+      <children>
+        <tagNode name="key">
+          <properties>
+            <help>Generate shared-secret key with specified file name</help>
+            <completionHelp>
+              <list>&lt;filename&gt;</list>
+            </completionHelp>
+          </properties>
+          <command>
+            result=1;
+            key_path=$4
+            full_path=
+
+            # Prepend /config/auth if the path is not absolute
+            if echo $key_path | egrep -ve '^/.*' > /dev/null; then
+                full_path=/config/auth/$key_path
+            else
+                full_path=$key_path
+            fi
+
+            key_dir=`dirname $full_path`
+            if [ ! -d $key_dir ]; then
+                echo "Directory $key_dir does not exist!"
+                exit 1
+            fi
+
+            echo "Generating OpenVPN key to $full_path"
+            sudo /usr/sbin/openvpn --genkey --secret "$full_path"
+            result=$?
+            if [ $result = 0 ]; then
+              echo "Your new local OpenVPN key has been generated"
+            fi
+            /usr/libexec/vyos/validators/file-exists --directory /config/auth "$full_path"
+          </command>
+        </tagNode>
+      </children>
+    </node>
+    </children>
+  </node>
+</interfaceDefinition>
