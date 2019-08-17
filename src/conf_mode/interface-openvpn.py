@@ -796,7 +796,7 @@ def verify(openvpn):
     return None
 
 def generate(openvpn):
-    if openvpn['deleted']:
+    if openvpn['deleted'] or openvpn['disable']:
         return None
 
     interface = openvpn['intf']
@@ -843,7 +843,6 @@ def generate(openvpn):
     os.chown(get_config_name(interface), uid, gid)
 
     return None
-
 
 def apply(openvpn):
     interface = openvpn['intf']
