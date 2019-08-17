@@ -58,6 +58,15 @@
             </properties>
             <command>echo kill $4 | socat - UNIX-CONNECT:/tmp/openvpn-mgmt-intf > /dev/null</command>
           </tagNode>
+          <tagNode name="interface">
+            <properties>
+              <help>Reset OpenVPN process on interface</help>
+              <completionHelp>
+                <script>sudo ${vyos_completion_dir}/list_interfaces.py --type openvpn</script>
+              </completionHelp>
+            </properties>
+            <command>sudo kill -SIGUSR1 $(cat /var/run/openvpn/$4.pid)</command>
+          </tagNode>
         </children>
       </node>
     </children>
