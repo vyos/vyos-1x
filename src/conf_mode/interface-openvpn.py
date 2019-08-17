@@ -44,6 +44,10 @@ config_tmpl = """
 # See https://community.openvpn.net/openvpn/wiki/Openvpn24ManPage
 # for individual keyword definition
 
+{% if description %}
+# {{ description }}
+{% endif %}
+
 verb 3
 status /opt/vyatta/etc/openvpn/status/{{ intf }}.status 30
 writepid /var/run/openvpn/{{ intf }}.pid
