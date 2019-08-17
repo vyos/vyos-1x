@@ -233,7 +233,7 @@ push "route {{ route }}"
 iroute {{ net }}
 {% endfor -%}
 
-{%- if disabled %}
+{%- if disable %}
 disable
 {% endif %}
 """
@@ -247,7 +247,7 @@ default_config_data = {
     'compress_lzo': False,
     'deleted': False,
     'description': '',
-    'disabled': False,
+    'disable': False,
     'encryption': '',
     'hash': '',
     'intf': '',
@@ -377,9 +377,9 @@ def get_config():
     if conf.exists('device-type'):
         openvpn['type'] = conf.return_value('device-type')
 
-    # interface disabled
-    if conf.exists('disabled'):
-        openvpn['disabled'] = True
+    # disable interface
+    if conf.exists('disable'):
+        openvpn['disable'] = True
 
     # data encryption algorithm
     if conf.exists('encryption'):
@@ -491,7 +491,7 @@ def get_config():
         conf.set_level('interfaces openvpn ' + openvpn['intf'] + ' server client ' + client)
         data = {
             'name': client,
-            'disabled': False,
+            'disable': False,
             'ip': '',
             'push_route': [],
             'subnet': [],
@@ -513,7 +513,7 @@ def get_config():
 
         # Option to disable client connection
         if conf.exists('disable'):
-            data['disabled'] = True
+            data['disable'] = True
 
         # IP address of the client
         if conf.exists('ip'):
@@ -852,7 +852,7 @@ def apply(openvpn):
             pid = int(f.read())
 
     # If tunnel interface has been deleted - stop service
-    if openvpn['deleted']:
+    if openvpn['deleted'] or openvpn['disable']:
         directory = os.path.dirname(get_config_name(interface))
 
         # we only need to stop the demon if it's running
