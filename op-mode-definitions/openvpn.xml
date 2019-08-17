@@ -71,4 +71,42 @@
       </node>
     </children>
   </node>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <node name="openvpn">
+            <properties>
+              <help>Show OpenVPN interface information</help>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed OpenVPN interface information</help>
+                </properties>
+                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf-type=openvpn --action=show</command>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="openvpn">
+            <properties>
+              <help>Show OpenVPN interface information</help>
+              <completionHelp>
+                <script>sudo ${vyos_completion_dir}/list_interfaces.py --type openvpn</script>
+              </completionHelp>
+            </properties>
+            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf=$4</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of specified OpenVPN interface information</help>
+                </properties>
+                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4" --action=show-brief</command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
