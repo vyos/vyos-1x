@@ -104,7 +104,7 @@ keepalive {{ ping_interval }} {{ ping_restart }}
 management /tmp/openvpn-mgmt-intf unix
 
 {%- if server_topology %}
-topology {% if 'site-to-site' in server_topology %}p2p{% else %}{{ server_topology }}{% endif %}
+topology {% if 'point-to-point' in server_topology %}p2p{% else %}subnet{% endif %}
 {% endif %}
 
 {% for ns in server_dns_nameserver -%}
