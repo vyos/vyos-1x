@@ -506,7 +506,7 @@ def get_config():
         #       with "topology p2p", this is "<ip> <our_ip>".
         if openvpn['server_topology'] == 'subnet':
             # we are only interested in the netmask portion of server_subnet
-            data['remote_netmask'] = openvpn['server_subnet'][1]
+            data['remote_netmask'] = openvpn['server_subnet'].split(' ')[1]
         else:
             # we need the server subnet in format 192.0.2.0/255.255.255.0
             subnet = openvpn['server_subnet'].replace(' ', r'/')
