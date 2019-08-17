@@ -345,8 +345,6 @@ def get_config():
     except KeyError as E:
         print("Interface not specified")
 
-    print('Executing for interface ' + openvpn['intf'])
-
     # Check if interface instance has been removed
     if not conf.exists('interfaces openvpn ' + openvpn['intf']):
         openvpn['deleted'] = True
