@@ -45,4 +45,21 @@
     </node>
     </children>
   </node>
+  <node name="reset">
+    <children>
+      <node name="openvpn">
+        <children>
+          <tagNode name="client">
+            <properties>
+              <help>Reset specified OpenVPN client</help>
+              <completionHelp>
+                <script>sudo ${vyos_completion_dir}/list_openvpn_clients.py --all</script>
+              </completionHelp>
+            </properties>
+            <command>echo kill $4 | socat - UNIX-CONNECT:/tmp/openvpn-mgmt-intf > /dev/null</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
