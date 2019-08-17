@@ -305,8 +305,8 @@ def openvpn_mkdir(directory):
     if not os.path.exists(directory):
         os.mkdir(directory)
 
-    # fix permissions
-    os.chmod(directory, stat.S_IRWXU|stat.S_IRWXG|stat.S_IROTH)
+    # fix permissions - corresponds to mode 755
+    os.chmod(directory, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
     uid = pwd.getpwnam(user).pw_uid
     gid = grp.getgrnam(group).gr_gid
     os.chown(directory, uid, gid)
