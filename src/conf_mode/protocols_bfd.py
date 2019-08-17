@@ -176,6 +176,10 @@ def verify(bfd):
         if peer['multihop'] and peer['echo_mode']:
             raise ConfigError('Multihop and echo-mode cannot be used together')
 
+        # multihop doesn't accept interface names
+        if peer['multihop'] and peer['src_if']:
+            raise ConfigError('Multihop and source interface cannot be used together')
+
         # echo interval can be configured only with enabled echo-mode
         if peer['echo_interval'] != '' and not peer['echo_mode']:
             raise ConfigError('echo-interval can be configured only with enabled echo-mode')
