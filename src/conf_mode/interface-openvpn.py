@@ -140,9 +140,9 @@ ccd-exclusive
 ping {{ ping_interval }}
 ping-restart {{ ping_restart }}
 
-{%- if 'tap' in type %}
+{%- if local_address_subnet %}
 ifconfig {{ local_address }} {{ local_address_subnet }}
-{% else %}
+{% elif remote_address %}
 ifconfig {{ local_address }} {{ remote_address }}
 {% endif %}
 
@@ -638,25 +638,24 @@ def verify(openvpn):
         if not (openvpn['local_address'] or openvpn['bridge_member']):
             raise ConfigError('Must specify "local-address" or "bridge member interface"')
 
-        if not openvpn['remote_address']:
-            raise ConfigError('Must specify "remote-address"')
-
-        if openvpn['local_address'] == openvpn['local_host']:
-            raise ConfigError('"local-address" cannot be the same as "local-host"')
-
         for host in openvpn['remote_host']:
             if host == openvpn['remote_address']:
                 raise ConfigError('"remote-address" cannot be the same as "remote-host"')
 
-        if openvpn['local_address'] == openvpn['remote_address']:
-            raise ConfigError('"local-address" and "remote-address" cannot be the same')
+        if openvpn['type'] == 'tun':
+            if not openvpn['remote_address']:
+                raise ConfigError('Must specify "remote-address"')
 
-        if openvpn['type'] == 'tap' and openvpn['local_address_subnet'] == '':
-            raise ConfigError('Must specify "subnet-mask" for local-address')
+            if openvpn['local_address'] == openvpn['remote_address']:
+                raise ConfigError('"local-address" and "remote-address" cannot be the same')
+
+            if openvpn['local_address'] == openvpn['local_host']:
+                raise ConfigError('"local-address" cannot be the same as "local-host"')
 
     else:
         if openvpn['local_address'] or openvpn['remote_address']:
             raise ConfigError('Cannot specify "local-address" or "remote-address" in client-server mode')
+
         elif openvpn['bridge_member']:
             raise ConfigError('Cannot specify "local-address" or "remote-address" in bridge mode')
 
