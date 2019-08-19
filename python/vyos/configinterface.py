@@ -123,11 +123,9 @@ def add_interface_address(intf, addr):
         os.system('/opt/vyatta/sbin/vyatta-dhcpv6-client.pl --start -ifname "{}"'.format(intf))
     elif vyos.validate.is_ipv4(addr):
         if not vyos.validate.is_intf_addr_assigned(intf, addr):
-            print("Assigning {} to {}".format(addr, intf))
             os.system('sudo ip -4 addr add "{}" broadcast + dev "{}"'.format(addr, intf))
     elif vyos.validate.is_ipv6(addr):
         if not vyos.validate.is_intf_addr_assigned(intf, addr):
-            print("Assigning {} to {}".format(addr, intf))
             os.system('sudo ip -6 addr add "{}" dev "{}"'.format(addr, intf))
     else:
         raise ConfigError('{} is not a valid interface address'.format(addr))
@@ -149,5 +147,26 @@ def remove_interface_address(intf, addr):
         os.system('ip -6 addr del "{}" dev "{}"'.format(addr, intf))
     else:
         raise ConfigError('{} is not a valid interface address'.format(addr))
+
+    pass
+
+def remove_interface(ifname):
+    """
+    Remove given interface from operating system, e.g. 'dum0'
+    """
+
+    if os.path.isdir('/sys/class/net/' + ifname):
+        os.system('ip link delete "{}"'.format(ifname))
+
+    pass
+
+def add_interface(type, ifname):
+    """
+    Add given interface to operating system, e.g. add 'dummy' interface with
+    name 'dum0'
+    """
+
+    if not os.path.isdir('/sys/class/net/' + ifname):
+        os.system('ip link add "{}" type "{}"'.format(ifname, type))
 
     pass
