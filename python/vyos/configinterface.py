@@ -151,3 +151,24 @@ def remove_interface_address(intf, addr):
         raise ConfigError('{} is not a valid interface address'.format(addr))
 
     pass
+
+def remove_interface(ifname):
+    """
+    Remove given interface from operating system, e.g. 'dum0'
+    """
+
+    if os.path.isdir('/sys/class/net/' + ifname):
+        os.system('ip link delete "{}"'.format(ifname))
+
+    pass
+
+def add_interface(type, ifname):
+    """
+    Add given interface to operating system, e.g. add 'dummy' interface with
+    name 'dum0'
+    """
+
+    if not os.path.isdir('/sys/class/net/' + ifname):
+        os.system('ip link add "{}" type "{}"'.format(ifname, type))
+
+    pass
