@@ -219,10 +219,6 @@ client-config-dir /opt/vyatta/etc/openvpn/ccd/{{ intf }}
 {% for option in options -%}
 {{ option }}
 {% endfor -%}
-
-{%- if server_2fa_authy_key %}
-plugin /usr/lib/authy/authy-openvpn.so https://api.authy.com/protected/json {{ server_2fa_authy_key }} nopam
-{% endif %}
 """
 
 client_tmpl = """
@@ -269,8 +265,6 @@ default_config_data = {
     'remote_address': '',
     'remote_host': [],
     'remote_port': '',
-    'server_2fa_authy_key': '',
-    'server_2fa_authy': [],
     'client': [],
     'server_domain': '',
     'server_max_conn': '',
@@ -452,31 +446,6 @@ def get_config():
 
     if conf.exists('replace-default-route local'):
         openvpn['redirect_gateway'] = 'local def1'
-
-    # Two Factor Authentication providers
-    # currently limited to authy
-    if conf.exists('2-factor-authentication authy api-key'):
-        openvpn['server_2fa_authy_key'] = conf.return_value('2-factor-authentication authy api-key')
-
-    # Authy users (must be email address)
-    for user in conf.list_nodes('server 2-factor-authentication authy user'):
-        # set configuration level
-        conf.set_level('interfaces openvpn ' + openvpn['intf'] + ' 2-factor-authentication authy user ' + user)
-        data = {
-            'user': user,
-            'country_code': '',
-            'mobile_number': ''
-        }
-
-        # Country calling codes
-        if conf.exists('country-calling-code'):
-            data['country_code'] = conf.return_value('country-calling-code')
-
-        # Mobile phone number
-        if conf.exists('phone-number'):
-            data['mobile_number'] = conf.return_value('phone-number')
-
-        openvpn['server_2fa_authy'].append(data)
 
     # Topology for clients
     if conf.exists('server topology'):

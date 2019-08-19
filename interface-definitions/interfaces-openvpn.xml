@@ -361,54 +361,6 @@
               <help>Server-mode options</help>
             </properties>
             <children>
-              <node name="2-factor-authentication">
-                <properties>
-                  <help>Two Factor Authentication providers</help>
-                </properties>
-                <children>
-                  <node name="authy">
-                    <properties>
-                      <help>Authy Two Factor Authentication providers</help>
-                    </properties>
-                    <children>
-                      <leafNode name="api-key">
-                        <properties>
-                          <help>Authy api key</help>
-                        </properties>
-                      </leafNode>
-                      <tagNode name="user">
-                        <properties>
-                          <help>Authy users (must be email address)</help>
-                          <constraint>
-                            <regex>[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$</regex>
-                          </constraint>
-                          <constraintErrorMessage>Invalid email address</constraintErrorMessage>
-                        </properties>
-                        <children>
-                          <leafNode name="country-calling-code">
-                            <properties>
-                              <help>Country calling codes</help>
-                              <constraint>
-                                <regex>[0-9]+$</regex>
-                              </constraint>
-                              <constraintErrorMessage>Invalid Country Calling Code</constraintErrorMessage>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="phone-number">
-                            <properties>
-                              <help>Mobile phone number</help>
-                              <constraint>
-                                <regex>[0-9]+$</regex>
-                              </constraint>
-                              <constraintErrorMessage>Invalid Phone Number</constraintErrorMessage>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </tagNode>
-                    </children>
-                  </node>
-                </children>
-              </node>
               <tagNode name="client">
                 <properties>
                   <help>Client-specific settings</help>
