@@ -123,11 +123,9 @@ def add_interface_address(intf, addr):
         os.system('/opt/vyatta/sbin/vyatta-dhcpv6-client.pl --start -ifname "{}"'.format(intf))
     elif vyos.validate.is_ipv4(addr):
         if not vyos.validate.is_intf_addr_assigned(intf, addr):
-            print("Assigning {} to {}".format(addr, intf))
             os.system('sudo ip -4 addr add "{}" broadcast + dev "{}"'.format(addr, intf))
     elif vyos.validate.is_ipv6(addr):
         if not vyos.validate.is_intf_addr_assigned(intf, addr):
-            print("Assigning {} to {}".format(addr, intf))
             os.system('sudo ip -6 addr add "{}" dev "{}"'.format(addr, intf))
     else:
         raise ConfigError('{} is not a valid interface address'.format(addr))
