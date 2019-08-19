@@ -20,6 +20,10 @@
                 <format>ipv6</format>
                 <description>BFD peer IPv6 address</description>
               </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
             </properties>
             <children>
               <node name="source">
@@ -46,6 +50,10 @@
                         <format>ipv6</format>
                         <description>Local IPv6 address used to connect to the peer</description>
                       </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
+                      </constraint>
                     </properties>
                   </leafNode>
                 </children>

@@ -1,0 +1,625 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="openvpn" owner="${vyos_conf_scripts_dir}/interface-openvpn.py">
+        <properties>
+          <help>OpenVPN tunnel interface name</help>
+          <priority>460</priority>
+          <constraint>
+            <regex>^vtun[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>OpenVPN tunnel interface must be named vtunN</constraintErrorMessage>
+          <valueHelp>
+            <format>vtunN</format>
+            <description>OpenVPN interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <node name="authentication">
+            <properties>
+              <help>Authentication options</help>
+            </properties>
+            <children>
+              <leafNode name="password">
+                <properties>
+                  <help>OpenVPN password used for authentication</help>
+                </properties>
+              </leafNode>
+              <leafNode name="username">
+                <properties>
+                  <help>OpenVPN username used for authentication</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="bridge-group">
+            <properties>
+              <help>Interface to be added to a bridge group</help>
+            </properties>
+            <children>
+              <leafNode name="bridge">
+                <properties>
+                  <help>Interface to a bridge-group</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py -t bridge</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="cost">
+                <properties>
+                  <help>Path cost for this port</help>
+                  <valueHelp>
+                    <format>0-2147483647</format>
+                    <description>Path cost for this port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-2147483647"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="cost">
+                <properties>
+                  <help>Path priority for this port</help>
+                  <valueHelp>
+                    <format>0-255</format>
+                    <description>Path priority for this port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="description">
+            <properties>
+              <help>Description</help>
+            </properties>
+          </leafNode>
+          <leafNode name="device-type">
+            <properties>
+              <help>OpenVPN interface device-type</help>
+              <completionHelp>
+                <list>tun tap</list>
+              </completionHelp>
+              <valueHelp>
+                <format>tun</format>
+                <description>TUN device, required for OSI layer 3</description>
+              </valueHelp>
+              <valueHelp>
+                <format>tap</format>
+                <description>TAP device, required for OSI layer 2</description>
+              </valueHelp>
+              <constraint>
+                <regex>(tun|tap)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable interface</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="encryption">
+            <properties>
+              <help>Data Encryption Algorithm</help>
+              <completionHelp>
+                <list>des 3des bf128 bf256 aes128 aes192 aes256</list>
+              </completionHelp>
+              <valueHelp>
+                <format>des</format>
+                <description>DES algorithm</description>
+              </valueHelp>
+              <valueHelp>
+                <format>3des</format>
+                <description>DES algorithm with triple encryption</description>
+              </valueHelp>
+              <valueHelp>
+                <format>bf128</format>
+                <description>Blowfish algorithm with 128-bit key</description>
+              </valueHelp>
+              <valueHelp>
+                <format>bf256</format>
+                <description>Blowfish algorithm with 256-bit key</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes128</format>
+                <description>AES algorithm with 128-bit key</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes192</format>
+                <description>AES algorithm with 192-bit key</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes256</format>
+                <description>AES algorithm with 256-bit key</description>
+              </valueHelp>
+              <constraint>
+                <regex>(des|3des|bf128|bf256|aes128|aes192|aes256)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="hash">
+            <properties>
+              <help>Hashing Algorithm</help>
+              <completionHelp>
+                <list>md5 sha1 sha256 sha384 sha512</list>
+              </completionHelp>
+              <valueHelp>
+                <format>md5</format>
+                <description>MD5 algorithm</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sha1</format>
+                <description>SHA-1 algorithm</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sha256</format>
+                <description>SHA-256 algorithm</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sha384</format>
+                <description>SHA-384 algorithm</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sha512</format>
+                <description>SHA-512 algorithm</description>
+              </valueHelp>
+              <constraint>
+                <regex>(md5|sha1|sha256|sha384|sha512)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="keep-alive">
+            <properties>
+              <help>Keepalive helper options</help>
+            </properties>
+            <children>
+              <leafNode name="failure-count">
+                <properties>
+                  <help>Maximum number of keepalive packet failures [default 6]</help>
+                  <valueHelp>
+                    <format>0-1000</format>
+                    <description>Maximum number of keepalive packet failures</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-1000"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="interval">
+                <properties>
+                  <help>Keepalive packet interval (seconds) [default 10]</help>
+                  <valueHelp>
+                    <format>0-600</format>
+                    <description>Keepalive packet interval (seconds)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-600"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="local-address">
+            <properties>
+              <help>Local IP address of tunnel</help>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="subnet-mask">
+                <properties>
+                  <help>Subnet-mask for local IP address of tunnel</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="local-host">
+            <properties>
+              <help>Local IP address to accept connections (all if not set)</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Local IPv4 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="local-port">
+            <properties>
+              <help>Local port number to accept connections</help>
+              <valueHelp>
+                <format>1-65535</format>
+                <description>Numeric IP port</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="mode">
+            <properties>
+              <help>OpenVPN mode of operation</help>
+              <completionHelp>
+                <list>site-to-site client server</list>
+              </completionHelp>
+              <valueHelp>
+                <format>site-to-site</format>
+                <description>Site-to-site mode</description>
+              </valueHelp>
+              <valueHelp>
+                <format>client</format>
+                <description>Client in client-server mode</description>
+              </valueHelp>
+              <valueHelp>
+                <format>server</format>
+                <description>Server in client-server mode</description>
+              </valueHelp>
+              <constraint>
+                <regex>(site-to-site|client|server)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="openvpn-option">
+            <properties>
+              <help>Additional OpenVPN options. You must
+                use the syntax of openvpn.conf in this text-field. Using this
+                without proper knowledge may result in a crashed OpenVPN server.
+                Check system log to look for errors.</help>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="persistent-tunnel">
+            <properties>
+              <help>Do not close and reopen interface (TUN/TAP device) on client restarts</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="protocol">
+            <properties>
+              <help>OpenVPN communication protocol</help>
+              <completionHelp>
+                <list>udp tcp-passive tcp-active</list>
+              </completionHelp>
+              <valueHelp>
+                <format>udp</format>
+                <description>Site-to-site mode</description>
+              </valueHelp>
+              <valueHelp>
+                <format>tcp-passive</format>
+                <description>TCP and accepts connections passively</description>
+              </valueHelp>
+              <valueHelp>
+                <format>tcp-active</format>
+                <description>TCP and initiates connections actively</description>
+              </valueHelp>
+              <constraint>
+                <regex>(udp|tcp-passive|tcp-active)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="remote-address">
+            <properties>
+              <help>IP address of remote end of tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote end IPv4 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="remote-host">
+            <properties>
+              <help>Remote host to connect to (dynamic if not set)</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IP address of remote host</description>
+              </valueHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Hostname of remote host</description>
+              </valueHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="remote-port">
+            <properties>
+              <help>Remote port number to connect to</help>
+              <valueHelp>
+                <format>1-65535</format>
+                <description>Numeric IP port</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="replace-default-route">
+            <properties>
+              <help>OpenVPN tunnel to be used as the default route</help>
+            </properties>
+            <children>
+              <leafNode name="local">
+                <properties>
+                  <help>Tunnel endpoints are on the same subnet</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="server">
+            <properties>
+              <help>Server-mode options</help>
+            </properties>
+            <children>
+              <node name="2-factor-authentication">
+                <properties>
+                  <help>Two Factor Authentication providers</help>
+                </properties>
+                <children>
+                  <node name="authy">
+                    <properties>
+                      <help>Authy Two Factor Authentication providers</help>
+                    </properties>
+                    <children>
+                      <leafNode name="api-key">
+                        <properties>
+                          <help>Authy api key</help>
+                        </properties>
+                      </leafNode>
+                      <tagNode name="user">
+                        <properties>
+                          <help>Authy users (must be email address)</help>
+                          <constraint>
+                            <regex>[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid email address</constraintErrorMessage>
+                        </properties>
+                        <children>
+                          <leafNode name="country-calling-code">
+                            <properties>
+                              <help>Country calling codes</help>
+                              <constraint>
+                                <regex>[0-9]+$</regex>
+                              </constraint>
+                              <constraintErrorMessage>Invalid Country Calling Code</constraintErrorMessage>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="phone-number">
+                            <properties>
+                              <help>Mobile phone number</help>
+                              <constraint>
+                                <regex>[0-9]+$</regex>
+                              </constraint>
+                              <constraintErrorMessage>Invalid Phone Number</constraintErrorMessage>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="client">
+                <properties>
+                  <help>Client-specific settings</help>
+                  <valueHelp>
+                    <format>name</format>
+                    <description>Client common-name in the certificate</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Option to disable client connection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ip">
+                    <properties>
+                      <help>IP address of the client</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Client IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="push-route">
+                    <properties>
+                      <help>Route to be pushed to the client</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 network and prefix length</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="subnet">
+                    <properties>
+                      <help>Subnet belonging to the client</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 network and prefix length belonging to the client</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="domain-name">
+                <properties>
+                  <help>DNS suffix to be pushed to all clients</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Domain Name Server suffix</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="max-connections">
+                <properties>
+                  <help>Number of maximum client connections</help>
+                  <valueHelp>
+                    <format>1-4096</format>
+                    <description>Number of concurrent clients</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4096"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="name-server">
+                <properties>
+                  <help>Domain Name Server (DNS)</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>DNS server IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="push-route">
+                <properties>
+                  <help>Route to be pushed to all clients</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 network and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="reject-unconfigured-clients">
+                <properties>
+                  <help>Reject connections from clients that are not explicitly configured</help>
+                </properties>
+              </leafNode>
+              <leafNode name="subnet">
+                <properties>
+                  <help>Server-mode subnet (from which client IPs are allocated)</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="topology">
+                <properties>
+                  <help>Topology for clients</help>
+                  <completionHelp>
+                    <list>point-to-point subnet</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>point-to-point</format>
+                    <description>Point-to-point topology</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>subnet</format>
+                    <description>Subnet topology</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(subnet|point-to-point)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="shared-secret-key-file">
+            <properties>
+              <help>File containing the secret key shared with remote end of tunnel</help>
+              <valueHelp>
+                <format>file</format>
+                <description>File in /config/auth directory</description>
+              </valueHelp>
+              <constraint>
+                <validator name="file-exists" argument="--directory /config/auth"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="tls">
+            <properties>
+              <help>Transport Layer Security (TLS) options</help>
+            </properties>
+            <children>
+              <leafNode name="ca-cert-file">
+                <properties>
+                  <help>File containing certificate for Certificate Authority (CA)</help>
+                </properties>
+              </leafNode>
+              <leafNode name="cert-file">
+                <properties>
+                  <help>File containing certificate for this host</help>
+                </properties>
+              </leafNode>
+              <leafNode name="crl-file">
+                <properties>
+                  <help>File containing certificate revocation list (CRL) for this host</help>
+                </properties>
+              </leafNode>
+              <leafNode name="dh-file">
+                <properties>
+                  <help>File containing Diffie Hellman parameters (server only)</help>
+                </properties>
+              </leafNode>
+              <leafNode name="key-file">
+                <properties>
+                  <help>File containing this host's private key</help>
+                </properties>
+              </leafNode>
+              <leafNode name="role">
+                <properties>
+                  <help>File containing this host's private key</help>
+                  <completionHelp>
+                    <list>active passive</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>active</format>
+                    <description>Initiate TLS negotiation actively</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>passive</format>
+                    <description>Waiting for TLS connections passively</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(active|passive)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="use-lzo-compression">
+            <properties>
+              <help>Use fast LZO compression on this TUN/TAP interface</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
