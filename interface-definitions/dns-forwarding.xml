@@ -97,6 +97,23 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="allow-from">
+                <properties>
+                  <help>Networks allowed to query this server</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IP address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <multi/>
+                  <constraint>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="listen-address">
                 <properties>
                   <help>Addresses to listen for DNS queries [REQUIRED]</help>
@@ -113,15 +130,6 @@
                     <validator name="ipv4-address"/>
                     <validator name="ipv6-address"/>
                   </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="listen-on">
-                <properties>
-                  <help>Interface to listen for DNS queries [DEPRECATED]</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="negative-ttl">

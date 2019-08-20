@@ -43,3 +43,14 @@ def list_interfaces_of_type(typ):
     else:
         r = re.compile('^{0}\d+'.format(types_data[typ]))
         return list(filter(lambda i: re.match(r, i), all_intfs))
+
+def get_type_of_interface(intf):
+    with open(intf_type_data_file, 'r') as f:
+        types_data = json.load(f)
+
+    for key,val in types_data.items():
+        r = re.compile('^{0}\d+'.format(val))
+        if re.match(r, intf):
+            return key
+
+    raise ValueError("No type found for interface name: {0}".format(intf))
