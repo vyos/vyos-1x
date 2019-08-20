@@ -44,7 +44,7 @@ config_tmpl = """
 # Non-configurable defaults
 daemon=yes
 threads=1
-allow-from=0.0.0.0/0, ::/0
+allow-from={{ allow_from | join(',') }}
 log-common-errors=yes
 non-local-bind=yes
 query-local-address=0.0.0.0
@@ -83,6 +83,7 @@ dnssec={{ dnssec }}
 """
 
 default_config_data = {
+    'allow_from': [],
     'cache_size': 10000,
     'export_hosts_file': 'yes',
     'listen_on': [],
@@ -120,6 +121,9 @@ def get_config(arguments):
         return None
 
     conf.set_level('service dns forwarding')
+
+    if conf.exists('allow-from'):
+        dns['allow_from'] = conf.return_values('allow-from')
 
     if conf.exists('cache-size'):
         cache_size = conf.return_value('cache-size')
@@ -216,11 +220,9 @@ def get_config(arguments):
 
     return dns
 
-
 def bracketize_ipv6_addrs(addrs):
     """Wraps each IPv6 addr in addrs in [], leaving IPv4 addrs untouched."""
     return ['[{0}]'.format(a) if a.count(':') > 1 else a for a in addrs]
-
 
 def verify(dns):
     # bail out early - looks like removal from running config
@@ -231,6 +233,10 @@ def verify(dns):
         raise ConfigError(
             "Error: DNS forwarding requires either a listen-address (preferred) or a listen-on option")
 
+    if not dns['allow_from']:
+        raise ConfigError(
+                "Error: DNS forwarding requires an allow-from network")
+
     if dns['domains']:
         for domain in dns['domains']:
             if not domain['servers']:
@@ -238,7 +244,6 @@ def verify(dns):
                     'Error: No server configured for domain {0}'.format(domain['name']))
 
     return None
-
 
 def generate(dns):
     # bail out early - looks like removal from running config
@@ -251,16 +256,14 @@ def generate(dns):
         f.write(config_text)
     return None
 
-
 def apply(dns):
-    if dns is not None:
-        os.system("systemctl restart pdns-recursor")
-    else:
+    if dns is None:
         # DNS forwarding is removed in the commit
         os.system("systemctl stop pdns-recursor")
         if os.path.isfile(config_file):
             os.unlink(config_file)
-
+    else:
+        os.system("systemctl restart pdns-recursor")
 
 if __name__ == '__main__':
     args = parser.parse_args()
