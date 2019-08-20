@@ -132,15 +132,6 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="listen-on">
-                <properties>
-                  <help>Interface to listen for DNS queries [DEPRECATED]</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <multi/>
-                </properties>
-              </leafNode>
               <leafNode name="negative-ttl">
                 <properties>
                   <help>Maximum amount of time negative entries are cached</help>

@@ -87,7 +87,6 @@ default_config_data = {
     'cache_size': 10000,
     'export_hosts_file': 'yes',
     'listen_on': [],
-    'interfaces': [],
     'name_servers': [],
     'negative_ttl': 3600,
     'domains': [],
@@ -167,46 +166,6 @@ def get_config(arguments):
 
     if conf.exists('dnssec'):
         dns['dnssec'] = conf.return_value('dnssec')
-
-    ## Hacks and tricks
-
-    # The old VyOS syntax that comes from dnsmasq was "listen-on $interface".
-    # pdns wants addresses instead, so we emulate it by looking up all addresses
-    # of a given interface and writing them to the config
-    if conf.exists('listen-on'):
-        print("WARNING: since VyOS 1.2.0, \"service dns forwarding listen-on\" is a limited compatibility option.")
-        print("It will only make DNS forwarder listen on addresses assigned to the interface at the time of commit")
-        print("which means it will NOT work properly with VRRP/clustering or addresses received from DHCP.")
-        print("Please reconfigure your system with \"service dns forwarding listen-address\" instead.")
-
-        interfaces = conf.return_values('listen-on')
-
-        listen4 = []
-        listen6 = []
-        for interface in interfaces:
-            try:
-                addrs = netifaces.ifaddresses(interface)
-            except ValueError:
-                print(
-                    "WARNING: interface {0} does not exist".format(interface))
-                continue
-
-            if netifaces.AF_INET in addrs.keys():
-                for ip4 in addrs[netifaces.AF_INET]:
-                    listen4.append(ip4['addr'])
-
-            if netifaces.AF_INET6 in addrs.keys():
-                for ip6 in addrs[netifaces.AF_INET6]:
-                    listen6.append(ip6['addr'])
-
-            if (not listen4) and (not (listen6)):
-                print(
-                    "WARNING: interface {0} has no configured addresses".format(interface))
-
-        dns['listen_on'] = dns['listen_on'] + listen4 + listen6
-
-        # Save interfaces in the dict for the reference
-        dns['interfaces'] = interfaces
 
     # Add name servers received from DHCP
     if conf.exists('dhcp'):
