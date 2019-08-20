@@ -1,0 +1,22 @@
+[Unit]
+Description=VyOS DNS configuration keeper
+After=auditd.service systemd-user-sessions.service time-sync.target
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
+Type=idle
+KillMode=process
+
+SyslogIdentifier=vyos-hostsd
+SyslogFacility=daemon
+
+Restart=on-failure
+
+# Does't work but leave it here
+User=root
+Group=vyattacfg
+
+[Install]
+# Installing in a earlier target leaves ExecStartPre waiting
+WantedBy=getty.target
+
