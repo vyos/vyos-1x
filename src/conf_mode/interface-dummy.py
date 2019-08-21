@@ -77,21 +77,12 @@ def get_config():
     return dummy
 
 def verify(dummy):
-    if dummy is None:
-        return None
-
     return None
 
 def generate(dummy):
-    if dummy is None:
-        return None
-
     return None
 
 def apply(dummy):
-    if dummy is None:
-        return None
-
     # Remove dummy interface
     if dummy['deleted']:
         VyIfconfig.remove_interface(dummy['intf'])
