@@ -12,20 +12,26 @@ class VyOSHostsdError(Exception):
 
 class Client(object):
     def __init__(self):
-        context = zmq.Context()
-        self.__socket = context.socket(zmq.REQ)
-        self.__socket.RCVTIMEO = 10000 #ms
-        self.__socket.setsockopt(zmq.LINGER, 0)
-        self.__socket.connect(SOCKET_PATH)
+        try:
+            context = zmq.Context()
+            self.__socket = context.socket(zmq.REQ)
+            self.__socket.RCVTIMEO = 10000 #ms
+            self.__socket.setsockopt(zmq.LINGER, 0)
+            self.__socket.connect(SOCKET_PATH)
+        except zmq.error.Again:
+            raise VyOSHostsdError("Could not connect to vyos-hostsd")
 
     def _communicate(self, msg):
-        request = json.dumps(msg).encode()
-        self.__socket.send(request)
+        try:
+            request = json.dumps(msg).encode()
+            self.__socket.send(request)
 
-        reply_msg = self.__socket.recv().decode()
-        reply = json.loads(reply_msg)
-        if 'error' in reply:
-            raise VyOSHostsdError(reply['error'])
+            reply_msg = self.__socket.recv().decode()
+            reply = json.loads(reply_msg)
+            if 'error' in reply:
+                raise VyOSHostsdError(reply['error'])
+        except zmq.error.Again:
+            raise VyOSHostsdError("Could not connect to vyos-hostsd")
 
     def set_host_name(self, host_name, domain_name, search_domains):
         msg = {
