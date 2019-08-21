@@ -20,6 +20,7 @@ import os
 import sys
 import time
 import json
+import signal
 import traceback
 
 import zmq
@@ -218,8 +219,16 @@ def handle_message(msg_json):
     with open(STATE_FILE, 'w') as f:
         json.dump(STATE, f)
 
+def exit_handler(sig, frame):
+    """ Clean up the state when shutdown correctly """
+    print("Cleaning up state")
+    os.unlink(STATE_FILE)
+    sys.exit(0)
+
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, exit_handler)
+
     # Create a directory for state checkpoints
     os.makedirs(DATA_DIR, exist_ok=True)
     if os.path.exists(STATE_FILE):
