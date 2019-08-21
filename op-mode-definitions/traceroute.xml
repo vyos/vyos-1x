@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="traceroute">
+    <properties>
+      <help>Track network path to node</help>
+    </properties>
+    <children>
+      <tagNode name="">
+        <properties>
+          <help>Track network path to specified node</help>
+          <completionHelp>
+            <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/traceroute $2</command>
+      </tagNode>
+
+      <tagNode name="ipv4">
+        <properties>
+          <help>Track network path to &lt;hostname|IPv4 address&gt;</help>
+          <completionHelp>
+            <list>&lt;hostname&gt; &lt;x.x.x.x&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/traceroute -4 $3</command>
+      </tagNode>
+
+      <tagNode name="ipv6">
+        <properties>
+          <help>Track network path to &lt;hostname|IPv6 address&gt;</help>
+          <completionHelp>
+            <list>&lt;hostname&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/traceroute -6 $3</command>
+      </tagNode>
+    </children>
+  </node>
+
+  <node name="monitor">
+    <children>
+      <tagNode name="traceroute">
+        <properties>
+          <help>Monitor the path to a destination in realtime</help>
+          <completionHelp>
+            <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/mtr $3</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
