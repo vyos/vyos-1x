@@ -62,6 +62,9 @@ Depends: python3,
   openvpn,
   openvpn-auth-ldap,
   openvpn-auth-radius,
+  mtr-tiny,
+  telnet,
+  traceroute,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
