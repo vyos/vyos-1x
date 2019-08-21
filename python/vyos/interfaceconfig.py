@@ -46,7 +46,14 @@ class Interface:
 
   @property
   def mtu(self):
-    return self._mtu
+    try:
+      ret = subprocess.check_output(['ip -j link list dev ' + self._ifname], shell=True).decode()
+      a = json.loads(ret)[0]
+      return a['mtu']
+    except subprocess.CalledProcessError as e:
+        if self._debug():
+          self._debug(e)
+        return None
 
   @mtu.setter
   def mtu(self, mtu=None):
@@ -62,7 +69,14 @@ class Interface:
 
   @property
   def macaddr(self):
-    return self._macaddr
+    try:
+      ret = subprocess.check_output(['ip -j -4 link show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      j = json.loads(ret)
+      return j[0]['address']
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+      return None
 
   @macaddr.setter
   def macaddr(self, mac=None):
@@ -77,7 +91,7 @@ class Interface:
 
   @property
   def ifalias(self):
-    return self._ifalias
+    return open('/sys/class/net/{0}/ifalias'.format(self._ifname),'r').read()
 
   @ifalias.setter
   def ifalias(self, ifalias=None):
@@ -116,6 +130,7 @@ class Interface:
     return False
 
   def get_mtu(self):
+    print ("function get_mtu() is depricated and will be removed soon")
     try:
       ret = subprocess.check_output(['ip -j link list dev ' + self._ifname], shell=True).decode()
       a = json.loads(ret)[0]
@@ -125,7 +140,9 @@ class Interface:
           self._debug(e)
         return None
 
+
   def get_macaddr(self):
+    print ("function get_macaddr() is depricated and will be removed soon")
     try:
       ret = subprocess.check_output(['ip -j -4 link show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
       j = json.loads(ret)
@@ -136,6 +153,7 @@ class Interface:
       return None
 
   def get_alias(self):
+    print ("function get_alias() is depricated and will be removed soon")
     return open('/sys/class/net/{0}/ifalias'.format(self._ifname),'r').read()
 
   def del_alias(self):
