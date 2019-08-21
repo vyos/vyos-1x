@@ -178,9 +178,6 @@ def get_config():
     return bridge
 
 def verify(bridge):
-    if bridge is None:
-        return None
-
     conf = Config()
     for br in conf.list_nodes('interfaces bridge'):
         # it makes no sense to verify ourself in this case
@@ -195,15 +192,9 @@ def verify(bridge):
     return None
 
 def generate(bridge):
-    if bridge is None:
-        return None
-
     return None
 
 def apply(bridge):
-    if bridge is None:
-        return None
-
     cmd = ''
     if bridge['deleted']:
         # bridges need to be shutdown first
