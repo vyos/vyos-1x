@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <properties>
+      <help>Show system information</help>
+    </properties>
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 information</help>
+        </properties>
+        <children>
+          <leafNode name="groups">
+            <properties>
+              <help>Show IP multicast group membership</help>
+            </properties>
+            <command>netstat -gn4</command>
+          </leafNode>
+
+          <node name="route">
+            <properties>
+              <help>Show IP routes</help>
+            </properties>
+            <children>
+              <node name="cache">
+                <properties>
+                  <help>Show kernel route cache</help>
+                </properties>
+                <command>ip -s route list cache</command>
+              </node>
+              <tagNode name="cache">
+                <properties>
+                  <help>Show kernel route cache for a given route</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s route list cache $5</command>
+              </tagNode>
+              <node name="forward">
+                <properties>
+                  <help>Show kernel route table</help>
+                </properties>
+                <command>ip route list</command>
+              </node>
+              <tagNode name="forward">
+                <properties>
+                  <help>Show kernel route table for a given route</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s route list $5</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+
+  <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Reset Internet Protocol (IP) parameters</help>
+        </properties>
+        <children>
+          <node name="arp">
+            <properties>
+              <help>Reset Address Resolution Protocol (ARP) cache</help>
+            </properties>
+            <children>
+              <tagNode name="address">
+                <properties>
+                  <help>Reset ARP cache for an IPv4 address</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /sbin/ip neigh flush to "$5"</command>
+              </tagNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Reset ARP cache for interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo /sbin/ip neigh flush dev "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+
+          <node name="route">
+            <properties>
+              <help>Reset IP route</help>
+            </properties>
+            <children>
+              <leafNode name= "cache">
+                <properties>
+                  <help>Flush the kernel route cache</help>
+                </properties>
+                <command>sudo /sbin/ip route flush cache</command>
+              </leafNode>
+
+              <tagNode name="cache">
+                <properties>
+                  <help>Flush the kernel route cache for a given route</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /sbin/ip route flush cache "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

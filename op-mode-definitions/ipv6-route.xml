@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <properties>
+      <help>Show system information</help>
+    </properties>
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 routing information</help>
+        </properties>
+        <children>
+          <leafNode name="groups">
+            <properties>
+              <help>Show IPv6 multicast group membership</help>
+            </properties>
+            <command>netstat -gn6</command>
+          </leafNode>
+
+          <leafNode name="neighbors">
+            <properties>
+              <help>Show IPv6 Neighbor Discovery (ND) information</help>
+            </properties>
+            <command>ip -f inet6 neigh list</command>
+          </leafNode>
+
+          <node name="route">
+            <properties>
+              <help>Show IPv6 routes</help>
+            </properties>
+            <children>
+              <node name="cache">
+                <properties>
+                  <help>Show kernel IPv6 route cache</help>
+                </properties>
+                <command>ip -s -f inet6 route list cache</command>
+              </node>
+              <tagNode name="cache">
+                <properties>
+                  <help>Show kernel IPv6 route cache for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s -f inet6 route list cache $5</command>
+              </tagNode>
+              <node name="forward">
+                <properties>
+                  <help>Show kernel IPv6 route table</help>
+                </properties>
+                <command>ip -f inet6 route list</command>
+              </node>
+              <tagNode name="forward">
+                <properties>
+                  <help>Show kernel IPv6 route table for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s -f inet6 route list $5</command>
+              </tagNode>
+            </children>
+          </node>
+
+        </children>
+      </node>
+    </children>
+  </node>
+
+  <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Reset Internet Protocol version 6 (IPv6) parameters</help>
+        </properties>
+        <children>
+          <node name="neighbors">
+            <properties>
+              <help>Reset IPv6 Neighbor Discovery (ND) cache</help>
+            </properties>
+            <children>
+              <tagNode name="address">
+                <properties>
+                  <help>Reset ND cache for an IPv6 address</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ip -f inet6 neigh flush to "$5"</command>
+              </tagNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Reset IPv6 ND cache for interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo ip -f inet6 neigh flush dev "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+
+          <node name="route">
+            <properties>
+              <help>Reset IPv6 route</help>
+            </properties>
+            <children>
+              <leafNode name= "cache">
+                <properties>
+                  <help>Flush the kernel IPv6 route cache</help>
+                </properties>
+                <command>sudo ip -f inet6 route flush cache</command>
+              </leafNode>
+
+              <tagNode name="cache">
+                <properties>
+                  <help>Flush the kernel IPv6 route cache for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ip -f inet6 route flush cache "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
