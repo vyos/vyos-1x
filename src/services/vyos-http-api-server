@@ -104,10 +104,12 @@ def configure():
             if not isinstance(c, dict):
                 raise ConfigSessionError("Malformed command \"{0}\": any command must be a dict".format(json.dumps(c)))
 
-            # Missing op or path is a show stopper
+            # Missing op is a show stopper
+            op = c['op']
+
             if not ('op' in c):
                 raise ConfigSessionError("Malformed command \"{0}\": missing \"op\" field".format(json.dumps(c)))
-            if not ('path' in c):
+            if not ('path' in c) and not (op == 'save'):
                 raise ConfigSessionError("Malformed command \"{0}\": missing \"path\" field".format(json.dumps(c)))
 
             # Missing value is fine, substitute for empty string
@@ -116,8 +118,11 @@ def configure():
             else:
                 value = ""
 
-            op = c['op']
-            path = c['path']
+            # Missing path is fine for save operation, substitute array with empty string
+            if 'path' in c:
+                path = c['path']
+            else:
+                path = [""]
 
             if not path:
                 raise ConfigSessionError("Malformed command \"{0}\": empty path".format(json.dumps(c)))
@@ -150,10 +155,13 @@ def configure():
                 session.delete(path, value=value)
             elif op == 'comment':
                 session.comment(path, value=value)
+            elif op == 'save':
+                session.save()
             else:
                 raise ConfigSessionError("\"{0}\" is not a valid operation".format(op))
         # end for
-        session.commit()
+        if op != 'save':
+            session.commit()
         print("Configuration modified via HTTP API using key \"{0}\"".format(id))
     except ConfigSessionError as e:
         session.discard()
