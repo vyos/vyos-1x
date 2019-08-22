@@ -1,7 +1,8 @@
 [Unit]
 Description=VyOS DNS configuration keeper
-After=auditd.service systemd-user-sessions.service time-sync.target
-Before=vyos-router.service cloud-init.service
+After=auditd.service time-sync.target
+Before=network-pre.target vyos-router.service
+Wants=network-pre.target
 
 [Service]
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
@@ -18,6 +19,6 @@ User=root
 Group=vyattacfg
 
 [Install]
-# Installing in a earlier target leaves ExecStartPre waiting
-WantedBy=getty.target
+#
+WantedBy=network.target
 
