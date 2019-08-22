@@ -89,6 +89,7 @@ class Interface:
       if self._debug():
         self._debug(e)
 
+
   @property
   def ifalias(self):
     return open('/sys/class/net/{0}/ifalias'.format(self._ifname),'r').read()
@@ -101,9 +102,17 @@ class Interface:
       self._ifalias = str(ifalias)      
     open('/sys/class/net/{0}/ifalias'.format(self._ifname),'w').write(self._ifalias)
 
+
   @property
   def linkstate(self):
-    return self._linkstate
+    try:
+      ret = subprocess.check_output(['ip -j link show ' + self._ifname], shell=True).decode()
+      s = json.loads(ret)
+      return s[0]['operstate'].lower()
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+      return None
 
   @linkstate.setter
   def linkstate(self, state='up'):
@@ -160,9 +169,7 @@ class Interface:
     open('/sys/class/net/{0}/ifalias'.format(self._ifname),'w').write()
 
   def get_link_state(self):
-    """
-        returns either up/down or None if it can't find the state
-    """
+    print ("function get_link_state() is depricated and will be removed soon")
     try:
       ret = subprocess.check_output(['ip -j link show ' + self._ifname], shell=True).decode()
       s = json.loads(ret)
