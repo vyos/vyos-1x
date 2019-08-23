@@ -28,6 +28,9 @@
                 <description>IPv6 address and prefix length</description>
               </valueHelp>
               <multi/>
+              <constraint>
+                <validator name="ip-cidr"/>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="description">

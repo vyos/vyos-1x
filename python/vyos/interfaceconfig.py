@@ -21,6 +21,7 @@ import re
 import json
 import socket
 import subprocess
+import ipaddress
 
 dhclient_conf_dir = r'/var/lib/dhcp/dhclient_'
 
@@ -188,6 +189,29 @@ class Interface:
         self._debug(e)
       return None
 
+  def get_addr(self, ret_prefix=None):
+    """
+        universal: reads all IPs assigned to an interface and returns it in a list,
+        or None if no IP address is assigned to the interface. Also may return
+        in prefix format if set ret_prefix
+    """
+    ips = []
+    try:
+      ret = subprocess.check_output(['ip -j addr show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      j = json.loads(ret)
+      for i in j:
+        if len(i) != 0:
+          for addr in i['addr_info']:
+            if ret_prefix:
+              ips.append(addr['local'] + "/" + str(addr['prefixlen']))
+            else:
+              ips.append(addr['local'])
+      return ips
+    except subprocess.CalledProcessError as e:
+      if self._debug():
+        self._debug(e)
+      return None
+
   def get_ipv4_addr(self):
     """
         reads all IPs assigned to an interface and returns it in a list, 
@@ -227,6 +251,38 @@ class Interface:
         self._debug(e)
       return None
 
+  def add_addr(self, ipaddr=[]):
+    """
+        universal: add ipv4/ipv6 addresses on the interface
+    """
+    for ip in ipaddr:
+      proto = '-4'
+      if ipaddress.ip_address(ip.split(r'/')[0]).version == 6:
+        proto = '-6'
+
+      try:
+        ret = subprocess.check_output(['ip ' + proto + ' address add ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      except subprocess.CalledProcessError as e:
+        if self._debug():
+          self._debug(e)
+        return None
+    return True
+
+  def del_addr(self, ipaddr=[]):
+    """
+        universal: delete ipv4/ipv6 addresses on the interface
+    """
+    for ip in ipaddr:
+      proto = '-4'
+      if ipaddress.ip_address(ip.split(r'/')[0]).version == 6:
+        proto = '-6'
+      try:
+        ret = subprocess.check_output(['ip ' + proto + ' address del ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
+      except subprocess.CalledProcessError as e:
+        if self._debug():
+          self._debug(e)
+        return None
+    return True
 
   def add_ipv4_addr(self, ipaddr=[]):
     """

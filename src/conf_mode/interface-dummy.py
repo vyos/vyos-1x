@@ -20,8 +20,6 @@ import os
 import sys
 import copy
 
-import vyos.configinterface as VyIfconfig
-
 from vyos.interfaceconfig import Interface
 from vyos.config import Config
 from vyos import ConfigError
@@ -86,20 +84,23 @@ def generate(dummy):
 def apply(dummy):
     # Remove dummy interface
     if dummy['deleted']:
-        VyIfconfig.remove_interface(dummy['intf'])
+        Interface(dummy['intf']).remove_interface()
     else:
         # Interface will only be added if it yet does not exist
-        VyIfconfig.add_interface('dummy', dummy['intf'])
+        Interface(dummy['intf'], 'dummy')
 
         # update interface description used e.g. within SNMP
-        VyIfconfig.set_description(dummy['intf'], dummy['description'])
+        if dummy['description']:
+            Interface(dummy['intf']).ifalias =  dummy['description']
 
         # Configure interface address(es)
-        for addr in dummy['address_remove']:
-            VyIfconfig.remove_interface_address(dummy['intf'], addr)
+        if len(dummy['address_remove']) > 0:
+            Interface(dummy['intf']).del_addr(dummy['address_remove'])
 
-        for addr in dummy['address']:
-            VyIfconfig.add_interface_address(dummy['intf'], addr)
+        if len(dummy['address']) > 0:
+            # delete already existing addreses from list
+            addresess = diff(dummy['address'], Interface(dummy['intf']).get_addr(1))
+            Interface(dummy['intf']).add_addr(addresess)
 
         if dummy['disable']:
             Interface(dummy['intf']).linkstate = 'down'
