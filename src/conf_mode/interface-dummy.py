@@ -22,6 +22,7 @@ import copy
 
 import vyos.configinterface as VyIfconfig
 
+from vyos.interfaceconfig import Interface
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -99,6 +100,11 @@ def apply(dummy):
 
         for addr in dummy['address']:
             VyIfconfig.add_interface_address(dummy['intf'], addr)
+
+        if dummy['disable']:
+            Interface(dummy['intf']).linkstate = 'down'
+        else:
+            Interface(dummy['intf']).linkstate = 'up'
 
     return None
 

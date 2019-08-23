@@ -42,6 +42,7 @@
           <leafNode name="disable">
             <properties>
               <help>Disable interface</help>
+              <valueless/>
             </properties>
           </leafNode>
         </children>
