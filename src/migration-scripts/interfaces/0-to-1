@@ -30,20 +30,22 @@ else:
     #
     for br in config.list_nodes(base):
         # STP: check if enabled
-        stp_val = config.return_value(base + [br, 'stp'])
-        # STP: delete node with old syntax
-        config.delete(base + [br, 'stp'])
-        # STP: set new node - if enabled
-        if stp_val == "true":
-            config.set(base + [br, 'stp'], value=None)
+        if config.exists(base + [br, 'stp']):
+            stp_val = config.return_value(base + [br, 'stp'])
+            # STP: delete node with old syntax
+            config.delete(base + [br, 'stp'])
+            # STP: set new node - if enabled
+            if stp_val == "true":
+                config.set(base + [br, 'stp'], value=None)
 
         # igmp-snooping: check if enabled
-        igmp_val = config.return_value(base + [br, 'igmp-snooping', 'querier'])
-        # igmp-snooping: delete node with old syntax
-        config.delete(base + [br, 'igmp-snooping', 'querier'])
-        # igmp-snooping: set new node - if enabled
-        if igmp_val == "enable":
-            config.set(base + [br, 'igmp', 'querier'], value=None)
+        if config.exists(base + [br, 'igmp-snooping', 'querier']):
+            igmp_val = config.return_value(base + [br, 'igmp-snooping', 'querier'])
+            # igmp-snooping: delete node with old syntax
+            config.delete(base + [br, 'igmp-snooping', 'querier'])
+            # igmp-snooping: set new node - if enabled
+            if igmp_val == "enable":
+                config.set(base + [br, 'igmp', 'querier'], value=None)
 
     #
     # move interface based bridge-group to actual bridge (de-nest)
