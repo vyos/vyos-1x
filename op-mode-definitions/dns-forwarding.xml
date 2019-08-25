@@ -42,6 +42,9 @@
     </children>
   </node>
   <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
     <children>
       <node name="dns">
         <properties>

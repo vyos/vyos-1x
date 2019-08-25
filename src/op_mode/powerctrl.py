@@ -22,20 +22,7 @@ import re
 
 from datetime import datetime, timedelta, time as type_time, date as type_date
 from subprocess import check_output, CalledProcessError, STDOUT
-
-def yn(msg, default=False):
-  default_msg = "[Y/n]" if default else "[y/N]"
-  while True:
-    sys.stdout.write("%s %s "  % (msg,default_msg))
-    c = input().lower()
-    if c == '':
-      return default
-    elif c in ("y", "ye","yes"):
-      return True
-    elif c in ("n", "no"):
-      return False
-    else:
-      sys.stdout.write("Please respond with yes/y or no/n\n")
+from vyos.util import ask_yes_no
 
 
 def valid_time(s):
@@ -80,7 +67,7 @@ def cancel_shutdown():
 def execute_shutdown(time, reboot = True, ask=True):
   if not ask:
     action = "reboot" if reboot else "poweroff"
-    if not yn("Are you sure you want to %s this system?" % action):
+    if not ask_yes_no("Are you sure you want to %s this system?" % action):
       sys.exit(0)
 
   action = "-r" if reboot else "-P"
