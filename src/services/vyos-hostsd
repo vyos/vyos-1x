@@ -171,6 +171,14 @@ def set_host_name(state, data):
     if data['search_domains']:
         state['search_domains'] = data['search_domains']
 
+def get_name_servers(state, tag):
+    ns = []
+    data = state['name_servers']
+    for n in data:
+        if data[n]['tag'] == tag:
+            ns.append(n)
+    return ns
+
 def get_option(msg, key):
     if key in msg:
         return msg[key]
@@ -209,6 +217,13 @@ def handle_message(msg_json):
             set_host_name(STATE, data)
         else:
             raise ValueError("Unknown message type {0}".format(_type))
+    elif op == 'get':
+        tag = get_option(msg, 'tag')
+        if _type == 'name_servers':
+            result = get_name_servers(STATE, tag)
+        else:
+            raise ValueError("Unimplemented")
+        return result
     else:
         raise ValueError("Unknown operation {0}".format(op))
 
@@ -254,7 +269,8 @@ if __name__ == '__main__':
         resp = {}
 
         try:
-            handle_message(message)
+            result = handle_message(message)
+            resp['data'] = result
         except ValueError as e:
             resp['error'] = str(e)
         except:

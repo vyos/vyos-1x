@@ -30,6 +30,8 @@ class Client(object):
             reply = json.loads(reply_msg)
             if 'error' in reply:
                 raise VyOSHostsdError(reply['error'])
+            else:
+                return reply["data"]
         except zmq.error.Again:
             raise VyOSHostsdError("Could not connect to vyos-hostsd")
 
@@ -60,3 +62,8 @@ class Client(object):
     def delete_name_servers(self, tag):
         msg = {'type': 'name_servers', 'op': 'delete', 'tag': tag}
         self._communicate(msg)
+
+    def get_name_servers(self, tag):
+        msg = {'type': 'name_servers', 'op': 'get', 'tag': tag}
+        return self._communicate(msg)
+
