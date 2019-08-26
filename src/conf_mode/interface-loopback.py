@@ -14,14 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
 
-import os
-import sys
-import copy
-
-import vyos.configinterface as VyIfconfig
-
+from os import environ
+from sys import exit
+from copy import deepcopy
+from pyroute2 import IPDB
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -37,12 +34,12 @@ def diff(first, second):
     return [item for item in first if item not in second]
 
 def get_config():
-    loopback = copy.deepcopy(default_config_data)
+    loopback = deepcopy(default_config_data)
     conf = Config()
 
     # determine tagNode instance
     try:
-        loopback['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+        loopback['intf'] = environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
@@ -60,6 +57,8 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         loopback['description'] = conf.return_value('description')
+    else:
+        loopback['description'] = loopback['intf']
 
     # Determine interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the interface
@@ -76,19 +75,28 @@ def generate(loopback):
     return None
 
 def apply(loopback):
-    # Remove loopback interface
+    ipdb = IPDB(mode='explicit')
+    lo_if = loopback['intf']
+
+    # the loopback device always exists
+    lo = ipdb.interfaces[lo_if]
+    # begin() a transaction prior to make any change
+    lo.begin()
+
     if not loopback['deleted']:
         # update interface description used e.g. within SNMP
-        VyIfconfig.set_description(loopback['intf'], loopback['description'])
-
-        # Configure interface address(es)
+        # update interface description used e.g. within SNMP
+        lo.ifalias = loopback['description']
+        # configure interface address(es)
         for addr in loopback['address']:
-            VyIfconfig.add_interface_address(loopback['intf'], addr)
+            lo.add_ip(addr)
 
-    # Remove interface address(es)
+    # remove interface address(es)
     for addr in loopback['address_remove']:
-        VyIfconfig.remove_interface_address(loopback['intf'], addr)
+        lo.del_ip(addr)
 
+    # commit changes on loopback interface
+    lo.commit()
     return None
 
 if __name__ == '__main__':
@@ -99,4 +107,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
