@@ -24,10 +24,10 @@ outp_tmpl = """
 {% if clients %}
 OpenVPN status on {{ intf }}
 
-Client CN       Remote Host           Local Host           TX bytes    RX bytes   Connected Since
----------       -----------           ----------           --------    --------   ---------------
+Client CN       Remote Host           Local Host            TX bytes    RX bytes   Connected Since
+---------       -----------           ----------            --------    --------   ---------------
 {%- for c in clients %}
-{{ "%-15s"|format(c.name) }} {{ "%-21s"|format(c.remote) }} {{ "%-15s"|format(local) }}   {{ "%-9s"|format(c.tx_bytes) }}   {{ "%-9s"|format(c.tx_bytes) }}  {{ c.online_since }}
+{{ "%-15s"|format(c.name) }} {{ "%-21s"|format(c.remote) }} {{ "%-21s"|format(local) }} {{ "%-9s"|format(c.tx_bytes) }}   {{ "%-9s"|format(c.tx_bytes) }}  {{ c.online_since }}
 {%- endfor %}
 {% endif %}
 """
@@ -57,7 +57,7 @@ def get_status(mode, interface):
     data = {
         'mode': mode,
         'intf': interface,
-        'local': '',
+        'local': 'N/A',
         'date': '',
         'clients': [],
     }
@@ -112,6 +112,7 @@ def get_status(mode, interface):
                 if line_no == 2:
                     client = {
                         'name': 'N/A',
+                        'remote': 'N/A',
                         'rx_bytes': bytes2HR(line.split(',')[1]),
                         'tx_bytes': '',
                         'online_since': 'N/A'
@@ -150,7 +151,8 @@ if __name__ == '__main__':
         data = get_status(args.mode, intf)
         local_host = config.return_effective_value('interfaces openvpn {} local-host'.format(intf))
         local_port = config.return_effective_value('interfaces openvpn {} local-port'.format(intf))
-        data['local'] = local_host + ':' + local_port
+        if local_host and local_port:
+            data['local'] = local_host + ':' + local_port
 
         if args.mode in ['client', 'site-to-site']:
             for client in data['clients']:
@@ -161,9 +163,6 @@ if __name__ == '__main__':
                 remote_port = config.return_effective_value('interfaces openvpn {} remote-port'.format(intf))
                 if len(remote_host) >= 1:
                     client['remote'] = str(remote_host[0]) + ':' + remote_port
-                else:
-                    client['remote'] = 'N/A'
-
 
         tmpl = jinja2.Template(outp_tmpl)
         print(tmpl.render(data))
