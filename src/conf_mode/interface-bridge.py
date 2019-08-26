@@ -23,6 +23,7 @@ import subprocess
 
 import vyos.configinterface as VyIfconfig
 
+from netifaces import interfaces
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -189,6 +190,10 @@ def verify(bridge):
             if intf['name'] in tmp:
                 raise ConfigError('Interface "{}" belongs to bridge "{}" and can not be enslaved.'.format(intf['name'], bridge['intf']))
 
+    # the interface must exist prior adding it to a bridge
+    for intf in bridge['member']:
+        if intf['name'] not in interfaces():
+            raise ConfigError('Can not add non existing interface "{}" to bridge "{}"'.format(intf['name'], bridge['intf']))
 
     return None
 
