@@ -110,6 +110,31 @@
           </tagNode>
         </children>
       </node>
+      <node name="openvpn">
+        <properties>
+          <help>Show OpenVPN information</help>
+        </properties>
+        <children>
+          <leafNode name="client">
+            <properties>
+              <help>Show tunnel status for OpenVPN client interfaces</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_openvpn.py --mode=client</command>
+          </leafNode>
+          <leafNode name="server">
+            <properties>
+              <help>Show tunnel status for OpenVPN server interfaces</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_openvpn.py --mode=server</command>
+          </leafNode>
+          <leafNode name="site-to-site">
+            <properties>
+              <help>Show tunnel status for OpenVPN site-to-site interfaces</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_openvpn.py --mode=site-to-site</command>
+          </leafNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>
