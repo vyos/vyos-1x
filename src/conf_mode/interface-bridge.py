@@ -247,7 +247,7 @@ def apply(bridge):
         if bridge['disable']:
             br.down()
 
-        # commit change son bridge interface
+        # commit changes on bridge interface
         br.commit()
 
         # configure additional bridge member options
