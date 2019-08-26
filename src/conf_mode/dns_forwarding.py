@@ -24,6 +24,7 @@ import jinja2
 import netifaces
 
 import vyos.util
+import vyos.hostsd_client
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -94,19 +95,6 @@ default_config_data = {
 }
 
 
-# borrowed from: https://github.com/donjajo/py-world/blob/master/resolvconfReader.py, THX!
-def get_resolvers(file):
-    try:
-        with open(file, 'r') as resolvconf:
-            lines = [line.split('#', 1)[0].rstrip()
-                     for line in resolvconf.readlines()]
-            resolvers = [line.split()[1]
-                         for line in lines if 'nameserver' in line]
-        return resolvers
-    except IOError:
-        return []
-
-
 def get_config(arguments):
     dns = default_config_data
     conf = Config()
@@ -171,11 +159,16 @@ def get_config(arguments):
     if conf.exists('dhcp'):
         interfaces = []
         interfaces = conf.return_values('dhcp')
+        hc = vyos.hostsd_client.Client()
+
         for interface in interfaces:
-            dhcp_resolvers = get_resolvers(
-                "/etc/resolv.conf.dhclient-new-{0}".format(interface))
+            dhcp_resolvers = hc.get_name_servers("dhcp-{0}".format(interface))
+            dhcpv6_resolvers = hc.get_name_servers("dhcpv6-{0}".format(interface))
+
             if dhcp_resolvers:
                 dns['name_servers'] = dns['name_servers'] + dhcp_resolvers
+            if dhcpv6_resolvers:
+                dns['name_servers'] = dns['name_servers'] + dhcpv6_resolvers
 
     return dns
 
