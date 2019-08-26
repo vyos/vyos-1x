@@ -16,13 +16,10 @@
 #
 #
 
-import os
-import sys
-import copy
-import subprocess
-
-import vyos.configinterface as VyIfconfig
-
+from os import environ
+from copy import deepcopy
+from sys import exit
+from pyroute2 import IPDB
 from netifaces import interfaces
 from vyos.config import Config
 from vyos import ConfigError
@@ -30,44 +27,42 @@ from vyos import ConfigError
 default_config_data = {
     'address': [],
     'address_remove': [],
-    'aging': '300',
-    'arp_cache_timeout_ms': '30000',
+    'aging': 300,
+    'arp_cache_timeout_ms': 30000,
     'description': '',
     'deleted': False,
-    'dhcp_client_id': '',
-    'dhcp_hostname': '',
-    'dhcpv6_parameters_only': False,
-    'dhcpv6_temporary': False,
     'disable': False,
-    'disable_link_detect': False,
-    'forwarding_delay': '15',
-    'hello_time': '2',
+    'disable_link_detect': 1,
+    'forwarding_delay': 14,
+    'hello_time': 2,
     'igmp_querier': 0,
     'intf': '',
     'mac' : '',
-    'max_age': '20',
+    'max_age': 20,
     'member': [],
     'member_remove': [],
-    'priority': '32768',
-    'stp': 'off'
+    'priority': 32768,
+    'stp': 0
 }
 
-def subprocess_cmd(command):
-    process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
-    proc_stdout = process.communicate()[0].strip()
-    pass
+def freeze(d):
+    if isinstance(d, dict):
+        return frozenset((key, freeze(value)) for key, value in d.items())
+    elif isinstance(d, list):
+        return tuple(freeze(value) for value in d)
+    return d
 
 def diff(first, second):
     second = set(second)
     return [item for item in first if item not in second]
 
 def get_config():
-    bridge = copy.deepcopy(default_config_data)
+    bridge = deepcopy(default_config_data)
     conf = Config()
 
     # determine tagNode instance
     try:
-        bridge['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+        bridge['intf'] = environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
@@ -85,27 +80,13 @@ def get_config():
 
     # retrieve aging - how long addresses are retained
     if conf.exists('aging'):
-        bridge['aging'] = conf.return_value('aging')
+        bridge['aging'] = int(conf.return_value('aging'))
 
     # retrieve interface description
     if conf.exists('description'):
         bridge['description'] = conf.return_value('description')
-
-    # DHCP client identifier
-    if conf.exists('dhcp-options client-id'):
-        bridge['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
-
-    # DHCP client hostname
-    if conf.exists('dhcp-options host-name'):
-        bridge['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
-
-    # DHCPv6 acquire only config parameters, no address
-    if conf.exists('dhcpv6-options parameters-only'):
-        bridge['dhcpv6_parameters_only'] = True
-
-    # DHCPv6 IPv6 "temporary" address
-    if conf.exists('dhcpv6-options temporary'):
-        bridge['dhcpv6_temporary'] = True
+    else:
+        bridge['description'] = bridge['intf']
 
     # Disable this bridge interface
     if conf.exists('disable'):
@@ -113,15 +94,15 @@ def get_config():
 
     # Ignore link state changes
     if conf.exists('disable-link-detect'):
-        bridge['disable_link_detect'] = True
+        bridge['disable_link_detect'] = 2
 
     # Forwarding delay
     if conf.exists('forwarding-delay'):
-        bridge['forwarding_delay'] = conf.return_value('forwarding-delay')
+        bridge['forwarding_delay'] = int(conf.return_value('forwarding-delay'))
 
     # Hello packet advertisment interval
     if conf.exists('hello-time'):
-        bridge['hello_time'] = conf.return_value('hello-time')
+        bridge['hello_time'] = int(conf.return_value('hello-time'))
 
     # Enable Internet Group Management Protocol (IGMP) querier
     if conf.exists('igmp querier'):
@@ -129,8 +110,7 @@ def get_config():
 
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
-        tmp = 1000 * int(conf.return_value('ip arp-cache-timeout'))
-        bridge['arp_cache_timeout_ms'] = str(tmp)
+        bridge['arp_cache_timeout_ms'] = int(conf.return_value('ip arp-cache-timeout')) * 1000
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):
@@ -138,21 +118,24 @@ def get_config():
 
     # Interval at which neighbor bridges are removed
     if conf.exists('max-age'):
-        bridge['max_age'] = conf.return_value('max-age')
+        bridge['max_age'] = int(conf.return_value('max-age'))
 
     # Determine bridge member interface (currently configured)
     for intf in conf.list_nodes('member interface'):
+        # cost and priority initialized with linux defaults
+        # by reading /sys/devices/virtual/net/br0/brif/eth2/{path_cost,priority}
+        # after adding interface to bridge after reboot
         iface = {
             'name': intf,
-            'cost': '',
-            'priority': ''
+            'cost': 100,
+            'priority': 32
         }
 
         if conf.exists('member interface {} cost'.format(intf)):
-            iface['cost'] = conf.return_value('member interface {} cost'.format(intf))
+            iface['cost'] = int(conf.return_value('member interface {} cost'.format(intf)))
 
         if conf.exists('member interface {} priority'.format(intf)):
-            iface['priority'] = conf.return_value('member interface {} priority'.format(intf))
+            iface['priority'] = int(conf.return_value('member interface {} priority'.format(intf)))
 
         bridge['member'].append(iface)
 
@@ -170,11 +153,11 @@ def get_config():
 
     # Priority for this bridge
     if conf.exists('priority'):
-        bridge['priority'] = conf.return_value('priority')
+        bridge['priority'] = int(conf.return_value('priority'))
 
     # Enable spanning tree protocol
     if conf.exists('stp'):
-        bridge['stp'] = 'on'
+        bridge['stp'] = 1
 
     return bridge
 
@@ -201,94 +184,89 @@ def generate(bridge):
     return None
 
 def apply(bridge):
-    cmd = ''
+    ipdb = IPDB(mode='explicit')
+    brif = bridge['intf']
+
     if bridge['deleted']:
-        # bridges need to be shutdown first
-        cmd += 'ip link set dev "{}" down'.format(bridge['intf'])
-        cmd += ' && '
-        # delete bridge
-        cmd += 'brctl delbr "{}"'.format(bridge['intf'])
-        subprocess_cmd(cmd)
-
+        try:
+            # delete bridge interface
+            with ipdb.interfaces[ brif ] as br:
+                br.remove()
+        except:
+            pass
     else:
-        # create bridge if it does not exist
-        if not os.path.exists("/sys/class/net/" + bridge['intf']):
-            # create bridge interface
-            cmd += 'brctl addbr "{}"'.format(bridge['intf'])
-            cmd += ' && '
-            # activate "UP" the interface
-            cmd += 'ip link set dev "{}" up'.format(bridge['intf'])
-            cmd += ' && '
+        try:
+            # create bridge interface if it not already exists
+            ipdb.create(kind='bridge', ifname=brif).commit()
+        except:
+            pass
 
-        # set ageing time
-        cmd += 'brctl setageing "{}" "{}"'.format(bridge['intf'], bridge['aging'])
-        cmd += ' && '
-
-        # set bridge forward delay
-        cmd += 'brctl setfd "{}" "{}"'.format(bridge['intf'], bridge['forwarding_delay'])
-        cmd += ' && '
-
-        # set hello time
-        cmd += 'brctl sethello "{}" "{}"'.format(bridge['intf'], bridge['hello_time'])
-        cmd += ' && '
-
-        # set max message age
-        cmd += 'brctl setmaxage "{}" "{}"'.format(bridge['intf'], bridge['max_age'])
-        cmd += ' && '
-
+        # get handle in bridge interface
+        br = ipdb.interfaces[brif]
+        # begin() a transaction prior to make any change
+        br.begin()
+        # enable interface
+        br.up()
+        # set ageing time - - value is in centiseconds YES! centiseconds!
+        br.br_ageing_time = bridge['aging'] * 100
+        # set bridge forward delay - value is in centiseconds YES! centiseconds!
+        br.br_forward_delay = bridge['forwarding_delay'] * 100
+        # set hello time - value is in centiseconds YES! centiseconds!
+        br.br_hello_time = bridge['hello_time'] * 100
+        # set max message age - value is in centiseconds YES! centiseconds!
+        br.br_max_age = bridge['max_age'] * 100
         # set bridge priority
-        cmd += 'brctl setbridgeprio "{}" "{}"'.format(bridge['intf'], bridge['priority'])
-        cmd += ' && '
-
+        br.br_priority = bridge['priority']
         # turn stp on/off
-        cmd += 'brctl stp "{}" "{}"'.format(bridge['intf'], bridge['stp'])
-
-        for intf in bridge['member_remove']:
-            # remove interface from bridge
-            cmd += ' && '
-            cmd += 'brctl delif "{}" "{}"'.format(bridge['intf'], intf)
-
-        for intf in bridge['member']:
-            # add interface to bridge
-            # but only if it is not yet member of this bridge
-            if not os.path.exists('/sys/devices/virtual/net/' + bridge['intf'] + '/brif/' + intf['name']):
-                cmd += ' && '
-                cmd += 'brctl addif "{}" "{}"'.format(bridge['intf'], intf['name'])
-
-            # set bridge port cost
-            if intf['cost']:
-                cmd += ' && '
-                cmd += 'brctl setpathcost "{}" "{}" "{}"'.format(bridge['intf'], intf['name'], intf['cost'])
-
-            # set bridge port priority
-            if intf['priority']:
-                cmd += ' && '
-                cmd += 'brctl setportprio "{}" "{}" "{}"'.format(bridge['intf'], intf['name'], intf['priority'])
-
-        subprocess_cmd(cmd)
+        br.br_stp_state = bridge['stp']
+        # enable or disable IGMP querier
+        br.br_mcast_querier = bridge['igmp_querier']
+        # update interface description used e.g. within SNMP
+        br.ifalias = bridge['description']
 
         # Change interface MAC address
         if bridge['mac']:
-            VyIfconfig.set_mac_address(bridge['intf'], bridge['mac'])
+            br.set_address = bridge['mac']
 
-        # update interface description used e.g. within SNMP
-        VyIfconfig.set_description(bridge['intf'], bridge['description'])
+        # remove interface from bridge
+        for intf in bridge['member_remove']:
+            br.del_port( intf['name'] )
 
-        # Ignore link state changes?
-        VyIfconfig.set_link_detect(bridge['intf'], bridge['disable_link_detect'])
-
-        # enable or disable IGMP querier
-        VyIfconfig.set_multicast_querier(bridge['intf'], bridge['igmp_querier'])
-
-        # ARP cache entry timeout in seconds
-        VyIfconfig.set_arp_cache_timeout(bridge['intf'], bridge['arp_cache_timeout_ms'])
+        # configure bridge member interfaces
+        for member in bridge['member']:
+            # add interface
+            br.add_port(member['name'])
 
         # Configure interface address(es)
         for addr in bridge['address_remove']:
-            VyIfconfig.remove_interface_address(bridge['intf'], addr)
-
+            br.del_ip(addr)
         for addr in bridge['address']:
-            VyIfconfig.add_interface_address(bridge['intf'], addr)
+            br.add_ip(addr)
+
+        # up/down interface
+        if bridge['disable']:
+            br.down()
+
+        # commit change son bridge interface
+        br.commit()
+
+        # configure additional bridge member options
+        for member in bridge['member']:
+            # configure ARP cache timeout in milliseconds
+            with open('/proc/sys/net/ipv4/neigh/' + member['name'] + '/base_reachable_time_ms', 'w') as f:
+                f.write(str(bridge['arp_cache_timeout_ms']))
+            # ignore link state changes
+            with open('/proc/sys/net/ipv4/conf/' + member['name'] + '/link_filter', 'w') as f:
+                f.write(str(bridge['disable_link_detect']))
+
+            # adjust member port stp attributes
+            member_if = ipdb.interfaces[ member['name'] ]
+            member_if.begin()
+            # set bridge port cost
+            member_if.brport_cost = member['cost']
+            # set bridge port priority
+            member_if.brport_priority = member['priority']
+            member_if.commit()
 
     return None
 
@@ -300,4 +278,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
