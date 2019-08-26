@@ -117,6 +117,7 @@
           <leafNode name="disable">
             <properties>
               <help>Disable this bridge interface</help>
+              <valueless/>
             </properties>
           </leafNode>
           <leafNode name="forwarding-delay">
