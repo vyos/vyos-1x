@@ -187,7 +187,8 @@ def verify(bridge):
         for intf in bridge['member']:
             tmp = conf.list_nodes('interfaces bridge {} member interface'.format(br))
             if intf['name'] in tmp:
-                raise ConfigError('{} can be assigned to any one bridge only'.format(intf['name']))
+                raise ConfigError('Interface "{}" belongs to bridge "{}" and can not be enslaved.'.format(intf['name'], bridge['intf']))
+
 
     return None
 
