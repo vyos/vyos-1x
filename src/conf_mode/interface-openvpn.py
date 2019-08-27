@@ -522,9 +522,9 @@ def get_config():
 
     # Route to be pushed to all clients
     if conf.exists('server push-route'):
-        network = conf.return_value('server push-route')
-        tmp = IPv4Interface(network).with_netmask
-        openvpn['server_push_route'] = tmp.replace(r'/', ' ')
+        for network in conf.return_values('server push-route'):
+            tmp = IPv4Interface(network).with_netmask
+            openvpn['server_push_route'].append(tmp.replace(r'/', ' '))
 
     # Reject connections from clients that are not explicitly configured
     if conf.exists('server reject-unconfigured-clients'):
