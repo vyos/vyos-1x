@@ -16,11 +16,10 @@
 #
 #
 
-import os
-import sys
-import copy
-
-from vyos.interfaceconfig import Interface
+from os import environ
+from copy import deepcopy
+from sys import exit
+from pyroute2 import IPDB
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -38,12 +37,12 @@ def diff(first, second):
     return [item for item in first if item not in second]
 
 def get_config():
-    dummy = copy.deepcopy(default_config_data)
+    dummy = deepcopy(default_config_data)
     conf = Config()
 
     # determine tagNode instance
     try:
-        dummy['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+        dummy['intf'] = environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
@@ -62,6 +61,8 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         dummy['description'] = conf.return_value('description')
+    else:
+        dummy['description'] = dummy['intf']
 
     # Disable this interface
     if conf.exists('disable'):
@@ -82,30 +83,45 @@ def generate(dummy):
     return None
 
 def apply(dummy):
+    ipdb = IPDB(mode='explicit')
+    dummyif = dummy['intf']
+
     # Remove dummy interface
     if dummy['deleted']:
-        Interface(dummy['intf']).remove_interface()
+        try:
+            # delete dummy interface
+            with ipdb.interface[ dummyif ] as du:
+                du.remove()
+        except:
+            pass
     else:
-        # Interface will only be added if it yet does not exist
-        Interface(dummy['intf'], 'dummy')
+        try:
+            # create dummy interface if it's non existing
+            ipdb.create(kind='dummy', ifname=dummyif).commit()
+        except:
+            pass
 
+        # retrieve handle to dummy interface
+        du = ipdb.interfaces[dummyif]
+        # begin a transaction prior to make any change
+        du.begin()
+        # enable interface
+        du.up()
         # update interface description used e.g. within SNMP
-        if dummy['description']:
-            Interface(dummy['intf']).ifalias =  dummy['description']
+        du.ifalias = dummy['description']
 
         # Configure interface address(es)
-        if len(dummy['address_remove']) > 0:
-            Interface(dummy['intf']).del_addr(dummy['address_remove'])
+        for addr in dummy['address_remove']:
+            du.del_ip(addr)
+        for addr in dummy['address']:
+            du.add_ip(addr)
 
-        if len(dummy['address']) > 0:
-            # delete already existing addreses from list
-            addresess = diff(dummy['address'], Interface(dummy['intf']).get_addr(1))
-            Interface(dummy['intf']).add_addr(addresess)
-
+        # disable interface on demand
         if dummy['disable']:
-            Interface(dummy['intf']).linkstate = 'down'
-        else:
-            Interface(dummy['intf']).linkstate = 'up'
+            du.down()
+
+        # commit changes on bridge interface
+        du.commit()
 
     return None
 
@@ -117,4 +133,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
