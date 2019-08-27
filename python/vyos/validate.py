@@ -16,6 +16,12 @@
 import netifaces
 import ipaddress
 
+def is_ip(addr):
+    """
+    Check addr if it is an IPv4 or IPv6 address
+    """
+    return is_ipv4(addr) or is_ipv6(addr)
+
 def is_ipv4(addr):
     """
     Check addr if it is an IPv4 address/network. Returns True/False

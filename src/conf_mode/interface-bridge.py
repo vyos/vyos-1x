@@ -45,13 +45,6 @@ default_config_data = {
     'stp': 0
 }
 
-def freeze(d):
-    if isinstance(d, dict):
-        return frozenset((key, freeze(value)) for key, value in d.items())
-    elif isinstance(d, list):
-        return tuple(freeze(value) for value in d)
-    return d
-
 def diff(first, second):
     second = set(second)
     return [item for item in first if item not in second]
