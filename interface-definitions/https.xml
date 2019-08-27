@@ -9,7 +9,7 @@
           <priority>1001</priority>
         </properties>
         <children>
-          <leafNode name="listen-address">
+          <tagNode name="listen-addresses">
             <properties>
               <help>Addresses to listen for HTTPS requests</help>
               <valueHelp>
@@ -20,13 +20,25 @@
                 <format>ipv6</format>
                 <description>HTTPS IPv6 address</description>
               </valueHelp>
-              <multi/>
+              <valueHelp>
+                <format>'*'</format>
+                <description>any</description>
+              </valueHelp>
               <constraint>
                 <validator name="ipv4-address"/>
                 <validator name="ipv6-address"/>
+                <regex>^\\*$</regex>
               </constraint>
             </properties>
-          </leafNode>
+            <children>
+              <leafNode name="server-names">
+                <properties>
+                  <help>Server names: exact, wildcard, regex, or '_' (any)</help>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
           <node name="certificates">
             <properties>
               <help>TLS certificates</help>
