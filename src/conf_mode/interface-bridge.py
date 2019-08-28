@@ -22,6 +22,8 @@ from sys import exit
 from pyroute2 import IPDB
 from netifaces import interfaces
 from vyos.config import Config
+from vyos.validate import is_ip
+from vyos.interfaceconfig import Interface as IF
 from vyos import ConfigError
 
 default_config_data = {
@@ -62,7 +64,9 @@ def get_config():
     # Check if bridge has been removed
     if not conf.exists('interfaces bridge ' + bridge['intf']):
         bridge['deleted'] = True
-        return bridge
+        # we should not bail out early here b/c we should
+        # find possible DHCP interfaces later on.
+        # DHCP interfaces invoke dhclient which should be stopped, too
 
     # set new configuration level
     conf.set_level('interfaces bridge ' + bridge['intf'])
@@ -185,6 +189,13 @@ def apply(bridge):
             # delete bridge interface
             with ipdb.interfaces[ brif ] as br:
                 br.remove()
+
+            # stop DHCP(v6) clients if configured
+            for addr in bridge['address_remove']:
+                if addr == 'dhcp':
+                    IF(brif).del_dhcpv4()
+                elif addr == 'dhcpv6':
+                    IF(brif).del_dhcpv6()
         except:
             pass
     else:
@@ -225,16 +236,31 @@ def apply(bridge):
         for intf in bridge['member_remove']:
             br.del_port( intf['name'] )
 
-        # configure bridge member interfaces
+        # add interfaces to bridge
         for member in bridge['member']:
-            # add interface
             br.add_port(member['name'])
 
-        # Configure interface address(es)
+        # remove configured network interface addresses/DHCP(v6) configuration
         for addr in bridge['address_remove']:
-            br.del_ip(addr)
+            try:
+                is_ip(addr)
+                br.del_ip(addr)
+            except ValueError:
+                if addr == 'dhcp':
+                    IF(brif).del_dhcpv4()
+                elif addr == 'dhcpv6':
+                    IF(brif).del_dhcpv6()
+
+        # add configured network interface addresses/DHCP(v6) configuration
         for addr in bridge['address']:
-            br.add_ip(addr)
+            try:
+                is_ip(addr)
+                br.add_ip(addr)
+            except:
+                if addr == 'dhcp':
+                    IF(brif).set_dhcpv4()
+                elif addr == 'dhcpv6':
+                    IF(brif).set_dhcpv6()
 
         # up/down interface
         if bridge['disable']:
