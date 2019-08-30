@@ -46,6 +46,11 @@ class Interface:
 
         self._ifname = str(ifname)
 
+    def _cmd(self, command):
+        process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
+        proc_stdout = process.communicate()[0].strip()
+        pass
+
     @property
     def mtu(self):
         """
@@ -83,31 +88,53 @@ class Interface:
 
 
     @property
-    def macaddr(self):
+    def mac(self):
         """
-        get/set interface mac address
-        """
-        try:
-            ret = subprocess.check_output(
-                ['ip -j -4 link show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            j = json.loads(ret)
-            return j[0]['address']
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
+        Get/set interface mac address
 
-    @macaddr.setter
-    def macaddr(self, mac=None):
-        if not re.search('^[a-f0-9:]{17}$', str(mac)):
-            raise ValueError("mac address invalid")
-        self._macaddr = str(mac)
-        try:
-            ret = subprocess.check_output(
-                ['ip link set address ' + mac + ' ' + self._ifname], shell=True).decode()
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        mac = Interface('ens192').mac
+        """
+        address = ''
+        with open('/sys/class/net/{0}/address'.format(self._ifname), 'r') as f:
+            address = f.read().rstrip('\n')
+        return address
+
+
+    @mac.setter
+    def mac(self, mac=None):
+        """
+        Get/set interface mac address
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        Interface('ens192').mac = '00:90:43:fe:fe:1b'
+        """
+        # a mac address consits out of 6 octets
+        octets = len(mac.split(':'))
+        if octets != 6:
+            raise ValueError('wrong number of MAC octets: {} '.format(octets))
+
+        # validate against the first mac address byte if it's a multicast address
+        if int(mac.split(':')[0]) & 1:
+            raise ValueError('{} is a multicast MAC address'.format(mac))
+
+        # overall mac address is not allowed to be 00:00:00:00:00:00
+        if sum(int(i, 16) for i in mac.split(':')) == 0:
+            raise ValueError('00:00:00:00:00:00 is not a valid MAC address')
+
+        # check for VRRP mac address
+        if mac.split(':')[0] == '0' and addr.split(':')[1] == '0' and mac.split(':')[2] == '94' and mac.split(':')[3] == '0' and mac.split(':')[4] == '1':
+            raise ValueError('{} is a VRRP MAC address'.format(mac))
+
+        # Assemble command executed on system. Unfortunately there is no way
+        # of altering the MAC address via sysfs
+        cmd = 'ip link set dev "{}" address "{}"'.format(self._ifname, mac)
+        self._cmd(cmd)
+
 
     @property
     def ifalias(self):
