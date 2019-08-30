@@ -176,30 +176,39 @@ class Interface:
             f.write(str(ifalias))
 
 
-    @property
-    def linkstate(self):
-        try:
-            ret = subprocess.check_output(
-                ['ip -j link show ' + self._ifname], shell=True).decode()
-            s = json.loads(ret)
-            return s[0]['operstate'].lower()
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
+    def up(self):
+        """
+        Bring interface up
 
-    @linkstate.setter
-    def linkstate(self, state='up'):
-        if str(state).lower() == 'up' or str(state).lower() == 'down':
-            self._linkstate = str(state).lower()
-        else:
-            self._linkstate = 'up'
-        try:
-            ret = subprocess.check_output(
-                ['ip link set dev ' + self._ifname + ' ' + state], shell=True).decode()
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        i = Interface('br100', type='bridge')
+        i.up()
+        """
+
+        # Assemble command executed on system. Unfortunately there is no way
+        # to up/down an interface via sysfs
+        cmd = 'ip link set dev "{}" up'.format(self._ifname)
+        self._cmd(cmd)
+
+
+    def down(self):
+        """
+        Bring interface down
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        i = Interface('br100', type='bridge')
+        i.down()
+        """
+
+        # Assemble command executed on system. Unfortunately there is no way
+        # to up/down an interface via sysfs
+        cmd = 'ip link set dev "{}" down'.format(self._ifname)
+        self._cmd(cmd)
+
 
     def _debug(self, e=None):
         """
