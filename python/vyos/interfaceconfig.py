@@ -158,50 +158,6 @@ class Interface:
             return True
         return False
 
-    def get_mtu(self):
-        print ("function get_mtu() is depricated and will be removed soon")
-        try:
-            ret = subprocess.check_output(
-                ['ip -j link list dev ' + self._ifname], shell=True).decode()
-            a = json.loads(ret)[0]
-            return a['mtu']
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
-
-    def get_macaddr(self):
-        print ("function get_macaddr() is depricated and will be removed soon")
-        try:
-            ret = subprocess.check_output(
-                ['ip -j -4 link show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            j = json.loads(ret)
-            return j[0]['address']
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
-
-    def get_alias(self):
-        print ("function get_alias() is depricated and will be removed soon")
-        return open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'r').read()
-
-    def del_alias(self):
-        open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'w').write()
-
-    def get_link_state(self):
-        print (
-            "function get_link_state() is depricated and will be removed soon")
-        try:
-            ret = subprocess.check_output(
-                ['ip -j link show ' + self._ifname], shell=True).decode()
-            s = json.loads(ret)
-            return s[0]['operstate'].lower()
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
-
     def remove_interface(self):
         try:
             ret = subprocess.check_output(
