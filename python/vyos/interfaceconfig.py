@@ -72,6 +72,9 @@ class Interface:
 
     @property
     def macaddr(self):
+        """
+        get/set interface mac address
+        """
         try:
             ret = subprocess.check_output(
                 ['ip -j -4 link show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
@@ -134,7 +137,7 @@ class Interface:
 
     def _debug(self, e=None):
         """
-            export DEBUG=1 to see debug messages
+        export DEBUG=1 to see debug messages
         """
         if os.getenv('DEBUG') == '1':
             if e:
@@ -199,9 +202,9 @@ class Interface:
 
     def get_addr(self, ret_prefix=None):
         """
-            universal: reads all IPs assigned to an interface and returns it in a list,
-            or None if no IP address is assigned to the interface. Also may return
-            in prefix format if set ret_prefix
+        universal: reads all IPs assigned to an interface and returns it in a list,
+        or None if no IP address is assigned to the interface. Also may return
+        in prefix format if set ret_prefix
         """
         ips = []
         try:
@@ -224,8 +227,8 @@ class Interface:
 
     def get_ipv4_addr(self):
         """
-            reads all IPs assigned to an interface and returns it in a list,
-            or None if no IP address is assigned to the interface
+        reads all IPs assigned to an interface and returns it in a list,
+        or None if no IP address is assigned to the interface
         """
         ips = []
         try:
@@ -244,8 +247,8 @@ class Interface:
 
     def get_ipv6_addr(self):
         """
-            reads all IPs assigned to an interface and returns it in a list,
-            or None if no IP address is assigned to the interface
+        reads all IPs assigned to an interface and returns it in a list,
+        or None if no IP address is assigned to the interface
         """
         ips = []
         try:
@@ -299,7 +302,7 @@ class Interface:
 
     def add_ipv4_addr(self, ipaddr=[]):
         """
-            add addresses on the interface
+        add addresses on the interface
         """
         for ip in ipaddr:
             try:
@@ -313,7 +316,7 @@ class Interface:
 
     def del_ipv4_addr(self, ipaddr=[]):
         """
-            delete addresses on the interface
+        delete addresses on the interface
         """
         for ip in ipaddr:
             try:
@@ -327,7 +330,7 @@ class Interface:
 
     def add_ipv6_addr(self, ipaddr=[]):
         """
-            add addresses on the interface
+        add addresses on the interface
         """
         for ip in ipaddr:
             try:
@@ -341,7 +344,7 @@ class Interface:
 
     def del_ipv6_addr(self, ipaddr=[]):
         """
-            delete addresses on the interface
+        delete addresses on the interface
         """
         for ip in ipaddr:
             try:
