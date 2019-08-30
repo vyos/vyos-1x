@@ -27,6 +27,15 @@ dhclient_conf_dir = r'/var/lib/dhcp/dhclient_'
 
 class Interface:
     def __init__(self, ifname=None, type=None):
+        """
+        Create instance of an IP interface
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        i = Interface('br111', type='bridge')
+        """
+
         if not ifname:
             raise Exception("interface name required")
 
@@ -46,10 +55,31 @@ class Interface:
 
         self._ifname = str(ifname)
 
+
+    def remove(self):
+        """
+        Remove system interface
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        i = Interface('br111')
+        i.remove()
+        """
+
+        # NOTE (Improvement):
+        # after interface removal no other commands should be allowed
+        # to be called and instead should raise an Exception:
+
+        cmd = 'ip link del dev "{}"'.format(self._ifname)
+        self._cmd(cmd)
+
+
     def _cmd(self, command):
         process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
         proc_stdout = process.communicate()[0].strip()
         pass
+
 
     @property
     def mtu(self):
@@ -221,15 +251,6 @@ class Interface:
             return True
         return False
 
-    def remove_interface(self):
-        try:
-            ret = subprocess.check_output(
-                ['ip link del dev ' + self._ifname], shell=True).decode()
-            return 0
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
 
     def get_addr(self, ret_prefix=None):
         """
