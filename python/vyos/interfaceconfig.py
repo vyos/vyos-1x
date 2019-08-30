@@ -48,27 +48,39 @@ class Interface:
 
     @property
     def mtu(self):
-        try:
-            ret = subprocess.check_output(
-                ['ip -j link list dev ' + self._ifname], shell=True).decode()
-            a = json.loads(ret)[0]
-            return a['mtu']
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
+        """
+        Get/set interface mtu in bytes.
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        mtu = Interface('ens192').mtu
+        print(mtu)
+        """
+
+        mtu = 0
+        with open('/sys/class/net/{0}/mtu'.format(self._ifname), 'r') as f:
+            mtu = f.read().rstrip('\n')
+        return mtu
+
 
     @mtu.setter
     def mtu(self, mtu=None):
+        """
+        Get/set interface mtu in bytes.
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        Interface('ens192').mtu = 1400
+        """
+
         if mtu < 68 or mtu > 9000:
-            raise ValueError("mtu size invalid value")
-        self._mtu = mtu
-        try:
-            ret = subprocess.check_output(
-                ['ip link set mtu ' + str(mtu) + ' dev ' + self._ifname], shell=True).decode()
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
+            raise ValueError('Invalid MTU size: "{}"'.format(mru))
+
+        with open('/sys/class/net/{0}/mtu'.format(self._ifname), 'w') as f:
+            f.write(str(mtu))
+
 
     @property
     def macaddr(self):
