@@ -1,8 +1,7 @@
 [Unit]
 Description=VyOS DNS configuration keeper
-After=auditd.service time-sync.target
-Before=network-pre.target vyos-router.service
-Wants=network-pre.target
+DefaultDependencies=no
+After=systemd-remount-fs.service
 
 [Service]
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
@@ -19,6 +18,4 @@ User=root
 Group=vyattacfg
 
 [Install]
-#
-WantedBy=network.target
-
+RequiredBy=cloud-init-local.service vyos-router.service
