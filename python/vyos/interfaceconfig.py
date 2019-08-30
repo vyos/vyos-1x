@@ -23,6 +23,10 @@ import socket
 import subprocess
 import ipaddress
 
+from vyos.validate import *
+from ipaddress import IPv4Network, IPv6Address
+from netifaces import ifaddresses, AF_INET, AF_INET6
+
 dhclient_conf_dir = r'/var/lib/dhcp/dhclient_'
 
 class Interface:
@@ -246,161 +250,99 @@ class Interface:
         return False
 
 
-    def get_addr(self, ret_prefix=None):
+    def get_addr(self):
         """
-        universal: reads all IPs assigned to an interface and returns it in a list,
-        or None if no IP address is assigned to the interface. Also may return
-        in prefix format if set ret_prefix
-        """
-        ips = []
-        try:
-            ret = subprocess.check_output(
-                ['ip -j addr show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            j = json.loads(ret)
-            for i in j:
-                if len(i) != 0:
-                    for addr in i['addr_info']:
-                        if ret_prefix:
-                            ips.append(
-                                addr['local'] + "/" + str(addr['prefixlen']))
-                        else:
-                            ips.append(addr['local'])
-            return ips
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
+        Retrieve assigned IPv4 and IPv6 addresses from given interface.
+        This is done using the netifaces and ipaddress python modules.
 
-    def get_ipv4_addr(self):
-        """
-        reads all IPs assigned to an interface and returns it in a list,
-        or None if no IP address is assigned to the interface
-        """
-        ips = []
-        try:
-            ret = subprocess.check_output(
-                ['ip -j -4 addr show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            j = json.loads(ret)
-            for i in j:
-                if len(i) != 0:
-                    for addr in i['addr_info']:
-                        ips.append(addr['local'])
-            return ips
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
+        Example:
 
-    def get_ipv6_addr(self):
+        from vyos.interfaceconfig import Interface
+        i = Interface('ens192')
+        i.get_addrs()
+          ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
         """
-        reads all IPs assigned to an interface and returns it in a list,
-        or None if no IP address is assigned to the interface
-        """
-        ips = []
-        try:
-            ret = subprocess.check_output(
-                ['ip -j -6 addr show dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            j = json.loads(ret)
-            for i in j:
-                if len(i) != 0:
-                    for addr in i['addr_info']:
-                        ips.append(addr['local'])
-            return ips
-        except subprocess.CalledProcessError as e:
-            if self._debug():
-                self._debug(e)
-            return None
 
-    def add_addr(self, ipaddr=[]):
-        """
-            universal: add ipv4/ipv6 addresses on the interface
-        """
-        for ip in ipaddr:
-            proto = '-4'
-            if ipaddress.ip_address(ip.split(r'/')[0]).version == 6:
-                proto = '-6'
+        ipv4 = []
+        ipv6 = []
 
-            try:
-                ret = subprocess.check_output(
-                    ['ip ' + proto + ' address add ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            except subprocess.CalledProcessError as e:
-                if self._debug():
-                    self._debug(e)
-                return None
-        return True
+        if AF_INET in ifaddresses(self._ifname).keys():
+            for v4_addr in ifaddresses(self._ifname)[AF_INET]:
+                # we need to manually assemble a list of IPv4 address/prefix
+                prefix = '/' + str(IPv4Network('0.0.0.0/' + v4_addr['netmask']).prefixlen)
+                ipv4.append( v4_addr['addr'] + prefix )
 
-    def del_addr(self, ipaddr=[]):
-        """
-            universal: delete ipv4/ipv6 addresses on the interface
-        """
-        for ip in ipaddr:
-            proto = '-4'
-            if ipaddress.ip_address(ip.split(r'/')[0]).version == 6:
-                proto = '-6'
-            try:
-                ret = subprocess.check_output(
-                    ['ip ' + proto + ' address del ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            except subprocess.CalledProcessError as e:
-                if self._debug():
-                    self._debug(e)
-                return None
-        return True
+        if AF_INET6 in ifaddresses(self._ifname).keys():
+            for v6_addr in ifaddresses(self._ifname)[AF_INET6]:
+                # Note that currently expanded netmasks are not supported. That means
+                # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
+                # see https://docs.python.org/3/library/ipaddress.html
+                bits =  bin( int(v6_addr['netmask'].replace(':',''), 16) ).count('1')
+                prefix = '/' + str(bits)
 
-    def add_ipv4_addr(self, ipaddr=[]):
-        """
-        add addresses on the interface
-        """
-        for ip in ipaddr:
-            try:
-                ret = subprocess.check_output(
-                    ['ip -4 address add ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            except subprocess.CalledProcessError as e:
-                if self._debug():
-                    self._debug(e)
-                return None
-        return True
+                # we alsoneed to remove the interface suffix on link local addresses
+                v6_addr['addr'] = v6_addr['addr'].split('%')[0]
+                ipv6.append( v6_addr['addr'] + prefix )
 
-    def del_ipv4_addr(self, ipaddr=[]):
-        """
-        delete addresses on the interface
-        """
-        for ip in ipaddr:
-            try:
-                ret = subprocess.check_output(
-                    ['ip -4 address del ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            except subprocess.CalledProcessError as e:
-                if self._debug():
-                    self._debug(e)
-                return None
-        return True
+        return ipv4 + ipv6
 
-    def add_ipv6_addr(self, ipaddr=[]):
-        """
-        add addresses on the interface
-        """
-        for ip in ipaddr:
-            try:
-                ret = subprocess.check_output(
-                    ['ip -6 address add ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            except subprocess.CalledProcessError as e:
-                if self._debug():
-                    self._debug(e)
-                return None
-        return True
 
-    def del_ipv6_addr(self, ipaddr=[]):
+    def add_addr(self, addr=None):
         """
-        delete addresses on the interface
+        Add IP address to interface. Address is only added if it yet not added
+        to that interface.
+
+        Example:
+
+        >>> from vyos.interfaceconfig import Interface
+        >>> j = Interface('br100', type='bridge')
+        >>> j.add_addr('192.0.2.1/24')
+        >>> j.add_addr('2001:db8::ffff/64')
+        >>> j.get_addr()
+        ['192.0.2.1/24', '2001:db8::ffff/64']
         """
-        for ip in ipaddr:
-            try:
-                ret = subprocess.check_output(
-                    ['ip -6 address del ' + ip + ' dev ' + self._ifname], stderr=subprocess.STDOUT, shell=True).decode()
-            except subprocess.CalledProcessError as e:
-                if self._debug():
-                    self._debug(e)
-                return None
-        return True
+
+        if not addr:
+            raise ValueError('No IP address specified')
+
+        if not is_intf_addr_assigned(self._ifname, addr):
+            cmd = ''
+            if is_ipv4(addr):
+                cmd = 'sudo ip -4 addr add "{}" broadcast + dev "{}"'.format(addr, self._ifname)
+            elif is_ipv6(addr):
+                cmd = 'sudo ip -6 addr add "{}" dev "{}"'.format(addr, self._ifname)
+
+            self._cmd(cmd)
+
+
+    def del_addr(self, addr=None):
+        """
+        Remove IP address from interface.
+
+        Example:
+        >>> from vyos.interfaceconfig import Interface
+        >>> j = Interface('br100', type='bridge')
+        >>> j.add_addr('2001:db8::ffff/64')
+        >>> j.add_addr('192.0.2.1/24')
+        >>> j.get_addr()
+        ['192.0.2.1/24', '2001:db8::ffff/64']
+        >>> j.del_addr('192.0.2.1/24')
+        >>> j.get_addr()
+        ['2001:db8::ffff/64']
+        """
+
+        if not addr:
+            raise ValueError('No IP address specified')
+
+        if is_intf_addr_assigned(self._ifname, addr):
+            cmd = ''
+            if is_ipv4(addr):
+                cmd = 'ip -4 addr del "{}" dev "{}"'.format(addr, self._ifname)
+            elif is_ipv6(addr):
+                cmd = 'ip -6 addr del "{}" dev "{}"'.format(addr, self._ifname)
+
+            self._cmd(cmd)
+
 
     # replace dhcpv4/v6 with systemd.networkd?
     def set_dhcpv4(self):
