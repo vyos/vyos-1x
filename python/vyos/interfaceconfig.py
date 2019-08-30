@@ -35,8 +35,8 @@ class Interface:
 
         if not os.path.exists('/sys/class/net/{0}'.format(ifname)):
             try:
-                ret = subprocess.check_output(
-                    ['ip link add dev ' + str(ifname) + ' type ' + type], stderr=subprocess.STDOUT, shell=True).decode()
+                cmd = 'ip link add dev "{}" type "{}"'.format(ifname, type)
+                self._cmd(cmd)
             except subprocess.CalledProcessError as e:
                 if self._debug():
                     self._debug(e)
