@@ -55,7 +55,7 @@ class Interface:
 
         self._ifname = str(ifname)
 
-
+    @property
     def remove(self):
         """
         Remove system interface
@@ -63,8 +63,8 @@ class Interface:
         Example:
 
         from vyos.interfaceconfig import Interface
-        i = Interface('br111')
-        i.remove()
+        i = Interface('br111', type='bridge')
+        i.remove
         """
 
         # NOTE (Improvement):
