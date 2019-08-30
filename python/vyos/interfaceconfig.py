@@ -138,16 +138,43 @@ class Interface:
 
     @property
     def ifalias(self):
-        return open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'r').read()
+        """
+        Get/set interface alias name
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        alias = Interface('ens192').ifalias
+        """
+
+        alias = ''
+        with open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'r') as f:
+            alias = f.read().rstrip('\n')
+        return alias
+
 
     @ifalias.setter
     def ifalias(self, ifalias=None):
+        """
+        Get/set interface alias name
+
+        Example:
+
+        from vyos.interfaceconfig import Interface
+        Interface('ens192').ifalias = 'VyOS upstream interface'
+
+        to clear interface alias e.g. delete it use:
+
+        Interface('ens192').ifalias = ''
+        """
+
+        # clear interface alias
         if not ifalias:
-            self._ifalias = self._ifname
-        else:
-            self._ifalias = str(ifalias)
-        open('/sys/class/net/{0}/ifalias'.format(
-            self._ifname), 'w').write(self._ifalias)
+            ifalias = '\0'
+
+        with open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'w') as f:
+            f.write(str(ifalias))
+
 
     @property
     def linkstate(self):
