@@ -326,12 +326,7 @@ class Interface:
             raise ValueError('No IP address specified')
 
         if not is_intf_addr_assigned(self._ifname, addr):
-            cmd = ''
-            if is_ipv4(addr):
-                cmd = 'sudo ip -4 addr add "{}" broadcast + dev "{}"'.format(addr, self._ifname)
-            elif is_ipv6(addr):
-                cmd = 'sudo ip -6 addr add "{}" dev "{}"'.format(addr, self._ifname)
-
+            cmd = 'sudo ip addr add "{}" dev "{}"'.format(addr, self._ifname)
             self._cmd(cmd)
 
 
@@ -355,12 +350,7 @@ class Interface:
             raise ValueError('No IP address specified')
 
         if is_intf_addr_assigned(self._ifname, addr):
-            cmd = ''
-            if is_ipv4(addr):
-                cmd = 'ip -4 addr del "{}" dev "{}"'.format(addr, self._ifname)
-            elif is_ipv6(addr):
-                cmd = 'ip -6 addr del "{}" dev "{}"'.format(addr, self._ifname)
-
+            cmd = 'ip addr del "{}" dev "{}"'.format(addr, self._ifname)
             self._cmd(cmd)
 
 
