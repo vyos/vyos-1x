@@ -205,38 +205,32 @@ class Interface:
         with open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'w') as f:
             f.write(str(ifalias))
 
-
-    def up(self):
+    @property
+    def state(self):
         """
-        Bring interface up
+        Enable (up) / Disable (down) an interface
 
         Example:
 
         from vyos.interfaceconfig import Interface
-        i = Interface('br100', type='bridge')
-        i.up()
+        i = Interface('ens192').link
         """
+
+        state = ''
+        with open('/sys/class/net/{0}/operstate'.format(self._ifname), 'r') as f:
+            state = f.read().rstrip('\n')
+        return state
+
+
+    @state.setter
+    def state(self, state=None):
+
+        if state not in ['up', 'down']:
+            raise ValueError('state must be "up" or "down"')
 
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
-        cmd = 'ip link set dev "{}" up'.format(self._ifname)
-        self._cmd(cmd)
-
-
-    def down(self):
-        """
-        Bring interface down
-
-        Example:
-
-        from vyos.interfaceconfig import Interface
-        i = Interface('br100', type='bridge')
-        i.down()
-        """
-
-        # Assemble command executed on system. Unfortunately there is no way
-        # to up/down an interface via sysfs
-        cmd = 'ip link set dev "{}" down'.format(self._ifname)
+        cmd = 'ip link set dev "{}" "{}"'.format(self._ifname, state)
         self._cmd(cmd)
 
 
