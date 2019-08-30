@@ -23,7 +23,7 @@ from pyroute2 import IPDB
 from netifaces import interfaces
 from vyos.config import Config
 from vyos.validate import is_ip
-from vyos.interfaceconfig import Interface as IF
+from vyos.ifconfig import Interface as IF
 from vyos import ConfigError
 
 default_config_data = {

@@ -36,8 +36,8 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        i = Interface('br111', type='bridge')
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('br111', type='bridge')
         """
 
         if not ifname:
@@ -66,9 +66,9 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        i = Interface('br111', type='bridge')
-        i.remove
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('br111', type='bridge')
+        >>> i.remove
         """
 
         # NOTE (Improvement):
@@ -92,9 +92,9 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        mtu = Interface('ens192').mtu
-        print(mtu)
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').mtu
+        '1500'
         """
 
         mtu = 0
@@ -110,8 +110,10 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        Interface('ens192').mtu = 1400
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('br100', type='bridge').mtu = 1400
+        >>> Interface('br100').mtu
+        '1400'
         """
 
         if mtu < 68 or mtu > 9000:
@@ -128,8 +130,9 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        mac = Interface('ens192').mac
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').mac
+        '00:0c:29:11:aa:cc'
         """
         address = ''
         with open('/sys/class/net/{0}/address'.format(self._ifname), 'r') as f:
@@ -144,8 +147,10 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        Interface('ens192').mac = '00:90:43:fe:fe:1b'
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').mac = '00:90:43:fe:fe:1b'
+        >>> Interface('eth1').mac
+        '00:90:43:fe:fe:1b'
         """
         # a mac address consits out of 6 octets
         octets = len(mac.split(':'))
@@ -177,8 +182,9 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        alias = Interface('ens192').ifalias
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').ifalias
+        ''
         """
 
         alias = ''
@@ -194,12 +200,16 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        Interface('ens192').ifalias = 'VyOS upstream interface'
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').ifalias = 'VyOS upstream interface'
+        >>> Interface('eth1').ifalias
+        'VyOS upstream interface'
 
         to clear interface alias e.g. delete it use:
 
-        Interface('ens192').ifalias = ''
+        >>> Interface('eth1').ifalias = ''
+        >>> Interface('eth1').ifalias
+        ''
         """
 
         # clear interface alias
@@ -216,8 +226,9 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        i = Interface('ens192').link
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').state
+        'up'
         """
 
         state = ''
@@ -228,6 +239,16 @@ class Interface:
 
     @state.setter
     def state(self, state=None):
+        """
+        Enable (up) / Disable (down) an interface
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').state = 'down'
+        >>> Interface('eth1').state
+        'down'
+        """
 
         if state not in ['up', 'down']:
             raise ValueError('state must be "up" or "down"')
@@ -257,10 +278,9 @@ class Interface:
 
         Example:
 
-        from vyos.interfaceconfig import Interface
-        i = Interface('ens192')
-        i.get_addrs()
-          ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').get_addrs()
+        ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
         """
 
         ipv4 = []
