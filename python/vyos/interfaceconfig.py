@@ -25,25 +25,24 @@ import ipaddress
 
 dhclient_conf_dir = r'/var/lib/dhcp/dhclient_'
 
-
 class Interface:
-
     def __init__(self, ifname=None, type=None):
         if not ifname:
             raise Exception("interface name required")
+
         if not os.path.exists('/sys/class/net/{0}'.format(ifname)) and not type:
             raise Exception("interface {0} not found".format(str(ifname)))
-        else:
-            if not os.path.exists('/sys/class/net/{0}'.format(ifname)):
-                try:
-                    ret = subprocess.check_output(
-                        ['ip link add dev ' + str(ifname) + ' type ' + type], stderr=subprocess.STDOUT, shell=True).decode()
-                except subprocess.CalledProcessError as e:
-                    if self._debug():
-                        self._debug(e)
-                    if "Operation not supported" in str(e.output.decode()):
-                        print(str(e.output.decode()))
-                        sys.exit(0)
+
+        if not os.path.exists('/sys/class/net/{0}'.format(ifname)):
+            try:
+                ret = subprocess.check_output(
+                    ['ip link add dev ' + str(ifname) + ' type ' + type], stderr=subprocess.STDOUT, shell=True).decode()
+            except subprocess.CalledProcessError as e:
+                if self._debug():
+                    self._debug(e)
+                if "Operation not supported" in str(e.output.decode()):
+                    print(str(e.output.decode()))
+                    sys.exit(0)
 
         self._ifname = str(ifname)
 
