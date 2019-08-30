@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="history">
+        <properties>
+          <help>Show command history</help>
+        </properties>
+        <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history</command>
+        <children>
+          <leafNode name="brief">
+            <properties>
+              <help>Show recent command history</help>
+            </properties>
+            <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history 20</command>
+          </leafNode>
+        </children>
+      </node>
+
+      <tagNode name="history">
+        <properties>
+          <help>Show last N commands in history</help>
+          <completionHelp>
+            <list>&lt;NUMBER&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history $3</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

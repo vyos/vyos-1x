@@ -15,17 +15,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import getpass
-import grp
 import os
 import sys
 
-
-def is_admin() -> bool:
-    """Look if current user is in sudo group"""
-    current_user = getpass.getuser()
-    (_, _, _, admin_group_members) = grp.getgrnam('sudo')
-    return current_user in admin_group_members
+from vyos.util import is_admin
 
 
 if __name__ == '__main__':
