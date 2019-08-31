@@ -57,8 +57,6 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         loopback['description'] = conf.return_value('description')
-    else:
-        loopback['description'] = loopback['intf']
 
     # Determine interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the interface
