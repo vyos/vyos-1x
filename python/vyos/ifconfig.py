@@ -624,6 +624,11 @@ class Interface:
             os.remove(self._dhcpv6_lease_file)
 
 
+class LoopbackIf(Interface):
+    def __init__(self, ifname=None):
+        super().__init__(ifname, type='loopback')
+
+
 class DummyIf(Interface):
     def __init__(self, ifname=None):
         super().__init__(ifname, type='dummy')
