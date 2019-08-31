@@ -18,7 +18,7 @@
 from os import environ
 from sys import exit
 from copy import deepcopy
-from pyroute2 import IPDB
+from vyos.ifconfig import LoopbackIf
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -75,28 +75,19 @@ def generate(loopback):
     return None
 
 def apply(loopback):
-    ipdb = IPDB(mode='explicit')
-    lo_if = loopback['intf']
-
-    # the loopback device always exists
-    lo = ipdb.interfaces[lo_if]
-    # begin() a transaction prior to make any change
-    lo.begin()
-
+    lo = LoopbackIf(loopback['intf'])
     if not loopback['deleted']:
         # update interface description used e.g. within SNMP
         # update interface description used e.g. within SNMP
         lo.ifalias = loopback['description']
         # configure interface address(es)
         for addr in loopback['address']:
-            lo.add_ip(addr)
+            lo.add_addr(addr)
 
     # remove interface address(es)
     for addr in loopback['address_remove']:
-        lo.del_ip(addr)
+        lo.del_addr(addr)
 
-    # commit changes on loopback interface
-    lo.commit()
     return None
 
 if __name__ == '__main__':

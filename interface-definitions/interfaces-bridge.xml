@@ -191,13 +191,13 @@
             <properties>
               <help>Interval at which neighbor bridges are removed</help>
               <valueHelp>
-                <format>1-40</format>
+                <format>1-1200</format>
                 <description>Bridge maximum aging time in seconds (default 20)</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1-40"/>
+                <validator name="numeric" argument="--range 1-1200"/>
               </constraint>
-              <constraintErrorMessage>Bridge max aging value must be between 1 and 40 seconds</constraintErrorMessage>
+              <constraintErrorMessage>Bridge max aging value must be between 1 and 1200 seconds</constraintErrorMessage>
             </properties>
           </leafNode>
           <node name="member">

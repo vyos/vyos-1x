@@ -16,21 +16,21 @@
 #
 #
 
-from os import environ
+import os
+
 from copy import deepcopy
 from sys import exit
-from pyroute2 import IPDB
 from netifaces import interfaces
 from vyos.config import Config
 from vyos.validate import is_ip
-from vyos.ifconfig import Interface as IF
+from vyos.ifconfig import BridgeIf, Interface
 from vyos import ConfigError
 
 default_config_data = {
     'address': [],
     'address_remove': [],
     'aging': 300,
-    'arp_cache_timeout_ms': 30000,
+    'arp_cache_tmo': 30,
     'description': '',
     'deleted': False,
     'disable': False,
@@ -57,7 +57,7 @@ def get_config():
 
     # determine tagNode instance
     try:
-        bridge['intf'] = environ['VYOS_TAGNODE_VALUE']
+        bridge['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
@@ -107,7 +107,7 @@ def get_config():
 
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
-        bridge['arp_cache_timeout_ms'] = int(conf.return_value('ip arp-cache-timeout')) * 1000
+        bridge['arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):
@@ -181,56 +181,35 @@ def generate(bridge):
     return None
 
 def apply(bridge):
-    ipdb = IPDB(mode='explicit')
-    brif = bridge['intf']
+    br = BridgeIf(bridge['intf'])
 
     if bridge['deleted']:
-        try:
-            # delete bridge interface
-            with ipdb.interfaces[ brif ] as br:
-                br.remove()
-
-            # stop DHCP(v6) clients if configured
-            for addr in bridge['address_remove']:
-                if addr == 'dhcp':
-                    IF(brif).del_dhcpv4()
-                elif addr == 'dhcpv6':
-                    IF(brif).del_dhcpv6()
-        except:
-            pass
+        # delete bridge interface
+        # DHCP is stopped inside remove()
+        br.remove()
     else:
-        try:
-            # create bridge interface if it not already exists
-            ipdb.create(kind='bridge', ifname=brif).commit()
-        except:
-            pass
-
-        # get handle in bridge interface
-        br = ipdb.interfaces[brif]
-        # begin() a transaction prior to make any change
-        br.begin()
         # enable interface
-        br.up()
-        # set ageing time - - value is in centiseconds YES! centiseconds!
-        br.br_ageing_time = bridge['aging'] * 100
-        # set bridge forward delay - value is in centiseconds YES! centiseconds!
-        br.br_forward_delay = bridge['forwarding_delay'] * 100
-        # set hello time - value is in centiseconds YES! centiseconds!
-        br.br_hello_time = bridge['hello_time'] * 100
-        # set max message age - value is in centiseconds YES! centiseconds!
-        br.br_max_age = bridge['max_age'] * 100
+        br.state = 'up'
+        # set ageing time
+        br.ageing_time = bridge['aging']
+        # set bridge forward delay
+        br.forward_delay = bridge['forwarding_delay']
+        # set hello time
+        br.hello_time = bridge['hello_time']
+        # set max message age
+        br.max_age = bridge['max_age']
         # set bridge priority
-        br.br_priority = bridge['priority']
+        br.priority = bridge['priority']
         # turn stp on/off
-        br.br_stp_state = bridge['stp']
+        br.stp_state = bridge['stp']
         # enable or disable IGMP querier
-        br.br_mcast_querier = bridge['igmp_querier']
+        br.multicast_querier = bridge['igmp_querier']
         # update interface description used e.g. within SNMP
         br.ifalias = bridge['description']
 
         # Change interface MAC address
         if bridge['mac']:
-            br.set_address = bridge['mac']
+            br.mac = bridge['mac']
 
         # remove interface from bridge
         for intf in bridge['member_remove']:
@@ -240,52 +219,40 @@ def apply(bridge):
         for member in bridge['member']:
             br.add_port(member['name'])
 
+        # up/down interface
+        if bridge['disable']:
+            br.state = 'down'
+
         # remove configured network interface addresses/DHCP(v6) configuration
         for addr in bridge['address_remove']:
-            try:
-                is_ip(addr)
-                br.del_ip(addr)
-            except ValueError:
-                if addr == 'dhcp':
-                    IF(brif).del_dhcpv4()
-                elif addr == 'dhcpv6':
-                    IF(brif).del_dhcpv6()
+            if addr == 'dhcp':
+                br.del_dhcp()
+            elif addr == 'dhcpv6':
+                br.del_dhcpv6()
+            else:
+                br.del_addr(addr)
 
         # add configured network interface addresses/DHCP(v6) configuration
         for addr in bridge['address']:
-            try:
-                is_ip(addr)
-                br.add_ip(addr)
-            except:
-                if addr == 'dhcp':
-                    IF(brif).set_dhcpv4()
-                elif addr == 'dhcpv6':
-                    IF(brif).set_dhcpv6()
-
-        # up/down interface
-        if bridge['disable']:
-            br.down()
-
-        # commit changes on bridge interface
-        br.commit()
+            if addr == 'dhcp':
+                br.set_dhcp()
+            elif addr == 'dhcpv6':
+                br.set_dhcpv6()
+            else:
+                br.add_addr(addr)
 
         # configure additional bridge member options
         for member in bridge['member']:
-            # configure ARP cache timeout in milliseconds
-            with open('/proc/sys/net/ipv4/neigh/' + member['name'] + '/base_reachable_time_ms', 'w') as f:
-                f.write(str(bridge['arp_cache_timeout_ms']))
-            # ignore link state changes
-            with open('/proc/sys/net/ipv4/conf/' + member['name'] + '/link_filter', 'w') as f:
-                f.write(str(bridge['disable_link_detect']))
-
-            # adjust member port stp attributes
-            member_if = ipdb.interfaces[ member['name'] ]
-            member_if.begin()
             # set bridge port cost
-            member_if.brport_cost = member['cost']
+            br.set_cost(member['name'], member['cost'])
             # set bridge port priority
-            member_if.brport_priority = member['priority']
-            member_if.commit()
+            br.set_priority(member['name'], member['priority'])
+
+            i = Interface(member['name'])
+            # configure ARP cache timeout
+            i.arp_cache_tmo = bridge['arp_cache_tmo']
+            # ignore link state changes
+            i.link_detect = bridge['disable_link_detect']
 
     return None
 
