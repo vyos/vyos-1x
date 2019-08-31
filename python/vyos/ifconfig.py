@@ -118,6 +118,28 @@ class Interface:
         # add exception handling code
         pass
 
+    def _read_sysfs(self, filename):
+        """
+        Provide a single primitive w/ error checking for reading from sysfs.
+        """
+        var = None
+        with open(filename, 'r') as f:
+            var = f.read().rstrip('\n')
+
+        self._debug_msg('read "{}" <- "{}"'.format(value, filename))
+        return var
+
+
+    def _write_sysfs(self, filename, value):
+        """
+        Provide a single primitive w/ error checking for writing to sysfs.
+        """
+        with open(filename, 'w') as f:
+            f.write(str(value))
+
+        self._debug_msg('write "{}" -> "{}"'.format(value, filename))
+        return None
+
 
     @property
     def mtu(self):
@@ -311,11 +333,7 @@ class Interface:
         >>> Interface('eth0').ifalias
         ''
         """
-
-        alias = ''
-        with open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'r') as f:
-            alias = f.read().rstrip('\n')
-        return alias
+        return self._read_sysfs('/sys/class/net/{0}/ifalias'.format(self._ifname))
 
 
     @ifalias.setter
@@ -336,13 +354,11 @@ class Interface:
         >>> Interface('eth0').ifalias
         ''
         """
-
-        # clear interface alias
         if not ifalias:
+            # clear interface alias
             ifalias = '\0'
 
-        with open('/sys/class/net/{0}/ifalias'.format(self._ifname), 'w') as f:
-            f.write(str(ifalias))
+        self._write_sysfs('/sys/class/net/{0}/ifalias'.format(self._ifname), ifalias)
 
 
     @property
