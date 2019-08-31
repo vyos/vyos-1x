@@ -41,7 +41,7 @@ interface "{{ intf }}" {
 dhclient_base = r'/var/lib/dhcp/dhclient_'
 
 class Interface:
-    def __init__(self, ifname=None, type=None, debug=False):
+    def __init__(self, ifname=None, type=None):
         """
         Create instance of an IP interface
 
@@ -57,9 +57,11 @@ class Interface:
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(str(ifname)))
 
-        # variable already referenced from _debug()
-        self._debug = debug
         self._ifname = str(ifname)
+        self._debug = False
+
+        if os.getenv('DEBUG') == '1':
+            self._debug = True
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)):
             cmd = 'ip link add dev "{}" type "{}"'.format(ifname, type)
@@ -79,12 +81,6 @@ class Interface:
     def _debug_msg(self, msg):
         if self._debug:
             print('"DEBUG/{}: {}'.format(self._ifname, msg))
-
-
-    def set_debug(self, debug):
-        if debug not in [True, False]:
-            raise ValueError('must specify True or False for debug')
-        self._debug = debug
 
 
     def remove(self):
