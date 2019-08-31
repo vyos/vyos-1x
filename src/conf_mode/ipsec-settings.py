@@ -62,7 +62,7 @@ conn {{ra_conn_name}}
   left={{outside_addr}}
   leftsubnet=%dynamic[/1701]
   rightsubnet=%dynamic
-  mark=%unique
+  mark_in=%unique
   auto=add
   ike=aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024!
   dpddelay=15
