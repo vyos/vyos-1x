@@ -19,8 +19,8 @@
 from os import environ
 from copy import deepcopy
 from sys import exit
-from pyroute2 import IPDB
 from vyos.config import Config
+from vyos.ifconfig import DummyIf
 from vyos import ConfigError
 
 default_config_data = {
@@ -83,45 +83,26 @@ def generate(dummy):
     return None
 
 def apply(dummy):
-    ipdb = IPDB(mode='explicit')
-    dummyif = dummy['intf']
+    du = DummyIf(dummy['intf'])
 
     # Remove dummy interface
     if dummy['deleted']:
-        try:
-            # delete dummy interface
-            with ipdb.interface[ dummyif ] as du:
-                du.remove()
-        except:
-            pass
+        du.remove()
     else:
-        try:
-            # create dummy interface if it's non existing
-            ipdb.create(kind='dummy', ifname=dummyif).commit()
-        except:
-            pass
-
-        # retrieve handle to dummy interface
-        du = ipdb.interfaces[dummyif]
-        # begin a transaction prior to make any change
-        du.begin()
         # enable interface
-        du.up()
+        du.state = 'up'
         # update interface description used e.g. within SNMP
         du.ifalias = dummy['description']
 
         # Configure interface address(es)
         for addr in dummy['address_remove']:
-            du.del_ip(addr)
+            du.del_addr(addr)
         for addr in dummy['address']:
-            du.add_ip(addr)
+            du.add_addr(addr)
 
         # disable interface on demand
         if dummy['disable']:
-            du.down()
-
-        # commit changes on bridge interface
-        du.commit()
+            du.state = 'down'
 
     return None
 
