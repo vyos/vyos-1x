@@ -61,8 +61,6 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         dummy['description'] = conf.return_value('description')
-    else:
-        dummy['description'] = dummy['intf']
 
     # Disable this interface
     if conf.exists('disable'):
