@@ -26,4 +26,97 @@
       </node>
     </children>
   </node>
+  <node name="set">
+    <properties>
+      <help>Set operational options</help>
+    </properties>
+    <children>
+      <tagNode name="builtin">
+        <properties>
+          <help>Bash builtin set command</help>
+          <completionHelp>
+            <list>&lt;OPTION&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>builtin $3</command>
+      </tagNode>
+
+      <node name="console">
+        <properties>
+          <help>Control console behaviors</help>
+        </properties>
+        <children>
+          <leafNode name="keymap">
+            <properties>
+              <help>Reconfigure console keyboard layout</help>
+            </properties>
+            <command>sudo dpkg-reconfigure -f dialog keyboard-configuration &amp;&amp; sudo systemctl restart keyboard-setup</command>
+          </leafNode>
+        </children>
+      </node>
+
+      <node name="terminal">
+        <properties>
+          <help>Control terminal behaviors</help>
+        </properties>
+        <children>
+
+          <node name="key">
+            <properties>
+              <help>Set key behaviors</help>
+            </properties>
+            <children>
+              <tagNode name="query-help">
+                <properties>
+                  <help>Enable/disable getting help using question mark (default enabled)</help>
+                  <completionHelp>
+                    <list>enable disable</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/toggle_help_binding.sh $5</command>
+              </tagNode>
+            </children>
+          </node>
+
+          <node name="pager">
+            <properties>
+              <help>Set terminal pager to default (less)</help>
+            </properties>
+            <command>VYATTA_PAGER=${_vyatta_default_pager}</command>
+          </node>
+          <tagNode name="pager">
+            <properties>
+              <help>Set terminal pager</help>
+              <completionHelp>
+                <list>&lt;PROGRAM&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>VYATTA_PAGER=$4</command>
+          </tagNode>
+
+          <tagNode name="length">
+            <properties>
+              <help>Set terminal to given number of rows (0 disables paging)</help>
+              <completionHelp>
+                <list>&lt;NUMBER&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>if [ "$4" -eq 0 ]; then VYATTA_PAGER=cat; else VYATTA_PAGER=${_vyatta_default_pager}; stty rows $4; fi</command>
+          </tagNode>
+
+          <tagNode name="width">
+            <properties>
+              <help>Set terminal to given number of columns</help>
+              <completionHelp>
+                <list>&lt;NUMBER&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>stty columns $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+
+
 </interfaceDefinition>

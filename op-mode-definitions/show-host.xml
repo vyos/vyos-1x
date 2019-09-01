@@ -7,6 +7,12 @@
           <help>Show host information</help>
         </properties>
         <children>
+          <leafNode name="date">
+            <properties>
+              <help>Show host current date</help>
+            </properties>
+            <command>/bin/date</command>
+          </leafNode>
           <leafNode name="domain">
             <properties>
               <help>Show domain name</help>
@@ -25,6 +31,12 @@
             </properties>
             <command>/usr/bin/host $4</command>
           </tagNode>
+          <leafNode name="os">
+            <properties>
+              <help>Show host operating system details</help>
+            </properties>
+            <command>/bin/uname -a</command>
+          </leafNode>
         </children>
       </node>
     </children>
