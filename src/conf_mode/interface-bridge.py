@@ -82,8 +82,6 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         bridge['description'] = conf.return_value('description')
-    else:
-        bridge['description'] = bridge['intf']
 
     # Disable this bridge interface
     if conf.exists('disable'):
