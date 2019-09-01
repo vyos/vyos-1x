@@ -1040,3 +1040,45 @@ class BondIf(Interface):
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
                                  .format(self._ifname), time)
+
+    @property
+    def arp_ip_target(self):
+        """
+        Specifies the IP addresses to use as ARP monitoring peers when
+        arp_interval is > 0. These are the targets of the ARP request sent to
+        determine the health of the link to the targets. Specify these values
+        in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by
+        a comma. At least one IP address must be given for ARP monitoring to
+        function. The maximum number of targets that can be specified is 16.
+
+        The default value is no IP addresses.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').arp_ip_target
+        '192.0.2.1'
+        """
+        return self._read_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
+                                .format(self._ifname))
+
+    @arp_ip_target.setter
+    def arp_ip_target(self, target):
+        """
+        Specifies the IP addresses to use as ARP monitoring peers when
+        arp_interval is > 0. These are the targets of the ARP request sent to
+        determine the health of the link to the targets. Specify these values
+        in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by
+        a comma. At least one IP address must be given for ARP monitoring to
+        function. The maximum number of targets that can be specified is 16.
+
+        The default value is no IP addresses.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').arp_ip_target = '192.0.2.1'
+        >>> BondIf('bond0').arp_ip_target
+        '192.0.2.1'
+        """
+        return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
+                                 .format(self._ifname), mode)
+
