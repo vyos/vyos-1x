@@ -41,18 +41,22 @@ interface "{{ intf }}" {
 dhclient_base = r'/var/lib/dhcp/dhclient_'
 
 class Interface:
-    def __init__(self, ifname=None, type=None):
+    def __init__(self, ifname, type=None):
         """
-        Create instance of an IP interface
+        This is the base interface class which supports basic IP/MAC address
+        operations as well as DHCP(v6). Other interface which represent e.g.
+        and ethernet bridge are implemented as derived classes adding all
+        additional functionality.
+
+        DEBUG:
+        This class has embedded debugging (print) which can be enabled by
+        creating the following file:
+        vyos@vyos# touch /tmp/vyos.ifconfig.debug
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> i = Interface('eth0')
         """
-
-        if not ifname:
-            raise Exception('interface name required')
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(str(ifname)))
@@ -60,7 +64,7 @@ class Interface:
         self._ifname = str(ifname)
         self._debug = False
 
-        if os.getenv('DEBUG') == '1':
+        if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             self._debug = True
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)):
@@ -88,7 +92,6 @@ class Interface:
         Remove system interface
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> i = Interface('eth0')
         >>> i.remove()
@@ -114,6 +117,7 @@ class Interface:
         # add exception handling code
         pass
 
+
     def _read_sysfs(self, filename):
         """
         Provide a single primitive w/ error checking for reading from sysfs.
@@ -130,10 +134,10 @@ class Interface:
         """
         Provide a single primitive w/ error checking for writing to sysfs.
         """
+        self._debug_msg('write "{}" -> "{}"'.format(value, filename))
         with open(filename, 'w') as f:
             f.write(str(value))
 
-        self._debug_msg('write "{}" -> "{}"'.format(value, filename))
         return None
 
 
@@ -143,37 +147,30 @@ class Interface:
         Get/set interface mtu in bytes.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').mtu
         '1500'
         """
-
-        mtu = 0
-        with open('/sys/class/net/{0}/mtu'.format(self._ifname), 'r') as f:
-            mtu = f.read().rstrip('\n')
-        return mtu
+        return self._read_sysfs('/sys/class/net/{0}/mtu'
+                                .format(self._ifname))
 
 
     @mtu.setter
-    def mtu(self, mtu=None):
+    def mtu(self, mtu):
         """
         Get/set interface mtu in bytes.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').mtu = 1400
         >>> Interface('eth0').mtu
         '1400'
         """
-
         if mtu < 68 or mtu > 9000:
             raise ValueError('Invalid MTU size: "{}"'.format(mru))
 
-        with open('/sys/class/net/{0}/mtu'.format(self._ifname), 'w') as f:
-            f.write(str(mtu))
-
+        return self._write_sysfs('/sys/class/net/{0}/mtu'
+                                 .format(self._ifname), mtu)
 
     @property
     def mac(self):
@@ -181,24 +178,20 @@ class Interface:
         Get/set interface mac address
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').mac
         '00:0c:29:11:aa:cc'
         """
-        address = ''
-        with open('/sys/class/net/{0}/address'.format(self._ifname), 'r') as f:
-            address = f.read().rstrip('\n')
-        return address
+        return self._read_sysfs('/sys/class/net/{0}/address'
+                                .format(self._ifname))
 
 
     @mac.setter
-    def mac(self, mac=None):
+    def mac(self, mac):
         """
         Get/set interface mac address
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').mac = '00:90:43:fe:fe:1b'
         >>> Interface('eth0').mac
@@ -230,41 +223,30 @@ class Interface:
     @property
     def arp_cache_tmo(self):
         """
-        Get configured ARP cache timeout value from interface. Example shows
-        default value of 30 seconds.
+        Get configured ARP cache timeout value from interface in seconds.
+        Internal Kernel representation is in milliseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').arp_cache_tmo
-        '30000'
+        '30'
         """
-
-        alias = ''
-        with open('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'.format(self._ifname), 'r') as f:
-            alias = f.read().rstrip('\n')
-        return alias
+        return (self._read_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
+                                 .format(self._ifname)) / 1000)
 
 
     @arp_cache_tmo.setter
-    def arp_cache_tmo(self, tmo=None):
+    def arp_cache_tmo(self, tmo):
         """
-        Set ARP cache timeout value in seconds for this.
+        Set ARP cache timeout value in seconds. Internal Kernel representation
+        is in milliseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').arp_cache_tmo = '40000'
+        >>> Interface('eth0').arp_cache_tmo = '40'
         """
-
-        # clear interface alias
-        if not tmo:
-            raise ValueError('Timeout value required')
-
-        # Kernel interface is on milli seconds
-        tmo = int(tmo) * 1000
-        with open('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'.format(self._ifname), 'w') as f:
-            f.write(str(tmo))
+        return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
+                                 .format(self._ifname), (int(tmo) * 1000))
 
     @property
     def link_detect(self):
@@ -272,20 +254,16 @@ class Interface:
         How does the kernel act when receiving packets on 'down' interfaces
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').link_detect
         '0'
         """
-
-        alias = ''
-        with open('/proc/sys/net/ipv4/conf/{0}/link_filter'.format(self._ifname), 'r') as f:
-            alias = f.read().rstrip('\n')
-        return alias
+        return self._read_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
+                                .format(self._ifname))
 
 
     @link_detect.setter
-    def link_detect(self, link_filter=None):
+    def link_detect(self, link_filter):
         """
         Konfigure kernel response in packets received on interfaces that are 'down'
 
@@ -302,18 +280,11 @@ class Interface:
         scripts.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').link_detect = '1'
         """
-
-        # clear interface alias
-        if not link_filter:
-            raise ValueError()
-
         if link_filter >= 0 and link_filter <= 2:
-            with open('/proc/sys/net/ipv4/conf/{0}/link_filter'.format(self._ifname), 'w') as f:
-                f.write(str(link_filter))
+            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'.format(self._ifname), link_filter)
         else:
             raise ValueError()
 
@@ -338,7 +309,6 @@ class Interface:
         Get/set interface alias name
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').ifalias = 'VyOS upstream interface'
         >>> Interface('eth0').ifalias
@@ -363,31 +333,24 @@ class Interface:
         Enable (up) / Disable (down) an interface
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').state
         'up'
         """
-
-        state = ''
-        with open('/sys/class/net/{0}/operstate'.format(self._ifname), 'r') as f:
-            state = f.read().rstrip('\n')
-        return state
+        return self._read_sysfs('/sys/class/net/{0}/operstate'.format(self._ifname))
 
 
     @state.setter
-    def state(self, state=None):
+    def state(self, state):
         """
         Enable (up) / Disable (down) an interface
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').state = 'down'
         >>> Interface('eth0').state
         'down'
         """
-
         if state not in ['up', 'down']:
             raise ValueError('state must be "up" or "down"')
 
@@ -403,7 +366,6 @@ class Interface:
         This is done using the netifaces and ipaddress python modules.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').get_addrs()
         ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
@@ -433,13 +395,12 @@ class Interface:
         return ipv4 + ipv6
 
 
-    def add_addr(self, addr=None):
+    def add_addr(self, addr):
         """
         Add IP address to interface. Address is only added if it yet not added
         to that interface.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> j = Interface('eth0')
         >>> j.add_addr('192.0.2.1/24')
@@ -447,21 +408,16 @@ class Interface:
         >>> j.get_addr()
         ['192.0.2.1/24', '2001:db8::ffff/64']
         """
-
-        if not addr:
-            raise ValueError('No IP address specified')
-
         if not is_intf_addr_assigned(self._ifname, addr):
             cmd = 'sudo ip addr add "{}" dev "{}"'.format(addr, self._ifname)
             self._cmd(cmd)
 
 
-    def del_addr(self, addr=None):
+    def del_addr(self, addr):
         """
         Remove IP address from interface.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> j = Interface('eth0')
         >>> j.add_addr('2001:db8::ffff/64')
@@ -472,10 +428,6 @@ class Interface:
         >>> j.get_addr()
         ['2001:db8::ffff/64']
         """
-
-        if not addr:
-            raise ValueError('No IP address specified')
-
         if is_intf_addr_assigned(self._ifname, addr):
             cmd = 'ip addr del "{}" dev "{}"'.format(addr, self._ifname)
             self._cmd(cmd)
@@ -493,7 +445,6 @@ class Interface:
         >>> j = Interface('eth0')
         >>> j.set_dhcp()
         """
-
         dhcp = {
             'hostname': 'vyos',
             'intf': self._ifname
@@ -528,7 +479,6 @@ class Interface:
         >>> j = Interface('eth0')
         >>> j.del_dhcp()
         """
-
         pid = 0
         if os.path.isfile(self._dhcp_pid_file):
             with open(self._dhcp_pid_file, 'r') as f:
@@ -565,7 +515,6 @@ class Interface:
         >>> j = Interface('eth0')
         >>> j.set_dhcpv6()
         """
-
         dhcpv6 = {
             'intf': self._ifname
         }
@@ -604,7 +553,6 @@ class Interface:
         >>> j = Interface('eth0')
         >>> j.del_dhcpv6()
         """
-
         pid = 0
         if os.path.isfile(self._dhcpv6_pid_file):
             with open(self._dhcpv6_pid_file, 'r') as f:
@@ -635,177 +583,130 @@ class Interface:
 
 
 class LoopbackIf(Interface):
-    def __init__(self, ifname=None):
+    def __init__(self, ifname):
         super().__init__(ifname, type='loopback')
 
 
 class DummyIf(Interface):
-    def __init__(self, ifname=None):
+    def __init__(self, ifname):
         super().__init__(ifname, type='dummy')
 
 
 class BridgeIf(Interface):
-    def __init__(self, ifname=None):
+    def __init__(self, ifname):
         super().__init__(ifname, type='bridge')
 
     @property
     def ageing_time(self):
         """
-        Get bridge aging time in seconds.
+        Return configured bridge interface MAC address aging time in seconds.
+        Internal kernel representation is in centiseconds, thus its converted
+        in the end. Kernel default is 300 seconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').aging_time
-        '3'
+        '300'
         """
-
-        time = 0
-        with open('/sys/class/net/{0}/bridge/ageing_time'.format(self._ifname), 'r') as f:
-            time = int(f.read().rstrip('\n'))
-
-        # kernel representation is in centiseconds - convert to seconds
-        return time/100
-
+        return (self._read_sysfs('/sys/class/net/{0}/bridge/ageing_time'
+                                 .format(self._ifname)) / 100)
 
     @ageing_time.setter
-    def ageing_time(self, time=None):
+    def ageing_time(self, time):
         """
-        Set bridge aging time in seconds.
+        Set bridge interface MAC address aging time in seconds. Internal kernel
+        representation is in centiseconds. Kernel default is 300 seconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').ageing_time = 2
         """
-
-        if not time:
-            raise ValueError()
-
-        # kernel representation is in centiseconds - convert from seconds to centiseconds
         time = int(time) * 100
-
-        with open('/sys/class/net/{0}/bridge/ageing_time'.format(self._ifname), 'w') as f:
-            f.write(str(time))
+        return self._write_sysfs('/sys/class/net/{0}/bridge/ageing_time'
+                                 .format(self._ifname), time)
 
     @property
     def forward_delay(self):
         """
-        Get bridge forwarding delay in seconds.
+        Get bridge forwarding delay in seconds. Internal Kernel representation
+        is in centiseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').ageing_time
-        '3"""
-
-        time = 0
-        with open('/sys/class/net/{0}/bridge/forward_delay'.format(self._ifname), 'r') as f:
-            time = int(f.read().rstrip('\n'))
-
-        # kernel representation is in centiseconds - convert to seconds
-        return time/100
-
+        '3'
+        """
+        return (self._read_sysfs('/sys/class/net/{0}/bridge/forward_delay'
+                                 .format(self._ifname)) / 100)
 
     @forward_delay.setter
-    def forward_delay(self, time=None):
+    def forward_delay(self, time):
         """
-        Set bridge forwarding delay in seconds.
+        Set bridge forwarding delay in seconds. Internal Kernel representation
+        is in centiseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').forward_delay = 15
         """
-
-        if not time:
-            raise ValueError()
-
-        # kernel representation is in centiseconds - convert from seconds to centiseconds
-        time = int(time) * 100
-
-        with open('/sys/class/net/{0}/bridge/forward_delay'.format(self._ifname), 'w') as f:
-            f.write(str(time))
+        return self._write_sysfs('/sys/class/net/{0}/bridge/forward_delay'
+                                 .format(self._ifname), (int(time) * 100))
 
     @property
     def hello_time(self):
         """
-        Get bridge hello time in seconds.
+        Get bridge hello time in seconds. Internal Kernel representation
+        is in centiseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').hello_time
         '2'
         """
-
-        time = 0
-        with open('/sys/class/net/{0}/bridge/hello_time'.format(self._ifname), 'r') as f:
-            time = int(f.read().rstrip('\n'))
-
-        # kernel representation is in centiseconds - convert to seconds
-        return time/100
+        return (self._read_sysfs('/sys/class/net/{0}/bridge/hello_time'
+                                 .format(self._ifname)) / 100)
 
 
     @hello_time.setter
-    def hello_time(self, time=None):
+    def hello_time(self, time):
         """
-        Set bridge hello time in seconds.
+        Set bridge hello time in seconds. Internal Kernel representation
+        is in centiseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').hello_time = 2
         """
-
-        if not time:
-            raise ValueError()
-
-        # kernel representation is in centiseconds - convert from seconds to centiseconds
-        time = int(time) * 100
-
-        with open('/sys/class/net/{0}/bridge/hello_time'.format(self._ifname), 'w') as f:
-            f.write(str(time))
+        return self._write_sysfs('/sys/class/net/{0}/bridge/hello_time'
+                                 .format(self._ifname), (int(time) * 100))
 
     @property
     def max_age(self):
         """
-        Get bridge max max message age in seconds.
+        Get bridge max max message age in seconds. Internal Kernel representation
+        is in centiseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').max_age
         '20'
         """
 
-        time = 0
-        with open('/sys/class/net/{0}/bridge/max_age'.format(self._ifname), 'r') as f:
-            time = int(f.read().rstrip('\n'))
-
-        # kernel representation is in centiseconds - convert to seconds
-        return time/100
-
+        return (self._read_sysfs('/sys/class/net/{0}/bridge/max_age'
+                                 .format(self._ifname)) / 100)
 
     @max_age.setter
-    def max_age(self, time=None):
+    def max_age(self, time):
         """
-        Set bridge max message age in seconds.
+        Set bridge max message age in seconds. Internal Kernel representation
+        is in centiseconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').max_age = 30
         """
-
-        if not time:
-            raise ValueError()
-
-        # kernel representation is in centiseconds - convert from seconds to centiseconds
-        time = int(time) * 100
-
-        with open('/sys/class/net/{0}/bridge/max_age'.format(self._ifname), 'w') as f:
-            f.write(str(time))
+        return self._write_sysfs('/sys/class/net/{0}/bridge/max_age'
+                                 .format(self._ifname), (int(time) * 100))
 
     @property
     def priority(self):
@@ -813,45 +714,31 @@ class BridgeIf(Interface):
         Get bridge max aging time in seconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').priority
         '32768'
         """
-
-        priority = 0
-        with open('/sys/class/net/{0}/bridge/priority'.format(self._ifname), 'r') as f:
-            priority = int(f.read().rstrip('\n'))
-
-        # kernel representation is in centiseconds - convert to seconds
-        return priority
-
+        return self._read_sysfs('/sys/class/net/{0}/bridge/priority'
+                                .format(self._ifname))
 
     @priority.setter
-    def priority(self, priority=None):
+    def priority(self, priority):
         """
         Set bridge max aging time in seconds.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').priority = 8192
         """
-
-        if not priority:
-            raise ValueError()
-
-        with open('/sys/class/net/{0}/bridge/priority'.format(self._ifname), 'w') as f:
-            f.write(str(priority))
-
+        return self._write_sysfs('/sys/class/net/{0}/bridge/priority'
+                                 .format(self._ifname), priority)
 
     @property
     def stp_state(self):
         """
-        Get bridge STP state
+        Get current bridge STP (Spanning Tree) state.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').stp_state
         '0'
@@ -865,23 +752,20 @@ class BridgeIf(Interface):
 
 
     @stp_state.setter
-    def stp_state(self, state=None):
+    def stp_state(self, state):
         """
-        Set bridge STP state.
-        0 -> STP disabled, 1 -> STP enabled
+        Set bridge STP (Spannign Tree) state. 0 -> STP disabled, 1 -> STP enabled
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').stp_state = 1
         """
 
         if int(state) >= 0 and int(state) <= 1:
-            with open('/sys/class/net/{0}/bridge/stp_state'.format(self._ifname), 'w') as f:
-                f.write(str(state))
+            return self._write_sysfs('/sys/class/net/{0}/bridge/stp_state'
+                                     .format(self._ifname), state)
         else:
-            raise ValueError()
-
+            raise ValueError("Value out of range")
 
     @property
     def multicast_querier(self):
@@ -889,21 +773,15 @@ class BridgeIf(Interface):
         Get bridge multicast querier membership state.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').multicast_querier
         '0'
         """
-
-        enable = 0
-        with open('/sys/class/net/{0}/bridge/multicast_querier'.format(self._ifname), 'r') as f:
-            enable = int(f.read().rstrip('\n'))
-
-        return enable
-
+        return self._read_sysfs('/sys/class/net/{0}/bridge/multicast_querier'
+                                .format(self._ifname))
 
     @multicast_querier.setter
-    def multicast_querier(self, enable=None):
+    def multicast_querier(self, enable):
         """
         Sets whether the bridge actively runs a multicast querier or not. When a
         bridge receives a 'multicast host membership' query from another network
@@ -913,29 +791,25 @@ class BridgeIf(Interface):
         Use enable=1 to enable or enable=0 to disable
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').multicast_querier = 1
         """
-
         if int(enable) >= 0 and int(enable) <= 1:
-            with open('/sys/class/net/{0}/bridge/multicast_querier'.format(self._ifname), 'w') as f:
-                f.write(str(enable))
+            return self._write_sysfs('/sys/class/net/{0}/bridge/multicast_querier'
+                                     .format(self._ifname), enable)
         else:
-            raise ValueError()
+            raise ValueError("Value out of range")
 
 
-    def add_port(self, interface=None):
+    def add_port(self, interface):
         """
-        Add bridge member port
+        Add physical interface to bridge (member port)
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
-
         if not interface:
             raise ValueError('No interface address specified')
 
@@ -943,7 +817,7 @@ class BridgeIf(Interface):
         self._cmd(cmd)
 
 
-    def del_port(self, interface=None):
+    def del_port(self, interface):
         """
         Add bridge member port
 
@@ -952,7 +826,6 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').del_port('eth1')
         """
-
         if not interface:
             raise ValueError('No interface address specified')
 
@@ -960,7 +833,7 @@ class BridgeIf(Interface):
         self._cmd(cmd)
 
 
-    def set_cost(self, interface=None, cost=None):
+    def set_cost(self, interface, cost):
         """
         Set interface path cost, only relevant for STP enabled interfaces
 
@@ -969,18 +842,11 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').path_cost(4)
         """
-
-        if not interface:
-            raise ValueError('interface not specified')
-
-        if not cost:
-            raise ValueError('cost not specified')
-
-        with open('/sys/class/net/{}/brif/{}/path_cost'.format(self._ifname, interface), 'w') as f:
-            f.write(str(cost))
+        return self._write_sysfs('/sys/class/net/{}/brif/{}/path_cost'
+                                 .format(self._ifname, interface), cost)
 
 
-    def set_priority(self, interface=None, priority=None):
+    def set_priority(self, interface, priority):
         """
         Set interface path priority, only relevant for STP enabled interfaces
 
@@ -989,12 +855,5 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').priority(4)
         """
-
-        if not interface:
-            raise ValueError('interface not specified')
-
-        if not priority:
-            raise ValueError('priority not specified')
-
-        with open('/sys/class/net/{}/brif/{}/priority'.format(self._ifname, interface), 'w') as f:
-            f.write(str(priority))
+        return self._write_sysfs('/sys/class/net/{}/brif/{}/priority'
+                                 .format(self._ifname, interface), priority)
