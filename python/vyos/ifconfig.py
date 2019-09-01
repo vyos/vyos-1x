@@ -954,3 +954,47 @@ class BridgeIf(Interface):
         """
         return self._write_sysfs('/sys/class/net/{}/brif/{}/priority'
                                  .format(self._ifname, interface), priority)
+
+
+class BondIf(Interface):
+    def __init__(self, ifname):
+        super().__init__(ifname, type='bond')
+
+    @property
+    def xmit_hash_policy(self):
+        """
+        Selects the transmit hash policy to use for slave selection in
+        balance-xor, 802.3ad, and tlb modes. Possible values are: layer2,
+        layer2+3, layer3+4, encap2+3, encap3+4.
+
+        The default value is layer2
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').xmit_hash_policy
+        'layer3+4'
+        """
+        # Linux Kernel appends has policy value to string, e.g. 'layer3+4 1',
+        # so remove the later part and only return the mode as string.
+        return self._read_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
+                                .format(self._ifname)).split(' ')[0]
+
+    @xmit_hash_policy.setter
+    def xmit_hash_policy(self, mode):
+        """
+        Selects the transmit hash policy to use for slave selection in
+        balance-xor, 802.3ad, and tlb modes. Possible values are: layer2,
+        layer2+3, layer3+4, encap2+3, encap3+4.
+
+        The default value is layer2
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').xmit_hash_policy = 'layer2+3'
+        >>> BondIf('bond0').proxy_arp
+        '1'
+        """
+        if not mode in ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']:
+            raise ValueError()
+        return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
+                                 .format(self._ifname), mode)
