@@ -22,7 +22,6 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 from vyos.config import Config
-from vyos.validate import is_ip
 from vyos.ifconfig import BridgeIf, Interface
 from vyos import ConfigError
 
