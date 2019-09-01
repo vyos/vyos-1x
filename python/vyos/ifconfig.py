@@ -998,3 +998,45 @@ class BondIf(Interface):
             raise ValueError()
         return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
                                  .format(self._ifname), mode)
+
+    @property
+    def arp_interval(self):
+        """
+        Specifies the ARP link monitoring frequency in milliseconds.
+
+        The ARP monitor works by periodically checking the slave devices to
+        determine whether they have sent or received traffic recently (the
+        precise criteria depends upon the bonding mode, and the state of the
+        slave). Regular traffic is generated via ARP probes issued for the
+        addresses specified by the arp_ip_target option.
+
+        The default value is 0.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').arp_interval
+        '0'
+        """
+        return self._read_sysfs('/sys/class/net/{}/bonding/arp_interval'
+                                .format(self._ifname))
+
+    @arp_interval.setter
+    def arp_interval(self, time):
+        """
+        Specifies the IP addresses to use as ARP monitoring peers when
+        arp_interval is > 0. These are the targets of the ARP request sent to
+        determine the health of the link to the targets. Specify these values
+        in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by
+        a comma. At least one IP address must be given for ARP monitoring to
+        function. The maximum number of targets that can be specified is 16.
+
+        The default value is no IP addresses.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').arp_interval = '100'
+        >>> BondIf('bond0').arp_interval
+        '100'
+        """
+        return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
+                                 .format(self._ifname), time)
