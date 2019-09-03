@@ -12,6 +12,7 @@ interface_definitions:
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/interfaces/node.def
 	rm -f $(TMPL_DIR)/interfaces/bridge/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -f $(TMPL_DIR)/protocols/static/node.def
 	rm -f $(TMPL_DIR)/system/node.def

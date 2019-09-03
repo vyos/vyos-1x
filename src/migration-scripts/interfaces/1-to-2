@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+# Change syntax of bond interface
+# - move interface based bond-group to actual bond (de-nest)
+# https://phabricator.vyos.net/T1614
+
+import sys
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['interfaces', 'bonding']
+
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+else:
+    #
+    # move interface based bond-group to actual bond (de-nest)
+    #
+    for intf in config.list_nodes(['interfaces', 'ethernet']):
+        # check if bond-group exists
+        if config.exists(['interfaces', 'ethernet', intf, 'bond-group']):
+            # get configured bond interface
+            bond = config.return_value(['interfaces', 'ethernet', intf, 'bond-group'])
+            # delete old interface asigned (nested) bond group
+            config.delete(['interfaces', 'ethernet', intf, 'bond-group'])
+            # create new bond member interface
+            config.set(base + [bond, 'member', 'interface'], value=intf, replace=False)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
