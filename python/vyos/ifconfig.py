@@ -680,16 +680,33 @@ class Interface:
 
 
 class LoopbackIf(Interface):
+    """
+    The loopback device is a special, virtual network interface that your router
+    uses to communicate with itself.
+    """
     def __init__(self, ifname):
         super().__init__(ifname, type='loopback')
 
 
 class DummyIf(Interface):
+    """
+    A dummy interface is entirely virtual like, for example, the loopback
+    interface. The purpose of a dummy interface is to provide a device to route
+    packets through without actually transmitting them.
+    """
     def __init__(self, ifname):
         super().__init__(ifname, type='dummy')
 
 
 class BridgeIf(Interface):
+    """
+    A bridge is a way to connect two Ethernet segments together in a protocol
+    independent way. Packets are forwarded based on Ethernet address, rather
+    than IP address (like a router). Since forwarding is done at Layer 2, all
+    protocols can go transparently through a bridge.
+
+    The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
+    """
     def __init__(self, ifname):
         super().__init__(ifname, type='bridge')
 
@@ -950,6 +967,13 @@ class BridgeIf(Interface):
 
 
 class BondIf(Interface):
+    """
+    The Linux bonding driver provides a method for aggregating multiple network
+    interfaces into a single logical "bonded" interface. The behavior of the
+    bonded interfaces depends upon the mode; generally speaking, modes provide
+    either hot standby or load balancing services. Additionally, link integrity
+    monitoring may be performed.
+    """
     def __init__(self, ifname):
         super().__init__(ifname, type='bond')
 
