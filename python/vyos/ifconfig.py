@@ -966,7 +966,11 @@ class BridgeIf(Interface):
                                  .format(self._ifname, interface), priority)
 
 
-class BondIf(Interface):
+class EthernetIf(Interface):
+    def __init__(self, ifname, type=None):
+        super().__init__(ifname, type)
+
+class BondIf(EthernetIf):
     """
     The Linux bonding driver provides a method for aggregating multiple network
     interfaces into a single logical "bonded" interface. The behavior of the
