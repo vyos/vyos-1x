@@ -145,15 +145,6 @@ def vlan_to_dict(conf):
     if conf.exists('disable'):
         vlan['disable'] = True
 
-    # ethertype is mandatory on vif-s nodes and only exists here!
-    # check if this is a vif-s node at all:
-    if conf.get_level().split()[-2] == 'vif-s':
-        # ethertype uses a default of 0x88A8
-        tmp = '0x88A8'
-        if conf.exists('ethertype'):
-             tmp = conf.return_value('ethertype')
-        vlan['ethertype'] = get_ethertype(tmp)
-
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         vlan['mac'] = conf.return_value('mac')
@@ -162,16 +153,33 @@ def vlan_to_dict(conf):
     if conf.exists('mtu'):
         vlan['mtu'] = int(conf.return_value('mtu'))
 
-    # check if there is a Q-in-Q vlan customer interface
-    # and call this function recursively
-    if conf.exists('vif-c'):
-        cfg_level = conf.get_level()
-        # add new key (vif-c) to dictionary
-        vlan['vif-c'] = []
-        for vif in conf.list_nodes('vif-c'):
-            # set config level to vif interface
-            conf.set_level(cfg_level + ' vif-c ' + vif)
-            vlan['vif-c'].append(vlan_to_dict(conf))
+    # ethertype is mandatory on vif-s nodes and only exists here!
+    # check if this is a vif-s node at all:
+    if conf.get_level().split()[-2] == 'vif-s':
+        vlan['vif_c'] = []
+        vlan['vif_c_remove'] = []
+
+        # ethertype uses a default of 0x88A8
+        tmp = '0x88A8'
+        if conf.exists('ethertype'):
+             tmp = conf.return_value('ethertype')
+        vlan['ethertype'] = get_ethertype(tmp)
+
+        # get vif-c interfaces (currently effective) - to determine which vif-c
+        # interface is no longer present and needs to be removed
+        eff_intf = conf.list_effective_nodes('vif-c')
+        act_intf = conf.list_nodes('vif-c')
+        vlan['vif_c_remove'] = diff(eff_intf, act_intf)
+
+        # check if there is a Q-in-Q vlan customer interface
+        # and call this function recursively
+        if conf.exists('vif-c'):
+            cfg_level = conf.get_level()
+            # add new key (vif-c) to dictionary
+            for vif in conf.list_nodes('vif-c'):
+                # set config level to vif interface
+                conf.set_level(cfg_level + ' vif-c ' + vif)
+                vlan['vif_c'].append(vlan_to_dict(conf))
 
     return vlan
 
@@ -309,7 +317,7 @@ def get_config():
     if conf.exists('member interface'):
         bond['member'] = conf.return_values('member interface')
 
-    # Determine interface addresses (currently effective) - to determine which
+    # get interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the bond
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
@@ -321,8 +329,8 @@ def get_config():
 
     # re-set configuration level and retrieve vif-s interfaces
     conf.set_level(cfg_base)
-    # Determine vif-s interfaces (currently effective) - to determine which
-    # vif-s interface is no longer present and needs to be removed
+    # get vif-s interfaces (currently effective) - to determine which vif-s
+    # interface is no longer present and needs to be removed
     eff_intf = conf.list_effective_nodes('vif-s')
     act_intf = conf.list_nodes('vif-s')
     bond['vif_s_remove'] = diff(eff_intf, act_intf)
@@ -458,8 +466,19 @@ def apply(bond):
 
         # create service VLAN interfaces (vif-s)
         for vif_s in bond['vif_s']:
-            vlan = b.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-            apply_vlan_config(vlan, vif_s)
+            s_vlan = b.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
+            apply_vlan_config(s_vlan, vif_s)
+
+            # remove no longer required client VLAN interfaces (vif-c)
+            # on lower service VLAN interface
+            for vif_c in vif_s['vif_c_remove']:
+                s_vlan.del_vlan(vif_c)
+
+            # create client VLAN interfaces (vif-c)
+            # on lower service VLAN interface
+            for vif_c in vif_s['vif_c']:
+                c_vlan = s_vlan.add_vlan(vif_c['id'])
+                apply_vlan_config(c_vlan, vif_c)
 
         # remove no longer required VLAN interfaces (vif)
         for vif in bond['vif_remove']:
