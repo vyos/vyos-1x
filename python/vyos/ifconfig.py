@@ -287,7 +287,7 @@ class Interface:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
                                      .format(self._ifname), link_filter)
         else:
-            raise ValueError()
+            raise ValueError("Value out of range")
 
 
     @property
@@ -989,7 +989,7 @@ class BondIf(Interface):
         '1'
         """
         if not mode in ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']:
-            raise ValueError()
+            raise ValueError("Value out of range")
         return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
                                  .format(self._ifname), mode)
 
