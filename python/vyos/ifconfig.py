@@ -913,10 +913,9 @@ class BridgeIf(Interface):
 
     def del_port(self, interface):
         """
-        Add bridge member port
+        Remove member port from bridge instance.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').del_port('eth1')
         """
@@ -1075,4 +1074,27 @@ class BondIf(Interface):
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
                                  .format(self._ifname), target)
+
+    def add_port(self, interface):
+        """
+        Enslave physical interface to bond
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').add_port('eth0')
+        >>> BondIf('bond0').add_port('eth1')
+        """
+        return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
+                                 .format(self._ifname), '+' + target)
+
+    def del_port(self, interface):
+        """
+        Remove physical port from bond
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').del_port('eth1')
+        """
+        return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
+                                 .format(self._ifname), '-' + target)
 
