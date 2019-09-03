@@ -1103,3 +1103,15 @@ class BondIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
                                  .format(self._ifname), '-' + interface)
 
+    def get_slaves(self):
+        """
+        Return a list with all configured slave interfaces on this bond.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').get_slaves()
+        ['eth1', 'eth2']
+        """
+        slaves = self._read_sysfs('/sys/class/net/{}/bonding/slaves'
+                                 .format(self._ifname))
+        return list(map(str, slaves.split()))
