@@ -1077,15 +1077,20 @@ class BondIf(Interface):
 
     def add_port(self, interface):
         """
-        Enslave physical interface to bond
+        Enslave physical interface to bond.
 
         Example:
         >>> from vyos.ifconfig import Interface
         >>> BondIf('bond0').add_port('eth0')
         >>> BondIf('bond0').add_port('eth1')
         """
+        # An interface can only be added to a bond if it is in 'down' state. If
+        # interface is in 'up' state, the following Kernel error will  be thrown:
+        # bond0: eth1 is up - this may be due to an out of date ifenslave.
+        Interface(interface).state = 'down'
+
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
-                                 .format(self._ifname), '+' + target)
+                                 .format(self._ifname), '+' + interface)
 
     def del_port(self, interface):
         """
@@ -1096,5 +1101,5 @@ class BondIf(Interface):
         >>> BondIf('bond0').del_port('eth1')
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
-                                 .format(self._ifname), '-' + target)
+                                 .format(self._ifname), '-' + interface)
 
