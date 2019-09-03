@@ -84,7 +84,7 @@ class Interface:
 
     def _debug_msg(self, msg):
         if self._debug:
-            print('DEBUG/{}: {}'.format(self._ifname, msg))
+            print('DEBUG/{:<6} {}'.format(self._ifname, msg))
 
 
     def remove(self):
@@ -109,7 +109,7 @@ class Interface:
 
 
     def _cmd(self, command):
-        self._debug_msg(command)
+        self._debug_msg("{:<6} '{}'".format('cmd', command))
 
         process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
         proc_stdout = process.communicate()[0].strip()
@@ -126,7 +126,7 @@ class Interface:
         with open(filename, 'r') as f:
             value = f.read().rstrip('\n')
 
-        self._debug_msg("read '{}' < '{}'".format(value, filename))
+        self._debug_msg("{:<6} '{}' < '{}'".format('read', value, filename))
         return value
 
 
@@ -134,7 +134,7 @@ class Interface:
         """
         Provide a single primitive w/ error checking for writing to sysfs.
         """
-        self._debug_msg("write '{}' > '{}'".format(value, filename))
+        self._debug_msg("{:<6} '{}' > '{}'".format('write', value, filename))
         with open(filename, 'w') as f:
             f.write(str(value))
 
@@ -506,7 +506,7 @@ class Interface:
         ['192.0.2.1/24', '2001:db8::ffff/64']
         """
         if not is_intf_addr_assigned(self._ifname, addr):
-            cmd = 'sudo ip addr add "{}" dev "{}"'.format(addr, self._ifname)
+            cmd = 'ip addr add "{}" dev "{}"'.format(addr, self._ifname)
             self._cmd(cmd)
 
 
