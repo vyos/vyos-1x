@@ -84,7 +84,7 @@ class Interface:
 
     def _debug_msg(self, msg):
         if self._debug:
-            print('"DEBUG/{}: {}'.format(self._ifname, msg))
+            print('DEBUG/{}: {}'.format(self._ifname, msg))
 
 
     def remove(self):
@@ -126,7 +126,7 @@ class Interface:
         with open(filename, 'r') as f:
             value = f.read().rstrip('\n')
 
-        self._debug_msg('read "{}" <- "{}"'.format(value, filename))
+        self._debug_msg("read '{}' < '{}'".format(value, filename))
         return value
 
 
@@ -134,7 +134,7 @@ class Interface:
         """
         Provide a single primitive w/ error checking for writing to sysfs.
         """
-        self._debug_msg('write "{}" -> "{}"'.format(value, filename))
+        self._debug_msg("write '{}' > '{}'".format(value, filename))
         with open(filename, 'w') as f:
             f.write(str(value))
 
