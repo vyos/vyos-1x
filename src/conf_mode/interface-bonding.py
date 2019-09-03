@@ -46,7 +46,6 @@ default_config_data = {
     'mac': '',
     'mode': '802.3ad',
     'member': [],
-    'member_remove': [],
     'mtu': 1500,
     'primary': '',
     'vif_s': [],
@@ -259,12 +258,6 @@ def get_config():
     # determine bond member interfaces (currently configured)
     if conf.exists('member interface'):
         bond['member'] = conf.return_values('member interface')
-
-    # Determine bond member interface (currently effective) - to determine which
-    # interfaces is no longer assigend to the bond and thus can be removed
-    eff_intf = conf.return_effective_values('member interface')
-    act_intf = conf.return_values('member interface')
-    bond['member_remove'] = diff(eff_intf, act_intf)
 
     # Determine interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the bond
