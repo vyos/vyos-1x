@@ -361,6 +361,11 @@ def verify(bond):
         if bond['primary'] not in bond['member']:
             raise ConfigError('Interface "{}" is not part of the bond'.format(bond['primary']))
 
+    for vif_s in bond['vif_s']:
+        for vif in bond['vif']:
+            if vif['id'] == vif_s['id']:
+                raise ConfigError('Can not use identical ID on vif and vif-s interface')
+
     return None
 
 
