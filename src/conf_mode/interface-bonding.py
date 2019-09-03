@@ -302,6 +302,9 @@ def verify(bond):
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
             raise ConfigError('Mode dependency failed, primary not supported in this mode.'.format())
 
+        if bond['primary'] not in bond['member']:
+            raise ConfigError('Interface "{}" is not part of the bond'.format(bond['primary']))
+
     return None
 
 def generate(bond):
