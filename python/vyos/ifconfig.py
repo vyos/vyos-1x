@@ -907,9 +907,6 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
-        if not interface:
-            raise ValueError('No interface address specified')
-
         cmd = 'ip link set dev "{}" master "{}"'.format(interface, self._ifname)
         self._cmd(cmd)
 
@@ -923,9 +920,6 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').del_port('eth1')
         """
-        if not interface:
-            raise ValueError('No interface address specified')
-
         cmd = 'ip link set dev "{}" nomaster'.format(interface)
         self._cmd(cmd)
 
