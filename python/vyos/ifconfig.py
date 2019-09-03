@@ -970,7 +970,7 @@ class BondIf(Interface):
         # Linux Kernel appends has policy value to string, e.g. 'layer3+4 1',
         # so remove the later part and only return the mode as string.
         return self._read_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
-                                .format(self._ifname)).split(' ')[0]
+                                .format(self._ifname)).split()[0]
 
     @xmit_hash_policy.setter
     def xmit_hash_policy(self, mode):
@@ -1115,3 +1115,90 @@ class BondIf(Interface):
         slaves = self._read_sysfs('/sys/class/net/{}/bonding/slaves'
                                  .format(self._ifname))
         return list(map(str, slaves.split()))
+
+    @property
+    def primary(self):
+        """
+        A string (eth0, eth2, etc) specifying which slave is the primary
+        device. The specified device will always be the active slave while it
+        is available. Only when the primary is off-line will alternate devices
+        be used. This is useful when one slave is preferred over another, e.g.,
+        when one slave has higher throughput than another.
+
+        The primary option is only valid for active-backup, balance-tlb and
+        balance-alb mode.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').primary
+        'eth1'
+        """
+        return self._read_sysfs('/sys/class/net/{}/bonding/primary'
+                                .format(self._ifname))
+
+    @primary.setter
+    def primary(self, interface):
+        """
+        A string (eth0, eth2, etc) specifying which slave is the primary
+        device. The specified device will always be the active slave while it
+        is available. Only when the primary is off-line will alternate devices
+        be used. This is useful when one slave is preferred over another, e.g.,
+        when one slave has higher throughput than another.
+
+        The primary option is only valid for active-backup, balance-tlb and
+        balance-alb mode.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').primary = 'eth2'
+        >>> BondIf('bond0').primary
+        'eth2'
+        """
+        if not interface:
+            # reset primary interface
+            interface = '\0'
+
+        return self._write_sysfs('/sys/class/net/{}/bonding/primary'
+                                 .format(self._ifname), interface)
+
+    @property
+    def mode(self):
+        """
+        Specifies one of the bonding policies. The default is balance-rr
+        (round robin).
+
+        Possible values are: balance-rr (0), active-backup (1), balance-xor (2),
+        broadcast (3), 802.3ad (4), balance-tlb (5), balance-alb (6)
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').mode
+        'balance-rr'
+        """
+        return self._read_sysfs('/sys/class/net/{}/bonding/mode'
+                                .format(self._ifname)).split()[0]
+
+    @mode.setter
+    def mode(self, mode):
+        """
+        Specifies one of the bonding policies. The default is balance-rr
+        (round robin).
+
+        Possible values are: balance-rr, active-backup, balance-xor,
+        broadcast, 802.3ad, balance-tlb, balance-alb
+
+        NOTE: the bonding mode can not be changed when the bond itself has
+        slaves
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BondIf('bond0').mode = '802.3ad'
+        >>> BondIf('bond0').mode
+        '802.3ad'
+        """
+        if not mode in ['balance-rr', 'active-backup', 'balance-xor', 'broadcast',
+                        '802.3ad', 'balance-tlb', 'balance-alb']:
+            raise ValueError("Value out of range")
+
+        return self._write_sysfs('/sys/class/net/{}/bonding/mode'
+                                 .format(self._ifname), mode)
