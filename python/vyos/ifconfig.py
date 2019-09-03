@@ -122,12 +122,12 @@ class Interface:
         """
         Provide a single primitive w/ error checking for reading from sysfs.
         """
-        var = None
+        value = None
         with open(filename, 'r') as f:
-            var = f.read().rstrip('\n')
+            value = f.read().rstrip('\n')
 
         self._debug_msg('read "{}" <- "{}"'.format(value, filename))
-        return var
+        return value
 
 
     def _write_sysfs(self, filename, value):
