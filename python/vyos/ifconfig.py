@@ -57,18 +57,16 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> i = Interface('eth0')
         """
+        self._ifname = str(ifname)
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
-            raise Exception('interface "{}" not found'.format(str(ifname)))
-
-        self._ifname = str(ifname)
-        self._debug = False
+            raise Exception('interface "{}" not found'.format(self._ifname))
 
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             self._debug = True
 
-        if not os.path.exists('/sys/class/net/{}'.format(ifname)):
-            cmd = 'ip link add dev "{}" type "{}"'.format(ifname, type)
+        if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
+            cmd = 'ip link add dev "{}" type "{}"'.format(self._ifname, type)
             self._cmd(cmd)
 
         # per interface DHCP config files
@@ -83,7 +81,7 @@ class Interface:
 
 
     def _debug_msg(self, msg):
-        if self._debug:
+        if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             print('DEBUG/{:<6} {}'.format(self._ifname, msg))
 
 
