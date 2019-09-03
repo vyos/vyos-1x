@@ -66,7 +66,7 @@ class Interface:
             self._debug = True
 
         if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
-            cmd = 'ip link add dev "{}" type "{}"'.format(self._ifname, type)
+            cmd = 'ip link add dev {} type {}'.format(self._ifname, type)
             self._cmd(cmd)
 
         # per interface DHCP config files
@@ -104,12 +104,12 @@ class Interface:
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
-        cmd = 'ip link del dev "{}"'.format(self._ifname)
+        cmd = 'ip link del dev {}'.format(self._ifname)
         self._cmd(cmd)
 
 
     def _cmd(self, command):
-        self._debug_msg("{:<6} '{}'".format('cmd', command))
+        self._debug_msg("cmd '{}'".format(command))
 
         process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
         proc_stdout = process.communicate()[0].strip()
@@ -126,7 +126,7 @@ class Interface:
         with open(filename, 'r') as f:
             value = f.read().rstrip('\n')
 
-        self._debug_msg("{:<6} '{}' < '{}'".format('read', value, filename))
+        self._debug_msg("read '{}' < '{}'".format(value, filename))
         return value
 
 
@@ -134,7 +134,7 @@ class Interface:
         """
         Provide a single primitive w/ error checking for writing to sysfs.
         """
-        self._debug_msg("{:<6} '{}' > '{}'".format('write', value, filename))
+        self._debug_msg("write '{}' > '{}'".format(value, filename))
         with open(filename, 'w') as f:
             f.write(str(value))
 
@@ -216,7 +216,7 @@ class Interface:
 
         # Assemble command executed on system. Unfortunately there is no way
         # of altering the MAC address via sysfs
-        cmd = 'ip link set dev "{}" address "{}"'.format(self._ifname, mac)
+        cmd = 'ip link set dev {} address {}'.format(self._ifname, mac)
         self._cmd(cmd)
 
 
@@ -360,7 +360,7 @@ class Interface:
 
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
-        cmd = 'ip link set dev "{}" "{}"'.format(self._ifname, state)
+        cmd = 'ip link set dev {} {}'.format(self._ifname, state)
         self._cmd(cmd)
 
     @property
@@ -924,7 +924,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
-        cmd = 'ip link set dev "{}" master "{}"'.format(interface, self._ifname)
+        cmd = 'ip link set dev {} master {}'.format(interface, self._ifname)
         self._cmd(cmd)
 
 
@@ -936,7 +936,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').del_port('eth1')
         """
-        cmd = 'ip link set dev "{}" nomaster'.format(interface)
+        cmd = 'ip link set dev {} nomaster'.format(interface)
         self._cmd(cmd)
 
 
