@@ -87,7 +87,9 @@ class Interface:
 
     def remove(self):
         """
-        Remove system interface
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
 
         Example:
         >>> from vyos.ifconfig import Interface
@@ -964,9 +966,52 @@ class BridgeIf(Interface):
                                  .format(self._ifname, interface), priority)
 
 
+
 class EthernetIf(Interface):
     def __init__(self, ifname, type=None):
         super().__init__(ifname, type)
+
+    def add_vlan(self, vlan_id, ethertype=''):
+        """
+        A virtual LAN (VLAN) is any broadcast domain that is partitioned and
+        isolated in a computer network at the data link layer (OSI layer 2).
+        Use this function to create a new VLAN interface on a given physical
+        interface.
+
+        This function creates both 802.1q and 802.1ad (Q-in-Q) interfaces. Proto
+        parameter is used to indicate VLAN type.
+
+        A new object of type EthernetIf is returned once the interface has been
+        created.
+        """
+        vlan_ifname = self._ifname + '.' + str(vlan_id)
+        if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
+            self._vlan_id = int(vlan_id)
+
+            if ethertype:
+                self._ethertype = ethertype
+                ethertype='proto {}'.format(ethertype)
+
+            # create interface in the system
+            cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan}'.format(intf=self._ifname, vlan=self._vlan_id, proto=ethertype)
+            self._cmd(cmd)
+
+        # return new object mapping to the newly created interface
+        # we can now work on this object for e.g. IP address setting
+        # or interface description and so on
+        return EthernetIf(vlan_ifname)
+
+
+    def del_vlan(self, vlan_id):
+        """
+        Remove VLAN interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
+        """
+        vlan_ifname = self._ifname + '.' + str(vlan_id)
+        tmp = EthernetIf(vlan_ifname)
+        tmp.remove()
+
 
 class BondIf(EthernetIf):
     """
