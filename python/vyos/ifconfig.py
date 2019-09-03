@@ -1080,5 +1080,5 @@ class BondIf(Interface):
         '192.0.2.1'
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
-                                 .format(self._ifname), mode)
+                                 .format(self._ifname), target)
 
