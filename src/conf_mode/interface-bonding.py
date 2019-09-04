@@ -23,6 +23,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.ifconfig import BondIf, EthernetIf
+from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -55,9 +56,6 @@ default_config_data = {
     'vif_remove': []
 }
 
-def diff(first, second):
-    second = set(second)
-    return [item for item in first if item not in second]
 
 def get_bond_mode(mode):
     if mode == 'round-robin':
@@ -76,112 +74,6 @@ def get_bond_mode(mode):
         return 'balance-alb'
     else:
         raise ConfigError('invalid bond mode "{}"'.format(mode))
-
-def get_ethertype(ethertype_val):
-    if ethertype_val == '0x88A8':
-        return '802.1ad'
-    elif ethertype_val == '0x8100':
-        return '802.1q'
-    else:
-        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
-
-
-def vlan_to_dict(conf):
-    """
-    Common used function which will extract VLAN related information from config
-    and represent the result as Python dictionary.
-
-    Function call's itself recursively if a vif-s/vif-c pair is detected.
-    """
-    vlan = {
-        'id': conf.get_level().split()[-1], # get the '100' in 'interfaces bonding bond0 vif-s 100'
-        'address': [],
-        'address_remove': [],
-        'description': '',
-        'dhcp_client_id': '',
-        'dhcp_hostname': '',
-        'dhcpv6_prm_only': False,
-        'dhcpv6_temporary': False,
-        'disable': False,
-        'disable_link_detect': 1,
-        'mac': '',
-        'mtu': 1500
-    }
-    # retrieve configured interface addresses
-    if conf.exists('address'):
-        vlan['address'] = conf.return_values('address')
-
-    # Determine interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the bond
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
-    vlan['address_remove'] = diff(eff_addr, act_addr)
-
-    # retrieve interface description
-    if conf.exists('description'):
-        vlan['description'] = conf.return_value('description')
-
-    # get DHCP client identifier
-    if conf.exists('dhcp-options client-id'):
-        vlan['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
-
-    # DHCP client host name (overrides the system host name)
-    if conf.exists('dhcp-options host-name'):
-        vlan['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
-
-    # DHCPv6 only acquire config parameters, no address
-    if conf.exists('dhcpv6-options parameters-only'):
-        vlan['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
-
-    # DHCPv6 temporary IPv6 address
-    if conf.exists('dhcpv6-options temporary'):
-        vlan['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
-
-    # ignore link state changes
-    if conf.exists('disable-link-detect'):
-        vlan['disable_link_detect'] = 2
-
-    # disable bond interface
-    if conf.exists('disable'):
-        vlan['disable'] = True
-
-    # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        vlan['mac'] = conf.return_value('mac')
-
-    # Maximum Transmission Unit (MTU)
-    if conf.exists('mtu'):
-        vlan['mtu'] = int(conf.return_value('mtu'))
-
-    # ethertype is mandatory on vif-s nodes and only exists here!
-    # check if this is a vif-s node at all:
-    if conf.get_level().split()[-2] == 'vif-s':
-        vlan['vif_c'] = []
-        vlan['vif_c_remove'] = []
-
-        # ethertype uses a default of 0x88A8
-        tmp = '0x88A8'
-        if conf.exists('ethertype'):
-             tmp = conf.return_value('ethertype')
-        vlan['ethertype'] = get_ethertype(tmp)
-
-        # get vif-c interfaces (currently effective) - to determine which vif-c
-        # interface is no longer present and needs to be removed
-        eff_intf = conf.list_effective_nodes('vif-c')
-        act_intf = conf.list_nodes('vif-c')
-        vlan['vif_c_remove'] = diff(eff_intf, act_intf)
-
-        # check if there is a Q-in-Q vlan customer interface
-        # and call this function recursively
-        if conf.exists('vif-c'):
-            cfg_level = conf.get_level()
-            # add new key (vif-c) to dictionary
-            for vif in conf.list_nodes('vif-c'):
-                # set config level to vif interface
-                conf.set_level(cfg_level + ' vif-c ' + vif)
-                vlan['vif_c'].append(vlan_to_dict(conf))
-
-    return vlan
 
 
 def apply_vlan_config(vlan, config):
@@ -321,7 +213,7 @@ def get_config():
     # address is no longer valid and needs to be removed from the bond
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
-    bond['address_remove'] = diff(eff_addr, act_addr)
+    bond['address_remove'] = list_diff(eff_addr, act_addr)
 
     # Primary device interface
     if conf.exists('primary'):
@@ -333,7 +225,7 @@ def get_config():
     # interface is no longer present and needs to be removed
     eff_intf = conf.list_effective_nodes('vif-s')
     act_intf = conf.list_nodes('vif-s')
-    bond['vif_s_remove'] = diff(eff_intf, act_intf)
+    bond['vif_s_remove'] = list_diff(eff_intf, act_intf)
 
     if conf.exists('vif-s'):
         for vif_s in conf.list_nodes('vif-s'):
@@ -347,7 +239,7 @@ def get_config():
     # vif interface is no longer present and needs to be removed
     eff_intf = conf.list_effective_nodes('vif')
     act_intf = conf.list_nodes('vif')
-    bond['vif_remove'] = diff(eff_intf, act_intf)
+    bond['vif_remove'] = list_diff(eff_intf, act_intf)
 
     if conf.exists('vif'):
         for vif in conf.list_nodes('vif'):

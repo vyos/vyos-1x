@@ -19,8 +19,10 @@
 from os import environ
 from copy import deepcopy
 from sys import exit
-from vyos.config import Config
+
 from vyos.ifconfig import DummyIf
+from vyos.configdict import list_diff
+from vyos.config import Config
 from vyos import ConfigError
 
 default_config_data = {
@@ -31,10 +33,6 @@ default_config_data = {
     'disable': False,
     'intf': ''
 }
-
-def diff(first, second):
-    second = set(second)
-    return [item for item in first if item not in second]
 
 def get_config():
     dummy = deepcopy(default_config_data)
@@ -70,7 +68,7 @@ def get_config():
     # address is no longer valid and needs to be removed from the interface
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
-    dummy['address_remove'] = diff(eff_addr, act_addr)
+    dummy['address_remove'] = list_diff(eff_addr, act_addr)
 
     return dummy
 
