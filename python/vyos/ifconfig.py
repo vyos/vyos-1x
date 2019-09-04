@@ -1288,7 +1288,7 @@ class WireGuardIf(Interface):
 
     def __init__(self, ifname):
         super().__init__(ifname, type='wireguard')
-        self.wg_config = {
+        self.config = {
             'port': 0,
           'private-key': None,
           'pubkey': None,
@@ -1299,36 +1299,36 @@ class WireGuardIf(Interface):
           'keepalive': 0
         }
 
-    def wg_update(self):
-        if not self.wg_config['private-key']:
+    def update(self):
+        if not self.config['private-key']:
             raise ValueError("private key required")
         else:
             # fmask permission check?
             pass
 
         cmd = "wg set {} ".format(self._ifname)
-        cmd += "listen-port {} ".format(self.wg_config['port'])
-        cmd += "fwmark {} ".format(str(self.wg_config['fwmark']))
-        cmd += "private-key {} ".format(self.wg_config['private-key'])
-        cmd += "peer {} ".format(self.wg_config['pubkey'])
-        cmd += " preshared-key {} ".format(self.wg_config['psk'])
+        cmd += "listen-port {} ".format(self.config['port'])
+        cmd += "fwmark {} ".format(str(self.config['fwmark']))
+        cmd += "private-key {} ".format(self.config['private-key'])
+        cmd += "peer {} ".format(self.config['pubkey'])
+        cmd += " preshared-key {} ".format(self.config['psk'])
         cmd += " allowed-ips "
-        for aip in self.wg_config['allowed-ips']:
-            if aip != self.wg_config['allowed-ips'][-1]:
+        for aip in self.config['allowed-ips']:
+            if aip != self.config['allowed-ips'][-1]:
                 cmd += aip + ","
             else:
                 cmd += aip
-        if self.wg_config['endpoint']:
-            cmd += " endpoint {}".format(self.wg_config['endpoint'])
-        cmd += " persistent-keepalive {}".format(self.wg_config['keepalive'])
+        if self.config['endpoint']:
+            cmd += " endpoint {}".format(self.config['endpoint'])
+        cmd += " persistent-keepalive {}".format(self.config['keepalive'])
 
         self._cmd(cmd)
 
         # remove psk since it isn't required anymore and is saved in the cli
         # config only !!
-        if self.wg_config['psk'] != '/dev/null':
-            if os.path.exists(self.wg_config['psk']):
-                os.remove(self.wg_config['psk'])
+        if self.config['psk'] != '/dev/null':
+            if os.path.exists(self.config['psk']):
+                os.remove(self.config['psk'])
 
     """
     Remove a peer of an interface, peers are identified by their public key.
@@ -1336,7 +1336,7 @@ class WireGuardIf(Interface):
     and the interface is needed, to remove the entry.
     """
 
-    def wg_remove_peer(self, peerkey):
+    def remove_peer(self, peerkey):
         cmd = "sudo wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
         self._cmd(cmd)
