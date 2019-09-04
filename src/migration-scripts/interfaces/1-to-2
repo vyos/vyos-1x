@@ -36,6 +36,25 @@ else:
             # create new bond member interface
             config.set(base + [bond, 'member', 'interface'], value=intf, replace=False)
 
+    #
+    # some combinations were allowed in the past from a CLI perspective
+    # but the kernel overwrote them - remove from CLI to not confuse the users.
+    # In addition new consitency checks are in place so users can't repeat the
+    # mistake. One of those nice issues is https://phabricator.vyos.net/T532
+    for bond in config.list_nodes(base):
+        if config.exists(base + [bond, 'arp-monitor', 'interval']) and config.exists(base + [bond, 'mode']):
+            mode = config.return_value(base + [bond, 'mode'])
+            if mode in ['802.3ad', 'transmit-load-balance', 'adaptive-load-balance']:
+                intvl = int(config.return_value(base + [bond, 'arp-monitor', 'interval']))
+                if intvl > 0:
+                    # this is not allowed and the linux kernel replies with:
+                    # option arp_interval: mode dependency failed, not supported in mode 802.3ad(4)
+                    # option arp_interval: mode dependency failed, not supported in mode balance-alb(6)
+                    # option arp_interval: mode dependency failed, not supported in mode balance-tlb(5)
+                    #
+                    # so we simply disable arp_interval by setting it to 0 and miimon will take care about the link
+                    config.set(base + [bond, 'arp-monitor', 'interval'], value='0')
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

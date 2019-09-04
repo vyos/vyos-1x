@@ -249,7 +249,7 @@ def get_config():
 
     # ARP link monitoring frequency in milliseconds
     if conf.exists('arp-monitor interval'):
-        bond['arp_mon_intvl'] = conf.return_value('arp-monitor interval')
+        bond['arp_mon_intvl'] = int(conf.return_value('arp-monitor interval'))
 
     # IP address to use for ARP monitoring
     if conf.exists('arp-monitor target'):
@@ -374,6 +374,43 @@ def verify(bond):
             if vif['id'] == vif_s['id']:
                 raise ConfigError('Can not use identical ID on vif and vif-s interface')
 
+
+    conf = Config()
+    for intf in bond['member']:
+        # we can not add disabled slave interfaces to our bond
+        if conf.exists('interfaces ethernet ' + intf + ' disable'):
+            raise ConfigError('can not add disabled interface {} to {}'.format(intf, bond['intf']))
+
+        # can not add interfaces with an assigned address to a bond
+        if conf.exists('interfaces ethernet ' + intf + ' address'):
+            raise ConfigError('can not add interface {} with an assigned address to {}'.format(intf, bond['intf']))
+
+        # bond members are not allowed to be bridge members, too
+        for bridge in conf.list_nodes('interfaces bridge'):
+            if conf.exists('interfaces bridge ' + bridge + ' member interface ' + intf):
+                raise ConfigError('can not add interface {} that is part of bridge {} to {}'.format(intf, bridge, bond['intf']))
+
+        # bond members are not allowed to be vrrp members, too
+        for vrrp in conf.list_nodes('high-availability vrrp group'):
+            if conf.exists('high-availability vrrp group ' + vrrp + ' interface ' + intf):
+                raise ConfigError('can not add interface {} which belongs to a VRRP group to {}'.format(intf, bond['intf']))
+
+        # bond members are not allowed to be underlaying psuedo-ethernet devices
+        for peth in conf.list_nodes('interfaces pseudo-ethernet'):
+            if conf.exists('interfaces pseudo-ethernet ' + peth + ' link ' + intf):
+                raise ConfigError('can not add interface {} used by pseudo-ethernet {} to {}'.format(intf, peth, bond['intf']))
+
+    if bond['primary']:
+        if bond['primary'] not in bond['member']:
+            raise ConfigError('primary interface must be a member interface of {}'.format(bond['intf']))
+
+        if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
+            raise ConfigError('primary interface only works for mode active-backup, transmit-load-balance or adaptive-load-balance')
+
+    if bond['arp_mon_intvl'] > 0:
+        if bond['mode'] in ['802.3ad', 'balance-tlb', 'balance-alb']:
+            raise ConfigError('ARP link monitoring does not work for mode 802.3ad, transmit-load-balance or adaptive-load-balance')
+
     return None
 
 
@@ -391,6 +428,11 @@ def apply(bond):
         # Some parameters can not be changed when the bond is up.
         # Always disable the bond prior changing anything
         b.state = 'down'
+
+        # The bonding mode can not be changed when there are interfaces enslaved
+        # to this bond, thus we will free all interfaces from the bond first!
+        for intf in b.get_slaves():
+            b.del_port(intf)
 
         # Configure interface address(es)
         for addr in bond['address_remove']:
@@ -444,17 +486,14 @@ def apply(bond):
         if bond['mac']:
             b.mac = bond['mac']
 
-        # The bonding mode can not be changed when there are interfaces enslaved
-        # to this bond, thus we will free all interfaces from the bond first!
-        for intf in b.get_slaves():
-            b.del_port(intf)
-
         # Bonding policy
         b.mode = bond['mode']
         # Maximum Transmission Unit (MTU)
         b.mtu = bond['mtu']
+
         # Primary device interface
-        b.primary = bond['primary']
+        if bond['primary']:
+            b.primary = bond['primary']
 
         # Add (enslave) interfaces to bond
         for intf in bond['member']:
