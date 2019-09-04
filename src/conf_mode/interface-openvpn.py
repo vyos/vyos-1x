@@ -806,6 +806,11 @@ def generate(openvpn):
 
     tmpl = jinja2.Template(config_tmpl)
     config_text = tmpl.render(openvpn)
+
+    # we need to support quoting of raw parameters from OpenVPN CLI
+    # see https://phabricator.vyos.net/T1632
+    config_text = config_text.replace("&quot;",'"')
+
     with open(get_config_name(interface), 'w') as f:
         f.write(config_text)
     os.chown(get_config_name(interface), uid, gid)
