@@ -21,8 +21,10 @@ import os
 from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
-from vyos.config import Config
+
 from vyos.ifconfig import BridgeIf, Interface
+from vyos.configdict import list_diff
+from vyos.config import Config
 from vyos import ConfigError
 
 default_config_data = {
@@ -45,10 +47,6 @@ default_config_data = {
     'priority': 32768,
     'stp': 0
 }
-
-def diff(first, second):
-    second = set(second)
-    return [item for item in first if item not in second]
 
 def get_config():
     bridge = deepcopy(default_config_data)
@@ -137,13 +135,13 @@ def get_config():
     # interfaces is no longer assigend to the bridge and thus can be removed
     eff_intf = conf.list_effective_nodes('member interface')
     act_intf = conf.list_nodes('member interface')
-    bridge['member_remove'] = diff(eff_intf, act_intf)
+    bridge['member_remove'] = list_diff(eff_intf, act_intf)
 
     # Determine interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the bridge
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
-    bridge['address_remove'] = diff(eff_addr, act_addr)
+    bridge['address_remove'] = list_diff(eff_addr, act_addr)
 
     # Priority for this bridge
     if conf.exists('priority'):

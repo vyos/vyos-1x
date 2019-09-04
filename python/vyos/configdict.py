@@ -78,3 +78,11 @@ def retrieve_config(path_hash, base_path, config):
                 config_hash[k][node] = retrieve_config(inner_hash, path + [node], config)
 
     return config_hash
+
+
+def list_diff(first, second):
+    """
+    Diff two dictionaries and return only unique items
+    """
+    second = set(second)
+    return [item for item in first if item not in second]

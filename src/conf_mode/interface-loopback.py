@@ -18,7 +18,9 @@
 from os import environ
 from sys import exit
 from copy import deepcopy
+
 from vyos.ifconfig import LoopbackIf
+from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -29,9 +31,6 @@ default_config_data = {
     'description': '',
 }
 
-def diff(first, second):
-    second = set(second)
-    return [item for item in first if item not in second]
 
 def get_config():
     loopback = deepcopy(default_config_data)
@@ -62,7 +61,7 @@ def get_config():
     # address is no longer valid and needs to be removed from the interface
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
-    loopback['address_remove'] = diff(eff_addr, act_addr)
+    loopback['address_remove'] = list_diff(eff_addr, act_addr)
 
     return loopback
 

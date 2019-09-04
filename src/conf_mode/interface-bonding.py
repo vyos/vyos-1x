@@ -23,6 +23,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.ifconfig import BondIf, EthernetIf
+from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -55,9 +56,6 @@ default_config_data = {
     'vif_remove': []
 }
 
-def diff(first, second):
-    second = set(second)
-    return [item for item in first if item not in second]
 
 def get_bond_mode(mode):
     if mode == 'round-robin':
@@ -76,6 +74,7 @@ def get_bond_mode(mode):
         return 'balance-alb'
     else:
         raise ConfigError('invalid bond mode "{}"'.format(mode))
+
 
 def get_ethertype(ethertype_val):
     if ethertype_val == '0x88A8':
@@ -321,7 +320,7 @@ def get_config():
     # address is no longer valid and needs to be removed from the bond
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
-    bond['address_remove'] = diff(eff_addr, act_addr)
+    bond['address_remove'] = list_diff(eff_addr, act_addr)
 
     # Primary device interface
     if conf.exists('primary'):
@@ -333,7 +332,7 @@ def get_config():
     # interface is no longer present and needs to be removed
     eff_intf = conf.list_effective_nodes('vif-s')
     act_intf = conf.list_nodes('vif-s')
-    bond['vif_s_remove'] = diff(eff_intf, act_intf)
+    bond['vif_s_remove'] = list_diff(eff_intf, act_intf)
 
     if conf.exists('vif-s'):
         for vif_s in conf.list_nodes('vif-s'):
@@ -347,7 +346,7 @@ def get_config():
     # vif interface is no longer present and needs to be removed
     eff_intf = conf.list_effective_nodes('vif')
     act_intf = conf.list_nodes('vif')
-    bond['vif_remove'] = diff(eff_intf, act_intf)
+    bond['vif_remove'] = list_diff(eff_intf, act_intf)
 
     if conf.exists('vif'):
         for vif in conf.list_nodes('vif'):
