@@ -69,6 +69,9 @@ def generate(http_api):
     if http_api is None:
         return None
 
+    if not os.path.exists('/etc/vyos'):
+        os.mkdir('/etc/vyos')
+
     with open(config_file, 'w') as f:
         json.dump(http_api, f, indent=2)
 
