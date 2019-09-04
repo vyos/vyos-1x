@@ -133,12 +133,12 @@ def get_config():
     else:
         conf.set_level('service https')
 
-    if conf.exists('listen-addresses'):
+    if conf.exists('listen-address'):
         addrs = {}
-        for addr in conf.list_nodes('listen-addresses'):
+        for addr in conf.list_nodes('listen-address'):
             addrs[addr] = ['_']
-            if conf.exists('listen-addresses {0} server-names'.format(addr)):
-                names = conf.return_values('listen-addresses {0} server-names'.format(addr))
+            if conf.exists('listen-address {0} server-names'.format(addr)):
+                names = conf.return_values('listen-address {0} server-names'.format(addr))
                 addrs[addr] = names[:]
         https['listen_addresses'] = addrs
 
