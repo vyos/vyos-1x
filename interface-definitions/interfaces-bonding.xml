@@ -1,0 +1,673 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="bonding" owner="${vyos_conf_scripts_dir}/interface-bonding.py">
+        <properties>
+          <help>Bonding interface name</help>
+          <priority>315</priority>
+          <constraint>
+            <regex>bond[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Bonding interface must be named bondN</constraintErrorMessage>
+          <valueHelp>
+            <format>bondN</format>
+            <description>Bonding interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help>
+              <completionHelp>
+                <list>dhcp dhcpv6</list>
+              </completionHelp>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dhcp</format>
+                <description>Dynamic Host Configuration Protocol</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dhcpv6</format>
+                <description>Dynamic Host Configuration Protocol for IPv6</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-cidr"/>
+                <regex>(dhcp|dhcpv6)</regex>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="arp-monitor">
+            <properties>
+              <help>ARP link monitoring parameters</help>
+            </properties>
+            <children>
+              <leafNode name="interval">
+                <properties>
+                  <help>ARP link monitoring interval</help>
+                  <valueHelp>
+                    <format>0-4294967295</format>
+                    <description>Specifies the ARP link monitoring frequency in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="target">
+                <properties>
+                  <help>IP address used for ARP monitoring</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Network Time Protocol (NTP) IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="description">
+            <properties>
+              <help>Interface description</help>
+              <constraint>
+                <regex>^.{1,256}$</regex>
+              </constraint>
+              <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="dhcp-options">
+            <properties>
+              <help>DHCP options</help>
+            </properties>
+            <children>
+              <leafNode name="client-id">
+                <properties>
+                  <help>DHCP client identifier</help>
+                </properties>
+              </leafNode>
+              <leafNode name="host-name">
+                <properties>
+                  <help>DHCP client host name (overrides the system host name)</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="dhcpv6-options">
+            <properties>
+              <help>DHCPv6 options</help>
+              <priority>319</priority>
+            </properties>
+            <children>
+              <leafNode name="parameters-only">
+                <properties>
+                  <help>Acquire only config parameters, no address</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="temporary">
+                <properties>
+                  <help>IPv6 "temporary" address</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="disable-link-detect">
+            <properties>
+              <help>Ignore link state changes</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable this bridge interface</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="hash-policy">
+            <properties>
+              <help>Bonding transmit hash policy</help>
+              <completionHelp>
+                <list>layer2 layer2+3 layer3+4</list>
+              </completionHelp>
+              <valueHelp>
+                <format>layer2</format>
+                <description>use MAC addresses to generate the hash (802.3ad, default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>layer2+3</format>
+                <description>combine MAC address and IP address to make hash</description>
+              </valueHelp>
+              <valueHelp>
+                <format>layer3+4</format>
+                <description>combine IP address and port to make hash</description>
+              </valueHelp>
+              <constraint>
+                <regex>(layer2\\+3|layer3\\+4|layer2)</regex>
+              </constraint>
+              <constraintErrorMessage>hash-policy must be layer2 layer2+3 or layer3+4</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="ip">
+            <children>
+              <leafNode name="arp-cache-timeout">
+                <properties>
+                  <help>ARP cache entry timeout in seconds</help>
+                  <valueHelp>
+                    <format>1-86400</format>
+                    <description>ARP cache entry timout in seconds (default 30)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-86400"/>
+                  </constraint>
+                  <constraintErrorMessage>Bridge max aging value must be between 6 and 86400 seconds</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="enable-proxy-arp">
+                <properties>
+                  <help>Enable proxy-arp on this interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="proxy-arp-pvlan">
+                <properties>
+                  <help>Enable private VLAN proxy ARP on this interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="mac">
+            <properties>
+              <help>Media Access Control (MAC) address</help>
+              <valueHelp>
+                <format>h:h:h:h:h:h</format>
+                <description>Hardware (MAC) address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="mac-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="mode">
+            <properties>
+              <help>Bonding mode</help>
+              <completionHelp>
+                <list>802.3ad active-backup broadcast round-robin transmit-load-balance adaptive-load-balance xor-hash</list>
+              </completionHelp>
+              <valueHelp>
+                <format>802.3ad</format>
+                <description>IEEE 802.3ad Dynamic link aggregation (Default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>active-backup</format>
+                <description>Fault tolerant: only one slave in the bond is active</description>
+              </valueHelp>
+              <valueHelp>
+                <format>broadcast</format>
+                <description>Fault tolerant: transmits everything on all slave interfaces</description>
+              </valueHelp>
+              <valueHelp>
+                <format>round-robin</format>
+                <description>Load balance: transmit packets in sequential order</description>
+              </valueHelp>
+              <valueHelp>
+                <format>transmit-load-balance</format>
+                <description>Load balance: adapts based on transmit load and speed</description>
+              </valueHelp>
+              <valueHelp>
+                <format>adaptive-load-balance</format>
+                <description>Load balance: adapts based on transmit and receive plus ARP</description>
+              </valueHelp>
+              <valueHelp>
+                <format>xor-hash</format>
+                <description>Distribute based on MAC address</description>
+              </valueHelp>
+              <constraint>
+                <regex>(802.3ad|active-backup|broadcast|round-robin|transmit-load-balance|adaptive-load-balance|xor-hash)</regex>
+              </constraint>
+              <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, transmit-load-balance, adaptive-load-balance, or xor</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="member">
+            <properties>
+              <help>Bridge member interfaces</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Member interface name</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --bondable</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="mtu">
+            <properties>
+              <help>Maximum Transmission Unit (MTU)</help>
+              <valueHelp>
+                <format>68-9000</format>
+                <description>Maximum Transmission Unit</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 68-9000"/>
+              </constraint>
+              <constraintErrorMessage>MTU must be between 68 and 9000</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="primary">
+            <properties>
+              <help>Primary device interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py --bondable</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <tagNode name="vif-s">
+            <properties>
+              <help>QinQ TAG-S Virtual Local Area Network (VLAN) ID</help>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4094"/>
+              </constraint>
+              <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IP address</help>
+                  <completionHelp>
+                    <list>dhcp dhcpv6</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcp</format>
+                    <description>Dynamic Host Configuration Protocol</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcpv6</format>
+                    <description>Dynamic Host Configuration Protocol for IPv6</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-cidr"/>
+                    <regex>(dhcp|dhcpv6)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="description">
+                <properties>
+                  <help>Interface description</help>
+                  <constraint>
+                    <regex>^.{1,256}$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <node name="dhcp-options">
+                <properties>
+                  <help>DHCP options</help>
+                </properties>
+                <children>
+                  <leafNode name="client-id">
+                    <properties>
+                      <help>DHCP client identifier</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host-name">
+                    <properties>
+                      <help>DHCP client host name (overrides the system host name)</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="dhcpv6-options">
+                <properties>
+                  <help>DHCPv6 options</help>
+                  <priority>319</priority>
+                </properties>
+                <children>
+                  <leafNode name="parameters-only">
+                    <properties>
+                      <help>Acquire only config parameters, no address</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="temporary">
+                    <properties>
+                      <help>IPv6 "temporary" address</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="disable-link-detect">
+                <properties>
+                  <help>Ignore link state changes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable this bridge interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ethertype">
+                <properties>
+                  <help>Set Ethertype</help>
+                  <completionHelp>
+                    <list>0x88A8 0x8100</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>0x88A8</format>
+                    <description>802.1ad</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>0x8100</format>
+                    <description>802.1q</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(0x88A8|0x8100)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Ethertype must be 0x88A8 or 0x8100</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="mac">
+                <properties>
+                  <help>Media Access Control (MAC) address</help>
+                  <valueHelp>
+                    <format>h:h:h:h:h:h</format>
+                    <description>Hardware (MAC) address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="mtu">
+                <properties>
+                  <help>Maximum Transmission Unit (MTU)</help>
+                  <valueHelp>
+                    <format>68-9000</format>
+                    <description>Maximum Transmission Unit</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 68-9000"/>
+                  </constraint>
+                  <constraintErrorMessage>MTU must be between 68 and 9000</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <tagNode name="vif-c">
+                <properties>
+                  <help>QinQ TAG-C Virtual Local Area Network (VLAN) ID</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4094"/>
+                  </constraint>
+                  <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IP address</help>
+                      <completionHelp>
+                        <list>dhcp dhcpv6</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 address and prefix length</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 address and prefix length</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dhcp</format>
+                        <description>Dynamic Host Configuration Protocol</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dhcpv6</format>
+                        <description>Dynamic Host Configuration Protocol for IPv6</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-cidr"/>
+                        <regex>(dhcp|dhcpv6)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="description">
+                    <properties>
+                      <help>Interface description</help>
+                      <constraint>
+                        <regex>^.{1,256}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <node name="dhcp-options">
+                    <properties>
+                      <help>DHCP options</help>
+                    </properties>
+                    <children>
+                      <leafNode name="client-id">
+                        <properties>
+                          <help>DHCP client identifier</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="host-name">
+                        <properties>
+                          <help>DHCP client host name (overrides the system host name)</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="dhcpv6-options">
+                    <properties>
+                      <help>DHCPv6 options</help>
+                      <priority>319</priority>
+                    </properties>
+                    <children>
+                      <leafNode name="parameters-only">
+                        <properties>
+                          <help>Acquire only config parameters, no address</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="temporary">
+                        <properties>
+                          <help>IPv6 "temporary" address</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="disable-link-detect">
+                    <properties>
+                      <help>Ignore link state changes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable this bridge interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mac">
+                    <properties>
+                      <help>Media Access Control (MAC) address</help>
+                      <valueHelp>
+                        <format>h:h:h:h:h:h</format>
+                        <description>Hardware (MAC) address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="mac-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mtu">
+                    <properties>
+                      <help>Maximum Transmission Unit (MTU)</help>
+                      <valueHelp>
+                        <format>68-9000</format>
+                        <description>Maximum Transmission Unit</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 68-9000"/>
+                      </constraint>
+                      <constraintErrorMessage>MTU must be between 68 and 9000</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="vif">
+            <properties>
+              <help>Virtual Local Area Network (VLAN) ID</help>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4094"/>
+              </constraint>
+              <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IP address</help>
+                  <completionHelp>
+                    <list>dhcp dhcpv6</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcp</format>
+                    <description>Dynamic Host Configuration Protocol</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcpv6</format>
+                    <description>Dynamic Host Configuration Protocol for IPv6</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-cidr"/>
+                    <regex>(dhcp|dhcpv6)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="description">
+                <properties>
+                  <help>Interface description</help>
+                  <constraint>
+                    <regex>^.{1,256}$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <node name="dhcp-options">
+                <properties>
+                  <help>DHCP options</help>
+                </properties>
+                <children>
+                  <leafNode name="client-id">
+                    <properties>
+                      <help>DHCP client identifier</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host-name">
+                    <properties>
+                      <help>DHCP client host name (overrides the system host name)</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="dhcpv6-options">
+                <properties>
+                  <help>DHCPv6 options</help>
+                  <priority>319</priority>
+                </properties>
+                <children>
+                  <leafNode name="parameters-only">
+                    <properties>
+                      <help>Acquire only config parameters, no address</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="temporary">
+                    <properties>
+                      <help>IPv6 "temporary" address</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="disable-link-detect">
+                <properties>
+                  <help>Ignore link state changes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable this bridge interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="mac">
+                <properties>
+                  <help>Media Access Control (MAC) address</help>
+                  <valueHelp>
+                    <format>h:h:h:h:h:h</format>
+                    <description>Hardware (MAC) address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="mtu">
+                <properties>
+                  <help>Maximum Transmission Unit (MTU)</help>
+                  <valueHelp>
+                    <format>68-9000</format>
+                    <description>Maximum Transmission Unit</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 68-9000"/>
+                  </constraint>
+                  <constraintErrorMessage>MTU must be between 68 and 9000</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
