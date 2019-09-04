@@ -172,6 +172,13 @@ def verify(bridge):
         if intf['name'] not in interfaces():
             raise ConfigError('Can not add non existing interface "{}" to bridge "{}"'.format(intf['name'], bridge['intf']))
 
+    # bridge members are not allowed to be bond members, too
+    for intf in bridge['member']:
+        for bond in conf.list_nodes('interfaces bonding'):
+            if conf.exists('interfaces bonding ' + bond + ' member interface'):
+                if intf['name'] in conf.return_values('interfaces bonding ' + bond + ' member interface'):
+                    raise ConfigError('Interface {} belongs to bond {}, can not add it to {}'.format(intf['name'], bond, bridge['intf']))
+
     return None
 
 def generate(bridge):
