@@ -137,8 +137,8 @@ def get_config():
         addrs = {}
         for addr in conf.list_nodes('listen-address'):
             addrs[addr] = ['_']
-            if conf.exists('listen-address {0} server-names'.format(addr)):
-                names = conf.return_values('listen-address {0} server-names'.format(addr))
+            if conf.exists('listen-address {0} server-name'.format(addr)):
+                names = conf.return_values('listen-address {0} server-name'.format(addr))
                 addrs[addr] = names[:]
         https['listen_addresses'] = addrs
 

@@ -31,7 +31,7 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="server-names">
+              <leafNode name="server-name">
                 <properties>
                   <help>Server names: exact, wildcard, regex, or '_' (any)</help>
                   <multi/>
