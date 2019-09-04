@@ -9,7 +9,7 @@
           <priority>1001</priority>
         </properties>
         <children>
-          <tagNode name="listen-addresses">
+          <tagNode name="listen-address">
             <properties>
               <help>Addresses to listen for HTTPS requests</help>
               <valueHelp>
