@@ -1280,10 +1280,12 @@ class WireGuardIf(Interface):
     >>> from vyos.ifconfig import WireGuardIf as wg_if
     >>> wg_intfc = wg_if("wg01")
     >>> print (wg_intfc.wg_config)
-    {'private-key': None, 'keepalive': 0, 'endpoint': None, 'port': 0, 'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
+    {'private-key': None, 'keepalive': 0, 'endpoint': None, 'port': 0, 
+    'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     >>> wg_intfc.wg_config['keepalive'] = 100
     >>> print (wg_intfc.wg_config)
-    {'private-key': None, 'keepalive': 100, 'endpoint': None, 'port': 0, 'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
+    {'private-key': None, 'keepalive': 100, 'endpoint': None, 'port': 0, 
+    'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     """
 
     def __init__(self, ifname):
