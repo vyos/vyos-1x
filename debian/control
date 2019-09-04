@@ -65,6 +65,7 @@ Depends: python3,
   mtr-tiny,
   telnet,
   traceroute,
+  ssl-cert, nginx-light,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
