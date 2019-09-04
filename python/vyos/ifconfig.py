@@ -1273,3 +1273,73 @@ class BondIf(EthernetIf):
 
         return self._write_sysfs('/sys/class/net/{}/bonding/mode'
                                  .format(self._ifname), mode)
+
+class WireGuardIf(Interface):
+    """
+    Wireguard interface class, contains a comnfig dictionary since
+    wireguard VPN is being comnfigured via the wg command rather than
+    writing the config into a file. Otherwise if a pre-shared key is used
+    (symetric enryption key), it would we exposed within multiple files.
+    Currently it's only within the config.boot if the config was saved.
+
+    Example:
+    >>> from vyos.ifconfig import WireGuardIf as wg_if
+    >>> wg_intfc = wg_if("wg01")
+    >>> print (wg_intfc.wg_config)
+    {'private-key': None, 'keepalive': 0, 'endpoint': None, 'port': 0, 'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
+    >>> wg_intfc.wg_config['keepalive'] = 100
+    >>> print (wg_intfc.wg_config)
+    {'private-key': None, 'keepalive': 100, 'endpoint': None, 'port': 0, 'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'} 
+    """
+    def __init__(self, ifname):
+      super().__init__(ifname, type='wireguard')
+      self.wg_config =  {
+        'port'        : 0,
+        'private-key' : None,
+        'pubkey'      : None,
+        'psk'         : '/dev/null',
+        'allowed-ips' : [],
+        'fwmark'      : 0x00,
+        'endpoint'    : None,
+        'keepalive'   : 0
+      }
+
+    def wg_update(self):
+      if not self.wg_config['private-key']:
+        raise ValueError("private key required")
+      else:
+        ### fmask permission check?
+        pass
+      
+      cmd =   "wg set {} ".format(self._ifname)
+      cmd +=  "listen-port {} ".format(self.wg_config['port']) 
+      cmd +=  "fwmark {} ".format(str(self.wg_config['fwmark']))
+      cmd +=  "private-key {} ".format(self.wg_config['private-key'])
+      cmd +=  "peer {} ".format(self.wg_config['pubkey'])
+      cmd += " preshared-key {} ".format(self.wg_config['psk'])
+      cmd += " allowed-ips "
+      for aip in self.wg_config['allowed-ips']:
+        if aip != self.wg_config['allowed-ips'][-1]:
+          cmd += aip + ","
+        else:
+          cmd += aip
+      if self.wg_config['endpoint']:
+        cmd += " endpoint {}".format(self.wg_config['endpoint'])
+      cmd += " persistent-keepalive {}".format(self.wg_config['keepalive'])
+
+      self._cmd(cmd)
+
+      ### remove psk since it isn't required anymore and is saved in the cli config only !!
+      if self.wg_config['psk'] != '/dev/null':
+        if os.path.exists(self.wg_config['psk']):
+          os.remove(self.wg_config['psk'])
+
+    """
+    Remove a peer of an interface, peers are identified by their public key.
+    Giving it a readable name is a vyos feature, to remove a peer the pubkey
+    and the interface is needed, to remove the entry.
+    """
+    def wg_remove_peer(self, peerkey):
+      cmd = "sudo wg set {0} peer {1} remove".format(self._ifname, str(peerkey))
+      self._cmd(cmd)
+
