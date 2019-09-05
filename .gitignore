@@ -119,3 +119,9 @@ debian/debhelper-build-stamp
 # Sonar Cloud
 .scannerwork
 /.vs
+
+# SlickEdit
+*.vpj
+*.vpw
+*.vpwhist
+*.vtg
