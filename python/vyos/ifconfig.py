@@ -1407,32 +1407,43 @@ class VXLANIf(Interface, ):
     """
     def __init__(self, ifname, config=''):
         if config:
+            self._ifname = ifname
+
             if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
                 # we assume that by default a multicast interface is created
                 group = 'group {}'.format(config['group'])
+
                 # if remote host is specified we ignore the multicast address
                 if config['remote']:
                     group = 'remote {}'.format(config['remote'])
+
                 # an underlay device is not always specified
                 dev = ''
                 if config['dev']:
-                    dev = 'dev'.format(config['dev'])
+                    dev = 'dev {}'.format(config['dev'])
 
-                cmd = 'ip link add dev {intf} type vxlan id {vni} {group} {dev} {port}'
-                    .format(intf=self._ifname, config['vni'], group=group, dev=dev, port=config['port'])
+                cmd = 'ip link add {intf} type vxlan id {vni} {grp_rem} {dev} dstport {port}' \
+                       .format(intf=self._ifname, vni=config['vni'], grp_rem=group, dev=dev, port=config['port'])
                 self._cmd(cmd)
 
         super().__init__(ifname, type='vxlan')
 
+    @staticmethod
+    def get_config():
+        """
+        VXLAN interfaces require a configuration when they are added using
+        iproute2. This static method will provide the configuration dictionary
+        used by this class.
 
-     @staticmethod
-     def get_config():
-         config = {
-             'vni': 0,
-             'dev': '',
-             'group': '',
-             'port': 8472 # The Linux implementation of VXLAN pre-dates
+        Example:
+        >> dict = VXLANIf().get_config()
+        """
+        config = {
+            'vni': 0,
+            'dev': '',
+            'group': '',
+            'port': 8472, # The Linux implementation of VXLAN pre-dates
                           # the IANA's selection of a standard destination port
-             'remote': '',
-             'ttl': 16
-         }
+            'remote': ''
+        }
+        return config
