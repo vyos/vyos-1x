@@ -170,7 +170,7 @@
                   <constraint>
                     <validator name="numeric" argument="--range 1-86400"/>
                   </constraint>
-                  <constraintErrorMessage>Bridge max aging value must be between 6 and 86400 seconds</constraintErrorMessage>
+                  <constraintErrorMessage>ARP cache entry timeout must be between 1 and 86400 seconds</constraintErrorMessage>
                 </properties>
               </leafNode>
             </children>
