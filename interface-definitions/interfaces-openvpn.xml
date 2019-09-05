@@ -42,7 +42,7 @@
                 <properties>
                   <help>Interface to a bridge-group</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py -t bridge</script>
+                    <script>${vyos_completion_dir}/list_interfaces.py --type bridge</script>
                   </completionHelp>
                 </properties>
               </leafNode>
