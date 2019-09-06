@@ -25,10 +25,11 @@ import jinja2
 from copy import deepcopy
 from grp import getgrnam
 from ipaddress import ip_address,ip_network,IPv4Interface
+from netifaces import interfaces
 from psutil import pid_exists
 from pwd import getpwnam
-from signal import SIGUSR1
 from subprocess import Popen, PIPE
+from time import sleep
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -819,47 +820,46 @@ def generate(openvpn):
     return None
 
 def apply(openvpn):
-    interface = openvpn['intf']
-
     pid = 0
-    pidfile = '/var/run/openvpn/{}.pid'.format(interface)
+    pidfile = '/var/run/openvpn/{}.pid'.format(openvpn['intf'])
     if os.path.isfile(pidfile):
         pid = 0
         with open(pidfile, 'r') as f:
             pid = int(f.read())
 
-    # If tunnel interface has been deleted - stop service
+    # Always stop OpenVPN service. We can not send a SIGUSR1 for restart of the
+    # service as the configuration is not re-read. Stop daemon only if it's
+    # running - it could have died or killed by someone evil
+    if pid_exists(pid):
+        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd += ' --pidfile ' + pidfile
+        subprocess_cmd(cmd)
+
+    # cleanup old PID file
+    if os.path.isfile(pidfile):
+        os.remove(pidfile)
+
+    # Do some cleanup when OpenVPN is disabled/deleted
     if openvpn['deleted'] or openvpn['disable']:
-        directory = os.path.dirname(get_config_name(interface))
-
-        # we only need to stop the demon if it's running
-        # daemon could have died or killed by someone
-        if pid_exists(pid):
-            cmd  = 'start-stop-daemon --stop --quiet'
-            cmd += ' --pidfile ' + pidfile
-            subprocess_cmd(cmd)
-
-        # cleanup old PID file
-        if os.path.isfile(pidfile):
-            os.remove(pidfile)
-
         # cleanup old configuration file
-        if os.path.isfile(get_config_name(interface)):
-            os.remove(get_config_name(interface))
+        if os.path.isfile(get_config_name(openvpn['intf'])):
+            os.remove(get_config_name(openvpn['intf']))
 
         # cleanup client config dir
-        if os.path.isdir(directory + '/ccd/' + interface):
+        directory = os.path.dirname(get_config_name(openvpn['intf']))
+        if os.path.isdir(directory + '/ccd/' + openvpn['intf']):
             try:
-                os.remove(directory + '/ccd/' + interface + '/*')
+                os.remove(directory + '/ccd/' + openvpn['intf'] + '/*')
             except:
                 pass
 
         return None
 
-    # Send SIGUSR1 to the process instead of creating a new process
-    if pid_exists(pid):
-        os.kill(pid, SIGUSR1)
-        return None
+    # On configuration change we need to wait for the 'old' interface to
+    # vanish from the Kernel, if it is not gone, OpenVPN will report:
+    # ERROR: Cannot ioctl TUNSETIFF vtun10: Device or resource busy (errno=16)
+    while openvpn['intf'] in interfaces():
+        sleep(0.250) # 250ms
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
@@ -868,12 +868,12 @@ def apply(openvpn):
     cmd += ' --exec /usr/sbin/openvpn'
     # now pass arguments to openvpn binary
     cmd += ' --'
-    cmd += ' --config ' + get_config_name(interface)
+    cmd += ' --config ' + get_config_name(openvpn['intf'])
 
     # execute assembled command
     subprocess_cmd(cmd)
-
     return None
+
 
 if __name__ == '__main__':
     try:
