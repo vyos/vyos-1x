@@ -18,15 +18,15 @@
 
 import os
 import re
-import pwd
-import grp
 import sys
 import stat
-import copy
 import jinja2
-import psutil
-from ipaddress import ip_address,ip_network,IPv4Interface
 
+from copy import deepcopy
+from grp import getgrnam
+from ipaddress import ip_address,ip_network,IPv4Interface
+from psutil import pid_exists
+from pwd import getpwnam
 from signal import SIGUSR1
 from subprocess import Popen, PIPE
 
@@ -302,8 +302,8 @@ def openvpn_mkdir(directory):
 
     # fix permissions - corresponds to mode 755
     os.chmod(directory, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
-    uid = pwd.getpwnam(user).pw_uid
-    gid = grp.getgrnam(group).gr_gid
+    uid = getpwnam(user).pw_uid
+    gid = getgrnam(group).gr_gid
     os.chown(directory, uid, gid)
 
 def fixup_permission(filename, permission=stat.S_IRUSR):
@@ -315,8 +315,8 @@ def fixup_permission(filename, permission=stat.S_IRUSR):
         os.chmod(filename, permission)
 
         # make file owned by root / vyattacfg
-        uid = pwd.getpwnam('root').pw_uid
-        gid = grp.getgrnam('vyattacfg').gr_gid
+        uid = getpwnam('root').pw_uid
+        gid = getgrnam('vyattacfg').gr_gid
         os.chown(filename, uid, gid)
 
 def checkCertHeader(header, filename):
@@ -335,7 +335,7 @@ def checkCertHeader(header, filename):
     return False
 
 def get_config():
-    openvpn = copy.deepcopy(default_config_data)
+    openvpn = deepcopy(default_config_data)
     conf = Config()
 
     # determine tagNode instance
@@ -793,8 +793,8 @@ def generate(openvpn):
         fixup_permission(auth_file)
 
     # get numeric uid/gid
-    uid = pwd.getpwnam(user).pw_uid
-    gid = grp.getgrnam(group).gr_gid
+    uid = getpwnam(user).pw_uid
+    gid = getgrnam(group).gr_gid
 
     # Generate client specific configuration
     for client in openvpn['client']:
@@ -834,7 +834,7 @@ def apply(openvpn):
 
         # we only need to stop the demon if it's running
         # daemon could have died or killed by someone
-        if psutil.pid_exists(pid):
+        if pid_exists(pid):
             cmd  = 'start-stop-daemon --stop --quiet'
             cmd += ' --pidfile ' + pidfile
             subprocess_cmd(cmd)
@@ -857,7 +857,7 @@ def apply(openvpn):
         return None
 
     # Send SIGUSR1 to the process instead of creating a new process
-    if psutil.pid_exists(pid):
+    if pid_exists(pid):
         os.kill(pid, SIGUSR1)
         return None
 
