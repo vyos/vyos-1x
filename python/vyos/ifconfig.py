@@ -1376,13 +1376,13 @@ class WireGuardIf(Interface):
             if os.path.exists(self.config['psk']):
                 os.remove(self.config['psk'])
 
-    """
-    Remove a peer of an interface, peers are identified by their public key.
-    Giving it a readable name is a vyos feature, to remove a peer the pubkey
-    and the interface is needed, to remove the entry.
-    """
 
     def remove_peer(self, peerkey):
+        """
+        Remove a peer of an interface, peers are identified by their public key.
+        Giving it a readable name is a vyos feature, to remove a peer the pubkey
+        and the interface is needed, to remove the entry.
+        """
         cmd = "sudo wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
         self._cmd(cmd)
