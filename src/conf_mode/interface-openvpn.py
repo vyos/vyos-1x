@@ -34,8 +34,8 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.validate import is_addr_assigned
 
-user = 'nobody'
-group = 'nogroup'
+user = 'openvpn'
+group = 'openvpn'
 
 # Please be careful if you edit the template.
 config_tmpl = """
@@ -58,6 +58,7 @@ dev {{ intf }}
 user {{ uid }}
 group {{ gid }}
 persist-key
+iproute /usr/libexec/vyos/system/unpriv-ip
 
 proto {% if 'tcp-active' in protocol -%}tcp-client{% elif 'tcp-passive' in protocol -%}tcp-server{% else %}udp{% endif %}
 
