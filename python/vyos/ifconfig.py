@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import subprocess
 import jinja2
 
@@ -96,6 +97,18 @@ class Interface:
         >>> i = Interface('eth0')
         >>> i.remove()
         """
+
+        # do we have sub interfaces (VLANs)?
+        # we apply a regex matching subinterfaces (indicated by a .) of a
+        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
+        # subinterfaces
+        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
+                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
+
+        for vlan in vlan_ifs:
+            Interface(vlan).remove()
+
+        # All subinterfaces are now removed, continue on the physical interface
 
         # stop DHCP(v6) if running
         self.del_dhcp()
