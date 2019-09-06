@@ -306,6 +306,13 @@ def verify(bond):
                 raise ConfigError('can not enslave interface {} which belongs to ' \
                                   'pseudo-ethernet {}'.format(intf, tmp))
 
+        # bond members are not allowed to be underlaying vxlan devices
+        for tmp in conf.list_nodes('interfaces vxlan'):
+            if conf.exists('interfaces vxlan ' + tmp + ' link ' + intf):
+                raise ConfigError('can not enslave interface {} which belongs to ' \
+                                  'vxlan {}'.format(intf, tmp))
+
+
     if bond['primary']:
         if bond['primary'] not in bond['member']:
             raise ConfigError('primary interface must be a member interface of {}' \
