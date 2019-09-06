@@ -257,10 +257,12 @@ def verify(bond):
 
     if bond['primary']:
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
-            raise ConfigError('Mode dependency failed, primary not supported in this mode.'.format())
+            raise ConfigError('Mode dependency failed, primary not supported ' \
+                              'in this mode.'.format())
 
         if bond['primary'] not in bond['member']:
-            raise ConfigError('Interface "{}" is not part of the bond'.format(bond['primary']))
+            raise ConfigError('Interface "{}" is not part of the bond' \
+                              .format(bond['primary']))
 
     for vif_s in bond['vif_s']:
         for vif in bond['vif']:
@@ -273,42 +275,50 @@ def verify(bond):
         # a bond member is only allowed to be assigned to any one bond
         for tmp in conf.list_nodes('interfaces bonding'):
             if conf.exists('interfaces bonding ' + tmp + ' member interface ' + intf):
-                raise ConfigError('can not add interface {} that is part of another bond ({}) to {}'.format(
-                    intf, tmp, bond['intf']))
+                raise ConfigError('can not enslave interface {} which already ' \
+                                  'belongs to bond {}'.format(intf, tmp))
 
         # we can not add disabled slave interfaces to our bond
         if conf.exists('interfaces ethernet ' + intf + ' disable'):
-            raise ConfigError('can not add disabled interface {} to {}'.format(intf, bond['intf']))
+            raise ConfigError('can not enslave disabled interface {}' \
+                              .format(intf))
 
         # can not add interfaces with an assigned address to a bond
         if conf.exists('interfaces ethernet ' + intf + ' address'):
-            raise ConfigError('can not add interface {} with an assigned address to {}'.format(intf, bond['intf']))
+            raise ConfigError('can not enslave interface {} which has an address ' \
+                              'assigned'.format(intf))
 
         # bond members are not allowed to be bridge members, too
-        for bridge in conf.list_nodes('interfaces bridge'):
-            if conf.exists('interfaces bridge ' + bridge + ' member interface ' + intf):
-                raise ConfigError('can not add interface {} that is part of bridge {} to {}'.format(intf, bridge, bond['intf']))
+        for tmp in conf.list_nodes('interfaces bridge'):
+            if conf.exists('interfaces bridge ' + tmp + ' member interface ' + intf):
+                raise ConfigError('can not enslave interface {} which belongs to ' \
+                                  'bridge {}'.format(intf, tmp))
 
         # bond members are not allowed to be vrrp members, too
-        for vrrp in conf.list_nodes('high-availability vrrp group'):
-            if conf.exists('high-availability vrrp group ' + vrrp + ' interface ' + intf):
-                raise ConfigError('can not add interface {} which belongs to a VRRP group to {}'.format(intf, bond['intf']))
+        for tmp in conf.list_nodes('high-availability vrrp group'):
+            if conf.exists('high-availability vrrp group ' + tmp + ' interface ' + intf):
+                raise ConfigError('can not enslave interface {} which belongs to ' \
+                                  'VRRP group {}'.format(intf, tmp))
 
         # bond members are not allowed to be underlaying psuedo-ethernet devices
-        for peth in conf.list_nodes('interfaces pseudo-ethernet'):
-            if conf.exists('interfaces pseudo-ethernet ' + peth + ' link ' + intf):
-                raise ConfigError('can not add interface {} used by pseudo-ethernet {} to {}'.format(intf, peth, bond['intf']))
+        for tmp in conf.list_nodes('interfaces pseudo-ethernet'):
+            if conf.exists('interfaces pseudo-ethernet ' + tmp + ' link ' + intf):
+                raise ConfigError('can not enslave interface {} which belongs to ' \
+                                  'pseudo-ethernet {}'.format(intf, tmp))
 
     if bond['primary']:
         if bond['primary'] not in bond['member']:
-            raise ConfigError('primary interface must be a member interface of {}'.format(bond['intf']))
+            raise ConfigError('primary interface must be a member interface of {}' \
+                              .format(bond['intf']))
 
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
-            raise ConfigError('primary interface only works for mode active-backup, transmit-load-balance or adaptive-load-balance')
+            raise ConfigError('primary interface only works for mode active-backup, ' \
+                              'transmit-load-balance or adaptive-load-balance')
 
     if bond['arp_mon_intvl'] > 0:
         if bond['mode'] in ['802.3ad', 'balance-tlb', 'balance-alb']:
-            raise ConfigError('ARP link monitoring does not work for mode 802.3ad, transmit-load-balance or adaptive-load-balance')
+            raise ConfigError('ARP link monitoring does not work for mode 802.3ad, ' \
+                              'transmit-load-balance or adaptive-load-balance')
 
     return None
 
