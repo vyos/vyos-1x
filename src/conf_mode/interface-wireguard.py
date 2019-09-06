@@ -223,8 +223,6 @@ def apply(c):
             if nkey != ekey:
                 sl.syslog(
                     sl.LOG_NOTICE, "peer {0} pubkey changed from {1} to {2} on interface {3}".format(p, ekey, nkey, ifname))
-                print (
-                    "peer {0} pubkey changed from {1} to {2} on interface {3}".format(p, ekey, nkey, ifname))
                 intfc.remove_peer(ekey)
 
     intfc.config['private-key'] = pk

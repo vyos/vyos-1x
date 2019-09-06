@@ -1349,7 +1349,7 @@ class WireGuardIf(Interface):
             # fmask permission check?
             pass
 
-        cmd = "wg set {} ".format(self._ifname)
+        cmd = "sudo wg set {} ".format(self._ifname)
         cmd += "listen-port {} ".format(self.config['port'])
         cmd += "fwmark {} ".format(str(self.config['fwmark']))
         cmd += "private-key {} ".format(self.config['private-key'])
