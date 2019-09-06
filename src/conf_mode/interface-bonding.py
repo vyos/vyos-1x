@@ -270,6 +270,12 @@ def verify(bond):
 
     conf = Config()
     for intf in bond['member']:
+        # a bond member is only allowed to be assigned to any one bond
+        for tmp in conf.list_nodes('interfaces bonding'):
+            if conf.exists('interfaces bonding ' + tmp + ' member interface ' + intf):
+                raise ConfigError('can not add interface {} that is part of another bond ({}) to {}'.format(
+                    intf, tmp, bond['intf']))
+
         # we can not add disabled slave interfaces to our bond
         if conf.exists('interfaces ethernet ' + intf + ' disable'):
             raise ConfigError('can not add disabled interface {} to {}'.format(intf, bond['intf']))
