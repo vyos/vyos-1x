@@ -91,6 +91,8 @@ def apply(dummy):
         du.ifalias = dummy['description']
 
         # Configure interface address(es)
+        # - not longer required addresses get removed first
+        # - newly addresses will be added second
         for addr in dummy['address_remove']:
             du.del_addr(addr)
         for addr in dummy['address']:

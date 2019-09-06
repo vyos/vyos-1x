@@ -77,7 +77,10 @@ def apply(loopback):
         # update interface description used e.g. within SNMP
         # update interface description used e.g. within SNMP
         lo.ifalias = loopback['description']
-        # configure interface address(es)
+
+        # Configure interface address(es)
+        # - not longer required addresses get removed first
+        # - newly addresses will be added second
         for addr in loopback['address']:
             lo.add_addr(addr)
 
