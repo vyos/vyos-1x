@@ -85,12 +85,6 @@ def apply_vlan_config(vlan, config):
     if type(vlan) != type(EthernetIf("lo")):
         raise TypeError()
 
-    # Configure interface address(es)
-    for addr in config['address_remove']:
-        vlan.del_addr(addr)
-    for addr in config['address']:
-        vlan.add_addr(addr)
-
     # update interface description used e.g. within SNMP
     vlan.ifalias = config['description']
     # ignore link state changes
@@ -106,6 +100,14 @@ def apply_vlan_config(vlan, config):
         vlan.state = 'down'
     else:
         vlan.state = 'up'
+
+    # Configure interface address(es)
+    # - not longer required addresses get removed first
+    # - newly addresses will be added second
+    for addr in config['address_remove']:
+        vlan.del_addr(addr)
+    for addr in config['address']:
+        vlan.add_addr(addr)
 
 
 def get_config():
@@ -138,6 +140,11 @@ def get_config():
     # retrieve configured interface addresses
     if conf.exists('address'):
         bond['address'] = conf.return_values('address')
+
+    # get interface addresses (currently effective) - to determine which
+    # address is no longer valid and needs to be removed from the bond
+    eff_addr = conf.return_effective_values('address')
+    bond['address_remove'] = list_diff(eff_addr, bond['address'])
 
     # ARP link monitoring frequency in milliseconds
     if conf.exists('arp-monitor interval'):
@@ -208,12 +215,6 @@ def get_config():
     # determine bond member interfaces (currently configured)
     if conf.exists('member interface'):
         bond['member'] = conf.return_values('member interface')
-
-    # get interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the bond
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
-    bond['address_remove'] = list_diff(eff_addr, act_addr)
 
     # Primary device interface
     if conf.exists('primary'):
@@ -314,6 +315,7 @@ def apply(bond):
     b = BondIf(bond['intf'])
 
     if bond['deleted']:
+        #
         # delete bonding interface
         b.remove()
     else:
@@ -325,12 +327,6 @@ def apply(bond):
         # to this bond, thus we will free all interfaces from the bond first!
         for intf in b.get_slaves():
             b.del_port(intf)
-
-        # Configure interface address(es)
-        for addr in bond['address_remove']:
-            b.del_addr(addr)
-        for addr in bond['address']:
-            b.add_addr(addr)
 
         # ARP link monitoring frequency
         b.arp_interval = bond['arp_mon_intvl']
@@ -348,8 +344,8 @@ def apply(bond):
         # from the kernel side this looks valid to me. We won't run into an error
         # when a user added manual adresses which would result in having more
         # then 16 adresses in total.
-        cur_addr = list(map(str, b.arp_ip_target.split()))
-        for addr in cur_addr:
+        arp_tgt_addr = list(map(str, b.arp_ip_target.split()))
+        for addr in arp_tgt_addr:
             b.arp_ip_target = '-' + addr
 
         # Add configured ARP target addresses
@@ -391,6 +387,20 @@ def apply(bond):
         for intf in bond['member']:
             b.add_port(intf)
 
+        # As the bond interface is always disabled first when changing
+        # parameters we will only re-enable the interface if it is not
+        # administratively disabled
+        if not bond['disable']:
+            b.state = 'up'
+
+        # Configure interface address(es)
+        # - not longer required addresses get removed first
+        # - newly addresses will be added second
+        for addr in bond['address_remove']:
+            b.del_addr(addr)
+        for addr in bond['address']:
+            b.add_addr(addr)
+
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in bond['vif_s_remove']:
             b.del_vlan(vif_s)
@@ -419,12 +429,6 @@ def apply(bond):
         for vif in bond['vif']:
             vlan = b.add_vlan(vif['id'])
             apply_vlan_config(vlan, vif)
-
-        # As the bond interface is always disabled first when changing
-        # parameters we will only re-enable the interface if it is not
-        # administratively disabled
-        if not bond['disable']:
-            b.state = 'up'
 
     return None
 

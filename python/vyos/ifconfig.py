@@ -61,6 +61,7 @@ class Interface:
         >>> i = Interface('eth0')
         """
         self._ifname = str(ifname)
+        self._state = 'down'
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(self._ifname))
@@ -111,8 +112,8 @@ class Interface:
         # All subinterfaces are now removed, continue on the physical interface
 
         # stop DHCP(v6) if running
-        self.del_dhcp()
-        self.del_dhcpv6()
+        self._del_dhcp()
+        self._del_dhcpv6()
 
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
@@ -359,6 +360,8 @@ class Interface:
         if state not in ['up', 'down']:
             raise ValueError('state must be "up" or "down"')
 
+        self._state = state
+
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
@@ -495,8 +498,14 @@ class Interface:
 
     def add_addr(self, addr):
         """
-        Add IP address to interface. Address is only added if it yet not added
-        to that interface.
+        Add IP(v6) address to interface. Address is only added if it is not
+        already assigned to that interface.
+
+        addr: can be an IPv4 address, IPv6 address, dhcp or dhcpv6!
+              IPv4: add IPv4 address to interface
+              IPv6: add IPv6 address to interface
+              dhcp: start dhclient (IPv4) on interface
+              dhcpv6: start dhclient (IPv6) on interface
 
         Example:
         >>> from vyos.ifconfig import Interface
@@ -506,13 +515,25 @@ class Interface:
         >>> j.get_addr()
         ['192.0.2.1/24', '2001:db8::ffff/64']
         """
-        if not is_intf_addr_assigned(self._ifname, addr):
-            cmd = 'ip addr add "{}" dev "{}"'.format(addr, self._ifname)
-            self._cmd(cmd)
+        if addr == 'dhcp':
+            self._set_dhcp()
+        elif addr == 'dhcpv6':
+            self._set_dhcpv6()
+        else:
+            if not is_intf_addr_assigned(self._ifname, addr):
+                cmd = 'ip addr add "{}" dev "{}"'.format(addr, self._ifname)
+                self._cmd(cmd)
 
     def del_addr(self, addr):
         """
-        Remove IP address from interface.
+        Delete IP(v6) address to interface. Address is only added if it is
+        assigned to that interface.
+
+        addr: can be an IPv4 address, IPv6 address, dhcp or dhcpv6!
+              IPv4: delete IPv4 address from interface
+              IPv6: delete IPv6 address from interface
+              dhcp: stop dhclient (IPv4) on interface
+              dhcpv6: stop dhclient (IPv6) on interface
 
         Example:
         >>> from vyos.ifconfig import Interface
@@ -525,12 +546,17 @@ class Interface:
         >>> j.get_addr()
         ['2001:db8::ffff/64']
         """
-        if is_intf_addr_assigned(self._ifname, addr):
-            cmd = 'ip addr del "{}" dev "{}"'.format(addr, self._ifname)
-            self._cmd(cmd)
+        if addr == 'dhcp':
+            self._del_dhcp()
+        elif addr == 'dhcpv6':
+            self._del_dhcpv6()
+        else:
+            if is_intf_addr_assigned(self._ifname, addr):
+                cmd = 'ip addr del "{}" dev "{}"'.format(addr, self._ifname)
+                self._cmd(cmd)
 
     # replace dhcpv4/v6 with systemd.networkd?
-    def set_dhcp(self):
+    def _set_dhcp(self):
         """
         Configure interface as DHCP client. The dhclient binary is automatically
         started in background!
@@ -557,15 +583,17 @@ class Interface:
         with open(self._dhcp_cfg_file, 'w') as f:
             f.write(dhcp_text)
 
-        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-            self._dhcp_pid_file
-        cmd += ' --exec /sbin/dhclient --'
-        # now pass arguments to dhclient binary
-        cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
-            self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
-        self._cmd(cmd)
+        if self._state == 'up':
+            cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
+                self._dhcp_pid_file
+            cmd += ' --exec /sbin/dhclient --'
+            # now pass arguments to dhclient binary
+            cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
+                self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
+            self._cmd(cmd)
 
-    def del_dhcp(self):
+
+    def _del_dhcp(self):
         """
         De-configure interface as DHCP clinet. All auto generated files like
         pid, config and lease will be removed.
@@ -601,7 +629,8 @@ class Interface:
         if os.path.isfile(self._dhcp_lease_file):
             os.remove(self._dhcp_lease_file)
 
-    def set_dhcpv6(self):
+
+    def _set_dhcpv6(self):
         """
         Configure interface as DHCPv6 client. The dhclient binary is automatically
         started in background!
@@ -622,25 +651,28 @@ class Interface:
         with open(self._dhcpv6_cfg_file, 'w') as f:
             f.write(dhcpv6_text)
 
-        # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
-        #
-        # wee need to wait for IPv6 DAD to finish once and interface is added
-        # this suxx :-(
-        sleep(5)
+        if self._state == 'up':
+            # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
+            #
+            # wee need to wait for IPv6 DAD to finish once and interface is added
+            # this suxx :-(
+            sleep(5)
 
-        # no longer accept router announcements on this interface
-        cmd = 'sysctl -q -w net.ipv6.conf.{}.accept_ra=0'.format(self._ifname)
-        self._cmd(cmd)
+            # no longer accept router announcements on this interface
+            cmd = 'sysctl -q -w net.ipv6.conf.{}.accept_ra=0'.format(self._ifname)
+            self._cmd(cmd)
 
-        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-            self._dhcpv6_pid_file
-        cmd += ' --exec /sbin/dhclient --'
-        # now pass arguments to dhclient binary
-        cmd += ' -6 -nw -cf {} -pf {} -lf {} {}'.format(
-            self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file, self._ifname)
-        self._cmd(cmd)
+            # assemble command-line to start DHCPv6 client (dhclient)
+            cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
+                self._dhcpv6_pid_file
+            cmd += ' --exec /sbin/dhclient --'
+            # now pass arguments to dhclient binary
+            cmd += ' -6 -nw -cf {} -pf {} -lf {} {}'.format(
+                self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file, self._ifname)
+            self._cmd(cmd)
 
-    def del_dhcpv6(self):
+
+    def _del_dhcpv6(self):
         """
         De-configure interface as DHCPv6 clinet. All auto generated files like
         pid, config and lease will be removed.
@@ -1281,7 +1313,6 @@ class BondIf(EthernetIf):
 
 
 class WireGuardIf(Interface):
-
     """
     Wireguard interface class, contains a comnfig dictionary since
     wireguard VPN is being comnfigured via the wg command rather than
@@ -1293,11 +1324,11 @@ class WireGuardIf(Interface):
     >>> from vyos.ifconfig import WireGuardIf as wg_if
     >>> wg_intfc = wg_if("wg01")
     >>> print (wg_intfc.wg_config)
-    {'private-key': None, 'keepalive': 0, 'endpoint': None, 'port': 0, 
+    {'private-key': None, 'keepalive': 0, 'endpoint': None, 'port': 0,
     'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     >>> wg_intfc.wg_config['keepalive'] = 100
     >>> print (wg_intfc.wg_config)
-    {'private-key': None, 'keepalive': 100, 'endpoint': None, 'port': 0, 
+    {'private-key': None, 'keepalive': 100, 'endpoint': None, 'port': 0,
     'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     """
 

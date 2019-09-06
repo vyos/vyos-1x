@@ -61,9 +61,7 @@ def get_config():
     # Check if bridge has been removed
     if not conf.exists('interfaces bridge ' + bridge['intf']):
         bridge['deleted'] = True
-        # we should not bail out early here b/c we should
-        # find possible DHCP interfaces later on.
-        # DHCP interfaces invoke dhclient which should be stopped, too
+        return bridge
 
     # set new configuration level
     conf.set_level('interfaces bridge ' + bridge['intf'])
@@ -71,6 +69,11 @@ def get_config():
     # retrieve configured interface addresses
     if conf.exists('address'):
         bridge['address'] = conf.return_values('address')
+
+    # Determine interface addresses (currently effective) - to determine which
+    # address is no longer valid and needs to be removed from the bridge
+    eff_addr = conf.return_effective_values('address')
+    bridge['address_remove'] = list_diff(eff_addr, bridge['address'])
 
     # retrieve aging - how long addresses are retained
     if conf.exists('aging'):
@@ -136,12 +139,6 @@ def get_config():
     eff_intf = conf.list_effective_nodes('member interface')
     act_intf = conf.list_nodes('member interface')
     bridge['member_remove'] = list_diff(eff_intf, act_intf)
-
-    # Determine interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the bridge
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
-    bridge['address_remove'] = list_diff(eff_addr, act_addr)
 
     # Priority for this bridge
     if conf.exists('priority'):
@@ -225,23 +222,13 @@ def apply(bridge):
         if bridge['disable']:
             br.state = 'down'
 
-        # remove configured network interface addresses/DHCP(v6) configuration
+        # Configure interface address(es)
+        # - not longer required addresses get removed first
+        # - newly addresses will be added second
         for addr in bridge['address_remove']:
-            if addr == 'dhcp':
-                br.del_dhcp()
-            elif addr == 'dhcpv6':
-                br.del_dhcpv6()
-            else:
-                br.del_addr(addr)
-
-        # add configured network interface addresses/DHCP(v6) configuration
+            br.del_addr(addr)
         for addr in bridge['address']:
-            if addr == 'dhcp':
-                br.set_dhcp()
-            elif addr == 'dhcpv6':
-                br.set_dhcpv6()
-            else:
-                br.add_addr(addr)
+            br.add_addr(addr)
 
         # configure additional bridge member options
         for member in bridge['member']:
