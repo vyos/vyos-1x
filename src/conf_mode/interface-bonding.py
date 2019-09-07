@@ -142,7 +142,7 @@ def get_config():
         bond['address'] = conf.return_values('address')
 
     # get interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the bond
+    # address is no longer valid and needs to be removed
     eff_addr = conf.return_effective_values('address')
     bond['address_remove'] = list_diff(eff_addr, bond['address'])
 
