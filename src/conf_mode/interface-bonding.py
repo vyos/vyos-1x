@@ -272,11 +272,14 @@ def verify(bond):
 
     conf = Config()
     for intf in bond['member']:
-        # a bond member is only allowed to be assigned to any one bond
-        for tmp in conf.list_nodes('interfaces bonding'):
+        # a bonding member interface is only allowed to be assigned to one bond!
+        all_bonds = conf.list_nodes('interfaces bonding')
+        # We do not need to check our own bond
+        all_bonds.remove(bond['intf'])
+        for tmp in all_bonds:
             if conf.exists('interfaces bonding ' + tmp + ' member interface ' + intf):
                 raise ConfigError('can not enslave interface {} which already ' \
-                                  'belongs to bond {}'.format(intf, tmp))
+                                  'belongs to {}'.format(intf, tmp))
 
         # we can not add disabled slave interfaces to our bond
         if conf.exists('interfaces ethernet ' + intf + ' disable'):
