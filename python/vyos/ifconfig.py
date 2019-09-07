@@ -1047,8 +1047,18 @@ class VLANIf(Interface):
         tmp.remove()
 
 
-class BondIf(VLANIf):
+class EthernetIf(VLANIf):
+    """
+    Abstraction of a Linux Ethernet Interface
+    """
+    def __init__(self, ifname):
+        super().__init__(ifname)
 
+    def remove(self):
+        raise OSError('Ethernet interfaces can not be removed')
+
+
+class BondIf(VLANIf):
     """
     The Linux bonding driver provides a method for aggregating multiple network
     interfaces into a single logical "bonded" interface. The behavior of the
@@ -1056,7 +1066,6 @@ class BondIf(VLANIf):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
-
     def __init__(self, ifname):
         super().__init__(ifname, type='bond')
 
