@@ -997,8 +997,11 @@ class BridgeIf(Interface):
                                  .format(self._ifname, interface), priority)
 
 
-class EthernetIf(Interface):
-
+class VLANIf(Interface):
+    """
+    This class handels the creation and removal of a VLAN interface. It serves
+    as base class for BondIf and EthernetIf.
+    """
     def __init__(self, ifname, type=None):
         super().__init__(ifname, type)
 
@@ -1012,7 +1015,7 @@ class EthernetIf(Interface):
         This function creates both 802.1q and 802.1ad (Q-in-Q) interfaces. Proto
         parameter is used to indicate VLAN type.
 
-        A new object of type EthernetIf is returned once the interface has been
+        A new object of type VLANIf is returned once the interface has been
         created.
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
@@ -1031,7 +1034,7 @@ class EthernetIf(Interface):
         # return new object mapping to the newly created interface
         # we can now work on this object for e.g. IP address setting
         # or interface description and so on
-        return EthernetIf(vlan_ifname)
+        return VLANIf(vlan_ifname)
 
     def del_vlan(self, vlan_id):
         """
@@ -1040,11 +1043,11 @@ class EthernetIf(Interface):
         client processes.
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
-        tmp = EthernetIf(vlan_ifname)
+        tmp = VLANIf(vlan_ifname)
         tmp.remove()
 
 
-class BondIf(EthernetIf):
+class BondIf(VLANIf):
 
     """
     The Linux bonding driver provides a method for aggregating multiple network
