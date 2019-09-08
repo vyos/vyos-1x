@@ -1073,6 +1073,25 @@ class EthernetIf(VLANIf):
     def remove(self):
         raise OSError('Ethernet interfaces can not be removed')
 
+    def set_flow_control(self, enable):
+        """
+        Changes the pause parameters of the specified Ethernet device.
+
+        @param enable: true -> enable pause frames, false -> disable pause frames
+        """
+        if enable not in ['on', 'off']:
+            raise ValueError("Value out of range")
+
+        # Assemble command executed on system. Unfortunately there is no way
+        # to change this setting via sysfs
+        cmd = 'ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
+              self._ifname, enable)
+        try:
+            # An exception will be thrown if the settings are not changed
+            self._cmd(cmd)
+        except CalledProcessError:
+            pass
+
 
 class BondIf(VLANIf):
     """
