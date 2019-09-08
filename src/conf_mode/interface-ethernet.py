@@ -140,6 +140,10 @@ def get_config():
     if conf.exists('disable-link-detect'):
         eth['disable_link_detect'] = 2
 
+    # retrieve real hardware address
+    if conf.exists('hw-id'):
+        eth['hw_id'] = conf.return_value('hw-id')
+
     # disable interface
     if conf.exists('disable'):
         eth['disable'] = True
@@ -235,9 +239,12 @@ def apply(eth):
     # Enable private VLAN proxy ARP on this interface
     e.proxy_arp_pvlan = eth['ip_proxy_arp_pvlan']
 
-    # Change interface MAC address
+    # Change interface MAC address - re-set to real hardware address (hw-id)
+    # if custom mac is removed
     if eth['mac']:
         e.mac = eth['mac']
+    else:
+        e.mac = eth['hw_id']
 
     # Maximum Transmission Unit (MTU)
     e.mtu = eth['mtu']
