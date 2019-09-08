@@ -1005,7 +1005,7 @@ class VLANIf(Interface):
     def __init__(self, ifname, type=None):
         super().__init__(ifname, type)
 
-    def add_vlan(self, vlan_id, ethertype=''):
+    def add_vlan(self, vlan_id, ethertype='', ingress_qos='', egress_qos=''):
         """
         A virtual LAN (VLAN) is any broadcast domain that is partitioned and
         isolated in a computer network at the data link layer (OSI layer 2).
@@ -1017,6 +1017,13 @@ class VLANIf(Interface):
 
         A new object of type VLANIf is returned once the interface has been
         created.
+
+        @param ethertype: If specified, create 802.1ad or 802.1q Q-in-Q VLAN
+                          interface
+        @param ingress_qos: Defines a mapping of VLAN header prio field to the
+                            Linux internal packet priority on incoming frames.
+        @param ingress_qos: Defines a mapping of Linux internal packet priority
+                            to VLAN header prio field but for outgoing frames.
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
         if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
@@ -1026,9 +1033,18 @@ class VLANIf(Interface):
                 self._ethertype = ethertype
                 ethertype = 'proto {}'.format(ethertype)
 
+            # Optional ingress QOS mapping
+            opt_i = ''
+            if ingress_qos:
+                opt_i = 'ingress-qos-map ' + ingress_qos
+            # Optional egress QOS mapping
+            opt_e = ''
+            if egress_qos:
+                opt_e = 'egress-qos-map ' + egress_qos
+
             # create interface in the system
-            cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan}'.format(
-                intf=self._ifname, vlan=self._vlan_id, proto=ethertype)
+            cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
+                   .format(intf=self._ifname, vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
             self._cmd(cmd)
 
         # return new object mapping to the newly created interface
