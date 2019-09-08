@@ -35,6 +35,7 @@ default_config_data = {
     'dhcpv6_temporary': False,
     'disable': False,
     'disable_link_detect': 1,
+    'flow_control': 'on',
     'hw_id': '',
     'ip_arp_cache_tmo': 30,
     'ip_proxy_arp': 0,
@@ -140,6 +141,10 @@ def get_config():
     if conf.exists('disable-link-detect'):
         eth['disable_link_detect'] = 2
 
+    # disable ethernet flow control (pause frames)
+    if conf.exists('disable-flow-control'):
+        eth['flow_control'] = 'off'
+
     # retrieve real hardware address
     if conf.exists('hw-id'):
         eth['hw_id'] = conf.return_value('hw-id')
@@ -232,6 +237,8 @@ def apply(eth):
 
     # ignore link state changes
     e.link_detect = eth['disable_link_detect']
+    # disable ethernet flow control (pause frames)
+    e.set_flow_control(eth['flow_control'])
     # configure ARP cache timeout in milliseconds
     e.arp_cache_tmp = eth['ip_arp_cache_tmo']
     # Enable proxy-arp on this interface
