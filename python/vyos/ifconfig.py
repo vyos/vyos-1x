@@ -15,12 +15,12 @@
 
 import os
 import re
-import subprocess
 import jinja2
 
 from vyos.validate import *
 from ipaddress import IPv4Network, IPv6Address
 from netifaces import ifaddresses, AF_INET, AF_INET6
+from subprocess import Popen, PIPE
 from time import sleep
 
 dhcp_cfg = """
@@ -84,6 +84,36 @@ class Interface:
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             print('DEBUG/{:<6} {}'.format(self._ifname, msg))
 
+    def _cmd(self, command):
+        p = Popen(command, stdout=PIPE, shell=True)
+        tmp = p.communicate()[0].strip()
+        self._debug_msg("cmd '{}'".format(command))
+        if tmp.decode():
+            self._debug_msg("returned:\n{}".format(tmp.decode()))
+
+        # do we need some error checking code here?
+
+    def _read_sysfs(self, filename):
+        """
+        Provide a single primitive w/ error checking for reading from sysfs.
+        """
+        value = None
+        with open(filename, 'r') as f:
+            value = f.read().rstrip('\n')
+
+        self._debug_msg("read '{}' < '{}'".format(value, filename))
+        return value
+
+    def _write_sysfs(self, filename, value):
+        """
+        Provide a single primitive w/ error checking for writing to sysfs.
+        """
+        self._debug_msg("write '{}' > '{}'".format(value, filename))
+        with open(filename, 'w') as f:
+            f.write(str(value))
+
+        return None
+
     def remove(self):
         """
         Remove interface from operating system. Removing the interface
@@ -117,36 +147,6 @@ class Interface:
         # to be called and instead should raise an Exception:
         cmd = 'ip link del dev {}'.format(self._ifname)
         self._cmd(cmd)
-
-    def _cmd(self, command):
-        self._debug_msg("cmd '{}'".format(command))
-
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-        proc_stdout = process.communicate()[0].strip()
-
-        # add exception handling code
-        pass
-
-    def _read_sysfs(self, filename):
-        """
-        Provide a single primitive w/ error checking for reading from sysfs.
-        """
-        value = None
-        with open(filename, 'r') as f:
-            value = f.read().rstrip('\n')
-
-        self._debug_msg("read '{}' < '{}'".format(value, filename))
-        return value
-
-    def _write_sysfs(self, filename, value):
-        """
-        Provide a single primitive w/ error checking for writing to sysfs.
-        """
-        self._debug_msg("write '{}' > '{}'".format(value, filename))
-        with open(filename, 'w') as f:
-            f.write(str(value))
-
-        return None
 
     @property
     def mtu(self):
