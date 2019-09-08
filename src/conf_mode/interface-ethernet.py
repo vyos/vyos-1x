@@ -282,7 +282,12 @@ def apply(eth):
 
     # create VLAN interfaces (vif)
     for vif in eth['vif']:
-        vlan = e.add_vlan(vif['id'])
+        # QoS priority mapping can only be set during interface creation
+        # so we delete the interface first if required.
+        if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
+            e.del_vlan(vif['id'])
+
+        vlan = e.add_vlan(vif['id'], ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
         apply_vlan_config(vlan, vif)
 
     return None
