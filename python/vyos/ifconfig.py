@@ -43,7 +43,6 @@ dhclient_base = r'/var/lib/dhcp/dhclient_'
 
 
 class Interface:
-
     def __init__(self, ifname, type=None):
         """
         This is the base interface class which supports basic IP/MAC address
@@ -202,6 +201,10 @@ class Interface:
         >>> Interface('eth0').mac
         '00:90:43:fe:fe:1b'
         """
+        # on interface removal (ethernet) an empty string is passed - ignore it
+        if not mac:
+            return None
+
         # a mac address consits out of 6 octets
         octets = len(mac.split(':'))
         if octets != 6:
