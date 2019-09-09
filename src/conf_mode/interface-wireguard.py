@@ -29,12 +29,6 @@ from vyos.ifconfig import WireGuardIf
 ifname = str(os.environ['VYOS_TAGNODE_VALUE'])
 intfc = WireGuardIf(ifname)
 
-dir = r'/config/auth/wireguard'
-pk = dir + '/private.key'
-pub = dir + '/public.key'
-psk_file = dir + '/psk'
-
-
 def check_kmod():
     if not os.path.exists('/sys/module/wireguard'):
         sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod")
@@ -57,7 +51,8 @@ def get_config():
             'state': 'enabled',
             'fwmark': 0x00,
             'mtu': 1420,
-            'peer': {}
+            'peer': {},
+            'pk'  : '/config/auth/wireguard/private.key'
         }
     }
 
@@ -112,12 +107,11 @@ def get_config():
 
     return config_data
 
-
 def verify(c):
     if not c:
         return None
 
-    if not os.path.exists(pk):
+    if not os.path.exists(c[ifname]['pk']):
         raise ConfigError(
             "No keys found, generate them by executing: \'run generate wireguard keypair\'")
 
@@ -225,7 +219,7 @@ def apply(c):
                     sl.LOG_NOTICE, "peer {0} pubkey changed from {1} to {2} on interface {3}".format(p, ekey, nkey, ifname))
                 intfc.remove_peer(ekey)
 
-    intfc.config['private-key'] = pk
+    intfc.config['private-key'] = c[ifname]['pk']
     for p in c[ifname]['peer']:
         intfc.config['pubkey'] = str(c[ifname]['peer'][p]['pubkey'])
         intfc.config['allowed-ips'] = (c[ifname]['peer'][p]['allowed-ips'])
@@ -249,6 +243,7 @@ def apply(c):
 
         # preshared-key - needs to be read from a file
         if 'psk' in c[ifname]['peer'][p]:
+            psk_file = '/config/auth/wireguard/psk'
             old_umask = os.umask(0o077)
             open(psk_file, 'w').write(str(c[ifname]['peer'][p]['psk']))
             os.umask(old_umask)

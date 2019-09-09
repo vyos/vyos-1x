@@ -1349,7 +1349,7 @@ class WireGuardIf(Interface):
             # fmask permission check?
             pass
 
-        cmd = "sudo wg set {} ".format(self._ifname)
+        cmd = "wg set {} ".format(self._ifname)
         cmd += "listen-port {} ".format(self.config['port'])
         cmd += "fwmark {} ".format(str(self.config['fwmark']))
         cmd += "private-key {} ".format(self.config['private-key'])
@@ -1380,7 +1380,7 @@ class WireGuardIf(Interface):
         Giving it a readable name is a vyos feature, to remove a peer the pubkey
         and the interface is needed, to remove the entry.
         """
-        cmd = "sudo wg set {0} peer {1} remove".format(
+        cmd = "wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
         self._cmd(cmd)
 
