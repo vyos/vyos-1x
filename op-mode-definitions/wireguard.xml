@@ -8,9 +8,9 @@
           <help>wireguard key generation utility</help>
         </properties>
         <children>
-          <leafNode name="keypair">
+          <leafNode name="default-keypair">
             <properties>
-              <help>generate a wireguard keypair</help>
+              <help>generates the wireguard default-keypair</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey</command>
           </leafNode>
@@ -37,19 +37,7 @@
           <help>Show wireguard properties</help>
         </properties>
         <children>
-          <leafNode name="pubkey">
-            <properties>
-              <help>Show wireguard public key</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --showpub</command>
-          </leafNode>
-          <leafNode name="privkey">
-            <properties>
-              <help>show wireguard private key</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --showpriv</command>
-          </leafNode>
-          <node name="named-keypairs">
+          <node name="keypairs">
             <properties>
               <help>Shows named wireguard keys</help>
             </properties>
