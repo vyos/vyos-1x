@@ -299,7 +299,12 @@ def apply(eth):
         # QoS priority mapping can only be set during interface creation
         # so we delete the interface first if required.
         if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
-            e.del_vlan(vif['id'])
+            try:
+                # on system bootup the above condition is true but the interface
+                # does not exists, which throws an exception, but that's legal
+                e.del_vlan(vif['id'])
+            except:
+                pass
 
         vlan = e.add_vlan(vif['id'], ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
         apply_vlan_config(vlan, vif)
