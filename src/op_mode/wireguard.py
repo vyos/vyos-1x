@@ -91,18 +91,16 @@ def genpsk():
 
     subprocess.call(['wg genpsk'], shell=True)
 
-
 def list_key_dirs():
-    """ lists all dirs under /config/auth/wireguard """
+    """ lists all dirs under /config/auth/wireguard """ 
     if os.path.exists(dir):
         nks = next(os.walk(dir))[1]
         for nk in nks:
             print (nk)
 
-
 def del_key_dir(kname):
     """ deletes /config/auth/wireguard/<kname> """
-    kdir = "{0}/{1}".format(dir, kname)
+    kdir = "{0}/{1}".format(dir,kname)
     if not os.path.isdir(kdir):
         print ("named keypair {} not found".format(kname))
         return 1
@@ -133,24 +131,26 @@ if __name__ == '__main__':
             if args.location:
                 genkey("{0}/{1}".format(dir, args.location))
             else:
-                genkey(dir)
-
+                genkey("{}/default".format(dir))
         if args.showpub:
             if args.location:
                 showkey("{0}/{1}/public.key".format(dir, args.location))
             else:
-                showkey("{}/public.key".format(dir))
+                showkey("{}/default/public.key".format(dir))
         if args.showpriv:
             if args.location:
                 showkey("{0}/{1}/private.key".format(dir, args.location))
             else:
-                showkey("{}/private".format(dir))
+                showkey("{}/default/private.key".format(dir))
         if args.genpsk:
             genpsk()
         if args.listkdir:
             list_key_dirs()
         if args.delkdir:
-            del_key_dir(args.location)
+            if args.location:
+                del_key_dir(args.location)
+            else:
+                del_key_dir("default")
 
     except ConfigError as e:
         print(e)

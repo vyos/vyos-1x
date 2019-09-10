@@ -31,7 +31,6 @@ intfc = WireGuardIf(ifname)
 
 kdir = r'/config/auth/wireguard'
 
-
 def check_kmod():
     if not os.path.exists('/sys/module/wireguard'):
         sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod")
@@ -55,7 +54,7 @@ def get_config():
             'fwmark': 0x00,
             'mtu': 1420,
             'peer': {},
-            'pk': '{}/private.key'.format(kdir)
+            'pk'  : '{}/default/private.key'.format(kdir)
         }
     }
 
@@ -81,8 +80,7 @@ def get_config():
         if c.exists(ifname + ' mtu'):
             config_data[ifname]['mtu'] = c.return_value(ifname + ' mtu')
         if c.exists(ifname + ' private-key'):
-            config_data[ifname]['pk'] = "{0}/{1}/private.key".format(
-                kdir, c.return_value(ifname + ' private-key'))
+            config_data[ifname]['pk'] = "{0}/{1}/private.key".format(kdir,c.return_value(ifname + ' private-key')) 
         if c.exists(ifname + ' peer'):
             for p in c.list_nodes(ifname + ' peer'):
                 if not c.exists(ifname + ' peer ' + p + ' disable'):
@@ -112,7 +110,6 @@ def get_config():
                             ifname + ' peer ' + p + ' preshared-key')
 
     return config_data
-
 
 def verify(c):
     if not c:

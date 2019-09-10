@@ -12,7 +12,7 @@
             <properties>
               <help>generate a wireguard keypair</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --genkey</command>
+            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey</command>
           </leafNode>
           <leafNode name="preshared-key">
             <properties>
@@ -119,9 +119,9 @@
           <help>Delete wireguard properties</help>
         </properties>
         <children>
-          <tagNode name="named-keypair">
+          <tagNode name="keypair">
             <properties>
-              <help>Delete wireguard named keypair</help>
+              <help>Delete a wireguard keypair</help>
               <completionHelp>
                 <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
               </completionHelp>
