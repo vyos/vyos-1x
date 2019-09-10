@@ -8,13 +8,19 @@
           <help>wireguard key generation utility</help>
         </properties>
         <children>
+          <leafNode name="keypair">
+            <properties>
+              <help>generate a wireguard keypair</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey</command>
+          </leafNode>
           <leafNode name="preshared-key">
             <properties>
               <help>generate a wireguard preshared key</help>
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard.py --genpsk</command>
           </leafNode>
-          <tagNode name="keypairs">
+          <tagNode name="named-keypairs">
             <properties>
               <help>Generates named wireguard keypairs</help>
             </properties>
