@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/interface-loopback.py">
+        <properties>
+          <help>Loopback interface</help>
+          <priority>300</priority>
+          <constraint>
+            <regex>lo$</regex>
+          </constraint>
+          <constraintErrorMessage>Loopback interface must be named lo</constraintErrorMessage>
+          <valueHelp>
+            <format>lo</format>
+            <description>Loopback interface</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Interface description</help>
+              <constraint>
+                <regex>^.{1,256}$</regex>
+              </constraint>
+              <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

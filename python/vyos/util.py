@@ -15,9 +15,11 @@
 
 import os
 import re
+import getpass
 import grp
 import time
 import subprocess
+import sys
 
 import psutil
 
@@ -176,3 +178,24 @@ def wait_for_commit_lock():
     while commit_in_progress():
         time.sleep(1)
 
+def ask_yes_no(question, default=False) -> bool:
+    """Ask a yes/no question via input() and return their answer."""
+    default_msg = "[Y/n]" if default else "[y/N]"
+    while True:
+        sys.stdout.write("%s %s " % (question, default_msg))
+        c = input().lower()
+        if c == '':
+            return default
+        elif c in ("y", "ye", "yes"):
+            return True
+        elif c in ("n", "no"):
+            return False
+        else:
+            sys.stdout.write("Please respond with yes/y or no/n\n")
+
+
+def is_admin() -> bool:
+    """Look if current user is in sudo group"""
+    current_user = getpass.getuser()
+    (_, _, _, admin_group_members) = grp.getgrnam('sudo')
+    return current_user in admin_group_members

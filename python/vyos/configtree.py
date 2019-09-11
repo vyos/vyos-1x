@@ -185,6 +185,14 @@ class ConfigTree(object):
         return self.__to_commands(self.__config).decode()
 
     def set(self, path, value=None, replace=True):
+        """Set new entry in VyOS configuration.
+        path: configuration path e.g. 'system dns forwarding listen-address'
+        value: value to be added to node, e.g. '172.18.254.201'
+        replace: True: current occurance will be replaced
+                 False: new value will be appended to current occurances - use
+                 this for adding values to a multi node
+        """
+
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
 

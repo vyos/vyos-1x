@@ -18,24 +18,25 @@
 
 import os
 import re
-import pwd
-import grp
 import sys
 import stat
-import copy
 import jinja2
-import psutil
-from ipaddress import ip_address,ip_network,IPv4Interface
 
-from signal import SIGUSR1
+from copy import deepcopy
+from grp import getgrnam
+from ipaddress import ip_address,ip_network,IPv4Interface
+from netifaces import interfaces
+from psutil import pid_exists
+from pwd import getpwnam
 from subprocess import Popen, PIPE
+from time import sleep
 
 from vyos.config import Config
 from vyos import ConfigError
 from vyos.validate import is_addr_assigned
 
-user = 'nobody'
-group = 'nogroup'
+user = 'openvpn'
+group = 'openvpn'
 
 # Please be careful if you edit the template.
 config_tmpl = """
@@ -58,6 +59,7 @@ dev {{ intf }}
 user {{ uid }}
 group {{ gid }}
 persist-key
+iproute /usr/libexec/vyos/system/unpriv-ip
 
 proto {% if 'tcp-active' in protocol -%}tcp-client{% elif 'tcp-passive' in protocol -%}tcp-server{% else %}udp{% endif %}
 
@@ -301,8 +303,8 @@ def openvpn_mkdir(directory):
 
     # fix permissions - corresponds to mode 755
     os.chmod(directory, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
-    uid = pwd.getpwnam(user).pw_uid
-    gid = grp.getgrnam(group).gr_gid
+    uid = getpwnam(user).pw_uid
+    gid = getgrnam(group).gr_gid
     os.chown(directory, uid, gid)
 
 def fixup_permission(filename, permission=stat.S_IRUSR):
@@ -314,8 +316,8 @@ def fixup_permission(filename, permission=stat.S_IRUSR):
         os.chmod(filename, permission)
 
         # make file owned by root / vyattacfg
-        uid = pwd.getpwnam('root').pw_uid
-        gid = grp.getgrnam('vyattacfg').gr_gid
+        uid = getpwnam('root').pw_uid
+        gid = getgrnam('vyattacfg').gr_gid
         os.chown(filename, uid, gid)
 
 def checkCertHeader(header, filename):
@@ -334,7 +336,7 @@ def checkCertHeader(header, filename):
     return False
 
 def get_config():
-    openvpn = copy.deepcopy(default_config_data)
+    openvpn = deepcopy(default_config_data)
     conf = Config()
 
     # determine tagNode instance
@@ -792,8 +794,8 @@ def generate(openvpn):
         fixup_permission(auth_file)
 
     # get numeric uid/gid
-    uid = pwd.getpwnam(user).pw_uid
-    gid = grp.getgrnam(group).gr_gid
+    uid = getpwnam(user).pw_uid
+    gid = getgrnam(group).gr_gid
 
     # Generate client specific configuration
     for client in openvpn['client']:
@@ -806,6 +808,11 @@ def generate(openvpn):
 
     tmpl = jinja2.Template(config_tmpl)
     config_text = tmpl.render(openvpn)
+
+    # we need to support quoting of raw parameters from OpenVPN CLI
+    # see https://phabricator.vyos.net/T1632
+    config_text = config_text.replace("&quot;",'"')
+
     with open(get_config_name(interface), 'w') as f:
         f.write(config_text)
     os.chown(get_config_name(interface), uid, gid)
@@ -813,47 +820,46 @@ def generate(openvpn):
     return None
 
 def apply(openvpn):
-    interface = openvpn['intf']
-
     pid = 0
-    pidfile = '/var/run/openvpn/{}.pid'.format(interface)
+    pidfile = '/var/run/openvpn/{}.pid'.format(openvpn['intf'])
     if os.path.isfile(pidfile):
         pid = 0
         with open(pidfile, 'r') as f:
             pid = int(f.read())
 
-    # If tunnel interface has been deleted - stop service
+    # Always stop OpenVPN service. We can not send a SIGUSR1 for restart of the
+    # service as the configuration is not re-read. Stop daemon only if it's
+    # running - it could have died or killed by someone evil
+    if pid_exists(pid):
+        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd += ' --pidfile ' + pidfile
+        subprocess_cmd(cmd)
+
+    # cleanup old PID file
+    if os.path.isfile(pidfile):
+        os.remove(pidfile)
+
+    # Do some cleanup when OpenVPN is disabled/deleted
     if openvpn['deleted'] or openvpn['disable']:
-        directory = os.path.dirname(get_config_name(interface))
-
-        # we only need to stop the demon if it's running
-        # daemon could have died or killed by someone
-        if psutil.pid_exists(pid):
-            cmd  = 'start-stop-daemon --stop --quiet'
-            cmd += ' --pidfile ' + pidfile
-            subprocess_cmd(cmd)
-
-        # cleanup old PID file
-        if os.path.isfile(pidfile):
-            os.remove(pidfile)
-
         # cleanup old configuration file
-        if os.path.isfile(get_config_name(interface)):
-            os.remove(get_config_name(interface))
+        if os.path.isfile(get_config_name(openvpn['intf'])):
+            os.remove(get_config_name(openvpn['intf']))
 
         # cleanup client config dir
-        if os.path.isdir(directory + '/ccd/' + interface):
+        directory = os.path.dirname(get_config_name(openvpn['intf']))
+        if os.path.isdir(directory + '/ccd/' + openvpn['intf']):
             try:
-                os.remove(directory + '/ccd/' + interface + '/*')
+                os.remove(directory + '/ccd/' + openvpn['intf'] + '/*')
             except:
                 pass
 
         return None
 
-    # Send SIGUSR1 to the process instead of creating a new process
-    if psutil.pid_exists(pid):
-        os.kill(pid, SIGUSR1)
-        return None
+    # On configuration change we need to wait for the 'old' interface to
+    # vanish from the Kernel, if it is not gone, OpenVPN will report:
+    # ERROR: Cannot ioctl TUNSETIFF vtun10: Device or resource busy (errno=16)
+    while openvpn['intf'] in interfaces():
+        sleep(0.250) # 250ms
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
@@ -862,12 +868,12 @@ def apply(openvpn):
     cmd += ' --exec /usr/sbin/openvpn'
     # now pass arguments to openvpn binary
     cmd += ' --'
-    cmd += ' --config ' + get_config_name(interface)
+    cmd += ' --config ' + get_config_name(openvpn['intf'])
 
     # execute assembled command
     subprocess_cmd(cmd)
-
     return None
+
 
 if __name__ == '__main__':
     try:

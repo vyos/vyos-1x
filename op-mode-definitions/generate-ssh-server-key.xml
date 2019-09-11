@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <properties>
+      <help>Generate an object</help>
+    </properties>
+    <children>
+      <node name="ssh-server-key">
+        <properties>
+          <help>Regenerate the host SSH keys and restart the SSH server</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/generate_ssh_server_key.py</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

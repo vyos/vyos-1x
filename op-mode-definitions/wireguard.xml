@@ -8,18 +8,24 @@
           <help>wireguard key generation utility</help>
         </properties>
         <children>
-          <leafNode name="keypair">
+          <leafNode name="default-keypair">
             <properties>
-              <help>generate a wireguard keypair</help>
+              <help>generates the wireguard default-keypair</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --genkey</command>
+            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey</command>
           </leafNode>
           <leafNode name="preshared-key">
             <properties>
               <help>generate a wireguard preshared key</help>
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard.py --genpsk</command>
-          </leafNode> 
+          </leafNode>
+          <tagNode name="named-keypairs">
+            <properties>
+              <help>Generates named wireguard keypairs</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey --location "$4"</command>
+          </tagNode>
         </children>
       </node>
     </children>
@@ -31,18 +37,31 @@
           <help>Show wireguard properties</help>
         </properties>
         <children>
-          <leafNode name="pubkey">
+          <node name="keypairs">
             <properties>
-              <help>show wireguard public key</help>
+              <help>Shows named wireguard keys</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --showpub</command>
-          </leafNode>
-          <leafNode name="privkey">
-            <properties>
-              <help>show wireguard private key</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --showpriv</command>
-          </leafNode>
+            <children>
+              <tagNode name="pubkey">
+                <properties>
+                  <help>Show wireguard private named key</help>
+                  <completionHelp>
+                    <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/wireguard.py --showpub --location "$5"</command>
+              </tagNode>
+              <tagNode name="privkey">
+                <properties>
+                  <help>Show wireguard public named key</help>
+                  <completionHelp>
+                    <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/wireguard.py --showpriv --location "$5"</command>
+              </tagNode>
+            </children>
+          </node>
         </children>
       </node>
       <node name="interfaces">
@@ -51,7 +70,7 @@
             <properties>
               <help>show wireguard interface information</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py -t wireguard</script>
+                <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
             </properties>
             <command>sudo wg show "$4"</command>
@@ -74,8 +93,28 @@
                 </properties>
                 <command>sudo wg show "$4" peers</command>
               </leafNode>
-             <!-- more commands upon request --> 
+             <!-- more commands upon request -->
             </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="delete">
+    <children>
+      <node name="wireguard">
+        <properties>
+          <help>Delete wireguard properties</help>
+        </properties>
+        <children>
+          <tagNode name="keypair">
+            <properties>
+              <help>Delete a wireguard keypair</help>
+              <completionHelp>
+                <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --delkdir --location "$4"</command>
           </tagNode>
         </children>
       </node>

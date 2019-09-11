@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="telnet">
+    <properties>
+      <help>Telnet to a node</help>
+    </properties>
+    <children>
+      <tagNode name="to">
+        <properties>
+          <help>Telnet to a host</help>
+          <completionHelp>
+            <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/telnet $3</command>
+        <children>
+          <tagNode name="port">
+            <properties>
+              <help>Telnet to a host:port</help>
+              <completionHelp>
+                <list>&lt;0-65535&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/telnet $3 $5</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

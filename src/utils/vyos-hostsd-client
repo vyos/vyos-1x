@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2019 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+import sys
+import argparse
+
+import vyos.hostsd_client
+
+parser = argparse.ArgumentParser()
+group = parser.add_mutually_exclusive_group()
+group.add_argument('--add-hosts', action="store_true")
+group.add_argument('--delete-hosts', action="store_true")
+group.add_argument('--add-name-servers', action="store_true")
+group.add_argument('--delete-name-servers', action="store_true")
+group.add_argument('--set-host-name', action="store_true")
+
+parser.add_argument('--host', type=str, action="append")
+parser.add_argument('--name-server', type=str, action="append")
+parser.add_argument('--host-name', type=str)
+parser.add_argument('--domain-name', type=str)
+parser.add_argument('--search-domain', type=str, action="append")
+
+parser.add_argument('--tag', type=str)
+
+args = parser.parse_args()
+
+try:
+    client = vyos.hostsd_client.Client()
+
+    if args.add_hosts:
+        if not args.tag:
+            raise ValueError("Tag is required for this operation")
+        data = []
+        for h in args.host:
+            entry = {}
+            params = h.split(",")
+            if len(params) < 2:
+                raise ValueError("Malformed host entry")
+            entry['host'] = params[0]
+            entry['address'] = params[1]
+            entry['aliases'] = params[2:]
+            data.append(entry)
+        client.add_hosts(args.tag, data)
+    elif args.delete_hosts:
+        if not args.tag:
+            raise ValueError("Tag is required for this operation")
+        client.delete_hosts(args.tag)
+    elif args.add_name_servers:
+        if not args.tag:
+            raise ValueError("Tag is required for this operation")
+        client.add_name_servers(args.tag, args.name_server)
+    elif args.delete_name_servers:
+        if not args.tag:
+            raise ValueError("Tag is required for this operation")
+        client.delete_name_servers(args.tag)
+    elif args.set_host_name:
+        client.set_host_name(args.host_name, args.domain_name, args.search_domain)
+    else:
+        raise ValueError("Operation required")
+
+except ValueError as e:
+    print("Incorrect options: {0}".format(e))
+    sys.exit(1)
+except vyos.hostsd_client.VyOSHostsdError as e:
+    print("Server returned an error: {0}".format(e))
+    sys.exit(1)
+

@@ -2,25 +2,25 @@
 <interfaceDefinition>
   <node name="generate">
     <children>
-    <node name="openvpn">
-      <properties>
-        <help>OpenVPN key generation tool</help>
-      </properties>
-      <children>
-        <tagNode name="key">
-          <properties>
-            <help>Generate shared-secret key with specified file name</help>
-            <completionHelp>
-              <list>&lt;filename&gt;</list>
-            </completionHelp>
-          </properties>
-          <command>
+      <node name="openvpn">
+        <properties>
+          <help>OpenVPN key generation tool</help>
+        </properties>
+        <children>
+          <tagNode name="key">
+            <properties>
+              <help>Generate shared-secret key with specified file name</help>
+              <completionHelp>
+                <list>&lt;filename&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>
             result=1;
             key_path=$4
             full_path=
 
             # Prepend /config/auth if the path is not absolute
-            if echo $key_path | egrep -ve '^/.*' > /dev/null; then
+            if echo $key_path | egrep -ve '^/.*' &gt; /dev/null; then
                 full_path=/config/auth/$key_path
             else
                 full_path=$key_path
@@ -40,12 +40,15 @@
             fi
             /usr/libexec/vyos/validators/file-exists --directory /config/auth "$full_path"
           </command>
-        </tagNode>
-      </children>
-    </node>
+          </tagNode>
+        </children>
+      </node>
     </children>
   </node>
   <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
     <children>
       <node name="openvpn">
         <children>
@@ -56,7 +59,7 @@
                 <script>sudo ${vyos_completion_dir}/list_openvpn_clients.py --all</script>
               </completionHelp>
             </properties>
-            <command>echo kill $4 | socat - UNIX-CONNECT:/tmp/openvpn-mgmt-intf > /dev/null</command>
+            <command>echo kill $4 | socat - UNIX-CONNECT:/tmp/openvpn-mgmt-intf &gt; /dev/null</command>
           </tagNode>
           <tagNode name="interface">
             <properties>
@@ -105,6 +108,31 @@
               </leafNode>
             </children>
           </tagNode>
+        </children>
+      </node>
+      <node name="openvpn">
+        <properties>
+          <help>Show OpenVPN information</help>
+        </properties>
+        <children>
+          <leafNode name="client">
+            <properties>
+              <help>Show tunnel status for OpenVPN client interfaces</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_openvpn.py --mode=client</command>
+          </leafNode>
+          <leafNode name="server">
+            <properties>
+              <help>Show tunnel status for OpenVPN server interfaces</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_openvpn.py --mode=server</command>
+          </leafNode>
+          <leafNode name="site-to-site">
+            <properties>
+              <help>Show tunnel status for OpenVPN site-to-site interfaces</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_openvpn.py --mode=site-to-site</command>
+          </leafNode>
         </children>
       </node>
     </children>

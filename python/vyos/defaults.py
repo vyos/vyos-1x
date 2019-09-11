@@ -29,7 +29,7 @@ cfg_vintage = 'vyatta'
 commit_lock = '/opt/vyatta/config/.lock'
 
 https_data = {
-    'listen_address' : [ '127.0.0.1' ]
+    'listen_addresses' : { '*': ['_'] }
 }
 
 api_data = {

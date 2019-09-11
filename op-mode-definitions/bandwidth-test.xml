@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="bandwidth-test">
+        <properties>
+          <help>Initiate or wait for bandwidth test</help>
+        </properties>
+        <children>
+          <leafNode name="accept">
+            <properties>
+              <help>Wait for bandwidth test connections (port TCP/5001)</help>
+            </properties>
+            <command>iperf -s</command>
+          </leafNode>
+          <tagNode name="initiate">
+            <properties>
+              <help>Initiate a bandwidth test to specified host (port TCP/5001)</help>
+              <completionHelp>
+                <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>iperf -c $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

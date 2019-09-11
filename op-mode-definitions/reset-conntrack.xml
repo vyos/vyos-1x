@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
+    <children>
+      <node name="conntrack">
+        <properties>
+          <help>Reset all currently tracked connections</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/clear_conntrack.py</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

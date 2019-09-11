@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="format">
+    <properties>
+      <help>Format a device</help>
+    </properties>
+    <children>
+      <tagNode name="disk">
+        <properties>
+          <help>Format a disk drive</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_disks.py</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <tagNode name="like">
+            <properties>
+              <help>Format this disk the same as another disk</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_disks.py --exclude ${COMP_WORDS[2]}</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/format_disk.py --target $3 --proto $5</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+
+  <node name="show">
+    <children>
+      <tagNode name="disk">
+        <properties>
+          <help>Show status of disk device</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_disks.py</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <leafNode name="format">
+            <properties>
+              <help>Show disk drive formatting</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_disk_format.sh $3</command>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

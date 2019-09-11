@@ -77,6 +77,14 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="private-key">
+            <properties>
+              <help>Private key to use on that interface</help>
+              <completionHelp>
+                <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
           <tagNode name="peer">
             <properties>
               <help>peer alias</help>
