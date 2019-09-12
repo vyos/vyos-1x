@@ -18,6 +18,7 @@
 import jinja2
 import argparse
 
+from sys import exit
 from vyos.config import Config
 
 outp_tmpl = """
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     config = Config()
     if len(config.list_effective_nodes('interfaces openvpn')) == 0:
         print("No OpenVPN interfaces configured")
-        sys.exit(0)
+        exit(0)
 
     # search all OpenVPN interfaces and add those with a matching mode to our
     # interfaces list
