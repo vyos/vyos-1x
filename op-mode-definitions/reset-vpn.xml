@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
+    <children>
+      <node name="vpn">
+        <properties>
+          <help>Reset Virtual Private Network (VPN) information</help>
+        </properties>
+        <children>
+          <node name="remote-access">
+            <properties>
+              <help>Reset remote access VPN connections</help>
+            </properties>
+            <children>
+              <node name="all">
+                <properties>
+                  <help>Terminate all user's current remote access VPN session(s)</help>
+                </properties>
+                <children>
+                  <node name="protocol">
+                    <properties>
+                      <help>Terminate specified user's current remote access VPN session(s) with specified protocol</help>
+                    </properties>
+                    <children>
+                      <leafNode name="l2tp">
+                        <properties>
+                          <help>Terminate all user's current remote access VPN session(s) with L2TP protocol</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="l2tp"</command> 
+                      </leafNode>
+                      <leafNode name="pptp">
+                        <properties>
+                          <help>Terminate all user's current remote access VPN session(s) with PPTP protocol</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="pptp"</command> 
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users"</command>
+              </node>
+              <tagNode name="interface">
+                <properties>
+                  <help>Terminate a remote access VPN interface</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --interface="$5"</command>
+              </tagNode>
+              <tagNode name="user">
+                <properties>
+                  <help>Terminate specified user's current remote access VPN session(s)</help>
+                </properties>
+                <children>
+                  <node name="protocol">
+                    <properties>
+                      <help>Terminate specified user's current remote access VPN session(s) with specified protocol</help>
+                    </properties>
+                    <children>
+                      <leafNode name="l2tp">
+                        <properties>
+                          <help>Terminate all user's current remote access VPN session(s) with L2TP protocol</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="l2tp"</command> 
+                      </leafNode>
+                      <leafNode name="pptp">
+                        <properties>
+                          <help>Terminate all user's current remote access VPN session(s) with PPTP protocol</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="pptp"</command> 
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

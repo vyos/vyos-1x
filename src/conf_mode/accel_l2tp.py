@@ -94,6 +94,7 @@ wins2={{wins[1]}}
 
 [l2tp]
 verbose=1
+ifname=l2tp%d
 ppp-max-mtu={{mtu}}
 mppe={{authentication['mppe']}}
 {% if outside_addr %}
