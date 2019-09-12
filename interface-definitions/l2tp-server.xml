@@ -405,6 +405,7 @@
                           <leafNode name="disable">
                             <properties>
                               <help>Option to disable a L2TP Server user</help>
+                              <valueless/>
                             </properties>
                           </leafNode>
                           <leafNode name="password">
@@ -551,6 +552,29 @@
                       </node>
                     </children>
                   </node>
+                </children>
+              </node>
+              <node name="ppp-options">
+                <properties>
+                  <help>Advanced protocol options</help>
+                </properties>
+                <children>
+                  <leafNode name="lcp-echo-interval">
+                    <properties>
+                      <help>LCP echo-requests/sec</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="lcp-echo-failure">
+                    <properties>
+                      <help>Maximum number of Echo-Requests may be sent without valid reply</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
             </children>
