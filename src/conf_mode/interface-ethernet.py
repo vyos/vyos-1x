@@ -35,6 +35,7 @@ default_config_data = {
     'dhcpv6_temporary': False,
     'disable': False,
     'disable_link_detect': 1,
+    'duplex': 'auto',
     'flow_control': 'on',
     'hw_id': '',
     'ip_arp_cache_tmo': 30,
@@ -43,6 +44,7 @@ default_config_data = {
     'intf': '',
     'mac': '',
     'mtu': 1500,
+    'speed': 'auto',
     'vif_s': [],
     'vif_s_remove': [],
     'vif': [],
@@ -153,6 +155,10 @@ def get_config():
     if conf.exists('disable'):
         eth['disable'] = True
 
+    # interface duplex
+    if conf.exists('duplex'):
+        eth['duplex'] = conf.return_value('duplex')
+
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
         eth['ip_arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
@@ -172,6 +178,10 @@ def get_config():
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
         eth['mtu'] = int(conf.return_value('mtu'))
+
+    # interface speed
+    if conf.exists('speed'):
+        eth['speed'] = conf.return_value('speed')
 
     # re-set configuration level and retrieve vif-s interfaces
     conf.set_level(cfg_base)
@@ -205,6 +215,14 @@ def get_config():
 
 
 def verify(eth):
+    if eth['speed'] == 'auto':
+        if eth['duplex'] != 'auto':
+            raise ConfigError('If speed is hardcoded, duplex must be hardcoded, too')
+
+    if eth['duplex'] == 'auto':
+        if eth['speed'] != 'auto':
+            raise ConfigError('If duplex is hardcoded, speed must be hardcoded, too')
+
     conf = Config()
     # some options can not be changed when interface is enslaved to a bond
     for bond in conf.list_nodes('interfaces bonding'):
@@ -255,6 +273,9 @@ def apply(eth):
 
     # Maximum Transmission Unit (MTU)
     e.mtu = eth['mtu']
+
+    # Set physical interface speed and duplex
+    e.set_speed_duplex(eth['speed'], eth['duplex'])
 
     # Configure interface address(es)
     # - not longer required addresses get removed first
