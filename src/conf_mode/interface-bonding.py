@@ -355,8 +355,7 @@ def apply(bond):
             b.del_port(intf)
 
         # ARP link monitoring frequency
-        if bond['mode'] not in ['802.3ad', 'balance-tlb', 'balance-alb']:
-            b.arp_interval = bond['arp_mon_intvl']
+        b.arp_interval = bond['arp_mon_intvl']
         # reset miimon on arp-montior deletion
         if bond['arp_mon_intvl'] == 0:
             # reset miimon to default
