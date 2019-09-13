@@ -1086,7 +1086,7 @@ class BondIf(EthernetIf):
         The default value is layer2
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').xmit_hash_policy = 'layer2+3'
         >>> BondIf('bond0').proxy_arp
         '1'
@@ -1130,7 +1130,7 @@ class BondIf(EthernetIf):
         The default value is no IP addresses.
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').arp_interval = '100'
         >>> BondIf('bond0').arp_interval
         '100'
@@ -1171,7 +1171,7 @@ class BondIf(EthernetIf):
         The default value is no IP addresses.
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').arp_ip_target = '192.0.2.1'
         >>> BondIf('bond0').arp_ip_target
         '192.0.2.1'
@@ -1184,7 +1184,7 @@ class BondIf(EthernetIf):
         Enslave physical interface to bond.
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').add_port('eth0')
         >>> BondIf('bond0').add_port('eth1')
         """
@@ -1201,7 +1201,7 @@ class BondIf(EthernetIf):
         Remove physical port from bond
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').del_port('eth1')
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
@@ -1212,7 +1212,7 @@ class BondIf(EthernetIf):
         Return a list with all configured slave interfaces on this bond.
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').get_slaves()
         ['eth1', 'eth2']
         """
@@ -1253,7 +1253,7 @@ class BondIf(EthernetIf):
         balance-alb mode.
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').primary = 'eth2'
         >>> BondIf('bond0').primary
         'eth2'
@@ -1295,7 +1295,7 @@ class BondIf(EthernetIf):
         slaves
 
         Example:
-        >>> from vyos.ifconfig import Interface
+        >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').mode = '802.3ad'
         >>> BondIf('bond0').mode
         '802.3ad'
