@@ -1179,6 +1179,45 @@ class BondIf(EthernetIf):
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
                                  .format(self._ifname), target)
 
+    @property
+    def miimon(self):
+        """
+        Specifies the MII link monitoring frequency in milliseconds.
+        This determines how often the link state of each slave is
+        inspected for link failures. A value of zero disables MII
+        link monitoring. A value of 100 is a good starting point.
+
+        The default value is 0.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').miimon
+        '250'
+        """
+        return self._read_sysfs('/sys/class/net/{}/bonding/miimon'
+                                .format(self._ifname))
+
+
+    @miimon.setter
+    def miimon(self, time):
+        """
+        Specifies the MII link monitoring frequency in milliseconds.
+        This determines how often the link state of each slave is
+        inspected for link failures. A value of zero disables MII
+        link monitoring. A value of 100 is a good starting point.
+
+        The default value is 0.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').miimon = 250
+        >>> BondIf('bond0').miimon
+        '250'
+        """
+        return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
+                                 .format(self._ifname), time)
+
+
     def add_port(self, interface):
         """
         Enslave physical interface to bond.
