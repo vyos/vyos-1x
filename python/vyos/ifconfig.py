@@ -1095,6 +1095,28 @@ class EthernetIf(VLANIf):
         except CalledProcessError:
             pass
 
+    def set_speed_duplex(self, speed, duplex):
+        """
+        Set link speed in Mbit/s and duplex.
+
+        @speed can be any link speed in MBit/s, e.g. 10, 100, 1000 auto
+        @duplex can be half, full, auto
+        """
+
+        if speed not in ['auto', '10', '100', '1000', '2500', '5000', '10000', '25000', '40000', '50000', '100000', '400000']:
+            raise ValueError("Value out of range (speed)")
+
+        if duplex not in ['auto', 'full', 'half']:
+            raise ValueError("Value out of range (duplex)")
+
+        cmd = 'ethtool -s {}'.format(self._ifname)
+        if speed == 'auto' or duplex == 'auto':
+            cmd += ' autoneg on'
+        else:
+            cmd += ' speed {} duplex {} autoneg off'.format(speed, duplex)
+
+        return self._cmd(cmd)
+
 
 class BondIf(VLANIf):
     """
