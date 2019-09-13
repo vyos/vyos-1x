@@ -357,7 +357,7 @@ def apply(bond):
         # ARP link monitoring frequency, reset miimon when arp-montior is inactive
         if bond['arp_mon_intvl'] == 0:
             # reset miimon to default
-            b.bond_miimon = 250
+            b.miimon = 250
         else:
             b.arp_interval = bond['arp_mon_intvl']
 
