@@ -724,8 +724,9 @@ def verify(openvpn):
             if not checkCertHeader('-----BEGIN X509 CRL-----', openvpn['tls_crl']):
                 raise ConfigError('Specified crl-file "{} not valid'.format(openvpn['tls_crl']))
 
-        if not checkCertHeader('-----BEGIN DH PARAMETERS-----', openvpn['tls_dh']):
-            raise ConfigError('Specified dh-file "{}" is not valid'.format(openvpn['tls_dh']))
+        if openvpn['tls_dh']:
+            if not checkCertHeader('-----BEGIN DH PARAMETERS-----', openvpn['tls_dh']):
+                raise ConfigError('Specified dh-file "{}" is not valid'.format(openvpn['tls_dh']))
 
         if openvpn['tls_role']:
             if openvpn['mode'] in ['client', 'server']:
