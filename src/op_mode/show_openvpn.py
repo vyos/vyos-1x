@@ -162,6 +162,10 @@ if __name__ == '__main__':
 
                 remote_host = config.return_effective_values('interfaces openvpn {} remote-host'.format(intf))
                 remote_port = config.return_effective_value('interfaces openvpn {} remote-port'.format(intf))
+
+                if not remote_port:
+                    remote_port = '1194'
+
                 if len(remote_host) >= 1:
                     client['remote'] = str(remote_host[0]) + ':' + remote_port
 
