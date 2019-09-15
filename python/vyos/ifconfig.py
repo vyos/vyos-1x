@@ -1112,6 +1112,11 @@ class EthernetIf(VLANIf):
         if enable not in ['on', 'off']:
             raise ValueError("Value out of range")
 
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net']:
+            self._debug_msg('{} driver does not support changing flow control settings!'
+                            .format(self.get_driver_name()))
+            return
+
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
         cmd = '/sbin/ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
