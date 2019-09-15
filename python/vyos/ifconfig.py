@@ -1096,7 +1096,7 @@ class EthernetIf(VLANIf):
 
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
-        cmd = 'ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
+        cmd = '/sbin/ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
               self._ifname, enable)
         try:
             # An exception will be thrown if the settings are not changed
@@ -1118,7 +1118,7 @@ class EthernetIf(VLANIf):
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError("Value out of range (duplex)")
 
-        cmd = 'ethtool -s {}'.format(self._ifname)
+        cmd = '/sbin/ethtool -s {}'.format(self._ifname)
         if speed == 'auto' or duplex == 'auto':
             cmd += ' autoneg on'
         else:
