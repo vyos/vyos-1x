@@ -129,6 +129,12 @@ class Interface:
         self._del_dhcp()
         self._del_dhcpv6()
 
+        # remove all assigned IP addresses from interface - this is a bit redundant
+        # as the kernel will remove all addresses on interface deletion, but we
+        # can not delete ALL interfaces, see below
+        for addr in self.get_addr():
+            self.del_addr(addr)
+
         # Ethernet interfaces can not be removed
         if type(self) == type(EthernetIf(self._ifname)):
             return
