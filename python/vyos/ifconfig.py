@@ -1211,6 +1211,76 @@ class EthernetIf(VLANIf):
         return self._cmd(cmd)
 
 
+    def set_gro(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_gro('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} gro {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_gso(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_gso('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} gso {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_sg(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_sg('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} sg {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_tso(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_tso('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} tso {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_ufo(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_udp_offload('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} ufo {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
 class BondIf(VLANIf):
     """
     The Linux bonding driver provides a method for aggregating multiple network
