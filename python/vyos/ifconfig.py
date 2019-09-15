@@ -125,22 +125,13 @@ class Interface:
         >>> i = Interface('eth0')
         >>> i.remove()
         """
-
-        # do we have sub interfaces (VLANs)?
-        # we apply a regex matching subinterfaces (indicated by a .) of a
-        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
-        # subinterfaces
-        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
-                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
-
-        for vlan in vlan_ifs:
-            Interface(vlan).remove()
-
-        # All subinterfaces are now removed, continue on the physical interface
-
         # stop DHCP(v6) if running
         self._del_dhcp()
         self._del_dhcpv6()
+
+        # Ethernet interfaces can not be removed
+        if type(self) == type(EthernetIf):
+            return
 
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
@@ -1009,6 +1000,31 @@ class VLANIf(Interface):
     def __init__(self, ifname, type=None):
         super().__init__(ifname, type)
 
+    def remove(self):
+        """
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('eth0')
+        >>> i.remove()
+        """
+        # do we have sub interfaces (VLANs)?
+        # we apply a regex matching subinterfaces (indicated by a .) of a
+        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
+        # subinterfaces
+        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
+                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
+
+        for vlan in vlan_ifs:
+            Interface(vlan).remove()
+
+        # All subinterfaces are now removed, continue on the physical interface
+        super().remove()
+
+
     def add_vlan(self, vlan_id, ethertype='', ingress_qos='', egress_qos=''):
         """
         A virtual LAN (VLAN) is any broadcast domain that is partitioned and
@@ -1073,9 +1089,6 @@ class EthernetIf(VLANIf):
     """
     def __init__(self, ifname):
         super().__init__(ifname)
-
-    def remove(self):
-        raise OSError('Ethernet interfaces can not be removed')
 
     def get_driver_name(self):
         """
