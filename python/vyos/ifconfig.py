@@ -1050,6 +1050,11 @@ class VLANIf(Interface):
                             Linux internal packet priority on incoming frames.
         @param ingress_qos: Defines a mapping of Linux internal packet priority
                             to VLAN header prio field but for outgoing frames.
+
+        Example:
+        >>> from vyos.ifconfig import VLANIf
+        >>> i = VLANIf('eth0')
+        >>> i.add_vlan(10)
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
         if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
@@ -1078,11 +1083,17 @@ class VLANIf(Interface):
         # or interface description and so on
         return VLANIf(vlan_ifname)
 
+
     def del_vlan(self, vlan_id):
         """
         Remove VLAN interface from operating system. Removing the interface
         deconfigures all assigned IP addresses and clear possible DHCP(v6)
         client processes.
+
+        Example:
+        >>> from vyos.ifconfig import VLANIf
+        >>> i = VLANIf('eth0.10')
+        >>> i.del_vlan()
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
         tmp = VLANIf(vlan_ifname)
@@ -1100,9 +1111,16 @@ class EthernetIf(VLANIf):
         """
         Return the driver name used by NIC. Some NICs don't support all
         features e.g. changing link-speed, duplex
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.get_driver_name()
+        'vmxnet3'
         """
         link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self._ifname))
         return os.path.basename(link)
+
 
     def has_autoneg(self):
         """
@@ -1110,6 +1128,12 @@ class EthernetIf(VLANIf):
 
         returns True -> Autonegotiation is supported by driver
                 False -> Autonegotiation is not supported by driver
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.has_autoneg()
+        'True'
         """
         regex = 'Supports auto-negotiation:[ ]\w+'
         tmp = self._cmd('/sbin/ethtool {}'.format(self._ifname))
@@ -1122,11 +1146,17 @@ class EthernetIf(VLANIf):
         else:
             return False
 
+
     def set_flow_control(self, enable):
         """
         Changes the pause parameters of the specified Ethernet device.
 
         @param enable: true -> enable pause frames, false -> disable pause frames
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_flow_control(True)
         """
         if enable not in ['on', 'off']:
             raise ValueError("Value out of range")
@@ -1146,12 +1176,18 @@ class EthernetIf(VLANIf):
         except CalledProcessError:
             pass
 
+
     def set_speed_duplex(self, speed, duplex):
         """
         Set link speed in Mbit/s and duplex.
 
         @speed can be any link speed in MBit/s, e.g. 10, 100, 1000 auto
         @duplex can be half, full, auto
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_speed_duplex('auto', 'auto')
         """
 
         if speed not in ['auto', '10', '100', '1000', '2500', '5000', '10000', '25000', '40000', '50000', '100000', '400000']:
