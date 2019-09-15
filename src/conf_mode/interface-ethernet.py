@@ -237,12 +237,8 @@ def verify(eth):
 
     return None
 
-
 def generate(eth):
-    import pprint
-    pprint.pprint(eth)
     return None
-
 
 def apply(eth):
     e = EthernetIf(eth['intf'])
