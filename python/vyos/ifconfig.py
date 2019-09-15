@@ -20,7 +20,7 @@ import jinja2
 from vyos.validate import *
 from ipaddress import IPv4Network, IPv6Address
 from netifaces import ifaddresses, AF_INET, AF_INET6
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 dhcp_cfg = """
@@ -84,7 +84,7 @@ class Interface:
             print('DEBUG/{:<6} {}'.format(self._ifname, msg))
 
     def _cmd(self, command):
-        p = Popen(command, stdout=PIPE, shell=True)
+        p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
         tmp = p.communicate()[0].strip()
         self._debug_msg("cmd '{}'".format(command))
         if tmp.decode():
