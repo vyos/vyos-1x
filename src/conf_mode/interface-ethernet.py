@@ -125,8 +125,6 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         eth['description'] = conf.return_value('description')
-    else:
-        eth['description'] = eth['intf']
 
     # get DHCP client identifier
     if conf.exists('dhcp-options client-id'):
