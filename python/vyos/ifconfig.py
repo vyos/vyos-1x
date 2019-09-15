@@ -130,7 +130,7 @@ class Interface:
         self._del_dhcpv6()
 
         # Ethernet interfaces can not be removed
-        if type(self) == type(EthernetIf):
+        if type(self) == type(EthernetIf(self._ifname)):
             return
 
         # NOTE (Improvement):

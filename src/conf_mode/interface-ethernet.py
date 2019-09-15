@@ -215,6 +215,9 @@ def get_config():
 
 
 def verify(eth):
+    if eth['deleted']:
+        return None
+
     if eth['speed'] == 'auto':
         if eth['duplex'] != 'auto':
             raise ConfigError('If speed is hardcoded, duplex must be hardcoded, too')
@@ -242,89 +245,93 @@ def generate(eth):
 
 def apply(eth):
     e = EthernetIf(eth['intf'])
-    # update interface description used e.g. within SNMP
-    e.ifalias = eth['description']
-
-    #
-    # missing DHCP/DHCPv6 options go here
-    #
-
-    # ignore link state changes
-    e.link_detect = eth['disable_link_detect']
-    # disable ethernet flow control (pause frames)
-    e.set_flow_control(eth['flow_control'])
-    # configure ARP cache timeout in milliseconds
-    e.arp_cache_tmp = eth['ip_arp_cache_tmo']
-    # Enable proxy-arp on this interface
-    e.proxy_arp = eth['ip_proxy_arp']
-    # Enable private VLAN proxy ARP on this interface
-    e.proxy_arp_pvlan = eth['ip_proxy_arp_pvlan']
-
-    # Change interface MAC address - re-set to real hardware address (hw-id)
-    # if custom mac is removed
-    if eth['mac']:
-        e.mac = eth['mac']
+    if eth['deleted']:
+        # delete interface
+        e.remove()
     else:
-        e.mac = eth['hw_id']
+        # update interface description used e.g. within SNMP
+        e.ifalias = eth['description']
 
-    # Maximum Transmission Unit (MTU)
-    e.mtu = eth['mtu']
+        #
+        # missing DHCP/DHCPv6 options go here
+        #
 
-    # Set physical interface speed and duplex
-    e.set_speed_duplex(eth['speed'], eth['duplex'])
+        # ignore link state changes
+        e.link_detect = eth['disable_link_detect']
+        # disable ethernet flow control (pause frames)
+        e.set_flow_control(eth['flow_control'])
+        # configure ARP cache timeout in milliseconds
+        e.arp_cache_tmp = eth['ip_arp_cache_tmo']
+        # Enable proxy-arp on this interface
+        e.proxy_arp = eth['ip_proxy_arp']
+        # Enable private VLAN proxy ARP on this interface
+        e.proxy_arp_pvlan = eth['ip_proxy_arp_pvlan']
 
-    # Configure interface address(es)
-    # - not longer required addresses get removed first
-    # - newly addresses will be added second
-    for addr in eth['address_remove']:
-        e.del_addr(addr)
-    for addr in eth['address']:
-        e.add_addr(addr)
+        # Change interface MAC address - re-set to real hardware address (hw-id)
+        # if custom mac is removed
+        if eth['mac']:
+            e.mac = eth['mac']
+        else:
+            e.mac = eth['hw_id']
 
-    # Enable/Disable interface
-    if eth['disable']:
-        e.state = 'down'
-    else:
-        e.state = 'up'
+        # Maximum Transmission Unit (MTU)
+        e.mtu = eth['mtu']
 
-    # remove no longer required service VLAN interfaces (vif-s)
-    for vif_s in eth['vif_s_remove']:
-        e.del_vlan(vif_s)
+        # Set physical interface speed and duplex
+        e.set_speed_duplex(eth['speed'], eth['duplex'])
 
-    # create service VLAN interfaces (vif-s)
-    for vif_s in eth['vif_s']:
-        s_vlan = e.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-        apply_vlan_config(s_vlan, vif_s)
+        # Configure interface address(es)
+        # - not longer required addresses get removed first
+        # - newly addresses will be added second
+        for addr in eth['address_remove']:
+            e.del_addr(addr)
+        for addr in eth['address']:
+            e.add_addr(addr)
 
-        # remove no longer required client VLAN interfaces (vif-c)
-        # on lower service VLAN interface
-        for vif_c in vif_s['vif_c_remove']:
-            s_vlan.del_vlan(vif_c)
+        # Enable/Disable interface
+        if eth['disable']:
+            e.state = 'down'
+        else:
+            e.state = 'up'
 
-        # create client VLAN interfaces (vif-c)
-        # on lower service VLAN interface
-        for vif_c in vif_s['vif_c']:
-            c_vlan = s_vlan.add_vlan(vif_c['id'])
-            apply_vlan_config(c_vlan, vif_c)
+        # remove no longer required service VLAN interfaces (vif-s)
+        for vif_s in eth['vif_s_remove']:
+            e.del_vlan(vif_s)
 
-    # remove no longer required VLAN interfaces (vif)
-    for vif in eth['vif_remove']:
-        e.del_vlan(vif)
+        # create service VLAN interfaces (vif-s)
+        for vif_s in eth['vif_s']:
+            s_vlan = e.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
+            apply_vlan_config(s_vlan, vif_s)
 
-    # create VLAN interfaces (vif)
-    for vif in eth['vif']:
-        # QoS priority mapping can only be set during interface creation
-        # so we delete the interface first if required.
-        if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
-            try:
-                # on system bootup the above condition is true but the interface
-                # does not exists, which throws an exception, but that's legal
-                e.del_vlan(vif['id'])
-            except:
-                pass
+            # remove no longer required client VLAN interfaces (vif-c)
+            # on lower service VLAN interface
+            for vif_c in vif_s['vif_c_remove']:
+                s_vlan.del_vlan(vif_c)
 
-        vlan = e.add_vlan(vif['id'], ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
-        apply_vlan_config(vlan, vif)
+            # create client VLAN interfaces (vif-c)
+            # on lower service VLAN interface
+            for vif_c in vif_s['vif_c']:
+                c_vlan = s_vlan.add_vlan(vif_c['id'])
+                apply_vlan_config(c_vlan, vif_c)
+
+        # remove no longer required VLAN interfaces (vif)
+        for vif in eth['vif_remove']:
+            e.del_vlan(vif)
+
+        # create VLAN interfaces (vif)
+        for vif in eth['vif']:
+            # QoS priority mapping can only be set during interface creation
+            # so we delete the interface first if required.
+            if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
+                try:
+                    # on system bootup the above condition is true but the interface
+                    # does not exists, which throws an exception, but that's legal
+                    e.del_vlan(vif['id'])
+                except:
+                    pass
+
+            vlan = e.add_vlan(vif['id'], ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
+            apply_vlan_config(vlan, vif)
 
     return None
 
