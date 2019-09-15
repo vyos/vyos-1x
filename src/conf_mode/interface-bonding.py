@@ -334,8 +334,7 @@ def apply(bond):
     b = BondIf(bond['intf'])
 
     if bond['deleted']:
-        #
-        # delete bonding interface
+        # delete interface
         b.remove()
     else:
         # Some parameters can not be changed when the bond is up.
