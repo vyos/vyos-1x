@@ -337,14 +337,37 @@
           </leafNode>
           <leafNode name="speed">
             <properties>
-              <help>Link speed in MBit/s</help>
+              <help>Link speed</help>
               <completionHelp>
-                <list>auto</list>
-                <script>/sbin/ethtool $VAR(../@) | sed -n '/Supported ports/{:a;n;/Supported pause frame use/b;p;ba}' | sed -s 's/Supported link modes://' | sed -e 's/[[:space:]]*//' | sed 's/[^0-9]*//g'</script>
+                <list>auto 10 100 1000 2500 5000 10000</list>
               </completionHelp>
               <valueHelp>
                 <format>auto</format>
                 <description>Auto negotiation (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>10</format>
+                <description>10 Mbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>100</format>
+                <description>100 Mbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>1000</format>
+                <description>1 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>2500</format>
+                <description>2.5 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>5000</format>
+                <description>5 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>10000</format>
+                <description>10 Gbit/sec</description>
               </valueHelp>
               <constraint>
                 <regex>(auto|10|100|1000|2500|5000|10000)</regex>
