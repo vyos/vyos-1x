@@ -1076,6 +1076,14 @@ class EthernetIf(VLANIf):
     def remove(self):
         raise OSError('Ethernet interfaces can not be removed')
 
+    def get_driver_name(self):
+        """
+        Return the driver name used by NIC. Some NICs don't support all
+        features e.g. changing link-speed, duplex
+        """
+        link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self._ifname))
+        return os.path.basename(link)
+
     def set_flow_control(self, enable):
         """
         Changes the pause parameters of the specified Ethernet device.
