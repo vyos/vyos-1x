@@ -44,6 +44,11 @@ default_config_data = {
     'intf': '',
     'mac': '',
     'mtu': 1500,
+    'offload_gro': 'off',
+    'offload_gso': 'off',
+    'offload_sg': 'off',
+    'offload_tso': 'off',
+    'offload_ufo': 'off',
     'speed': 'auto',
     'vif_s': [],
     'vif_s_remove': [],
@@ -179,6 +184,26 @@ def get_config():
     if conf.exists('mtu'):
         eth['mtu'] = int(conf.return_value('mtu'))
 
+    # GRO (generic receive offload)
+    if conf.exists('offload-options generic-receive'):
+        eth['offload_gro'] = conf.return_value('offload-options generic-receive')
+
+    # GSO (generic segmentation offload)
+    if conf.exists('offload-options generic-segmentation'):
+        eth['offload_gso'] = conf.return_value('offload-options generic-segmentation')
+
+    # scatter-gather option
+    if conf.exists('offload-options scatter-gather'):
+        eth['offload_sg'] = conf.return_value('offload-options scatter-gather')
+
+    # TSO (TCP segmentation offloading)
+    if conf.exists('offload-options tcp-segmentation'):
+        eth['offload_tso'] = conf.return_value('offload-options tcp-segmentation')
+
+    # UDP fragmentation offloading
+    if conf.exists('offload-options udp-fragmentation'):
+        eth['offload_ufo'] = conf.return_value('offload-options udp-fragmentation')
+
     # interface speed
     if conf.exists('speed'):
         eth['speed'] = conf.return_value('speed')
@@ -276,6 +301,21 @@ def apply(eth):
 
         # Maximum Transmission Unit (MTU)
         e.mtu = eth['mtu']
+
+        # GRO (generic receive offload)
+        e.set_gro(eth['offload_gro'])
+
+        # GSO (generic segmentation offload)
+        e.set_gso(eth['offload_gso'])
+
+        # scatter-gather option
+        e.set_sg(eth['offload_sg'])
+
+        # TSO (TCP segmentation offloading)
+        e.set_tso(eth['offload_tso'])
+
+        # UDP fragmentation offloading
+        e.set_ufo(eth['offload_ufo'])
 
         # Set physical interface speed and duplex
         e.set_speed_duplex(eth['speed'], eth['duplex'])
