@@ -1141,6 +1141,12 @@ class EthernetIf(VLANIf):
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError("Value out of range (duplex)")
 
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net']:
+            self._debug_msg('{} driver does not support changing speed/duplex settings!'
+                            .format(self.get_driver_name()))
+            return
+
+
         cmd = '/sbin/ethtool -s {}'.format(self._ifname)
         if speed == 'auto' or duplex == 'auto':
             cmd += ' autoneg on'
