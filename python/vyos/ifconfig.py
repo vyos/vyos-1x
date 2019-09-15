@@ -158,7 +158,7 @@ class Interface:
         >>> Interface('eth0').mtu
         '1500'
         """
-        return self._read_sysfs('/sys/class/net/{0}/mtu'
+        return self._read_sysfs('/sys/class/net/{}/mtu'
                                 .format(self._ifname))
 
     @mtu.setter
@@ -175,7 +175,7 @@ class Interface:
         if mtu < 68 or mtu > 9000:
             raise ValueError('Invalid MTU size: "{}"'.format(mru))
 
-        return self._write_sysfs('/sys/class/net/{0}/mtu'
+        return self._write_sysfs('/sys/class/net/{}/mtu'
                                  .format(self._ifname), mtu)
 
     @property
@@ -188,7 +188,7 @@ class Interface:
         >>> Interface('eth0').mac
         '00:0c:29:11:aa:cc'
         """
-        return self._read_sysfs('/sys/class/net/{0}/address'
+        return self._read_sysfs('/sys/class/net/{}/address'
                                 .format(self._ifname))
 
     @mac.setter
@@ -307,7 +307,7 @@ class Interface:
         >>> Interface('eth0').ifalias
         ''
         """
-        return self._read_sysfs('/sys/class/net/{0}/ifalias'
+        return self._read_sysfs('/sys/class/net/{}/ifalias'
                                 .format(self._ifname))
 
     @ifalias.setter
@@ -331,7 +331,7 @@ class Interface:
             # clear interface alias
             ifalias = '\0'
 
-        self._write_sysfs('/sys/class/net/{0}/ifalias'
+        self._write_sysfs('/sys/class/net/{}/ifalias'
                           .format(self._ifname), ifalias)
 
     @property
@@ -344,7 +344,7 @@ class Interface:
         >>> Interface('eth0').state
         'up'
         """
-        return self._read_sysfs('/sys/class/net/{0}/operstate'
+        return self._read_sysfs('/sys/class/net/{}/operstate'
                                 .format(self._ifname))
 
     @state.setter
@@ -763,7 +763,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').aging_time
         '300'
         """
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/ageing_time'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/ageing_time'
                                  .format(self._ifname)) / 100)
 
     @ageing_time.setter
@@ -777,7 +777,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').ageing_time = 2
         """
         time = int(time) * 100
-        return self._write_sysfs('/sys/class/net/{0}/bridge/ageing_time'
+        return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
                                  .format(self._ifname), time)
 
     @property
@@ -791,7 +791,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').ageing_time
         '3'
         """
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/forward_delay'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname)) / 100)
 
     @forward_delay.setter
@@ -804,7 +804,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').forward_delay = 15
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/forward_delay'
+        return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname), (int(time) * 100))
 
     @property
@@ -818,7 +818,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').hello_time
         '2'
         """
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/hello_time'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname)) / 100)
 
     @hello_time.setter
@@ -831,7 +831,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').hello_time = 2
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/hello_time'
+        return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname), (int(time) * 100))
 
     @property
@@ -846,7 +846,7 @@ class BridgeIf(Interface):
         '20'
         """
 
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/max_age'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname)) / 100)
 
     @max_age.setter
@@ -859,7 +859,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').max_age = 30
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/max_age'
+        return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname), (int(time) * 100))
 
     @property
@@ -872,7 +872,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').priority
         '32768'
         """
-        return self._read_sysfs('/sys/class/net/{0}/bridge/priority'
+        return self._read_sysfs('/sys/class/net/{}/bridge/priority'
                                 .format(self._ifname))
 
     @priority.setter
@@ -884,7 +884,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').priority = 8192
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/priority'
+        return self._write_sysfs('/sys/class/net/{}/bridge/priority'
                                  .format(self._ifname), priority)
 
     @property
@@ -899,7 +899,7 @@ class BridgeIf(Interface):
         """
 
         state = 0
-        with open('/sys/class/net/{0}/bridge/stp_state'.format(self._ifname), 'r') as f:
+        with open('/sys/class/net/{}/bridge/stp_state'.format(self._ifname), 'r') as f:
             state = int(f.read().rstrip('\n'))
 
         return state
@@ -915,7 +915,7 @@ class BridgeIf(Interface):
         """
 
         if int(state) >= 0 and int(state) <= 1:
-            return self._write_sysfs('/sys/class/net/{0}/bridge/stp_state'
+            return self._write_sysfs('/sys/class/net/{}/bridge/stp_state'
                                      .format(self._ifname), state)
         else:
             raise ValueError("Value out of range")
@@ -930,7 +930,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').multicast_querier
         '0'
         """
-        return self._read_sysfs('/sys/class/net/{0}/bridge/multicast_querier'
+        return self._read_sysfs('/sys/class/net/{}/bridge/multicast_querier'
                                 .format(self._ifname))
 
     @multicast_querier.setter
@@ -948,7 +948,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').multicast_querier = 1
         """
         if int(enable) >= 0 and int(enable) <= 1:
-            return self._write_sysfs('/sys/class/net/{0}/bridge/multicast_querier'
+            return self._write_sysfs('/sys/class/net/{}/bridge/multicast_querier'
                                      .format(self._ifname), enable)
         else:
             raise ValueError("Value out of range")
