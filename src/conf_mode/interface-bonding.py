@@ -157,8 +157,6 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         bond['description'] = conf.return_value('description')
-    else:
-        bond['description'] = bond['intf']
 
     # get DHCP client identifier
     if conf.exists('dhcp-options client-id'):
@@ -354,12 +352,12 @@ def apply(bond):
         for intf in b.get_slaves():
             b.del_port(intf)
 
-        # ARP link monitoring frequency
-        b.arp_interval = bond['arp_mon_intvl']
-        # reset miimon on arp-montior deletion
+        # ARP link monitoring frequency, reset miimon when arp-montior is inactive
         if bond['arp_mon_intvl'] == 0:
             # reset miimon to default
-            b.bond_miimon = 250
+            b.miimon = 250
+        else:
+            b.arp_interval = bond['arp_mon_intvl']
 
         # ARP monitor targets need to be synchronized between sysfs and CLI.
         # Unfortunately an address can't be send twice to sysfs as this will

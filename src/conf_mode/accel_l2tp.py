@@ -94,6 +94,7 @@ wins2={{wins[1]}}
 
 [l2tp]
 verbose=1
+ifname=l2tp%d
 ppp-max-mtu={{mtu}}
 mppe={{authentication['mppe']}}
 {% if outside_addr %}
@@ -133,7 +134,16 @@ single-session=replace
 {% if idle_timeout %}
 lcp-echo-timeout={{idle_timeout}}
 {% endif %}
+{% if ppp_options['lcp-echo-interval'] %}
+lcp-echo-interval={{ppp_options['lcp-echo-interval']}}
+{% else %}
 lcp-echo-interval=30
+{% endif %}
+{% if ppp_options['lcp-echo-failure'] %}
+lcp-echo-failure={{ppp_options['lcp-echo-failure']}}
+{% else %}
+lcp-echo-failure=3
+{% endif %}
 {% if ccp_disable %}
 ccp=0
 {% endif %}
@@ -287,6 +297,7 @@ def get_config():
     'mtu'                 : '1436',
     'ip6_column'          : '',
     'ip6_dp_column'       : '',
+    'ppp_options'         : {},
   }
 
   ### general options ###
@@ -438,6 +449,17 @@ def get_config():
 
   if c.exists('ccp-disable'):
     config_data['ccp_disable'] = True
+
+  ### ppp_options
+  ppp_options = {}
+  if c.exists('ppp-options'):
+    if c.exists('ppp-options lcp-echo-failure'):
+      ppp_options['lcp-echo-failure'] = c.return_value('ppp-options lcp-echo-failure')
+    if c.exists('ppp-options lcp-echo-interval'):
+      ppp_options['lcp-echo-interval'] = c.return_value('ppp-options lcp-echo-interval')
+
+  if len(ppp_options) !=0:
+    config_data['ppp_options'] = ppp_options
 
   return config_data
 

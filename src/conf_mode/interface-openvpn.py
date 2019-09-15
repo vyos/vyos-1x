@@ -326,14 +326,14 @@ def checkCertHeader(header, filename):
     Returns True on success or on file not found to not trigger the exceptions
     """
     if not os.path.isfile(filename):
-        return True
+        return False
 
     with open(filename, 'r') as f:
         for line in f:
             if re.match(header, line):
                 return True
 
-    return False
+    return True
 
 def get_config():
     openvpn = deepcopy(default_config_data)
@@ -696,8 +696,9 @@ def verify(openvpn):
     #
     # TLS/encryption
     #
-    if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['shared_secret_file']):
-        raise ConfigError('Specified shared-secret-key-file "{}" is not valid'.format(openvpn['shared_secret_file']))
+    if openvpn['shared_secret_file']:
+        if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['shared_secret_file']):
+            raise ConfigError('Specified shared-secret-key-file "{}" is not valid'.format(openvpn['shared_secret_file']))
 
     if openvpn['tls']:
         if not openvpn['tls_ca_cert']:
@@ -719,11 +720,13 @@ def verify(openvpn):
         if not checkCertHeader('-----BEGIN (?:RSA )?PRIVATE KEY-----', openvpn['tls_key']):
             raise ConfigError('Specified key-file "{}" is not valid'.format(openvpn['tls_key']))
 
-        if not checkCertHeader('-----BEGIN X509 CRL-----', openvpn['tls_crl']):
-            raise ConfigError('Specified crl-file "{} not valid'.format(openvpn['tls_crl']))
+        if openvpn['tls_crl']:
+            if not checkCertHeader('-----BEGIN X509 CRL-----', openvpn['tls_crl']):
+                raise ConfigError('Specified crl-file "{} not valid'.format(openvpn['tls_crl']))
 
-        if not checkCertHeader('-----BEGIN DH PARAMETERS-----', openvpn['tls_dh']):
-            raise ConfigError('Specified dh-file "{}" is not valid'.format(openvpn['tls_dh']))
+        if openvpn['tls_dh']:
+            if not checkCertHeader('-----BEGIN DH PARAMETERS-----', openvpn['tls_dh']):
+                raise ConfigError('Specified dh-file "{}" is not valid'.format(openvpn['tls_dh']))
 
         if openvpn['tls_role']:
             if openvpn['mode'] in ['client', 'server']:
