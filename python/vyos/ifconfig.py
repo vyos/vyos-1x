@@ -91,6 +91,7 @@ class Interface:
             self._debug_msg("returned:\n{}".format(tmp.decode()))
 
         # do we need some error checking code here?
+        return tmp
 
     def _read_sysfs(self, filename):
         """
