@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+#
+#    build-command-template: converts old style commands definitions to XML
+#
+#    Copyright (C) 2019 VyOS maintainers <maintainers@vyos.net>
+#
+#    This library is free software; you can redistribute it and/or
+#    modify it under the terms of the GNU Lesser General Public
+#    License as published by the Free Software Foundation; either
+#    version 2.1 of the License, or (at your option) any later version.
+#
+#    This library is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#    Lesser General Public License for more details.
+#
+#    You should have received a copy of the GNU Lesser General Public
+#    License along with this library; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+#    USA
+
+
+import os
+import re
+import sys
+
+from lxml import etree
+
+
+# Node types
+NODE = 0
+LEAF_NODE = 1
+TAG_NODE = 2
+
+def parse_command_data(t):
+    regs = {
+      'help': r'\bhelp:(.*)(?:\n|$)',
+      'priority': r'\bpriority:(.*)(?:\n|$)',
+      'type': r'\btype:(.*)(?:\n|$)'
+    }
+
+    data = {'multi': False, 'help': ""}
+
+    for r in regs:
+        try:
+            data[r] = re.search(regs[r], t).group(1).strip()
+        except:
+            data[r] = None
+
+    # val_help is special: there can be multiple instances
+    val_help_strings = re.findall(r'\bval_help:(.*)(?:\n|$)', t)
+    val_help = []
+    for v in val_help_strings:
+        try:
+            fmt, msg = re.match(r'\s*(.*)\s*;\s*(.*)\s*(?:\n|$)', v).groups()
+        except:
+            fmt = "<text>"
+            msg = v
+        val_help.append((fmt, msg))
+    data['val_help'] = val_help
+
+    # multi is on/off
+    if re.match(r'\bmulti:', t):
+        data['multi'] = True
+
+    return(data)
+
+def walk(tree, base_path, name):
+    path = os.path.join(base_path, name)
+
+    contents = os.listdir(path)
+
+    # Determine node type and create XML element for the node
+    # Tag node dirs will always have 'node.tag' subdir and 'node.def' file
+    # Leaf node dirs have nothing but a 'node.def' file
+    # Everything that doesn't match either of these patterns is a normal node
+    if contents == ['node.tag', 'node.def']:
+        print("Creating a tag node from {0}".format(path))
+        elem = etree.Element('tagNode')
+        node_type = TAG_NODE
+    elif contents == ['node.def']:
+        print("Creating a leaf node from {0}".format(path))
+        elem = etree.Element('leafNode')
+        node_type = LEAF_NODE
+    else:
+        print("Creating a node from {0}".format(path))
+        elem = etree.Element('node')
+        node_type = NODE
+
+    # Read and parse the command definition data (the 'node.def' file)
+    with open(os.path.join(path, 'node.def'), 'r') as f:
+        node_def = f.read()
+    data = parse_command_data(node_def)
+
+    # Import the data into the properties element
+    props_elem = etree.Element('properties')
+
+    if data['priority']:
+        # Priority values sometimes come with comments that explain the value choice
+        try:
+            prio, prio_comment = re.match(r'\s*(\d+)\s*#(.*)', data['priority']).groups()
+        except:
+            prio = data['priority'].strip()
+            prio_comment = None
+        prio_elem = etree.Element('priority')
+        prio_elem.text = prio
+        props_elem.append(prio_elem)
+        if prio_comment:
+            prio_comment_elem = etree.Comment(prio_comment)
+            props_elem.append(prio_comment_elem)
+
+    if data['multi']:
+        multi_elem = etree.Element('multi')
+        props_elem.append(multi_elem)
+
+    if data['help']:
+        help_elem = etree.Element('help')
+        help_elem.text = data['help']
+        props_elem.append(help_elem)
+
+    # For leaf nodes, absense of a type: tag means they take no values
+    # For any other nodes, it doesn't mean anything
+    if not data['type'] and (node_type == LEAF_NODE):
+        valueless = etree.Element('valueless')
+        props_elem.append(valueless)
+
+    # There can be only one constraint element in the definition
+    # Create it now, we'll modify it in the next two cases, then append
+    constraint_elem = etree.Element('constraint')
+    has_constraint = False
+
+    if data['val_help']:
+        for vh in data['val_help']:
+            vh_elem = etree.Element('valueHelp')
+
+            vh_fmt_elem = etree.Element('format')
+            # Many commands use special "u32:<start>-<end>" format for ranges
+            if re.match(r'u32:', vh[0]):
+                vh_fmt = re.match(r'u32:(.*)', vh[0]).group(1).strip()
+
+                # If valid range of values is specified in val_help, we can automatically
+                # create a constraint for it
+                # Extracting it from syntax:expression: would be much more complicated
+                vh_validator = etree.Element('validator')
+                vh_validator.set("name", "numeric")
+                vh_validator.set("argument", "--range {0}".format(vh_fmt))
+                constraint_elem.append(vh_validator)
+                has_constraint = True
+            else:
+                vh_fmt = vh[0]
+            vh_fmt_elem.text = vh_fmt
+
+            vh_help_elem = etree.Element('description')
+            vh_help_elem.text = vh[1]
+
+            vh_elem.append(vh_fmt_elem)
+            vh_elem.append(vh_help_elem)
+            props_elem.append(vh_elem)
+
+    # Translate the "type:" to the new validator system
+    if data['type']:
+        t = data['type']
+        if t == 'txt':
+            # Can't infer anything from the generic "txt" type
+            pass
+        else:
+            validator = etree.Element('validator')
+            if t == 'u32':
+                validator.set('name', 'numeric')
+                validator.set('argument', '--non-negative')
+            elif t == 'ipv4':
+                validator.set('name', 'ipv4-address')
+            elif t == 'ipv4net':
+                validator.set('name', 'ipv4-prefix')
+            elif t == 'ipv6':
+                validator.set('name', 'ipv6-address')
+            elif t == 'ipv6net':
+                validator.set('name', 'ipv6-prefix')
+            elif t == 'macaddr':
+                validator.set('name', 'mac-address')
+            else:
+                print("Warning: unsupported type \'{0}\'".format(t))
+                validator = None
+
+            if (validator is not None) and (not has_constraint):
+                # If has_constraint is true, it means a more specific validator
+                # was already extracted from another option
+                constraint_elem.append(validator)
+                has_constraint = True
+
+    if has_constraint:
+        props_elem.append(constraint_elem)
+
+    elem.append(props_elem)
+
+    elem.set("name", name)
+
+    if node_type != LEAF_NODE:
+        children = etree.Element('children')
+
+        # Create the next level dir path,
+        # accounting for the "virtual" node.tag subdir for tag nodes
+        next_level = path
+        if node_type == TAG_NODE:
+            next_level = os.path.join(path, 'node.tag')
+
+        # Walk the subdirs of the next level
+        for d in os.listdir(next_level):
+            dp = os.path.join(next_level, d)
+            if os.path.isdir(dp):
+                walk(children, next_level, d)
+
+        elem.append(children)
+
+    tree.append(elem)
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: {0} <base path>".format(sys.argv[0]))
+        sys.exit(1)
+    else:
+        base_path = sys.argv[1]
+
+    root = etree.Element('interfaceDefinition')
+    contents = os.listdir(base_path)
+    elem = etree.Element('node')
+    elem.set('name', os.path.basename(base_path))
+    children = etree.Element('children')
+
+    for c in contents:
+        path = os.path.join(base_path, c)
+        if os.path.isdir(path):
+            walk(children, base_path, c)
+
+    elem.append(children)
+    root.append(elem)
+
+    xml_data = etree.tostring(root, pretty_print=True).decode()
+    with open('output.xml', 'w') as f:
+        f.write(xml_data)
