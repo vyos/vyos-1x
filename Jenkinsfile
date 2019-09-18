@@ -8,7 +8,7 @@ pipeline {
             docker {
               label 'jessie-amd64'
               args '--privileged --sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006 -v /tmp:/tmp'
-              image 'higebu/vyos-build:current'
+              image 'vyos/vyos-build:current'
             }
 
           }
