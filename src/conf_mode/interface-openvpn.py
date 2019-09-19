@@ -96,6 +96,7 @@ persist-tun
 #
 client
 nobind
+keepalive {{ ping_interval }} {{ ping_restart }}
 {%- elif 'server' in mode %}
 #
 # OpenVPN Server mode
@@ -171,6 +172,19 @@ crl-verify {{ tls_crl }}
 dh {{ tls_dh }}
 {% endif %}
 
+{%- if tls_auth %}
+tls-auth {{tls_auth}}
+{% endif %}
+
+{%- if tls_version_min %}
+tls-version-min {{tls_version_min}}
+{% endif %}
+
+{%- if mtu %}
+tun-mtu {{mtu}}
+{% endif %}
+
+
 {%- if 'active' in tls_role %}
 tls-client
 {%- elif 'passive' in tls_role %}
@@ -202,10 +216,13 @@ cipher bf-cbc
 keysize 25
 {%- elif 'aes128' in encryption %}
 cipher aes-128-cbc
+ncp-ciphers aes-128-cbc:AES-128-CBC
 {%- elif 'aes192' in encryption %}
 cipher aes-192-cbc
+ncp-ciphers aes-192-cbc:AES-192-CBC
 {%- elif 'aes256' in encryption %}
 cipher aes-256-cbc
+ncp-ciphers aes-256-cbc:AES-256-CBC
 {% endif %}
 {% endif %}
 
@@ -260,6 +277,7 @@ default_config_data = {
     'local_host': '',
     'local_port': '',
     'mode': '',
+    'mtu': '',
     'options': [],
     'persistent_tunnel': False,
     'protocol': '',
@@ -277,12 +295,14 @@ default_config_data = {
     'server_topology': '',
     'shared_secret_file': '',
     'tls': False,
+    'tls_auth': '',
     'tls_ca_cert': '',
     'tls_cert': '',
     'tls_crl': '',
     'tls_dh': '',
     'tls_key': '',
     'tls_role': '',
+    'tls_version_min': '',
     'type': 'tun',
     'uid': user,
     'gid': group,
@@ -416,6 +436,9 @@ def get_config():
         mode = conf.return_value('mode')
         openvpn['mode'] = mode
 
+    if conf.exists('mtu'):
+        openvpn['mtu'] = conf.return_value('mtu')
+    
     # Additional OpenVPN options
     if conf.exists('openvpn-option'):
         openvpn['options'] = conf.return_values('openvpn-option')
@@ -532,6 +555,11 @@ def get_config():
     if conf.exists('server reject-unconfigured-clients'):
         openvpn['server_reject_unconfigured'] = True
 
+    # File containing TLS auth static key
+    if conf.exists('tls auth-file'):
+        openvpn['tls_auth'] = conf.return_value('tls auth-file')
+        openvpn['tls'] = True
+    
     # File containing certificate for Certificate Authority (CA)
     if conf.exists('tls ca-cert-file'):
          openvpn['tls_ca_cert'] = conf.return_value('tls ca-cert-file')
@@ -561,7 +589,11 @@ def get_config():
     if conf.exists('tls role'):
          openvpn['tls_role'] = conf.return_value('tls role')
          openvpn['tls'] = True
-
+    
+    # Minimum required TLS version
+    if conf.exists('tls minimum-tls-version'):
+         openvpn['tls_version_min'] = conf.return_value('tls minimum-tls-version')
+    
     if conf.exists('shared-secret-key-file'):
         openvpn['shared_secret_file'] = conf.return_value('shared-secret-key-file')
 
@@ -713,12 +745,18 @@ def verify(openvpn):
 
         if not checkCertHeader('-----BEGIN CERTIFICATE-----', openvpn['tls_ca_cert']):
             raise ConfigError('Specified ca-cert-file "{}" is invalid'.format(openvpn['tls_ca_cert']))
-
-        if not checkCertHeader('-----BEGIN CERTIFICATE-----', openvpn['tls_cert']):
-            raise ConfigError('Specified cert-file "{}" is invalid'.format(openvpn['tls_cert']))
-
-        if not checkCertHeader('-----BEGIN (?:RSA )?PRIVATE KEY-----', openvpn['tls_key']):
-            raise ConfigError('Specified key-file "{}" is not valid'.format(openvpn['tls_key']))
+        
+        if openvpn['tls_auth']:
+            if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['tls_auth']):
+                raise ConfigError('Specified auth-file "{}" is invalid'.format(openvpn['tls_auth']))
+        
+        if openvpn['tls_cert']:
+            if not checkCertHeader('-----BEGIN CERTIFICATE-----', openvpn['tls_cert']):
+                raise ConfigError('Specified cert-file "{}" is invalid'.format(openvpn['tls_cert']))
+        
+        if openvpn['tls_key']:
+            if not checkCertHeader('-----BEGIN (?:RSA )?PRIVATE KEY-----', openvpn['tls_key']):
+                raise ConfigError('Specified key-file "{}" is not valid'.format(openvpn['tls_key']))
 
         if openvpn['tls_crl']:
             if not checkCertHeader('-----BEGIN X509 CRL-----', openvpn['tls_crl']):
@@ -730,7 +768,8 @@ def verify(openvpn):
 
         if openvpn['tls_role']:
             if openvpn['mode'] in ['client', 'server']:
-                raise ConfigError('Cannot specify "tls role" in client-server mode')
+                if not openvpn['tls_auth']:
+                    raise ConfigError('Cannot specify "tls role" in client-server mode')
 
             if openvpn['tls_role'] == 'active':
                 if openvpn['protocol'] == 'tcp-passive':
