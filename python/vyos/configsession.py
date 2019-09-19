@@ -145,7 +145,8 @@ class ConfigSession(object):
         self.__run_command([COMMENT] + path + value)
 
     def commit(self):
-        self.__run_command([COMMIT])
+        out = self.__run_command([COMMIT])
+        return out
 
     def discard(self):
         self.__run_command([DISCARD])
@@ -157,4 +158,5 @@ class ConfigSession(object):
             return config_data
 
     def load_config(self, file_path):
-        self.__run_command(LOAD_CONFIG + [file_path])
+        out = self.__run_command(LOAD_CONFIG + [file_path])
+        return out

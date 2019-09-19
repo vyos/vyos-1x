@@ -20,6 +20,7 @@ directories = {
   "config": "/opt/vyatta/etc/config",
   "current": "/opt/vyatta/etc/config-migrate/current",
   "migrate": "/opt/vyatta/etc/config-migrate/migrate",
+  "log": "/var/log/vyatta",
 }
 
 cfg_group = 'vyattacfg'

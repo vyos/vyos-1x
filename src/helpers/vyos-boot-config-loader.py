@@ -18,41 +18,72 @@
 
 import os
 import sys
+import pwd
+import grp
 import subprocess
 import traceback
+from datetime import datetime
 
+from vyos.defaults import directories
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.configtree import ConfigTree
 
 STATUS_FILE = '/tmp/vyos-config-status'
 TRACE_FILE = '/tmp/boot-config-trace'
 
-session = ConfigSession(os.getpid(), 'vyos-boot-config-loader')
-env = session.get_session_env()
+CFG_GROUP = 'vyattacfg'
 
-default_file_name = env['vyatta_sysconfdir'] + '/config.boot.default'
-
-if len(sys.argv) < 1:
-    print("Must be called with argument.")
-    sys.exit(1)
+if 'log' in directories:
+    LOG_DIR = directories['log']
 else:
-    file_name = sys.argv[1]
+    LOG_DIR = '/var/log/vyatta'
+
+LOG_FILE = LOG_DIR + '/vyos-boot-config-loader.log'
+
+try:
+    with open('/proc/cmdline', 'r') as f:
+        cmdline = f.read()
+    if 'vyos-debug' in cmdline:
+        os.environ['VYOS_DEBUG'] = 'yes'
+except Exception as e:
+    print('{0}'.format(e))
 
 def write_config_status(status):
-    with open(STATUS_FILE, 'w') as f:
-        f.write('{0}\n'.format(status))
+    try:
+        with open(STATUS_FILE, 'w') as f:
+            f.write('{0}\n'.format(status))
+    except Exception as e:
+        print('{0}'.format(e))
 
 def trace_to_file(trace_file_name):
-    with open(trace_file_name, 'w') as trace_file:
-        traceback.print_exc(file=trace_file)
-
-def failsafe():
     try:
-        with open(default_file_name, 'r') as f:
+        with open(trace_file_name, 'w') as trace_file:
+            traceback.print_exc(file=trace_file)
+    except Exception as e:
+        print('{0}'.format(e))
+
+def failsafe(config_file_name):
+    fail_msg = """
+    !!!!!
+    There were errors loading the configuration
+    Please examine the errors in
+    {0}
+    and correct
+    !!!!!
+    """.format(TRACE_FILE)
+
+    print(fail_msg, file=sys.stderr)
+
+    users = [x[0] for x in pwd.getpwall()]
+    if 'vyos' in users:
+        return
+
+    try:
+        with open(config_file_name, 'r') as f:
             config_file = f.read()
     except Exception as e:
         print("Catastrophic: no default config file "
-              "'{0}'".format(default_file_name))
+              "'{0}'".format(config_file_name))
         sys.exit(1)
 
     config = ConfigTree(config_file)
@@ -73,29 +104,73 @@ def failsafe():
     except subprocess.CalledProcessError as e:
         sys.exit("{0}".format(e))
 
-    with open('/etc/motd', 'a+') as f:
-        f.write('\n\n')
-        f.write('!!!!!\n')
-        f.write('There were errors loading the initial configuration;\n')
-        f.write('please examine the errors in {0} and correct.'
-                '\n'.format(TRACE_FILE))
-        f.write('!!!!!\n\n')
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Must specify boot config file.")
+        sys.exit(1)
+    else:
+        file_name = sys.argv[1]
 
-try:
-    with open(file_name, 'r') as f:
-        config_file = f.read()
-except Exception as e:
-    write_config_status(1)
-    failsafe()
-    trace_to_file(TRACE_FILE)
-    sys.exit("{0}".format(e))
+    # Set user and group options, so that others will be able to commit
+    # Currently, the only caller does 'sg CFG_GROUP', but that may change
+    cfg_group = grp.getgrnam(CFG_GROUP)
+    os.setgid(cfg_group.gr_gid)
 
-try:
-    session.load_config(file_name)
-    session.commit()
-    write_config_status(0)
-except ConfigSessionError as e:
-    write_config_status(1)
-    failsafe()
-    trace_to_file(TRACE_FILE)
-    sys.exit(1)
+    # Need to set file permissions to 775 so that every vyattacfg group
+    # member has write access to the running config
+    os.umask(0o002)
+
+    session = ConfigSession(os.getpid(), 'vyos-boot-config-loader')
+    env = session.get_session_env()
+
+    default_file_name = env['vyatta_sysconfdir'] + '/config.boot.default'
+
+    try:
+        with open(file_name, 'r') as f:
+            config_file = f.read()
+    except Exception:
+        write_config_status(1)
+        failsafe(default_file_name)
+        trace_to_file(TRACE_FILE)
+        sys.exit(1)
+
+    try:
+        time_begin_load = datetime.now()
+        load_out = session.load_config(file_name)
+        time_end_load = datetime.now()
+        time_begin_commit = datetime.now()
+        commit_out = session.commit()
+        time_end_commit = datetime.now()
+        write_config_status(0)
+    except ConfigSessionError:
+        # If here, there is no use doing session.discard, as we have no
+        # recoverable config environment, and will only throw an error
+        write_config_status(1)
+        failsafe(default_file_name)
+        trace_to_file(TRACE_FILE)
+        sys.exit(1)
+
+    time_elapsed_load = time_end_load - time_begin_load
+    time_elapsed_commit = time_end_commit - time_begin_commit
+
+    try:
+        if not os.path.exists(LOG_DIR):
+            os.mkdir(LOG_DIR)
+        with open(LOG_FILE, 'a') as f:
+            f.write('\n\n')
+            f.write('{0}    Begin config load\n'
+                    ''.format(time_begin_load))
+            f.write(load_out)
+            f.write('{0}    End config load\n'
+                    ''.format(time_end_load))
+            f.write('Elapsed time for config load: {0}\n'
+                    ''.format(time_elapsed_load))
+            f.write('{0}    Begin config commit\n'
+                    ''.format(time_begin_commit))
+            f.write(commit_out)
+            f.write('{0}    End config commit\n'
+                    ''.format(time_end_commit))
+            f.write('Elapsed time for config commit: {0}\n'
+                    ''.format(time_elapsed_commit))
+    except Exception as e:
+        print('{0}'.format(e))
