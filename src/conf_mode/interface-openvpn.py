@@ -216,13 +216,13 @@ cipher bf-cbc
 keysize 25
 {%- elif 'aes128' in encryption %}
 cipher aes-128-cbc
-ncp-ciphers aes-128-cbc:AES-128-CBC:aes-128-gcm:AES-128-GCM
+ncp-ciphers aes-128-cbc:AES-128-CBC
 {%- elif 'aes192' in encryption %}
 cipher aes-192-cbc
-ncp-ciphers aes-192-cbc:AES-192-CBC:aes-192-gcm:AES-192-GCM
+ncp-ciphers aes-192-cbc:AES-192-CBC
 {%- elif 'aes256' in encryption %}
 cipher aes-256-cbc
-ncp-ciphers aes-256-cbc:AES-256-CBC:aes-256-gcm:AES-256-GCM
+ncp-ciphers aes-256-cbc:AES-256-CBC
 {% endif %}
 {% endif %}
 
