@@ -1057,6 +1057,36 @@ class BondIf(EthernetIf):
     def __init__(self, ifname):
         super().__init__(ifname, type='bond')
 
+    def remove(self):
+        """
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('eth0')
+        >>> i.remove()
+        """
+        # when a bond member gets deleted, all members are placed in A/D state
+        # even when they are enabled inside CLI. This will make the config
+        # and system look async.
+        slave_list = []
+        for s in self.get_slaves():
+            slave = {
+                'ifname' : s,
+                'state': Interface(s).state
+            }
+            slave_list.append(slave)
+
+        # remove bond master which places members in disabled state
+        super().remove()
+
+        # replicate previous interface state before bond destruction back to
+        # physical interface
+        for slave in slave_list:
+             i = Interface(slave['ifname'])
+             i.state = slave['state']
+
     @property
     def xmit_hash_policy(self):
         """
