@@ -167,6 +167,10 @@ key {{ tls_key }}
 crl-verify {{ tls_crl }}
 {% endif %}
 
+{%- if tls_version_min %}
+tls-version-min {{tls_version_min}}
+{% endif %}
+
 {%- if tls_dh %}
 dh {{ tls_dh }}
 {% endif %}
@@ -283,6 +287,7 @@ default_config_data = {
     'tls_dh': '',
     'tls_key': '',
     'tls_role': '',
+    'tls_version_min': '',
     'type': 'tun',
     'uid': user,
     'gid': group,
@@ -562,6 +567,10 @@ def get_config():
          openvpn['tls_role'] = conf.return_value('tls role')
          openvpn['tls'] = True
 
+    # Minimum required TLS version
+    if conf.exists('tls minimum-tls-version'):
+         openvpn['tls_version_min'] = conf.return_value('tls minimum-tls-version')
+    
     if conf.exists('shared-secret-key-file'):
         openvpn['shared_secret_file'] = conf.return_value('shared-secret-key-file')
 
