@@ -253,12 +253,10 @@ def verify(eth):
     # some options can not be changed when interface is enslaved to a bond
     for bond in conf.list_nodes('interfaces bonding'):
         if conf.exists('interfaces bonding ' + bond + ' member interface'):
-                if eth['name'] in conf.return_values('interfaces bonding ' + bond + ' member interface'):
-                    if eth['disable']:
-                        raise ConfigError('Can not disable interface {} which is a member of {}').format(eth['intf'], bond)
-
-                    if eth['address']:
-                        raise ConfigError('Can not assign address to interface {} which is a member of {}').format(eth['intf'], bond)
+            bond_member = conf.return_values('interfaces bonding ' + bond + ' member interface')
+            if eth['name'] in bond_member:
+                if eth['address']:
+                    raise ConfigError('Can not assign address to interface {} which is a member of {}').format(eth['intf'], bond)
 
 
     return None
