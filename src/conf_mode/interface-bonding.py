@@ -279,11 +279,6 @@ def verify(bond):
                 raise ConfigError('can not enslave interface {} which already ' \
                                   'belongs to {}'.format(intf, tmp))
 
-        # we can not add disabled slave interfaces to our bond
-        if conf.exists('interfaces ethernet ' + intf + ' disable'):
-            raise ConfigError('can not enslave disabled interface {}' \
-                              .format(intf))
-
         # can not add interfaces with an assigned address to a bond
         if conf.exists('interfaces ethernet ' + intf + ' address'):
             raise ConfigError('can not enslave interface {} which has an address ' \
