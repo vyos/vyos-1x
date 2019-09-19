@@ -518,6 +518,11 @@
               <help>Transport Layer Security (TLS) options</help>
             </properties>
             <children>
+              <leafNode name="auth-file">
+                <properties>
+                  <help>File containing tls static key for tls-auth</help>
+                </properties>
+              </leafNode>
               <leafNode name="ca-cert-file">
                 <properties>
                   <help>File containing certificate for Certificate Authority (CA)</help>
