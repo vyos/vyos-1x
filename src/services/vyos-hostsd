@@ -43,7 +43,7 @@ hosts_tmpl_source = """
 
 # Local host
 127.0.0.1       localhost
-127.0.1.1       {{ host_name }}{% if domain_name %}.{{ domain_name }}{% endif %}
+127.0.1.1       {{ host_name }}{% if domain_name %}.{{ domain_name }} {{ host_name }}{% endif %}
 
 # The following lines are desirable for IPv6 capable hosts
 ::1             localhost ip6-localhost ip6-loopback
