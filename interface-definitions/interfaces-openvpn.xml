@@ -543,7 +543,7 @@
                   <help>File containing this host's private key</help>
                 </properties>
               </leafNode>
-              <leafNode name="minimum-tls-version">
+              <leafNode name="tls-version-min">
                 <properties>
                   <help>Specify the minimum required TLS version</help>
                   <completionHelp>
