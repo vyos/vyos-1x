@@ -521,31 +521,73 @@
               <leafNode name="auth-file">
                 <properties>
                   <help>File containing tls static key for tls-auth</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="ca-cert-file">
                 <properties>
                   <help>File containing certificate for Certificate Authority (CA)</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="cert-file">
                 <properties>
                   <help>File containing certificate for this host</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="crl-file">
                 <properties>
                   <help>File containing certificate revocation list (CRL) for this host</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="dh-file">
                 <properties>
                   <help>File containing Diffie Hellman parameters (server only)</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="key-file">
                 <properties>
                   <help>File containing this host's private key</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="role">
