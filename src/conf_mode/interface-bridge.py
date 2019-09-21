@@ -183,8 +183,7 @@ def apply(bridge):
     br = BridgeIf(bridge['intf'])
 
     if bridge['deleted']:
-        # delete bridge interface
-        # DHCP is stopped inside remove()
+        # delete interface
         br.remove()
     else:
         # enable interface

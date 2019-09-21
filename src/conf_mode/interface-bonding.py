@@ -22,7 +22,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BondIf, EthernetIf
+from vyos.ifconfig import BondIf, VLANIf
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -82,7 +82,7 @@ def apply_vlan_config(vlan, config):
     to a VLAN interface
     """
 
-    if type(vlan) != type(EthernetIf("lo")):
+    if type(vlan) != type(VLANIf("lo")):
         raise TypeError()
 
     # update interface description used e.g. within SNMP
@@ -334,8 +334,7 @@ def apply(bond):
     b = BondIf(bond['intf'])
 
     if bond['deleted']:
-        #
-        # delete bonding interface
+        # delete interface
         b.remove()
     else:
         # Some parameters can not be changed when the bond is up.
