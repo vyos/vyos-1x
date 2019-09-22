@@ -59,7 +59,7 @@ def setDescription() {
 
 /* Only keep the 10 most recent builds. */
 def projectProperties = [
-    [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '1']],
+    [$class: 'BuildDiscarderProperty',strategy: [$class: 'LogRotator', numToKeepStr: '10']],
 ]
 
 properties(projectProperties)
@@ -131,9 +131,12 @@ pipeline {
                         files = findFiles(glob: '*.deb')
                         files.each { PACKAGE ->
                             def RELEASE = getGitBranchName()
-                            def ARCH = sh(returnStdout: true, script: "dpkg-deb -f ${pkg} Architecture").trim()
-                            def SUBSTRING = sh(returnStdout: true, script: "dpkg-deb -f ${pkg} Package").trim()
+                            def ARCH = sh(returnStdout: true, script: "dpkg-deb -f ${PACKAGE} Architecture").trim()
+                            def SUBSTRING = sh(returnStdout: true, script: "dpkg-deb -f ${PACKAGE} Package").trim()
                             def SSH_DIR = '~/VyOS/' + RELEASE + '/' + ARCH
+                            def ARCH_OPT = ''
+                            if (ARCH != 'all')
+                                ARCH_OPT = '-A ' + ARCH
 
                             // No need to explicitly check the return code. The pipeline
                             // will fail if sh returns a non 0 exit code
@@ -144,13 +147,13 @@ pipeline {
                                 scp ${SSH_OPTS} ${PACKAGE} ${SSH_REMOTE}:${SSH_DIR}/
                             """
                             sh """
-                                ssh ${SSH_OPTS} ${SSH_REMOTE} -t "uncron-add 'reprepro -v -b ${VYOS_REPO_PATH} -A ${ARCH} remove ${RELEASE} ${SUBSTRING}'"
+                                ssh ${SSH_OPTS} ${SSH_REMOTE} -t "uncron-add 'reprepro -v -b ${VYOS_REPO_PATH} ${ARCH_OPT} remove ${RELEASE} ${SUBSTRING}'"
                             """
                             sh """
                                 ssh ${SSH_OPTS} ${SSH_REMOTE} -t "uncron-add 'reprepro -v -b ${VYOS_REPO_PATH} deleteunreferenced'"
                             """
                             sh """
-                                ssh ${SSH_OPTS} ${SSH_REMOTE} -t "uncron-add 'reprepro -v -b ${VYOS_REPO_PATH} -A ${ARCH} includedeb ${RELEASE} ${SSH_DIR}/${PACKAGE}'"
+                                ssh ${SSH_OPTS} ${SSH_REMOTE} -t "uncron-add 'reprepro -v -b ${VYOS_REPO_PATH} ${ARCH_OPT} includedeb ${RELEASE} ${SSH_DIR}/${PACKAGE}'"
                             """
                         }
                     }
