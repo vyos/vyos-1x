@@ -32,6 +32,7 @@ def isCustomBuild() {
     def gitURI = 'git@github.com:vyos/' + env.JOB_NAME
     def httpURI = 'https://github.com/vyos/' + env.JOB_NAME
 
+    echo getGitRepoURL()
     return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
 }
 
