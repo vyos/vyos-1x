@@ -40,7 +40,7 @@ def setDescription() {
 
     // build up the main description text
     def description = ""
-    description += "<h2>Build VyOS ISO image</h2>"
+    description += "<h2>VyOS individual package build: vyos-1x</h2>"
 
     if (isCustomBuild()) {
         description += "<p style='border: 3px dashed red; width: 50%;'>"
