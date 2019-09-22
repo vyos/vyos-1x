@@ -29,9 +29,8 @@ def getGitRepoURL() {
 // env.JOB_NAME is e.g. vyos-build or vyos-1x and so on ....
 def isCustomBuild() {
     // GitHub organisation base URL
-    def repoPath = 'vyos/' + env.JOB_NAME + '.git'
-    def gitURI = 'git@github.com:' + repoPath
-    def httpURI = 'https://github.com/' + repoPath
+    def gitURI = 'git@github.com:vyos/vyos-1x.git'
+    def httpURI = 'https://github.com/vyos/vyos-1x.git'
 
     return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
 }
