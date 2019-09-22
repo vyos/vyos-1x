@@ -29,10 +29,10 @@ def getGitRepoURL() {
 // env.JOB_NAME is e.g. vyos-build or vyos-1x and so on ....
 def isCustomBuild() {
     // GitHub organisation base URL
-    def gitURI = 'git@github.com:vyos/' + env.JOB_NAME
-    def httpURI = 'https://github.com/vyos/' + env.JOB_NAME
+    def repoPath = 'vyos/' + env.JOB_NAME + '.git'
+    def gitURI = 'git@github.com:' + repoPath
+    def httpURI = 'https://github.com/' + repoPath
 
-    echo getGitRepoURL()
     return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
 }
 
