@@ -116,6 +116,10 @@ def vlan_to_dict(conf):
         'dhcpv6_temporary': False,
         'disable': False,
         'disable_link_detect': 1,
+        'egress_qos': '',
+        'egress_qos_changed': False,
+        'ingress_qos': '',
+        'ingress_qos_changed': False,
         'mac': '',
         'mtu': 1500
     }
@@ -153,7 +157,7 @@ def vlan_to_dict(conf):
     if conf.exists('disable-link-detect'):
         vlan['disable_link_detect'] = 2
 
-    # disable bond interface
+    # disable VLAN interface
     if conf.exists('disable'):
         vlan['disable'] = True
 
@@ -164,6 +168,22 @@ def vlan_to_dict(conf):
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
         vlan['mtu'] = int(conf.return_value('mtu'))
+
+    # VLAN egress QoS
+    if conf.exists('egress-qos'):
+        vlan['egress_qos'] = conf.return_value('egress-qos')
+
+    # egress changes QoS require VLAN interface recreation
+    if vlan['egress_qos'] != conf.return_effective_value('egress-qos'):
+        vlan['egress_qos_changed'] = True
+
+    # VLAN ingress QoS
+    if conf.exists('ingress-qos'):
+        vlan['ingress_qos'] = conf.return_value('ingress-qos')
+
+    # ingress changes QoS require VLAN interface recreation
+    if vlan['ingress_qos'] != conf.return_effective_value('ingress-qos'):
+        vlan['ingress_qos_changed'] = True
 
     # ethertype is mandatory on vif-s nodes and only exists here!
     # check if this is a vif-s node at all:

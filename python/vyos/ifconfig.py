@@ -15,12 +15,12 @@
 
 import os
 import re
-import subprocess
 import jinja2
 
 from vyos.validate import *
 from ipaddress import IPv4Network, IPv6Address
 from netifaces import ifaddresses, AF_INET, AF_INET6
+from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 dhcp_cfg = """
@@ -43,7 +43,6 @@ dhclient_base = r'/var/lib/dhcp/dhclient_'
 
 
 class Interface:
-
     def __init__(self, ifname, type=None):
         """
         This is the base interface class which supports basic IP/MAC address
@@ -84,48 +83,15 @@ class Interface:
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             print('DEBUG/{:<6} {}'.format(self._ifname, msg))
 
-    def remove(self):
-        """
-        Remove interface from operating system. Removing the interface
-        deconfigures all assigned IP addresses and clear possible DHCP(v6)
-        client processes.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> i = Interface('eth0')
-        >>> i.remove()
-        """
-
-        # do we have sub interfaces (VLANs)?
-        # we apply a regex matching subinterfaces (indicated by a .) of a
-        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
-        # subinterfaces
-        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
-                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
-
-        for vlan in vlan_ifs:
-            Interface(vlan).remove()
-
-        # All subinterfaces are now removed, continue on the physical interface
-
-        # stop DHCP(v6) if running
-        self._del_dhcp()
-        self._del_dhcpv6()
-
-        # NOTE (Improvement):
-        # after interface removal no other commands should be allowed
-        # to be called and instead should raise an Exception:
-        cmd = 'ip link del dev {}'.format(self._ifname)
-        self._cmd(cmd)
-
     def _cmd(self, command):
+        p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
+        tmp = p.communicate()[0].strip()
         self._debug_msg("cmd '{}'".format(command))
+        if tmp.decode():
+            self._debug_msg("returned:\n{}".format(tmp.decode()))
 
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-        proc_stdout = process.communicate()[0].strip()
-
-        # add exception handling code
-        pass
+        # do we need some error checking code here?
+        return tmp
 
     def _read_sysfs(self, filename):
         """
@@ -148,6 +114,37 @@ class Interface:
 
         return None
 
+    def remove(self):
+        """
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('eth0')
+        >>> i.remove()
+        """
+        # stop DHCP(v6) if running
+        self._del_dhcp()
+        self._del_dhcpv6()
+
+        # remove all assigned IP addresses from interface - this is a bit redundant
+        # as the kernel will remove all addresses on interface deletion, but we
+        # can not delete ALL interfaces, see below
+        for addr in self.get_addr():
+            self.del_addr(addr)
+
+        # Ethernet interfaces can not be removed
+        if type(self) == type(EthernetIf(self._ifname)):
+            return
+
+        # NOTE (Improvement):
+        # after interface removal no other commands should be allowed
+        # to be called and instead should raise an Exception:
+        cmd = 'ip link del dev {}'.format(self._ifname)
+        self._cmd(cmd)
+
     @property
     def mtu(self):
         """
@@ -158,7 +155,7 @@ class Interface:
         >>> Interface('eth0').mtu
         '1500'
         """
-        return self._read_sysfs('/sys/class/net/{0}/mtu'
+        return self._read_sysfs('/sys/class/net/{}/mtu'
                                 .format(self._ifname))
 
     @mtu.setter
@@ -175,7 +172,7 @@ class Interface:
         if mtu < 68 or mtu > 9000:
             raise ValueError('Invalid MTU size: "{}"'.format(mru))
 
-        return self._write_sysfs('/sys/class/net/{0}/mtu'
+        return self._write_sysfs('/sys/class/net/{}/mtu'
                                  .format(self._ifname), mtu)
 
     @property
@@ -188,7 +185,7 @@ class Interface:
         >>> Interface('eth0').mac
         '00:0c:29:11:aa:cc'
         """
-        return self._read_sysfs('/sys/class/net/{0}/address'
+        return self._read_sysfs('/sys/class/net/{}/address'
                                 .format(self._ifname))
 
     @mac.setter
@@ -202,6 +199,10 @@ class Interface:
         >>> Interface('eth0').mac
         '00:90:43:fe:fe:1b'
         """
+        # on interface removal (ethernet) an empty string is passed - ignore it
+        if not mac:
+            return None
+
         # a mac address consits out of 6 octets
         octets = len(mac.split(':'))
         if octets != 6:
@@ -303,7 +304,7 @@ class Interface:
         >>> Interface('eth0').ifalias
         ''
         """
-        return self._read_sysfs('/sys/class/net/{0}/ifalias'
+        return self._read_sysfs('/sys/class/net/{}/ifalias'
                                 .format(self._ifname))
 
     @ifalias.setter
@@ -327,7 +328,7 @@ class Interface:
             # clear interface alias
             ifalias = '\0'
 
-        self._write_sysfs('/sys/class/net/{0}/ifalias'
+        self._write_sysfs('/sys/class/net/{}/ifalias'
                           .format(self._ifname), ifalias)
 
     @property
@@ -340,7 +341,7 @@ class Interface:
         >>> Interface('eth0').state
         'up'
         """
-        return self._read_sysfs('/sys/class/net/{0}/operstate'
+        return self._read_sysfs('/sys/class/net/{}/operstate'
                                 .format(self._ifname))
 
     @state.setter
@@ -759,7 +760,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').aging_time
         '300'
         """
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/ageing_time'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/ageing_time'
                                  .format(self._ifname)) / 100)
 
     @ageing_time.setter
@@ -773,7 +774,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').ageing_time = 2
         """
         time = int(time) * 100
-        return self._write_sysfs('/sys/class/net/{0}/bridge/ageing_time'
+        return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
                                  .format(self._ifname), time)
 
     @property
@@ -787,7 +788,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').ageing_time
         '3'
         """
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/forward_delay'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname)) / 100)
 
     @forward_delay.setter
@@ -800,7 +801,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').forward_delay = 15
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/forward_delay'
+        return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname), (int(time) * 100))
 
     @property
@@ -814,7 +815,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').hello_time
         '2'
         """
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/hello_time'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname)) / 100)
 
     @hello_time.setter
@@ -827,7 +828,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').hello_time = 2
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/hello_time'
+        return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname), (int(time) * 100))
 
     @property
@@ -842,7 +843,7 @@ class BridgeIf(Interface):
         '20'
         """
 
-        return (self._read_sysfs('/sys/class/net/{0}/bridge/max_age'
+        return (self._read_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname)) / 100)
 
     @max_age.setter
@@ -855,7 +856,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').max_age = 30
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/max_age'
+        return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname), (int(time) * 100))
 
     @property
@@ -868,7 +869,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').priority
         '32768'
         """
-        return self._read_sysfs('/sys/class/net/{0}/bridge/priority'
+        return self._read_sysfs('/sys/class/net/{}/bridge/priority'
                                 .format(self._ifname))
 
     @priority.setter
@@ -880,7 +881,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').priority = 8192
         """
-        return self._write_sysfs('/sys/class/net/{0}/bridge/priority'
+        return self._write_sysfs('/sys/class/net/{}/bridge/priority'
                                  .format(self._ifname), priority)
 
     @property
@@ -895,7 +896,7 @@ class BridgeIf(Interface):
         """
 
         state = 0
-        with open('/sys/class/net/{0}/bridge/stp_state'.format(self._ifname), 'r') as f:
+        with open('/sys/class/net/{}/bridge/stp_state'.format(self._ifname), 'r') as f:
             state = int(f.read().rstrip('\n'))
 
         return state
@@ -911,7 +912,7 @@ class BridgeIf(Interface):
         """
 
         if int(state) >= 0 and int(state) <= 1:
-            return self._write_sysfs('/sys/class/net/{0}/bridge/stp_state'
+            return self._write_sysfs('/sys/class/net/{}/bridge/stp_state'
                                      .format(self._ifname), state)
         else:
             raise ValueError("Value out of range")
@@ -926,7 +927,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').multicast_querier
         '0'
         """
-        return self._read_sysfs('/sys/class/net/{0}/bridge/multicast_querier'
+        return self._read_sysfs('/sys/class/net/{}/bridge/multicast_querier'
                                 .format(self._ifname))
 
     @multicast_querier.setter
@@ -944,7 +945,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').multicast_querier = 1
         """
         if int(enable) >= 0 and int(enable) <= 1:
-            return self._write_sysfs('/sys/class/net/{0}/bridge/multicast_querier'
+            return self._write_sysfs('/sys/class/net/{}/bridge/multicast_querier'
                                      .format(self._ifname), enable)
         else:
             raise ValueError("Value out of range")
@@ -997,12 +998,40 @@ class BridgeIf(Interface):
                                  .format(self._ifname, interface), priority)
 
 
-class EthernetIf(Interface):
-
+class VLANIf(Interface):
+    """
+    This class handels the creation and removal of a VLAN interface. It serves
+    as base class for BondIf and EthernetIf.
+    """
     def __init__(self, ifname, type=None):
         super().__init__(ifname, type)
 
-    def add_vlan(self, vlan_id, ethertype=''):
+    def remove(self):
+        """
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('eth0')
+        >>> i.remove()
+        """
+        # do we have sub interfaces (VLANs)?
+        # we apply a regex matching subinterfaces (indicated by a .) of a
+        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
+        # subinterfaces
+        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
+                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
+
+        for vlan in vlan_ifs:
+            Interface(vlan).remove()
+
+        # All subinterfaces are now removed, continue on the physical interface
+        super().remove()
+
+
+    def add_vlan(self, vlan_id, ethertype='', ingress_qos='', egress_qos=''):
         """
         A virtual LAN (VLAN) is any broadcast domain that is partitioned and
         isolated in a computer network at the data link layer (OSI layer 2).
@@ -1012,8 +1041,20 @@ class EthernetIf(Interface):
         This function creates both 802.1q and 802.1ad (Q-in-Q) interfaces. Proto
         parameter is used to indicate VLAN type.
 
-        A new object of type EthernetIf is returned once the interface has been
+        A new object of type VLANIf is returned once the interface has been
         created.
+
+        @param ethertype: If specified, create 802.1ad or 802.1q Q-in-Q VLAN
+                          interface
+        @param ingress_qos: Defines a mapping of VLAN header prio field to the
+                            Linux internal packet priority on incoming frames.
+        @param ingress_qos: Defines a mapping of Linux internal packet priority
+                            to VLAN header prio field but for outgoing frames.
+
+        Example:
+        >>> from vyos.ifconfig import VLANIf
+        >>> i = VLANIf('eth0')
+        >>> i.add_vlan(10)
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
         if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
@@ -1023,29 +1064,224 @@ class EthernetIf(Interface):
                 self._ethertype = ethertype
                 ethertype = 'proto {}'.format(ethertype)
 
+            # Optional ingress QOS mapping
+            opt_i = ''
+            if ingress_qos:
+                opt_i = 'ingress-qos-map ' + ingress_qos
+            # Optional egress QOS mapping
+            opt_e = ''
+            if egress_qos:
+                opt_e = 'egress-qos-map ' + egress_qos
+
             # create interface in the system
-            cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan}'.format(
-                intf=self._ifname, vlan=self._vlan_id, proto=ethertype)
+            cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
+                   .format(intf=self._ifname, vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
             self._cmd(cmd)
 
         # return new object mapping to the newly created interface
         # we can now work on this object for e.g. IP address setting
         # or interface description and so on
-        return EthernetIf(vlan_ifname)
+        return VLANIf(vlan_ifname)
+
 
     def del_vlan(self, vlan_id):
         """
         Remove VLAN interface from operating system. Removing the interface
         deconfigures all assigned IP addresses and clear possible DHCP(v6)
         client processes.
+
+        Example:
+        >>> from vyos.ifconfig import VLANIf
+        >>> i = VLANIf('eth0.10')
+        >>> i.del_vlan()
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
-        tmp = EthernetIf(vlan_ifname)
+        tmp = VLANIf(vlan_ifname)
         tmp.remove()
 
 
-class BondIf(EthernetIf):
+class EthernetIf(VLANIf):
+    """
+    Abstraction of a Linux Ethernet Interface
+    """
+    def __init__(self, ifname):
+        super().__init__(ifname)
 
+    def get_driver_name(self):
+        """
+        Return the driver name used by NIC. Some NICs don't support all
+        features e.g. changing link-speed, duplex
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.get_driver_name()
+        'vmxnet3'
+        """
+        link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self._ifname))
+        return os.path.basename(link)
+
+
+    def has_autoneg(self):
+        """
+        Not all drivers support autonegotiation.
+
+        returns True -> Autonegotiation is supported by driver
+                False -> Autonegotiation is not supported by driver
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.has_autoneg()
+        'True'
+        """
+        regex = 'Supports auto-negotiation:[ ]\w+'
+        tmp = self._cmd('/sbin/ethtool {}'.format(self._ifname))
+        tmp = re.search(regex, tmp.decode())
+
+        # Output is either 'Supports auto-negotiation: Yes' or
+        # 'Supports auto-negotiation: No'
+        if tmp.group().split(':')[1].lstrip() == "Yes":
+            return True
+        else:
+            return False
+
+
+    def set_flow_control(self, enable):
+        """
+        Changes the pause parameters of the specified Ethernet device.
+
+        @param enable: true -> enable pause frames, false -> disable pause frames
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_flow_control(True)
+        """
+        if enable not in ['on', 'off']:
+            raise ValueError("Value out of range")
+
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net']:
+            self._debug_msg('{} driver does not support changing flow control settings!'
+                            .format(self.get_driver_name()))
+            return
+
+        # Assemble command executed on system. Unfortunately there is no way
+        # to change this setting via sysfs
+        cmd = '/sbin/ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
+              self._ifname, enable)
+        try:
+            # An exception will be thrown if the settings are not changed
+            self._cmd(cmd)
+        except CalledProcessError:
+            pass
+
+
+    def set_speed_duplex(self, speed, duplex):
+        """
+        Set link speed in Mbit/s and duplex.
+
+        @speed can be any link speed in MBit/s, e.g. 10, 100, 1000 auto
+        @duplex can be half, full, auto
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_speed_duplex('auto', 'auto')
+        """
+
+        if speed not in ['auto', '10', '100', '1000', '2500', '5000', '10000', '25000', '40000', '50000', '100000', '400000']:
+            raise ValueError("Value out of range (speed)")
+
+        if duplex not in ['auto', 'full', 'half']:
+            raise ValueError("Value out of range (duplex)")
+
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net']:
+            self._debug_msg('{} driver does not support changing speed/duplex settings!'
+                            .format(self.get_driver_name()))
+            return
+
+
+        cmd = '/sbin/ethtool -s {}'.format(self._ifname)
+        if speed == 'auto' or duplex == 'auto':
+            cmd += ' autoneg on'
+        else:
+            cmd += ' speed {} duplex {} autoneg off'.format(speed, duplex)
+
+        return self._cmd(cmd)
+
+
+    def set_gro(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_gro('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} gro {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_gso(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_gso('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} gso {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_sg(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_sg('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} sg {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_tso(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_tso('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} tso {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+    def set_ufo(self, state):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_udp_offload('on')
+        """
+        if state not in ['on', 'off']:
+            raise ValueError('state must be "on" or "off"')
+
+        cmd = '/sbin/ethtool -K {} ufo {}'.format(self._ifname, state)
+        return self._cmd(cmd)
+
+
+class BondIf(VLANIf):
     """
     The Linux bonding driver provides a method for aggregating multiple network
     interfaces into a single logical "bonded" interface. The behavior of the
@@ -1053,9 +1289,38 @@ class BondIf(EthernetIf):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
-
     def __init__(self, ifname):
         super().__init__(ifname, type='bond')
+
+    def remove(self):
+        """
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses and clear possible DHCP(v6)
+        client processes.
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('eth0')
+        >>> i.remove()
+        """
+        # when a bond member gets deleted, all members are placed in A/D state
+        # even when they are enabled inside CLI. This will make the config
+        # and system look async.
+        slave_list = []
+        for s in self.get_slaves():
+            slave = {
+                'ifname' : s,
+                'state': Interface(s).state
+            }
+            slave_list.append(slave)
+
+        # remove bond master which places members in disabled state
+        super().remove()
+
+        # replicate previous interface state before bond destruction back to
+        # physical interface
+        for slave in slave_list:
+             i = Interface(slave['ifname'])
+             i.state = slave['state']
 
     @property
     def xmit_hash_policy(self):

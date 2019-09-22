@@ -518,29 +518,99 @@
               <help>Transport Layer Security (TLS) options</help>
             </properties>
             <children>
+              <leafNode name="auth-file">
+                <properties>
+                  <help>File containing tls static key for tls-auth</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="ca-cert-file">
                 <properties>
                   <help>File containing certificate for Certificate Authority (CA)</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="cert-file">
                 <properties>
                   <help>File containing certificate for this host</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="crl-file">
                 <properties>
                   <help>File containing certificate revocation list (CRL) for this host</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="dh-file">
                 <properties>
                   <help>File containing Diffie Hellman parameters (server only)</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="key-file">
                 <properties>
                   <help>File containing this host's private key</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tls-version-min">
+                <properties>
+                  <help>Specify the minimum required TLS version</help>
+                  <completionHelp>
+                    <list>1.0 1.1 1.2</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>1.0</format>
+                    <description>TLS v1.0</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>1.1</format>
+                    <description>TLS v1.1</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>1.2</format>
+                    <description>TLS v1.2</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(1.0|1.1|1.2)</regex>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="role">

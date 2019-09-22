@@ -26,17 +26,34 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.ifconfig import WireGuardIf
 
-ifname = str(os.environ['VYOS_TAGNODE_VALUE'])
-intfc = WireGuardIf(ifname)
+try:
+    ifname = str(os.environ['VYOS_TAGNODE_VALUE'])
+    intfc = WireGuardIf(ifname)
+except KeyError:
+    print("Interface not specified")
+    sys.exit(1)
 
 kdir = r'/config/auth/wireguard'
 
-def check_kmod():
+def _check_kmod():
     if not os.path.exists('/sys/module/wireguard'):
         sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod")
         if os.system('sudo modprobe wireguard') != 0:
             sl.syslog(sl.LOG_NOTICE, "modprobe wireguard failed")
             raise ConfigError("modprobe wireguard failed")
+
+
+def _migrate_default_keys():
+    if os.path.exists('{}/private.key'.format(kdir)) and not os.path.exists('{}/default/private.key'.format(kdir)):
+        sl.syslog(sl.LOG_NOTICE, "migrate keypair to default")
+        old_umask = os.umask(0o027)
+        location = '{}/default'.format(kdir)
+        subprocess.call(['sudo mkdir -p ' + location], shell=True)
+        subprocess.call(['sudo chgrp vyattacfg ' + location], shell=True)
+        subprocess.call(['sudo chmod 750 ' + location], shell=True)
+        os.rename('{}/private.key'.format(kdir),'{}/private.key'.format(location))
+        os.rename('{}/public.key'.format(kdir),'{}/public.key'.format(location))
+        os.umask(old_umask)
 
 
 def get_config():
@@ -257,7 +274,8 @@ def apply(c):
 
 if __name__ == '__main__':
     try:
-        check_kmod()
+        _check_kmod()
+        _migrate_default_keys()
         c = get_config()
         verify(c)
         apply(c)

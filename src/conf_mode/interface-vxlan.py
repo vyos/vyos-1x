@@ -28,7 +28,6 @@ from netifaces import interfaces
 
 default_config_data = {
     'address': [],
-    'address_remove': [],
     'deleted': False,
     'description': '',
     'disable': False,
@@ -42,7 +41,6 @@ default_config_data = {
     'remote_port': 8472 # The Linux implementation of VXLAN pre-dates
                         # the IANA's selection of a standard destination port
 }
-
 
 def get_config():
     vxlan = deepcopy(default_config_data)
@@ -65,12 +63,6 @@ def get_config():
     # retrieve configured interface addresses
     if conf.exists('address'):
         vxlan['address'] = conf.return_values('address')
-
-    # Determine interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the interface
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
-    vxlan['address_remove'] = list_diff(eff_addr, act_addr)
 
     # retrieve interface description
     if conf.exists('description'):
@@ -180,11 +172,9 @@ def apply(vxlan):
         # Enable proxy-arp on this interface
         v.proxy_arp = vxlan['ip_proxy_arp']
 
-        # Configure interface address(es)
-        # - not longer required addresses get removed first
-        # - newly addresses will be added second
-        for addr in vxlan['address_remove']:
-            v.del_addr(addr)
+        # Configure interface address(es) - no need to implicitly delete the
+        # old addresses as they have already been removed by deleting the
+        # interface above
         for addr in vxlan['address']:
             v.add_addr(addr)
 
