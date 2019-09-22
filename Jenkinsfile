@@ -131,8 +131,8 @@ pipeline {
                         files = findFiles(glob: '*.deb')
                         files.each { PACKAGE ->
                             def RELEASE = getGitBranchName()
-                            def ARCH = sh(returnStdout: true, script: "dpkg-deb -f ${pkg} Architecture").trim()
-                            def SUBSTRING = sh(returnStdout: true, script: "dpkg-deb -f ${pkg} Package").trim()
+                            def ARCH = sh(returnStdout: true, script: "dpkg-deb -f ${PACKAGE} Architecture").trim()
+                            def SUBSTRING = sh(returnStdout: true, script: "dpkg-deb -f ${PACKAGE} Package").trim()
                             def SSH_DIR = '~/VyOS/' + RELEASE + '/' + ARCH
 
                             // No need to explicitly check the return code. The pipeline
