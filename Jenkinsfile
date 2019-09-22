@@ -30,7 +30,7 @@ def getGitRepoURL() {
 def isCustomBuild() {
     // GitHub organisation base URL
     def gitURI = 'git@github.com:vyos/' + env.JOB_NAME
-    def httpURI = 'https://github.com/vyos' + env.JOB_NAME
+    def httpURI = 'https://github.com/vyos/' + env.JOB_NAME
 
     return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
 }
