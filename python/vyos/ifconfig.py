@@ -210,7 +210,7 @@ class Interface:
 
         # validate against the first mac address byte if it's a multicast
         # address
-        if int(mac.split(':')[0]) & 1:
+        if int(mac.split(':')[0], 16) & 1:
             raise ValueError('{} is a multicast MAC address'.format(mac))
 
         # overall mac address is not allowed to be 00:00:00:00:00:00
