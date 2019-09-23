@@ -610,9 +610,19 @@ class Interface:
             self._debug_msg('No DHCP client PID found')
             return None
 
-        # stop dhclient
-        cmd = 'start-stop-daemon --stop --quiet --pidfile {}'.format(
-            self._dhcp_pid_file)
+        # stop dhclient, we need to call dhclient and tell it should release the
+        # aquired IP address. tcpdump tells me:
+        # 172.16.35.103.68 > 172.16.35.254.67: [bad udp cksum 0xa0cb -> 0xb943!] BOOTP/DHCP, Request from 00:50:56:9d:11:df, length 300, xid 0x620e6946, Flags [none] (0x0000)
+        #  Client-IP 172.16.35.103
+        #  Client-Ethernet-Address 00:50:56:9d:11:df
+        #  Vendor-rfc1048 Extensions
+        #    Magic Cookie 0x63825363
+        #    DHCP-Message Option 53, length 1: Release
+        #    Server-ID Option 54, length 4: 172.16.35.254
+        #    Hostname Option 12, length 10: "vyos"
+        #
+        cmd = '/sbin/dhclient -cf {} -pf {} -lf {} -r {}'.format(
+                self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
         self._cmd(cmd)
 
         # cleanup old config file
