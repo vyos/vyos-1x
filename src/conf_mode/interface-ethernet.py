@@ -316,6 +316,12 @@ def apply(eth):
         # Set physical interface speed and duplex
         e.set_speed_duplex(eth['speed'], eth['duplex'])
 
+        # Enable/Disable interface
+        if eth['disable']:
+            e.state = 'down'
+        else:
+            e.state = 'up'
+
         # Configure interface address(es)
         # - not longer required addresses get removed first
         # - newly addresses will be added second
@@ -323,12 +329,6 @@ def apply(eth):
             e.del_addr(addr)
         for addr in eth['address']:
             e.add_addr(addr)
-
-        # Enable/Disable interface
-        if eth['disable']:
-            e.state = 'down'
-        else:
-            e.state = 'up'
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in eth['vif_s_remove']:
