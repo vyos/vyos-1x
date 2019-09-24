@@ -187,7 +187,7 @@ def apply(bridge):
         # enable interface
         br.state = 'up'
         # set ageing time
-        br.ageing_time = bridge['aging']
+        br.set_ageing_time(bridge['aging'])
         # set bridge forward delay
         br.set_forward_delay(bridge['forwarding_delay'])
         # set hello time

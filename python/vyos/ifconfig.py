@@ -740,30 +740,14 @@ class BridgeIf(Interface):
     def __init__(self, ifname):
         super().__init__(ifname, type='bridge')
 
-    @property
-    def ageing_time(self):
-        """
-        Return configured bridge interface MAC address aging time in seconds.
-        Internal kernel representation is in centiseconds, thus its converted
-        in the end. Kernel default is 300 seconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').aging_time
-        '300'
-        """
-        return (self._read_sysfs('/sys/class/net/{}/bridge/ageing_time'
-                                 .format(self._ifname)) / 100)
-
-    @ageing_time.setter
-    def ageing_time(self, time):
+    def set_ageing_time(self, time):
         """
         Set bridge interface MAC address aging time in seconds. Internal kernel
         representation is in centiseconds. Kernel default is 300 seconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').ageing_time = 2
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').ageing_time(2)
         """
         time = int(time) * 100
         return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
