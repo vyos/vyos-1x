@@ -170,7 +170,7 @@ def apply(vxlan):
         # configure ARP cache timeout in milliseconds
         v.arp_cache_tmp = vxlan['ip_arp_cache_tmo']
         # Enable proxy-arp on this interface
-        v.proxy_arp = vxlan['ip_proxy_arp']
+        v.set_proxy_arp(vxlan['ip_proxy_arp'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the

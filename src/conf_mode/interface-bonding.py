@@ -382,7 +382,7 @@ def apply(bond):
         # configure ARP cache timeout in milliseconds
         b.arp_cache_tmp = bond['ip_arp_cache_tmo']
         # Enable proxy-arp on this interface
-        b.proxy_arp = bond['ip_proxy_arp']
+        b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
         b.proxy_arp_pvlan = bond['ip_proxy_arp_pvlan']
 

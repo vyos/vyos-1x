@@ -314,29 +314,13 @@ class Interface:
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
         self._cmd(cmd)
 
-    @property
-    def proxy_arp(self):
-        """
-        Get current proxy ARP configuration from sysfs. Default: 0
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp
-        '0'
-        """
-        return self._read_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp'
-                                .format(self._ifname))
-
-    @proxy_arp.setter
-    def proxy_arp(self, enable):
+    def set_proxy_arp(self, enable):
         """
         Set per interface proxy ARP configuration
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp = 1
-        >>> Interface('eth0').proxy_arp
-        '1'
+        >>> Interface('eth0').set_proxy_arp(1)
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp'
