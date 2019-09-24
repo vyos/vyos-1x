@@ -397,7 +397,7 @@ def apply(bond):
 
         # Primary device interface
         if bond['primary']:
-            b.primary = bond['primary']
+            b.set_primary(bond['primary'])
 
         # Add (enslave) interfaces to bond
         for intf in bond['member']:

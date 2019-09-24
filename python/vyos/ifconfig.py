@@ -1516,8 +1516,8 @@ class BondIf(VLANIf):
                                   .format(self._ifname))
         return list(map(str, slaves.split()))
 
-    @property
-    def primary(self):
+
+    def set_primary(self, interface):
         """
         A string (eth0, eth2, etc) specifying which slave is the primary
         device. The specified device will always be the active slave while it
@@ -1530,29 +1530,7 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').primary
-        'eth1'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bonding/primary'
-                                .format(self._ifname))
-
-    @primary.setter
-    def primary(self, interface):
-        """
-        A string (eth0, eth2, etc) specifying which slave is the primary
-        device. The specified device will always be the active slave while it
-        is available. Only when the primary is off-line will alternate devices
-        be used. This is useful when one slave is preferred over another, e.g.,
-        when one slave has higher throughput than another.
-
-        The primary option is only valid for active-backup, balance-tlb and
-        balance-alb mode.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').primary = 'eth2'
-        >>> BondIf('bond0').primary
-        'eth2'
+        >>> BondIf('bond0').set_primary('eth2')
         """
         if not interface:
             # reset primary interface
