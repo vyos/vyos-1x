@@ -1115,23 +1115,41 @@ class BondIf(VLANIf):
         return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
                                  .format(self._ifname), mode)
 
-    def set_arp_interval(self, time):
+    def set_arp_interval(self, interval):
         """
-        Specifies the IP addresses to use as ARP monitoring peers when
-        arp_interval is > 0. These are the targets of the ARP request sent to
-        determine the health of the link to the targets. Specify these values
-        in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by
-        a comma. At least one IP address must be given for ARP monitoring to
-        function. The maximum number of targets that can be specified is 16.
+        Specifies the ARP link monitoring frequency in milliseconds.
 
-        The default value is no IP addresses.
+        The ARP monitor works by periodically checking the slave devices
+        to determine whether they have sent or received traffic recently
+        (the precise criteria depends upon the bonding mode, and the
+        state of the slave). Regular traffic is generated via ARP probes
+        issued for the addresses specified by the arp_ip_target option.
+
+        If ARP monitoring is used in an etherchannel compatible mode
+        (modes 0 and 2), the switch should be configured in a mode that
+        evenly distributes packets across all links. If the switch is
+        configured to distribute the packets in an XOR fashion, all
+        replies from the ARP targets will be received on the same link
+        which could cause the other team members to fail.
+
+        value of 0 disables ARP monitoring. The default value is 0.
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').set_arp_interval = '100'
+        >>> BondIf('bond0').set_arp_interval('100')
         """
-        return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
-                                 .format(self._ifname), time)
+        if int(interval) == 0:
+            """
+            Specifies the MII link monitoring frequency in milliseconds.
+            This determines how often the link state of each slave is
+            inspected for link failures. A value of zero disables MII
+            link monitoring. A value of 100 is a good starting point.
+            """
+            return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
+                                     .format(self._ifname), interval)
+        else:
+            return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
+                                     .format(self._ifname), interval)
 
     def get_arp_ip_target(self):
         """
@@ -1171,45 +1189,6 @@ class BondIf(VLANIf):
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
                                  .format(self._ifname), target)
-
-    @property
-    def miimon(self):
-        """
-        Specifies the MII link monitoring frequency in milliseconds.
-        This determines how often the link state of each slave is
-        inspected for link failures. A value of zero disables MII
-        link monitoring. A value of 100 is a good starting point.
-
-        The default value is 0.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').miimon
-        '250'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bonding/miimon'
-                                .format(self._ifname))
-
-
-    @miimon.setter
-    def miimon(self, time):
-        """
-        Specifies the MII link monitoring frequency in milliseconds.
-        This determines how often the link state of each slave is
-        inspected for link failures. A value of zero disables MII
-        link monitoring. A value of 100 is a good starting point.
-
-        The default value is 0.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').miimon = 250
-        >>> BondIf('bond0').miimon
-        '250'
-        """
-        return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
-                                 .format(self._ifname), time)
-
 
     def add_port(self, interface):
         """

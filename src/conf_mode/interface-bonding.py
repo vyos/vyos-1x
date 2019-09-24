@@ -345,11 +345,8 @@ def apply(bond):
             b.del_port(intf)
 
         # ARP link monitoring frequency, reset miimon when arp-montior is inactive
-        if bond['arp_mon_intvl'] == 0:
-            # reset miimon to default
-            b.miimon = 250
-        else:
-            b.set_arp_interval(bond['arp_mon_intvl'])
+        # this is done inside BondIf automatically
+        b.set_arp_interval(bond['arp_mon_intvl'])
 
         # ARP monitor targets need to be synchronized between sysfs and CLI.
         # Unfortunately an address can't be send twice to sysfs as this will
