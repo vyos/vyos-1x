@@ -349,7 +349,7 @@ def apply(bond):
             # reset miimon to default
             b.miimon = 250
         else:
-            b.arp_interval = bond['arp_mon_intvl']
+            b.set_arp_interval(bond['arp_mon_intvl'])
 
         # ARP monitor targets need to be synchronized between sysfs and CLI.
         # Unfortunately an address can't be send twice to sysfs as this will
