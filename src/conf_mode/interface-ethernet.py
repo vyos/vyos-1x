@@ -71,7 +71,7 @@ def apply_vlan_config(vlan, config):
     # ignore link state changes
     vlan.link_detect = config['disable_link_detect']
     # Maximum Transmission Unit (MTU)
-    vlan.mtu = config['mtu']
+    vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
         vlan.mac = config['mac']
@@ -296,7 +296,7 @@ def apply(eth):
             e.mac = eth['hw_id']
 
         # Maximum Transmission Unit (MTU)
-        e.mtu = eth['mtu']
+        e.set_mtu(eth['mtu'])
 
         # GRO (generic receive offload)
         e.set_gro(eth['offload_gro'])

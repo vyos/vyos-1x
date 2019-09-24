@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 
@@ -90,7 +88,7 @@ def apply_vlan_config(vlan, config):
     # ignore link state changes
     vlan.link_detect = config['disable_link_detect']
     # Maximum Transmission Unit (MTU)
-    vlan.mtu = config['mtu']
+    vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
         vlan.mac = config['mac']
@@ -395,7 +393,7 @@ def apply(bond):
         # Bonding policy
         b.mode = bond['mode']
         # Maximum Transmission Unit (MTU)
-        b.mtu = bond['mtu']
+        b.set_mtu(bond['mtu'])
 
         # Primary device interface
         if bond['primary']:

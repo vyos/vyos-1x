@@ -145,28 +145,26 @@ class Interface:
         cmd = 'ip link del dev {}'.format(self._ifname)
         self._cmd(cmd)
 
-    @property
-    def mtu(self):
+    def get_mtu(self):
         """
         Get/set interface mtu in bytes.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mtu
+        >>> Interface('eth0').get_mtu()
         '1500'
         """
         return self._read_sysfs('/sys/class/net/{}/mtu'
                                 .format(self._ifname))
 
-    @mtu.setter
-    def mtu(self, mtu):
+    def set_mtu(self, mtu):
         """
         Get/set interface mtu in bytes.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mtu = 1400
-        >>> Interface('eth0').mtu
+        >>> Interface('eth0').set_mtu(1400)
+        >>> Interface('eth0').get_mtu()
         '1400'
         """
         if mtu < 68 or mtu > 9000:

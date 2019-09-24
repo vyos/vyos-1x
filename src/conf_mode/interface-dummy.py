@@ -13,10 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-from os import environ
+import os
+
 from copy import deepcopy
 from sys import exit
 
@@ -40,7 +39,7 @@ def get_config():
 
     # determine tagNode instance
     try:
-        dummy['intf'] = environ['VYOS_TAGNODE_VALUE']
+        dummy['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
