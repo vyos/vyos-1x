@@ -380,7 +380,7 @@ def apply(bond):
         # Bonding transmit hash policy
         b.xmit_hash_policy = bond['hash_policy']
         # configure ARP cache timeout in milliseconds
-        b.arp_cache_tmp = bond['ip_arp_cache_tmo']
+        b.set_arp_cache_tmo(bond['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
         b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface

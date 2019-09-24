@@ -208,29 +208,15 @@ class Interface:
         cmd = 'ip link set dev {} address {}'.format(self._ifname, mac)
         self._cmd(cmd)
 
-    @property
-    def arp_cache_tmo(self):
-        """
-        Get configured ARP cache timeout value from interface in seconds.
-        Internal Kernel representation is in milliseconds.
 
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').arp_cache_tmo
-        '30'
-        """
-        return (self._read_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
-                                 .format(self._ifname)) / 1000)
-
-    @arp_cache_tmo.setter
-    def arp_cache_tmo(self, tmo):
+    def set_arp_cache_tmo(self, tmo):
         """
         Set ARP cache timeout value in seconds. Internal Kernel representation
         is in milliseconds.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').arp_cache_tmo = '40'
+        >>> Interface('eth0').set_arp_cache_tmo(40)
         """
         return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
                                  .format(self._ifname), (int(tmo) * 1000))

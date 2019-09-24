@@ -282,7 +282,7 @@ def apply(eth):
         # disable ethernet flow control (pause frames)
         e.set_flow_control(eth['flow_control'])
         # configure ARP cache timeout in milliseconds
-        e.arp_cache_tmo = eth['ip_arp_cache_tmo']
+        e.set_arp_cache_tmo(eth['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
         e.set_proxy_arp(eth['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface

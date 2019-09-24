@@ -168,7 +168,7 @@ def apply(vxlan):
         v.set_mtu(vxlan['mtu'])
 
         # configure ARP cache timeout in milliseconds
-        v.arp_cache_tmp = vxlan['ip_arp_cache_tmo']
+        v.set_arp_cache_tmo(vxlan['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
 

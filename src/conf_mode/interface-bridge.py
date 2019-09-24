@@ -236,7 +236,7 @@ def apply(bridge):
 
             i = Interface(member['name'])
             # configure ARP cache timeout
-            i.arp_cache_tmo = bridge['arp_cache_tmo']
+            i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
             # ignore link state changes
             i.set_link_detect(bridge['disable_link_detect'])
 
