@@ -163,7 +163,7 @@ def apply(vxlan):
         # Finally create the new interface
         v = VXLANIf(vxlan['intf'], config=conf)
         # update interface description used e.g. by SNMP
-        v.ifalias = vxlan['description']
+        v.set_alias(vxlan['description'])
         # Maximum Transfer Unit (MTU)
         v.set_mtu(vxlan['mtu'])
 

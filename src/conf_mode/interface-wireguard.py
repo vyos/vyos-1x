@@ -210,7 +210,7 @@ def apply(c):
     # ifalias for snmp from description
     descr_eff = c_eff.return_effective_value(ifname + ' description')
     if descr_eff != c[ifname]['descr']:
-        intfc.ifalias = str(c[ifname]['descr'])
+        intfc.set_alias(str(c[ifname]['descr']))
 
     # peer deletion
     peer_eff = c_eff.list_effective_nodes(ifname + ' peer')

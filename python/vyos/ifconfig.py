@@ -261,36 +261,17 @@ class Interface:
         else:
             raise ValueError("Value out of range")
 
-    @property
-    def ifalias(self):
+    def set_alias(self, ifalias=None):
         """
-        Get/set interface alias name
-
-        Example:
-
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').ifalias
-        ''
-        """
-        return self._read_sysfs('/sys/class/net/{}/ifalias'
-                                .format(self._ifname))
-
-    @ifalias.setter
-    def ifalias(self, ifalias=None):
-        """
-        Get/set interface alias name
+        Set interface alias name used by e.g. SNMP
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').ifalias = 'VyOS upstream interface'
-        >>> Interface('eth0').ifalias
-        'VyOS upstream interface'
+        >>> Interface('eth0').set_alias('VyOS upstream interface')
 
-        to clear interface alias e.g. delete it use:
+        to clear alias e.g. delete it use:
 
-        >>> Interface('eth0').ifalias = ''
-        >>> Interface('eth0').ifalias
-        ''
+        >>> Interface('eth0').set_ifalias('')
         """
         if not ifalias:
             # clear interface alias

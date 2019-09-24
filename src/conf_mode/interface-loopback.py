@@ -75,8 +75,7 @@ def apply(loopback):
     lo = LoopbackIf(loopback['intf'])
     if not loopback['deleted']:
         # update interface description used e.g. within SNMP
-        # update interface description used e.g. within SNMP
-        lo.ifalias = loopback['description']
+        lo.set_alias(loopback['description'])
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

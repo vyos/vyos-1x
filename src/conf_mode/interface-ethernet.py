@@ -67,7 +67,7 @@ def apply_vlan_config(vlan, config):
         raise TypeError()
 
     # update interface description used e.g. within SNMP
-    vlan.ifalias = config['description']
+    vlan.set_alias(config['description'])
     # ignore link state changes
     vlan.set_link_detect(config['disable_link_detect'])
     # Maximum Transmission Unit (MTU)
@@ -271,7 +271,7 @@ def apply(eth):
         e.remove()
     else:
         # update interface description used e.g. within SNMP
-        e.ifalias = eth['description']
+        e.set_alias(eth['description'])
 
         #
         # missing DHCP/DHCPv6 options go here

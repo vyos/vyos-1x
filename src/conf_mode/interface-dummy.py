@@ -78,28 +78,28 @@ def generate(dummy):
     return None
 
 def apply(dummy):
-    du = DummyIf(dummy['intf'])
+    d = DummyIf(dummy['intf'])
 
     # Remove dummy interface
     if dummy['deleted']:
-        du.remove()
+        d.remove()
     else:
         # enable interface
-        du.state = 'up'
+        d.state = 'up'
         # update interface description used e.g. within SNMP
-        du.ifalias = dummy['description']
+        d.set_alias(dummy['description'])
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
         # - newly addresses will be added second
         for addr in dummy['address_remove']:
-            du.del_addr(addr)
+            d.del_addr(addr)
         for addr in dummy['address']:
-            du.add_addr(addr)
+            d.add_addr(addr)
 
         # disable interface on demand
         if dummy['disable']:
-            du.state = 'down'
+            d.state = 'down'
 
     return None
 

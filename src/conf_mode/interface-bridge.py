@@ -201,7 +201,7 @@ def apply(bridge):
         # enable or disable IGMP querier
         br.set_multicast_querier(bridge['igmp_querier'])
         # update interface description used e.g. within SNMP
-        br.ifalias = bridge['description']
+        br.set_alias(bridge['description'])
 
         # Change interface MAC address
         if bridge['mac']:
