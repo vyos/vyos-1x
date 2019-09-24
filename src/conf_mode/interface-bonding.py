@@ -384,7 +384,7 @@ def apply(bond):
         # Enable proxy-arp on this interface
         b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
-        b.proxy_arp_pvlan = bond['ip_proxy_arp_pvlan']
+        b.set_proxy_arp_pvlan(bond['ip_proxy_arp_pvlan'])
 
         # Change interface MAC address
         if bond['mac']:

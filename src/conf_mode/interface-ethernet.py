@@ -286,7 +286,7 @@ def apply(eth):
         # Enable proxy-arp on this interface
         e.set_proxy_arp(eth['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
-        e.proxy_arp_pvlan = eth['ip_proxy_arp_pvlan']
+        e.set_proxy_arp_pvlan(eth['ip_proxy_arp_pvlan'])
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed

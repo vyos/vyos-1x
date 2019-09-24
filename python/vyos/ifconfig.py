@@ -328,8 +328,7 @@ class Interface:
         else:
             raise ValueError("Value out of range")
 
-    @property
-    def proxy_arp_pvlan(self):
+    def set_proxy_arp_pvlan(self, enable):
         """
         Private VLAN proxy arp.
         Basically allow proxy arp replies back to the same interface
@@ -351,38 +350,7 @@ class Interface:
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp_pvlan
-        '0'
-        """
-        return self._read_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp_pvlan'
-                                .format(self._ifname))
-
-    @proxy_arp_pvlan.setter
-    def proxy_arp_pvlan(self, enable):
-        """
-        Private VLAN proxy arp.
-        Basically allow proxy arp replies back to the same interface
-        (from which the ARP request/solicitation was received).
-
-        This is done to support (ethernet) switch features, like RFC
-        3069, where the individual ports are NOT allowed to
-        communicate with each other, but they are allowed to talk to
-        the upstream router.  As described in RFC 3069, it is possible
-        to allow these hosts to communicate through the upstream
-        router by proxy_arp'ing. Don't need to be used together with
-        proxy_arp.
-
-        This technology is known by different names:
-        In RFC 3069 it is called VLAN Aggregation.
-        Cisco and Allied Telesyn call it Private VLAN.
-        Hewlett-Packard call it Source-Port filtering or port-isolation.
-        Ericsson call it MAC-Forced Forwarding (RFC Draft).
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp_pvlan = 1
-        >>> Interface('eth0').proxy_arp_pvlan
-        '1'
+        >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp_pvlan'
