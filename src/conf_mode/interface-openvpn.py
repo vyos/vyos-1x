@@ -29,8 +29,9 @@ from pwd import getpwnam
 from subprocess import Popen, PIPE
 from time import sleep
 
-from vyos.config import Config
 from vyos import ConfigError
+from vyos.config import Config
+from vyos.ifconfig import Interface
 from vyos.validate import is_addr_assigned
 
 user = 'openvpn'
@@ -899,6 +900,13 @@ def apply(openvpn):
 
     # execute assembled command
     subprocess_cmd(cmd)
+
+    # better late then sorry ... but we can only set interface alias after
+    # OpenVPN has been launched and created the interface
+    while openvpn['intf'] not in interfaces():
+        sleep(0.250) # 250ms
+    Interface(openvpn['intf']).set_alias(openvpn['description'])
+
     return None
 
 
