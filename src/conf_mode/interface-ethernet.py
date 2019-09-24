@@ -67,20 +67,20 @@ def apply_vlan_config(vlan, config):
         raise TypeError()
 
     # update interface description used e.g. within SNMP
-    vlan.ifalias = config['description']
+    vlan.set_alias(config['description'])
     # ignore link state changes
-    vlan.link_detect = config['disable_link_detect']
+    vlan.set_link_detect(config['disable_link_detect'])
     # Maximum Transmission Unit (MTU)
-    vlan.mtu = config['mtu']
+    vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
-        vlan.mac = config['mac']
+        vlan.set_mac(config['mac'])
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.state = 'down'
+        vlan.set_state('down')
     else:
-        vlan.state = 'up'
+        vlan.set_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first
@@ -271,32 +271,32 @@ def apply(eth):
         e.remove()
     else:
         # update interface description used e.g. within SNMP
-        e.ifalias = eth['description']
+        e.set_alias(eth['description'])
 
         #
         # missing DHCP/DHCPv6 options go here
         #
 
         # ignore link state changes
-        e.link_detect = eth['disable_link_detect']
+        e.set_link_detect(eth['disable_link_detect'])
         # disable ethernet flow control (pause frames)
         e.set_flow_control(eth['flow_control'])
         # configure ARP cache timeout in milliseconds
-        e.arp_cache_tmo = eth['ip_arp_cache_tmo']
+        e.set_arp_cache_tmo(eth['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
-        e.proxy_arp = eth['ip_proxy_arp']
+        e.set_proxy_arp(eth['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
-        e.proxy_arp_pvlan = eth['ip_proxy_arp_pvlan']
+        e.set_proxy_arp_pvlan(eth['ip_proxy_arp_pvlan'])
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed
         if eth['mac']:
-            e.mac = eth['mac']
+            e.set_mac(eth['mac'])
         else:
-            e.mac = eth['hw_id']
+            e.set_mac(eth['hw_id'])
 
         # Maximum Transmission Unit (MTU)
-        e.mtu = eth['mtu']
+        e.set_mtu(eth['mtu'])
 
         # GRO (generic receive offload)
         e.set_gro(eth['offload_gro'])
@@ -316,6 +316,12 @@ def apply(eth):
         # Set physical interface speed and duplex
         e.set_speed_duplex(eth['speed'], eth['duplex'])
 
+        # Enable/Disable interface
+        if eth['disable']:
+            e.set_state('down')
+        else:
+            e.set_state('up')
+
         # Configure interface address(es)
         # - not longer required addresses get removed first
         # - newly addresses will be added second
@@ -323,12 +329,6 @@ def apply(eth):
             e.del_addr(addr)
         for addr in eth['address']:
             e.add_addr(addr)
-
-        # Enable/Disable interface
-        if eth['disable']:
-            e.state = 'down'
-        else:
-            e.state = 'up'
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in eth['vif_s_remove']:

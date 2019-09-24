@@ -13,10 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-from os import environ
+import os
+
 from copy import deepcopy
 from sys import exit
 
@@ -40,7 +39,7 @@ def get_config():
 
     # determine tagNode instance
     try:
-        dummy['intf'] = environ['VYOS_TAGNODE_VALUE']
+        dummy['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
@@ -79,28 +78,28 @@ def generate(dummy):
     return None
 
 def apply(dummy):
-    du = DummyIf(dummy['intf'])
+    d = DummyIf(dummy['intf'])
 
     # Remove dummy interface
     if dummy['deleted']:
-        du.remove()
+        d.remove()
     else:
-        # enable interface
-        du.state = 'up'
         # update interface description used e.g. within SNMP
-        du.ifalias = dummy['description']
+        d.set_alias(dummy['description'])
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
         # - newly addresses will be added second
         for addr in dummy['address_remove']:
-            du.del_addr(addr)
+            d.del_addr(addr)
         for addr in dummy['address']:
-            du.add_addr(addr)
+            d.add_addr(addr)
 
         # disable interface on demand
         if dummy['disable']:
-            du.state = 'down'
+            d.set_state('down')
+        else
+            d.set_state('up')
 
     return None
 

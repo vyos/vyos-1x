@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 import re
@@ -31,8 +29,9 @@ from pwd import getpwnam
 from subprocess import Popen, PIPE
 from time import sleep
 
-from vyos.config import Config
 from vyos import ConfigError
+from vyos.config import Config
+from vyos.ifconfig import Interface
 from vyos.validate import is_addr_assigned
 
 user = 'openvpn'
@@ -580,7 +579,7 @@ def get_config():
     # Minimum required TLS version
     if conf.exists('tls tls-version-min'):
          openvpn['tls_version_min'] = conf.return_value('tls tls-version-min')
-    
+
     if conf.exists('shared-secret-key-file'):
         openvpn['shared_secret_file'] = conf.return_value('shared-secret-key-file')
 
@@ -736,7 +735,7 @@ def verify(openvpn):
         if openvpn['tls_auth']:
             if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['tls_auth']):
                 raise ConfigError('Specified auth-file "{}" is invalid'.format(openvpn['tls_auth']))
-        
+
         if openvpn['tls_cert']:
             if not checkCertHeader('-----BEGIN CERTIFICATE-----', openvpn['tls_cert']):
                 raise ConfigError('Specified cert-file "{}" is invalid'.format(openvpn['tls_cert']))
@@ -901,6 +900,13 @@ def apply(openvpn):
 
     # execute assembled command
     subprocess_cmd(cmd)
+
+    # better late then sorry ... but we can only set interface alias after
+    # OpenVPN has been launched and created the interface
+    while openvpn['intf'] not in interfaces():
+        sleep(0.250) # 250ms
+    Interface(openvpn['intf']).set_alias(openvpn['description'])
+
     return None
 
 

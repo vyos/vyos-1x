@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 
@@ -86,20 +84,20 @@ def apply_vlan_config(vlan, config):
         raise TypeError()
 
     # update interface description used e.g. within SNMP
-    vlan.ifalias = config['description']
+    vlan.set_alias(config['description'])
     # ignore link state changes
-    vlan.link_detect = config['disable_link_detect']
+    vlan.set_link_detect(config['disable_link_detect'])
     # Maximum Transmission Unit (MTU)
-    vlan.mtu = config['mtu']
+    vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
-        vlan.mac = config['mac']
+        vlan.set_mac(config['mac'])
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.state = 'down'
+        vlan.set_state('down')
     else:
-        vlan.state = 'up'
+        vlan.set_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first
@@ -339,7 +337,7 @@ def apply(bond):
     else:
         # Some parameters can not be changed when the bond is up.
         # Always disable the bond prior changing anything
-        b.state = 'down'
+        b.set_state('down')
 
         # The bonding mode can not be changed when there are interfaces enslaved
         # to this bond, thus we will free all interfaces from the bond first!
@@ -347,11 +345,8 @@ def apply(bond):
             b.del_port(intf)
 
         # ARP link monitoring frequency, reset miimon when arp-montior is inactive
-        if bond['arp_mon_intvl'] == 0:
-            # reset miimon to default
-            b.miimon = 250
-        else:
-            b.arp_interval = bond['arp_mon_intvl']
+        # this is done inside BondIf automatically
+        b.set_arp_interval(bond['arp_mon_intvl'])
 
         # ARP monitor targets need to be synchronized between sysfs and CLI.
         # Unfortunately an address can't be send twice to sysfs as this will
@@ -362,44 +357,44 @@ def apply(bond):
         # from the kernel side this looks valid to me. We won't run into an error
         # when a user added manual adresses which would result in having more
         # then 16 adresses in total.
-        arp_tgt_addr = list(map(str, b.arp_ip_target.split()))
+        arp_tgt_addr = list(map(str, b.get_arp_ip_target().split()))
         for addr in arp_tgt_addr:
-            b.arp_ip_target = '-' + addr
+            b.set_arp_ip_target('-' + addr)
 
         # Add configured ARP target addresses
         for addr in bond['arp_mon_tgt']:
-            b.arp_ip_target = '+' + addr
+            b.set_arp_ip_target('+' + addr)
 
         # update interface description used e.g. within SNMP
-        b.ifalias = bond['description']
+        b.set_alias(bond['description'])
 
         #
         # missing DHCP/DHCPv6 options go here
         #
 
         # ignore link state changes
-        b.link_detect = bond['disable_link_detect']
+        b.set_link_detect(bond['disable_link_detect'])
         # Bonding transmit hash policy
-        b.xmit_hash_policy = bond['hash_policy']
+        b.set_hash_policy(bond['hash_policy'])
         # configure ARP cache timeout in milliseconds
-        b.arp_cache_tmp = bond['ip_arp_cache_tmo']
+        b.set_arp_cache_tmo(bond['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
-        b.proxy_arp = bond['ip_proxy_arp']
+        b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
-        b.proxy_arp_pvlan = bond['ip_proxy_arp_pvlan']
+        b.set_proxy_arp_pvlan(bond['ip_proxy_arp_pvlan'])
 
         # Change interface MAC address
         if bond['mac']:
-            b.mac = bond['mac']
+            b.set_mac(bond['mac'])
 
         # Bonding policy
-        b.mode = bond['mode']
+        b.set_mode(bond['mode'])
         # Maximum Transmission Unit (MTU)
-        b.mtu = bond['mtu']
+        b.set_mtu(bond['mtu'])
 
         # Primary device interface
         if bond['primary']:
-            b.primary = bond['primary']
+            b.set_primary(bond['primary'])
 
         # Add (enslave) interfaces to bond
         for intf in bond['member']:
@@ -409,7 +404,7 @@ def apply(bond):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not bond['disable']:
-            b.state = 'up'
+            b.set_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

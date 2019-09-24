@@ -13,9 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-from os import environ
+import os
+
 from sys import exit
 from copy import deepcopy
 
@@ -48,7 +48,7 @@ def get_config():
 
     # determine tagNode instance
     try:
-        vxlan['intf'] = environ['VYOS_TAGNODE_VALUE']
+        vxlan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
@@ -127,7 +127,7 @@ def verify(vxlan):
     if vxlan['link']:
         # VXLAN adds a 50 byte overhead - we need to check the underlaying MTU
         # if our configured MTU is at least 50 bytes less
-        underlay_mtu = int(Interface(vxlan['link']).mtu)
+        underlay_mtu = int(Interface(vxlan['link']).get_mtu())
         if underlay_mtu < (vxlan['mtu'] + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               'MTU is to small ({})'.format(underlay_mtu))
@@ -163,14 +163,14 @@ def apply(vxlan):
         # Finally create the new interface
         v = VXLANIf(vxlan['intf'], config=conf)
         # update interface description used e.g. by SNMP
-        v.ifalias = vxlan['description']
+        v.set_alias(vxlan['description'])
         # Maximum Transfer Unit (MTU)
-        v.mtu = vxlan['mtu']
+        v.set_mtu(vxlan['mtu'])
 
         # configure ARP cache timeout in milliseconds
-        v.arp_cache_tmp = vxlan['ip_arp_cache_tmo']
+        v.set_arp_cache_tmo(vxlan['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
-        v.proxy_arp = vxlan['ip_proxy_arp']
+        v.set_proxy_arp(vxlan['ip_proxy_arp'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the
@@ -182,7 +182,7 @@ def apply(vxlan):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not vxlan['disable']:
-            v.state='up'
+            v.set_state('up')
 
     return None
 
