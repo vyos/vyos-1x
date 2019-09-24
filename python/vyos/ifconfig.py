@@ -1133,8 +1133,7 @@ class BondIf(VLANIf):
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
                                  .format(self._ifname), time)
 
-    @property
-    def arp_ip_target(self):
+    def get_arp_ip_target(self):
         """
         Specifies the IP addresses to use as ARP monitoring peers when
         arp_interval is > 0. These are the targets of the ARP request sent to
@@ -1147,14 +1146,13 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').arp_ip_target
+        >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
         return self._read_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
                                 .format(self._ifname))
 
-    @arp_ip_target.setter
-    def arp_ip_target(self, target):
+    def set_arp_ip_target(self, target):
         """
         Specifies the IP addresses to use as ARP monitoring peers when
         arp_interval is > 0. These are the targets of the ARP request sent to
@@ -1167,8 +1165,8 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').arp_ip_target = '192.0.2.1'
-        >>> BondIf('bond0').arp_ip_target
+        >>> BondIf('bond0').set_arp_ip_target('192.0.2.1')
+        >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'

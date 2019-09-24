@@ -360,13 +360,13 @@ def apply(bond):
         # from the kernel side this looks valid to me. We won't run into an error
         # when a user added manual adresses which would result in having more
         # then 16 adresses in total.
-        arp_tgt_addr = list(map(str, b.arp_ip_target.split()))
+        arp_tgt_addr = list(map(str, b.get_arp_ip_target().split()))
         for addr in arp_tgt_addr:
-            b.arp_ip_target = '-' + addr
+            b.set_arp_ip_target('-' + addr)
 
         # Add configured ARP target addresses
         for addr in bond['arp_mon_tgt']:
-            b.arp_ip_target = '+' + addr
+            b.set_arp_ip_target('+' + addr)
 
         # update interface description used e.g. within SNMP
         b.set_alias(bond['description'])
