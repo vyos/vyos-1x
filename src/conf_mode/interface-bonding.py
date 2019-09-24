@@ -91,7 +91,7 @@ def apply_vlan_config(vlan, config):
     vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
-        vlan.mac = config['mac']
+        vlan.set_mac(config['mac'])
 
     # enable/disable VLAN interface
     if config['disable']:
@@ -388,7 +388,7 @@ def apply(bond):
 
         # Change interface MAC address
         if bond['mac']:
-            b.mac = bond['mac']
+            b.set_mac(bond['mac'])
 
         # Bonding policy
         b.mode = bond['mode']

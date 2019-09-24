@@ -173,29 +173,13 @@ class Interface:
         return self._write_sysfs('/sys/class/net/{}/mtu'
                                  .format(self._ifname), mtu)
 
-    @property
-    def mac(self):
+    def set_mac(self, mac):
         """
-        Get/set interface mac address
+        Set interface MAC (Media Access Contrl) address to given value.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mac
-        '00:0c:29:11:aa:cc'
-        """
-        return self._read_sysfs('/sys/class/net/{}/address'
-                                .format(self._ifname))
-
-    @mac.setter
-    def mac(self, mac):
-        """
-        Get/set interface mac address
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mac = '00:90:43:fe:fe:1b'
-        >>> Interface('eth0').mac
-        '00:90:43:fe:fe:1b'
+        >>> Interface('eth0').set_mac('00:50:ab:cd:ef:01')
         """
         # on interface removal (ethernet) an empty string is passed - ignore it
         if not mac:

@@ -74,7 +74,7 @@ def apply_vlan_config(vlan, config):
     vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
-        vlan.mac = config['mac']
+        vlan.set_mac(config['mac'])
 
     # enable/disable VLAN interface
     if config['disable']:
@@ -291,9 +291,9 @@ def apply(eth):
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed
         if eth['mac']:
-            e.mac = eth['mac']
+            e.set_mac(eth['mac'])
         else:
-            e.mac = eth['hw_id']
+            e.set_mac(eth['hw_id'])
 
         # Maximum Transmission Unit (MTU)
         e.set_mtu(eth['mtu'])

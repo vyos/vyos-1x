@@ -205,7 +205,7 @@ def apply(bridge):
 
         # Change interface MAC address
         if bridge['mac']:
-            br.mac = bridge['mac']
+            br.set_mac(bridge['mac'])
 
         # remove interface from bridge
         for intf in bridge['member_remove']:
