@@ -95,9 +95,9 @@ def apply_vlan_config(vlan, config):
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.state = 'down'
+        vlan.set_state('down')
     else:
-        vlan.state = 'up'
+        vlan.set_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first
@@ -337,7 +337,7 @@ def apply(bond):
     else:
         # Some parameters can not be changed when the bond is up.
         # Always disable the bond prior changing anything
-        b.state = 'down'
+        b.set_state('down')
 
         # The bonding mode can not be changed when there are interfaces enslaved
         # to this bond, thus we will free all interfaces from the bond first!
@@ -407,7 +407,7 @@ def apply(bond):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not bond['disable']:
-            b.state = 'up'
+            b.set_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

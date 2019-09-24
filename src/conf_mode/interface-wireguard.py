@@ -173,11 +173,11 @@ def apply(c):
     # interface state
     if c[ifname]['state'] == 'disable':
         sl.syslog(sl.LOG_NOTICE, "disable interface " + ifname)
-        intfc.state = 'down'
+        intfc.set_state('down')
     else:
-        if not intfc.state == 'up':
+        if not intfc.get_state() == 'up':
             sl.syslog(sl.LOG_NOTICE, "enable interface " + ifname)
-            intfc.state = 'up'
+            intfc.set_state('up')
 
     # IP address
     if not c_eff.exists_effective(ifname + ' address'):

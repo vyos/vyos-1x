@@ -60,7 +60,6 @@ class Interface:
         >>> i = Interface('eth0')
         """
         self._ifname = str(ifname)
-        self._state = 'down'
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(self._ifname))
@@ -266,34 +265,30 @@ class Interface:
         self._write_sysfs('/sys/class/net/{}/ifalias'
                           .format(self._ifname), ifalias)
 
-    @property
-    def state(self):
+    def get_state(self):
         """
         Enable (up) / Disable (down) an interface
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').state
+        >>> Interface('eth0').get_state()
         'up'
         """
         return self._read_sysfs('/sys/class/net/{}/operstate'
                                 .format(self._ifname))
 
-    @state.setter
-    def state(self, state):
+    def set_state(self, state):
         """
         Enable (up) / Disable (down) an interface
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').state = 'down'
-        >>> Interface('eth0').state
+        >>> Interface('eth0').set_state('down')
+        >>> Interface('eth0').get_state()
         'down'
         """
         if state not in ['up', 'down']:
             raise ValueError('state must be "up" or "down"')
-
-        self._state = state
 
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
@@ -468,7 +463,7 @@ class Interface:
         with open(self._dhcp_cfg_file, 'w') as f:
             f.write(dhcp_text)
 
-        if self._state == 'up':
+        if self.get_state() == 'up':
             cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
                 self._dhcp_pid_file
             cmd += ' --exec /sbin/dhclient --'
@@ -546,7 +541,7 @@ class Interface:
         with open(self._dhcpv6_cfg_file, 'w') as f:
             f.write(dhcpv6_text)
 
-        if self._state == 'up':
+        if self.get_state() == 'up':
             # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
             #
             # wee need to wait for IPv6 DAD to finish once and interface is added
@@ -1115,7 +1110,7 @@ class BondIf(VLANIf):
         for s in self.get_slaves():
             slave = {
                 'ifname' : s,
-                'state': Interface(s).state
+                'state': Interface(s).get_state()
             }
             slave_list.append(slave)
 
@@ -1126,7 +1121,7 @@ class BondIf(VLANIf):
         # physical interface
         for slave in slave_list:
              i = Interface(slave['ifname'])
-             i.state = slave['state']
+             i.set_state(slave['state'])
 
     @property
     def xmit_hash_policy(self):
@@ -1301,7 +1296,7 @@ class BondIf(VLANIf):
         # An interface can only be added to a bond if it is in 'down' state. If
         # interface is in 'up' state, the following Kernel error will  be thrown:
         # bond0: eth1 is up - this may be due to an out of date ifenslave.
-        Interface(interface).state = 'down'
+        Interface(interface).set_state('down')
 
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
                                  .format(self._ifname), '+' + interface)

@@ -84,8 +84,6 @@ def apply(dummy):
     if dummy['deleted']:
         d.remove()
     else:
-        # enable interface
-        d.state = 'up'
         # update interface description used e.g. within SNMP
         d.set_alias(dummy['description'])
 
@@ -99,7 +97,9 @@ def apply(dummy):
 
         # disable interface on demand
         if dummy['disable']:
-            d.state = 'down'
+            d.set_state('down')
+        else
+            d.set_state('up')
 
     return None
 

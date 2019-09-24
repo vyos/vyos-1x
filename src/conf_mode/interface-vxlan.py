@@ -182,7 +182,7 @@ def apply(vxlan):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not vxlan['disable']:
-            v.state='up'
+            v.set_state('up')
 
     return None
 

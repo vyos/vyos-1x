@@ -78,9 +78,9 @@ def apply_vlan_config(vlan, config):
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.state = 'down'
+        vlan.set_state('down')
     else:
-        vlan.state = 'up'
+        vlan.set_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first
@@ -318,9 +318,9 @@ def apply(eth):
 
         # Enable/Disable interface
         if eth['disable']:
-            e.state = 'down'
+            e.set_state('down')
         else:
-            e.state = 'up'
+            e.set_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
