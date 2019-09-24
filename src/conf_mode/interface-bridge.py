@@ -199,7 +199,7 @@ def apply(bridge):
         # turn stp on/off
         br.stp_state = bridge['stp']
         # enable or disable IGMP querier
-        br.multicast_querier = bridge['igmp_querier']
+        br.set_multicast_querier(bridge['igmp_querier'])
         # update interface description used e.g. within SNMP
         br.ifalias = bridge['description']
 

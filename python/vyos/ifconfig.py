@@ -909,21 +909,8 @@ class BridgeIf(Interface):
         else:
             raise ValueError("Value out of range")
 
-    @property
-    def multicast_querier(self):
-        """
-        Get bridge multicast querier membership state.
 
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').multicast_querier
-        '0'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bridge/multicast_querier'
-                                .format(self._ifname))
-
-    @multicast_querier.setter
-    def multicast_querier(self, enable):
+    def set_multicast_querier(self, enable):
         """
         Sets whether the bridge actively runs a multicast querier or not. When a
         bridge receives a 'multicast host membership' query from another network
@@ -934,13 +921,14 @@ class BridgeIf(Interface):
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').multicast_querier = 1
+        >>> BridgeIf('br0').set_multicast_querier(1)
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/sys/class/net/{}/bridge/multicast_querier'
                                      .format(self._ifname), enable)
         else:
             raise ValueError("Value out of range")
+
 
     def add_port(self, interface):
         """
