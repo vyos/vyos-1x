@@ -69,7 +69,7 @@ def apply_vlan_config(vlan, config):
     # update interface description used e.g. within SNMP
     vlan.ifalias = config['description']
     # ignore link state changes
-    vlan.link_detect = config['disable_link_detect']
+    vlan.set_link_detect(config['disable_link_detect'])
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
@@ -278,7 +278,7 @@ def apply(eth):
         #
 
         # ignore link state changes
-        e.link_detect = eth['disable_link_detect']
+        e.set_link_detect(eth['disable_link_detect'])
         # disable ethernet flow control (pause frames)
         e.set_flow_control(eth['flow_control'])
         # configure ARP cache timeout in milliseconds

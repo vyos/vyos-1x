@@ -86,7 +86,7 @@ def apply_vlan_config(vlan, config):
     # update interface description used e.g. within SNMP
     vlan.ifalias = config['description']
     # ignore link state changes
-    vlan.link_detect = config['disable_link_detect']
+    vlan.set_link_detect(config['disable_link_detect'])
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
@@ -376,7 +376,7 @@ def apply(bond):
         #
 
         # ignore link state changes
-        b.link_detect = bond['disable_link_detect']
+        b.set_link_detect(bond['disable_link_detect'])
         # Bonding transmit hash policy
         b.xmit_hash_policy = bond['hash_policy']
         # configure ARP cache timeout in milliseconds

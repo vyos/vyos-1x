@@ -235,23 +235,9 @@ class Interface:
         return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
                                  .format(self._ifname), (int(tmo) * 1000))
 
-    @property
-    def link_detect(self):
+    def set_link_detect(self, link_filter):
         """
-        How does the kernel act when receiving packets on 'down' interfaces
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').link_detect
-        '0'
-        """
-        return self._read_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
-                                .format(self._ifname))
-
-    @link_detect.setter
-    def link_detect(self, link_filter):
-        """
-        Konfigure kernel response in packets received on interfaces that are 'down'
+        Configure kernel response in packets received on interfaces that are 'down'
 
         0 - Allow packets to be received for the address on this interface
             even if interface is disabled or no carrier.
@@ -267,9 +253,9 @@ class Interface:
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').link_detect = '1'
+        >>> Interface('eth0').set_link_detect(1)
         """
-        if link_filter >= 0 and link_filter <= 2:
+        if int(link_filter) >= 0 and int(link_filter) <= 2:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
                                      .format(self._ifname), link_filter)
         else:
