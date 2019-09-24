@@ -1254,25 +1254,7 @@ class BondIf(VLANIf):
         return self._write_sysfs('/sys/class/net/{}/bonding/primary'
                                  .format(self._ifname), interface)
 
-    @property
-    def mode(self):
-        """
-        Specifies one of the bonding policies. The default is balance-rr
-        (round robin).
-
-        Possible values are: balance-rr (0), active-backup (1), balance-xor (2),
-        broadcast (3), 802.3ad (4), balance-tlb (5), balance-alb (6)
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').mode
-        'balance-rr'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bonding/mode'
-                                .format(self._ifname)).split()[0]
-
-    @mode.setter
-    def mode(self, mode):
+    def set_mode(self, mode):
         """
         Specifies one of the bonding policies. The default is balance-rr
         (round robin).
@@ -1285,9 +1267,7 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').mode = '802.3ad'
-        >>> BondIf('bond0').mode
-        '802.3ad'
+        >>> BondIf('bond0').set_mode('802.3ad')
         """
         if not mode in [
             'balance-rr', 'active-backup', 'balance-xor', 'broadcast',

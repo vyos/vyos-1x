@@ -388,7 +388,7 @@ def apply(bond):
             b.set_mac(bond['mac'])
 
         # Bonding policy
-        b.mode = bond['mode']
+        b.set_mode(bond['mode'])
         # Maximum Transmission Unit (MTU)
         b.set_mtu(bond['mtu'])
 
