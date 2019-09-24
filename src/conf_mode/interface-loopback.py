@@ -72,20 +72,20 @@ def generate(loopback):
     return None
 
 def apply(loopback):
-    lo = LoopbackIf(loopback['intf'])
-    if not loopback['deleted']:
+    l = LoopbackIf(loopback['intf'])
+    if loopback['deleted']:
+        l.remove()
+    else:
         # update interface description used e.g. within SNMP
-        lo.set_alias(loopback['description'])
+        l.set_alias(loopback['description'])
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
         # - newly addresses will be added second
+        for addr in loopback['address_remove']:
+            l.del_addr(addr)
         for addr in loopback['address']:
-            lo.add_addr(addr)
-
-    # remove interface address(es)
-    for addr in loopback['address_remove']:
-        lo.del_addr(addr)
+            l.add_addr(addr)
 
     return None
 

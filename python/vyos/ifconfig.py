@@ -680,6 +680,21 @@ class LoopbackIf(Interface):
     def __init__(self, ifname):
         super().__init__(ifname, type='loopback')
 
+    def remove(self):
+        """
+        Loopback interface can not be deleted from operating system. We can
+        only remove all assigned IP addresses.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = LoopbackIf('lo').remove()
+        """
+        # remove all assigned IP addresses from interface
+        for addr in self.get_addr():
+            self.del_addr(addr)
+
+        # question: do we also delerte the loopback address? 127.0.0.1/8
+
 
 class DummyIf(Interface):
 
