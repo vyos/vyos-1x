@@ -24,13 +24,17 @@ def getGitRepoURL() {
     return scm.userRemoteConfigs[0].url
 }
 
-// Returns true if this is a custom build launched on any project fork,
-// returns false if this is build from git@github.com:vyos/env.JOB_NAME
-// env.JOB_NAME is e.g. vyos-build or vyos-1x and so on ....
+def getGitRepoName() {
+    return getGitRepoURL().split('/').last()
+}
+
+// Returns true if this is a custom build launched on any project fork.
+// Returns false if this is build from git@github.com:vyos/<reponame>.
+// <reponame> can be e.g. vyos-1x.git or vyatta-op.git
 def isCustomBuild() {
     // GitHub organisation base URL
-    def gitURI = 'git@github.com:vyos/vyos-1x.git'
-    def httpURI = 'https://github.com/vyos/vyos-1x.git'
+    def gitURI = 'git@github.com:vyos/' + getGitRepoName()
+    def httpURI = 'https://github.com/vyos/' + getGitRepoName()
 
     return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
 }
@@ -40,7 +44,7 @@ def setDescription() {
 
     // build up the main description text
     def description = ""
-    description += "<h2>VyOS individual package build: vyos-1x</h2>"
+    description += "<h2>VyOS individual package build: " + getGitRepoName().replace('.git', '') + "</h2>"
 
     if (isCustomBuild()) {
         description += "<p style='border: 3px dashed red; width: 50%;'>"
