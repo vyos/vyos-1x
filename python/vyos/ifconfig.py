@@ -922,32 +922,6 @@ class EthernetIf(VLANIf):
         link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self._ifname))
         return os.path.basename(link)
 
-
-    def has_autoneg(self):
-        """
-        Not all drivers support autonegotiation.
-
-        returns True -> Autonegotiation is supported by driver
-                False -> Autonegotiation is not supported by driver
-
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.has_autoneg()
-        'True'
-        """
-        regex = 'Supports auto-negotiation:[ ]\w+'
-        tmp = self._cmd('/sbin/ethtool {}'.format(self._ifname))
-        tmp = re.search(regex, tmp.decode())
-
-        # Output is either 'Supports auto-negotiation: Yes' or
-        # 'Supports auto-negotiation: No'
-        if tmp.group().split(':')[1].lstrip() == "Yes":
-            return True
-        else:
-            return False
-
-
     def set_flow_control(self, enable):
         """
         Changes the pause parameters of the specified Ethernet device.
