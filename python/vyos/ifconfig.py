@@ -781,29 +781,14 @@ class BridgeIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname), (int(time) * 100))
 
-    @property
-    def hello_time(self):
-        """
-        Get bridge hello time in seconds. Internal Kernel representation
-        is in centiseconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').hello_time
-        '2'
-        """
-        return (self._read_sysfs('/sys/class/net/{}/bridge/hello_time'
-                                 .format(self._ifname)) / 100)
-
-    @hello_time.setter
-    def hello_time(self, time):
+    def set_hello_time(self, time):
         """
         Set bridge hello time in seconds. Internal Kernel representation
         is in centiseconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').hello_time = 2
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_hello_time(2)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname), (int(time) * 100))

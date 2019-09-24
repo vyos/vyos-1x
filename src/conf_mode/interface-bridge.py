@@ -191,7 +191,7 @@ def apply(bridge):
         # set bridge forward delay
         br.set_forward_delay(bridge['forwarding_delay'])
         # set hello time
-        br.hello_time = bridge['hello_time']
+        br.set_hello_time(bridge['hello_time'])
         # set max message age
         br.set_max_age(bridge['max_age'])
         # set bridge priority
