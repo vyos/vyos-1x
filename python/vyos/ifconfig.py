@@ -818,12 +818,22 @@ class VLANIf(Interface):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
-        # do we have sub interfaces (VLANs)?
-        # we apply a regex matching subinterfaces (indicated by a .) of a
-        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
-        # subinterfaces
+        # Do we have sub interfaces (VLANs)? We apply a regex matching
+        # subinterfaces (indicated by a .) of a parent interface.
+        #
+        # As interfaces need to be deleted "in order" starting from Q-in-Q
+        # we delete them first.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
-                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
+                        if re.match(self._ifname + r'(?:\.\d+)(?:\.\d+)', f)]
+
+        for vlan in vlan_ifs:
+            Interface(vlan).remove()
+
+        # After deleting all Q-in-Q interfaces delete other VLAN interfaces
+        # which probably acted as parent to Q-in-Q or have been regular 802.1q
+        # interface.
+        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
+                        if re.match(self._ifname + r'(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -897,8 +907,7 @@ class VLANIf(Interface):
         >>> i.del_vlan()
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
-        tmp = VLANIf(vlan_ifname)
-        tmp.remove()
+        VLANIf(vlan_ifname).remove()
 
 
 class EthernetIf(VLANIf):
