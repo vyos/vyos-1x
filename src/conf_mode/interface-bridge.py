@@ -20,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BridgeIf, Interface
+from vyos.ifconfig import BridgeIf, STPIf
 from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
@@ -229,16 +229,15 @@ def apply(bridge):
 
         # configure additional bridge member options
         for member in bridge['member']:
-            # set bridge port path cost
-            br.set_path_cost(member['name'], member['cost'])
-            # set bridge port path priority
-            br.set_path_priority(member['name'], member['priority'])
-
-            i = Interface(member['name'])
+            i = STPIf(member['name'])
             # configure ARP cache timeout
             i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
             # ignore link state changes
             i.set_link_detect(bridge['disable_link_detect'])
+            # set bridge port path cost
+            i.set_path_cost(member['cost'])
+            # set bridge port path priority
+            i.set_path_priority(member['priority'])
 
     return None
 

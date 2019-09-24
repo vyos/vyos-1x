@@ -641,6 +641,47 @@ class DummyIf(Interface):
         super().__init__(ifname, type='dummy')
 
 
+class STPIf(Interface):
+    """
+    A spanning-tree capable interface. This applies only to bridge port member
+    interfaces!
+    """
+    def __init__(self, ifname):
+        super().__init__(ifname)
+
+    def set_path_cost(self, cost):
+        """
+        Set interface path cost, only relevant for STP enabled interfaces
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_path_cost(4)
+        """
+        if not os.path.isfile('/sys/class/net/{}/brport/path_cost'
+                              .format(self._ifname)):
+            raise TypeError('{} is not a bridge port member'.format(self._ifname))
+
+        return self._write_sysfs('/sys/class/net/{}/brport/path_cost'
+                                 .format(self._ifname), cost)
+
+    def set_path_priority(self, priority):
+        """
+        Set interface path priority, only relevant for STP enabled interfaces
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_path_priority(4)
+        """
+        if not os.path.isfile('/sys/class/net/{}/brport/priority'
+                              .format(self._ifname)):
+            raise TypeError('{} is not a bridge port member'.format(self._ifname))
+
+        return self._write_sysfs('/sys/class/net/{}/brport/priority'
+                                 .format(self._ifname), priority)
+
+
 class BridgeIf(Interface):
 
     """
@@ -773,31 +814,6 @@ class BridgeIf(Interface):
         """
         cmd = 'ip link set dev {} nomaster'.format(interface)
         self._cmd(cmd)
-
-    def set_path_cost(self, interface, cost):
-        """
-        Set interface path cost, only relevant for STP enabled interfaces
-
-        Example:
-
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').path_cost(4)
-        """
-        return self._write_sysfs('/sys/class/net/{}/brif/{}/path_cost'
-                                 .format(self._ifname, interface), cost)
-
-    def set_path_priority(self, interface, priority):
-        """
-        Set interface path priority, only relevant for STP enabled interfaces
-
-        Example:
-
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').priority(4)
-        """
-        return self._write_sysfs('/sys/class/net/{}/brif/{}/priority'
-                                 .format(self._ifname, interface), priority)
-
 
 class VLANIf(Interface):
     """
