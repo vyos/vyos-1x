@@ -378,7 +378,7 @@ def apply(bond):
         # ignore link state changes
         b.set_link_detect(bond['disable_link_detect'])
         # Bonding transmit hash policy
-        b.xmit_hash_policy = bond['hash_policy']
+        b.set_hash_policy(bond['hash_policy'])
         # configure ARP cache timeout in milliseconds
         b.set_arp_cache_tmo(bond['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
