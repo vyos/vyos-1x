@@ -189,7 +189,7 @@ def apply(bridge):
         # set ageing time
         br.ageing_time = bridge['aging']
         # set bridge forward delay
-        br.forward_delay = bridge['forwarding_delay']
+        br.set_forward_delay(bridge['forwarding_delay'])
         # set hello time
         br.hello_time = bridge['hello_time']
         # set max message age

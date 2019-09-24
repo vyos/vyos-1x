@@ -769,29 +769,14 @@ class BridgeIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
                                  .format(self._ifname), time)
 
-    @property
-    def forward_delay(self):
-        """
-        Get bridge forwarding delay in seconds. Internal Kernel representation
-        is in centiseconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').ageing_time
-        '3'
-        """
-        return (self._read_sysfs('/sys/class/net/{}/bridge/forward_delay'
-                                 .format(self._ifname)) / 100)
-
-    @forward_delay.setter
-    def forward_delay(self, time):
+    def set_forward_delay(self, time):
         """
         Set bridge forwarding delay in seconds. Internal Kernel representation
         is in centiseconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').forward_delay = 15
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').forward_delay(15)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname), (int(time) * 100))
