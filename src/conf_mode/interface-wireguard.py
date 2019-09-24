@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import os
@@ -97,7 +95,7 @@ def get_config():
         if c.exists(ifname + ' mtu'):
             config_data[ifname]['mtu'] = c.return_value(ifname + ' mtu')
         if c.exists(ifname + ' private-key'):
-            config_data[ifname]['pk'] = "{0}/{1}/private.key".format(kdir,c.return_value(ifname + ' private-key')) 
+            config_data[ifname]['pk'] = "{0}/{1}/private.key".format(kdir,c.return_value(ifname + ' private-key'))
         if c.exists(ifname + ' peer'):
             for p in c.list_nodes(ifname + ' peer'):
                 if not c.exists(ifname + ' peer ' + p + ' disable'):
@@ -175,11 +173,11 @@ def apply(c):
     # interface state
     if c[ifname]['state'] == 'disable':
         sl.syslog(sl.LOG_NOTICE, "disable interface " + ifname)
-        intfc.state = 'down'
+        intfc.set_state('down')
     else:
-        if not intfc.state == 'up':
+        if not intfc.get_state() == 'up':
             sl.syslog(sl.LOG_NOTICE, "enable interface " + ifname)
-            intfc.state = 'up'
+            intfc.set_state('up')
 
     # IP address
     if not c_eff.exists_effective(ifname + ' address'):
@@ -204,15 +202,15 @@ def apply(c):
 
     # interface MTU
     if c[ifname]['mtu'] != 1420:
-        intfc.mtu = int(c[ifname]['mtu'])
+        intfc.set_mtu(int(c[ifname]['mtu']))
     else:
     # default is set to 1420 in config_data
-        intfc.mtu = int(c[ifname]['mtu'])
+        intfc.set_mtu(int(c[ifname]['mtu']))
 
     # ifalias for snmp from description
     descr_eff = c_eff.return_effective_value(ifname + ' description')
     if descr_eff != c[ifname]['descr']:
-        intfc.ifalias = str(c[ifname]['descr'])
+        intfc.set_alias(str(c[ifname]['descr']))
 
     # peer deletion
     peer_eff = c_eff.list_effective_nodes(ifname + ' peer')

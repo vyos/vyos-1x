@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 
@@ -22,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BridgeIf, Interface
+from vyos.ifconfig import BridgeIf, STPIf
 from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
@@ -187,27 +185,27 @@ def apply(bridge):
         br.remove()
     else:
         # enable interface
-        br.state = 'up'
+        br.set_state('up')
         # set ageing time
-        br.ageing_time = bridge['aging']
+        br.set_ageing_time(bridge['aging'])
         # set bridge forward delay
-        br.forward_delay = bridge['forwarding_delay']
+        br.set_forward_delay(bridge['forwarding_delay'])
         # set hello time
-        br.hello_time = bridge['hello_time']
+        br.set_hello_time(bridge['hello_time'])
         # set max message age
-        br.max_age = bridge['max_age']
+        br.set_max_age(bridge['max_age'])
         # set bridge priority
-        br.priority = bridge['priority']
+        br.set_priority(bridge['priority'])
         # turn stp on/off
-        br.stp_state = bridge['stp']
+        br.set_stp(bridge['stp'])
         # enable or disable IGMP querier
-        br.multicast_querier = bridge['igmp_querier']
+        br.set_multicast_querier(bridge['igmp_querier'])
         # update interface description used e.g. within SNMP
-        br.ifalias = bridge['description']
+        br.set_alias(bridge['description'])
 
         # Change interface MAC address
         if bridge['mac']:
-            br.mac = bridge['mac']
+            br.set_mac(bridge['mac'])
 
         # remove interface from bridge
         for intf in bridge['member_remove']:
@@ -219,7 +217,7 @@ def apply(bridge):
 
         # up/down interface
         if bridge['disable']:
-            br.state = 'down'
+            br.set_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
@@ -231,16 +229,15 @@ def apply(bridge):
 
         # configure additional bridge member options
         for member in bridge['member']:
-            # set bridge port cost
-            br.set_cost(member['name'], member['cost'])
-            # set bridge port priority
-            br.set_priority(member['name'], member['priority'])
-
-            i = Interface(member['name'])
+            i = STPIf(member['name'])
             # configure ARP cache timeout
-            i.arp_cache_tmo = bridge['arp_cache_tmo']
+            i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
             # ignore link state changes
-            i.link_detect = bridge['disable_link_detect']
+            i.set_link_detect(bridge['disable_link_detect'])
+            # set bridge port path cost
+            i.set_path_cost(member['cost'])
+            # set bridge port path priority
+            i.set_path_priority(member['priority'])
 
     return None
 

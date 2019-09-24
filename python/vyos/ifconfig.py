@@ -60,7 +60,6 @@ class Interface:
         >>> i = Interface('eth0')
         """
         self._ifname = str(ifname)
-        self._state = 'down'
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(self._ifname))
@@ -145,28 +144,26 @@ class Interface:
         cmd = 'ip link del dev {}'.format(self._ifname)
         self._cmd(cmd)
 
-    @property
-    def mtu(self):
+    def get_mtu(self):
         """
         Get/set interface mtu in bytes.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mtu
+        >>> Interface('eth0').get_mtu()
         '1500'
         """
         return self._read_sysfs('/sys/class/net/{}/mtu'
                                 .format(self._ifname))
 
-    @mtu.setter
-    def mtu(self, mtu):
+    def set_mtu(self, mtu):
         """
         Get/set interface mtu in bytes.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mtu = 1400
-        >>> Interface('eth0').mtu
+        >>> Interface('eth0').set_mtu(1400)
+        >>> Interface('eth0').get_mtu()
         '1400'
         """
         if mtu < 68 or mtu > 9000:
@@ -175,29 +172,13 @@ class Interface:
         return self._write_sysfs('/sys/class/net/{}/mtu'
                                  .format(self._ifname), mtu)
 
-    @property
-    def mac(self):
+    def set_mac(self, mac):
         """
-        Get/set interface mac address
+        Set interface MAC (Media Access Contrl) address to given value.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mac
-        '00:0c:29:11:aa:cc'
-        """
-        return self._read_sysfs('/sys/class/net/{}/address'
-                                .format(self._ifname))
-
-    @mac.setter
-    def mac(self, mac):
-        """
-        Get/set interface mac address
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').mac = '00:90:43:fe:fe:1b'
-        >>> Interface('eth0').mac
-        '00:90:43:fe:fe:1b'
+        >>> Interface('eth0').set_mac('00:50:ab:cd:ef:01')
         """
         # on interface removal (ethernet) an empty string is passed - ignore it
         if not mac:
@@ -226,50 +207,22 @@ class Interface:
         cmd = 'ip link set dev {} address {}'.format(self._ifname, mac)
         self._cmd(cmd)
 
-    @property
-    def arp_cache_tmo(self):
-        """
-        Get configured ARP cache timeout value from interface in seconds.
-        Internal Kernel representation is in milliseconds.
 
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').arp_cache_tmo
-        '30'
-        """
-        return (self._read_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
-                                 .format(self._ifname)) / 1000)
-
-    @arp_cache_tmo.setter
-    def arp_cache_tmo(self, tmo):
+    def set_arp_cache_tmo(self, tmo):
         """
         Set ARP cache timeout value in seconds. Internal Kernel representation
         is in milliseconds.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').arp_cache_tmo = '40'
+        >>> Interface('eth0').set_arp_cache_tmo(40)
         """
         return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
                                  .format(self._ifname), (int(tmo) * 1000))
 
-    @property
-    def link_detect(self):
+    def set_link_detect(self, link_filter):
         """
-        How does the kernel act when receiving packets on 'down' interfaces
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').link_detect
-        '0'
-        """
-        return self._read_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
-                                .format(self._ifname))
-
-    @link_detect.setter
-    def link_detect(self, link_filter):
-        """
-        Konfigure kernel response in packets received on interfaces that are 'down'
+        Configure kernel response in packets received on interfaces that are 'down'
 
         0 - Allow packets to be received for the address on this interface
             even if interface is disabled or no carrier.
@@ -285,44 +238,25 @@ class Interface:
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').link_detect = '1'
+        >>> Interface('eth0').set_link_detect(1)
         """
-        if link_filter >= 0 and link_filter <= 2:
+        if int(link_filter) >= 0 and int(link_filter) <= 2:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
                                      .format(self._ifname), link_filter)
         else:
             raise ValueError("Value out of range")
 
-    @property
-    def ifalias(self):
+    def set_alias(self, ifalias=None):
         """
-        Get/set interface alias name
-
-        Example:
-
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').ifalias
-        ''
-        """
-        return self._read_sysfs('/sys/class/net/{}/ifalias'
-                                .format(self._ifname))
-
-    @ifalias.setter
-    def ifalias(self, ifalias=None):
-        """
-        Get/set interface alias name
+        Set interface alias name used by e.g. SNMP
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').ifalias = 'VyOS upstream interface'
-        >>> Interface('eth0').ifalias
-        'VyOS upstream interface'
+        >>> Interface('eth0').set_alias('VyOS upstream interface')
 
-        to clear interface alias e.g. delete it use:
+        to clear alias e.g. delete it use:
 
-        >>> Interface('eth0').ifalias = ''
-        >>> Interface('eth0').ifalias
-        ''
+        >>> Interface('eth0').set_ifalias('')
         """
         if not ifalias:
             # clear interface alias
@@ -331,63 +265,43 @@ class Interface:
         self._write_sysfs('/sys/class/net/{}/ifalias'
                           .format(self._ifname), ifalias)
 
-    @property
-    def state(self):
+    def get_state(self):
         """
         Enable (up) / Disable (down) an interface
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').state
+        >>> Interface('eth0').get_state()
         'up'
         """
         return self._read_sysfs('/sys/class/net/{}/operstate'
                                 .format(self._ifname))
 
-    @state.setter
-    def state(self, state):
+    def set_state(self, state):
         """
         Enable (up) / Disable (down) an interface
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').state = 'down'
-        >>> Interface('eth0').state
+        >>> Interface('eth0').set_state('down')
+        >>> Interface('eth0').get_state()
         'down'
         """
         if state not in ['up', 'down']:
             raise ValueError('state must be "up" or "down"')
-
-        self._state = state
 
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
         self._cmd(cmd)
 
-    @property
-    def proxy_arp(self):
-        """
-        Get current proxy ARP configuration from sysfs. Default: 0
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp
-        '0'
-        """
-        return self._read_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp'
-                                .format(self._ifname))
-
-    @proxy_arp.setter
-    def proxy_arp(self, enable):
+    def set_proxy_arp(self, enable):
         """
         Set per interface proxy ARP configuration
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp = 1
-        >>> Interface('eth0').proxy_arp
-        '1'
+        >>> Interface('eth0').set_proxy_arp(1)
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp'
@@ -395,8 +309,7 @@ class Interface:
         else:
             raise ValueError("Value out of range")
 
-    @property
-    def proxy_arp_pvlan(self):
+    def set_proxy_arp_pvlan(self, enable):
         """
         Private VLAN proxy arp.
         Basically allow proxy arp replies back to the same interface
@@ -418,38 +331,7 @@ class Interface:
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp_pvlan
-        '0'
-        """
-        return self._read_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp_pvlan'
-                                .format(self._ifname))
-
-    @proxy_arp_pvlan.setter
-    def proxy_arp_pvlan(self, enable):
-        """
-        Private VLAN proxy arp.
-        Basically allow proxy arp replies back to the same interface
-        (from which the ARP request/solicitation was received).
-
-        This is done to support (ethernet) switch features, like RFC
-        3069, where the individual ports are NOT allowed to
-        communicate with each other, but they are allowed to talk to
-        the upstream router.  As described in RFC 3069, it is possible
-        to allow these hosts to communicate through the upstream
-        router by proxy_arp'ing. Don't need to be used together with
-        proxy_arp.
-
-        This technology is known by different names:
-        In RFC 3069 it is called VLAN Aggregation.
-        Cisco and Allied Telesyn call it Private VLAN.
-        Hewlett-Packard call it Source-Port filtering or port-isolation.
-        Ericsson call it MAC-Forced Forwarding (RFC Draft).
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').proxy_arp_pvlan = 1
-        >>> Interface('eth0').proxy_arp_pvlan
-        '1'
+        >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp_pvlan'
@@ -581,7 +463,7 @@ class Interface:
         with open(self._dhcp_cfg_file, 'w') as f:
             f.write(dhcp_text)
 
-        if self._state == 'up':
+        if self.get_state() == 'up':
             cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
                 self._dhcp_pid_file
             cmd += ' --exec /sbin/dhclient --'
@@ -659,7 +541,7 @@ class Interface:
         with open(self._dhcpv6_cfg_file, 'w') as f:
             f.write(dhcpv6_text)
 
-        if self._state == 'up':
+        if self.get_state() == 'up':
             # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
             #
             # wee need to wait for IPv6 DAD to finish once and interface is added
@@ -731,6 +613,21 @@ class LoopbackIf(Interface):
     def __init__(self, ifname):
         super().__init__(ifname, type='loopback')
 
+    def remove(self):
+        """
+        Loopback interface can not be deleted from operating system. We can
+        only remove all assigned IP addresses.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = LoopbackIf('lo').remove()
+        """
+        # remove all assigned IP addresses from interface
+        for addr in self.get_addr():
+            self.del_addr(addr)
+
+        # question: do we also delerte the loopback address? 127.0.0.1/8
+
 
 class DummyIf(Interface):
 
@@ -742,6 +639,47 @@ class DummyIf(Interface):
 
     def __init__(self, ifname):
         super().__init__(ifname, type='dummy')
+
+
+class STPIf(Interface):
+    """
+    A spanning-tree capable interface. This applies only to bridge port member
+    interfaces!
+    """
+    def __init__(self, ifname):
+        super().__init__(ifname)
+
+    def set_path_cost(self, cost):
+        """
+        Set interface path cost, only relevant for STP enabled interfaces
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_path_cost(4)
+        """
+        if not os.path.isfile('/sys/class/net/{}/brport/path_cost'
+                              .format(self._ifname)):
+            raise TypeError('{} is not a bridge port member'.format(self._ifname))
+
+        return self._write_sysfs('/sys/class/net/{}/brport/path_cost'
+                                 .format(self._ifname), cost)
+
+    def set_path_priority(self, priority):
+        """
+        Set interface path priority, only relevant for STP enabled interfaces
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_path_priority(4)
+        """
+        if not os.path.isfile('/sys/class/net/{}/brport/priority'
+                              .format(self._ifname)):
+            raise TypeError('{} is not a bridge port member'.format(self._ifname))
+
+        return self._write_sysfs('/sys/class/net/{}/brport/priority'
+                                 .format(self._ifname), priority)
 
 
 class BridgeIf(Interface):
@@ -758,167 +696,73 @@ class BridgeIf(Interface):
     def __init__(self, ifname):
         super().__init__(ifname, type='bridge')
 
-    @property
-    def ageing_time(self):
-        """
-        Return configured bridge interface MAC address aging time in seconds.
-        Internal kernel representation is in centiseconds, thus its converted
-        in the end. Kernel default is 300 seconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').aging_time
-        '300'
-        """
-        return (self._read_sysfs('/sys/class/net/{}/bridge/ageing_time'
-                                 .format(self._ifname)) / 100)
-
-    @ageing_time.setter
-    def ageing_time(self, time):
+    def set_ageing_time(self, time):
         """
         Set bridge interface MAC address aging time in seconds. Internal kernel
         representation is in centiseconds. Kernel default is 300 seconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').ageing_time = 2
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').ageing_time(2)
         """
         time = int(time) * 100
         return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
                                  .format(self._ifname), time)
 
-    @property
-    def forward_delay(self):
-        """
-        Get bridge forwarding delay in seconds. Internal Kernel representation
-        is in centiseconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').ageing_time
-        '3'
-        """
-        return (self._read_sysfs('/sys/class/net/{}/bridge/forward_delay'
-                                 .format(self._ifname)) / 100)
-
-    @forward_delay.setter
-    def forward_delay(self, time):
+    def set_forward_delay(self, time):
         """
         Set bridge forwarding delay in seconds. Internal Kernel representation
         is in centiseconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').forward_delay = 15
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').forward_delay(15)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
                                  .format(self._ifname), (int(time) * 100))
 
-    @property
-    def hello_time(self):
-        """
-        Get bridge hello time in seconds. Internal Kernel representation
-        is in centiseconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').hello_time
-        '2'
-        """
-        return (self._read_sysfs('/sys/class/net/{}/bridge/hello_time'
-                                 .format(self._ifname)) / 100)
-
-    @hello_time.setter
-    def hello_time(self, time):
+    def set_hello_time(self, time):
         """
         Set bridge hello time in seconds. Internal Kernel representation
         is in centiseconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').hello_time = 2
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_hello_time(2)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname), (int(time) * 100))
 
-    @property
-    def max_age(self):
-        """
-        Get bridge max max message age in seconds. Internal Kernel representation
-        is in centiseconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').max_age
-        '20'
-        """
-
-        return (self._read_sysfs('/sys/class/net/{}/bridge/max_age'
-                                 .format(self._ifname)) / 100)
-
-    @max_age.setter
-    def max_age(self, time):
+    def set_max_age(self, time):
         """
         Set bridge max message age in seconds. Internal Kernel representation
         is in centiseconds.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').max_age = 30
+        >>> BridgeIf('br0').set_max_age(30)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname), (int(time) * 100))
 
-    @property
-    def priority(self):
-        """
-        Get bridge max aging time in seconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').priority
-        '32768'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bridge/priority'
-                                .format(self._ifname))
-
-    @priority.setter
-    def priority(self, priority):
+    def set_priority(self, priority):
         """
         Set bridge max aging time in seconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').priority = 8192
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_priority(8192)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/priority'
                                  .format(self._ifname), priority)
 
-    @property
-    def stp_state(self):
+    def set_stp(self, state):
         """
-        Get current bridge STP (Spanning Tree) state.
+        Set bridge STP (Spanning Tree) state. 0 -> STP disabled, 1 -> STP enabled
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').stp_state
-        '0'
-        """
-
-        state = 0
-        with open('/sys/class/net/{}/bridge/stp_state'.format(self._ifname), 'r') as f:
-            state = int(f.read().rstrip('\n'))
-
-        return state
-
-    @stp_state.setter
-    def stp_state(self, state):
-        """
-        Set bridge STP (Spannign Tree) state. 0 -> STP disabled, 1 -> STP enabled
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').stp_state = 1
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_stp(1)
         """
 
         if int(state) >= 0 and int(state) <= 1:
@@ -927,21 +771,8 @@ class BridgeIf(Interface):
         else:
             raise ValueError("Value out of range")
 
-    @property
-    def multicast_querier(self):
-        """
-        Get bridge multicast querier membership state.
 
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').multicast_querier
-        '0'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bridge/multicast_querier'
-                                .format(self._ifname))
-
-    @multicast_querier.setter
-    def multicast_querier(self, enable):
+    def set_multicast_querier(self, enable):
         """
         Sets whether the bridge actively runs a multicast querier or not. When a
         bridge receives a 'multicast host membership' query from another network
@@ -952,13 +783,14 @@ class BridgeIf(Interface):
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').multicast_querier = 1
+        >>> BridgeIf('br0').set_multicast_querier(1)
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/sys/class/net/{}/bridge/multicast_querier'
                                      .format(self._ifname), enable)
         else:
             raise ValueError("Value out of range")
+
 
     def add_port(self, interface):
         """
@@ -983,31 +815,6 @@ class BridgeIf(Interface):
         cmd = 'ip link set dev {} nomaster'.format(interface)
         self._cmd(cmd)
 
-    def set_cost(self, interface, cost):
-        """
-        Set interface path cost, only relevant for STP enabled interfaces
-
-        Example:
-
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').path_cost(4)
-        """
-        return self._write_sysfs('/sys/class/net/{}/brif/{}/path_cost'
-                                 .format(self._ifname, interface), cost)
-
-    def set_priority(self, interface, priority):
-        """
-        Set interface path priority, only relevant for STP enabled interfaces
-
-        Example:
-
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').priority(4)
-        """
-        return self._write_sysfs('/sys/class/net/{}/brif/{}/priority'
-                                 .format(self._ifname, interface), priority)
-
-
 class VLANIf(Interface):
     """
     This class handels the creation and removal of a VLAN interface. It serves
@@ -1027,12 +834,22 @@ class VLANIf(Interface):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
-        # do we have sub interfaces (VLANs)?
-        # we apply a regex matching subinterfaces (indicated by a .) of a
-        # parent interface. 'bond0(?:\.\d+){1,2}' will match vif and vif-s/vif-c
-        # subinterfaces
+        # Do we have sub interfaces (VLANs)? We apply a regex matching
+        # subinterfaces (indicated by a .) of a parent interface.
+        #
+        # As interfaces need to be deleted "in order" starting from Q-in-Q
+        # we delete them first.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
-                       if re.match(self._ifname + r'(?:\.\d+){1,2}', f)]
+                        if re.match(self._ifname + r'(?:\.\d+)(?:\.\d+)', f)]
+
+        for vlan in vlan_ifs:
+            Interface(vlan).remove()
+
+        # After deleting all Q-in-Q interfaces delete other VLAN interfaces
+        # which probably acted as parent to Q-in-Q or have been regular 802.1q
+        # interface.
+        vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
+                        if re.match(self._ifname + r'(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -1106,8 +923,7 @@ class VLANIf(Interface):
         >>> i.del_vlan()
         """
         vlan_ifname = self._ifname + '.' + str(vlan_id)
-        tmp = VLANIf(vlan_ifname)
-        tmp.remove()
+        VLANIf(vlan_ifname).remove()
 
 
 class EthernetIf(VLANIf):
@@ -1130,32 +946,6 @@ class EthernetIf(VLANIf):
         """
         link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self._ifname))
         return os.path.basename(link)
-
-
-    def has_autoneg(self):
-        """
-        Not all drivers support autonegotiation.
-
-        returns True -> Autonegotiation is supported by driver
-                False -> Autonegotiation is not supported by driver
-
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.has_autoneg()
-        'True'
-        """
-        regex = 'Supports auto-negotiation:[ ]\w+'
-        tmp = self._cmd('/sbin/ethtool {}'.format(self._ifname))
-        tmp = re.search(regex, tmp.decode())
-
-        # Output is either 'Supports auto-negotiation: Yes' or
-        # 'Supports auto-negotiation: No'
-        if tmp.group().split(':')[1].lstrip() == "Yes":
-            return True
-        else:
-            return False
-
 
     def set_flow_control(self, enable):
         """
@@ -1319,7 +1109,7 @@ class BondIf(VLANIf):
         for s in self.get_slaves():
             slave = {
                 'ifname' : s,
-                'state': Interface(s).state
+                'state': Interface(s).get_state()
             }
             slave_list.append(slave)
 
@@ -1330,10 +1120,10 @@ class BondIf(VLANIf):
         # physical interface
         for slave in slave_list:
              i = Interface(slave['ifname'])
-             i.state = slave['state']
+             i.set_state(slave['state'])
 
-    @property
-    def xmit_hash_policy(self):
+
+    def set_hash_policy(self, mode):
         """
         Selects the transmit hash policy to use for slave selection in
         balance-xor, 802.3ad, and tlb modes. Possible values are: layer2,
@@ -1343,57 +1133,50 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').xmit_hash_policy
-        'layer3+4'
-        """
-        # Linux Kernel appends has policy value to string, e.g. 'layer3+4 1',
-        # so remove the later part and only return the mode as string.
-        return self._read_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
-                                .format(self._ifname)).split()[0]
-
-    @xmit_hash_policy.setter
-    def xmit_hash_policy(self, mode):
-        """
-        Selects the transmit hash policy to use for slave selection in
-        balance-xor, 802.3ad, and tlb modes. Possible values are: layer2,
-        layer2+3, layer3+4, encap2+3, encap3+4.
-
-        The default value is layer2
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').xmit_hash_policy = 'layer2+3'
-        >>> BondIf('bond0').proxy_arp
-        '1'
+        >>> BondIf('bond0').set_hash_policy('layer2+3')
         """
         if not mode in ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']:
             raise ValueError("Value out of range")
         return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
                                  .format(self._ifname), mode)
 
-    @property
-    def arp_interval(self):
+    def set_arp_interval(self, interval):
         """
         Specifies the ARP link monitoring frequency in milliseconds.
 
-        The ARP monitor works by periodically checking the slave devices to
-        determine whether they have sent or received traffic recently (the
-        precise criteria depends upon the bonding mode, and the state of the
-        slave). Regular traffic is generated via ARP probes issued for the
-        addresses specified by the arp_ip_target option.
+        The ARP monitor works by periodically checking the slave devices
+        to determine whether they have sent or received traffic recently
+        (the precise criteria depends upon the bonding mode, and the
+        state of the slave). Regular traffic is generated via ARP probes
+        issued for the addresses specified by the arp_ip_target option.
 
-        The default value is 0.
+        If ARP monitoring is used in an etherchannel compatible mode
+        (modes 0 and 2), the switch should be configured in a mode that
+        evenly distributes packets across all links. If the switch is
+        configured to distribute the packets in an XOR fashion, all
+        replies from the ARP targets will be received on the same link
+        which could cause the other team members to fail.
+
+        value of 0 disables ARP monitoring. The default value is 0.
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').arp_interval
-        '0'
+        >>> BondIf('bond0').set_arp_interval('100')
         """
-        return self._read_sysfs('/sys/class/net/{}/bonding/arp_interval'
-                                .format(self._ifname))
+        if int(interval) == 0:
+            """
+            Specifies the MII link monitoring frequency in milliseconds.
+            This determines how often the link state of each slave is
+            inspected for link failures. A value of zero disables MII
+            link monitoring. A value of 100 is a good starting point.
+            """
+            return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
+                                     .format(self._ifname), interval)
+        else:
+            return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
+                                     .format(self._ifname), interval)
 
-    @arp_interval.setter
-    def arp_interval(self, time):
+    def get_arp_ip_target(self):
         """
         Specifies the IP addresses to use as ARP monitoring peers when
         arp_interval is > 0. These are the targets of the ARP request sent to
@@ -1406,35 +1189,13 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').arp_interval = '100'
-        >>> BondIf('bond0').arp_interval
-        '100'
-        """
-        return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
-                                 .format(self._ifname), time)
-
-    @property
-    def arp_ip_target(self):
-        """
-        Specifies the IP addresses to use as ARP monitoring peers when
-        arp_interval is > 0. These are the targets of the ARP request sent to
-        determine the health of the link to the targets. Specify these values
-        in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by
-        a comma. At least one IP address must be given for ARP monitoring to
-        function. The maximum number of targets that can be specified is 16.
-
-        The default value is no IP addresses.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').arp_ip_target
+        >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
         return self._read_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
                                 .format(self._ifname))
 
-    @arp_ip_target.setter
-    def arp_ip_target(self, target):
+    def set_arp_ip_target(self, target):
         """
         Specifies the IP addresses to use as ARP monitoring peers when
         arp_interval is > 0. These are the targets of the ARP request sent to
@@ -1447,51 +1208,12 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').arp_ip_target = '192.0.2.1'
-        >>> BondIf('bond0').arp_ip_target
+        >>> BondIf('bond0').set_arp_ip_target('192.0.2.1')
+        >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
                                  .format(self._ifname), target)
-
-    @property
-    def miimon(self):
-        """
-        Specifies the MII link monitoring frequency in milliseconds.
-        This determines how often the link state of each slave is
-        inspected for link failures. A value of zero disables MII
-        link monitoring. A value of 100 is a good starting point.
-
-        The default value is 0.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').miimon
-        '250'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bonding/miimon'
-                                .format(self._ifname))
-
-
-    @miimon.setter
-    def miimon(self, time):
-        """
-        Specifies the MII link monitoring frequency in milliseconds.
-        This determines how often the link state of each slave is
-        inspected for link failures. A value of zero disables MII
-        link monitoring. A value of 100 is a good starting point.
-
-        The default value is 0.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').miimon = 250
-        >>> BondIf('bond0').miimon
-        '250'
-        """
-        return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
-                                 .format(self._ifname), time)
-
 
     def add_port(self, interface):
         """
@@ -1505,7 +1227,7 @@ class BondIf(VLANIf):
         # An interface can only be added to a bond if it is in 'down' state. If
         # interface is in 'up' state, the following Kernel error will  be thrown:
         # bond0: eth1 is up - this may be due to an out of date ifenslave.
-        Interface(interface).state = 'down'
+        Interface(interface).set_state('down')
 
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
                                  .format(self._ifname), '+' + interface)
@@ -1534,8 +1256,8 @@ class BondIf(VLANIf):
                                   .format(self._ifname))
         return list(map(str, slaves.split()))
 
-    @property
-    def primary(self):
+
+    def set_primary(self, interface):
         """
         A string (eth0, eth2, etc) specifying which slave is the primary
         device. The specified device will always be the active slave while it
@@ -1548,29 +1270,7 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').primary
-        'eth1'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bonding/primary'
-                                .format(self._ifname))
-
-    @primary.setter
-    def primary(self, interface):
-        """
-        A string (eth0, eth2, etc) specifying which slave is the primary
-        device. The specified device will always be the active slave while it
-        is available. Only when the primary is off-line will alternate devices
-        be used. This is useful when one slave is preferred over another, e.g.,
-        when one slave has higher throughput than another.
-
-        The primary option is only valid for active-backup, balance-tlb and
-        balance-alb mode.
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').primary = 'eth2'
-        >>> BondIf('bond0').primary
-        'eth2'
+        >>> BondIf('bond0').set_primary('eth2')
         """
         if not interface:
             # reset primary interface
@@ -1579,25 +1279,7 @@ class BondIf(VLANIf):
         return self._write_sysfs('/sys/class/net/{}/bonding/primary'
                                  .format(self._ifname), interface)
 
-    @property
-    def mode(self):
-        """
-        Specifies one of the bonding policies. The default is balance-rr
-        (round robin).
-
-        Possible values are: balance-rr (0), active-backup (1), balance-xor (2),
-        broadcast (3), 802.3ad (4), balance-tlb (5), balance-alb (6)
-
-        Example:
-        >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').mode
-        'balance-rr'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bonding/mode'
-                                .format(self._ifname)).split()[0]
-
-    @mode.setter
-    def mode(self, mode):
+    def set_mode(self, mode):
         """
         Specifies one of the bonding policies. The default is balance-rr
         (round robin).
@@ -1610,9 +1292,7 @@ class BondIf(VLANIf):
 
         Example:
         >>> from vyos.ifconfig import BondIf
-        >>> BondIf('bond0').mode = '802.3ad'
-        >>> BondIf('bond0').mode
-        '802.3ad'
+        >>> BondIf('bond0').set_mode('802.3ad')
         """
         if not mode in [
             'balance-rr', 'active-backup', 'balance-xor', 'broadcast',
