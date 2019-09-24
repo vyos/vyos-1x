@@ -195,7 +195,7 @@ def apply(bridge):
         # set max message age
         br.set_max_age(bridge['max_age'])
         # set bridge priority
-        br.priority = bridge['priority']
+        br.set_priority(bridge['priority'])
         # turn stp on/off
         br.stp_state = bridge['stp']
         # enable or disable IGMP querier
@@ -229,10 +229,10 @@ def apply(bridge):
 
         # configure additional bridge member options
         for member in bridge['member']:
-            # set bridge port cost
-            br.set_cost(member['name'], member['cost'])
-            # set bridge port priority
-            br.set_priority(member['name'], member['priority'])
+            # set bridge port path cost
+            br.set_path_cost(member['name'], member['cost'])
+            # set bridge port path priority
+            br.set_path_priority(member['name'], member['priority'])
 
             i = Interface(member['name'])
             # configure ARP cache timeout

@@ -789,27 +789,13 @@ class BridgeIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname), (int(time) * 100))
 
-    @property
-    def priority(self):
-        """
-        Get bridge max aging time in seconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').priority
-        '32768'
-        """
-        return self._read_sysfs('/sys/class/net/{}/bridge/priority'
-                                .format(self._ifname))
-
-    @priority.setter
-    def priority(self, priority):
+    def set_priority(self, priority):
         """
         Set bridge max aging time in seconds.
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').priority = 8192
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_priority(8192)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/priority'
                                  .format(self._ifname), priority)
@@ -891,7 +877,7 @@ class BridgeIf(Interface):
         cmd = 'ip link set dev {} nomaster'.format(interface)
         self._cmd(cmd)
 
-    def set_cost(self, interface, cost):
+    def set_path_cost(self, interface, cost):
         """
         Set interface path cost, only relevant for STP enabled interfaces
 
@@ -903,7 +889,7 @@ class BridgeIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/brif/{}/path_cost'
                                  .format(self._ifname, interface), cost)
 
-    def set_priority(self, interface, priority):
+    def set_path_priority(self, interface, priority):
         """
         Set interface path priority, only relevant for STP enabled interfaces
 
