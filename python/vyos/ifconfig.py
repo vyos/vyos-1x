@@ -800,31 +800,13 @@ class BridgeIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/bridge/priority'
                                  .format(self._ifname), priority)
 
-    @property
-    def stp_state(self):
+    def set_stp(self, state):
         """
-        Get current bridge STP (Spanning Tree) state.
+        Set bridge STP (Spanning Tree) state. 0 -> STP disabled, 1 -> STP enabled
 
         Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').stp_state
-        '0'
-        """
-
-        state = 0
-        with open('/sys/class/net/{}/bridge/stp_state'.format(self._ifname), 'r') as f:
-            state = int(f.read().rstrip('\n'))
-
-        return state
-
-    @stp_state.setter
-    def stp_state(self, state):
-        """
-        Set bridge STP (Spannign Tree) state. 0 -> STP disabled, 1 -> STP enabled
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').stp_state = 1
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_stp(1)
         """
 
         if int(state) >= 0 and int(state) <= 1:

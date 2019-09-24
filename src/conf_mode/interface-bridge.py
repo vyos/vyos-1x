@@ -197,7 +197,7 @@ def apply(bridge):
         # set bridge priority
         br.set_priority(bridge['priority'])
         # turn stp on/off
-        br.stp_state = bridge['stp']
+        br.set_stp(bridge['stp'])
         # enable or disable IGMP querier
         br.set_multicast_querier(bridge['igmp_querier'])
         # update interface description used e.g. within SNMP
