@@ -823,30 +823,14 @@ class BridgeIf(Interface):
         return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
                                  .format(self._ifname), (int(time) * 100))
 
-    @property
-    def max_age(self):
-        """
-        Get bridge max max message age in seconds. Internal Kernel representation
-        is in centiseconds.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').max_age
-        '20'
-        """
-
-        return (self._read_sysfs('/sys/class/net/{}/bridge/max_age'
-                                 .format(self._ifname)) / 100)
-
-    @max_age.setter
-    def max_age(self, time):
+    def set_max_age(self, time):
         """
         Set bridge max message age in seconds. Internal Kernel representation
         is in centiseconds.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> BridgeIf('br0').max_age = 30
+        >>> BridgeIf('br0').set_max_age(30)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
                                  .format(self._ifname), (int(time) * 100))

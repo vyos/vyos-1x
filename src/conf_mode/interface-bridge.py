@@ -193,7 +193,7 @@ def apply(bridge):
         # set hello time
         br.hello_time = bridge['hello_time']
         # set max message age
-        br.max_age = bridge['max_age']
+        br.set_max_age(bridge['max_age'])
         # set bridge priority
         br.priority = bridge['priority']
         # turn stp on/off
