@@ -903,8 +903,19 @@ def apply(openvpn):
 
     # better late then sorry ... but we can only set interface alias after
     # OpenVPN has been launched and created the interface
+    cnt = 0
     while openvpn['intf'] not in interfaces():
-        sleep(0.250) # 250ms
+        # If VPN tunnel can't be established because the peer/server isn't
+        # (temporarily) available, the vtun interface never becomes registered
+        # with the kernel, and the commit would hang if there is no bail out
+        # condition
+        cnt += 1
+        if cnt == 50:
+            break
+
+        # sleep 250ms
+        sleep(0.250)
+
     Interface(openvpn['intf']).set_alias(openvpn['description'])
 
     return None
