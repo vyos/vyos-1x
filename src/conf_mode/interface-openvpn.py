@@ -916,7 +916,12 @@ def apply(openvpn):
         # sleep 250ms
         sleep(0.250)
 
-    Interface(openvpn['intf']).set_alias(openvpn['description'])
+    try:
+        # we need to catch the exception if the interface is not up due to
+        # reason stated above
+        Interface(openvpn['intf']).set_alias(openvpn['description'])
+    except:
+        pass
 
     return None
 
