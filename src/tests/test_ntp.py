@@ -203,6 +203,8 @@ class TestNtp(TestCase):
 			restrict 127.0.0.1
 			restrict -6 ::1
 			
+			# Do not listen on any interface address by default
+			interface ignore wildcard
 			#
 			# Configurable section
 			#
@@ -222,7 +224,6 @@ class TestNtp(TestCase):
 			
 			
 			# NTP should listen on configured addresses only
-			interface ignore wildcard
 			interface listen 198.51.100.0/24
 
                 '''),
