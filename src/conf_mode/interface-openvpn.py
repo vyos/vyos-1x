@@ -225,6 +225,20 @@ auth-retry nointeract
 client-config-dir /opt/vyatta/etc/openvpn/ccd/{{ intf }}
 {% endif %}
 
+# DEPRECATED This option will be removed in OpenVPN 2.5
+# Until OpenVPN v2.3 the format of the X.509 Subject fields was formatted like this:
+# /C=US/L=Somewhere/CN=John Doe/emailAddress=john@example.com In addition the old
+# behaviour was to remap any character other than alphanumeric, underscore ('_'),
+# dash ('-'), dot ('.'), and slash ('/') to underscore ('_'). The X.509 Subject
+# string as returned by the tls_id environmental variable, could additionally
+# contain colon (':') or equal ('='). When using the --compat-names option, this
+# old formatting and remapping will be re-enabled again. This is purely implemented
+# for compatibility reasons when using older plug-ins or scripts which does not
+# handle the new formatting or UTF-8 characters.
+#
+# See https://phabricator.vyos.net/T1512
+compat-names
+
 {% for option in options -%}
 {{ option }}
 {% endfor -%}
