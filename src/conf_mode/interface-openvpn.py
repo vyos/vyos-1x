@@ -225,6 +225,20 @@ auth-retry nointeract
 client-config-dir /opt/vyatta/etc/openvpn/ccd/{{ intf }}
 {% endif %}
 
+# DEPRECATED This option will be removed in OpenVPN 2.5
+# Until OpenVPN v2.3 the format of the X.509 Subject fields was formatted like this:
+# /C=US/L=Somewhere/CN=John Doe/emailAddress=john@example.com In addition the old
+# behaviour was to remap any character other than alphanumeric, underscore ('_'),
+# dash ('-'), dot ('.'), and slash ('/') to underscore ('_'). The X.509 Subject
+# string as returned by the tls_id environmental variable, could additionally
+# contain colon (':') or equal ('='). When using the --compat-names option, this
+# old formatting and remapping will be re-enabled again. This is purely implemented
+# for compatibility reasons when using older plug-ins or scripts which does not
+# handle the new formatting or UTF-8 characters.
+#
+# See https://phabricator.vyos.net/T1512
+compat-names
+
 {% for option in options -%}
 {{ option }}
 {% endfor -%}
@@ -903,9 +917,25 @@ def apply(openvpn):
 
     # better late then sorry ... but we can only set interface alias after
     # OpenVPN has been launched and created the interface
+    cnt = 0
     while openvpn['intf'] not in interfaces():
-        sleep(0.250) # 250ms
-    Interface(openvpn['intf']).set_alias(openvpn['description'])
+        # If VPN tunnel can't be established because the peer/server isn't
+        # (temporarily) available, the vtun interface never becomes registered
+        # with the kernel, and the commit would hang if there is no bail out
+        # condition
+        cnt += 1
+        if cnt == 50:
+            break
+
+        # sleep 250ms
+        sleep(0.250)
+
+    try:
+        # we need to catch the exception if the interface is not up due to
+        # reason stated above
+        Interface(openvpn['intf']).set_alias(openvpn['description'])
+    except:
+        pass
 
     return None
 

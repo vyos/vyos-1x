@@ -23,4 +23,14 @@
       </node>
     </children>
   </node>
+  <node name="restart">
+    <children>
+      <leafNode name="ipoe-server">
+        <properties>
+          <help>show ipoe-server status</help>
+        </properties>
+        <command>if [ -e /var/run/accel_ipoe.pid ]; then /usr/bin/accel-cmd restart -p 2002; else echo "ipoe-server not running"; fi</command>
+      </leafNode>
+    </children>
+  </node>
 </interfaceDefinition>

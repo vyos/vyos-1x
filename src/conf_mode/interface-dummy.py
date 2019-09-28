@@ -98,7 +98,7 @@ def apply(dummy):
         # disable interface on demand
         if dummy['disable']:
             d.set_state('down')
-        else
+        else:
             d.set_state('up')
 
     return None

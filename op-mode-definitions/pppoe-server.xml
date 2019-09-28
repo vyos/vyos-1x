@@ -29,4 +29,14 @@
       </node>
     </children>
   </node>
+  <node name="restart">
+    <children>
+      <leafNode name="pppoe-server">
+        <properties>
+          <help>Restarts pppoe-server</help>
+        </properties>
+        <command>if [ -e /var/run/accel_pppoe.pid ]; then /usr/bin/accel-cmd restart -p 2001; else echo "pppoe-server not running"; fi</command> 
+      </leafNode>
+    </children>
+  </node>
 </interfaceDefinition>
