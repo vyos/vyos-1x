@@ -96,12 +96,7 @@ pipeline {
             steps {
                 script {
                     dir('build') {
-                        sh """
-                            #!/bin/bash
-                            sudo apt-get -o Acquire::Check-Valid-Until=false update
-                            sudo mk-build-deps -i -r -t \'apt-get --no-install-recommends -yq\' debian/control
-                            dpkg-buildpackage -b -us -uc -tc
-                        """
+                        sh "dpkg-buildpackage -b -us -uc -tc"
                     }
                 }
             }
