@@ -5,7 +5,7 @@
       <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/interface-wireguard.py">
         <properties>
           <help>WireGuard interface name</help>
-          <priority>459</priority>
+          <priority>999</priority>
           <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->
           <constraint>
             <regex>^wg[0-9]{1,4}</regex>
