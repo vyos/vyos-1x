@@ -735,6 +735,9 @@ def verify(openvpn):
     # TLS/encryption
     #
     if openvpn['shared_secret_file']:
+        if openvpn['encryption'] in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
+            raise ConfigError('GCM encryption with shared-secret-key-file is not supported')
+        
         if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['shared_secret_file']):
             raise ConfigError('Specified shared-secret-key-file "{}" is not valid'.format(openvpn['shared_secret_file']))
 
