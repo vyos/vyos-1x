@@ -166,9 +166,9 @@ def delete_name_servers(data, tag):
 def set_host_name(state, data):
     if data['host_name']:
         state['host_name'] = data['host_name']
-    if data['domain_name']:
+    if 'domain_name' in data:
         state['domain_name'] = data['domain_name']
-    if data['search_domains']:
+    if 'search_domains' in data:
         state['search_domains'] = data['search_domains']
 
 def get_name_servers(state, tag):
