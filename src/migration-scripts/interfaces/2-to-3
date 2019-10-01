@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+# Change syntax of openvpn encryption settings
+# - move cipher from encryption to encryption cipher
+# https://phabricator.vyos.net/T1704
+
+import sys
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['interfaces', 'openvpn']
+
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+else:
+    #
+    # move cipher from "encryption" to "encryption cipher"
+    #
+    for intf in config.list_nodes(['interfaces', 'openvpn']):
+        # Check if encryption is set
+        if config.exists(['interfaces', 'openvpn', intf, 'encryption']):
+            # Get cipher used
+            cipher = config.return_value(['interfaces', 'openvpn', intf, 'encryption'])
+            # Delete old syntax
+            config.delete(['interfaces', 'openvpn', intf, 'encryption'])
+            # Add new syntax to config
+            config.set(['interfaces', 'openvpn', intf, 'encryption', 'cipher'], value=cipher)
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

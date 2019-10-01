@@ -220,6 +220,12 @@ cipher aes-256-gcm
 {%- elif 'aes256' in encryption %}
 cipher aes-256-cbc
 {% endif %}
+{%- if ncp_ciphers %}
+ncp-ciphers {{ncp_ciphers}}
+{% endif %} 
+{% endif %}
+{%- if disable_ncp %}
+ncp-disable
 {% endif %}
 
 {%- if auth %}
@@ -277,6 +283,7 @@ default_config_data = {
     'deleted': False,
     'description': '',
     'disable': False,
+    'disable_ncp': False,
     'encryption': '',
     'hash': '',
     'intf': '',
@@ -287,6 +294,7 @@ default_config_data = {
     'local_host': '',
     'local_port': '',
     'mode': '',
+    'ncp_ciphers': '',
     'options': [],
     'persistent_tunnel': False,
     'protocol': '',
@@ -410,10 +418,36 @@ def get_config():
     if conf.exists('disable'):
         openvpn['disable'] = True
 
-    # data encryption algorithm
-    if conf.exists('encryption'):
-        openvpn['encryption'] = conf.return_value('encryption')
+    # data encryption algorithm cipher
+    if conf.exists('encryption cipher'):
+        openvpn['encryption'] = conf.return_value('encryption cipher')
 
+    # disable ncp-ciphers support
+    if conf.exists('encryption disable-ncp'):
+        openvpn['disable_ncp'] = True
+    
+    # data encryption algorithm ncp-list
+    if conf.exists('encryption ncp-ciphers'):
+        _ncp_ciphers = []
+        for enc in conf.return_values('encryption ncp-ciphers'):
+            if enc == 'des':
+                _ncp_ciphers.append('des-cbc')
+            elif enc == '3des':
+                _ncp_ciphers.append('des-ede3-cbc')
+            elif enc == 'aes128':
+                _ncp_ciphers.append('aes-128-cbc')
+            elif enc == 'aes128gcm':
+                _ncp_ciphers.append('aes-128-gcm')
+            elif enc == 'aes192':
+                _ncp_ciphers.append('aes-192-cbc')
+            elif enc == 'aes192gcm':
+                _ncp_ciphers.append('aes-192-gcm')
+            elif enc == 'aes256':
+                _ncp_ciphers.append('aes-256-cbc')
+            elif enc == 'aes256gcm':
+                _ncp_ciphers.append('aes-256-gcm')
+        openvpn['ncp_ciphers'] = ':'.join(_ncp_ciphers)
+    
     # hash algorithm
     if conf.exists('hash'):
         openvpn['hash'] = conf.return_value('hash')
@@ -621,6 +655,9 @@ def verify(openvpn):
         if openvpn['bridge_member']:
             raise ConfigError('Can not delete {} as it is a member interface of bridge {}!'.format(openvpn['intf'], bridge))
 
+    # Check if we have disabled ncp and at the same time specified ncp-ciphers
+    if openvpn['disable_ncp'] and openvpn['ncp_ciphers']:
+        raise ConfigError('Cannot specify both "encryption disable-ncp" and "encryption ncp-ciphers"')
     #
     # OpenVPN client mode - VERIFY
     #
@@ -660,6 +697,9 @@ def verify(openvpn):
 
             if openvpn['local_address'] == openvpn['local_host']:
                 raise ConfigError('"local-address" cannot be the same as "local-host"')
+
+        if openvpn['ncp_ciphers']:
+            raise ConfigError('encryption ncp-ciphers cannot be specified in site-to-site mode, only server or client')
 
     else:
         if openvpn['local_address'] or openvpn['remote_address']:
