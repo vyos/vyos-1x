@@ -525,6 +525,7 @@ def get_config():
 
                     # Static DHCP leases
                     if conf.exists('static-mapping'):
+                        addresses_for_exclude = []
                         for mapping in conf.list_nodes('static-mapping'):
                             conf.set_level('service dhcp-server shared-network-name {0} subnet {1} static-mapping {2}'.format(network, net, mapping))
                             mapping = {
@@ -542,6 +543,7 @@ def get_config():
                             # IP address used for this DHCP client
                             if conf.exists('ip-address'):
                                 mapping['ip_address'] = conf.return_value('ip-address')
+                                addresses_for_exclude.append(mapping['ip_address'])
 
                             # MAC address of requesting DHCP client
                             if conf.exists('mac-address'):
@@ -559,6 +561,13 @@ def get_config():
 
                             # append static-mapping configuration to subnet list
                             subnet['static_mapping'].append(mapping)
+
+                        # Now we have all static DHCP leases - we also need to slice them
+                        # out of our DHCP ranges to avoid ISC DHCPd warnings as:
+                        #   dhcpd: Dynamic and static leases present for 192.0.2.51.
+                        #   dhcpd: Remove host declaration DMZ_PC1 or remove 192.0.2.51
+                        #   dhcpd: from the dynamic address pool for DMZ
+                        subnet['range'] = dhcp_slice_range(addresses_for_exclude, subnet['range'])
 
                     # Reset config level to matching hirachy
                     conf.set_level('service dhcp-server shared-network-name {0} subnet {1}'.format(network, net))
