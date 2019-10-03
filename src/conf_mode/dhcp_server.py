@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2019 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,13 +18,13 @@
 
 import sys
 import os
-import ipaddress
 import jinja2
 import socket
 import struct
 
 import vyos.validate
 
+from ipaddress import ip_address, ip_network
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -272,33 +272,33 @@ def dhcp_slice_range(exclude_list, range_list):
         range_last_exclude = ''
 
         for e in exclude_list:
-            if (ipaddress.ip_address(e) >= ipaddress.ip_address(range_start)) and \
-               (ipaddress.ip_address(e) <= ipaddress.ip_address(range_stop)):
+            if (ip_address(e) >= ip_address(range_start)) and \
+               (ip_address(e) <= ip_address(range_stop)):
                 range_last_exclude = e
 
         for e in exclude_list:
-            if (ipaddress.ip_address(e) >= ipaddress.ip_address(range_start)) and \
-               (ipaddress.ip_address(e) <= ipaddress.ip_address(range_stop)):
+            if (ip_address(e) >= ip_address(range_start)) and \
+               (ip_address(e) <= ip_address(range_stop)):
 
                 # Build new IP address range ending one IP address before exclude address
                 r = {
                     'start' : range_start,
-                    'stop' : str(ipaddress.ip_address(e) -1)
+                    'stop' : str(ip_address(e) -1)
                 }
                 # On the next run our IP address range will start one address after the exclude address
-                range_start = str(ipaddress.ip_address(e) + 1)
+                range_start = str(ip_address(e) + 1)
 
                 # on subsequent exclude addresses we can not
                 # append them to our output
-                if not (ipaddress.ip_address(r['start']) > ipaddress.ip_address(r['stop'])):
+                if not (ip_address(r['start']) > ip_address(r['stop'])):
                     # Everything is fine, add range to result
                     output.append(r)
 
                 # Take care of last IP address range spanning from the last exclude
                 # address (+1) to the end of the initial configured range
-                if ipaddress.ip_address(e) == ipaddress.ip_address(range_last_exclude):
+                if ip_address(e) == ip_address(range_last_exclude):
                     r = {
-                      'start': str(ipaddress.ip_address(e) + 1),
+                      'start': str(ip_address(e) + 1),
                       'stop': str(range_stop)
                     }
                     output.append(r)
@@ -385,8 +385,8 @@ def get_config():
                     conf.set_level('service dhcp-server shared-network-name {0} subnet {1}'.format(network, net))
                     subnet = {
                         'network': net,
-                        'address': str(ipaddress.ip_network(net).network_address),
-                        'netmask': str(ipaddress.ip_network(net).netmask),
+                        'address': str(ip_network(net).network_address),
+                        'netmask': str(ip_network(net).netmask),
                         'bootfile_name': '',
                         'bootfile_server': '',
                         'client_prefix_length': '',
@@ -577,7 +577,7 @@ def get_config():
                         # Option format is:
                         # <netmask>, <network-byte1>, <network-byte2>, <network-byte3>, <router-byte1>, <router-byte2>, <router-byte3>
                         # where bytes with the value 0 are omitted.
-                        net = ipaddress.ip_network(subnet['static_subnet'])
+                        net = ip_network(subnet['static_subnet'])
                         # add netmask
                         string = str(net.prefixlen) + ','
                         # add network bytes
@@ -697,17 +697,17 @@ def verify(dhcp):
                     raise ConfigError('DHCP range stop address for start {0} is not defined!'.format(start))
 
                 # Start address must be inside network
-                if not ipaddress.ip_address(start) in ipaddress.ip_network(subnet['network']):
+                if not ip_address(start) in ip_network(subnet['network']):
                     raise ConfigError('DHCP range start address {0} is not in subnet {1}\n' \
                                       'specified for shared network {2}!'.format(start, subnet['network'], network['name']))
 
                 # Stop address must be inside network
-                if not ipaddress.ip_address(stop) in ipaddress.ip_network(subnet['network']):
+                if not ip_address(stop) in ip_network(subnet['network']):
                     raise ConfigError('DHCP range stop address {0} is not in subnet {1}\n' \
                                       'specified for shared network {2}!'.format(stop, subnet['network'], network['name']))
 
                 # Stop address must be greater or equal to start address
-                if not ipaddress.ip_address(stop) >= ipaddress.ip_address(start):
+                if not ip_address(stop) >= ip_address(start):
                     raise ConfigError('DHCP range stop address {0} must be greater or equal\n' \
                                       'to the range start address {1}!'.format(stop, start))
 
@@ -727,7 +727,7 @@ def verify(dhcp):
 
             # Exclude addresses must be in bound
             for exclude in subnet['exclude']:
-                if not ipaddress.ip_address(exclude) in ipaddress.ip_network(subnet['network']):
+                if not ip_address(exclude) in ip_network(subnet['network']):
                     raise ConfigError('Exclude IP address {0} is outside of the DHCP lease network {1}\n' \
                                       'under shared network {2}!'.format(exclude, subnet['network'], network['name']))
 
@@ -753,7 +753,7 @@ def verify(dhcp):
                                       '{0} under shared network name {1}!'.format(mapping['name'], network['name']))
 
                 # Static IP address must be in bound
-                if not ipaddress.ip_address(mapping['ip_address']) in ipaddress.ip_network(subnet['network']):
+                if not ip_address(mapping['ip_address']) in ip_network(subnet['network']):
                     raise ConfigError('DHCP static lease IP address {0} for static mapping {1}\n' \
                                       'in shared network {2} is outside DHCP lease subnet {3}!' \
                                       .format(mapping['ip_address'], mapping['name'], network['name'], subnet['network']))
@@ -776,9 +776,9 @@ def verify(dhcp):
                 subnets.append(subnet['network'])
 
             # Check for overlapping subnets
-            net = ipaddress.ip_network(subnet['network'])
+            net = ip_network(subnet['network'])
             for n in subnets:
-                net2 = ipaddress.ip_network(n)
+                net2 = ip_network(n)
                 if (net != net2):
                     if net.overlaps(net2):
                         raise ConfigError('DHCP conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
