@@ -50,7 +50,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>vlan</format>
-                    <description>One VLAN per client</description>    
+                    <description>One VLAN per client</description>
                   </valueHelp>
                 </properties>
               </leafNode>
@@ -267,7 +267,7 @@
                       </children>
                     </tagNode>
                   </children>
-                </tagNode> 
+                </tagNode>
                 <tagNode name="radius-server">
                   <properties>
                     <help>IP address of RADIUS server</help>
@@ -352,7 +352,7 @@
                           <properties>
                             <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
                             <valueHelp>
-                              <format>number</format>
+                              <format>1-65535</format>
                                 <description>port number</description>
                             </valueHelp>
                             <constraint>
