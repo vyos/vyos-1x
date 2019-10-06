@@ -1,0 +1,941 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="wireless" owner="${vyos_conf_scripts_dir}/interfaces-wireless.py">
+        <properties>
+          <help>Wireless network interface (WiFi/WLAN)</help>
+          <priority>318</priority>
+          <constraint>
+            <regex>wlan[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Wireless interface must be named wlanN</constraintErrorMessage>
+          <valueHelp>
+            <format>wlanN</format>
+            <description>Wireless (WiFi/WLAN) interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <multi/>
+              <constraint>
+                <validator name="ip-cidr"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="capabilities">
+            <properties>
+              <help>HT and VHT capabilities for your card</help>
+            </properties>
+            <children>
+              <node name="ht">
+                <properties>
+                  <help>HT (High Throughput) settings</help>
+                </properties>
+                <children>
+                  <leafNode name="40MHz-incapable">
+                    <properties>
+                      <help>40MHz intolerance, use 20MHz only!</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="auto-powersave">
+                    <properties>
+                      <help>Enable WMM-PS unscheduled automatic power aave delivery [U-APSD]</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="channel-set-width">
+                    <properties>
+                      <help>Supported channel set width</help>
+                      <completionHelp>
+                        <list>ht20 ht40+ ht40-</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ht20</format>
+                        <description>Supported channel set width both 20 MHz only</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ht40+</format>
+                        <description>Supported channel set width both 20 MHz and 40 MHz with secondary channel above primary channel</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ht40-</format>
+                        <description>Supported channel set width both 20 MHz and 40 MHz with secondary channel below primary channel</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(ht20|ht40\\+|ht40-)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="delayed-block-ack">
+                    <properties>
+                      <help>Enable HT-delayed block ack</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dsss-cck-40">
+                    <properties>
+                      <help>Enable DSSS_CCK-40</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="greenfield">
+                    <properties>
+                      <help>Enable HT-greenfield</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ldpc">
+                    <properties>
+                      <help>Enable LDPC coding capability</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="lsig-protection">
+                    <properties>
+                      <help>Enable L-SIG TXOP protection capability</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-amsdu">
+                    <properties>
+                      <help>Set maximum A-MSDU length</help>
+                      <completionHelp>
+                        <list>3839 7935</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>3839</format>
+                        <description>Set maximum A-MSDU length to 3839 octets</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>7935</format>
+                        <description>Set maximum A-MSDU length to 7935 octets</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(3839|7935)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="short-gi">
+                    <properties>
+                      <help>Short GI capabilities</help>
+                      <completionHelp>
+                        <list>20 40</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>20</format>
+                        <description>Short GI for 20 MHz</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>40</format>
+                        <description>Short GI for 40 MHz</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(20|40)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="smps">
+                    <properties>
+                      <help>Spatial Multiplexing Power Save (SMPS) settings</help>
+                      <completionHelp>
+                        <list>static dynamic</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>static</format>
+                        <description>STATIC Spatial Multiplexing (SM) Power Save</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dynamic</format>
+                        <description>DYNAMIC Spatial Multiplexing (SM) Power Save</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(static|dynamic)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <node name="stbc">
+                    <properties>
+                      <help>Support for sending and receiving PPDU using STBC (Space Time Block Coding)</help>
+                    </properties>
+                    <children>
+                      <leafNode name="rx">
+                        <properties>
+                          <help>Enable receiving PPDU using STBC (Space Time Block Coding)</help>
+                          <valueHelp>
+                            <format>[1-3]+</format>
+                            <description>Number of spacial streams that can use RX STBC</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>[1-3]+</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid capability item</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="tx">
+                        <properties>
+                          <help>Enable sending PPDU using STBC (Space Time Block Coding)</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <leafNode name="require-ht">
+                <properties>
+                  <help>Require stations to support HT PHY (reject association if they do not)</help>
+                  <completionHelp>
+                    <script>echo If you reject non-HT, you also disable 802.11g</script>
+                  </completionHelp>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="require-vht">
+                <properties>
+                  <help>Require stations to support VHT PHY (reject association if they do not)</help>
+                  <completionHelp>
+                    <script>echo If you reject non-VHT, you also disable 802.11n</script>
+                  </completionHelp>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="vht">
+                <properties>
+                  <help>VHT (Very High Throughput) settings</help>
+                </properties>
+                <children>
+                  <leafNode name="antenna-count">
+                    <properties>
+                      <help>Number of antennas on this card</help>
+                      <valueHelp>
+                        <format>1-9</format>
+                        <description>Number of antennas for this card</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-9"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="antenna-pattern-fixed">
+                    <properties>
+                      <help>Set if antenna pattern does not change during the lifetime of an association</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="beamform">
+                    <properties>
+                      <help>Beamforming capabilities</help>
+                      <completionHelp>
+                        <list>single-user-beamformer single-user-beamformee multi-user-beamformer multi-user-beamformee</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>single-user-beamformer</format>
+                        <description>Support for operation as single user beamformer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>single-user-beamformee</format>
+                        <description>Support for operation as single user beamformee</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>multi-user-beamformer</format>
+                        <description>Support for operation as multi user beamformer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>multi-user-beamformee</format>
+                        <description>Support for operation as multi user beamformee</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(single-user-beamformer|single-user-beamformee|multi-user-beamformer|multi-user-beamformee)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <node name="center-channel-freq">
+                    <properties>
+                      <help>VHT operating channel center frequency</help>
+                    </properties>
+                    <children>
+                      <leafNode name="freq-1">
+                        <properties>
+                          <help>VHT operating channel center frequency - center freq 1 (for use with 80, 80+80 and 160 modes)</help>
+                          <valueHelp>
+                            <format>&lt;34-173&gt;</format>
+                            <description>5Ghz (802.11 a/h/j/n/ac) center channel index (use 42 for primary 80MHz channel 36)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 34-173"/>
+                          </constraint>
+                          <constraintErrorMessage>Channel center value must be between 34 and 173</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="freq-2">
+                        <properties>
+                          <help>VHT operating channel center frequency - center freq 2 (for use with the 80+80 mode)</help>
+                          <valueHelp>
+                            <format>34-173</format>
+                            <description>5Ghz (802.11 a/h/j/n/ac) center channel index (use 58 for primary 80MHz channel 52)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 34-173"/>
+                          </constraint>
+                          <constraintErrorMessage>Channel center value must be between 34 and 173</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="channel-set-width">
+                    <properties>
+                      <help>VHT operating Channel width</help>
+                      <completionHelp>
+                        <list>0 1 2 3</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>0</format>
+                        <description>20 or 40 MHz channel width (default)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>1</format>
+                        <description>80 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>2</format>
+                        <description>160 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>3</format>
+                        <description>80+80 MHz channel width</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-3"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ldpc">
+                    <properties>
+                      <help>Enable LDPC (Low Density Parity Check) coding capability</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="link-adaptation">
+                    <properties>
+                      <help>VHT link adaptation capabilities</help>
+                      <completionHelp>
+                        <list>single-user-beamformer single-user-beamformee multi-user-beamformer multi-user-beamformee</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>unsolicited</format>
+                        <description>Station provides only unsolicited VHT MFB</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>both</format>
+                        <description>Station can provide VHT MFB in response to VHT MRQ and unsolicited VHT MFB</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(unsolicited|both)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid capability item</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-mpdu-exp">
+                    <properties>
+                      <help>Set the maximum length of A-MPDU pre-EOF padding that the station can receive</help>
+                      <valueHelp>
+                        <format>&lt;0-7&gt;</format>
+                        <description>Maximum length of A-MPDU pre-EOF padding = 2 pow(13 + x) -1 octets</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-7"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-mpdu">
+                    <properties>
+                      <help>Increase Maximum MPDU length to 7991 or 11454 octets (otherwise: 3895 octets)</help>
+                      <completionHelp>
+                        <list>7991 11454</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>7991</format>
+                        <description>ncrease Maximum MPDU length to 7991 octets</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>11454</format>
+                        <description>ncrease Maximum MPDU length to 11454 octets</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(7991|11454)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="short-gi">
+                    <properties>
+                      <help>Short GI capabilities</help>
+                      <completionHelp>
+                        <list>80 160</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>80</format>
+                        <description>Short GI for 80 MHz</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>160</format>
+                        <description>Short GI for 160 MHz</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(80|160)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <node name="stbc">
+                    <properties>
+                      <help>Support for sending and receiving PPDU using STBC (Space Time Block Coding)</help>
+                    </properties>
+                    <children>
+                      <leafNode name="rx">
+                        <properties>
+                          <help>Enable receiving PPDU using STBC (Space Time Block Coding)</help>
+                          <valueHelp>
+                            <format>[1-4]+</format>
+                            <description>Number of spacial streams that can use RX STBC</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>[1-4]+</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid capability item</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="tx">
+                        <properties>
+                          <help>Enable sending PPDU using STBC (Space Time Block Coding)</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="tx-powersave">
+                    <properties>
+                      <help>Enable VHT TXOP Power Save Mode</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vht-cf">
+                    <properties>
+                      <help>Station supports receiving VHT variant HT Control field</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="channel">
+            <properties>
+              <help>Wireless radio channel (use 0 for ACS auto channel selection)</help>
+              <valueHelp>
+                <format>&lt;1-14&gt;</format>
+                <description>2.4Ghz (802.11 b/g/n) Channel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>&lt;0,34-173&gt;</format>
+                <description>5Ghz (802.11 a/h/j/n/ac) Channel</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-173"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Interface description</help>
+              <constraint>
+                <regex>.{1,256}$</regex>
+              </constraint>
+              <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="dhcp-options">
+            <properties>
+              <help>DHCP options</help>
+            </properties>
+            <children>
+              <leafNode name="client-id">
+                <properties>
+                  <help>DHCP client identifier</help>
+                </properties>
+              </leafNode>
+              <leafNode name="host-name">
+                <properties>
+                  <help>DHCP client host name (overrides system host name)</help>
+                </properties>
+              </leafNode>
+              <leafNode name="vendor-class-id">
+                <properties>
+                  <help>DHCP client vendor type</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="dhcpv6-options">
+            <properties>
+              <help>DHCPv6 options</help>
+              <priority>319</priority>
+            </properties>
+            <children>
+              <leafNode name="parameters-only">
+                <properties>
+                  <help>Acquire only config parameters, no address</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="temporary">
+                <properties>
+                  <help>IPv6 "temporary" address</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="disable-broadcast-ssid">
+            <properties>
+              <help>Disable broadcast of SSID from access-point</help>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-link-detect">
+            <properties>
+              <help>Ignore link state changes</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable this bridge interface</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="expunge-failing-stations">
+            <properties>
+              <help>Disassociate stations based on excessive transmission failures</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="hw-id">
+            <properties>
+              <help>Media Access Control (MAC) address</help>
+              <valueHelp>
+                <format>h:h:h:h:h:h</format>
+                <description>Hardware (MAC) address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="mac-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="isolate-stations">
+            <properties>
+              <help>Isolate stations on the AP so they cannot see each other</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="mac">
+            <properties>
+              <help>Media Access Control (MAC) address</help>
+              <valueHelp>
+                <format>h:h:h:h:h:h</format>
+                <description>Hardware (MAC) address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="mac-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="max-stations">
+            <properties>
+              <help>Maximum number of wireless radio stations. Excess stations will be rejected upon authentication request.</help>
+              <valueHelp>
+                <format>&lt;1-2007&gt;</format>
+                <description>Number of allowed stations</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-2007"/>
+              </constraint>
+              <constraintErrorMessage>Number of stations must be between 1 and 2007</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="mgmt-frame-protection">
+            <properties>
+              <help>Management Frame Protection (MFP) according to IEEE 802.11w</help>
+              <completionHelp>
+                <list>disabled optional required</list>
+              </completionHelp>
+              <valueHelp>
+                <format>disabled</format>
+                <description>no MFP (hostapd default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>optional</format>
+                <description>MFP optional</description>
+              </valueHelp>
+              <valueHelp>
+                <format>required</format>
+                <description>MFP enforced</description>
+              </valueHelp>
+              <constraint>
+                <regex>(disabled|optional|required)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="mode">
+            <properties>
+              <help>Wireless radio mode</help>
+              <completionHelp>
+                <list>a b g n ac</list>
+              </completionHelp>
+              <valueHelp>
+                <format>a</format>
+                <description>802.11a - 54 Mbits/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>b</format>
+                <description>802.11b - 11 Mbits/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>g</format>
+                <description>802.11g - 54 Mbits/sec (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>n</format>
+                <description>802.11n - 600 Mbits/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ac</format>
+                <description>802.11ac - 1300 Mbits/sec</description>
+              </valueHelp>
+              <constraint>
+                <regex>(a|b|g|n|ac)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="physical-device">
+            <properties>
+              <help>Wireless physical device</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_wireless_phys.sh</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <leafNode name="reduce-transmit-power">
+            <properties>
+              <help>Transmission power reduction in dBm</help>
+              <valueHelp>
+                <format>&lt;0-255&gt;</format>
+                <description>TX power reduction in dBm</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-255"/>
+              </constraint>
+              <constraintErrorMessage>dBm value must be between 0 and 255</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="security">
+            <properties>
+              <help>Wireless security settings</help>
+            </properties>
+            <children>
+              <node name="wep">
+                <properties>
+                  <help>Wired Equivalent Privacy (WEP) parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="key">
+                    <properties>
+                      <help>WEP encryption key</help>
+                      <valueHelp>
+                        <format>&lt;hexdigits&gt;</format>
+                        <description>Wired Equivalent Privacy key</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>([a-fA-F0-9]{10}|[a-fA-F0-9]{26}|[a-fA-F0-9]{32})</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid WEP key</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="wpa">
+                <properties>
+                  <help>Wifi Protected Access (WPA) parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="cipher">
+                    <properties>
+                      <help>Cipher suite for WPA</help>
+                      <completionHelp>
+                        <list>TKIP CCMP</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>CCMP</format>
+                        <description>AES in Counter mode with CBC-MAC [RFC 3610, IEEE 802.11i/D7.0]</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>TKIP</format>
+                        <description>Temporal Key Integrity Protocol [IEEE 802.11i/D7.0]</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(CCMP|TKIP)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid WEP key</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>WPA mode</help>
+                      <completionHelp>
+                        <list>wpa wpa2 both</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>wpa</format>
+                        <description>WPA (IEEE 802.11i/D3.0)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>wpa2</format>
+                        <description>WPA2 (full IEEE 802.11i/RSN)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>both</format>
+                        <description>Allow both WPA and WPA2</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(wpa|wpa2|both)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Unknown WPA mode</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="passphrase">
+                    <properties>
+                      <help>WPA personal shared pass phrase. If you are
+                using special characters in the WPA passphrase then single
+                quotes are required.</help>
+                      <valueHelp>
+                        <format>&lt;text&gt;</format>
+                        <description>Passphrase of at least 8 but not more than 63 printable characters</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>.{8,63}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid WPA pass phrase, must be 8 to 63 printable characters!</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="radius-server">
+                    <properties>
+                      <help>RADIUS server authentication</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address of RADIUS server</description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="accounting">
+                        <properties>
+                          <help>RADIUS server to receive accounting info (default: 1813)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>RADIUS server accounting port</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="port">
+                        <properties>
+                          <help>RADIUS server port (default: 1812)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>RADIUS server port</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="secret">
+                        <properties>
+                          <help>Secret for radius access</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="ssid">
+            <properties>
+              <help>Wireless access-point service set identifier (SSID)</help>
+              <constraint>
+                <regex>.{1,32}$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid SSID</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="type">
+            <properties>
+              <help>Wireless device type for this interface</help>
+              <completionHelp>
+                <list>access-point station monitor</list>
+              </completionHelp>
+              <valueHelp>
+                <format>access-point</format>
+                <description>Access-point forwards packets between other nodes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>station</format>
+                <description>Connects to another access point</description>
+              </valueHelp>
+              <valueHelp>
+                <format>monitor</format>
+                <description>Passively monitor all packets on the frequency/channel</description>
+              </valueHelp>
+              <constraint>
+                <regex>(access-point|station|monitor)</regex>
+              </constraint>
+              <constraintErrorMessage>Type must be access-point, station or monitor</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <tagNode name="vif">
+            <properties>
+              <help>Virtual Local Area Network (VLAN) ID</help>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4094"/>
+              </constraint>
+              <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IP address</help>
+                  <completionHelp>
+                    <list>dhcp dhcpv6</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcp</format>
+                    <description>Dynamic Host Configuration Protocol</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcpv6</format>
+                    <description>Dynamic Host Configuration Protocol for IPv6</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-cidr"/>
+                    <regex>(dhcp|dhcpv6)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="description">
+                <properties>
+                  <help>Interface description</help>
+                  <constraint>
+                    <regex>^.{1,256}$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <node name="dhcpv6-options">
+                <properties>
+                  <help>DHCPv6 options</help>
+                </properties>
+                <children>
+                  <leafNode name="parameters-only">
+                    <properties>
+                      <help>Acquire only config parameters, no address</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="temporary">
+                    <properties>
+                      <help>IPv6 "temporary" address</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="disable-link-detect">
+                <properties>
+                  <help>Ignore link state changes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable this bridge interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="mac">
+                <properties>
+                  <help>Media Access Control (MAC) address</help>
+                  <valueHelp>
+                    <format>h:h:h:h:h:h</format>
+                    <description>Hardware (MAC) address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="system">
+    <children>
+      <leafNode name="wifi-regulatory-domain" owner="${vyos_conf_scripts_dir}/system-wifi-regdom.py">
+        <properties>
+          <help>Wireless regulatory domain (mandatory)</help>
+          <priority>305</priority>
+          <completionHelp>
+            <list>US EU JP DE UK CN</list>
+          </completionHelp>
+          <valueHelp>
+            <format>&lt;code%gt;</format>
+            <description>Country code (ISO/IEC 3166-1)</description>
+          </valueHelp>
+          <constraint>
+            <regex>[A-Z][A-Z]$</regex>
+          </constraint>
+          <constraintErrorMessage>invalid country code</constraintErrorMessage>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

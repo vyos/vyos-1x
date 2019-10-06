@@ -64,8 +64,15 @@ Depends: python3,
   mtr-tiny,
   telnet,
   traceroute,
-  ssl-cert, nginx-light,
-  vyos-qat-kernel-modules, vyos-qat-utilities
+  vyos-qat-kernel-modules,
+  vyos-qat-utilities,
+  ssl-cert,
+  nginx-light,
+  hostapd (>= 0.6.8),
+  wpasupplicant (>= 0.6.7),
+  iw,
+  crda,
+  wireless-regdb,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
