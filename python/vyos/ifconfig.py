@@ -293,7 +293,21 @@ class Interface:
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
-        return self._cmd(cmd)
+        tmp = self._cmd(cmd)
+
+        # better safe then sorry - wait until the interface is really up
+        # but only for a given period of time to avoid potential deadlocks!
+        cnt = 0
+        while self.get_state() != state:
+            cnt += 1
+            if cnt == 50:
+                print('Interface {} could not be brought up in time ...'.format(self._ifname))
+                break
+
+            # sleep 250ms
+            sleep(0.250)
+
+        return tmp
 
     def set_proxy_arp(self, enable):
         """
