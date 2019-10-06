@@ -142,7 +142,7 @@ class Interface:
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
         cmd = 'ip link del dev {}'.format(self._ifname)
-        self._cmd(cmd)
+        return self._cmd(cmd)
 
     def get_mtu(self):
         """
@@ -205,7 +205,7 @@ class Interface:
         # Assemble command executed on system. Unfortunately there is no way
         # of altering the MAC address via sysfs
         cmd = 'ip link set dev {} address {}'.format(self._ifname, mac)
-        self._cmd(cmd)
+        return self._cmd(cmd)
 
 
     def set_arp_cache_tmo(self, tmo):
@@ -293,7 +293,7 @@ class Interface:
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
-        self._cmd(cmd)
+        return self._cmd(cmd)
 
     def set_proxy_arp(self, enable):
         """
@@ -402,7 +402,7 @@ class Interface:
         else:
             if not is_intf_addr_assigned(self._ifname, addr):
                 cmd = 'ip addr add "{}" dev "{}"'.format(addr, self._ifname)
-                self._cmd(cmd)
+                return self._cmd(cmd)
 
     def del_addr(self, addr):
         """
@@ -433,7 +433,7 @@ class Interface:
         else:
             if is_intf_addr_assigned(self._ifname, addr):
                 cmd = 'ip addr del "{}" dev "{}"'.format(addr, self._ifname)
-                self._cmd(cmd)
+                return self._cmd(cmd)
 
     # replace dhcpv4/v6 with systemd.networkd?
     def _set_dhcp(self):
@@ -470,7 +470,7 @@ class Interface:
             # now pass arguments to dhclient binary
             cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
                 self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
-            self._cmd(cmd)
+            return self._cmd(cmd)
 
 
     def _del_dhcp(self):
@@ -559,7 +559,7 @@ class Interface:
             # now pass arguments to dhclient binary
             cmd += ' -6 -nw -cf {} -pf {} -lf {} {}'.format(
                 self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file, self._ifname)
-            self._cmd(cmd)
+            return self._cmd(cmd)
 
 
     def _del_dhcpv6(self):
@@ -582,8 +582,7 @@ class Interface:
             return None
 
         # stop dhclient
-        cmd = 'start-stop-daemon --stop --quiet --pidfile {}'.format(
-            self._dhcpv6_pid_file)
+        cmd = 'start-stop-daemon --stop --quiet --pidfile {}'.format(self._dhcpv6_pid_file)
         self._cmd(cmd)
 
         # accept router announcements on this interface
@@ -802,7 +801,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth1')
         """
         cmd = 'ip link set dev {} master {}'.format(interface, self._ifname)
-        self._cmd(cmd)
+        return self._cmd(cmd)
 
     def del_port(self, interface):
         """
@@ -813,7 +812,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').del_port('eth1')
         """
         cmd = 'ip link set dev {} nomaster'.format(interface)
-        self._cmd(cmd)
+        return self._cmd(cmd)
 
 class VLANIf(Interface):
     """
@@ -972,7 +971,7 @@ class EthernetIf(VLANIf):
               self._ifname, enable)
         try:
             # An exception will be thrown if the settings are not changed
-            self._cmd(cmd)
+            return self._cmd(cmd)
         except CalledProcessError:
             pass
 
@@ -1376,7 +1375,7 @@ class WireGuardIf(Interface):
         """
         cmd = "wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
-        self._cmd(cmd)
+        return self._cmd(cmd)
 
 
 class VXLANIf(Interface, ):
