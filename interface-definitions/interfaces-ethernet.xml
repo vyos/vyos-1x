@@ -70,7 +70,12 @@
               </leafNode>
               <leafNode name="host-name">
                 <properties>
-                  <help>DHCP client host name (overrides the system host name)</help>
+                  <help>DHCP client host name (overrides system host name)</help>
+                </properties>
+              </leafNode>
+              <leafNode name="vendor-class-id">
+                <properties>
+                  <help>DHCP client vendor type</help>
                 </properties>
               </leafNode>
             </children>
@@ -454,7 +459,12 @@
                   </leafNode>
                   <leafNode name="host-name">
                     <properties>
-                      <help>DHCP client host name (overrides the system host name)</help>
+                      <help>DHCP client host name (overrides system host name)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vendor-class-id">
+                    <properties>
+                      <help>DHCP client vendor type</help>
                     </properties>
                   </leafNode>
                 </children>
@@ -615,7 +625,12 @@
                       </leafNode>
                       <leafNode name="host-name">
                         <properties>
-                          <help>DHCP client host name (overrides the system host name)</help>
+                          <help>DHCP client host name (overrides system host name)</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="vendor-class-id">
+                        <properties>
+                          <help>DHCP client vendor type</help>
                         </properties>
                       </leafNode>
                     </children>
@@ -760,7 +775,12 @@
                   </leafNode>
                   <leafNode name="host-name">
                     <properties>
-                      <help>DHCP client host name (overrides the system host name)</help>
+                      <help>DHCP client host name (overrides system host name)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vendor-class-id">
+                    <properties>
+                      <help>DHCP client vendor type</help>
                     </properties>
                   </leafNode>
                 </children>

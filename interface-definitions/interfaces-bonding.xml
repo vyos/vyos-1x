@@ -101,6 +101,11 @@
                   <help>DHCP client host name (overrides the system host name)</help>
                 </properties>
               </leafNode>
+              <leafNode name="vendor-class-id">
+                <properties>
+                  <help>DHCP client vendor type</help>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <node name="dhcpv6-options">
@@ -339,6 +344,11 @@
                       <help>DHCP client host name (overrides the system host name)</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="vendor-class-id">
+                    <properties>
+                      <help>DHCP client vendor type</help>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <node name="dhcpv6-options">
@@ -480,6 +490,11 @@
                           <help>DHCP client host name (overrides the system host name)</help>
                         </properties>
                       </leafNode>
+                      <leafNode name="vendor-class-id">
+                        <properties>
+                          <help>DHCP client vendor type</help>
+                        </properties>
+                      </leafNode>
                     </children>
                   </node>
                   <node name="dhcpv6-options">
@@ -603,6 +618,11 @@
                   <leafNode name="host-name">
                     <properties>
                       <help>DHCP client host name (overrides the system host name)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vendor-class-id">
+                    <properties>
+                      <help>DHCP client vendor type</help>
                     </properties>
                   </leafNode>
                 </children>

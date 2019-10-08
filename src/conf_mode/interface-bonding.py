@@ -34,6 +34,7 @@ default_config_data = {
     'deleted': False,
     'dhcp_client_id': '',
     'dhcp_hostname': '',
+    'dhcp_vendor_class_id': '',
     'dhcpv6_prm_only': False,
     'dhcpv6_temporary': False,
     'disable': False,
@@ -163,6 +164,10 @@ def get_config():
     # DHCP client host name (overrides the system host name)
     if conf.exists('dhcp-options host-name'):
         bond['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
+
+    # DHCP client vendor identifier
+    if conf.exists('dhcp-options vendor-class-id'):
+        bond['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
@@ -376,6 +381,9 @@ def apply(bond):
 
         if bond['dhcp_hostname']:
             opt['hostname'] = bond['dhcp_hostname']
+
+        if bond['dhcp_vendor_class_id']:
+            opt['vendor_class_id'] = bond['dhcp_vendor_class_id']
 
         # store DHCP config dictionary - used later on when addresses
         # are requested

@@ -35,6 +35,9 @@ interface "{{ intf }}" {
     {% if client_id -%}
     send dhcp-client-identifier "{{ client_id }}";
     {% endif -%}
+    {% if vendor_class_id -%}
+    send vendor-class-identifier "{{ vendor_class_id }}";
+    {% endif -%}
     request subnet-mask, broadcast-address, routers, domain-name-servers,
         rfc3442-classless-static-routes, domain-name, interface-mtu;
     require subnet-mask;
@@ -91,6 +94,7 @@ class Interface:
             'intf' : self._ifname,
             'hostname' : '',
             'client_id' : '',
+            'vendor_class_id' : ''
         }
 
     def _debug_msg(self, msg):

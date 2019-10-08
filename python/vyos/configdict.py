@@ -112,6 +112,7 @@ def vlan_to_dict(conf):
         'description': '',
         'dhcp_client_id': '',
         'dhcp_hostname': '',
+        'dhcp_vendor_class_id': '',
         'dhcpv6_prm_only': False,
         'dhcpv6_temporary': False,
         'disable': False,
@@ -144,6 +145,10 @@ def vlan_to_dict(conf):
     # DHCP client host name (overrides the system host name)
     if conf.exists('dhcp-options host-name'):
         vlan['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
+
+    # DHCP client vendor identifier
+    if conf.exists('dhcp-options vendor-class-id'):
+        vlan['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
