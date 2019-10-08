@@ -66,6 +66,19 @@ def apply_vlan_config(vlan, config):
     if type(vlan) != type(VLANIf("lo")):
         raise TypeError()
 
+    # get DHCP config dictionary and update values
+    opt = vlan.get_dhcp_options()
+
+    if config['dhcp_client_id']:
+        opt['client_id'] = config['dhcp_client_id']
+
+    if config['dhcp_hostname']:
+        opt['hostname'] = config['dhcp_hostname']
+
+    # store DHCP config dictionary - used later on when addresses
+    # are requested
+    vlan.set_dhcp_options(opt)
+
     # update interface description used e.g. within SNMP
     vlan.set_alias(config['description'])
     # ignore link state changes
@@ -273,9 +286,18 @@ def apply(eth):
         # update interface description used e.g. within SNMP
         e.set_alias(eth['description'])
 
-        #
-        # missing DHCP/DHCPv6 options go here
-        #
+        # get DHCP config dictionary and update values
+        opt = e.get_dhcp_options()
+
+        if eth['dhcp_client_id']:
+            opt['client_id'] = eth['dhcp_client_id']
+
+        if eth['dhcp_hostname']:
+            opt['hostname'] = eth['dhcp_hostname']
+
+        # store DHCP config dictionary - used later on when addresses
+        # are requested
+        e.set_dhcp_options(opt)
 
         # ignore link state changes
         e.set_link_detect(eth['disable_link_detect'])

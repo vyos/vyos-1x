@@ -368,9 +368,18 @@ def apply(bond):
         # update interface description used e.g. within SNMP
         b.set_alias(bond['description'])
 
-        #
-        # missing DHCP/DHCPv6 options go here
-        #
+        # get DHCP config dictionary and update values
+        opt = b.get_dhcp_options()
+
+        if bond['dhcp_client_id']:
+            opt['client_id'] = bond['dhcp_client_id']
+
+        if bond['dhcp_hostname']:
+            opt['hostname'] = bond['dhcp_hostname']
+
+        # store DHCP config dictionary - used later on when addresses
+        # are requested
+        b.set_dhcp_options(opt)
 
         # ignore link state changes
         b.set_link_detect(bond['disable_link_detect'])
