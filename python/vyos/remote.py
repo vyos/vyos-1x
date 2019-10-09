@@ -121,16 +121,34 @@ def get_remote_config(remote_file):
     if request['protocol'] in ('scp', 'sftp'):
         check_and_add_host_key(request['host'])
 
+    redirect_opt = ''
+
+    if request['protocol'] in ('http', 'https'):
+        redirect_opt = '-L'
+        # Try header first, and look for 'OK' or 'Moved' codes:
+        curl_cmd = 'curl {0} -q -I {1}'.format(redirect_opt, remote_file)
+        try:
+            curl_output = subprocess.check_output(curl_cmd, shell=True,
+                                                  universal_newlines=True)
+        except subprocess.CalledProcessError:
+            sys.exit(1)
+
+        return_vals = re.findall(r'^HTTP\/\d+\.?\d\s+(\d+)\s+(.*)$',
+                                 curl_output, re.MULTILINE)
+        for val in return_vals:
+            if int(val[0]) not in [200, 301, 302]:
+                print('HTTP error: {0} {1}'.format(*val))
+                sys.exit(1)
+
     if request['user'] and not request['passwd']:
         curl_cmd = 'curl -# -u {0} {1}'.format(request['user'], remote_file)
     else:
-        curl_cmd = 'curl -# {0}'.format(remote_file)
+        curl_cmd = 'curl {0} -# {1}'.format(redirect_opt, remote_file)
 
-    config_file = None
     try:
         config_file = subprocess.check_output(curl_cmd, shell=True,
                                         universal_newlines=True)
-    except subprocess.CalledProcessError as err:
-        print("Called process error: {}.".format(err))
+    except subprocess.CalledProcessError:
+        config_file = None
 
     return config_file

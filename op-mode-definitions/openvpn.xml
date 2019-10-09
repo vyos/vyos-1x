@@ -68,7 +68,7 @@
                 <script>sudo ${vyos_completion_dir}/list_interfaces.py --type openvpn</script>
               </completionHelp>
             </properties>
-            <command>sudo kill -SIGUSR1 $(cat /var/run/openvpn/$4.pid)</command>
+            <command>sudo ${vyos_op_scripts_dir}/reset_openvpn.py $4</command>
           </tagNode>
         </children>
       </node>

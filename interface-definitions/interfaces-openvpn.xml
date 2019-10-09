@@ -106,7 +106,7 @@
             <properties>
               <help>Data Encryption Algorithm</help>
               <completionHelp>
-                <list>des 3des bf128 bf256 aes128 aes192 aes256</list>
+                <list>des 3des bf128 bf256 aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
               </completionHelp>
               <valueHelp>
                 <format>des</format>
@@ -126,18 +126,30 @@
               </valueHelp>
               <valueHelp>
                 <format>aes128</format>
-                <description>AES algorithm with 128-bit key</description>
+                <description>AES algorithm with 128-bit key CBC</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes128gcm</format>
+                <description>AES algorithm with 128-bit key GCM</description>
               </valueHelp>
               <valueHelp>
                 <format>aes192</format>
-                <description>AES algorithm with 192-bit key</description>
+                <description>AES algorithm with 192-bit key CBC</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes192gcm</format>
+                <description>AES algorithm with 192-bit key GCM</description>
               </valueHelp>
               <valueHelp>
                 <format>aes256</format>
-                <description>AES algorithm with 256-bit key</description>
+                <description>AES algorithm with 256-bit key CBC</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes256gcm</format>
+                <description>AES algorithm with 256-bit key GCM</description>
               </valueHelp>
               <constraint>
-                <regex>(des|3des|bf128|bf256|aes128|aes192|aes256)</regex>
+                <regex>(des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
               </constraint>
             </properties>
           </leafNode>

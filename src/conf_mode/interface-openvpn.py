@@ -207,10 +207,16 @@ keysize 128
 {%- elif 'bf256' in encryption %}
 cipher bf-cbc
 keysize 25
+{%- elif 'aes128gcm' in encryption %}
+cipher aes-128-gcm
 {%- elif 'aes128' in encryption %}
 cipher aes-128-cbc
+{%- elif 'aes192gcm' in encryption %}
+cipher aes-192-gcm
 {%- elif 'aes192' in encryption %}
 cipher aes-192-cbc
+{%- elif 'aes256gcm' in encryption %}
+cipher aes-256-gcm
 {%- elif 'aes256' in encryption %}
 cipher aes-256-cbc
 {% endif %}
@@ -729,6 +735,9 @@ def verify(openvpn):
     # TLS/encryption
     #
     if openvpn['shared_secret_file']:
+        if openvpn['encryption'] in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
+            raise ConfigError('GCM encryption with shared-secret-key-file is not supported')
+        
         if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['shared_secret_file']):
             raise ConfigError('Specified shared-secret-key-file "{}" is not valid'.format(openvpn['shared_secret_file']))
 

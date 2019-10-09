@@ -224,10 +224,10 @@ def apply(c):
         intfc.add_addr(ip)
 
     # interface mtu
-    intfc.mtu = int(c['mtu'])
+    intfc.set_mtu(int(c['mtu']))
 
     # ifalias for snmp from description
-    intfc.ifalias = str(c['descr'])
+    intfc.set_alias(str(c['descr']))
 
     # remove peers
     if c['peer_remove']:
@@ -267,7 +267,7 @@ def apply(c):
         intfc.update()
 
     # interface state
-    intfc.state = c['state']
+    intfc.set_state(c['state'])
 
     return None
 
