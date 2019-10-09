@@ -32,6 +32,11 @@ default_config_data = {
     'arp_cache_tmo': 30,
     'description': '',
     'deleted': False,
+    'dhcp_client_id': '',
+    'dhcp_hostname': '',
+    'dhcp_vendor_class_id': '',
+    'dhcpv6_prm_only': False,
+    'dhcpv6_temporary': False,
     'disable': False,
     'disable_link_detect': 1,
     'forwarding_delay': 14,
@@ -80,6 +85,26 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         bridge['description'] = conf.return_value('description')
+
+    # get DHCP client identifier
+    if conf.exists('dhcp-options client-id'):
+        bridge['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
+
+    # DHCP client host name (overrides the system host name)
+    if conf.exists('dhcp-options host-name'):
+        bridge['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
+
+    # DHCP client vendor identifier
+    if conf.exists('dhcp-options vendor-class-id'):
+        bridge['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
+
+    # DHCPv6 only acquire config parameters, no address
+    if conf.exists('dhcpv6-options parameters-only'):
+        bridge['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+
+    # DHCPv6 temporary IPv6 address
+    if conf.exists('dhcpv6-options temporary'):
+        bridge['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
 
     # Disable this bridge interface
     if conf.exists('disable'):
@@ -202,6 +227,22 @@ def apply(bridge):
         br.set_multicast_querier(bridge['igmp_querier'])
         # update interface description used e.g. within SNMP
         br.set_alias(bridge['description'])
+
+        # get DHCP config dictionary and update values
+        opt = br.get_dhcp_options()
+
+        if bridge['dhcp_client_id']:
+            opt['client_id'] = bridge['dhcp_client_id']
+
+        if bridge['dhcp_hostname']:
+            opt['hostname'] = bridge['dhcp_hostname']
+
+        if bridge['dhcp_vendor_class_id']:
+            opt['vendor_class_id'] = bridge['dhcp_vendor_class_id']
+
+        # store DHCP config dictionary - used later on when addresses
+        # are requested
+        br.set_dhcp_options(opt)
 
         # Change interface MAC address
         if bridge['mac']:
