@@ -71,6 +71,7 @@ class Interface:
         >>> i = Interface('eth0')
         """
         self._ifname = str(ifname)
+        self._statechange_wait = True
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(self._ifname))
@@ -314,17 +315,18 @@ class Interface:
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
         tmp = self._cmd(cmd)
 
-        # better safe then sorry - wait until the interface is really up
-        # but only for a given period of time to avoid potential deadlocks!
-        cnt = 0
-        while self.get_state() != state:
-            cnt += 1
-            if cnt == 50:
-                print('Interface {} could not be brought up in time ...'.format(self._ifname))
-                break
+        if self._statechange_wait:
+            # better safe then sorry - wait until the interface is really up
+            # but only for a given period of time to avoid potential deadlocks!
+            cnt = 0
+            while self.get_state() != state:
+                cnt += 1
+                if cnt == 50:
+                    print('Interface {} could not be brought up in time ...'.format(self._ifname))
+                    break
 
-            # sleep 250ms
-            sleep(0.250)
+                # sleep 250ms
+                sleep(0.250)
 
         return tmp
 
@@ -1370,15 +1372,17 @@ class WireGuardIf(Interface):
 
     def __init__(self, ifname):
         super().__init__(ifname, type='wireguard')
+        self._statechange_wait = False
+
         self.config = {
             'port': 0,
-          'private-key': None,
-          'pubkey': None,
-          'psk': '/dev/null',
-          'allowed-ips': [],
-          'fwmark': 0x00,
-          'endpoint': None,
-          'keepalive': 0
+            'private-key': None,
+            'pubkey': None,
+            'psk': '/dev/null',
+            'allowed-ips': [],
+            'fwmark': 0x00,
+            'endpoint': None,
+            'keepalive': 0
         }
 
     def update(self):
