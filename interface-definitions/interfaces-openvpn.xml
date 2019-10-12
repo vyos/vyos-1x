@@ -160,7 +160,7 @@
               </leafNode>
               <leafNode name="ncp-ciphers">
                 <properties>
-                  <help>Data Encryption Algorithm list for use in server or client mode</help>
+                  <help>Cipher negotiation list for use in server or client mode</help>
                   <completionHelp>
                     <list>des 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
                   </completionHelp>
