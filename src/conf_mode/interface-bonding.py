@@ -221,7 +221,7 @@ def get_config():
     if conf.exists('primary'):
         bond['primary'] = conf.return_value('primary')
 
-    # re-set configuration level and retrieve vif-s interfaces
+    # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
     # get vif-s interfaces (currently effective) - to determine which vif-s
     # interface is no longer present and needs to be removed
@@ -235,7 +235,7 @@ def get_config():
             conf.set_level(cfg_base + ' vif-s ' + vif_s)
             bond['vif_s'].append(vlan_to_dict(conf))
 
-    # re-set configuration level and retrieve vif-s interfaces
+    # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
     # Determine vif interfaces (currently effective) - to determine which
     # vif interface is no longer present and needs to be removed
