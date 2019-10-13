@@ -597,8 +597,8 @@ class Interface:
             sleep(5)
 
             # no longer accept router announcements on this interface
-            cmd = 'sysctl -q -w net.ipv6.conf.{}.accept_ra=0'.format(self._ifname)
-            self._cmd(cmd)
+            self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
+                  .format(self._ifname), 0)
 
             # assemble command-line to start DHCPv6 client (dhclient)
             cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
@@ -634,8 +634,8 @@ class Interface:
         self._cmd(cmd)
 
         # accept router announcements on this interface
-        cmd = 'sysctl -q -w net.ipv6.conf.{}.accept_ra=1'.format(self._ifname)
-        self._cmd(cmd)
+        self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
+              .format(self._ifname), 1)
 
         # cleanup old config file
         if os.path.isfile(self._dhcpv6_cfg_file):
