@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="ethernet" owner="${vyos_conf_scripts_dir}/interface-ethernet.py">
+      <tagNode name="ethernet" owner="${vyos_conf_scripts_dir}/interfaces-ethernet.py">
         <properties>
           <help>Ethernet interface name</help>
           <priority>318</priority>

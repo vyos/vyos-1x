@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="bonding" owner="${vyos_conf_scripts_dir}/interface-bonding.py">
+      <tagNode name="bonding" owner="${vyos_conf_scripts_dir}/interfaces-bonding.py">
         <properties>
           <help>Bonding interface name</help>
           <priority>315</priority>
