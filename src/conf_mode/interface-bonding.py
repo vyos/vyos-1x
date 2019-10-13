@@ -84,6 +84,21 @@ def apply_vlan_config(vlan, config):
     if type(vlan) != type(VLANIf("lo")):
         raise TypeError()
 
+    # get DHCP config dictionary and update values
+    opt = vlan.get_dhcp_options()
+
+    if config['dhcp_client_id']:
+        opt['client_id'] = config['dhcp_client_id']
+
+    if config['dhcp_hostname']:
+        opt['hostname'] = config['dhcp_hostname']
+
+    if config['dhcp_vendor_class_id']:
+        opt['vendor_class_id'] = config['dhcp_vendor_class_id']
+
+    # store DHCP config dictionary - used later on when addresses are aquired
+    vlan.set_dhcp_options(opt)
+
     # update interface description used e.g. within SNMP
     vlan.set_alias(config['description'])
     # ignore link state changes
@@ -385,8 +400,7 @@ def apply(bond):
         if bond['dhcp_vendor_class_id']:
             opt['vendor_class_id'] = bond['dhcp_vendor_class_id']
 
-        # store DHCP config dictionary - used later on when addresses
-        # are requested
+        # store DHCP config dictionary - used later on when addresses are aquired
         b.set_dhcp_options(opt)
 
         # ignore link state changes
