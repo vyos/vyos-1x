@@ -99,6 +99,18 @@ def apply_vlan_config(vlan, config):
     # store DHCP config dictionary - used later on when addresses are aquired
     vlan.set_dhcp_options(opt)
 
+    # get DHCPv6 config dictionary and update values
+    opt = vlan.get_dhcpv6_options()
+
+    if config['dhcpv6_prm_only']:
+        opt['dhcpv6_prm_only'] = True
+
+    if config['dhcpv6_temporary']:
+        opt['dhcpv6_temporary'] = True
+
+    # store DHCPv6 config dictionary - used later on when addresses are aquired
+    vlan.set_dhcpv6_options(opt)
+
     # update interface description used e.g. within SNMP
     vlan.set_alias(config['description'])
     # ignore link state changes
@@ -186,11 +198,11 @@ def get_config():
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
-        bond['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+        bond['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
     if conf.exists('dhcpv6-options temporary'):
-        bond['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
+        bond['dhcpv6_temporary'] = True
 
     # ignore link state changes
     if conf.exists('disable-link-detect'):
@@ -279,6 +291,21 @@ def verify(bond):
         if bond['primary'] not in bond['member']:
             raise ConfigError('Interface "{}" is not part of the bond' \
                               .format(bond['primary']))
+
+
+    # DHCPv6 parameters-only and temporary address are mutually exclusive
+    for vif_s in bond['vif_s']:
+        if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+        for vif_c in vif_s['vif_c']:
+            if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
+                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+    for vif in bond['vif']:
+        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
 
     for vif_s in bond['vif_s']:
         for vif in bond['vif']:
@@ -402,6 +429,18 @@ def apply(bond):
 
         # store DHCP config dictionary - used later on when addresses are aquired
         b.set_dhcp_options(opt)
+
+        # get DHCPv6 config dictionary and update values
+        opt = b.get_dhcpv6_options()
+
+        if bond['dhcpv6_prm_only']:
+            opt['dhcpv6_prm_only'] = True
+
+        if bond['dhcpv6_temporary']:
+            opt['dhcpv6_temporary'] = True
+
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        b.set_dhcpv6_options(opt)
 
         # ignore link state changes
         b.set_link_detect(bond['disable_link_detect'])
