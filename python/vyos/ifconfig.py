@@ -98,6 +98,13 @@ class Interface:
             'vendor_class_id' : ''
         }
 
+        # DHCPv6 options
+        self._dhcpv6_options = {
+            'intf' : self._ifname,
+            'dhcpv6_prm_only' : False,
+            'dhcpv6_temporary' : False
+        }
+
     def _debug_msg(self, msg):
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             print('DEBUG/{:<6} {}'.format(self._ifname, msg))
@@ -474,6 +481,7 @@ class Interface:
     def get_dhcp_options(self):
         """
         Return dictionary with supported DHCP options.
+
         Dictionary should be altered and send back via set_dhcp_options()
         so those options are applied when DHCP is run.
         """
@@ -484,6 +492,21 @@ class Interface:
         Store new DHCP options used by next run of DHCP client.
         """
         self._dhcp_options = options
+
+    def get_dhcpv6_options(self):
+        """
+        Return dictionary with supported DHCPv6 options.
+
+        Dictionary should be altered and send back via set_dhcp_options()
+        so those options are applied when DHCP is run.
+        """
+        return self._dhcpv6_options
+
+    def set_dhcpv6_options(self, options):
+        """
+        Store new DHCP options used by next run of DHCP client.
+        """
+        self._dhcpv6_options = options
 
     # replace dhcpv4/v6 with systemd.networkd?
     def _set_dhcp(self):
@@ -579,9 +602,14 @@ class Interface:
         >>> j = Interface('eth0')
         >>> j.set_dhcpv6()
         """
-        dhcpv6 = {
-            'intf': self._ifname
-        }
+        dhcpv6 = self.get_dhcpv6_options()
+        import pprint
+        pprint.pprint(dhcpv6)
+
+        # better save then sorry .. should be checked in interface script
+        # but if you missed it we are safe!
+        if dhcpv6['dhcpv6_prm_only'] and dhcpv6['dhcpv6_temporary']:
+            raise Exception('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
         # render DHCP configuration
         tmpl = jinja2.Template(dhcpv6_cfg)
@@ -597,16 +625,24 @@ class Interface:
             sleep(5)
 
             # no longer accept router announcements on this interface
-            cmd = 'sysctl -q -w net.ipv6.conf.{}.accept_ra=0'.format(self._ifname)
-            self._cmd(cmd)
+            self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
+                  .format(self._ifname), 0)
 
             # assemble command-line to start DHCPv6 client (dhclient)
             cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
                 self._dhcpv6_pid_file
             cmd += ' --exec /sbin/dhclient --'
             # now pass arguments to dhclient binary
-            cmd += ' -6 -nw -cf {} -pf {} -lf {} {}'.format(
-                self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file, self._ifname)
+            cmd += ' -6 -nw -cf {} -pf {} -lf {}'.format(
+                self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file)
+
+            # add optional arguments
+            if dhcpv6['dhcpv6_prm_only']:
+                cmd += ' -S'
+            if dhcpv6['dhcpv6_temporary']:
+                cmd += ' -T'
+
+            cmd += ' {}'.format(self._ifname)
             return self._cmd(cmd)
 
 
@@ -634,8 +670,8 @@ class Interface:
         self._cmd(cmd)
 
         # accept router announcements on this interface
-        cmd = 'sysctl -q -w net.ipv6.conf.{}.accept_ra=1'.format(self._ifname)
-        self._cmd(cmd)
+        self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
+              .format(self._ifname), 1)
 
         # cleanup old config file
         if os.path.isfile(self._dhcpv6_cfg_file):

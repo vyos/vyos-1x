@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="vxlan" owner="${vyos_conf_scripts_dir}/interface-vxlan.py">
+      <tagNode name="vxlan" owner="${vyos_conf_scripts_dir}/interfaces-vxlan.py">
         <properties>
           <help>Virtual extensible LAN interface (VXLAN)</help>
           <priority>460</priority>

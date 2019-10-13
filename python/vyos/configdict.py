@@ -152,11 +152,11 @@ def vlan_to_dict(conf):
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
-        vlan['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+        vlan['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
     if conf.exists('dhcpv6-options temporary'):
-        vlan['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
+        vlan['dhcpv6_temporary'] = True
 
     # ignore link state changes
     if conf.exists('disable-link-detect'):
