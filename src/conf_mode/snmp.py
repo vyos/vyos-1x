@@ -208,7 +208,7 @@ init_config_tmpl = """
 SNMPDRUN=yes
 
 # snmpd options (use syslog, close stdin/out/err).
-SNMPDOPTS='-LSed -u snmp -g snmp -p /run/snmpd.pid'
+SNMPDOPTS='-LSed -u snmp -g snmp -I -ipCidrRouteTable,inetCidrRouteTable -p /run/snmpd.pid'
 """
 
 default_config_data = {
