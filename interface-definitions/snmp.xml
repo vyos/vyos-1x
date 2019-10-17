@@ -21,6 +21,9 @@
               <leafNode name="authorization">
                 <properties>
                   <help>Authorization type (default: 'ro')</help>
+                  <completionHelp>
+                    <list>ro rw</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>ro</format>
                     <description>read only</description>
@@ -193,6 +196,9 @@
                   <leafNode name="mode">
                     <properties>
                       <help>Define group access permission (default: 'ro')</help>
+                      <completionHelp>
+                        <list>ro rw</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>ro</format>
                         <description>read only</description>
@@ -210,6 +216,9 @@
                   <leafNode name="seclevel">
                     <properties>
                       <help>Security levels</help>
+                      <completionHelp>
+                        <list>noauth auth priv2</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>noauth</format>
                         <description>Messages not authenticated and not encrypted (noAuthNoPriv)</description>
@@ -280,6 +289,9 @@
                       <leafNode name="type">
                         <properties>
                           <help>Defines the protocol used for authentication (default: 'md5')</help>
+                          <completionHelp>
+                            <list>md5 sha</list>
+                          </completionHelp>
                           <valueHelp>
                             <format>md5</format>
                             <description>Message Digest 5</description>
@@ -343,6 +355,9 @@
                       <leafNode name="type">
                         <properties>
                           <help>Defines the protocol for privacy (default: 'des')</help>
+                          <completionHelp>
+                            <list>des aes</list>
+                          </completionHelp>
                           <valueHelp>
                             <format>des</format>
                             <description>Data Encryption Standard</description>
@@ -361,6 +376,9 @@
                   <leafNode name="protocol">
                     <properties>
                       <help>Defines protocol for notification between TCP and UDP</help>
+                      <completionHelp>
+                        <list>tcp udp</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>tcp</format>
                         <description>Use Transmission Control Protocol for notifications</description>
@@ -377,6 +395,9 @@
                   <leafNode name="type">
                     <properties>
                       <help>Specifies the type of notification between inform and trap (default: 'inform')</help>
+                      <completionHelp>
+                        <list>inform trap</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>inform</format>
                         <description>Use INFORM</description>
@@ -464,6 +485,9 @@
                       <leafNode name="type">
                         <properties>
                           <help>Defines the protocol used for authentication (default: 'md5')</help>
+                          <completionHelp>
+                            <list>md5 sha</list>
+                          </completionHelp>
                           <valueHelp>
                             <format>md5</format>
                             <description>Message Digest 5</description>
@@ -499,6 +523,9 @@
                   <leafNode name="mode">
                     <properties>
                       <help>Define users access permission (default: 'ro')</help>
+                      <completionHelp>
+                        <list>ro rw</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>ro</format>
                         <description>read only</description>
@@ -539,6 +566,9 @@
                       <leafNode name="type">
                         <properties>
                           <help>Defines the protocol for privacy (default: 'des')</help>
+                          <completionHelp>
+                            <list>des aes</list>
+                          </completionHelp>
                           <valueHelp>
                             <format>des</format>
                             <description>Data Encryption Standard</description>
