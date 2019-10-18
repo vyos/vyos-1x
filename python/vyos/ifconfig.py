@@ -16,6 +16,7 @@
 import os
 import re
 import jinja2
+import json
 
 from vyos.validate import *
 from ipaddress import IPv4Network, IPv6Address
@@ -116,7 +117,7 @@ class Interface:
             self._debug_msg("returned:\n{}".format(tmp.decode()))
 
         # do we need some error checking code here?
-        return tmp
+        return tmp.decode()
 
     def _read_sysfs(self, filename):
         """
@@ -300,8 +301,10 @@ class Interface:
         >>> Interface('eth0').get_state()
         'up'
         """
-        return self._read_sysfs('/sys/class/net/{}/operstate'
-                                .format(self._ifname))
+        cmd = 'ip -json link show dev {}'.format(self._ifname)
+        tmp = self._cmd(cmd)
+        out = json.loads(tmp)
+        return out[0]['operstate'].lower()
 
     def set_state(self, state):
         """
