@@ -521,14 +521,13 @@ class Interface:
         with open(self._dhcp_cfg_file, 'w') as f:
             f.write(dhcp_text)
 
-        if self.get_state() == 'up':
-            cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-                self._dhcp_pid_file
-            cmd += ' --exec /sbin/dhclient --'
-            # now pass arguments to dhclient binary
-            cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
-                self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
-            return self._cmd(cmd)
+        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
+            self._dhcp_pid_file
+        cmd += ' --exec /sbin/dhclient --'
+        # now pass arguments to dhclient binary
+        cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
+            self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
+        return self._cmd(cmd)
 
 
     def _del_dhcp(self):
