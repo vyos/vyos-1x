@@ -190,9 +190,6 @@ def verify(c):
                 raise ConfigError("ERROR: allowed-ips required for peer " + p)
             if not c['peer'][p]['pubkey']:
                 raise ConfigError("peer pubkey required for peer " + p)
-            if not c['peer'][p]['endpoint']:
-                raise ConfigError("peer endpoint required for peer " + p)
-
 
 def apply(c):
     # no wg configs left, remove all interface from system
