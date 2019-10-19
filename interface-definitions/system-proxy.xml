@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="proxy" owner="${vyos_conf_scripts_dir}/system-proxy.py">
+        <properties>
+          <help>Sets a proxy for system wide use</help>
+        </properties>
+        <children>
+          <leafNode name="url">
+            <properties>
+              <help>Proxy URL</help>
+              <constraint>
+                <regex>^http://[a-z0-9\.]+$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="port">
+            <properties>
+              <help>Proxy port</help>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="username">
+            <properties>
+              <help>Proxy username</help>
+              <constraint>
+                <regex>^[a-z0-9-_\.]{1,100}$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="password">
+            <properties>
+              <help>Proxy password</help>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

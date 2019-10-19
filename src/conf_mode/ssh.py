@@ -262,7 +262,8 @@ def apply(ssh):
     else:
         # SSH access is removed in the commit
         os.system("sudo systemctl stop ssh.service")
-        os.unlink(config_file)
+        if os.path.isfile(config_file):
+            os.unlink(config_file)
 
     return None
 

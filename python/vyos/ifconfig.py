@@ -16,6 +16,7 @@
 import os
 import re
 import jinja2
+import json
 
 from vyos.validate import *
 from ipaddress import IPv4Network, IPv6Address
@@ -71,7 +72,6 @@ class Interface:
         >>> i = Interface('eth0')
         """
         self._ifname = str(ifname)
-        self._statechange_wait = True
 
         if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
             raise Exception('interface "{}" not found'.format(self._ifname))
@@ -117,7 +117,7 @@ class Interface:
             self._debug_msg("returned:\n{}".format(tmp.decode()))
 
         # do we need some error checking code here?
-        return tmp
+        return tmp.decode()
 
     def _read_sysfs(self, filename):
         """
@@ -301,8 +301,10 @@ class Interface:
         >>> Interface('eth0').get_state()
         'up'
         """
-        return self._read_sysfs('/sys/class/net/{}/operstate'
-                                .format(self._ifname))
+        cmd = 'ip -json link show dev {}'.format(self._ifname)
+        tmp = self._cmd(cmd)
+        out = json.loads(tmp)
+        return out[0]['operstate'].lower()
 
     def set_state(self, state):
         """
@@ -320,22 +322,7 @@ class Interface:
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
         cmd = 'ip link set dev {} {}'.format(self._ifname, state)
-        tmp = self._cmd(cmd)
-
-        if self._statechange_wait:
-            # better safe then sorry - wait until the interface is really up
-            # but only for a given period of time to avoid potential deadlocks!
-            cnt = 0
-            while self.get_state() != state:
-                cnt += 1
-                if cnt == 50:
-                    print('Interface {} could not be brought up in time ...'.format(self._ifname))
-                    break
-
-                # sleep 250ms
-                sleep(0.250)
-
-        return tmp
+        return self._cmd(cmd)
 
     def set_proxy_arp(self, enable):
         """
@@ -534,14 +521,13 @@ class Interface:
         with open(self._dhcp_cfg_file, 'w') as f:
             f.write(dhcp_text)
 
-        if self.get_state() == 'up':
-            cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-                self._dhcp_pid_file
-            cmd += ' --exec /sbin/dhclient --'
-            # now pass arguments to dhclient binary
-            cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
-                self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
-            return self._cmd(cmd)
+        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
+            self._dhcp_pid_file
+        cmd += ' --exec /sbin/dhclient --'
+        # now pass arguments to dhclient binary
+        cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
+            self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
+        return self._cmd(cmd)
 
 
     def _del_dhcp(self):
@@ -1408,7 +1394,6 @@ class WireGuardIf(Interface):
 
     def __init__(self, ifname):
         super().__init__(ifname, type='wireguard')
-        self._statechange_wait = False
 
         self.config = {
             'port': 0,

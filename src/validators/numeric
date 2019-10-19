@@ -24,7 +24,7 @@ import re
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--float", action="store_true", help="Accept floating point values")
 group = parser.add_mutually_exclusive_group()
-group.add_argument("-r", "--range", type=str, help="Check if the number is within range (inclusive), example: 1024-65535")
+group.add_argument("-r", "--range", type=str, help="Check if the number is within range (inclusive), example: 1024-65535", action='append')
 group.add_argument("-n", "--non-negative", action="store_true", help="Check if the number is non-negative (>= 0)")
 group.add_argument("-p", "--positive", action="store_true", help="Check if the number is positive (> 0)")
 parser.add_argument("number", type=str, help="Number to validate")
@@ -47,15 +47,25 @@ else:
         sys.exit(1)
 
 if args.range:
-    try:
-        lower, upper = re.match(r'(\d+)\s*\-\s*(\d+)', args.range).groups()
-        lower, upper = int(lower), int(upper)
-    except:
-        print("{0} is not a valid number range",format(args.range), file=sys.stderr)
-        sys.exit(1)
+    valid = False
+    for r in args.range:
+        try:
+            lower, upper = re.match(r'(\d+)\s*\-\s*(\d+)', r).groups()
+            lower, upper = int(lower), int(upper)
+        except:
+            print("{0} is not a valid number range",format(args.range), file=sys.stderr)
+            sys.exit(1)
 
-    if (number < lower) or (number > upper):
-        print("Number {0} is not in the {1} range".format(number, args.range), file=sys.stderr)
+        if (number >= lower) and (number <= upper):
+            valid = True
+    # end for
+
+    if not valid:
+        if len(args.range) > 1:
+            err_msg = "Number {0} is not in any of the ranges {1}".format(number, args.range)
+        else:
+            err_msg = "Number {0} is not in the range {1}".format(number, args.range[0])
+        print(err_msg, file=sys.stderr)
         sys.exit(1)
 elif args.non_negative:
     if number < 0:
