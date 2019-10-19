@@ -301,7 +301,8 @@ def dhcp_slice_range(exclude_list, range_list):
                       'start': str(ip_address(e) + 1),
                       'stop': str(range_stop)
                     }
-                    output.append(r)
+                    if not (ip_address(r['start']) > ip_address(r['stop'])):
+                        output.append(r)
             else:
               # if we have no exclude in the whole range - we just take the range
               # as it is
