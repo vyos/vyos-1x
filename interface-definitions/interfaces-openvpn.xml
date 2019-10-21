@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="openvpn" owner="${vyos_conf_scripts_dir}/interface-openvpn.py">
+      <tagNode name="openvpn" owner="${vyos_conf_scripts_dir}/interfaces-openvpn.py">
         <properties>
           <help>OpenVPN tunnel interface name</help>
           <priority>460</priority>
@@ -106,7 +106,7 @@
             <properties>
               <help>Data Encryption Algorithm</help>
               <completionHelp>
-                <list>des 3des bf128 bf256 aes128 aes192 aes256</list>
+                <list>des 3des bf128 bf256 aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
               </completionHelp>
               <valueHelp>
                 <format>des</format>
@@ -126,18 +126,30 @@
               </valueHelp>
               <valueHelp>
                 <format>aes128</format>
-                <description>AES algorithm with 128-bit key</description>
+                <description>AES algorithm with 128-bit key CBC</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes128gcm</format>
+                <description>AES algorithm with 128-bit key GCM</description>
               </valueHelp>
               <valueHelp>
                 <format>aes192</format>
-                <description>AES algorithm with 192-bit key</description>
+                <description>AES algorithm with 192-bit key CBC</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes192gcm</format>
+                <description>AES algorithm with 192-bit key GCM</description>
               </valueHelp>
               <valueHelp>
                 <format>aes256</format>
-                <description>AES algorithm with 256-bit key</description>
+                <description>AES algorithm with 256-bit key CBC</description>
+              </valueHelp>
+              <valueHelp>
+                <format>aes256gcm</format>
+                <description>AES algorithm with 256-bit key GCM</description>
               </valueHelp>
               <constraint>
-                <regex>(des|3des|bf128|bf256|aes128|aes192|aes256)</regex>
+                <regex>(des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -587,6 +599,29 @@
                   </valueHelp>
                   <constraint>
                     <validator name="file-exists" argument="--directory /config/auth"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tls-version-min">
+                <properties>
+                  <help>Specify the minimum required TLS version</help>
+                  <completionHelp>
+                    <list>1.0 1.1 1.2</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>1.0</format>
+                    <description>TLS v1.0</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>1.1</format>
+                    <description>TLS v1.1</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>1.2</format>
+                    <description>TLS v1.2</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(1.0|1.1|1.2)</regex>
                   </constraint>
                 </properties>
               </leafNode>

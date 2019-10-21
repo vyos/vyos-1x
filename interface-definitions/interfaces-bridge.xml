@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/interface-bridge.py">
+      <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/interfaces-bridge.py">
         <properties>
           <help>Bridge interface name</help>
           <priority>470</priority>
@@ -83,6 +83,11 @@
               <leafNode name="host-name">
                 <properties>
                   <help>DHCP client host name (overrides the system host name)</help>
+                </properties>
+              </leafNode>
+              <leafNode name="vendor-class-id">
+                <properties>
+                  <help>DHCP client vendor type</help>
                 </properties>
               </leafNode>
             </children>

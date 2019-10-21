@@ -13,14 +13,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-from os import environ
-from copy import deepcopy
+import os
+
 from sys import exit
+from copy import deepcopy
 
-from vyos.ifconfig import DummyIf
+from vyos.ifconfig import LoopbackIf
 from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
@@ -30,77 +29,63 @@ default_config_data = {
     'address_remove': [],
     'deleted': False,
     'description': '',
-    'disable': False,
-    'intf': ''
 }
 
+
 def get_config():
-    dummy = deepcopy(default_config_data)
+    loopback = deepcopy(default_config_data)
     conf = Config()
 
     # determine tagNode instance
     try:
-        dummy['intf'] = environ['VYOS_TAGNODE_VALUE']
+        loopback['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     except KeyError as E:
         print("Interface not specified")
 
     # Check if interface has been removed
-    if not conf.exists('interfaces dummy ' + dummy['intf']):
-        dummy['deleted'] = True
-        return dummy
+    if not conf.exists('interfaces loopback ' + loopback['intf']):
+        loopback['deleted'] = True
 
     # set new configuration level
-    conf.set_level('interfaces dummy ' + dummy['intf'])
+    conf.set_level('interfaces loopback ' + loopback['intf'])
 
     # retrieve configured interface addresses
     if conf.exists('address'):
-        dummy['address'] = conf.return_values('address')
+        loopback['address'] = conf.return_values('address')
 
     # retrieve interface description
     if conf.exists('description'):
-        dummy['description'] = conf.return_value('description')
-
-    # Disable this interface
-    if conf.exists('disable'):
-        dummy['disable'] = True
+        loopback['description'] = conf.return_value('description')
 
     # Determine interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the interface
     eff_addr = conf.return_effective_values('address')
     act_addr = conf.return_values('address')
-    dummy['address_remove'] = list_diff(eff_addr, act_addr)
+    loopback['address_remove'] = list_diff(eff_addr, act_addr)
 
-    return dummy
+    return loopback
 
-def verify(dummy):
+def verify(loopback):
     return None
 
-def generate(dummy):
+def generate(loopback):
     return None
 
-def apply(dummy):
-    du = DummyIf(dummy['intf'])
-
-    # Remove dummy interface
-    if dummy['deleted']:
-        du.remove()
+def apply(loopback):
+    l = LoopbackIf(loopback['intf'])
+    if loopback['deleted']:
+        l.remove()
     else:
-        # enable interface
-        du.state = 'up'
         # update interface description used e.g. within SNMP
-        du.ifalias = dummy['description']
+        l.set_alias(loopback['description'])
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
         # - newly addresses will be added second
-        for addr in dummy['address_remove']:
-            du.del_addr(addr)
-        for addr in dummy['address']:
-            du.add_addr(addr)
-
-        # disable interface on demand
-        if dummy['disable']:
-            du.state = 'down'
+        for addr in loopback['address_remove']:
+            l.del_addr(addr)
+        for addr in loopback['address']:
+            l.add_addr(addr)
 
     return None
 

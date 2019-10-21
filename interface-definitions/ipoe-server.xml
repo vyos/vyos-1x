@@ -50,7 +50,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>vlan</format>
-                    <description>One VLAN per client</description>    
+                    <description>One VLAN per client</description>
                   </valueHelp>
                 </properties>
               </leafNode>
@@ -97,7 +97,7 @@
                     <validator name="numeric" argument="--range 1-4096"/>
                   </constraint>
                   <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="vlan-range">
@@ -106,7 +106,7 @@
                   <constraint>
                     <regex>(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})-(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})</regex>
                   </constraint>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
@@ -173,13 +173,13 @@
               <leafNode name="prefix">
                 <properties>
                   <help>Format: ipv6prefix/mask,prefix_len (e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients)</help>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="delegate-prefix">
                 <properties>
                   <help>Format: ipv6prefix/mask,prefix_len (delegates prefix  to clients via DHCPv6 prefix delegation</help>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
@@ -211,164 +211,164 @@
                     <description>Authentication disabled</description>
                   </valueHelp>
                 </properties>
-                </leafNode>
-                <tagNode name="interface">
-                  <properties>
-                    <help>Network interface the client mac will appear on</help>
-                    <completionHelp>
-                      <script>${vyos_completion_dir}/list_interfaces.py</script>
-                    </completionHelp>
-                  </properties>
-                  <children>
-                    <tagNode name="mac-address">
-                      <properties>
-                        <help>Client mac address allowed to receive an IP address</help>
-                        <valueHelp>
-                          <format>h:h:h:h:h:h</format>
-                          <description>Hardware (MAC) address</description>
-                        </valueHelp>
-                        <constraint>
-                          <validator name="mac-address"/>
-                        </constraint>
-                      </properties>
-                      <children>
-                        <node name="rate-limit">
-                          <properties>
-                            <help>Upload/Download speed limits</help>
-                          </properties>
-                          <children>
-                            <leafNode name="upload">
-                              <properties>
-                                <help>Upload bandwidth limit in kbits/sec</help>
-                                <constraint>
-                                  <validator name="numeric" argument="--range 1-65535"/>
-                                </constraint>
-                              </properties>
-                            </leafNode>
-                            <leafNode name="download">
-                              <properties>
-                                <help>Download bandwidth limit in kbits/sec</help>
-                                <constraint>
-                                  <validator name="numeric" argument="--range 1-65535"/>
-                                </constraint>
-                              </properties>
-                            </leafNode>
-                          </children>
-                        </node>
-                        <leafNode name="vlan-id">
-                          <properties>
-                            <help>VLAN-ID of the client network</help>
-                            <constraint>
-                              <validator name="numeric" argument="--range 1-4096"/>
-                            </constraint>
-                            <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
-                          </properties>
-                        </leafNode>
-                      </children>
-                    </tagNode>
-                  </children>
-                </tagNode> 
-                <tagNode name="radius-server">
-                  <properties>
-                    <help>IP address of RADIUS server</help>
-                    <valueHelp>
-                      <format>ipv4</format>
-                        <description>IP address of RADIUS server</description>
-                    </valueHelp>
-                  </properties>
-                  <children>
-                    <leafNode name="secret">
-                      <properties>
-                        <help>Key for accessing the specified server</help>
-                      </properties>
-                    </leafNode>
-                   <leafNode name="req-limit">
-                      <properties>
-                        <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                      </properties>
-                    </leafNode>
-                    <leafNode name="fail-time">
-                      <properties>
-                        <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
-                      </properties>
-                    </leafNode>
-                  </children>
-                </tagNode>
-                <node name="radius-settings">
-                  <properties>
-                    <help>RADIUS settings</help>
-                  </properties>
-                  <children>
-                    <leafNode name="timeout">
-                      <properties>
-                        <help>Timeout to wait response from server (seconds)</help>
-                      </properties>
-                    </leafNode>
-                    <leafNode name="acct-timeout">
-                      <properties>
-                        <help>Timeout to wait reply for Interim-Update packets. (default 3 seconds)</help>
-                      </properties>
-                    </leafNode>
-                    <leafNode name="max-try">
-                      <properties>
-                        <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
-                      </properties>
-                    </leafNode>
-                    <leafNode name="nas-identifier">
-                      <properties>
-                        <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
-                      </properties>
-                    </leafNode>
-                    <leafNode name="nas-ip-address">
-                      <properties>
-                        <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
-                        <valueHelp>
-                          <format>ipv4</format>
-                          <description>IPv4 address of the DAE Server</description>
-                        </valueHelp>
-                        <constraint>
-                          <validator name="ipv4-address"/>
-                        </constraint>
-                      </properties>
-                    </leafNode>
-                    <node name="dae-server">
-                      <properties>
-                        <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
-                      </properties>
-                      <children>
-                        <leafNode name="ip-address">
-                          <properties>
-                            <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
-                            <valueHelp>
-                              <format>ipv4</format>
-                              <description>IPv4 address of the DAE Server</description>
-                            </valueHelp>
-                            <constraint>
-                              <validator name="ipv4-address"/>
-                            </constraint>
-                          </properties>
-                        </leafNode>
-                        <leafNode name="port">
-                          <properties>
-                            <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
-                            <valueHelp>
-                              <format>number</format>
-                                <description>port number</description>
-                            </valueHelp>
-                            <constraint>
-                              <validator name="numeric" argument="--range 1-65535"/>
-                            </constraint>
-                          </properties>
-                        </leafNode>
-                        <leafNode name="secret">
-                          <properties>
-                            <help>Secret for Dynamic Authorization Extension server (DM/CoA)</help>
-                          </properties>
-                        </leafNode>
-                      </children>
-                    </node>
-                  </children>
-                </node>
+              </leafNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Network interface the client mac will appear on</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="mac-address">
+                    <properties>
+                      <help>Client mac address allowed to receive an IP address</help>
+                      <valueHelp>
+                        <format>h:h:h:h:h:h</format>
+                        <description>Hardware (MAC) address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="mac-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <node name="rate-limit">
+                        <properties>
+                          <help>Upload/Download speed limits</help>
+                        </properties>
+                        <children>
+                          <leafNode name="upload">
+                            <properties>
+                              <help>Upload bandwidth limit in kbits/sec</help>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-65535"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="download">
+                            <properties>
+                              <help>Download bandwidth limit in kbits/sec</help>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-65535"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <leafNode name="vlan-id">
+                        <properties>
+                          <help>VLAN-ID of the client network</help>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-4096"/>
+                          </constraint>
+                          <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <tagNode name="radius-server">
+                <properties>
+                  <help>IP address of RADIUS server</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address of RADIUS server</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="secret">
+                    <properties>
+                      <help>Key for accessing the specified server</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="req-limit">
+                    <properties>
+                      <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="fail-time">
+                    <properties>
+                      <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="radius-settings">
+                <properties>
+                  <help>RADIUS settings</help>
+                </properties>
+                <children>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Timeout to wait response from server (seconds)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="acct-timeout">
+                    <properties>
+                      <help>Timeout to wait reply for Interim-Update packets. (default 3 seconds)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-try">
+                    <properties>
+                      <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nas-identifier">
+                    <properties>
+                      <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nas-ip-address">
+                    <properties>
+                      <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address of the DAE Server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <node name="dae-server">
+                    <properties>
+                      <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
+                    </properties>
+                    <children>
+                      <leafNode name="ip-address">
+                        <properties>
+                          <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address of the DAE Server</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="port">
+                        <properties>
+                          <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>port number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="secret">
+                        <properties>
+                          <help>Secret for Dynamic Authorization Extension server (DM/CoA)</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
             </children>
           </node>
         </children>

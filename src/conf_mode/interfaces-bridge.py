@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 
@@ -22,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BridgeIf, Interface
+from vyos.ifconfig import BridgeIf, STPIf
 from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
@@ -34,6 +32,11 @@ default_config_data = {
     'arp_cache_tmo': 30,
     'description': '',
     'deleted': False,
+    'dhcp_client_id': '',
+    'dhcp_hostname': '',
+    'dhcp_vendor_class_id': '',
+    'dhcpv6_prm_only': False,
+    'dhcpv6_temporary': False,
     'disable': False,
     'disable_link_detect': 1,
     'forwarding_delay': 14,
@@ -82,6 +85,26 @@ def get_config():
     # retrieve interface description
     if conf.exists('description'):
         bridge['description'] = conf.return_value('description')
+
+    # get DHCP client identifier
+    if conf.exists('dhcp-options client-id'):
+        bridge['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
+
+    # DHCP client host name (overrides the system host name)
+    if conf.exists('dhcp-options host-name'):
+        bridge['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
+
+    # DHCP client vendor identifier
+    if conf.exists('dhcp-options vendor-class-id'):
+        bridge['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
+
+    # DHCPv6 only acquire config parameters, no address
+    if conf.exists('dhcpv6-options parameters-only'):
+        bridge['dhcpv6_prm_only'] = True
+
+    # DHCPv6 temporary IPv6 address
+    if conf.exists('dhcpv6-options temporary'):
+        bridge['dhcpv6_temporary'] = True
 
     # Disable this bridge interface
     if conf.exists('disable'):
@@ -151,6 +174,9 @@ def get_config():
     return bridge
 
 def verify(bridge):
+    if bridge['dhcpv6_prm_only'] and bridge['dhcpv6_temporary']:
+        raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
     conf = Config()
     for br in conf.list_nodes('interfaces bridge'):
         # it makes no sense to verify ourself in this case
@@ -183,32 +209,58 @@ def apply(bridge):
     br = BridgeIf(bridge['intf'])
 
     if bridge['deleted']:
-        # delete bridge interface
-        # DHCP is stopped inside remove()
+        # delete interface
         br.remove()
     else:
         # enable interface
-        br.state = 'up'
+        br.set_state('up')
         # set ageing time
-        br.ageing_time = bridge['aging']
+        br.set_ageing_time(bridge['aging'])
         # set bridge forward delay
-        br.forward_delay = bridge['forwarding_delay']
+        br.set_forward_delay(bridge['forwarding_delay'])
         # set hello time
-        br.hello_time = bridge['hello_time']
+        br.set_hello_time(bridge['hello_time'])
         # set max message age
-        br.max_age = bridge['max_age']
+        br.set_max_age(bridge['max_age'])
         # set bridge priority
-        br.priority = bridge['priority']
+        br.set_priority(bridge['priority'])
         # turn stp on/off
-        br.stp_state = bridge['stp']
+        br.set_stp(bridge['stp'])
         # enable or disable IGMP querier
-        br.multicast_querier = bridge['igmp_querier']
+        br.set_multicast_querier(bridge['igmp_querier'])
         # update interface description used e.g. within SNMP
-        br.ifalias = bridge['description']
+        br.set_alias(bridge['description'])
+
+        # get DHCP config dictionary and update values
+        opt = br.get_dhcp_options()
+
+        if bridge['dhcp_client_id']:
+            opt['client_id'] = bridge['dhcp_client_id']
+
+        if bridge['dhcp_hostname']:
+            opt['hostname'] = bridge['dhcp_hostname']
+
+        if bridge['dhcp_vendor_class_id']:
+            opt['vendor_class_id'] = bridge['dhcp_vendor_class_id']
+
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        br.set_dhcp_options(opt)
+
+        # get DHCPv6 config dictionary and update values
+        opt = br.get_dhcpv6_options()
+
+        if bridge['dhcpv6_prm_only']:
+            opt['dhcpv6_prm_only'] = True
+
+        if bridge['dhcpv6_temporary']:
+            opt['dhcpv6_temporary'] = True
+
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        br.set_dhcpv6_options(opt)
 
         # Change interface MAC address
         if bridge['mac']:
-            br.mac = bridge['mac']
+            br.set_mac(bridge['mac'])
 
         # remove interface from bridge
         for intf in bridge['member_remove']:
@@ -220,7 +272,7 @@ def apply(bridge):
 
         # up/down interface
         if bridge['disable']:
-            br.state = 'down'
+            br.set_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
@@ -232,16 +284,15 @@ def apply(bridge):
 
         # configure additional bridge member options
         for member in bridge['member']:
-            # set bridge port cost
-            br.set_cost(member['name'], member['cost'])
-            # set bridge port priority
-            br.set_priority(member['name'], member['priority'])
-
-            i = Interface(member['name'])
+            i = STPIf(member['name'])
             # configure ARP cache timeout
-            i.arp_cache_tmo = bridge['arp_cache_tmo']
+            i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
             # ignore link state changes
-            i.link_detect = bridge['disable_link_detect']
+            i.set_link_detect(bridge['disable_link_detect'])
+            # set bridge port path cost
+            i.set_path_cost(member['cost'])
+            # set bridge port path priority
+            i.set_path_priority(member['priority'])
 
     return None
 

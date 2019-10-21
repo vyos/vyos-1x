@@ -369,6 +369,9 @@ def verify(c):
   if c == None or not c:
     return None
 
+  if not c['interfaces']:
+    raise ConfigError("service ipoe-server interface requires a value")
+
   for intfc in c['interfaces']:
     if not c['interfaces'][intfc]['range']:
       raise ConfigError("service ipoe-server interface " + intfc + " client-subnet needs a value") 

@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 
@@ -22,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BondIf, EthernetIf
+from vyos.ifconfig import BondIf, VLANIf
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -36,6 +34,7 @@ default_config_data = {
     'deleted': False,
     'dhcp_client_id': '',
     'dhcp_hostname': '',
+    'dhcp_vendor_class_id': '',
     'dhcpv6_prm_only': False,
     'dhcpv6_temporary': False,
     'disable': False,
@@ -82,24 +81,51 @@ def apply_vlan_config(vlan, config):
     to a VLAN interface
     """
 
-    if type(vlan) != type(EthernetIf("lo")):
+    if type(vlan) != type(VLANIf("lo")):
         raise TypeError()
 
+    # get DHCP config dictionary and update values
+    opt = vlan.get_dhcp_options()
+
+    if config['dhcp_client_id']:
+        opt['client_id'] = config['dhcp_client_id']
+
+    if config['dhcp_hostname']:
+        opt['hostname'] = config['dhcp_hostname']
+
+    if config['dhcp_vendor_class_id']:
+        opt['vendor_class_id'] = config['dhcp_vendor_class_id']
+
+    # store DHCP config dictionary - used later on when addresses are aquired
+    vlan.set_dhcp_options(opt)
+
+    # get DHCPv6 config dictionary and update values
+    opt = vlan.get_dhcpv6_options()
+
+    if config['dhcpv6_prm_only']:
+        opt['dhcpv6_prm_only'] = True
+
+    if config['dhcpv6_temporary']:
+        opt['dhcpv6_temporary'] = True
+
+    # store DHCPv6 config dictionary - used later on when addresses are aquired
+    vlan.set_dhcpv6_options(opt)
+
     # update interface description used e.g. within SNMP
-    vlan.ifalias = config['description']
+    vlan.set_alias(config['description'])
     # ignore link state changes
-    vlan.link_detect = config['disable_link_detect']
+    vlan.set_link_detect(config['disable_link_detect'])
     # Maximum Transmission Unit (MTU)
-    vlan.mtu = config['mtu']
+    vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address
     if config['mac']:
-        vlan.mac = config['mac']
+        vlan.set_mac(config['mac'])
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.state = 'down'
+        vlan.set_state('down')
     else:
-        vlan.state = 'up'
+        vlan.set_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first
@@ -166,13 +192,17 @@ def get_config():
     if conf.exists('dhcp-options host-name'):
         bond['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
 
+    # DHCP client vendor identifier
+    if conf.exists('dhcp-options vendor-class-id'):
+        bond['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
+
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
-        bond['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+        bond['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
     if conf.exists('dhcpv6-options temporary'):
-        bond['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
+        bond['dhcpv6_temporary'] = True
 
     # ignore link state changes
     if conf.exists('disable-link-detect'):
@@ -218,7 +248,7 @@ def get_config():
     if conf.exists('primary'):
         bond['primary'] = conf.return_value('primary')
 
-    # re-set configuration level and retrieve vif-s interfaces
+    # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
     # get vif-s interfaces (currently effective) - to determine which vif-s
     # interface is no longer present and needs to be removed
@@ -232,7 +262,7 @@ def get_config():
             conf.set_level(cfg_base + ' vif-s ' + vif_s)
             bond['vif_s'].append(vlan_to_dict(conf))
 
-    # re-set configuration level and retrieve vif-s interfaces
+    # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
     # Determine vif interfaces (currently effective) - to determine which
     # vif interface is no longer present and needs to be removed
@@ -261,6 +291,21 @@ def verify(bond):
         if bond['primary'] not in bond['member']:
             raise ConfigError('Interface "{}" is not part of the bond' \
                               .format(bond['primary']))
+
+
+    # DHCPv6 parameters-only and temporary address are mutually exclusive
+    for vif_s in bond['vif_s']:
+        if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+        for vif_c in vif_s['vif_c']:
+            if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
+                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+    for vif in bond['vif']:
+        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
 
     for vif_s in bond['vif_s']:
         for vif in bond['vif']:
@@ -334,13 +379,12 @@ def apply(bond):
     b = BondIf(bond['intf'])
 
     if bond['deleted']:
-        #
-        # delete bonding interface
+        # delete interface
         b.remove()
     else:
         # Some parameters can not be changed when the bond is up.
         # Always disable the bond prior changing anything
-        b.state = 'down'
+        b.set_state('down')
 
         # The bonding mode can not be changed when there are interfaces enslaved
         # to this bond, thus we will free all interfaces from the bond first!
@@ -348,11 +392,8 @@ def apply(bond):
             b.del_port(intf)
 
         # ARP link monitoring frequency, reset miimon when arp-montior is inactive
-        if bond['arp_mon_intvl'] == 0:
-            # reset miimon to default
-            b.miimon = 250
-        else:
-            b.arp_interval = bond['arp_mon_intvl']
+        # this is done inside BondIf automatically
+        b.set_arp_interval(bond['arp_mon_intvl'])
 
         # ARP monitor targets need to be synchronized between sysfs and CLI.
         # Unfortunately an address can't be send twice to sysfs as this will
@@ -363,44 +404,67 @@ def apply(bond):
         # from the kernel side this looks valid to me. We won't run into an error
         # when a user added manual adresses which would result in having more
         # then 16 adresses in total.
-        arp_tgt_addr = list(map(str, b.arp_ip_target.split()))
+        arp_tgt_addr = list(map(str, b.get_arp_ip_target().split()))
         for addr in arp_tgt_addr:
-            b.arp_ip_target = '-' + addr
+            b.set_arp_ip_target('-' + addr)
 
         # Add configured ARP target addresses
         for addr in bond['arp_mon_tgt']:
-            b.arp_ip_target = '+' + addr
+            b.set_arp_ip_target('+' + addr)
 
         # update interface description used e.g. within SNMP
-        b.ifalias = bond['description']
+        b.set_alias(bond['description'])
 
-        #
-        # missing DHCP/DHCPv6 options go here
-        #
+        # get DHCP config dictionary and update values
+        opt = b.get_dhcp_options()
+
+        if bond['dhcp_client_id']:
+            opt['client_id'] = bond['dhcp_client_id']
+
+        if bond['dhcp_hostname']:
+            opt['hostname'] = bond['dhcp_hostname']
+
+        if bond['dhcp_vendor_class_id']:
+            opt['vendor_class_id'] = bond['dhcp_vendor_class_id']
+
+        # store DHCP config dictionary - used later on when addresses are aquired
+        b.set_dhcp_options(opt)
+
+        # get DHCPv6 config dictionary and update values
+        opt = b.get_dhcpv6_options()
+
+        if bond['dhcpv6_prm_only']:
+            opt['dhcpv6_prm_only'] = True
+
+        if bond['dhcpv6_temporary']:
+            opt['dhcpv6_temporary'] = True
+
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        b.set_dhcpv6_options(opt)
 
         # ignore link state changes
-        b.link_detect = bond['disable_link_detect']
+        b.set_link_detect(bond['disable_link_detect'])
         # Bonding transmit hash policy
-        b.xmit_hash_policy = bond['hash_policy']
+        b.set_hash_policy(bond['hash_policy'])
         # configure ARP cache timeout in milliseconds
-        b.arp_cache_tmp = bond['ip_arp_cache_tmo']
+        b.set_arp_cache_tmo(bond['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
-        b.proxy_arp = bond['ip_proxy_arp']
+        b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
-        b.proxy_arp_pvlan = bond['ip_proxy_arp_pvlan']
+        b.set_proxy_arp_pvlan(bond['ip_proxy_arp_pvlan'])
 
         # Change interface MAC address
         if bond['mac']:
-            b.mac = bond['mac']
+            b.set_mac(bond['mac'])
 
         # Bonding policy
-        b.mode = bond['mode']
+        b.set_mode(bond['mode'])
         # Maximum Transmission Unit (MTU)
-        b.mtu = bond['mtu']
+        b.set_mtu(bond['mtu'])
 
         # Primary device interface
         if bond['primary']:
-            b.primary = bond['primary']
+            b.set_primary(bond['primary'])
 
         # Add (enslave) interfaces to bond
         for intf in bond['member']:
@@ -410,7 +474,7 @@ def apply(bond):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not bond['disable']:
-            b.state = 'up'
+            b.set_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

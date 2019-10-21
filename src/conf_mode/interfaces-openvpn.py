@@ -13,16 +13,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 import re
-import sys
-import stat
-import jinja2
 
+from jinja2 import Template
 from copy import deepcopy
+from sys import exit
+from stat import S_IRUSR,S_IRWXU,S_IRGRP,S_IXGRP,S_IROTH,S_IXOTH
 from grp import getgrnam
 from ipaddress import ip_address,ip_network,IPv4Interface
 from netifaces import interfaces
@@ -31,8 +29,9 @@ from pwd import getpwnam
 from subprocess import Popen, PIPE
 from time import sleep
 
-from vyos.config import Config
 from vyos import ConfigError
+from vyos.config import Config
+from vyos.ifconfig import Interface
 from vyos.validate import is_addr_assigned
 
 user = 'openvpn'
@@ -167,6 +166,10 @@ key {{ tls_key }}
 crl-verify {{ tls_crl }}
 {% endif %}
 
+{%- if tls_version_min %}
+tls-version-min {{tls_version_min}}
+{% endif %}
+
 {%- if tls_dh %}
 dh {{ tls_dh }}
 {% endif %}
@@ -204,10 +207,16 @@ keysize 128
 {%- elif 'bf256' in encryption %}
 cipher bf-cbc
 keysize 25
+{%- elif 'aes128gcm' in encryption %}
+cipher aes-128-gcm
 {%- elif 'aes128' in encryption %}
 cipher aes-128-cbc
+{%- elif 'aes192gcm' in encryption %}
+cipher aes-192-gcm
 {%- elif 'aes192' in encryption %}
 cipher aes-192-cbc
+{%- elif 'aes256gcm' in encryption %}
+cipher aes-256-gcm
 {%- elif 'aes256' in encryption %}
 cipher aes-256-cbc
 {% endif %}
@@ -221,6 +230,20 @@ auth-retry nointeract
 {%- if client %}
 client-config-dir /opt/vyatta/etc/openvpn/ccd/{{ intf }}
 {% endif %}
+
+# DEPRECATED This option will be removed in OpenVPN 2.5
+# Until OpenVPN v2.3 the format of the X.509 Subject fields was formatted like this:
+# /C=US/L=Somewhere/CN=John Doe/emailAddress=john@example.com In addition the old
+# behaviour was to remap any character other than alphanumeric, underscore ('_'),
+# dash ('-'), dot ('.'), and slash ('/') to underscore ('_'). The X.509 Subject
+# string as returned by the tls_id environmental variable, could additionally
+# contain colon (':') or equal ('='). When using the --compat-names option, this
+# old formatting and remapping will be re-enabled again. This is purely implemented
+# for compatibility reasons when using older plug-ins or scripts which does not
+# handle the new formatting or UTF-8 characters.
+#
+# See https://phabricator.vyos.net/T1512
+compat-names
 
 {% for option in options -%}
 {{ option }}
@@ -288,6 +311,7 @@ default_config_data = {
     'tls_dh': '',
     'tls_key': '',
     'tls_role': '',
+    'tls_version_min': '',
     'type': 'tun',
     'uid': user,
     'gid': group,
@@ -307,12 +331,12 @@ def openvpn_mkdir(directory):
         os.mkdir(directory)
 
     # fix permissions - corresponds to mode 755
-    os.chmod(directory, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
+    os.chmod(directory, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
     uid = getpwnam(user).pw_uid
     gid = getgrnam(group).gr_gid
     os.chown(directory, uid, gid)
 
-def fixup_permission(filename, permission=stat.S_IRUSR):
+def fixup_permission(filename, permission=S_IRUSR):
     """
     Check if the given file exists and change ownershit to root/vyattacfg
     and appripriate file access permissions - default is user and group readable
@@ -572,6 +596,10 @@ def get_config():
          openvpn['tls_role'] = conf.return_value('tls role')
          openvpn['tls'] = True
 
+    # Minimum required TLS version
+    if conf.exists('tls tls-version-min'):
+         openvpn['tls_version_min'] = conf.return_value('tls tls-version-min')
+
     if conf.exists('shared-secret-key-file'):
         openvpn['shared_secret_file'] = conf.return_value('shared-secret-key-file')
 
@@ -707,6 +735,9 @@ def verify(openvpn):
     # TLS/encryption
     #
     if openvpn['shared_secret_file']:
+        if openvpn['encryption'] in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
+            raise ConfigError('GCM encryption with shared-secret-key-file is not supported')
+
         if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['shared_secret_file']):
             raise ConfigError('Specified shared-secret-key-file "{}" is not valid'.format(openvpn['shared_secret_file']))
 
@@ -727,7 +758,7 @@ def verify(openvpn):
         if openvpn['tls_auth']:
             if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['tls_auth']):
                 raise ConfigError('Specified auth-file "{}" is invalid'.format(openvpn['tls_auth']))
-        
+
         if openvpn['tls_cert']:
             if not checkCertHeader('-----BEGIN CERTIFICATE-----', openvpn['tls_cert']):
                 raise ConfigError('Specified cert-file "{}" is invalid'.format(openvpn['tls_cert']))
@@ -820,13 +851,13 @@ def generate(openvpn):
     # Generate client specific configuration
     for client in openvpn['client']:
         client_file = directory + '/ccd/' + interface + '/' + client['name']
-        tmpl = jinja2.Template(client_tmpl)
+        tmpl = Template(client_tmpl)
         client_text = tmpl.render(client)
         with open(client_file, 'w') as f:
             f.write(client_text)
         os.chown(client_file, uid, gid)
 
-    tmpl = jinja2.Template(config_tmpl)
+    tmpl = Template(config_tmpl)
     config_text = tmpl.render(openvpn)
 
     # we need to support quoting of raw parameters from OpenVPN CLI
@@ -892,6 +923,29 @@ def apply(openvpn):
 
     # execute assembled command
     subprocess_cmd(cmd)
+
+    # better late then sorry ... but we can only set interface alias after
+    # OpenVPN has been launched and created the interface
+    cnt = 0
+    while openvpn['intf'] not in interfaces():
+        # If VPN tunnel can't be established because the peer/server isn't
+        # (temporarily) available, the vtun interface never becomes registered
+        # with the kernel, and the commit would hang if there is no bail out
+        # condition
+        cnt += 1
+        if cnt == 50:
+            break
+
+        # sleep 250ms
+        sleep(0.250)
+
+    try:
+        # we need to catch the exception if the interface is not up due to
+        # reason stated above
+        Interface(openvpn['intf']).set_alias(openvpn['description'])
+    except:
+        pass
+
     return None
 
 
@@ -903,4 +957,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
