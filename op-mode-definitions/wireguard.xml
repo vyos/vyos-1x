@@ -73,7 +73,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
             </properties>
-            <command>sudo wg show "$4"</command>
+	    <command>sudo ${vyos_op_scripts_dir}/wireguard.py "$4"</command>
             <children>
               <leafNode name="allowed-ips">
                 <properties>
