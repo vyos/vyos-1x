@@ -220,10 +220,11 @@ cipher aes-256-gcm
 {%- elif 'aes256' in encryption %}
 cipher aes-256-cbc
 {% endif %}
+{% endif %}
+
 {%- if ncp_ciphers %}
 ncp-ciphers {{ncp_ciphers}}
 {% endif %} 
-{% endif %}
 {%- if disable_ncp %}
 ncp-disable
 {% endif %}
