@@ -83,12 +83,17 @@ for sa in sas:
 
                 enc = isa["encr-alg"].decode()
                 key_size = isa["encr-keysize"].decode()
-                hash = isa["integ-alg"].decode()
+                if "integ-alg" in isa:
+                    hash = isa["integ-alg"].decode()
+                else:
+                    hash = ""
                 if "dh-group" in isa:
                     dh_group = isa["dh-group"].decode()
                 else:
                     dh_group = ""
-                proposal = "{0}_{1}/{2}".format(enc, key_size, hash)
+                proposal = "{0}_{1}".format(enc, key_size)
+                if hash:
+                    proposal = "{0}/{1}".format(proposal, hash)
                 if dh_group:
                     proposal = "{0}/{1}".format(proposal, dh_group)
 
