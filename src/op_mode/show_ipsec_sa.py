@@ -82,7 +82,10 @@ for sa in sas:
                 pkts_str = re.sub(r'B', r'', pkts_str)
 
                 enc = isa["encr-alg"].decode()
-                key_size = isa["encr-keysize"].decode()
+                if "encr-keysize" in isa:
+                    key_size = isa["encr-keysize"].decode()
+                else:
+                    key_size = ""
                 if "integ-alg" in isa:
                     hash = isa["integ-alg"].decode()
                 else:
@@ -91,7 +94,10 @@ for sa in sas:
                     dh_group = isa["dh-group"].decode()
                 else:
                     dh_group = ""
-                proposal = "{0}_{1}".format(enc, key_size)
+
+                proposal = enc
+                if key_size:
+                    proposal = "{0}_{1}".format(proposal, key_size)
                 if hash:
                     proposal = "{0}/{1}".format(proposal, hash)
                 if dh_group:
