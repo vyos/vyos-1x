@@ -433,20 +433,28 @@ def get_config():
         for enc in conf.return_values('encryption ncp-ciphers'):
             if enc == 'des':
                 _ncp_ciphers.append('des-cbc')
+                _ncp_ciphers.append('DES-CBC')
             elif enc == '3des':
                 _ncp_ciphers.append('des-ede3-cbc')
+                _ncp_ciphers.append('DES-EDE3-CBC')
             elif enc == 'aes128':
                 _ncp_ciphers.append('aes-128-cbc')
+                _ncp_ciphers.append('AES-128-CBC')
             elif enc == 'aes128gcm':
                 _ncp_ciphers.append('aes-128-gcm')
+                _ncp_ciphers.append('AES-128-GCM')
             elif enc == 'aes192':
                 _ncp_ciphers.append('aes-192-cbc')
+                _ncp_ciphers.append('AES-192-CBC')
             elif enc == 'aes192gcm':
                 _ncp_ciphers.append('aes-192-gcm')
+                _ncp_ciphers.append('AES-192-GCM')
             elif enc == 'aes256':
                 _ncp_ciphers.append('aes-256-cbc')
+                _ncp_ciphers.append('AES-256-CBC')
             elif enc == 'aes256gcm':
                 _ncp_ciphers.append('aes-256-gcm')
+                _ncp_ciphers.append('AES-256-GCM')
         openvpn['ncp_ciphers'] = ':'.join(_ncp_ciphers)
     
     # hash algorithm
