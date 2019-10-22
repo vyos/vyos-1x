@@ -23,8 +23,8 @@ import shutil
 import subprocess
 import syslog as sl
 import re
-import time
 
+from vyos.interface import Interface
 
 from vyos import ConfigError
 from vyos.config import Config
@@ -40,41 +40,6 @@ def check_kmod():
             sl.syslog(sl.LOG_ERR, "modprobe wireguard failed")
             raise ConfigError("modprobe wireguard failed")
 
-
-def showint(interface):
-    output = subprocess.check_output(["wg", "show", interface], universal_newlines=True)
-    c = Config()
-    c.set_level("interfaces wireguard {}".format(interface))
-    description = c.return_effective_value("description".format(interface))
-    """ if the interface has a description, modify the output to include it """
-    if (description):
-        output = re.sub(r"interface: {}".format(re.escape(interface)),"interface: {}\n  Description: {}".format(interface,description),output)
-    
-    """ pull the last handshake times.  Assume if the handshake was greater than 5 minutes, the tunnel is down """
-    peer_timeouts = {}
-    last_hs_output = subprocess.check_output(["wg", "show", interface, "latest-handshakes"], universal_newlines=True)
-    for match in re.findall(r'(\S+)\s+(\d+)',last_hs_output): 
-        peer_timeouts[match[0]] = match[1]
-
-    """ modify all the peers, reformat to provide VyOS config provided peername, whether the tunnel is up/down """
-    for peer in c.list_effective_nodes(' peer'):
-        pubkey = c.return_effective_value("peer {} pubkey".format(peer))
-        status = ""
-        if int(peer_timeouts[pubkey]) > 0:
-            #Five minutes and the tunnel is still up
-            if (time.time() - int(peer_timeouts[pubkey]) < (60*5)):
-                status = "UP"
-            else:
-                status = "DOWN"
-        elif (peer_timeouts[pubkey] is None):
-            status = "DOWN"
-        elif (int(peer_timeouts[pubkey]) == 0):
-            status = "DOWN"
-
-        output = re.sub(r"peer: {}".format(re.escape(pubkey)),"peer: {}\n  Status: {}\n  public key: {}".format(peer,status,pubkey),output)
-
-    print(output)
-    
 def generate_keypair(pk, pub):
     """ generates a keypair which is stored in /config/auth/wireguard """
     old_umask = os.umask(0o027)
@@ -185,7 +150,8 @@ if __name__ == '__main__':
         if args.listkdir:
             list_key_dirs()
         if args.showinterface:
-            showint(args.showinterface)
+            intf = Interface(args.showinterface)
+            intf.print_interface()
         if args.delkdir:
             if args.location:
                 del_key_dir(args.location)
