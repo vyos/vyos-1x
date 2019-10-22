@@ -45,6 +45,8 @@ class Interface():
 
     def print_interface_stats(self):
         stats = self.get_interface_stats()
+        if stats is None:
+            return
         rx = [['bytes','packets','errors','dropped','overrun','mcast'],[stats['rx_bytes'],stats['rx_packets'],stats['rx_errors'],stats['rx_dropped'],stats['rx_over_errors'],stats['multicast']]]
         tx = [['bytes','packets','errors','dropped','carrier','collisions'],[stats['tx_bytes'],stats['tx_packets'],stats['tx_errors'],stats['tx_dropped'],stats['tx_carrier_errors'],stats['collisions']]]
         output = "RX: \n"
@@ -66,20 +68,25 @@ class Interface():
                     data = open(metric_path, 'r').read()[:-1]
                     dev_dict[metric] = int(data)
             interface_stats[dev] = dev_dict
+        if self.intf not in interface_stats:
+            return None
+
         return interface_stats[self.intf]
 
     def print_wireguard_interface(self):
-        output = subprocess.check_output(["wg", "show", self.intf], universal_newlines=True)
-        wgdump = vyos.interfaces.wireguard_dump()[self.intf]
+        
+        wgdump = vyos.interfaces.wireguard_dump().get(self.intf,None)
+        if (wgdump is None):
+            print ("interface {} not found".format(self.intf))
+            return
+
         c = Config()
         c.set_level("interfaces wireguard {}".format(self.intf))
         description = c.return_effective_value("description")
 
         print ("interface: {}".format(self.intf))
-        """ if the interface has a description, modify the output to include it """
         if (description):
             print ("  description: {}".format(description))
-            output = re.sub(r"interface: {}".format(re.escape(self.intf)),"interface: {}\n  Description: {}".format(self.intf,description),output)
 
         print ("  public key: {}".format(wgdump['public_key']))
         print ("  private key: (hidden)")
