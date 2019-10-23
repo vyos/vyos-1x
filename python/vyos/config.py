@@ -63,6 +63,7 @@ In operational mode, all functions return values from the running config.
 
 """
 
+import os
 import re
 import subprocess
 
@@ -96,7 +97,11 @@ class Config(object):
 
         # Running config can be obtained either from op or conf mode, it always succeeds
         # (if config system is initialized at all).
-        running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', 'showConfig'])
+        if os.path.isfile('/tmp/vyos-config-status'):
+            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', 'showConfig'])
+        else:
+            with open('/opt/vyatta/etc/config/config.boot') as f:
+                running_config_text = f.read()
 
         # Session config ("active") only exists in conf mode.
         # Trying to obtain it from op mode will cause a fatal cli-shell-api error.
