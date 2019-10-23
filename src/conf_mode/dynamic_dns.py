@@ -47,11 +47,11 @@ use=if, if={{ interface.interface }}
 {% for rfc in interface.rfc2136 -%}
 {% for record in rfc.record %}
 # RFC2136 dynamic DNS configuration for {{ record }}.{{ rfc.zone }}
-server={{ rfc.server }}
-protocol=nsupdate
-password={{ rfc.keyfile }}
-ttl={{ rfc.ttl }}
-zone={{ rfc.zone }}
+server={{ rfc.server }},
+protocol=nsupdate,
+password={{ rfc.keyfile }},
+ttl={{ rfc.ttl }},
+zone={{ rfc.zone }},
 {{ record }}
 {% endfor -%}
 {% endfor -%}
@@ -59,12 +59,12 @@ zone={{ rfc.zone }}
 {% for srv in interface.service %}
 {% for host in srv.host %}
 # DynDNS provider configuration for {{ host }}
-protocol={{ srv.protocol }}
-max-interval=28d
-login={{ srv.login }}
-password='{{ srv.password }}'
+protocol={{ srv.protocol }},
+max-interval=28d,
+login={{ srv.login }},
+password='{{ srv.password }}',
 {% if srv.server -%}
-server={{ srv.server }}
+server={{ srv.server }},
 {% endif -%}
 {{ host }}
 {% endfor %}
