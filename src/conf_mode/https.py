@@ -67,7 +67,7 @@ server {
 {% endif %}
 
         # proxy settings for HTTP API, if enabled; 503, if not
-        location ~ /(retrieve|configure) {
+        location ~ /(retrieve|configure|config-file|image) {
 {% if api %}
                 proxy_pass http://localhost:{{ api.port }};
                 proxy_buffering off;
