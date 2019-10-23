@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2019 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 import sys
@@ -23,7 +21,7 @@ import jinja2
 from vyos.config import Config
 from vyos import ConfigError
 
-config_file = r'/etc/ddclient.conf'
+config_file = r'/etc/ddclient/ddclient.conf'
 cache_file = r'/var/cache/ddclient/ddclient.cache'
 
 config_tmpl = """
