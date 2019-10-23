@@ -34,7 +34,6 @@ from vyos.config import VyOSError
 
 
 DEFAULT_CONFIG_FILE = '/etc/vyos/http-api.conf'
-
 CFG_GROUP = 'vyattacfg'
 
 app = bottle.default_app()
@@ -222,6 +221,82 @@ def get_value():
         return error(500, "An internal error occured. Check the logs for details.")
 
     return success(res)
+
+@app.route('/config-file', method='POST')
+@auth_required
+def config_file_op():
+    config = app.config['vyos_config']
+    session = app.config['vyos_session']
+
+    command = bottle.request.forms.get("data")
+    command = json.loads(command)
+
+    try:
+        op = command['op']
+    except KeyError:
+        return error(400, "Missing required field \"op\"")
+
+    try:
+        if op == 'save':
+            try:
+                path = command['file']
+            except KeyError:
+                path = '/config/config.boot'
+            res = session.save_config(path)
+        elif op == 'load':
+            try:
+                path = command['file']
+            except KeyError:
+                return error(400, "Missing required field \"file\"")
+            res = session.load_config(path)
+            res = session.commit()
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except VyOSError as e:
+        return error(400, str(e))
+    except Exception as e:
+        print(traceback.format_exc(), file=sys.stderr)
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+@app.route('/image', method='POST')
+@auth_required
+def config_file_op():
+    config = app.config['vyos_config']
+    session = app.config['vyos_session']
+
+    command = bottle.request.forms.get("data")
+    command = json.loads(command)
+
+    try:
+        op = command['op']
+    except KeyError:
+        return error(400, "Missing required field \"op\"")
+
+    try:
+        if op == 'add':
+            try:
+                url = command['url']
+            except KeyError:
+                return error(400, "Missing required field \"url\"")
+            res = session.install_image(url)
+        elif op == 'delete':
+            try:
+                name = command['name']
+            except KeyError:
+                return error(400, "Missing required field \"name\"")
+            res = session.remove_image(name)
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except VyOSError as e:
+        return error(400, str(e))
+    except Exception as e:
+        print(traceback.format_exc(), file=sys.stderr)
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
 
 if __name__ == '__main__':
     # systemd's user and group options don't work, do it by hand here,
