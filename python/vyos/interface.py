@@ -83,11 +83,14 @@ class Interface():
         c = Config()
         c.set_level("interfaces wireguard {}".format(self.intf))
         description = c.return_effective_value("description")
+        ips = c.return_effective_values("address")
 
         print ("interface: {}".format(self.intf))
         if (description):
             print ("  description: {}".format(description))
 
+        if (ips is not None):
+            print ("  address: {}".format(", ".join(ips)))
         print ("  public key: {}".format(wgdump['public_key']))
         print ("  private key: (hidden)")
         print ("  listening port: {}".format(wgdump['listen_port']))
