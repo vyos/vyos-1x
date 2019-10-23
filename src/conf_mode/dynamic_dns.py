@@ -66,6 +66,10 @@ password='{{ srv.password }}',
 {% if srv.server -%}
 server={{ srv.server }},
 {% endif -%}
+{% if 'cloudflare' in srv.protocol -%}
+{% set zone = host.split('.',1) -%}
+zone={{ zone[1] }},
+{% endif -%}
 {{ host }}
 {% endfor %}
 {% endfor %}
