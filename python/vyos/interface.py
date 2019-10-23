@@ -32,12 +32,19 @@ class Interface():
 
     intf = None
     intf_type = None
+    valid = False
 
     def __init__(self,intf):
         self.intf = intf
         self.intf_type = vyos.interfaces.get_type_of_interface(self.intf)
+        self.valid = (self.intf in vyos.interfaces.list_interfaces())
 
     def print_interface(self):
+
+        if not self.valid:
+            print("Invalid interface [{}]".format(self.intf))
+            return
+
         if (self.intf_type == 'wireguard'):
             self.print_wireguard_interface()
 
@@ -66,21 +73,24 @@ class Interface():
                     data = open(metric_path, 'r').read()[:-1]
                     dev_dict[metric] = int(data)
             interface_stats[dev] = dev_dict
+
         return interface_stats[self.intf]
 
     def print_wireguard_interface(self):
-        output = subprocess.check_output(["wg", "show", self.intf], universal_newlines=True)
-        wgdump = vyos.interfaces.wireguard_dump()[self.intf]
+        
+        wgdump = vyos.interfaces.wireguard_dump().get(self.intf,None)
+
         c = Config()
         c.set_level("interfaces wireguard {}".format(self.intf))
         description = c.return_effective_value("description")
+        ips = c.return_effective_values("address")
 
         print ("interface: {}".format(self.intf))
-        """ if the interface has a description, modify the output to include it """
         if (description):
             print ("  description: {}".format(description))
-            output = re.sub(r"interface: {}".format(re.escape(self.intf)),"interface: {}\n  Description: {}".format(self.intf,description),output)
 
+        if (ips):
+            print ("  address: {}".format(", ".join(ips)))
         print ("  public key: {}".format(wgdump['public_key']))
         print ("  private key: (hidden)")
         print ("  listening port: {}".format(wgdump['listen_port']))
