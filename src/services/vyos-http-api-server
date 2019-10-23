@@ -27,6 +27,8 @@ import vyos.config
 
 import bottle
 
+from functools import wraps
+
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.config import VyOSError
 
@@ -61,16 +63,23 @@ def success(data):
     resp = {"success": True, "data": data, "error": None}
     return json.dumps(resp)
 
+def auth_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        key = bottle.request.forms.get("key")
+        api_keys = app.config['vyos_keys']
+        id = check_auth(api_keys, key)
+        if not id:
+            return error(401, "Valid API key is required")
+        return f(*args, **kwargs)
+
+    return decorated_function
+
 @app.route('/configure', method='POST')
+@auth_required
 def configure():
     session = app.config['vyos_session']
     config = app.config['vyos_config']
-    api_keys = app.config['vyos_keys']
-
-    key = bottle.request.forms.get("key")
-    id = check_auth(api_keys, key)
-    if not id:
-        return error(401, "Valid API key is required")
 
     strict_field = bottle.request.forms.get("strict")
     if strict_field == "true":
@@ -177,16 +186,10 @@ def configure():
         return success(None)
 
 @app.route('/retrieve', method='POST')
+@auth_required
 def get_value():
     config = app.config['vyos_config']
     session = app.config['vyos_session']
-
-    api_keys = app.config['vyos_keys']
-
-    key = bottle.request.forms.get("key")
-    id = check_auth(api_keys, key)
-    if not id:
-        return error(401, "Valid API key is required")
 
     command = bottle.request.forms.get("data")
     command = json.loads(command)
