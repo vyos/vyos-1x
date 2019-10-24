@@ -130,7 +130,7 @@ def get_config():
         print("Interface not specified")
 
     # check if ethernet interface has been removed
-    cfg_base = 'interfaces ethernet ' + eth['intf']
+    cfg_base = ['interfaces', 'ethernet', eth['intf']]
     if not conf.exists(cfg_base):
         eth['deleted'] = True
         # we can not bail out early as ethernet interface can not be removed
@@ -249,7 +249,7 @@ def get_config():
     if conf.exists('vif-s'):
         for vif_s in conf.list_nodes('vif-s'):
             # set config level to vif-s interface
-            conf.set_level(cfg_base + ' vif-s ' + vif_s)
+            conf.set_level(cfg_base + ['vif-s', vif_s])
             eth['vif_s'].append(vlan_to_dict(conf))
 
     # re-set configuration level to parse new nodes
@@ -263,7 +263,7 @@ def get_config():
     if conf.exists('vif'):
         for vif in conf.list_nodes('vif'):
             # set config level to vif interface
-            conf.set_level(cfg_base + ' vif ' + vif)
+            conf.set_level(cfg_base + ['vif', vif])
             eth['vif'].append(vlan_to_dict(conf))
 
     return eth
