@@ -16,6 +16,8 @@
 import vyos
 from vyos.config import Config
 import vyos.interfaces
+import vyos.ioctl
+from vyos.iflag import IFlag
 
 import re
 import json
@@ -33,11 +35,18 @@ class Interface():
     intf = None
     intf_type = None
     valid = False
+    flags = None
 
     def __init__(self,intf):
         self.intf = intf
         self.intf_type = vyos.interfaces.get_type_of_interface(self.intf)
         self.valid = (self.intf in vyos.interfaces.list_interfaces())
+        if (self.valid):
+            self.flags = vyos.ioctl.get_interface_flags(intf)
+    
+    def up(self):
+        """ return whether interface is up or not """
+        return self.flags & IFlag.IFF_UP
 
     def print_interface(self):
 
