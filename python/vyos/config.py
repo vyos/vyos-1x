@@ -126,7 +126,12 @@ class Config(object):
         # splitting at whitespace is reasonably safe.
         # It may cause problems with exists() when it's used for checking values,
         # since values may contain whitespace.
-        path = re.split(r'\s*', path)
+        if isinstance(path, str):
+            path = re.split(r'\s*', path)
+        elif isinstance(path, list):
+            pass
+        else:
+            raise TypeError("Path must be a whitespace-separated string or a list")
         return (self._level + path)
 
     def _run(self, cmd):
@@ -155,7 +160,12 @@ class Config(object):
         # Make sure there's always a space between default path (level)
         # and path supplied as method argument
         # XXX: for small strings in-place concatenation is not a problem
-        self._level = re.split(r'\s*', path)
+        if isinstance(path, str):
+            self._level = re.split(r'\s*', path)
+        elif isinstance(path, list):
+            self._level = path
+        else:
+            raise TypeError("Level path must be either a whitespace-separated string or a list")
 
     def get_level(self):
         """
