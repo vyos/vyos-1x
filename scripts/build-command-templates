@@ -125,7 +125,7 @@ def get_properties(p):
         regexes = []
         regex_elements = vce.findall("regex")
         if regex_elements is not None:
-            regexes = list(map(lambda e: e.text.strip(), regex_elements))
+            regexes = list(map(lambda e: e.text.strip().replace('\\','\\\\'), regex_elements))
         if "" in regexes:
             print("Warning: empty regex, node will be accepting any value")
 
