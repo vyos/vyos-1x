@@ -78,7 +78,7 @@ createUser {{ u.name }}
 {%- elif u.authPassword %}
 createUser {{ u.name }} {{ u.authProtocol | upper }} "{{ u.authPassword }}" {{ u.privProtocol | upper }} {{ u.privPassword }}
 {%- else %}
-usmUser 1 3 {{ u.engineID }} "{{ u.name }}" "{{ u.name }}" NULL {{ u.authOID }} {{ u.authMasterKey }} {{ u.privOID }} {{ u.privMasterKey }} 0x
+usmUser 1 3 {{ v3_engineid }} "{{ u.name }}" "{{ u.name }}" NULL {{ u.authOID }} {{ u.authMasterKey }} {{ u.privOID }} {{ u.privMasterKey }} 0x
 {%- endif %}
 {%- endfor %}
 
@@ -197,7 +197,7 @@ access {{ g.name }} "" tsm {{ g.seclevel }} exact {{ g.view }} {% if g.mode == '
 
 # trap-target
 {%- for t in v3_traps %}
-trapsess -v 3 {{ '-Ci' if t.type == 'inform' }} -e {{ t.engineID }} -u {{ t.secName }} -l {{ t.secLevel }} -a {{ t.authProtocol }} {% if t.authPassword %}-A {{ t.authPassword }}{% elif t.authMasterKey %}-3m {{ t.authMasterKey }}{% endif %} -x {{ t.privProtocol }} {% if t.privPassword %}-X {{ t.privPassword }}{% elif t.privMasterKey %}-3M {{ t.privMasterKey }}{% endif %} {{ t.ipProto }}:{{ t.ipAddr }}:{{ t.ipPort }}
+trapsess -v 3 {{ '-Ci' if t.type == 'inform' }} -e {{ v3_engineid }} -u {{ t.secName }} -l {{ t.secLevel }} -a {{ t.authProtocol }} {% if t.authPassword %}-A {{ t.authPassword }}{% elif t.authMasterKey %}-3m {{ t.authMasterKey }}{% endif %} -x {{ t.privProtocol }} {% if t.privPassword %}-X {{ t.privPassword }}{% elif t.privMasterKey %}-3M {{ t.privMasterKey }}{% endif %} {{ t.ipProto }}:{{ t.ipAddr }}:{{ t.ipPort }}
 {%- endfor %}
 
 # group
@@ -359,15 +359,11 @@ def get_config():
     else:
         snmp['v3_enabled'] = True
 
-    #
     # 'set service snmp v3 engineid'
-    #
     if conf.exists('v3 engineid'):
         snmp['v3_engineid'] = conf.return_value('v3 engineid')
 
-    #
     # 'set service snmp v3 group'
-    #
     if conf.exists('v3 group'):
         for group in conf.list_nodes('v3 group'):
             v3_group = {
@@ -388,14 +384,11 @@ def get_config():
 
             snmp['v3_groups'].append(v3_group)
 
-    #
     # 'set service snmp v3 trap-target'
-    #
     if conf.exists('v3 trap-target'):
         for trap in conf.list_nodes('v3 trap-target'):
             trap_cfg = {
                 'ipAddr': trap,
-                'engineID': '',
                 'secName': '',
                 'authProtocol': 'md5',
                 'authPassword': '',
@@ -408,11 +401,6 @@ def get_config():
                 'type': '',
                 'secLevel': 'noAuthNoPriv'
             }
-
-            if conf.exists('v3 trap-target {0} engineid'.format(trap)):
-                # Set the context engineID used for SNMPv3 REQUEST messages scopedPdu.
-                # If not specified, this will default to the authoritative engineID.
-                trap_cfg['engineID'] = conf.return_value('v3 trap-target {0} engineid'.format(trap))
 
             if conf.exists('v3 trap-target {0} user'.format(trap)):
                 # Set the securityName used for authenticated SNMPv3 messages.
@@ -488,7 +476,6 @@ def get_config():
                 'authPassword': '',
                 'authProtocol': 'md5',
                 'authOID': 'none',
-                'engineID': '',
                 'group': '',
                 'mode': 'ro',
                 'privMasterKey': '',
@@ -498,9 +485,7 @@ def get_config():
                 'privProtocol': 'des'
             }
 
-            #
             # v3 user {0} auth
-            #
             if conf.exists('v3 user {0} auth encrypted-key'.format(user)):
                 user_cfg['authMasterKey'] = conf.return_value('v3 user {0} auth encrypted-key'.format(user))
 
@@ -516,27 +501,15 @@ def get_config():
             user_cfg['authProtocol'] = type
             user_cfg['authOID'] = OIDs[type]
 
-            #
-            # v3 user {0} engineid
-            #
-            if conf.exists('v3 user {0} engineid'.format(user)):
-                user_cfg['engineID'] = conf.return_value('v3 user {0} engineid'.format(user))
-
-            #
             # v3 user {0} group
-            #
             if conf.exists('v3 user {0} group'.format(user)):
                 user_cfg['group'] = conf.return_value('v3 user {0} group'.format(user))
 
-            #
             # v3 user {0} mode
-            #
             if conf.exists('v3 user {0} mode'.format(user)):
                 user_cfg['mode'] = conf.return_value('v3 user {0} mode'.format(user))
 
-            #
             # v3 user {0} privacy
-            #
             if conf.exists('v3 user {0} privacy encrypted-key'.format(user)):
                 user_cfg['privMasterKey'] = conf.return_value('v3 user {0} privacy encrypted-key'.format(user))
 
@@ -660,13 +633,6 @@ def verify(snmp):
             if not 'privPassword' and 'privMasterKey' in trap.keys():
                 raise ConfigError('v3 trap: "user" must be specified')
 
-            if 'type' in trap.keys():
-                if trap['type'] == 'trap' and trap['engineID'] == '':
-                    raise ConfigError('must specify engineid if type is "trap"')
-            else:
-                raise ConfigError('"type" must be specified')
-
-
     if 'v3_users' in snmp.keys():
         for user in snmp['v3_users']:
             #
@@ -697,9 +663,6 @@ def verify(snmp):
 
             if user['privPassword'] == '' and user['privMasterKey'] == '':
                 raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
-
-            if user['privMasterKey'] and user['engineID'] == '':
-                raise ConfigError('Can not have "encrypted-key" without engineid')
 
             if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
                 raise ConfigError('Must specify auth or tsm-key for user auth')
@@ -835,7 +798,6 @@ def apply(snmp):
                     # Now update the running configuration
                     #
                     # Currently when executing os.system() the environment does not have the vyos_libexec_dir variable set, see T685
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" engineid {1} > /dev/null'.format(cfg['user'], engineID))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['auth_pw']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['priv_pw']))
                     os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))

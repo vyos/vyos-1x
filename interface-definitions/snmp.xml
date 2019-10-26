@@ -307,15 +307,6 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="engineid">
-                    <properties>
-                      <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
-                      <constraint>
-                        <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
-                      </constraint>
-                      <constraintErrorMessage>ID must contain from 2 to 36 hex digits</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
                   <leafNode name="port">
                     <properties>
                       <help>Specifies TCP/UDP port of destination SNMP traps/informs (default: '162')</help>
@@ -503,15 +494,6 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="engineid">
-                    <properties>
-                      <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
-                      <constraint>
-                        <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
-                      </constraint>
-                      <constraintErrorMessage>ID must contain from 2 to 36 hex digits</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
                   <leafNode name="group">
                     <properties>
                       <help>Specifies group for user name</help>
