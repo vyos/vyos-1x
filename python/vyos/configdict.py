@@ -106,7 +106,7 @@ def vlan_to_dict(conf):
     Function call's itself recursively if a vif-s/vif-c pair is detected.
     """
     vlan = {
-        'id': conf.get_level().split()[-1], # get the '100' in 'interfaces bonding bond0 vif-s 100'
+        'id': conf.get_level()[-1], # get the '100' in 'interfaces bonding bond0 vif-s 100'
         'address': [],
         'address_remove': [],
         'description': '',
@@ -152,11 +152,11 @@ def vlan_to_dict(conf):
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
-        vlan['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+        vlan['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
     if conf.exists('dhcpv6-options temporary'):
-        vlan['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
+        vlan['dhcpv6_temporary'] = True
 
     # ignore link state changes
     if conf.exists('disable-link-detect'):
@@ -192,7 +192,7 @@ def vlan_to_dict(conf):
 
     # ethertype is mandatory on vif-s nodes and only exists here!
     # check if this is a vif-s node at all:
-    if conf.get_level().split()[-2] == 'vif-s':
+    if conf.get_level()[-2] == 'vif-s':
         vlan['vif_c'] = []
         vlan['vif_c_remove'] = []
 
@@ -215,7 +215,7 @@ def vlan_to_dict(conf):
             # add new key (vif-c) to dictionary
             for vif in conf.list_nodes('vif-c'):
                 # set config level to vif interface
-                conf.set_level(cfg_level + ' vif-c ' + vif)
+                conf.set_level(cfg_level + ['vif-c', vif])
                 vlan['vif_c'].append(vlan_to_dict(conf))
 
     return vlan

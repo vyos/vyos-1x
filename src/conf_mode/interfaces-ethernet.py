@@ -79,9 +79,20 @@ def apply_vlan_config(vlan, config):
     if config['dhcp_vendor_class_id']:
         opt['vendor_class_id'] = config['dhcp_vendor_class_id']
 
-    # store DHCP config dictionary - used later on when addresses
-    # are requested
+    # store DHCP config dictionary - used later on when addresses are aquired
     vlan.set_dhcp_options(opt)
+
+    # get DHCPv6 config dictionary and update values
+    opt = vlan.get_dhcpv6_options()
+
+    if config['dhcpv6_prm_only']:
+        opt['dhcpv6_prm_only'] = True
+
+    if config['dhcpv6_temporary']:
+        opt['dhcpv6_temporary'] = True
+
+    # store DHCPv6 config dictionary - used later on when addresses are aquired
+    vlan.set_dhcpv6_options(opt)
 
     # update interface description used e.g. within SNMP
     vlan.set_alias(config['description'])
@@ -119,7 +130,7 @@ def get_config():
         print("Interface not specified")
 
     # check if ethernet interface has been removed
-    cfg_base = 'interfaces ethernet ' + eth['intf']
+    cfg_base = ['interfaces', 'ethernet', eth['intf']]
     if not conf.exists(cfg_base):
         eth['deleted'] = True
         # we can not bail out early as ethernet interface can not be removed
@@ -157,11 +168,11 @@ def get_config():
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
-        eth['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+        eth['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
     if conf.exists('dhcpv6-options temporary'):
-        eth['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
+        eth['dhcpv6_temporary'] = True
 
     # ignore link state changes
     if conf.exists('disable-link-detect'):
@@ -238,7 +249,7 @@ def get_config():
     if conf.exists('vif-s'):
         for vif_s in conf.list_nodes('vif-s'):
             # set config level to vif-s interface
-            conf.set_level(cfg_base + ' vif-s ' + vif_s)
+            conf.set_level(cfg_base + ['vif-s', vif_s])
             eth['vif_s'].append(vlan_to_dict(conf))
 
     # re-set configuration level to parse new nodes
@@ -252,7 +263,7 @@ def get_config():
     if conf.exists('vif'):
         for vif in conf.list_nodes('vif'):
             # set config level to vif interface
-            conf.set_level(cfg_base + ' vif ' + vif)
+            conf.set_level(cfg_base + ['vif', vif])
             eth['vif'].append(vlan_to_dict(conf))
 
     return eth
@@ -270,6 +281,9 @@ def verify(eth):
         if eth['speed'] != 'auto':
             raise ConfigError('If duplex is hardcoded, speed must be hardcoded, too')
 
+    if eth['dhcpv6_prm_only'] and eth['dhcpv6_temporary']:
+        raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
     conf = Config()
     # some options can not be changed when interface is enslaved to a bond
     for bond in conf.list_nodes('interfaces bonding'):
@@ -279,6 +293,18 @@ def verify(eth):
                 if eth['address']:
                     raise ConfigError('Can not assign address to interface {} which is a member of {}').format(eth['intf'], bond)
 
+    # DHCPv6 parameters-only and temporary address are mutually exclusive
+    for vif_s in eth['vif_s']:
+        if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+        for vif_c in vif_s['vif_c']:
+            if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
+                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+    for vif in eth['vif']:
+        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
     return None
 
@@ -306,9 +332,20 @@ def apply(eth):
         if eth['dhcp_vendor_class_id']:
             opt['vendor_class_id'] = eth['dhcp_vendor_class_id']
 
-        # store DHCP config dictionary - used later on when addresses
-        # are requested
+        # store DHCP config dictionary - used later on when addresses are aquired
         e.set_dhcp_options(opt)
+
+        # get DHCPv6 config dictionary and update values
+        opt = e.get_dhcpv6_options()
+
+        if eth['dhcpv6_prm_only']:
+            opt['dhcpv6_prm_only'] = True
+
+        if eth['dhcpv6_temporary']:
+            opt['dhcpv6_temporary'] = True
+
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        e.set_dhcpv6_options(opt)
 
         # ignore link state changes
         e.set_link_detect(eth['disable_link_detect'])

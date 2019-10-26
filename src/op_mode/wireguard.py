@@ -22,13 +22,15 @@ import sys
 import shutil
 import subprocess
 import syslog as sl
+import re
 
+from vyos.interface import Interface
 
 from vyos import ConfigError
+from vyos.config import Config
 
 dir = r'/config/auth/wireguard'
 psk = dir + '/preshared.key'
-
 
 def check_kmod():
     """ check if kmod is loaded, if not load it """
@@ -37,7 +39,6 @@ def check_kmod():
         if os.system('sudo modprobe wireguard') != 0:
             sl.syslog(sl.LOG_ERR, "modprobe wireguard failed")
             raise ConfigError("modprobe wireguard failed")
-
 
 def generate_keypair(pk, pub):
     """ generates a keypair which is stored in /config/auth/wireguard """
@@ -124,6 +125,8 @@ if __name__ == '__main__':
         '--listkdir', action="store_true", help='lists named keydirectories')
     parser.add_argument(
         '--delkdir', action="store_true", help='removes named keydirectories')
+    parser.add_argument(
+        '--showinterface', action="store", help='shows interface details')
     args = parser.parse_args()
 
     try:
@@ -146,6 +149,9 @@ if __name__ == '__main__':
             genpsk()
         if args.listkdir:
             list_key_dirs()
+        if args.showinterface:
+            intf = Interface(args.showinterface)
+            intf.print_interface()
         if args.delkdir:
             if args.location:
                 del_key_dir(args.location)

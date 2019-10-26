@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/interface-loopback.py">
+      <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/interfaces-loopback.py">
         <properties>
           <help>Loopback interface</help>
           <priority>300</priority>

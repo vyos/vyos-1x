@@ -16,11 +16,11 @@
 
 import os
 import re
-import sys
-import stat
-import jinja2
 
+from jinja2 import Template
 from copy import deepcopy
+from sys import exit
+from stat import S_IRUSR,S_IRWXU,S_IRGRP,S_IXGRP,S_IROTH,S_IXOTH
 from grp import getgrnam
 from ipaddress import ip_address,ip_network,IPv4Interface
 from netifaces import interfaces
@@ -340,12 +340,12 @@ def openvpn_mkdir(directory):
         os.mkdir(directory)
 
     # fix permissions - corresponds to mode 755
-    os.chmod(directory, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
+    os.chmod(directory, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
     uid = getpwnam(user).pw_uid
     gid = getgrnam(group).gr_gid
     os.chown(directory, uid, gid)
 
-def fixup_permission(filename, permission=stat.S_IRUSR):
+def fixup_permission(filename, permission=S_IRUSR):
     """
     Check if the given file exists and change ownershit to root/vyattacfg
     and appripriate file access permissions - default is user and group readable
@@ -786,7 +786,7 @@ def verify(openvpn):
     if openvpn['shared_secret_file']:
         if openvpn['encryption'] in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
             raise ConfigError('GCM encryption with shared-secret-key-file is not supported')
-        
+
         if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['shared_secret_file']):
             raise ConfigError('Specified shared-secret-key-file "{}" is not valid'.format(openvpn['shared_secret_file']))
 
@@ -900,13 +900,13 @@ def generate(openvpn):
     # Generate client specific configuration
     for client in openvpn['client']:
         client_file = directory + '/ccd/' + interface + '/' + client['name']
-        tmpl = jinja2.Template(client_tmpl)
+        tmpl = Template(client_tmpl)
         client_text = tmpl.render(client)
         with open(client_file, 'w') as f:
             f.write(client_text)
         os.chown(client_file, uid, gid)
 
-    tmpl = jinja2.Template(config_tmpl)
+    tmpl = Template(config_tmpl)
     config_text = tmpl.render(openvpn)
 
     # we need to support quoting of raw parameters from OpenVPN CLI
@@ -1006,4 +1006,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)

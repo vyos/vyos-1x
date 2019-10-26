@@ -100,11 +100,11 @@ def get_config():
 
     # DHCPv6 only acquire config parameters, no address
     if conf.exists('dhcpv6-options parameters-only'):
-        bridge['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
+        bridge['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
     if conf.exists('dhcpv6-options temporary'):
-        bridge['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
+        bridge['dhcpv6_temporary'] = True
 
     # Disable this bridge interface
     if conf.exists('disable'):
@@ -174,6 +174,9 @@ def get_config():
     return bridge
 
 def verify(bridge):
+    if bridge['dhcpv6_prm_only'] and bridge['dhcpv6_temporary']:
+        raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
     conf = Config()
     for br in conf.list_nodes('interfaces bridge'):
         # it makes no sense to verify ourself in this case
@@ -240,9 +243,20 @@ def apply(bridge):
         if bridge['dhcp_vendor_class_id']:
             opt['vendor_class_id'] = bridge['dhcp_vendor_class_id']
 
-        # store DHCP config dictionary - used later on when addresses
-        # are requested
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
         br.set_dhcp_options(opt)
+
+        # get DHCPv6 config dictionary and update values
+        opt = br.get_dhcpv6_options()
+
+        if bridge['dhcpv6_prm_only']:
+            opt['dhcpv6_prm_only'] = True
+
+        if bridge['dhcpv6_temporary']:
+            opt['dhcpv6_temporary'] = True
+
+        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        br.set_dhcpv6_options(opt)
 
         # Change interface MAC address
         if bridge['mac']:
