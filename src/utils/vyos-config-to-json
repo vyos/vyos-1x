@@ -1,0 +1,40 @@
+#!/usr/bin/python3
+
+import sys
+import json
+
+from signal import signal, SIGPIPE, SIG_DFL
+from vyos.configtree import ConfigTree
+
+signal(SIGPIPE,SIG_DFL)
+
+config_string = None
+if (len(sys.argv) == 1):
+    # If no argument given, act as a pipe
+    config_string = sys.stdin.read()
+else:
+    file_name = sys.argv[1]
+    try:
+        with open(file_name, 'r') as f:
+            config_string = f.read()
+    except OSError as e:
+        print("Could not read config file {0}: {1}".format(file_name, e), file=sys.stderr)
+
+# This script is usually called with the output of "cli-shell-api showCfg", which does not
+# escape backslashes. "ConfigTree()" expects escaped backslashes when parsing a config
+# string (and also prints them itself). Therefore this script would fail.
+# Manually escape backslashes here to handle backslashes in any configuration strings
+# properly. The alternative would be to modify the output of "cli-shell-api showCfg",
+# but that may be break other things who rely on that specific output.
+config_string = config_string.replace("\\", "\\\\")
+
+try:
+    config = ConfigTree(config_string)
+    json_str = config.to_json()
+    # Pretty print
+    json_str = json.dumps(json.loads(json_str), indent=4, sort_keys=True)
+except ValueError as e:
+    print("Could not parse the config file: {0}".format(e), file=sys.stderr)
+    sys.exit(1)
+
+print(json_str)
