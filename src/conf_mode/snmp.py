@@ -27,6 +27,7 @@ import vyos.validate
 from binascii import hexlify
 from shutil import move
 from time import sleep
+from stat import S_IRWXU,S_IXGRP,S_IXOTH
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -545,9 +546,9 @@ def verify(snmp):
     if snmp['script_ext']:
         for ext in snmp['script_ext']:
             if not os.path.isfile(snmp['script_ext'][ext]):
-                print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")
+                print ("WARNING: script: {} doesn't exist".format(snmp['script_ext'][ext]))
             else:
-                os.chmod(snmp['script_ext'][ext], 0o555)
+                os.chmod(snmp['script_ext'][ext], S_IRWXU|S_IXGRP|S_IXOTH)
 
     for listen in snmp['listen_address']:
         addr = listen[0]
