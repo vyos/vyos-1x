@@ -20,8 +20,8 @@ import json
 import glob
 import time
 
+import vyos.interfaces
 from vyos.validate import *
-import vyos.interface
 from vyos.config import Config
 from ipaddress import IPv4Network, IPv6Address
 from netifaces import ifaddresses, AF_INET, AF_INET6
