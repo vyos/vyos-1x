@@ -17,12 +17,20 @@ import os
 import re
 import jinja2
 import json
+import glob
+import time
 
 from vyos.validate import *
+import vyos.interface
+from vyos.config import Config
 from ipaddress import IPv4Network, IPv6Address
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from subprocess import Popen, PIPE, STDOUT
 from time import sleep
+from os.path import isfile
+from tabulate import tabulate
+from hurry.filesize import size,alternative
+from datetime import timedelta
 
 dhclient_base = r'/var/lib/dhcp/dhclient_'
 dhcp_cfg = """
@@ -671,6 +679,31 @@ class Interface:
         if os.path.isfile(self._dhcpv6_lease_file):
             os.remove(self._dhcpv6_lease_file)
 
+    def op_show_interface_stats(self):
+        stats = self.get_interface_stats()
+        rx = [['bytes','packets','errors','dropped','overrun','mcast'],[stats['rx_bytes'],stats['rx_packets'],stats['rx_errors'],stats['rx_dropped'],stats['rx_over_errors'],stats['multicast']]]
+        tx = [['bytes','packets','errors','dropped','carrier','collisions'],[stats['tx_bytes'],stats['tx_packets'],stats['tx_errors'],stats['tx_dropped'],stats['tx_carrier_errors'],stats['collisions']]]
+        output = "RX: \n"
+        output += tabulate(rx,headers="firstrow",numalign="right",tablefmt="plain")
+        output += "\n\nTX: \n"
+        output += tabulate(tx,headers="firstrow",numalign="right",tablefmt="plain")
+        print('  '.join(('\n'+output.lstrip()).splitlines(True)))
+
+    def get_interface_stats(self):
+        interface_stats = dict()
+        devices = [f for f in glob.glob("/sys/class/net/**/statistics")]
+        for dev_path in devices:
+            metrics = [f for f in glob.glob(dev_path +"/**")]
+            dev = re.findall(r"/sys/class/net/(.*)/statistics",dev_path)[0]
+            dev_dict = dict()
+            for metric_path in metrics:
+                metric = metric_path.replace(dev_path+"/","")
+                if isfile(metric_path):
+                    data = open(metric_path, 'r').read()[:-1]
+                    dev_dict[metric] = int(data)
+            interface_stats[dev] = dev_dict
+
+        return interface_stats[self._ifname]
 
 class LoopbackIf(Interface):
 
@@ -1371,7 +1404,6 @@ class BondIf(VLANIf):
         return self._write_sysfs('/sys/class/net/{}/bonding/mode'
                                  .format(self._ifname), mode)
 
-
 class WireGuardIf(Interface):
     """
     Wireguard interface class, contains a comnfig dictionary since
@@ -1447,6 +1479,70 @@ class WireGuardIf(Interface):
         cmd = "wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
         return self._cmd(cmd)
+    
+    def op_show_interface(self):
+        wgdump = vyos.interfaces.wireguard_dump().get(self._ifname,None)
+
+        c = Config()
+        c.set_level(["interfaces","wireguard",self._ifname])
+        description = c.return_effective_value(["description"])
+        ips = c.return_effective_values(["address"])
+
+        print ("interface: {}".format(self._ifname))
+        if (description):
+            print ("  description: {}".format(description))
+
+        if (ips):
+            print ("  address: {}".format(", ".join(ips)))
+        print ("  public key: {}".format(wgdump['public_key']))
+        print ("  private key: (hidden)")
+        print ("  listening port: {}".format(wgdump['listen_port']))
+        print ()
+
+        for peer in c.list_effective_nodes(["peer"]):
+            if wgdump['peers']:
+                pubkey = c.return_effective_value(["peer",peer,"pubkey"])
+                if pubkey in wgdump['peers']:
+                    wgpeer = wgdump['peers'][pubkey] 
+
+                    print ("  peer: {}".format(peer))
+                    print ("    public key: {}".format(pubkey))
+
+                    """ figure out if the tunnel is recently active or not """
+                    status = "inactive"
+                    if (wgpeer['latest_handshake'] is None):
+                        """ no handshake ever """
+                        status = "inactive"
+                    else:
+                        if int(wgpeer['latest_handshake']) > 0:
+                            delta = timedelta(seconds=int(time.time() - wgpeer['latest_handshake']))
+                            print ("    latest handshake: {}".format(delta))
+                            if (time.time() - int(wgpeer['latest_handshake']) < (60*5)):
+                                """ Five minutes and the tunnel is still active """
+                                status = "active"
+                            else:
+                                """ it's been longer than 5 minutes """
+                                status = "inactive"
+                        elif int(wgpeer['latest_handshake']) == 0:
+                            """ no handshake ever """
+                            status = "inactive"
+                        print ("    status: {}".format(status))    
+
+                    if wgpeer['endpoint'] is not None:
+                        print ("    endpoint: {}".format(wgpeer['endpoint']))
+
+                    if wgpeer['allowed_ips'] is not None:
+                        print ("    allowed ips: {}".format(",".join(wgpeer['allowed_ips']).replace(",",", ")))
+                    
+                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0: 
+                        rx_size =size(wgpeer['transfer_rx'],system=alternative)
+                        tx_size =size(wgpeer['transfer_tx'],system=alternative)
+                        print ("    transfer: {} received, {} sent".format(rx_size,tx_size))
+
+                    if wgpeer['persistent_keepalive'] is not None:
+                        print ("    persistent keepalive: every {} seconds".format(wgpeer['persistent_keepalive']))
+                print()
+        super().op_show_interface_stats()
 
 
 class VXLANIf(Interface, ):
