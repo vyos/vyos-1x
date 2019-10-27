@@ -549,10 +549,6 @@ def verify(snmp):
         else:
           os.chmod(snmp['script_ext'][ext], 0o555)
 
-    # bail out early if SNMP v3 is not configured
-    if not snmp['v3_enabled']:
-        return None
-
     for listen in snmp['listen_address']:
         addr = listen[0]
         port = listen[1]
@@ -570,6 +566,10 @@ def verify(snmp):
             snmp['listen_on'].append(listen)
         else:
             print('WARNING: SNMP listen address {0} not configured!'.format(addr))
+
+    # bail out early if SNMP v3 is not configured
+    if not snmp['v3_enabled']:
+        return None
 
     if 'v3_groups' in snmp.keys():
         for group in snmp['v3_groups']:
