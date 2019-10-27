@@ -43,6 +43,11 @@ else:
         for user in config.list_nodes(config_base + ['v3', 'user']):
             config.delete(config_base + ['v3', 'user', user, 'engineid'])
 
+    # we drop TSM support as there seem to be no users and this code is untested
+    # https://phabricator.vyos.net/T1769
+    if config.exists(config_base + ['v3', 'tsm']):
+        config.delete(config_base + ['v3', 'tsm'])
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
