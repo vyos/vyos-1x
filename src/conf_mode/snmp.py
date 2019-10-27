@@ -16,19 +16,17 @@
 
 import sys
 import os
-import shutil
 import stat
 import pwd
-import time
-
 import jinja2
-import random
-import binascii
 import re
 
 import vyos.version
 import vyos.validate
 
+from binascii import hexlify
+from shutil import move
+from time import sleep
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -249,10 +247,10 @@ def get_config():
     version_data = vyos.version.get_version_data()
     snmp['version'] = version_data['version']
 
-    # create an internal snmpv3 user of the form 'vyattaxxxxxxxxxxxxxxxx'
+    # create an internal snmpv3 user of the form 'vyosxxxxxxxxxxxxxxxx'
     # os.urandom(8) returns 8 bytes of random data
-    snmp['vyos_user'] = 'vyatta' + binascii.hexlify(os.urandom(8)).decode('utf-8')
-    snmp['vyos_user_pass'] = binascii.hexlify(os.urandom(16)).decode('utf-8')
+    snmp['vyos_user'] = 'vyos' + hexlify(os.urandom(8)).decode('utf-8')
+    snmp['vyos_user_pass'] = hexlify(os.urandom(16)).decode('utf-8')
 
     if conf.exists('community'):
         for name in conf.list_nodes('community'):
@@ -700,7 +698,7 @@ def apply(snmp):
             if os.path.exists(volatiledir) and os.path.isdir(volatiledir):
                 files = os.listdir(volatiledir)
                 for f in files:
-                    shutil.move(volatiledir + '/' + f, nonvolatiledir)
+                    move(volatiledir + '/' + f, nonvolatiledir)
                     os.chmod(nonvolatiledir + '/' + f, stat.S_IWUSR | stat.S_IRUSR)
 
                 os.rmdir(volatiledir)
@@ -721,7 +719,7 @@ def apply(snmp):
         snmpReady = False
         while not snmpReady:
             while not os.path.exists(config_file_user):
-                time.sleep(1)
+                sleep(1)
 
             with open(config_file_user, 'r') as f:
                 for line in f:
