@@ -105,6 +105,14 @@ class ConfigTree(object):
         self.__to_commands.argtypes = [c_void_p]
         self.__to_commands.restype = c_char_p
 
+        self.__to_json = self.__lib.to_json
+        self.__to_json.argtypes = [c_void_p]
+        self.__to_json.restype = c_char_p
+
+        self.__to_json_ast = self.__lib.to_json_ast
+        self.__to_json_ast.argtypes = [c_void_p]
+        self.__to_json_ast.restype = c_char_p
+
         self.__set_add_value = self.__lib.set_add_value
         self.__set_add_value.argtypes = [c_void_p, c_char_p, c_char_p]
         self.__set_add_value.restype = c_int
@@ -183,6 +191,12 @@ class ConfigTree(object):
 
     def to_commands(self):
         return self.__to_commands(self.__config).decode()
+
+    def to_json(self):
+        return self.__to_json(self.__config).decode()
+
+    def to_json_ast(self):
+        return self.__to_json_ast(self.__config).decode()
 
     def set(self, path, value=None, replace=True):
         """Set new entry in VyOS configuration.
