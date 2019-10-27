@@ -104,12 +104,10 @@ class Config(object):
                 running_config_text = f.read()
 
         # Session config ("active") only exists in conf mode.
-        # Trying to obtain it from op mode will cause a fatal cli-shell-api error.
-        # If that happens, we assume that a script is running from op mode and use the running config
-        # for the "session config" variable as well.
-        try:
+        # In op mode, we'll just use the same running config for both active and session configs.
+        if self.in_session():
             session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', 'showConfig'])
-        except VyOSError:
+        else:
             session_config_text = running_config_text
 
         self._session_config = vyos.configtree.ConfigTree(session_config_text)
