@@ -222,7 +222,7 @@ class Config(object):
         except VyOSError:
             return False
 
-    def show_config(self, path='', default=None):
+    def show_config(self, path=[], default=None):
         """
         Args:
             path (str): Configuration tree path, or empty
@@ -231,6 +231,8 @@ class Config(object):
         Returns:
             str: working configuration
         """
+        if isinstance(path, list):
+            path = " ".join(path)
         try:
             out = self._run(self._make_command('showConfig', path))
             return out
