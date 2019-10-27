@@ -307,15 +307,6 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="engineid">
-                    <properties>
-                      <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
-                      <constraint>
-                        <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
-                      </constraint>
-                      <constraintErrorMessage>ID must contain from 2 to 36 hex digits</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
                   <leafNode name="port">
                     <properties>
                       <help>Specifies TCP/UDP port of destination SNMP traps/informs (default: '162')</help>
@@ -421,35 +412,6 @@
                   </leafNode>
                 </children>
               </tagNode>
-              <node name="tsm">
-                <properties>
-                  <help>Specifies that SNMPv3 uses the Transport Security Model (TSM)</help>
-                </properties>
-                <children>
-                  <leafNode name="local-key">
-                    <properties>
-                      <help>Fingerprint of a TSM server certificate</help>
-                      <constraint>
-                        <regex>^[0-9A-F]{2}(:[0-9A-F]{2}){19}$</regex>
-                      </constraint>
-                      <constraintErrorMessage>Value can be finger print key or filename in /config/snmp/tls/certs</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="port">
-                    <properties>
-                      <help>Defines the port used for TSM (default: '10161')</help>
-                      <valueHelp>
-                        <format>1-65535</format>
-                        <description>Numeric IP port</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                      <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               <tagNode name="user">
                 <properties>
                   <help>Specifies the user with name username</help>
@@ -503,15 +465,6 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="engineid">
-                    <properties>
-                      <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
-                      <constraint>
-                        <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
-                      </constraint>
-                      <constraintErrorMessage>ID must contain from 2 to 36 hex digits</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
                   <leafNode name="group">
                     <properties>
                       <help>Specifies group for user name</help>
@@ -580,11 +533,6 @@
                           <constraint>
                             <regex>(des|aes)</regex>
                           </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="tsm-key">
-                        <properties>
-                          <help>Specifies finger print or file name of TSM certificate</help>
                         </properties>
                       </leafNode>
                     </children>
