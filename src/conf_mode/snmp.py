@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2019 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import os
@@ -117,9 +115,6 @@ monitor  -r 10 -e linkDownTrap "Generate linkDown" ifOperStatus == 2
 ########################
 # configurable section #
 ########################
-{% if v3_tsm_key %}
-[snmp] localCert {{ v3_tsm_key }}
-{%- endif %}
 
 # Default system description is VyOS version
 sysDescr VyOS {{ version }}
@@ -130,7 +125,7 @@ SysDescr {{ description }}
 {%- endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161,udp6:161{% endif %}{% if v3_tsm_key %},tlstcp:{{ v3_tsm_port }},dtlsudp::{{ v3_tsm_port }}{% endif %}
+agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161,udp6:161{% endif %}
 
 # SNMP communities
 {%- for c in communities %}
@@ -192,7 +187,6 @@ view {{ v.name }} included .{{ oid.oid }}
 #             context sec.model sec.level match  read    write  notif
 {%- for g in v3_groups %}
 access {{ g.name }} "" usm {{ g.seclevel }} exact {{ g.view }} {% if g.mode == 'ro' %}none{% else %}{{ g.view }}{% endif %} none
-access {{ g.name }} "" tsm {{ g.seclevel }} exact {{ g.view }} {% if g.mode == 'ro' %}none{% else %}{{ g.view }}{% endif %} none
 {%- endfor %}
 
 # trap-target
@@ -203,7 +197,6 @@ trapsess -v 3 {{ '-Ci' if t.type == 'inform' }} -e {{ v3_engineid }} -u {{ t.sec
 # group
 {%- for u in v3_users %}
 group {{ u.group }} usm {{ u.name }}
-group {{ u.group }} tsm {{ u.name }}
 {% endfor %}
 {%- endif %}
 
@@ -244,8 +237,6 @@ default_config_data = {
     'v3_engineid': '',
     'v3_groups': [],
     'v3_traps': [],
-    'v3_tsm_key': '',
-    'v3_tsm_port': '10161',
     'v3_users': [],
     'v3_views': [],
     'script_ext': {}
@@ -471,19 +462,7 @@ def get_config():
 
             snmp['v3_traps'].append(trap_cfg)
 
-    #
-    # 'set service snmp v3 tsm'
-    #
-    if conf.exists('v3 tsm'):
-        if conf.exists('v3 tsm local-key'):
-            snmp['v3_tsm_key'] = conf.return_value('v3 tsm local-key')
-
-        if conf.exists('v3 tsm port'):
-            snmp['v3_tsm_port'] = conf.return_value('v3 tsm port')
-
-    #
     # 'set service snmp v3 user'
-    #
     if conf.exists('v3 user'):
         for user in conf.list_nodes('v3 user'):
             user_cfg = {
@@ -497,7 +476,6 @@ def get_config():
                 'privMasterKey': '',
                 'privPassword': '',
                 'privOID': '',
-                'privTsmKey': '',
                 'privProtocol': 'des'
             }
 
@@ -532,9 +510,6 @@ def get_config():
             if conf.exists('v3 user {0} privacy plaintext-key'.format(user)):
                 user_cfg['privPassword'] = conf.return_value('v3 user {0} privacy plaintext-key'.format(user))
 
-            if conf.exists('v3 user {0} privacy tsm-key'.format(user)):
-                user_cfg['privTsmKey'] = conf.return_value('v3 user {0} privacy tsm-key'.format(user))
-
             # load default value
             type = user_cfg['privProtocol']
             if conf.exists('v3 user {0} privacy type'.format(user)):
@@ -546,9 +521,7 @@ def get_config():
 
             snmp['v3_users'].append(user_cfg)
 
-    #
     # 'set service snmp v3 view'
-    #
     if conf.exists('v3 view'):
         for view in conf.list_nodes('v3 view'):
             view_cfg = {
@@ -574,21 +547,13 @@ def verify(snmp):
     if snmp['script_ext']:
       for ext in snmp['script_ext']:
         if not os.path.isfile(snmp['script_ext'][ext]):
-          print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")  
+          print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")
         else:
           os.chmod(snmp['script_ext'][ext], 0o555)
 
     # bail out early if SNMP v3 is not configured
     if not snmp['v3_enabled']:
         return None
-
-    tsmKeyPattern = re.compile('^[0-9A-F]{2}(:[0-9A-F]{2}){19}$', re.IGNORECASE)
-
-    if snmp['v3_tsm_key']:
-        if not tsmKeyPattern.match(snmp['v3_tsm_key']):
-            if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                    raise ConfigError('TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
 
     for listen in snmp['listen_address']:
         addr = listen[0]
@@ -687,17 +652,8 @@ def verify(snmp):
             if user['privPassword'] == '' and user['privMasterKey'] == '':
                 raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
 
-            if user['authPassword'] == '' and user['authMasterKey'] == '' and user['privTsmKey'] == '':
-                raise ConfigError('Must specify auth or tsm-key for user auth')
-
             if user['mode'] == '':
                 raise ConfigError('Must specify user mode ro/rw')
-
-            if user['privTsmKey']:
-                if not tsmKeyPattern.match(snmp['v3_tsm_key']):
-                    if not os.path.isfile('/etc/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                        if not os.path.isfile('/config/snmp/tls/certs/' + snmp['v3_tsm_key']):
-                            raise ConfigError('User TSM key must be fingerprint or filename in "/config/snmp/tls/certs/" folder')
 
     if 'v3_views' in snmp.keys():
         for view in snmp['v3_views']:
