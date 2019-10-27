@@ -202,7 +202,7 @@ group {{ u.group }} usm {{ u.name }}
 {% if script_ext %}
 # extension scripts
 {%- for ext in script_ext|sort %}
-extend\t{{ext}}\t{{script_ext[ext]}}
+extend {{ ext.name }} {{ ext.script }}
 {%- endfor %}
 {% endif %}
 """
@@ -238,7 +238,7 @@ default_config_data = {
     'v3_traps': [],
     'v3_users': [],
     'v3_views': [],
-    'script_ext': {}
+    'script_ext': []
 }
 
 def rmfile(file):
@@ -347,9 +347,13 @@ def get_config():
     # 'set service snmp script-extensions'
     #
     if conf.exists('script-extensions'):
-      for extname in conf.list_nodes('script-extensions extension-name'):
-        snmp['script_ext'][extname] = '/config/user-data/' + conf.return_value('script-extensions extension-name ' + extname + ' script')
+        for extname in conf.list_nodes('script-extensions extension-name'):
+            extension = {
+                'name': extname,
+                'script' : conf.return_value('script-extensions extension-name {} script'.format(extname))
+            }
 
+            snmp['script_ext'].append(extension)
 
     #########################################################################
     #                ____  _   _ __  __ ____          _____                 #
@@ -545,10 +549,10 @@ def verify(snmp):
     ### check if the configured script actually exist under /config/user-data
     if snmp['script_ext']:
         for ext in snmp['script_ext']:
-            if not os.path.isfile(snmp['script_ext'][ext]):
-                print ("WARNING: script: {} doesn't exist".format(snmp['script_ext'][ext]))
+            if not os.path.isfile(ext['script']):
+                print ("WARNING: script: {} doesn't exist".format(ext['script']))
             else:
-                os.chmod(snmp['script_ext'][ext], S_IRWXU|S_IXGRP|S_IXOTH)
+                os.chmod(ext['script'], S_IRWXU|S_IXGRP|S_IXOTH)
 
     for listen in snmp['listen_address']:
         addr = listen[0]
