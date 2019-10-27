@@ -543,11 +543,11 @@ def verify(snmp):
 
     ### check if the configured script actually exist under /config/user-data
     if snmp['script_ext']:
-      for ext in snmp['script_ext']:
-        if not os.path.isfile(snmp['script_ext'][ext]):
-          print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")
-        else:
-          os.chmod(snmp['script_ext'][ext], 0o555)
+        for ext in snmp['script_ext']:
+            if not os.path.isfile(snmp['script_ext'][ext]):
+                print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")
+            else:
+                os.chmod(snmp['script_ext'][ext], 0o555)
 
     for listen in snmp['listen_address']:
         addr = listen[0]
