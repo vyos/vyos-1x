@@ -65,6 +65,7 @@ In operational mode, all functions return values from the running config.
 
 import os
 import re
+import json
 import subprocess
 
 import vyos.configtree
@@ -225,7 +226,7 @@ class Config(object):
     def show_config(self, path=[], default=None):
         """
         Args:
-            path (str): Configuration tree path, or empty
+            path (str list): Configuration tree path, or empty
             default (str): Default value to return
 
         Returns:
@@ -238,6 +239,16 @@ class Config(object):
             return out
         except VyOSError:
             return(default)
+
+    def get_config_dict(self, path=[], effective=False):
+        """
+        Args: path (str list): Configuration tree path, can be empty
+        Returns: a dict representation of the config
+        """
+        res = self.show_config(self._make_path(path))
+        config_tree = vyos.configtree.ConfigTree(res)
+        config_dict = json.loads(config_tree.to_json())
+        return config_dict
 
     def is_multi(self, path):
         """
