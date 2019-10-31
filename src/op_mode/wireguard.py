@@ -24,7 +24,7 @@ import subprocess
 import syslog as sl
 import re
 
-from vyos.interface import Interface
+from vyos.ifconfig import WireGuardIf
 
 from vyos import ConfigError
 from vyos.config import Config
@@ -150,8 +150,8 @@ if __name__ == '__main__':
         if args.listkdir:
             list_key_dirs()
         if args.showinterface:
-            intf = Interface(args.showinterface)
-            intf.print_interface()
+            intf = WireGuardIf(args.showinterface)
+            intf.op_show_interface()
         if args.delkdir:
             if args.location:
                 del_key_dir(args.location)

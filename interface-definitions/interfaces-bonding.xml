@@ -159,7 +159,7 @@
                 <description>combine IP address and port to make hash</description>
               </valueHelp>
               <constraint>
-                <regex>(layer2\\+3|layer3\\+4|layer2)</regex>
+                <regex>(layer2\+3|layer3\+4|layer2)</regex>
               </constraint>
               <constraintErrorMessage>hash-policy must be layer2 layer2+3 or layer3+4</constraintErrorMessage>
             </properties>

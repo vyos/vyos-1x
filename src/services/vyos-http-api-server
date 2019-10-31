@@ -207,11 +207,21 @@ def get_value():
         elif op == 'exists':
             res = config.exists(path)
         elif op == 'showConfig':
-            config_format = 'raw'
+            config_format = 'json'
             if 'configFormat' in command:
                 config_format = command['configFormat']
 
-            res = session.show_config(command['path'], format=config_format)
+            res = session.show_config(path=command['path'])
+            if config_format == 'json':
+                config_tree = vyos.configtree.ConfigTree(res)
+                res = json.loads(config_tree.to_json())
+            elif config_format == 'json_ast':
+                config_tree = vyos.configtree.ConfigTree(res)
+                res = json.loads(config_tree.to_json_ast())
+            elif config_format == 'raw':
+                pass
+            else:
+                return error(400, "\"{0}\" is not a valid config format")
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
     except VyOSError as e:

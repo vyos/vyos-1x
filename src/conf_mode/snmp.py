@@ -16,19 +16,18 @@
 
 import sys
 import os
-import shutil
 import stat
 import pwd
-import time
-
 import jinja2
-import random
-import binascii
 import re
 
 import vyos.version
 import vyos.validate
 
+from binascii import hexlify
+from shutil import move
+from time import sleep
+from stat import S_IRWXU,S_IXGRP,S_IXOTH
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -203,7 +202,7 @@ group {{ u.group }} usm {{ u.name }}
 {% if script_ext %}
 # extension scripts
 {%- for ext in script_ext|sort %}
-extend\t{{ext}}\t{{script_ext[ext]}}
+extend {{ ext.name }} {{ ext.script }}
 {%- endfor %}
 {% endif %}
 """
@@ -239,7 +238,7 @@ default_config_data = {
     'v3_traps': [],
     'v3_users': [],
     'v3_views': [],
-    'script_ext': {}
+    'script_ext': []
 }
 
 def rmfile(file):
@@ -257,10 +256,10 @@ def get_config():
     version_data = vyos.version.get_version_data()
     snmp['version'] = version_data['version']
 
-    # create an internal snmpv3 user of the form 'vyattaxxxxxxxxxxxxxxxx'
+    # create an internal snmpv3 user of the form 'vyosxxxxxxxxxxxxxxxx'
     # os.urandom(8) returns 8 bytes of random data
-    snmp['vyos_user'] = 'vyatta' + binascii.hexlify(os.urandom(8)).decode('utf-8')
-    snmp['vyos_user_pass'] = binascii.hexlify(os.urandom(16)).decode('utf-8')
+    snmp['vyos_user'] = 'vyos' + hexlify(os.urandom(8)).decode('utf-8')
+    snmp['vyos_user_pass'] = hexlify(os.urandom(16)).decode('utf-8')
 
     if conf.exists('community'):
         for name in conf.list_nodes('community'):
@@ -348,9 +347,13 @@ def get_config():
     # 'set service snmp script-extensions'
     #
     if conf.exists('script-extensions'):
-      for extname in conf.list_nodes('script-extensions extension-name'):
-        snmp['script_ext'][extname] = '/config/user-data/' + conf.return_value('script-extensions extension-name ' + extname + ' script')
+        for extname in conf.list_nodes('script-extensions extension-name'):
+            extension = {
+                'name': extname,
+                'script' : conf.return_value('script-extensions extension-name {} script'.format(extname))
+            }
 
+            snmp['script_ext'].append(extension)
 
     #########################################################################
     #                ____  _   _ __  __ ____          _____                 #
@@ -545,15 +548,11 @@ def verify(snmp):
 
     ### check if the configured script actually exist under /config/user-data
     if snmp['script_ext']:
-      for ext in snmp['script_ext']:
-        if not os.path.isfile(snmp['script_ext'][ext]):
-          print ("WARNING: script: " + snmp['script_ext'][ext] + " doesn\'t exist")
-        else:
-          os.chmod(snmp['script_ext'][ext], 0o555)
-
-    # bail out early if SNMP v3 is not configured
-    if not snmp['v3_enabled']:
-        return None
+        for ext in snmp['script_ext']:
+            if not os.path.isfile(ext['script']):
+                print ("WARNING: script: {} doesn't exist".format(ext['script']))
+            else:
+                os.chmod(ext['script'], S_IRWXU|S_IXGRP|S_IXOTH)
 
     for listen in snmp['listen_address']:
         addr = listen[0]
@@ -572,6 +571,10 @@ def verify(snmp):
             snmp['listen_on'].append(listen)
         else:
             print('WARNING: SNMP listen address {0} not configured!'.format(addr))
+
+    # bail out early if SNMP v3 is not configured
+    if not snmp['v3_enabled']:
+        return None
 
     if 'v3_groups' in snmp.keys():
         for group in snmp['v3_groups']:
@@ -723,7 +726,7 @@ def apply(snmp):
             if os.path.exists(volatiledir) and os.path.isdir(volatiledir):
                 files = os.listdir(volatiledir)
                 for f in files:
-                    shutil.move(volatiledir + '/' + f, nonvolatiledir)
+                    move(volatiledir + '/' + f, nonvolatiledir)
                     os.chmod(nonvolatiledir + '/' + f, stat.S_IWUSR | stat.S_IRUSR)
 
                 os.rmdir(volatiledir)
@@ -744,7 +747,7 @@ def apply(snmp):
         snmpReady = False
         while not snmpReady:
             while not os.path.exists(config_file_user):
-                time.sleep(1)
+                sleep(1)
 
             with open(config_file_user, 'r') as f:
                 for line in f:
