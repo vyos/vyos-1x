@@ -264,7 +264,7 @@ def apply(bridge):
 
         # remove interface from bridge
         for intf in bridge['member_remove']:
-            br.del_port( intf['name'] )
+            br.del_port(intf)
 
         # add interfaces to bridge
         for member in bridge['member']:
