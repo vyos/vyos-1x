@@ -23,6 +23,8 @@ import time
 import vyos.interfaces
 from vyos.validate import *
 from vyos.config import Config
+from vyos import ConfigError
+
 from ipaddress import IPv4Network, IPv6Address
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from subprocess import Popen, PIPE, STDOUT
@@ -112,6 +114,9 @@ class Interface:
             'dhcpv6_prm_only' : False,
             'dhcpv6_temporary' : False
         }
+
+        # list of assigned IP addresses
+        self._addr = []
 
     def _debug_msg(self, msg):
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
@@ -432,6 +437,18 @@ class Interface:
         >>> j.get_addr()
         ['192.0.2.1/24', '2001:db8::ffff/64']
         """
+
+        # cache new IP address which is assigned to interface
+        self._addr.append(addr)
+
+        # we can not have both DHCP and static IPv4 addresses assigned to an interface
+        if 'dhcp' in self._addr:
+            for addr in self._addr:
+                # do not change below 'if' ordering esle you will get an exception as:
+                #   ValueError: 'dhcp' does not appear to be an IPv4 or IPv6 address
+                if addr != 'dhcp' and is_ipv4(addr):
+                    raise ConfigError("Can't configure both static IPv4 and DHCP address on the same interface")
+
         if addr == 'dhcp':
             self._set_dhcp()
         elif addr == 'dhcpv6':
