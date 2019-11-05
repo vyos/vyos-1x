@@ -221,7 +221,7 @@ def get_value():
             elif config_format == 'raw':
                 pass
             else:
-                return error(400, "\"{0}\" is not a valid config format")
+                return error(400, "\"{0}\" is not a valid config format".format(config_format))
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
     except VyOSError as e:
