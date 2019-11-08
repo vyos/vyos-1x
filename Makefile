@@ -48,6 +48,7 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
+	rm -f $(OP_TMPL_DIR)/show/system/node.def
 
 .PHONY: all
 all: clean interface_definitions op_mode_definitions
