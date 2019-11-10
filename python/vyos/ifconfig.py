@@ -1496,7 +1496,7 @@ class WireGuardIf(Interface):
         cmd = "wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
         return self._cmd(cmd)
-    
+
     def op_show_interface(self):
         wgdump = vyos.interfaces.wireguard_dump().get(self._ifname,None)
 
@@ -1520,7 +1520,7 @@ class WireGuardIf(Interface):
             if wgdump['peers']:
                 pubkey = c.return_effective_value(["peer",peer,"pubkey"])
                 if pubkey in wgdump['peers']:
-                    wgpeer = wgdump['peers'][pubkey] 
+                    wgpeer = wgdump['peers'][pubkey]
 
                     print ("  peer: {}".format(peer))
                     print ("    public key: {}".format(pubkey))
@@ -1543,15 +1543,15 @@ class WireGuardIf(Interface):
                         elif int(wgpeer['latest_handshake']) == 0:
                             """ no handshake ever """
                             status = "inactive"
-                        print ("    status: {}".format(status))    
+                        print ("    status: {}".format(status))
 
                     if wgpeer['endpoint'] is not None:
                         print ("    endpoint: {}".format(wgpeer['endpoint']))
 
                     if wgpeer['allowed_ips'] is not None:
                         print ("    allowed ips: {}".format(",".join(wgpeer['allowed_ips']).replace(",",", ")))
-                    
-                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0: 
+
+                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0:
                         rx_size =size(wgpeer['transfer_rx'],system=alternative)
                         tx_size =size(wgpeer['transfer_tx'],system=alternative)
                         print ("    transfer: {} received, {} sent".format(rx_size,tx_size))
