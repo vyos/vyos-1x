@@ -57,6 +57,7 @@ Depends: python3,
   udp-broadcast-relay,
   pdns-recursor,
   ssl-cert, nginx-light,
+  vyos-qat-kernel-modules, vyos-qat-utilities
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
