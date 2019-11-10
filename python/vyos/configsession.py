@@ -25,6 +25,9 @@ COMMIT = '/opt/vyatta/sbin/my_commit'
 DISCARD = '/opt/vyatta/sbin/my_discard'
 SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
+SAVE_CONFIG = ['/opt/vyatta/sbin/vyatta-save-config.pl']
+INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image']
+REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -36,6 +39,8 @@ APP = "vyos-http-api"
 def inject_vyos_env(env):
     env['VYATTA_CFG_GROUP_NAME'] = 'vyattacfg'
     env['VYATTA_USER_LEVEL_DIR'] = '/opt/vyatta/etc/shell/level/admin'
+    env['VYATTA_PROCESS_CLIENT'] = 'gui2_rest'
+    env['VYOS_HEADLESS_CLIENT'] = 'vyos_http_api'
     env['vyatta_bindir']= '/opt/vyatta/bin'
     env['vyatta_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
     env['vyatta_configdir'] = '/opt/vyatta/config'
@@ -158,3 +163,15 @@ class ConfigSession(object):
 
     def load_config(self, file_path):
         self.__run_command(LOAD_CONFIG + [file_path])
+
+    def save_config(self, file_path):
+        out = self.__run_command(SAVE_CONFIG + [file_path])
+        return out
+
+    def install_image(self, url):
+        out = self.__run_command(INSTALL_IMAGE + [url])
+        return out
+
+    def remove_image(self, name):
+        out = self.__run_command(REMOVE_IMAGE + [name])
+        return out
