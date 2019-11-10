@@ -1139,6 +1139,14 @@ class EthernetIf(VLANIf):
                             .format(self.get_driver_name()))
             return
 
+        # Get current speed and duplex settings:
+        cmd = '/sbin/ethtool {0}'.format(self._ifname)
+        tmp = self._cmd(cmd)
+
+        if re.search("\tAuto-negotiation: on", tmp):
+            if speed == 'auto' or duplex == 'auto':
+                # bail out early as nothing is to change
+                return
 
         cmd = '/sbin/ethtool -s {}'.format(self._ifname)
         if speed == 'auto' or duplex == 'auto':
