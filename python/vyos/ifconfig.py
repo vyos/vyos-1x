@@ -21,6 +21,7 @@ import glob
 import time
 
 import vyos.interfaces
+
 from vyos.validate import *
 from vyos.config import Config
 from vyos import ConfigError
@@ -1084,6 +1085,24 @@ class EthernetIf(VLANIf):
             self._debug_msg('{} driver does not support changing flow control settings!'
                             .format(self.get_driver_name()))
             return
+
+        # Get current flow control settings:
+        cmd = '/sbin/ethtool --show-pause {0}'.format(self._ifname)
+        tmp = self._cmd(cmd)
+
+        # The above command returns - with tabs:
+        #
+        # Pause parameters for eth0:
+        # Autonegotiate:  on
+        # RX:             off
+        # TX:             off
+        if re.search("Autonegotiate:\ton", tmp):
+            if enable == "on":
+                # flowcontrol is already enabled - no need to re-enable it again
+                # this will prevent the interface from flapping as applying the
+                # flow-control settings will take the interface down and bring
+                # it back up every time.
+                return
 
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
