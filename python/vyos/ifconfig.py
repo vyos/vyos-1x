@@ -21,6 +21,7 @@ import glob
 import time
 
 import vyos.interfaces
+
 from vyos.validate import *
 from vyos.config import Config
 from vyos import ConfigError
@@ -1085,6 +1086,24 @@ class EthernetIf(VLANIf):
                             .format(self.get_driver_name()))
             return
 
+        # Get current flow control settings:
+        cmd = '/sbin/ethtool --show-pause {0}'.format(self._ifname)
+        tmp = self._cmd(cmd)
+
+        # The above command returns - with tabs:
+        #
+        # Pause parameters for eth0:
+        # Autonegotiate:  on
+        # RX:             off
+        # TX:             off
+        if re.search("Autonegotiate:\ton", tmp):
+            if enable == "on":
+                # flowcontrol is already enabled - no need to re-enable it again
+                # this will prevent the interface from flapping as applying the
+                # flow-control settings will take the interface down and bring
+                # it back up every time.
+                return
+
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
         cmd = '/sbin/ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
@@ -1120,6 +1139,31 @@ class EthernetIf(VLANIf):
                             .format(self.get_driver_name()))
             return
 
+        # Get current speed and duplex settings:
+        cmd = '/sbin/ethtool {0}'.format(self._ifname)
+        tmp = self._cmd(cmd)
+
+        if re.search("\tAuto-negotiation: on", tmp):
+            if speed == 'auto' and duplex == 'auto':
+                # bail out early as nothing is to change
+                return
+        else:
+            # read in current speed and duplex settings
+            cur_speed = 0
+            cur_duplex = ''
+            for line in tmp.splitlines():
+                if line.lstrip().startswith("Speed:"):
+                    non_decimal = re.compile(r'[^\d.]+')
+                    cur_speed = non_decimal.sub('', line)
+                    continue
+
+                if line.lstrip().startswith("Duplex:"):
+                    cur_duplex = line.split()[-1].lower()
+                    break
+
+            if (cur_speed == speed) and (cur_duplex == duplex):
+                # bail out early as nothing is to change
+                return
 
         cmd = '/sbin/ethtool -s {}'.format(self._ifname)
         if speed == 'auto' or duplex == 'auto':
@@ -1496,7 +1540,7 @@ class WireGuardIf(Interface):
         cmd = "wg set {0} peer {1} remove".format(
             self._ifname, str(peerkey))
         return self._cmd(cmd)
-    
+
     def op_show_interface(self):
         wgdump = vyos.interfaces.wireguard_dump().get(self._ifname,None)
 
@@ -1520,7 +1564,7 @@ class WireGuardIf(Interface):
             if wgdump['peers']:
                 pubkey = c.return_effective_value(["peer",peer,"pubkey"])
                 if pubkey in wgdump['peers']:
-                    wgpeer = wgdump['peers'][pubkey] 
+                    wgpeer = wgdump['peers'][pubkey]
 
                     print ("  peer: {}".format(peer))
                     print ("    public key: {}".format(pubkey))
@@ -1543,15 +1587,15 @@ class WireGuardIf(Interface):
                         elif int(wgpeer['latest_handshake']) == 0:
                             """ no handshake ever """
                             status = "inactive"
-                        print ("    status: {}".format(status))    
+                        print ("    status: {}".format(status))
 
                     if wgpeer['endpoint'] is not None:
                         print ("    endpoint: {}".format(wgpeer['endpoint']))
 
                     if wgpeer['allowed_ips'] is not None:
                         print ("    allowed ips: {}".format(",".join(wgpeer['allowed_ips']).replace(",",", ")))
-                    
-                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0: 
+
+                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0:
                         rx_size =size(wgpeer['transfer_rx'],system=alternative)
                         tx_size =size(wgpeer['transfer_tx'],system=alternative)
                         print ("    transfer: {} received, {} sent".format(rx_size,tx_size))

@@ -65,6 +65,7 @@ Depends: python3,
   telnet,
   traceroute,
   ssl-cert, nginx-light,
+  vyos-qat-kernel-modules, vyos-qat-utilities
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
