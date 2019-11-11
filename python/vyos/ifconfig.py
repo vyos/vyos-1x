@@ -1144,7 +1144,24 @@ class EthernetIf(VLANIf):
         tmp = self._cmd(cmd)
 
         if re.search("\tAuto-negotiation: on", tmp):
-            if speed == 'auto' or duplex == 'auto':
+            if speed == 'auto' and duplex == 'auto':
+                # bail out early as nothing is to change
+                return
+        else:
+            # read in current speed and duplex settings
+            cur_speed = 0
+            cur_duplex = ''
+            for line in tmp.splitlines():
+                if line.lstrip().startswith("Speed:"):
+                    non_decimal = re.compile(r'[^\d.]+')
+                    cur_speed = non_decimal.sub('', line)
+                    continue
+
+                if line.lstrip().startswith("Duplex:"):
+                    cur_duplex = line.split()[-1].lower()
+                    break
+
+            if (cur_speed == speed) and (cur_duplex == duplex):
                 # bail out early as nothing is to change
                 return
 
