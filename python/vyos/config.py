@@ -69,6 +69,7 @@ import json
 import subprocess
 
 import vyos.configtree
+import vyos.util
 
 
 class VyOSError(Exception):
@@ -110,6 +111,11 @@ class Config(object):
             session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', 'showConfig'])
         else:
             session_config_text = running_config_text
+
+        # The output of showConfig does not escape backslashes, as is expected
+        # by ConfigTree().
+        session_config_text = vyos.util.escape_backslash(session_config_text)
+        running_config_text = vyos.util.escape_backslash(running_config_text)
 
         self._session_config = vyos.configtree.ConfigTree(session_config_text)
         self._running_config = vyos.configtree.ConfigTree(running_config_text)

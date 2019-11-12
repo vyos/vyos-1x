@@ -24,6 +24,7 @@ import traceback
 import threading
 
 import vyos.config
+import vyos.util
 
 import bottle
 
@@ -212,6 +213,7 @@ def get_value():
                 config_format = command['configFormat']
 
             res = session.show_config(path=command['path'])
+            res = vyos.util.escape_backslash(res)
             if config_format == 'json':
                 config_tree = vyos.configtree.ConfigTree(res)
                 res = json.loads(config_tree.to_json())
