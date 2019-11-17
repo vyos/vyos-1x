@@ -22,6 +22,7 @@ import time
 import json
 import signal
 import traceback
+import re
 
 import zmq
 
@@ -154,14 +155,10 @@ def add_name_servers(data, entries, tag):
 
 def delete_name_servers(data, tag):
     name_servers = data['name_servers']
-    keys_for_deletion = []
-
-    for ns in name_servers:
-      if name_servers[ns]['tag'] == tag:
-          keys_for_deletion.append(ns)
-
-    for k in keys_for_deletion:
-      del name_servers[k]
+    regex_filter = re.compile(tag)
+    for ns in list(name_servers.keys()):
+        if regex_filter.match(name_servers[ns]['tag']):
+            del name_servers[ns]
 
 def set_host_name(state, data):
     if data['host_name']:
@@ -174,8 +171,9 @@ def set_host_name(state, data):
 def get_name_servers(state, tag):
     ns = []
     data = state['name_servers']
+    regex_filter = re.compile(tag)
     for n in data:
-        if data[n]['tag'] == tag:
+        if regex_filter.match(data[n]['tag']):
             ns.append(n)
     return ns
 
