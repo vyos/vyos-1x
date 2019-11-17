@@ -57,7 +57,7 @@
                 <properties>
                   <help>Show wireless interface configuration</help>
                 </properties>
-                <command>echo TBD.</command>
+                <command>${vyos_op_scripts_dir}/show_wireless.py --brief</command>
               </leafNode>
             </children>
           </node>
@@ -80,7 +80,7 @@
                 <properties>
                   <help>Show summary of the specified wireless interface information</help>
                 </properties>
-                <command>echo TBD.</command>
+                <command>sudo ${vyos_op_scripts_dir}/show_wireless.py --scan "$4"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
@@ -94,7 +94,7 @@
                 <properties>
                   <help>Show specified wireless interface information</help>
                 </properties>
-                <command>echo "TBD."</command>
+                <command>${vyos_op_scripts_dir}/show_wireless.py --stations "$4"</command>
               </leafNode>
               <tagNode name="vif">
                 <properties>
