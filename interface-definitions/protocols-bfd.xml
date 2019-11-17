@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<!-- Bidirectional Forwarding Detection (BFD) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="bfd" owner="${vyos_conf_scripts_dir}/protocols_bfd.py">
+        <properties>
+          <help>Bidirectional Forwarding Detection (BFD)</help>
+          <priority>820</priority>
+        </properties>
+        <children>
+          <tagNode name="peer">
+            <properties>
+              <help>Configures a new BFD peer to listen and talk to</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>BFD peer IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>BFD peer IPv6 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="source">
+                <properties>
+                  <help>Bind listener to specifid interface/address, mandatory for IPv6</help>
+                </properties>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Local interface to bind our peer listener to</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="address">
+                    <properties>
+                      <help>Local address to bind our peer listener to</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 address used to connect to the peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 address used to connect to the peer</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="interval">
+                <properties>
+                  <help>Configure timer intervals</help>
+                </properties>
+                <children>
+                  <leafNode name="receive">
+                    <properties>
+                      <help>Minimum interval of receiving control packets</help>
+                      <valueHelp>
+                        <format>10-60000</format>
+                        <description>Interval in milliseconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-60000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="transmit">
+                    <properties>
+                      <help>Minimum interval of transmitting control packets</help>
+                      <valueHelp>
+                        <format>10-60000</format>
+                        <description>Interval in milliseconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-60000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="multiplier">
+                    <properties>
+                      <help>Multiplier to determine packet loss</help>
+                      <valueHelp>
+                        <format>2-255</format>
+                        <description>Remote transmission interval will be multiplied by this value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="echo-interval">
+                    <properties>
+                      <help>Echo receive transmission interval</help>
+                      <valueHelp>
+                        <format>10-60000</format>
+                        <description>The minimal echo receive transmission interval that this system is capable of handling</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-60000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="shutdown">
+                <properties>
+                  <help>Disable this peer</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="multihop">
+                <properties>
+                  <help>Allow this BFD peer to not be directly connected</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="echo-mode">
+                <properties>
+                  <help>Enables the echo transmission mode</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

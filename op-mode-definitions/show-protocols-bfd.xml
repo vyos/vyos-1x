@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="protocols">
+        <children>
+          <node name="bfd">
+            <children>
+              <node name="peer">
+                <properties>
+                  <help>Show all Bidirectional Forwarding Detection (BFD) peer status</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bfd peers"</command>
+                <children>
+                  <leafNode name="counters">
+                    <properties>
+                      <help>Show Bidirectional Forwarding Detection (BFD) peer counters</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bfd peers counters"</command>
+                  </leafNode>
+                </children>
+              </node>
+              <tagNode name="peer">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) peer status</help>
+                  <completionHelp>
+                    <script>/usr/bin/vtysh -c "show bfd peers" | awk '/[:blank:]*peer/ { printf "%s\n", $2 }'</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bfd peers" | awk -v BFD_PEER=$5 '($0 ~ peer BFD_PEER) { system("/usr/bin/vtysh -c \"show bfd " $0 "\"") }'</command>
+                <children>
+                  <leafNode name="counters">
+                    <properties>
+                      <help>Show Bidirectional Forwarding Detection (BFD) peer counters</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bfd peers" | awk -v BFD_PEER=$5 '($0 ~ peer BFD_PEER) { system("/usr/bin/vtysh -c \"show bfd " $0 " counters\"") }'</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
