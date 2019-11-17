@@ -28,7 +28,7 @@ OpenVPN status on {{ intf }}
 Client CN       Remote Host           Local Host            TX bytes    RX bytes   Connected Since
 ---------       -----------           ----------            --------    --------   ---------------
 {%- for c in clients %}
-{{ "%-15s"|format(c.name) }} {{ "%-21s"|format(c.remote) }} {{ "%-21s"|format(local) }} {{ "%-9s"|format(c.tx_bytes) }}   {{ "%-9s"|format(c.tx_bytes) }}  {{ c.online_since }}
+{{ "%-15s"|format(c.name) }} {{ "%-21s"|format(c.remote) }} {{ "%-21s"|format(local) }} {{ "%-9s"|format(c.tx_bytes) }}   {{ "%-9s"|format(c.rx_bytes) }}  {{ c.online_since }}
 {%- endfor %}
 {% endif %}
 """
