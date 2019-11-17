@@ -11,7 +11,7 @@
   "l2tpv3":           "l2tpeth",
   "vxlan":            "vxlan",
   "wireguard":        "wg",
-  "wireless":         "wireless",
+  "wireless":         "wlan",
   "wirelessmodem":    "wlm",
   "input":            "ifb",
   "pppoe":            "pppoe"
