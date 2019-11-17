@@ -66,7 +66,7 @@ def get_config():
         hosts['nameserver'] = conf.return_values("system name-server")
 
     if conf.exists("system disable-dhcp-nameservers"):
-        hosts['no_dhcp_ns'] = conf.exists('system disable-dhcp-nameservers')
+        hosts['no_dhcp_ns'] = True
 
     # system static-host-mapping
     hosts['static_host_mapping'] = []
@@ -134,6 +134,10 @@ def apply(config):
 
     try:
         client = vyos.hostsd_client.Client()
+
+        # Check if disable-dhcp-nameservers is configured, and if yes - delete DNS servers added by DHCP
+        if config['no_dhcp_ns']:
+            client.delete_name_servers('dhcp-.+')
 
         client.set_host_name(config['hostname'], config['domain_name'], config['domain_search'])
 
