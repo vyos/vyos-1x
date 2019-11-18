@@ -633,14 +633,24 @@ ieee8021x=1
 # WPA-EAP-SHA256 = WPA2-Enterprise using SHA256
 wpa_key_mgmt=WPA-EAP
 
+{% if sec_wpa_radius_source -%}
+# RADIUS client forced local IP address for the access point
+# Normally the local IP address is determined automatically based on configured
+# IP addresses, but this field can be used to force a specific address to be
+# used, e.g., when the device has multiple IP addresses.
+radius_client_addr={{ sec_wpa_radius_source }}
+{% endif %}
+
 {% for radius in sec_wpa_radius -%}
+# RADIUS authentication server
 auth_server_addr={{ radius.server }}
 auth_server_port={{ radius.port }}
-auth_server_shared_secret={{ radius.secret }}
-{% if radius.accounting -%}
+auth_server_shared_secret={{ radius.key }}
+{% if radius.acc_port -%}
+# RADIUS accounting server
 acct_server_addr={{ radius.server }}
 acct_server_port={{ radius.acc_port }}
-acct_server_shared_secret={{ radius.secret }}
+acct_server_shared_secret={{ radius.key }}
 {% endif %}
 {% endfor %}
 
@@ -1156,29 +1166,32 @@ def get_config():
     if conf.exists('security wpa passphrase'):
         wifi['sec_wpa_passphrase'] = conf.return_value('security wpa passphrase')
 
-    # WPA radius server goes here
-    for server in conf.list_nodes('security wpa radius-server'):
-        # set new configuration level
-        conf.set_level(cfg_base + ' security wpa radius-server ' + server)
+    # WPA RADIUS source address
+    if conf.exists('security wpa radius source-address'):
+        wifi['sec_wpa_radius_source'] = conf.return_value('security wpa radius source-address')
 
+    # WPA RADIUS server
+    for server in conf.list_nodes('security wpa radius server'):
+        # set new configuration level
+        conf.set_level(cfg_base + ' security wpa radius server ' + server)
         radius = {
             'server' : server,
             'acc_port' : '',
             'port' : 1812,
-            'secret' : ''
+            'key' : ''
         }
-
-        # receive RADIUS accounting info
-        if conf.exists('accounting'):
-            radius['acc_port'] = conf.return_value('accounting')
 
         # RADIUS server port
         if conf.exists('port'):
-            radius['port'] = conf.return_value('port')
+            radius['port'] = int(conf.return_value('port'))
+
+        # receive RADIUS accounting info
+        if conf.exists('accounting'):
+            radius['acc_port'] = radius['port'] + 1
 
         # RADIUS server shared-secret
-        if conf.exists('secret'):
-            radius['secret'] = conf.return_value('secret')
+        if conf.exists('key'):
+            radius['key'] = conf.return_value('key')
 
         # append RADIUS server to list of servers
         wifi['sec_wpa_radius'].append(radius)

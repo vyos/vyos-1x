@@ -53,8 +53,41 @@ else:
                     # not supported in the new backend. Convert all to lower-case
                     config.set(base + [wifi, node.lower()])
 
+        # Remove debug node
         if config.exists(base + [wifi, 'debug']):
             config.delete(base + [wifi, 'debug'])
+
+        # RADIUS servers
+        if config.exists(base + [wifi, 'security', 'wpa', 'radius-server']):
+            for server in config.list_nodes(base + [wifi, 'security', 'wpa', 'radius-server']):
+                base_server = base + [wifi, 'security', 'wpa', 'radius-server', server]
+
+                # Migrate RADIUS shared secret
+                if config.exists(base_server + ['secret']):
+                    key = config.return_value(base_server + ['secret'])
+                    # write new configuration node
+                    config.set(base + [wifi, 'security', 'wpa', 'radius', 'server', server, 'key'], value=key)
+                    # format as tag node
+                    config.set_tag(base + [wifi, 'security', 'wpa', 'radius', 'server'])
+
+                # Migrate RADIUS port
+                if config.exists(base_server + ['port']):
+                    port = config.return_value(base_server + ['port'])
+                    # write new configuration node
+                    config.set(base + [wifi, 'security', 'wpa', 'radius', 'server', server, 'port'], value=port)
+                    # format as tag node
+                    config.set_tag(base + [wifi, 'security', 'wpa', 'radius', 'server'])
+
+                # Migrate RADIUS accounting
+                if config.exists(base_server + ['accounting']):
+                    port = config.return_value(base_server + ['accounting'])
+                    # write new configuration node
+                    config.set(base + [wifi, 'security', 'wpa', 'radius', 'server', server, 'accounting'])
+                    # format as tag node
+                    config.set_tag(base + [wifi, 'security', 'wpa', 'radius', 'server'])
+
+            # delete old radius-server nodes
+            config.delete(base + [wifi, 'security', 'wpa', 'radius-server'])
 
     try:
         with open(file_name, 'w') as f:

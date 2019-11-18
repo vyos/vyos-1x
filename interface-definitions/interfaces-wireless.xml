@@ -744,46 +744,47 @@
                       <constraintErrorMessage>Invalid WPA pass phrase, must be 8 to 63 printable characters!</constraintErrorMessage>
                     </properties>
                   </leafNode>
-                  <tagNode name="radius-server">
+                  <node name="radius">
                     <properties>
-                      <help>RADIUS server authentication</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address of RADIUS server</description>
-                      </valueHelp>
+                      <help>RADIUS specific configuration</help>
                     </properties>
                     <children>
-                      <leafNode name="accounting">
+                      <tagNode name="server">
                         <properties>
-                          <help>RADIUS server to receive accounting info (default: 1813)</help>
+                          <help>RADIUS server</help>
                           <valueHelp>
-                            <format>1-65535</format>
-                            <description>RADIUS server accounting port</description>
+                            <format>ipv4</format>
+                            <description>IPv4 address of RADIUS server</description>
                           </valueHelp>
-                          <constraint>
-                            <validator name="numeric" argument="--range 1-65535"/>
-                          </constraint>
                         </properties>
-                      </leafNode>
-                      <leafNode name="port">
-                        <properties>
-                          <help>RADIUS server port (default: 1812)</help>
-                          <valueHelp>
-                            <format>1-65535</format>
-                            <description>RADIUS server port</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="numeric" argument="--range 1-65535"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="secret">
-                        <properties>
-                          <help>Secret for radius access</help>
-                        </properties>
-                      </leafNode>
+                        <children>
+                          <leafNode name="accounting">
+                            <properties>
+                              <help>Enable RADIUS server to receive accounting info</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="port">
+                            <properties>
+                              <help>RADIUS server port (default: 1812)</help>
+                              <valueHelp>
+                                <format>1-65535</format>
+                                <description>RADIUS server port</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-65535"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="key">
+                            <properties>
+                              <help>RADIUS shared secret key</help>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
                     </children>
-                  </tagNode>
+                  </node>
                 </children>
               </node>
             </children>
