@@ -5,7 +5,7 @@
       <tagNode name="wireless" owner="${vyos_conf_scripts_dir}/interfaces-wireless.py">
         <properties>
           <help>Wireless network interface (WiFi/WLAN)</help>
-          <priority>318</priority>
+          <priority>400</priority>
           <constraint>
             <regex>wlan[0-9]+$</regex>
           </constraint>
