@@ -74,7 +74,7 @@
                         <description>Supported channel set width both 20 MHz and 40 MHz with secondary channel below primary channel</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(ht20|ht40\\+|ht40-)</regex>
+                        <regex>(ht20|ht40\+|ht40-)</regex>
                       </constraint>
                       <multi/>
                     </properties>
