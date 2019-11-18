@@ -35,17 +35,18 @@ else:
 
     # Migrate "vpn l2tp authentication radius-server" tag node to new
     # "vpn l2tp authentication radius server" tag node
-    for server in config.list_nodes(cfg_base + ['radius-server']):
-        base_server = cfg_base + ['radius-server', server]
-        key = config.return_value(base_server + ['key'])
+    if config.exists(cfg_base + ['radius-server']):
+        for server in config.list_nodes(cfg_base + ['radius-server']):
+            base_server = cfg_base + ['radius-server', server]
+            key = config.return_value(base_server + ['key'])
 
-        # delete old configuration node
-        config.delete(base_server)
-        # write new configuration node
-        config.set(cfg_base + ['radius', 'server', server, 'key'], value=key)
+            # delete old configuration node
+            config.delete(base_server)
+            # write new configuration node
+            config.set(cfg_base + ['radius', 'server', server, 'key'], value=key)
 
-        # format as tag node
-        config.set_tag(cfg_base + ['radius', 'server'])
+            # format as tag node
+            config.set_tag(cfg_base + ['radius', 'server'])
 
     # delete top level tag node
     if config.exists(cfg_base + ['radius-server']):
