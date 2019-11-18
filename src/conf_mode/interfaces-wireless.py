@@ -172,7 +172,9 @@ ieee80211w=2
 # DSSS/CCK Mode in 40 MHz: [DSSS_CCK-40] = allowed (not allowed if not set)
 # 40 MHz intolerant [40-INTOLERANT] (not advertised if not set)
 # L-SIG TXOP protection support: [LSIG-TXOP-PROT] (disabled if not set)
+{% if cap_ht %}
 ht_capab=
+{%- endif -%}
 
 {%- if cap_ht_40mhz_incapable -%}
 [40-INTOLERANT]
@@ -356,7 +358,9 @@ require_ht=1
 # Indicates the possibility of Tx antenna pattern change
 # 0 = Tx antenna pattern might change during the lifetime of an association
 # 1 = Tx antenna pattern does not change during the lifetime of an association
+{% if cap_vht %}
 vht_capab=
+{%- endif -%}
 
 {%- if cap_vht_max_mpdu -%}
 [MAX-MPDU-{{ cap_vht_max_mpdu }}]
@@ -741,6 +745,7 @@ wmm_ac_vo_acm=0
 default_config_data = {
     'address': [],
     'address_remove': [],
+    'cap_ht' : False,
     'cap_ht_40mhz_incapable' : False,
     'cap_ht_powersave' : False,
     'cap_ht_chan_set_width' : '',
@@ -756,6 +761,7 @@ default_config_data = {
     'cap_ht_stbc_tx' : False,
     'cap_req_ht' : False,
     'cap_req_vht' : False,
+    'cap_vht' : False,
     'cap_vht_antenna_cnt' : '',
     'cap_vht_antenna_fixed' : False,
     'cap_vht_beamform' : '',
@@ -894,55 +900,68 @@ def get_config():
     wifi['address_remove'] = list_diff(eff_addr, wifi['address'])
 
     # 40MHz intolerance, use 20MHz only
-    if conf.exists('capabilities ht 40MHz-incapable'):
+    if conf.exists('capabilities ht 40mhz-incapable'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_40mhz_incapable'] = True
 
     # WMM-PS Unscheduled Automatic Power Save Delivery [U-APSD]
     if conf.exists('capabilities ht auto-powersave'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_powersave'] = True
 
     # Supported channel set width
     if conf.exists('capabilities ht channel-set-width'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_chan_set_width'] = conf.return_values('capabilities ht channel-set-width')
 
     # HT-delayed Block Ack
     if conf.exists('capabilities ht delayed-block-ack'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_delayed_block_ack'] = True
 
     # DSSS/CCK Mode in 40 MHz
     if conf.exists('capabilities ht dsss-cck-40'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_dsss_cck_40'] = True
 
     # HT-greenfield capability
     if conf.exists('capabilities ht greenfield'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_greenfield'] = True
 
     # LDPC coding capability
     if conf.exists('capabilities ht ldpc'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_ldpc'] = True
 
     # L-SIG TXOP protection capability
     if conf.exists('capabilities ht lsig-protection'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_lsig_protection'] = True
 
     # Set Maximum A-MSDU length
     if conf.exists('capabilities ht max-amsdu'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_max_amsdu'] = conf.return_value('capabilities ht max-amsdu')
 
     # Short GI capabilities
     if conf.exists('capabilities ht short-gi'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_short_gi'] = conf.return_values('capabilities ht short-gi')
 
     # Spatial Multiplexing Power Save (SMPS) settings
     if conf.exists('capabilities ht smps'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_smps'] = conf.return_value('capabilities ht smps')
 
     # Support for receiving PPDU using STBC (Space Time Block Coding)
     if conf.exists('capabilities ht stbc rx'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_stbc_rx'] = conf.return_value('capabilities ht stbc rx')
 
     # Support for sending PPDU using STBC (Space Time Block Coding)
     if conf.exists('capabilities ht stbc tx'):
+        wifi['cap_ht'] = True
         wifi['cap_ht_stbc_tx'] = True
 
     # Require stations to support HT PHY (reject association if they do not)
@@ -955,62 +974,77 @@ def get_config():
 
     # Number of antennas on this card
     if conf.exists('capabilities vht antenna-count'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_antenna_cnt'] = conf.return_value('capabilities vht antenna-count')
 
     # set if antenna pattern does not change during the lifetime of an association
     if conf.exists('capabilities vht antenna-pattern-fixed'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_antenna_fixed'] = True
 
     # Beamforming capabilities
     if conf.exists('capabilities vht beamform'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_beamform'] = conf.return_values('capabilities vht beamform')
 
     # VHT operating channel center frequency - center freq 1 (for use with 80, 80+80 and 160 modes)
     if conf.exists('capabilities vht center-channel-freq freq-1'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_center_freq_1'] = conf.return_value('capabilities vht center-channel-freq freq-1')
 
     # VHT operating channel center frequency - center freq 2 (for use with the 80+80 mode)
     if conf.exists('capabilities vht center-channel-freq freq-2'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_center_freq_2'] = conf.return_value('capabilities vht center-channel-freq freq-2')
 
     # VHT operating Channel width
     if conf.exists('capabilities vht channel-set-width'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_chan_set_width'] = conf.return_value('capabilities vht channel-set-width')
 
     # LDPC coding capability
     if conf.exists('capabilities vht ldpc'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_ldpc'] = True
 
     # VHT link adaptation capabilities
     if conf.exists('capabilities vht link-adaptation'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_link_adaptation'] = True
 
     # Set the maximum length of A-MPDU pre-EOF padding that the station can receive
     if conf.exists('capabilities vht max-mpdu-exp'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_max_mpdu_exp'] = conf.return_value('capabilities vht max-mpdu-exp')
 
     # Increase Maximum MPDU length
     if conf.exists('capabilities vht max-mpdu'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_max_mpdu'] = conf.return_value('capabilities vht max-mpdu')
 
     # Increase Maximum MPDU length
     if conf.exists('capabilities vht short-gi'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_short_gi'] = conf.return_values('capabilities vht short-gi')
 
     # Support for receiving PPDU using STBC (Space Time Block Coding)
     if conf.exists('capabilities vht stbc rx'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_stbc_rx'] = conf.return_value('capabilities vht stbc rx')
 
     # Support for the transmission of at least 2x1 STBC (Space Time Block Coding)
     if conf.exists('capabilities vht stbc tx'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_stbc_tx'] = True
 
     # Support for VHT TXOP Power Save Mode
     if conf.exists('capabilities vht tx-powersave'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_tx_powersave'] = True
 
     # STA supports receiving a VHT variant HT Control field
     if conf.exists('capabilities vht vht-cf'):
+        wifi['cap_vht'] = True
         wifi['cap_vht_vht_cf'] = True
 
     # Wireless radio channel
