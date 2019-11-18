@@ -608,18 +608,18 @@ wpa_pairwise={{ sec_wpa_cipher | join(" ") }}
 # bit 1 = Shared Key Authentication (requires WEP)
 auth_algs=1
 
+# WPA pre-shared keys for WPA-PSK. This can be either entered as a 256-bit
+# secret in hex format (64 hex digits), wpa_psk, or as an ASCII passphrase
+# (8..63 characters) that will be converted to PSK. This conversion uses SSID
+# so the PSK changes when ASCII passphrase is used and the SSID is changed.
+wpa_passphrase={{ sec_wpa_passphrase }}
+
 # Set of accepted key management algorithms (WPA-PSK, WPA-EAP, or both). The
 # entries are separated with a space. WPA-PSK-SHA256 and WPA-EAP-SHA256 can be
 # added to enable SHA256-based stronger algorithms.
 # WPA-PSK = WPA-Personal / WPA2-Personal
 # WPA-PSK-SHA256 = WPA2-Personal using SHA256
 wpa_key_mgmt=WPA-PSK
-
-# WPA pre-shared keys for WPA-PSK. This can be either entered as a 256-bit
-# secret in hex format (64 hex digits), wpa_psk, or as an ASCII passphrase
-# (8..63 characters) that will be converted to PSK. This conversion uses SSID
-# so the PSK changes when ASCII passphrase is used and the SSID is changed.
-wpa_passphrase={{ sec_wpa_passphrase }}
 
 {% elif sec_wpa_radius -%}
 ##### IEEE 802.1X-2004 related configuration ##################################
