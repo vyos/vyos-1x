@@ -43,7 +43,7 @@
                   <help>HT (High Throughput) settings</help>
                 </properties>
                 <children>
-                  <leafNode name="40MHz-incapable">
+                  <leafNode name="40mhz-incapable">
                     <properties>
                       <help>40MHz intolerance, use 20MHz only!</help>
                       <valueless/>

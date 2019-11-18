@@ -24,24 +24,36 @@ if not config.exists(base):
 else:
     for wifi in config.list_nodes(base):
         # as converting a node to bool is always the same, we can script it
-        to_bool_nodes = ['capabilities ht 40MHz-incapable', 'capabilities ht auto-powersave',
-                         'capabilities ht delayed-block-ack', 'capabilities ht dsss-cck-40',
-                         'capabilities ht greenfield', 'capabilities ht ldpc', 'capabilities ht lsig-protection',
-                         'capabilities ht stbc tx', 'capabilities require-ht', 'capabilities require-vht',
-                         'capabilities vht antenna-pattern-fixed', 'capabilities vht ldpc',
-                         'capabilities vht stbc tx', 'capabilities vht tx-powersave',
-                         'capabilities vht vht-cf', 'expunge-failing-stations', 'isolate-stations']
+        to_bool_nodes = ['capabilities ht 40MHz-incapable',
+                         'capabilities ht auto-powersave',
+                         'capabilities ht delayed-block-ack',
+                         'capabilities ht dsss-cck-40',
+                         'capabilities ht greenfield',
+                         'capabilities ht ldpc',
+                         'capabilities ht lsig-protection',
+                         'capabilities ht stbc tx',
+                         'capabilities require-ht',
+                         'capabilities require-vht',
+                         'capabilities vht antenna-pattern-fixed',
+                         'capabilities vht ldpc',
+                         'capabilities vht stbc tx',
+                         'capabilities vht tx-powersave',
+                         'capabilities vht vht-cf',
+                         'expunge-failing-stations',
+                         'isolate-stations']
 
         for node in to_bool_nodes:
             if config.exists(base + [wifi, node]):
                 tmp = config.return_value(base + [wifi, node])
                 # delete old node
                 config.delete(base + [wifi, node])
+                # set new node if it was enabled
                 if tmp == 'true':
-                    config.set(base + [wifi, node])
+                    # OLD CLI used camel casing in 40MHz-incapable which is
+                    # not supported in the new backend. Convert all to lower-case
+                    config.set(base + [wifi, node.lower()])
 
         if config.exists(base + [wifi, 'debug']):
-            tmp = config.return_value(base + [wifi, 'debug'])
             config.delete(base + [wifi, 'debug'])
 
     try:
