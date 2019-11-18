@@ -749,9 +749,18 @@
                       <help>RADIUS specific configuration</help>
                     </properties>
                     <children>
+                      <leafNode name="source-address">
+                        <properties>
+                          <help>RADIUS client forced local IP address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address of RADIUS server</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
                       <tagNode name="server">
                         <properties>
-                          <help>RADIUS server</help>
+                          <help>IP address of RADIUS server</help>
                           <valueHelp>
                             <format>ipv4</format>
                             <description>IPv4 address of RADIUS server</description>
