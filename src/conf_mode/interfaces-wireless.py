@@ -1255,6 +1255,10 @@ def verify(wifi):
     if wifi['sec_wpa'] and not (wifi['sec_wpa_passphrase'] or wifi['sec_wpa_radius']):
         raise ConfigError('Misssing WPA key or RADIUS server')
 
+    for radius in wifi['sec_wpa_radius']:
+        if not radius['key']:
+            raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
+
     conf = Config()
     if not conf.exists('system wifi-regulatory-domain'):
         raise ConfigError('Wireless regulatory domain is mandatory.\n' \
