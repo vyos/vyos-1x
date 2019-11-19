@@ -44,14 +44,14 @@ case "$action" in
     fi
     # add host
     /usr/bin/vyos-hostsd-client --add-hosts --tag "DHCP-$client_ip" --host "$client_fqdn_name,$client_ip"
-    ;;
     ((changes++))
+    ;;
 
   release) # delete mapping for released address
     # delete host
     /usr/bin/vyos-hostsd-client --delete-hosts --tag "DHCP-$client_ip"
-    ;;
     ((changes++))
+    ;;
 
   *)
     logger -s -t on-dhcp-event "Invalid command \"$1\""
