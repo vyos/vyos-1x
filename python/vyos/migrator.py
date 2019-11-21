@@ -125,8 +125,9 @@ class Migrator(object):
                         self._config_file])
                 except FileNotFoundError:
                     pass
-                except subprocess.CalledProcessError as err:
-                    print("Called process error: {}.".format(err))
+                except Exception as err:
+                    print("\nMigration script error: {0}: {1}."
+                          "".format(migrate_script, err))
                     sys.exit(1)
 
                 if log:
