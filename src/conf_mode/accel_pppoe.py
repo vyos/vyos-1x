@@ -44,6 +44,9 @@ pppoe_config = '''
 [modules]
 log_syslog
 pppoe
+{% if authentication['mode'] == 'radius' %}
+radius
+{% endif %}
 ippool
 {% if client_ipv6_pool %}
 ipv6pool
@@ -62,9 +65,6 @@ net-snmp
 {% endif %}
 {% if limits %}
 connlimit
-{% endif %}
-{% if authentication['mode'] == 'radius' %}
-radius
 {% endif %}
 
 [core]
