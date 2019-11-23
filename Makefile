@@ -34,6 +34,7 @@ op_mode_definitions:
 
 	# XXX: delete top level op mode node.def's that now live in other packages
 	rm -f $(OP_TMPL_DIR)/clear/node.def
+	rm -f $(OP_TMPL_DIR)/clear/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/set/node.def
 	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/interfaces/node.def
