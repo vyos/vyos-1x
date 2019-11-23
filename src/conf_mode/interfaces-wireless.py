@@ -752,6 +752,18 @@ wmm_ac_vo_acm=0
 
 """
 
+# Please be careful if you edit the template.
+config_wpa_suppl_tmpl = """
+# WPA supplicant config
+network={
+    ssid="{{ ssid }}"
+{%- if sec_wpa_passphrase %}
+    psk="{{ sec_wpa_passphrase }}"
+{% endif %}
+}
+
+"""
+
 default_config_data = {
     'address': [],
     'address_remove': [],
@@ -822,22 +834,51 @@ default_config_data = {
     'vif_remove': []
 }
 
-def get_config_name(intf):
-    cfg_file = r'/etc/hostapd/{}.cfg'.format(intf)
+def get_conf_file(conf_type, intf):
+    cfg_dir = '/var/run/' + conf_type
+
+    # create directory on demand
+    if not os.path.exists(cfg_dir):
+        os.mkdir(cfg_dir)
+        # fix permissions - corresponds to mode 755
+        os.chmod(cfg_dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
+        uid = getpwnam(user).pw_uid
+        gid = getgrnam(group).gr_gid
+        os.chown(cfg_dir, uid, gid)
+
+    cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
+    return cfg_file
+
+def get_pid(conf_type, intf):
+    cfg_dir = '/var/run/' + conf_type
+
+    # create directory on demand
+    if not os.path.exists(cfg_dir):
+        os.mkdir(cfg_dir)
+        # fix permissions - corresponds to mode 755
+        os.chmod(cfg_dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
+        uid = getpwnam(user).pw_uid
+        gid = getgrnam(group).gr_gid
+        os.chown(cfg_dir, uid, gid)
+
+    cfg_file = cfg_dir + r'/{}.pid'.format(intf)
     return cfg_file
 
 
-def wifi_mkdir(directory):
+def get_wpa_suppl_config_name(intf):
+    cfg_dir = '/var/run/wpa_supplicant'
+
     # create directory on demand
-    if not os.path.exists(directory):
-        os.mkdir(directory)
+    if not os.path.exists(cfg_dir):
+        os.mkdir(cfg_dir)
+        # fix permissions - corresponds to mode 755
+        os.chmod(cfg_dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
+        uid = getpwnam(user).pw_uid
+        gid = getgrnam(group).gr_gid
+        os.chown(cfg_dir, uid, gid)
 
-    # fix permissions - corresponds to mode 755
-    os.chmod(directory, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
-    uid = getpwnam(user).pw_uid
-    gid = getgrnam(group).gr_gid
-    os.chown(directory, uid, gid)
-
+    cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
+    return cfg_file
 
 def subprocess_cmd(command):
     p = Popen(command, stdout=PIPE, shell=True)
@@ -1267,37 +1308,57 @@ def verify(wifi):
     return None
 
 def generate(wifi):
-    if wifi['deleted']:
-        if os.path.isfile(get_config_name(wifi['intf'])):
-            os.unlink(get_config_name(wifi['intf']))
-
-        return None
-
-    # create config directory on demand
-    directory = os.path.dirname(get_config_name(wifi['intf']))
-    wifi_mkdir(directory)
-
-    tmpl = Template(config_hostapd_tmpl)
-    config_text = tmpl.render(wifi)
-    with open(get_config_name(wifi['intf']), 'w') as f:
-        f.write(config_text)
-
-    return None
-
-def apply(wifi):
     pid = 0
-    pidfile = '/var/run/hostapd/{}.pid'.format(wifi['intf'])
+    # always stop hostapd service first before reconfiguring it
+    pidfile = get_pid('hostapd', wifi['intf'])
     if os.path.isfile(pidfile):
         pid = 0
         with open(pidfile, 'r') as f:
             pid = int(f.read())
 
-    # always stop hostapd service first before reconfiguring it
     if pid_exists(pid):
         cmd  = 'start-stop-daemon --stop --quiet'
         cmd += ' --pidfile ' + pidfile
         subprocess_cmd(cmd)
 
+    # always stop wpa_supplicant service first before reconfiguring it
+    pidfile = get_pid('wpa_supplicant', wifi['intf'])
+    if os.path.isfile(pidfile):
+        pid = 0
+        with open(pidfile, 'r') as f:
+            pid = int(f.read())
+
+    if pid_exists(pid):
+        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd += ' --pidfile ' + pidfile
+        subprocess_cmd(cmd)
+
+    # Delete config files if interface is removed
+    if wifi['deleted']:
+        if os.path.isfile(get_conf_file('hostapd', wifi['intf'])):
+            os.unlink(get_conf_file('hostapd', wifi['intf']))
+
+        if os.path.isfile(get_conf_file('wpa_supplicant', wifi['intf'])):
+            os.unlink(get_conf_file('wpa_supplicant', wifi['intf']))
+
+        return None
+
+    # render appropriate new config files depending on access-point or station mode
+    if wifi['type'] == 'access-point':
+        tmpl = Template(config_hostapd_tmpl)
+        config_text = tmpl.render(wifi)
+        with open(get_conf_file('hostapd', wifi['intf']), 'w') as f:
+            f.write(config_text)
+
+    elif wifi['type'] == 'station':
+        tmpl = Template(config_wpa_suppl_tmpl)
+        config_text = tmpl.render(wifi)
+        with open(get_conf_file('wpa_supplicant', wifi['intf']), 'w') as f:
+            f.write(config_text)
+
+    return None
+
+def apply(wifi):
     w = EthernetIf(wifi['intf'])
     if wifi['deleted']:
         # delete interface
@@ -1377,14 +1438,22 @@ def apply(wifi):
             vlan = e.add_vlan(vif['id'])
             apply_vlan_config(vlan, vif)
 
-    # Physical interface is now configured. Proceed by starting hostapd
+    # Physical interface is now configured. Proceed by starting hostapd or
+    # wpa_supplicant daemon
     cmd  = 'start-stop-daemon --start --quiet'
-    cmd += ' --pidfile ' + pidfile
-    cmd += ' --exec /usr/sbin/hostapd'
-    # now pass arguments to hostapd binary
-    cmd += ' --'
-    cmd += ' -P ' + pidfile
-    cmd += ' -B ' + get_config_name(wifi['intf'])
+    if wifi['type'] == 'access-point':
+        cmd += ' --exec /usr/sbin/hostapd'
+        # now pass arguments to hostapd binary
+        cmd += ' -- -B'
+        cmd += ' -P {}'.format(get_pid('hostapd', wifi['intf']))
+        cmd += ' {}'.format(get_conf_file('hostapd', wifi['intf']))
+    elif wifi['type'] == 'station':
+        cmd += ' --exec /sbin/wpa_supplicant'
+        # now pass arguments to hostapd binary
+        cmd += ' -- -s -B -D nl80211'
+        cmd += ' -P {}'.format(get_pid('wpa_supplicant', wifi['intf']))
+        cmd += ' -i {}'.format(wifi['intf'])
+        cmd += ' -c {}'.format(get_conf_file('wpa_supplicant', wifi['intf']))
 
     # execute assembled command
     subprocess_cmd(cmd)
