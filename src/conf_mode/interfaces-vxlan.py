@@ -38,8 +38,9 @@ default_config_data = {
     'link': '',
     'mtu': 1450,
     'remote': '',
-    'remote_port': 8472 # The Linux implementation of VXLAN pre-dates
-                        # the IANA's selection of a standard destination port
+    'remote_port': 8472, # The Linux implementation of VXLAN pre-dates
+                         # the IANA's selection of a standard destination port
+    'vni': ''
 }
 
 def get_config():
