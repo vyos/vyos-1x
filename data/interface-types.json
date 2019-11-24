@@ -14,5 +14,6 @@
   "wireless":         "wlan",
   "wirelessmodem":    "wlm",
   "input":            "ifb",
-  "pppoe":            "pppoe"
+  "pppoe":            "pppoe",
+  "geneve":           "gnv"
 }

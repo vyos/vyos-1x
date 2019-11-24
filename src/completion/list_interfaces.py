@@ -36,8 +36,9 @@ elif args.bridgeable:
     wireless = vyos.interfaces.list_interfaces_of_type("wireless")
     tunnel = vyos.interfaces.list_interfaces_of_type("tunnel")
     wireless = vyos.interfaces.list_interfaces_of_type("wireless")
+    geneve  = vyos.interfaces.list_interfaces_of_type("geneve")
 
-    interfaces = eth + bond + l2tpv3 + openvpn + vxlan + wireless + tunnel
+    interfaces = eth + bond + l2tpv3 + openvpn + vxlan + tunnel + wireless + geneve
 
 elif args.bondable:
     eth = vyos.interfaces.list_interfaces_of_type("ethernet")
