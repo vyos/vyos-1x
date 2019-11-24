@@ -1609,7 +1609,7 @@ class WireGuardIf(Interface):
 class VXLANIf(Interface, ):
     """
     The VXLAN protocol is a tunnelling protocol designed to solve the
-    problem of limited VLAN IDs (4096) in IEEE 802.1q.  With VXLAN the
+    problem of limited VLAN IDs (4096) in IEEE 802.1q. With VXLAN the
     size of the identifier is expanded to 24 bits (16777216).
 
     VXLAN is described by IETF RFC 7348, and has been implemented by a
@@ -1665,6 +1665,43 @@ class VXLANIf(Interface, ):
             'group': '',
             'port': 8472, # The Linux implementation of VXLAN pre-dates
                           # the IANA's selection of a standard destination port
+            'remote': ''
+        }
+        return config
+
+class GeneveIf(Interface, ):
+    """
+    Geneve: Generic Network Virtualization Encapsulation
+
+    For more information please refer to:
+    https://tools.ietf.org/html/draft-gross-geneve-00
+    https://www.redhat.com/en/blog/what-geneve
+    https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels/#geneve
+    https://lwn.net/Articles/644938/
+    """
+    def __init__(self, ifname, config=''):
+        if config:
+            self._ifname = ifname
+
+            if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
+                cmd = 'ip link add name {} type geneve id {} remote {}' \
+                       .format(self._ifname, config['vni'], config['remote'])
+                self._cmd(cmd)
+
+        super().__init__(ifname, type='geneve')
+
+    @staticmethod
+    def get_config():
+        """
+        GENEVE interfaces require a configuration when they are added using
+        iproute2. This static method will provide the configuration dictionary
+        used by this class.
+
+        Example:
+        >> dict = GeneveIf().get_config()
+        """
+        config = {
+            'vni': 0,
             'remote': ''
         }
         return config
