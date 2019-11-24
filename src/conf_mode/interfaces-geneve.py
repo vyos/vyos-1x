@@ -35,7 +35,8 @@ default_config_data = {
     'ip_arp_cache_tmo': 30,
     'ip_proxy_arp': 0,
     'mtu': 1500,
-    'remote': ''
+    'remote': '',
+    'vni': ''
 }
 
 def get_config():
