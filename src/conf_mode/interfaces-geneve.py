@@ -32,6 +32,8 @@ default_config_data = {
     'description': '',
     'disable': False,
     'intf': '',
+    'ip_arp_cache_tmo': 30,
+    'ip_proxy_arp': 0,
     'mtu': 1450,
     'remote': ''
 }
@@ -65,6 +67,14 @@ def get_config():
     # Disable this interface
     if conf.exists('disable'):
         geneve['disable'] = True
+
+    # ARP cache entry timeout in seconds
+    if conf.exists('ip arp-cache-timeout'):
+        geneve['ip_arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
+
+    # Enable proxy-arp on this interface
+    if conf.exists('ip enable-proxy-arp'):
+        geneve['ip_proxy_arp'] = 1
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -123,6 +133,11 @@ def apply(geneve):
         v.set_alias(geneve['description'])
         # Maximum Transfer Unit (MTU)
         v.set_mtu(geneve['mtu'])
+
+        # configure ARP cache timeout in milliseconds
+        v.set_arp_cache_tmo(geneve['ip_arp_cache_tmo'])
+        # Enable proxy-arp on this interface
+        v.set_proxy_arp(geneve['ip_proxy_arp'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the
