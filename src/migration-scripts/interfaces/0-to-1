@@ -49,7 +49,7 @@ if __name__ == '__main__':
     config = ConfigTree(config_file)
     base = ['interfaces', 'bridge']
 
-    if not config.exists(['interfaces', 'bridge']):
+    if not config.exists(base):
         # Nothing to do
         sys.exit(0)
     else:
