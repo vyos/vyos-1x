@@ -34,7 +34,7 @@ default_config_data = {
     'intf': '',
     'ip_arp_cache_tmo': 30,
     'ip_proxy_arp': 0,
-    'mtu': 1450,
+    'mtu': 1500,
     'remote': ''
 }
 
