@@ -793,9 +793,9 @@ def verify(dhcp):
                         raise ConfigError('DHCP conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
 
     if not listen_ok:
-        raise ConfigError('None of the DHCP lease subnets are inside any configured subnet on\n' \
-                          'broadcast interfaces. At least one lease subnet must be set such that\n' \
-                          'DHCP server listens on a one broadcast interface!')
+        raise ConfigError('DHCP server configuration error!\n' \
+                          'None of configured DHCP subnets does not have appropriate\n' \
+                          'primary IP address on any broadcast interface.')
 
     return None
 
