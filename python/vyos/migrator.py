@@ -80,6 +80,8 @@ class Migrator(object):
         """
         self._log_file = os.path.join(vyos.defaults.directories['config'],
                                       'vyos-migrate.log')
+        # on creation, allow write permission for cfg_group
+        os.umask(0o113)
         try:
             log = open('{0}'.format(self._log_file), 'w')
             log.write("List of executed migration scripts:\n")
