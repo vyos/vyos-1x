@@ -18,6 +18,12 @@ import json
 from ctypes import cdll, c_char_p, c_void_p, c_int
 
 
+def escape_backslash(string: str) -> str:
+    """Escape single backslashes in string that are not in escape sequence"""
+    p = re.compile(r'(?<!\\)[\\](?!b|f|n|r|t|\\[^bfnrt])')
+    result = p.sub(r'\\\\', string)
+    return result
+
 def strip_comments(s):
     """ Split a config string into the config section and the trailing comments """
     INITIAL = 0
@@ -169,6 +175,7 @@ class ConfigTree(object):
         self.__destroy.argtypes = [c_void_p]
 
         config_section, comments_section = strip_comments(config_string)
+        config_section = escape_backslash(config_section)
         config = self.__from_string(config_section.encode())
         if config is None:
             msg = self.__get_error().decode()
