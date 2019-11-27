@@ -292,7 +292,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>tcp</format>
-                        <description>send log messages to remote syslog server over tdp</description>
+                        <description>send log messages to remote syslog server over tcp</description>
                       </valueHelp>
                     </properties>
                   </leafNode>
