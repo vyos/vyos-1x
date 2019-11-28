@@ -80,13 +80,18 @@ class Migrator(object):
         """
         self._log_file = os.path.join(vyos.defaults.directories['config'],
                                       'vyos-migrate.log')
+        # on creation, allow write permission for cfg_group;
+        # restore original umask on exit
+        mask = os.umask(0o113)
         try:
             log = open('{0}'.format(self._log_file), 'w')
             log.write("List of executed migration scripts:\n")
         except Exception as e:
+            os.umask(mask)
             print("Logging error: {0}".format(e))
             return None
 
+        os.umask(mask)
         return log
 
     def run_migration_scripts(self, config_file_versions, system_versions):
