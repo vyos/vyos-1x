@@ -84,6 +84,7 @@ Depends: python3,
   wireless-regdb,
   pmacct (>= 1.6.0),
   python3-certbot-nginx,
+  pppoe,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data

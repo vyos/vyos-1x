@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+
+# Change syntax of wireless interfaces
+# Migrate boolean nodes to valueless
+
+from sys import exit
+from vyos.configtree import ConfigTree
+
+def migrate_dialer(config, tree, intf):
+    for pppoe in config.list_nodes(tree):
+        # assemble string, 0 -> pppoe0
+        new_base = ['interfaces', 'pppoe', 'pppoe' + pppoe]
+        config.set(new_base)
+        # format as tag node to avoid loading problems
+        config.set_tag(['interfaces', 'pppoe'])
+
+        default_route = tree + [pppoe, 'default-route']
+        print(default_route)
+        if config.exists(default_route):
+            tmp = config.return_value(default_route)
+            config.set(new_base + ['default-route'], value=tmp)
+
+        disable = tree + [pppoe, 'disable']
+        if config.exists(disable):
+            tmp = config.return_value(disable)
+            config.set(new_base + ['disable'], value=tmp)
+
+        mtu = tree + [pppoe, 'mtu']
+        if config.exists(mtu):
+            tmp = config.return_value(mtu)
+            config.set(new_base + ['mtu'], value=tmp)
+
+        nameserver = tree + [pppoe, 'name-server']
+        if config.exists(nameserver):
+            tmp = config.return_value(nameserver)
+            config.set(new_base + ['name-server'], value=tmp)
+
+        password = tree + [pppoe, 'password']
+        if config.exists(password):
+            tmp = config.return_value(password)
+            config.set(new_base + ['password'], value=tmp)
+
+        userid = tree + [pppoe, 'user-id']
+        if config.exists(userid):
+            tmp = config.return_value(userid)
+            config.set(new_base + ['user-id'], value=tmp)
+
+        ipv6_enable = tree + [pppoe, 'enable-ipv6']
+        if config.exists(ipv6_enable):
+            config.set(new_base + ['ipv6', 'enable'])
+
+        ipv6_slaac = tree + [pppoe, 'ipv6', 'address', 'autoconf']
+        if config.exists(ipv6_slaac):
+            config.set(new_base + ['ipv6', 'address', 'autoconf'])
+
+        # Delete old PPPoE interface
+        config.delete(tree + [pppoe])
+
+
+if __name__ == '__main__':
+
+    if (len(sys.argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = sys.argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    pppoe_links = ['bonding', 'ethernet']
+
+    for link_type in pppoe_links:
+        if not config.exists(['interfaces', link_type]):
+            continue
+
+        for interface in config.list_nodes(['interfaces', link_type]):
+            # check if PPPoE exists
+            pppoe_if = ['interfaces', link_type, interface, 'pppoe']
+            if config.exists(pppoe_if):
+                for dialer in  config.list_nodes(pppoe_if):
+                    migrate_dialer(config, pppoe_if, interface)
+
+            # also migrate VLANs
+            if not config.exists(['interfaces', link_type, interface, 'vif']):
+                continue
+
+            for vlan in config.list_nodes(['interfaces', link_type, interface, 'vif']):
+                pppoe_if = ['interfaces', link_type, interface, 'vif', vlan, 'pppoe']
+                if config.exists(pppoe_if):
+                    for dialer in  config.list_nodes(pppoe_if):
+                        intf = "{}.{}".format(interface, vlan)
+                        migrate_dialer(config, pppoe_if, intf)
+
+
+    print(config.to_string())
+    exit(1)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)

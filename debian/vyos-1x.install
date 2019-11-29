@@ -1,7 +1,7 @@
-etc/init.d
-etc/vyos
-etc/systemd
 etc/dhcp
+etc/init.d
+etc/systemd
+etc/vyos
 lib/
 opt/
 usr/
