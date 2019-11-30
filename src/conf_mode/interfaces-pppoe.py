@@ -224,22 +224,6 @@ def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
     config_file_ifup = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
-    pid = 0
-    pidfile = '/var/run/{}.pid'.format(pppoe['intf'])
-    if os.path.isfile(pidfile):
-        pid = 0
-        with open(pidfile, 'r') as f:
-            pid = int(f.read())
-
-    # Always stop OpenVPN service. We can not send a SIGUSR1 for restart of the
-    # service as the configuration is not re-read. Stop daemon only if it's
-    # running - it could have died or killed by someone evil
-    print("pid: {}".format(pid))
-    if pid_exists(pid):
-        cmd  = 'start-stop-daemon --stop --quiet'
-        cmd += ' --pidfile ' + pidfile
-        subprocess_cmd(cmd)
-
     if pppoe['deleted']:
         # Delete PPP configuration files
         if os.path.exists(config_file_pppoe):
@@ -263,8 +247,26 @@ def generate(pppoe):
         os.chmod(config_file_ifup,
                 S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
 
+    return None
+
+def apply(pppoe):
+    pid = 0
+    pidfile = '/var/run/{}.pid'.format(pppoe['intf'])
+    if os.path.isfile(pidfile):
+        pid = 0
+        with open(pidfile, 'r') as f:
+            pid = int(f.read())
+
+    # Always stop PPPoE dialer first
+    if pid_exists(pid):
+        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd += ' --pidfile ' + pidfile
+        subprocess_cmd(cmd)
+
     if not pppoe['disable']:
         # No matching PPP process running - spawn a new one
+        # NOTE: PID file is only created after dial-in is complete. This is bad
+        # as you could have zombie dialers.
         cmd  = 'start-stop-daemon --start --quiet'
         cmd += ' --pidfile ' + pidfile
         cmd += ' --background'
@@ -277,11 +279,6 @@ def generate(pppoe):
         subprocess_cmd(cmd)
 
     return None
-
-
-def apply(pppoe):
-    return None
-
 
 if __name__ == '__main__':
     try:
