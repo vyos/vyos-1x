@@ -210,14 +210,15 @@ def get_config():
 
     return pppoe
 
-
 def verify(pppoe):
     if pppoe['deleted']:
         # bail out early
         return None
 
-    return None
+    if not pppoe['link']:
+        raise ConfigError('Physical link interface for PPPoE missing')
 
+    return None
 
 def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
