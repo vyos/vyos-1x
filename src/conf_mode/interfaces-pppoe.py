@@ -126,7 +126,6 @@ default_config_data = {
 }
 
 def subprocess_cmd(command):
-    print(command)
     p = Popen(command, stdout=PIPE, shell=True)
     p.communicate()
 
