@@ -56,6 +56,11 @@
               <constraintErrorMessage>Must be either 'auto', 'none' or 'force'</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Interface description</help>
+            </properties>
+          </leafNode>
           <leafNode name="disable">
             <properties>
               <help>Disable interface</help>
