@@ -20,7 +20,6 @@ from sys import exit
 from copy import deepcopy
 
 from jinja2 import Template
-from psutil import pid_exists
 from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 from subprocess import Popen, PIPE
 
@@ -223,6 +222,10 @@ def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
     config_file_ifup = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
+    # Always hang-up PPPoE connection prior generating new configuration file
+    cmd = 'systemctl stop ppp@{}.service'.format(pppoe['intf'])
+    subprocess_cmd(cmd)
+
     if pppoe['deleted']:
         # Delete PPP configuration files
         if os.path.exists(config_file_pppoe):
@@ -249,32 +252,9 @@ def generate(pppoe):
     return None
 
 def apply(pppoe):
-    pid = 0
-    pidfile = '/var/run/{}.pid'.format(pppoe['intf'])
-    if os.path.isfile(pidfile):
-        pid = 0
-        with open(pidfile, 'r') as f:
-            pid = int(f.read())
-
-    # Always stop PPPoE dialer first
-    if pid_exists(pid):
-        cmd  = 'start-stop-daemon --stop --quiet'
-        cmd += ' --pidfile ' + pidfile
-        subprocess_cmd(cmd)
-
     if not pppoe['disable']:
-        # No matching PPP process running - spawn a new one
-        # NOTE: PID file is only created after dial-in is complete. This is bad
-        # as you could have zombie dialers.
-        cmd  = 'start-stop-daemon --start --quiet'
-        cmd += ' --pidfile ' + pidfile
-        cmd += ' --background'
-        cmd += ' --exec /usr/sbin/pppd'
-        # now pass arguments to pppd binary
-        cmd += ' -- '
-        cmd += ' call {}'.format(pppoe['intf'])
-
-        # execute assembled command
+        # Dial PPPoE connection
+        cmd = 'systemctl start ppp@{}.service'.format(pppoe['intf'])
         subprocess_cmd(cmd)
 
     return None

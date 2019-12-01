@@ -1,0 +1,11 @@
+[Unit]
+Description=Dialing PPP connection %I
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/pppd call %I nodetach nolog
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
