@@ -20,7 +20,6 @@ from sys import exit
 from copy import deepcopy
 
 from jinja2 import Template
-from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 from subprocess import Popen, PIPE
 
 from vyos.config import Config
@@ -90,18 +89,6 @@ usepeerdns
 +ipv6
 {% endif %}
 
-"""
-
-config_pppoe_autoconf_tmpl = """
-#!/bin/sh
-
-if [ "$6" != "{{ intf }}" ]; then
-        exit
-fi
-
-echo 0 > /proc/sys/net/ipv6/conf/$1/forwarding
-echo 2 > /proc/sys/net/ipv6/conf/$1/accept_ra
-echo 1 > /proc/sys/net/ipv6/conf/$1/autoconf
 """
 
 default_config_data = {
@@ -220,7 +207,6 @@ def verify(pppoe):
 
 def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
-    config_file_ifup = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd = 'systemctl stop ppp@{}.service'.format(pppoe['intf'])
@@ -231,23 +217,12 @@ def generate(pppoe):
         if os.path.exists(config_file_pppoe):
             os.unlink(config_file_pppoe)
 
-        if os.path.exists(config_file_ifup):
-            os.unlink(config_file_ifup)
-
     else:
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
         with open(config_file_pppoe, 'w') as f:
             f.write(config_text)
-
-        tmpl = Template(config_pppoe_autoconf_tmpl)
-        config_text = tmpl.render(pppoe)
-        with open(config_file_ifup, 'w') as f:
-            f.write(config_text)
-
-        os.chmod(config_file_ifup,
-                S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
 
     return None
 
