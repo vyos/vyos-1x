@@ -130,7 +130,7 @@ def get_config():
         print("Interface not specified")
 
     # check if ethernet interface has been removed
-    cfg_base = ['interfaces', 'ethernet', eth['intf']]
+    cfg_base = 'interfaces ethernet ' + eth['intf']
     if not conf.exists(cfg_base):
         eth['deleted'] = True
         # we can not bail out early as ethernet interface can not be removed
