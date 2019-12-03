@@ -199,9 +199,3 @@ def is_admin() -> bool:
     current_user = getpass.getuser()
     (_, _, _, admin_group_members) = grp.getgrnam('sudo')
     return current_user in admin_group_members
-
-def escape_backslash(string: str) -> str:
-    """Escape single backslashes in string that are not in escape sequence"""
-    p = re.compile(r'(?<!\\)[\\](?!b|f|n|r|t|\\[^bfnrt])')
-    result = p.sub(r'\\\\', string)
-    return result
