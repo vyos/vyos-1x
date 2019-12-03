@@ -17,23 +17,7 @@
           </valueHelp>
         </properties>
         <children>
-          <leafNode name="address">
-            <properties>
-              <help>IP address</help>
-              <constraint>
-                <validator name="ip-cidr"/>
-              </constraint>
-              <valueHelp>
-                <format>ipv4net</format>
-                <description>IPv4 address and prefix length</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6net</format>
-                <description>IPv6 address and prefix length</description>
-              </valueHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include "include/address-ipv4-ipv6.xml.i"
           <leafNode name="description">
             <properties>
               <help>description</help>
