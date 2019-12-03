@@ -821,24 +821,24 @@
                 <properties>
                   <help>VLAN egress QoS</help>
                   <completionHelp>
-                    <script>echo Format for qos mapping \"0:1 1:6 7:6\"</script>
+                    <script>echo Format for qos mapping, e.g.: '0:1 1:6 7:6'</script>
                   </completionHelp>
                   <constraint>
                     <regex>[:0-7 ]+$</regex>
                   </constraint>
-                  <constraintErrorMessage>QoS mapping should be in the format of \"0:7 2:3\" with numbers 0-9</constraintErrorMessage>
+                  <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="ingress-qos">
                 <properties>
                   <help>VLAN ingress QoS</help>
                   <completionHelp>
-                    <script>echo Format for qos mapping \"0:1 1:6 7:6\"</script>
+                    <script>echo Format for qos mapping '0:1 1:6 7:6'</script>
                   </completionHelp>
                   <constraint>
                     <regex>[:0-7 ]+$</regex>
                   </constraint>
-                  <constraintErrorMessage>QoS mapping should be in the format of \"0:7 2:3\" with numbers 0-9</constraintErrorMessage>
+                  <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
                 </properties>
               </leafNode>
               <node name="ip">

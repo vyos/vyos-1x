@@ -47,7 +47,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>process-no-validate</format>
-                    <description>Respond with DNSSEC records to clients that ask for it. Don't do any validation.</description>
+                    <description>Respond with DNSSEC records to clients that ask for it. No validation done at all!</description>
                   </valueHelp>
                   <valueHelp>
                     <format>process</format>

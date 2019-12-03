@@ -610,7 +610,7 @@
               </leafNode>
               <leafNode name="key-file">
                 <properties>
-                  <help>File containing this host's private key</help>
+                  <help>Private key for this host</help>
                   <valueHelp>
                     <format>file</format>
                     <description>File in /config/auth directory</description>
@@ -645,7 +645,7 @@
               </leafNode>
               <leafNode name="role">
                 <properties>
-                  <help>File containing this host's private key</help>
+                  <help>Private key for this host</help>
                   <completionHelp>
                     <list>active passive</list>
                   </completionHelp>
