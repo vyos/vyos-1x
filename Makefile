@@ -18,7 +18,7 @@ obj = $(src:.xml.in=.xml)
 	# -nostdinc  Do not search the standard system directories for header files
 	# -P         Inhibit generation of linemarkers in the output from the
 	#            preprocessor
-	@gcc -ansi -x c -E -undef -nostdinc -P -o $(BUILD_DIR)/$@ -c $<
+	@$(CC) -ansi -x c -E -undef -nostdinc -P -I$(CURDIR)/interface-definitions -o $(BUILD_DIR)/$@ -c $<
 
 $(BUILD_DIR):
 	install -d -m 0755 $(BUILD_DIR)/interface-definitions
