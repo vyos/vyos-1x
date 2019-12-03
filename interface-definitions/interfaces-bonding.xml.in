@@ -16,7 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include "include/address-ipv4-ipv6-dhcp.xml.i"
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
           <node name="arp-monitor">
             <properties>
               <help>ARP link monitoring parameters</help>
@@ -254,8 +254,8 @@
               </completionHelp>
             </properties>
           </leafNode>
-          #include "include/vif-s.xml.i"
-          #include "include/vif.xml.i"
+          #include <include/vif-s.xml.i>
+          #include <include/vif.xml.i>
         </children>
       </tagNode>
     </children>

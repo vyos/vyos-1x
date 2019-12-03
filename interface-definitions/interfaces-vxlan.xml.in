@@ -16,7 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include "include/address-ipv4-ipv6.xml.i"
+          #include <include/address-ipv4-ipv6.xml.i>
           <leafNode name="description">
             <properties>
               <help>Interface description</help>

@@ -16,7 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include "include/address-ipv4-ipv6-dhcp.xml.i"
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
           <node name="capabilities">
             <properties>
               <help>HT and VHT capabilities for your card</help>
@@ -815,7 +815,7 @@
               <constraintErrorMessage>Type must be access-point, station or monitor</constraintErrorMessage>
             </properties>
           </leafNode>
-          #include "include/vif.xml.i"
+          #include <include/vif.xml.i>
         </children>
       </tagNode>
     </children>

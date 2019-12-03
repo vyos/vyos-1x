@@ -20,7 +20,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include "include/address-ipv4-ipv6-dhcp.xml.i"
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
           <leafNode name="description">
             <properties>
               <help>Interface description</help>
@@ -368,8 +368,8 @@
               <constraintErrorMessage>Speed must be auto, 10, 100, 1000, 2500, 5000, 10000, 25000, 40000, 50000 or 100000</constraintErrorMessage>
             </properties>
           </leafNode>
-          #include "include/vif-s.xml.i"
-          #include "include/vif.xml.i"
+          #include <include/vif-s.xml.i>
+          #include <include/vif.xml.i>
         </children>
       </tagNode>
     </children>
