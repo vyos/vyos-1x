@@ -53,9 +53,9 @@ $outchannel {{file}},{{files[file]['log-file']}},{{files[file]['max-size']}},{{f
 ## remote logging
 {% for host in hosts %}
 {% if hosts[host]['proto'] == 'tcp' %}
-{{hosts[host]['selectors']}} @@{{host}}
+{{hosts[host]['selectors']}} @@{{host}}:{{hosts[host]['port']}}
 {% else %}
-{{hosts[host]['selectors']}} @{{host}}
+{{hosts[host]['selectors']}} @{{host}}:{{hosts[host]['port']}}
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -177,19 +177,22 @@ def get_config():
 
     # set system syslog host
     if c.exists('host'):
-        proto = 'udp'
-        rhosts = c.list_nodes('host')
+        rhosts = c.list_nodes(['host'])
         for rhost in rhosts:
-            for fac in c.list_nodes('host ' + rhost + ' facility'):
-                if c.exists('host ' + rhost + ' facility ' + fac + ' protocol'):
-                    proto = c.return_value(
-                        'host ' + rhost + ' facility ' + fac + ' protocol')
-
+            if c.exists('host ' + rhost + ' port'):
+                port = c.return_value(['host', rhost, 'port'])
+            else:
+                port = '514'
+            if c.exists('host ' + rhost + ' protocol'):
+                proto = c.return_value(['host', rhost, 'protocol'])            
+            else:
+                proto = 'udp'
             config_data['hosts'].update(
                 {
                     rhost: {
                         'selectors': generate_selectors(c, 'host ' + rhost + ' facility'),
-                        'proto': proto
+                        'proto': proto,
+                        'port' : port
                     }
                 }
             )
@@ -289,14 +292,12 @@ def verify(c):
                 for s in c[conf][item]['selectors'].split(";"):
                     f = re.sub("\..*$", "", s)
                     if f not in fac:
-                        print (c[conf])
                         raise ConfigError(
                             'Invalid facility ' + s + ' set in ' + conf + ' ' + item)
                     l = re.sub("^.+\.", "", s)
                     if l not in lvl:
                         raise ConfigError(
                             'Invalid logging level ' + s + ' set in ' + conf + ' ' + item)
-
 
 def apply(c):
     if not c and os.path.exists('/var/run/rsyslogd.pid'):
