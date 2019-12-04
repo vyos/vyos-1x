@@ -19,10 +19,8 @@ import os
 from sys import exit
 from copy import deepcopy
 
-from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos.ifconfig import GeneveIf, Interface
-from vyos.interfaces import get_type_of_interface
 from vyos import ConfigError
 from netifaces import interfaces
 
