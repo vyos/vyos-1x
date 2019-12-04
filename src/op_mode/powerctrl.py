@@ -60,7 +60,11 @@ def check_shutdown():
 
 def cancel_shutdown():
   try:
-    cmd = check_output(["/sbin/shutdown","-c"])
+    timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    cmd = check_output(["/sbin/shutdown","-c","--no-wall"])
+    message = "Reboot scheduled has been cancelled %s" % timenow
+    #Generate broadcast message about cancel reboot
+    os.system("wall %s" % message)
   except CalledProcessError as e:
     sys.exit("Error aborting shutdown: %s" % e)
 
@@ -105,7 +109,7 @@ def execute_shutdown(time, reboot = True, ask=True):
   else:
     sys.exit("Could not decode time and date")
 
-  print(cmd.decode().split(",",1)[0])
+  check_shutdown()
 
 def chk_vyatta_based_reboots():
   ### T870 commit-confirm is still using the vyatta code base, once gone, the code below can be removed
