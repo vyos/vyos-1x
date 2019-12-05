@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <node name="syslog" owner="${vyos_conf_scripts_dir}/syslog.py">
+      <node name="syslog" owner="${vyos_conf_scripts_dir}/system-syslog.py">
         <properties>
           <help>System logging</help>
           <priority>400</priority>
