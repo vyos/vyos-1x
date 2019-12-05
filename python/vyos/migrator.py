@@ -30,6 +30,7 @@ class Migrator(object):
         self._force = force
         self._set_vintage = set_vintage
         self._config_file_vintage = None
+        self._log_file = None
         self._changed = False
 
     def read_config_file_versions(self):
@@ -71,11 +72,35 @@ class Migrator(object):
         else:
             return True
 
+    def open_log_file(self):
+        """
+        Open log file for migration, catching any error.
+        Note that, on boot, migration takes place before the canonical log
+        directory is created, hence write to the config file directory.
+        """
+        self._log_file = os.path.join(vyos.defaults.directories['config'],
+                                      'vyos-migrate.log')
+        # on creation, allow write permission for cfg_group;
+        # restore original umask on exit
+        mask = os.umask(0o113)
+        try:
+            log = open('{0}'.format(self._log_file), 'w')
+            log.write("List of executed migration scripts:\n")
+        except Exception as e:
+            os.umask(mask)
+            print("Logging error: {0}".format(e))
+            return None
+
+        os.umask(mask)
+        return log
+
     def run_migration_scripts(self, config_file_versions, system_versions):
         """
         Run migration scripts iteratively, until config file version equals
         system component version.
         """
+        log = self.open_log_file()
+
         cfg_versions = config_file_versions
         sys_versions = system_versions
 
@@ -101,17 +126,27 @@ class Migrator(object):
                         '{}-to-{}'.format(cfg_ver, next_ver))
 
                 try:
-                    subprocess.check_output([migrate_script,
+                    subprocess.check_call([migrate_script,
                         self._config_file])
                 except FileNotFoundError:
                     pass
-                except subprocess.CalledProcessError as err:
-                    print("Called process error: {}.".format(err))
+                except Exception as err:
+                    print("\nMigration script error: {0}: {1}."
+                          "".format(migrate_script, err))
                     sys.exit(1)
+
+                if log:
+                    try:
+                        log.write('{0}\n'.format(migrate_script))
+                    except Exception as e:
+                        print("Error writing log: {0}".format(e))
 
                 cfg_ver = next_ver
 
             rev_versions[key] = cfg_ver
+
+        if log:
+            log.close()
 
         return rev_versions
 

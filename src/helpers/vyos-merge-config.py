@@ -72,9 +72,6 @@ merge_config_tree = ConfigTree(config_file)
 effective_config = Config()
 
 output_effective_config = effective_config.show_config()
-# showConfig (called by config.show_config() does not escape
-# backslashes, which configtree expects; cf. T1001.
-output_effective_config = output_effective_config.replace("\\", "\\\\")
 
 effective_config_tree = ConfigTree(output_effective_config)
 

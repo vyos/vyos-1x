@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="system">
+        <properties>
+          <help>Show system information</help>
+        </properties>
+        <children>
+          <node name="acceleration">
+            <properties>
+              <help>Acceleration components</help>
+            </properties>
+            <children>
+              <node name="qat">
+                <properties>
+                  <help>Intel QAT (Quick Assist Technology) Devices</help>
+                </properties>
+                <children>
+                  <tagNode name="device">
+                    <properties>
+                      <help>Show QAT information for a given acceleration device</help>
+                      <completionHelp>
+                        <script>${vyos_op_scripts_dir}/show_acceleration.py --dev_list</script>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <node name="flows">
+                        <properties>
+                          <help>Intel QAT flows</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_acceleration.py --flow --dev $6</command>
+                      </node>
+                      <node name="config">
+                        <properties>
+                          <help>Intel QAT configuration</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_acceleration.py --conf --dev $6</command>
+                      </node>
+                    </children>
+                  </tagNode>
+                  <node name="status">
+                    <properties>
+                      <help>Intel QAT status</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_acceleration.py --status</command>
+                  </node>
+                  <node name="interrupts">
+                    <properties>
+                      <help>Intel QAT interrupts</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_acceleration.py --interrupts</command>
+                  </node>
+                </children>
+                <command>${vyos_op_scripts_dir}/show_acceleration.py --hw</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

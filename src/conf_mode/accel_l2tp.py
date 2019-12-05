@@ -125,6 +125,9 @@ gw-ip-address={{outside_nexthop}}
 {% if authentication['mode'] == 'local' %}
 [chap-secrets]
 chap-secrets=/etc/accel-ppp/l2tp/chap-secrets
+{% if outside_nexthop %}
+gw-ip-address={{outside_nexthop}}
+{% endif %}
 {% endif %}
 
 [ppp]
@@ -287,7 +290,7 @@ def get_config():
     'mppe'                : 'prefer'
     },
     'outside_addr'        : '',
-    'outside_nexthop'     : '',
+    'outside_nexthop'     : '10.255.255.0',
     'dns'                 : [],
     'dnsv6'               : [],
     'wins'                : [],
@@ -429,7 +432,16 @@ def get_config():
   ### gateway address 
   if c.exists('outside-nexthop'):
     config_data['outside_nexthop'] = c.return_value('outside-nexthop') 
-  
+  else:
+    ### calculate gw-ip-address
+    if c.exists('client-ip-pool start'):
+      ### use start ip as gw-ip-address
+      config_data['outside_nexthop'] = c.return_value('client-ip-pool start')
+    elif c.exists('client-ip-pool subnet'):
+      ### use first ip address from first defined pool
+      lst_ip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", c.return_values('client-ip-pool subnet')[0])
+      config_data['outside_nexthop'] = lst_ip[0]
+
   if c.exists('authentication require'):
     auth_mods = {'pap' : 'pap','chap' : 'auth_chap_md5', 'mschap' : 'auth_mschap_v1', 'mschap-v2' : 'auth_mschap_v2'}
     for proto in c.return_values('authentication require'):

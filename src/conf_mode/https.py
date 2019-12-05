@@ -49,7 +49,7 @@ server {
         listen 443 ssl;
         listen [::]:443 ssl;
 {% else %}
-        listen {{ server.address }}:443 ssl;
+        listen {{ server.address }}:{{ server.port }} ssl;
 {% endif %}
 
 {% for name in server.name %}
@@ -107,7 +107,11 @@ def get_config():
     if conf.exists('listen-address'):
         for addr in conf.list_nodes('listen-address'):
             server_block = {'address' : addr}
+            server_block['port'] = '443'
             server_block['name'] = ['_']
+            if conf.exists('listen-address {0} listen-port'.format(addr)):
+                port = conf.return_value('listen-address {0} listen-port'.format(addr))
+                server_block['port'] = port
             if conf.exists('listen-address {0} server-name'.format(addr)):
                 names = conf.return_values('listen-address {0} server-name'.format(addr))
                 server_block['name'] = names[:]

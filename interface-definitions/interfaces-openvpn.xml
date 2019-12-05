@@ -102,57 +102,114 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="encryption">
+          <node name="encryption">
             <properties>
-              <help>Data Encryption Algorithm</help>
-              <completionHelp>
-                <list>des 3des bf128 bf256 aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
-              </completionHelp>
-              <valueHelp>
-                <format>des</format>
-                <description>DES algorithm</description>
-              </valueHelp>
-              <valueHelp>
-                <format>3des</format>
-                <description>DES algorithm with triple encryption</description>
-              </valueHelp>
-              <valueHelp>
-                <format>bf128</format>
-                <description>Blowfish algorithm with 128-bit key</description>
-              </valueHelp>
-              <valueHelp>
-                <format>bf256</format>
-                <description>Blowfish algorithm with 256-bit key</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes128</format>
-                <description>AES algorithm with 128-bit key CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes128gcm</format>
-                <description>AES algorithm with 128-bit key GCM</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes192</format>
-                <description>AES algorithm with 192-bit key CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes192gcm</format>
-                <description>AES algorithm with 192-bit key GCM</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes256</format>
-                <description>AES algorithm with 256-bit key CBC</description>
-              </valueHelp>
-              <valueHelp>
-                <format>aes256gcm</format>
-                <description>AES algorithm with 256-bit key GCM</description>
-              </valueHelp>
-              <constraint>
-                <regex>(des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
-              </constraint>
+              <help>Data Encryption settings</help>
             </properties>
-          </leafNode>
+            <children>
+              <leafNode name="cipher">
+                <properties>
+                  <help>Standard Data Encryption Algorithm</help>
+                  <completionHelp>
+                    <list>des 3des bf128 bf256 aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>des</format>
+                    <description>DES algorithm</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>3des</format>
+                    <description>DES algorithm with triple encryption</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>bf128</format>
+                    <description>Blowfish algorithm with 128-bit key</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>bf256</format>
+                    <description>Blowfish algorithm with 256-bit key</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes128</format>
+                    <description>AES algorithm with 128-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes128gcm</format>
+                    <description>AES algorithm with 128-bit key GCM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes192</format>
+                    <description>AES algorithm with 192-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes192gcm</format>
+                    <description>AES algorithm with 192-bit key GCM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes256</format>
+                    <description>AES algorithm with 256-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes256gcm</format>
+                    <description>AES algorithm with 256-bit key GCM</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="ncp-ciphers">
+                <properties>
+                  <help>Cipher negotiation list for use in server or client mode</help>
+                  <completionHelp>
+                    <list>des 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>des</format>
+                    <description>DES algorithm</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>3des</format>
+                    <description>DES algorithm with triple encryption</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes128</format>
+                    <description>AES algorithm with 128-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes128gcm</format>
+                    <description>AES algorithm with 128-bit key GCM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes192</format>
+                    <description>AES algorithm with 192-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes192gcm</format>
+                    <description>AES algorithm with 192-bit key GCM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes256</format>
+                    <description>AES algorithm with 256-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes256gcm</format>
+                    <description>AES algorithm with 256-bit key GCM</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-ncp">
+                <properties>
+                  <help>Disable support for ncp-ciphers</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="hash">
             <properties>
               <help>Hashing Algorithm</help>

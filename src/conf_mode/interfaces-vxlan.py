@@ -19,10 +19,8 @@ import os
 from sys import exit
 from copy import deepcopy
 
-from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos.ifconfig import VXLANIf, Interface
-from vyos.interfaces import get_type_of_interface
 from vyos import ConfigError
 from netifaces import interfaces
 
@@ -38,8 +36,9 @@ default_config_data = {
     'link': '',
     'mtu': 1450,
     'remote': '',
-    'remote_port': 8472 # The Linux implementation of VXLAN pre-dates
-                        # the IANA's selection of a standard destination port
+    'remote_port': 8472, # The Linux implementation of VXLAN pre-dates
+                         # the IANA's selection of a standard destination port
+    'vni': ''
 }
 
 def get_config():

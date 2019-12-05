@@ -47,11 +47,11 @@ use=if, if={{ interface.interface }}
 {% for rfc in interface.rfc2136 -%}
 {% for record in rfc.record %}
 # RFC2136 dynamic DNS configuration for {{ record }}.{{ rfc.zone }}
-server={{ rfc.server }},
-protocol=nsupdate,
-password={{ rfc.keyfile }},
-ttl={{ rfc.ttl }},
-zone={{ rfc.zone }},
+server={{ rfc.server }}
+protocol=nsupdate
+password={{ rfc.keyfile }}
+ttl={{ rfc.ttl }}
+zone={{ rfc.zone }}
 {{ record }}
 {% endfor -%}
 {% endfor -%}

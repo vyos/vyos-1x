@@ -16,7 +16,7 @@ args = parser.parse_args()
 if args.type:
     try:
         interfaces = vyos.interfaces.list_interfaces_of_type(args.type)
-        
+
     except ValueError as e:
         print(e, file=sys.stderr)
         print("")
@@ -35,7 +35,10 @@ elif args.bridgeable:
     vxlan = vyos.interfaces.list_interfaces_of_type("vxlan")
     wireless = vyos.interfaces.list_interfaces_of_type("wireless")
     tunnel = vyos.interfaces.list_interfaces_of_type("tunnel")
-    interfaces = eth + bond + l2tpv3 + openvpn + vxlan + wireless + tunnel
+    wireless = vyos.interfaces.list_interfaces_of_type("wireless")
+    geneve  = vyos.interfaces.list_interfaces_of_type("geneve")
+
+    interfaces = eth + bond + l2tpv3 + openvpn + vxlan + tunnel + wireless + geneve
 
 elif args.bondable:
     eth = vyos.interfaces.list_interfaces_of_type("ethernet")

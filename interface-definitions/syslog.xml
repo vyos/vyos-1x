@@ -27,6 +27,10 @@
                   <completionHelp>
                     <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
                   </completionHelp>
+                  <constraint>
+                    <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage>
                   <valueHelp>
                     <format>all</format>
                     <description>All facilities excluding "mark"</description>
@@ -127,6 +131,10 @@
                       <completionHelp>
                         <list>emerg alert crit err warning notice info debug all</list>
                       </completionHelp>
+                      <constraint>
+                        <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
                       <valueHelp>
                         <format>emerg</format>
                         <description>Emergency messages</description>
@@ -173,10 +181,10 @@
             <properties>
               <help>Logging to a remote host</help>
               <constraint>
-                <!-- at least let's make sure whitespace isn't allowed, ideally it should be checked for IPv4/IPv6 address or fqdn/hostname -->
-                <regex>[^ ]{1,63}</regex>
+                <validator name="ip-address" />
+                <regex>(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)</regex>
               </constraint>
-              <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
+              <constraintErrorMessage>Invalid host FQDN or IP address</constraintErrorMessage>
               <valueHelp>
                 <format>x.x.x.x or host.domain.tld</format>
                 <description>Remote host name or IP address</description>
@@ -189,6 +197,10 @@
                   <completionHelp>
                     <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
                   </completionHelp>
+                  <constraint>
+                    <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage> 
                   <valueHelp>
                     <format>all</format>
                     <description>All facilities excluding "mark"</description>
@@ -292,8 +304,15 @@
                       </valueHelp>
                       <valueHelp>
                         <format>tcp</format>
-                        <description>send log messages to remote syslog server over tdp</description>
+                        <description>send log messages to remote syslog server over tcp</description>
                       </valueHelp>
+                      <completionHelp>
+                        <list>udp tcp</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(udp|tcp)</regex>
+                      </constraint>
+                      <constraintErrorMessage>invalid protocol name</constraintErrorMessage>
                     </properties>
                   </leafNode>
                   <leafNode name="level">
@@ -302,6 +321,10 @@
                       <completionHelp>
                         <list>emerg alert crit err warning notice info debug all</list>
                       </completionHelp>
+                      <constraint>
+                        <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
                       <valueHelp>
                         <format>emerg</format>
                         <description>Emergency messages</description>
@@ -380,6 +403,10 @@
                   <completionHelp>
                     <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
                   </completionHelp>
+                  <constraint>
+                    <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage>
                   <valueHelp>
                     <format>all</format>
                     <description>All facilities excluding "mark"</description>
@@ -480,6 +507,10 @@
                       <completionHelp>
                         <list>emerg alert crit err warning notice info debug all</list>
                       </completionHelp>
+                      <constraint>
+                        <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
                       <valueHelp>
                         <format>emerg</format>
                         <description>Emergency messages</description>
@@ -583,6 +614,10 @@
                   <completionHelp>
                     <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
                   </completionHelp>
+                  <constraint>
+                    <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage>
                   <valueHelp>
                     <format>all</format>
                     <description>All facilities excluding "mark"</description>
@@ -683,6 +718,10 @@
                       <completionHelp>
                         <list>emerg alert crit err warning notice info debug all</list>
                       </completionHelp>
+                      <constraint>
+                        <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
                       <valueHelp>
                         <format>emerg</format>
                         <description>Emergency messages</description>
@@ -736,6 +775,10 @@
                   <completionHelp>
                     <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
                   </completionHelp>
+                  <constraint>
+                    <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage>
                   <valueHelp>
                     <format>all</format>
                     <description>All facilities excluding "mark"</description>
@@ -836,6 +879,10 @@
                       <completionHelp>
                         <list>emerg alert crit err warning notice info debug all</list>
                       </completionHelp>
+                      <constraint>
+                        <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
                       <valueHelp>
                         <format>emerg</format>
                         <description>Emergency messages</description>
