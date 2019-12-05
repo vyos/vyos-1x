@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <node name="syslog" owner="${vyos_conf_scripts_dir}/system-syslog.py">
+      <node name="syslog" owner="${vyos_conf_scripts_dir}/syslog.py">
         <properties>
           <help>System logging</help>
           <priority>400</priority>
@@ -191,39 +191,6 @@
               </valueHelp>
             </properties>
             <children>
-              <leafNode name="protocol">
-                <properties>
-                  <help>Syslog communication protocol</help>
-                  <valueHelp>
-                    <format>udp</format>
-                    <description>Send log messages to remote syslog server over udp</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>tcp</format>
-                    <description>Send log messages to remote syslog server over tcp</description>
-                  </valueHelp>
-                  <completionHelp>
-                    <list>udp tcp</list>
-                  </completionHelp>
-                  <constraint>
-                    <regex>(udp|tcp)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Invalid protocol name</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="port">
-                <properties>
-                  <help>Destination port</help>
-                  <valueHelp>
-                    <format>1-65535</format>
-                    <description>Protocol destination port</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                  <constraintErrorMessage>Invalid destination port</constraintErrorMessage>
-                </properties>
-              </leafNode>
               <tagNode name="facility">
                 <properties>
                   <help>Facility for logging</help>
@@ -328,6 +295,26 @@
                   </valueHelp>
                 </properties>
                 <children>
+                  <leafNode name="protocol">
+                    <properties>
+                      <help>syslog communication protocol</help>
+                      <valueHelp>
+                        <format>udp</format>
+                        <description>send log messages to remote syslog server over udp</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>tcp</format>
+                        <description>send log messages to remote syslog server over tcp</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <list>udp tcp</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(udp|tcp)</regex>
+                      </constraint>
+                      <constraintErrorMessage>invalid protocol name</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
                   <leafNode name="level">
                     <properties>
                       <help>Logging level</help>
