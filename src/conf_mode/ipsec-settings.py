@@ -21,6 +21,7 @@ import re
 import os
 import jinja2
 import syslog as sl
+import time
 
 import vyos.config
 import vyos.defaults
@@ -38,6 +39,7 @@ server_cert_path = '/etc/ipsec.d/certs'
 server_key_path = '/etc/ipsec.d/private'
 delim_ipsec_l2tp_begin = "### VyOS L2TP VPN Begin ###"
 delim_ipsec_l2tp_end = "### VyOS L2TP VPN End ###"
+charon_pidfile = '/var/run/charon.pid'
 
 l2pt_ipsec_conf = '''
 {{delim_ipsec_l2tp_begin}}
@@ -243,11 +245,22 @@ def generate(data):
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_flie)
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
 
-def apply(data):
-    # Do nothing
-    # StrongSWAN should only be restarted when actual tunnels are configured
-    # Restart ipsec for l2tp
+def restart_ipsec():
     os.system("ipsec restart >&/dev/null")
+    # counter for apply swanctl config
+    counter = 10
+    while counter <= 10:
+        if os.path.exists(charon_pidfile):
+            os.system("swanctl -q >&/dev/null")
+            break
+        counter -=1
+        time.sleep(1)
+        if counter == 0:
+            raise ConfigError('VPN configuration error: IPSec is not running.')
+
+def apply(data):
+    # Restart IPSec daemon
+    restart_ipsec()
 
 if __name__ == '__main__':
     try:
