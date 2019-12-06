@@ -14,12 +14,7 @@
     #include <include/address-ipv4-ipv6-dhcp.xml.i>
     #include <include/interface-description.xml.i>
     #include <include/dhcp-dhcpv6-options.xml.i>
-    <leafNode name="disable-link-detect">
-      <properties>
-        <help>Ignore link state changes</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/interface-disable-link-detect.xml.i>
     #include <include/interface-disable.xml.i>
     <leafNode name="egress-qos">
       <properties>

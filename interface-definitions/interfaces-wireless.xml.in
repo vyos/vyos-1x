@@ -452,12 +452,7 @@
               <help>Disable broadcast of SSID from access-point</help>
             </properties>
           </leafNode>
-          <leafNode name="disable-link-detect">
-            <properties>
-              <help>Ignore link state changes</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-disable.xml.i>
           <leafNode name="expunge-failing-stations">
             <properties>
