@@ -203,7 +203,8 @@ def get_config():
                 }
             )
             if c.exists('host ' + rhost + ' port'):
-                config_data['hosts'][rhost]['port'] = c.return_value(['host', rhost, 'port'])
+                config_data['hosts'][rhost][
+                    'port'] = c.return_value(['host', rhost, 'port'])
 
     # set system syslog user
     if c.exists('user'):
@@ -273,7 +274,7 @@ def verify(c):
     if c == None:
         return None
 
-    ### may be obsolete
+    # may be obsolete
     # /etc/rsyslog.conf is generated somewhere and copied over the original (exists in /opt/vyatta/etc/rsyslog.conf)
     # it interferes with the global logging, to make sure we are using a single base, template is enforced here
     #
@@ -285,7 +286,7 @@ def verify(c):
     # /var/log/vyos-rsyslog were the old files, we may want to clean those up, but currently there
     # is a chance that someone still needs it, so I don't automatically remove
     # them
-    ###
+    #
 
     if c == None:
         return None
