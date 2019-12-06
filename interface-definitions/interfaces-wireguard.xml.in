@@ -19,12 +19,7 @@
         <children>
           #include <include/address-ipv4-ipv6.xml.i>
           #include <include/interface-description.xml.i>
-          <leafNode name="disable">
-            <properties>
-              <help>disables interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable.xml.i>
           <leafNode name="port">
             <properties>
               <help>Local port number to accept connections</help>

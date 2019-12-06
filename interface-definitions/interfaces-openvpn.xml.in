@@ -53,12 +53,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable.xml.i>
           <node name="encryption">
             <properties>
               <help>Data Encryption settings</help>

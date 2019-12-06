@@ -458,12 +458,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable this bridge interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable.xml.i>
           <leafNode name="expunge-failing-stations">
             <properties>
               <help>Disassociate stations based on excessive transmission failures</help>

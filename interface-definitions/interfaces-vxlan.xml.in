@@ -18,12 +18,7 @@
         <children>
           #include <include/address-ipv4-ipv6.xml.i>
           #include <include/interface-description.xml.i>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable.xml.i>
           <leafNode name="group">
             <properties>
               <help>Multicast group address for VXLAN interface</help>

@@ -57,12 +57,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable this bridge interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable.xml.i>
           <leafNode name="hash-policy">
             <properties>
               <help>Bonding transmit hash policy</help>

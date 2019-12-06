@@ -16,12 +16,7 @@
         <valueless/>
       </properties>
     </leafNode>
-    <leafNode name="disable">
-      <properties>
-        <help>Disable this bridge interface</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/interface-disable.xml.i>
     <leafNode name="ethertype">
       <properties>
         <help>Set Ethertype</help>
@@ -85,12 +80,7 @@
             <valueless/>
           </properties>
         </leafNode>
-        <leafNode name="disable">
-          <properties>
-            <help>Disable this bridge interface</help>
-            <valueless/>
-          </properties>
-        </leafNode>
+        #include <include/interface-disable.xml.i>
         <leafNode name="mac">
           <properties>
             <help>Media Access Control (MAC) address</help>

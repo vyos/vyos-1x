@@ -20,12 +20,7 @@
         <valueless/>
       </properties>
     </leafNode>
-    <leafNode name="disable">
-      <properties>
-        <help>Disable this bridge interface</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/interface-disable.xml.i>
     <leafNode name="egress-qos">
       <properties>
         <help>VLAN egress QoS</help>
