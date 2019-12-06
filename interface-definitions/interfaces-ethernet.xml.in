@@ -71,12 +71,7 @@
             <children>
               #include <include/interface-arp-cache-timeout.xml.i>
               #include <include/interface-enable-proxy-arp.xml.i>
-              <leafNode name="proxy-arp-pvlan">
-                <properties>
-                  <help>Enable private VLAN proxy ARP on this interface</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/interface-proxy-arp-pvlan.xml.i>
             </children>
           </node>
           #include <include/interface-mac.xml.i>
