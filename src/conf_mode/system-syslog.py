@@ -186,6 +186,7 @@ def get_config():
     # set system syslog host
     if c.exists('host'):
         rhosts = c.list_nodes('host')
+        proto = 'udp'
         for rhost in rhosts:
             for fac in c.list_nodes('host ' + rhost + ' facility'):
                 if c.exists('host ' + rhost + ' facility ' + fac + ' protocol'):
@@ -303,7 +304,6 @@ def verify(c):
                 for s in c[conf][item]['selectors'].split(";"):
                     f = re.sub("\..*$", "", s)
                     if f not in fac:
-                        print (c[conf])
                         raise ConfigError(
                             'Invalid facility ' + s + ' set in ' + conf + ' ' + item)
                     l = re.sub("^.+\.", "", s)
