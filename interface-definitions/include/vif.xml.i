@@ -12,15 +12,7 @@
   </properties>
   <children>
     #include <include/address-ipv4-ipv6-dhcp.xml.i>
-    <leafNode name="description">
-      <properties>
-        <help>Interface description</help>
-        <constraint>
-          <regex>^.{1,256}$</regex>
-        </constraint>
-        <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
-      </properties>
-    </leafNode>
+    #include <include/interface-description.xml.i>
     #include <include/dhcp-dhcpv6-options.xml.i>
     <leafNode name="disable-link-detect">
       <properties>

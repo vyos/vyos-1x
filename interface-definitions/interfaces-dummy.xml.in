@@ -17,15 +17,7 @@
         </properties>
         <children>
           #include <include/address-ipv4-ipv6.xml.i>
-          <leafNode name="description">
-            <properties>
-              <help>Interface description</help>
-              <constraint>
-                <regex>^.{1,256}$</regex>
-              </constraint>
-              <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
-            </properties>
-          </leafNode>
+          #include <include/interface-description.xml.i>
           <leafNode name="disable">
             <properties>
               <help>Disable interface</help>
