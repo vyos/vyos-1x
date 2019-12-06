@@ -29,10 +29,13 @@ def is_ipv4(addr):
 
     # With the below statement we can check for IPv4 networks and host
     # addresses at the same time
-    if ipaddress.ip_address(addr.split(r'/')[0]).version == 4:
-        return True
-    else:
-        return False
+    try:
+        if ipaddress.ip_address(addr.split(r'/')[0]).version == 4:
+            return True
+    except:
+        pass
+
+    return False
 
 def is_ipv6(addr):
     """
@@ -41,10 +44,13 @@ def is_ipv6(addr):
 
     # With the below statement we can check for IPv4 networks and host
     # addresses at the same time
-    if ipaddress.ip_network(addr.split(r'/')[0]).version == 6:
-        return True
-    else:
-        return False
+    try:
+        if ipaddress.ip_network(addr.split(r'/')[0]).version == 6:
+            return True
+    except:
+        pass
+
+    return False
 
 def is_intf_addr_assigned(intf, addr):
     """
