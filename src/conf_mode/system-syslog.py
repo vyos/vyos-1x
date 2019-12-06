@@ -53,9 +53,17 @@ $outchannel {{file}},{{files[file]['log-file']}},{{files[file]['max-size']}},{{f
 ## remote logging
 {% for host in hosts %}
 {% if hosts[host]['proto'] == 'tcp' %}
+{% if hosts[host]['port'] %}
+{{hosts[host]['selectors']}} @@{{host}}:{{hosts[host]['port']}}
+{% else %}
 {{hosts[host]['selectors']}} @@{{host}}
+{% endif %}
+{% else %}
+{% if hosts[host]['port'] %}
+{{hosts[host]['selectors']}} @{{host}}:{{hosts[host]['port']}}
 {% else %}
 {{hosts[host]['selectors']}} @{{host}}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -177,13 +185,14 @@ def get_config():
 
     # set system syslog host
     if c.exists('host'):
-        proto = 'udp'
         rhosts = c.list_nodes('host')
         for rhost in rhosts:
             for fac in c.list_nodes('host ' + rhost + ' facility'):
                 if c.exists('host ' + rhost + ' facility ' + fac + ' protocol'):
                     proto = c.return_value(
                         'host ' + rhost + ' facility ' + fac + ' protocol')
+                else:
+                    proto = 'udp'
 
             config_data['hosts'].update(
                 {
@@ -193,6 +202,8 @@ def get_config():
                     }
                 }
             )
+            if c.exists('host ' + rhost + ' port'):
+                config_data['hosts'][rhost]['port'] = c.return_value(['host', rhost, 'port'])
 
     # set system syslog user
     if c.exists('user'):
@@ -261,7 +272,8 @@ def generate(c):
 def verify(c):
     if c == None:
         return None
-    #
+
+    ### may be obsolete
     # /etc/rsyslog.conf is generated somewhere and copied over the original (exists in /opt/vyatta/etc/rsyslog.conf)
     # it interferes with the global logging, to make sure we are using a single base, template is enforced here
     #
@@ -273,6 +285,7 @@ def verify(c):
     # /var/log/vyos-rsyslog were the old files, we may want to clean those up, but currently there
     # is a chance that someone still needs it, so I don't automatically remove
     # them
+    ###
 
     if c == None:
         return None
