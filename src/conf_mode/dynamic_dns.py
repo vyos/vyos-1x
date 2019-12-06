@@ -95,6 +95,7 @@ default_service_protocol = {
 default_config_data = {
     'interfaces': [],
     'cache_file': cache_file,
+    'deleted': False,
     'pid_file': pid_file
 }
 
@@ -102,7 +103,8 @@ def get_config():
     dyndns = default_config_data
     conf = Config()
     if not conf.exists('service dns dynamic'):
-        return None
+        dyndns['deleted'] = True
+        return dyndns
     else:
         conf.set_level('service dns dynamic')
 
@@ -194,7 +196,7 @@ def get_config():
 
 def verify(dyndns):
     # bail out early - looks like removal from running config
-    if dyndns is None:
+    if dyndns['deleted']:
         return None
 
     # A 'node' corresponds to an interface
@@ -239,7 +241,10 @@ def verify(dyndns):
 
 def generate(dyndns):
     # bail out early - looks like removal from running config
-    if dyndns is None:
+    if dyndns['deleted']:
+        if os.path.exists(config_file):
+            os.unlink(config_file)
+
         return None
 
     dirname = os.path.dirname(dyndns['pid_file'])
@@ -264,7 +269,7 @@ def apply(dyndns):
     if os.path.exists('/etc/ddclient.conf'):
         os.unlink('/etc/ddclient.conf')
 
-    if dyndns is None:
+    if dyndns['deleted']:
         os.system('/etc/init.d/ddclient stop')
         if os.path.exists(dyndns['pid_file']):
             os.unlink(dyndns['pid_file'])
