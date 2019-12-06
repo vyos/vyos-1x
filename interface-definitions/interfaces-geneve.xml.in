@@ -25,12 +25,7 @@
             </properties>
             <children>
               #include <include/interface-arp-cache-timeout.xml.i>
-              <leafNode name="enable-proxy-arp">
-                <properties>
-                  <help>Enable proxy-arp on this interface</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/interface-enable-proxy-arp.xml.i>
             </children>
           </node>
           #include <include/interface-mtu-1450-9000.xml.i>

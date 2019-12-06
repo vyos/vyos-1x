@@ -1,0 +1,6 @@
+<leafNode name="enable-proxy-arp">
+  <properties>
+    <help>Enable proxy-arp on this interface</help>
+    <valueless/>
+  </properties>
+</leafNode>

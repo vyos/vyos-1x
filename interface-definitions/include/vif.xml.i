@@ -43,18 +43,7 @@
     <node name="ip">
       <children>
         #include <include/interface-arp-cache-timeout.xml.i>
-        <leafNode name="enable-proxy-arp">
-          <properties>
-            <help>Enable proxy-arp on this interface</help>
-            <valueless/>
-          </properties>
-        </leafNode>
-        <leafNode name="proxy-arp-pvlan">
-          <properties>
-            <help>Enable private VLAN proxy ARP on this interface</help>
-            <valueless/>
-          </properties>
-        </leafNode>
+        #include <include/interface-enable-proxy-arp.xml.i>
       </children>
     </node>
     #include <include/interface-mac.xml.i>
