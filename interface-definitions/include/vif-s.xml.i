@@ -37,18 +37,7 @@
         <constraintErrorMessage>Ethertype must be 0x88A8 or 0x8100</constraintErrorMessage>
       </properties>
     </leafNode>
-    <leafNode name="mac">
-      <properties>
-        <help>Media Access Control (MAC) address</help>
-        <valueHelp>
-          <format>h:h:h:h:h:h</format>
-          <description>Hardware (MAC) address</description>
-        </valueHelp>
-        <constraint>
-          <validator name="mac-address"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/interface-mac.xml.i>
     <leafNode name="mtu">
       <properties>
         <help>Maximum Transmission Unit (MTU)</help>
@@ -81,18 +70,7 @@
           </properties>
         </leafNode>
         #include <include/interface-disable.xml.i>
-        <leafNode name="mac">
-          <properties>
-            <help>Media Access Control (MAC) address</help>
-            <valueHelp>
-              <format>h:h:h:h:h:h</format>
-              <description>Hardware (MAC) address</description>
-            </valueHelp>
-            <constraint>
-              <validator name="mac-address"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/interface-mac.xml.i>
         <leafNode name="mtu">
           <properties>
             <help>Maximum Transmission Unit (MTU)</help>
