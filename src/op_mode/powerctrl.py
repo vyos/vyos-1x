@@ -25,48 +25,55 @@ from subprocess import check_output, CalledProcessError, STDOUT
 from vyos.util import ask_yes_no
 
 
-def valid_time(s):
+def parse_time(s):
   try:
     return datetime.strptime(s, "%H:%M").time()
   except ValueError:
     return None
 
-
-def valid_date(s):
-  try:
-    return datetime.strptime(s, "%d%m%Y").date()
-  except ValueError:
+def parse_date(s):
+  for fmt in ["%d%m%Y", "%d/%m/%Y", "%d.%m.%Y", "%d:%m:%Y", "%Y-%m-%d"]:
     try:
-      return datetime.strptime(s, "%d/%m/%Y").date()
+      return datetime.strptime(s, fmt).date()
     except ValueError:
-      try:
-        return datetime.strptime(s, "%d.%m.%Y").date()
-      except ValueError:
-        try:
-          return datetime.strptime(s, "%d:%m:%Y").date()
-        except ValueError:
-          return None
+      continue
+  # If nothing matched...
+  return None
 
+def get_shutdown_status():
+  try:
+    output = check_output(["/bin/systemctl", "status", "systemd-shutdownd.service"]).decode()
+    return output
+  except CalledProcessError:
+    return None
 
 def check_shutdown():
-  try:
-    cmd = check_output(["/bin/systemctl","status","systemd-shutdownd.service"])
-    #Shutodwn is scheduled
-    r = re.findall(r'Status: \"(.*)\"\n', cmd.decode())[0]
-    print(r)
-  except CalledProcessError as e:
-    #Shutdown is not scheduled
-    print("Shutdown is not scheduled")
+  output = get_shutdown_status()
+  if output:
+    r = re.findall(r'Status: \"(.*)\"\n', output)
+    if r:
+        # When available, that line is like
+        # Status: "Shutting down at Thu 1970-01-01 00:00:00 UTC (poweroff)..."
+        print(r[0])
+    else:
+        # Sometimes status string is not available immediately
+        # after service startup
+        print("Poweroff or reboot is scheduled")
+  else:
+    print("Poweroff or reboot is not scheduled")
 
 def cancel_shutdown():
-  try:
-    timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cmd = check_output(["/sbin/shutdown","-c","--no-wall"])
-    message = "Reboot scheduled has been cancelled %s" % timenow
-    #Generate broadcast message about cancel reboot
-    os.system("wall %s" % message)
-  except CalledProcessError as e:
-    sys.exit("Error aborting shutdown: %s" % e)
+  output = get_shutdown_status()
+  if output:
+    try:
+      timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+      cmd = check_output(["/sbin/shutdown","-c","--no-wall"])
+      message = "Scheduled reboot or poweroff has been cancelled %s" % timenow
+      os.system("wall %s" % message)
+    except CalledProcessError as e:
+      sys.exit("Could not cancel a reboot or poweroff: %s" % e)
+  else:
+    print("Reboot or poweroff is not scheduled")
 
 def execute_shutdown(time, reboot = True, ask=True):
   if not ask:
@@ -84,31 +91,29 @@ def execute_shutdown(time, reboot = True, ask=True):
     cmd = check_output(["/sbin/shutdown",action,"now"],stderr=STDOUT)
     print(cmd.decode().split(",",1)[0])
     return
-
-  # Try to extract date from the first argument
-  if len(time) == 1:
-    time = time[0].split(" ",1)
-
-  if len(time) == 1:
-    ts = valid_time(time[0])
-    if time[0].isdigit() or valid_time(time[0]):
-      cmd = check_output(["/sbin/shutdown",action,time[0]],stderr=STDOUT)
+  elif len(time) == 1:
+    # Assume the argument is just time
+    ts = parse_time(time[0])
+    if ts:
+      cmd = check_output(["/sbin/shutdown", action, time[0]], stderr=STDOUT)
     else:
-      sys.exit("Timestamp needs to be in format of 12:34")
-
+      sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
   elif len(time) == 2:
-    ts = valid_time(time[0])
-    ds = valid_date(time[1])
+    # Assume it's date and time
+    ts = parse_time(time[0])
+    ds = parse_date(time[1])
     if ts and ds:
       t = datetime.combine(ds, ts)
       td = t - datetime.now()
       t2 = 1 + int(td.total_seconds())//60 # Get total minutes
-      cmd = check_output(["/sbin/shutdown",action,str(t2)],stderr=STDOUT)
+      cmd = check_output(["/sbin/shutdown", action, str(t2)], stderr=STDOUT)
     else:
-      sys.exit("Timestamp needs to be in format of 12:34\nDatestamp in the format of DD.MM.YY")
+      if not ts:
+        sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
+      else:
+        sys.exit("Invalid time \"{0}\". A valid format is YYYY-MM-DD [HH:MM]".format(time[1]))
   else:
-    sys.exit("Could not decode time and date")
-
+    sys.exit("Could not decode date and time. Valids formats are HH:MM or YYYY-MM-DD HH:MM")
   check_shutdown()
 
 def chk_vyatta_based_reboots():
@@ -117,7 +122,7 @@ def chk_vyatta_based_reboots():
   ### name is the node of scheduled the job, commit-confirm checks for that
 
   f = r'/var/run/confirm.job'
-  if os .path.exists(f):
+  if os.path.exists(f):
     jid = open(f).read().strip()
     if jid != 0:
       subprocess.call(['sudo', 'atrm', jid])
@@ -126,7 +131,7 @@ def chk_vyatta_based_reboots():
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("--yes", "-y",
-            help="dont as for shutdown",
+            help="Do not ask for confirmation",
             action="store_true",
             dest="yes")
   action = parser.add_mutually_exclusive_group(required=True)
@@ -164,3 +169,4 @@ def main():
 
 if __name__ == "__main__":
   main()
+

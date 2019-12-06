@@ -169,6 +169,10 @@ def get_config():
                     if key_eff != key_cfg and key_eff != None:
                         wg['peer_remove'].append(key_cfg)
 
+                # if a peer is disabled, we have to exec a remove for it's pubkey
+                else:
+                  peer_key = c.return_value('peer {peer} pubkey'.format(peer=p))
+                  wg['peer_remove'].append(peer_key)
     return wg
 
 
@@ -190,6 +194,7 @@ def verify(c):
                 raise ConfigError("ERROR: allowed-ips required for peer " + p)
             if not c['peer'][p]['pubkey']:
                 raise ConfigError("peer pubkey required for peer " + p)
+
 
 def apply(c):
     # no wg configs left, remove all interface from system

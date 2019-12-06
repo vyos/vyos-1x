@@ -160,7 +160,10 @@ class Config(object):
         # and path supplied as method argument
         # XXX: for small strings in-place concatenation is not a problem
         if isinstance(path, str):
-            self._level = re.split(r'\s+', path)
+            if path:
+                self._level = re.split(r'\s*', path)
+            else:
+                self._level = []
         elif isinstance(path, list):
             self._level = path
         else:

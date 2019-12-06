@@ -615,8 +615,6 @@ class Interface:
         >>> j.set_dhcpv6()
         """
         dhcpv6 = self.get_dhcpv6_options()
-        import pprint
-        pprint.pprint(dhcpv6)
 
         # better save then sorry .. should be checked in interface script
         # but if you missed it we are safe!
@@ -629,33 +627,32 @@ class Interface:
         with open(self._dhcpv6_cfg_file, 'w') as f:
             f.write(dhcpv6_text)
 
-        if self.get_state() == 'up':
-            # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
-            #
-            # wee need to wait for IPv6 DAD to finish once and interface is added
-            # this suxx :-(
-            sleep(5)
+        # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
+        #
+        # wee need to wait for IPv6 DAD to finish once and interface is added
+        # this suxx :-(
+        sleep(5)
 
-            # no longer accept router announcements on this interface
-            self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
-                  .format(self._ifname), 0)
+        # no longer accept router announcements on this interface
+        self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
+              .format(self._ifname), 0)
 
-            # assemble command-line to start DHCPv6 client (dhclient)
-            cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-                self._dhcpv6_pid_file
-            cmd += ' --exec /sbin/dhclient --'
-            # now pass arguments to dhclient binary
-            cmd += ' -6 -nw -cf {} -pf {} -lf {}'.format(
-                self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file)
+        # assemble command-line to start DHCPv6 client (dhclient)
+        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
+            self._dhcpv6_pid_file
+        cmd += ' --exec /sbin/dhclient --'
+        # now pass arguments to dhclient binary
+        cmd += ' -6 -nw -cf {} -pf {} -lf {}'.format(
+            self._dhcpv6_cfg_file, self._dhcpv6_pid_file, self._dhcpv6_lease_file)
 
-            # add optional arguments
-            if dhcpv6['dhcpv6_prm_only']:
-                cmd += ' -S'
-            if dhcpv6['dhcpv6_temporary']:
-                cmd += ' -T'
+        # add optional arguments
+        if dhcpv6['dhcpv6_prm_only']:
+            cmd += ' -S'
+        if dhcpv6['dhcpv6_temporary']:
+            cmd += ' -T'
 
-            cmd += ' {}'.format(self._ifname)
-            return self._cmd(cmd)
+        cmd += ' {}'.format(self._ifname)
+        return self._cmd(cmd)
 
 
     def _del_dhcpv6(self):
