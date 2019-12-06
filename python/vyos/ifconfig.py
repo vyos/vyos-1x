@@ -615,8 +615,6 @@ class Interface:
         >>> j.set_dhcpv6()
         """
         dhcpv6 = self.get_dhcpv6_options()
-        import pprint
-        pprint.pprint(dhcpv6)
 
         # better save then sorry .. should be checked in interface script
         # but if you missed it we are safe!
