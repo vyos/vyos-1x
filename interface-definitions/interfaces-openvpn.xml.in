@@ -33,11 +33,7 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="description">
-            <properties>
-              <help>Description</help>
-            </properties>
-          </leafNode>
+          #include <include/interface-description.xml.i>
           <leafNode name="device-type">
             <properties>
               <help>OpenVPN interface device-type</help>
@@ -57,12 +53,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-disable.xml.i>
           <node name="encryption">
             <properties>
               <help>Data Encryption settings</help>
@@ -610,7 +601,7 @@
               </leafNode>
               <leafNode name="key-file">
                 <properties>
-                  <help>File containing this host's private key</help>
+                  <help>Private key for this host</help>
                   <valueHelp>
                     <format>file</format>
                     <description>File in /config/auth directory</description>
@@ -645,7 +636,7 @@
               </leafNode>
               <leafNode name="role">
                 <properties>
-                  <help>File containing this host's private key</help>
+                  <help>Private key for this host</help>
                   <completionHelp>
                     <list>active passive</list>
                   </completionHelp>

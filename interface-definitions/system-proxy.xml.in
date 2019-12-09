@@ -11,7 +11,7 @@
             <properties>
               <help>Proxy URL</help>
               <constraint>
-                <regex>^http://[a-z0-9\.]+$</regex>
+                <regex>http://[a-z0-9\.]+$</regex>
               </constraint>
             </properties>
           </leafNode>

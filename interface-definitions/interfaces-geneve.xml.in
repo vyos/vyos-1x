@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="geneve" owner="${vyos_conf_scripts_dir}/interfaces-geneve.py">
+        <properties>
+          <help>Generic Network Virtualization Encapsulation (GENEVE)</help>
+          <priority>460</priority>
+          <constraint>
+            <regex>gnv[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>GENEVE interface must be named gnvN</constraintErrorMessage>
+          <valueHelp>
+            <format>gnvN</format>
+            <description>GENEVE interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/address-ipv4-ipv6.xml.i>
+          #include <include/interface-description.xml.i>
+          #include <include/interface-disable.xml.i>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface-arp-cache-timeout.xml.i>
+              #include <include/interface-enable-proxy-arp.xml.i>
+            </children>
+          </node>
+          #include <include/interface-mtu-1450-9000.xml.i>
+          <leafNode name="remote">
+            <properties>
+              <help>Remote address of GENEVE tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote address of GENEVE tunnel</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="vni">
+            <properties>
+              <help>Virtual Network Identifier</help>
+              <valueHelp>
+                <format>0-16777214</format>
+                <description>GENEVE virtual network identifier</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-16777214"/>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

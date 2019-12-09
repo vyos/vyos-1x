@@ -289,7 +289,7 @@
                   </leafNode>
                   <leafNode name="fail-time">
                     <properties>
-                      <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                      <help>If server does not respond, mark it unavailable for this time (seconds)</help>
                     </properties>
                   </leafNode>
                 </children>
