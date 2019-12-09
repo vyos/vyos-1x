@@ -107,7 +107,7 @@ class Config(object):
         # Session config ("active") only exists in conf mode.
         # In op mode, we'll just use the same running config for both active and session configs.
         if self.in_session():
-            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', 'showConfig'])
+            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
             session_config_text = running_config_text
 
