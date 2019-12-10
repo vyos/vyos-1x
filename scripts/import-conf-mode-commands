@@ -34,9 +34,10 @@ TAG_NODE = 2
 
 def parse_command_data(t):
     regs = {
-      'help': r'\bhelp:(.*)(?:\n|$)',
-      'priority': r'\bpriority:(.*)(?:\n|$)',
-      'type': r'\btype:(.*)(?:\n|$)'
+        'help': r'\bhelp:(.*)(?:\n|$)',
+        'priority': r'\bpriority:(.*)(?:\n|$)',
+        'type': r'\btype:(.*)(?:\n|$)',
+        'syntax_expression_var': r'\bsyntax:expression: \$VAR\(\@\) in (.*)'
     }
 
     data = {'multi': False, 'help': ""}
@@ -128,6 +129,20 @@ def walk(tree, base_path, name):
     # Create it now, we'll modify it in the next two cases, then append
     constraint_elem = etree.Element('constraint')
     has_constraint = False
+
+    # Add regexp field for multiple options
+    if data['syntax_expression_var']:
+        regex = etree.Element('regex')
+        constraint_error=etree.Element('constraintErrorMessage')
+        values = re.search(r'(.+) ; (.+)', data['syntax_expression_var']).group(1)
+        message = re.search(r'(.+) ; (.+)', data['syntax_expression_var']).group(2)
+        values = re.findall(r'\"(.+?)\"', values)
+        regex.text = '|'.join(values)
+        constraint_error.text = re.sub('\".*?VAR.*?\"', '', message)
+        constraint_error.text = re.sub(r'[\"|\\]', '', message)
+        constraint_elem.append(regex)
+        props_elem.append(constraint_elem)
+        props_elem.append(constraint_error)
 
     if data['val_help']:
         for vh in data['val_help']:
