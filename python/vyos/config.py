@@ -195,7 +195,7 @@ class Config(object):
             # libvyosconfig exists() works only for _nodes_, not _values_
             # libvyattacfg one also worked for values, so we emulate that case here
             if isinstance(path, str):
-                path = re.split(r'\s*', path)
+                path = re.split(r'\s+', path)
             path_without_value = path[:-1]
             path_str = " ".join(path_without_value)
             try:
