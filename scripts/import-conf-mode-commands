@@ -74,7 +74,7 @@ def walk(tree, base_path, name):
     # Tag node dirs will always have 'node.tag' subdir and 'node.def' file
     # Leaf node dirs have nothing but a 'node.def' file
     # Everything that doesn't match either of these patterns is a normal node
-    if contents == ['node.tag', 'node.def']:
+    if 'node.tag' in contents:
         print("Creating a tag node from {0}".format(path))
         elem = etree.Element('tagNode')
         node_type = TAG_NODE
