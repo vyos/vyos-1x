@@ -16,6 +16,7 @@
 import os
 import re
 import grp
+import sys
 import time
 import subprocess
 
@@ -176,3 +177,17 @@ def wait_for_commit_lock():
     while commit_in_progress():
         time.sleep(1)
 
+def ask_yes_no(question, default=False) -> bool:
+    """Ask a yes/no question via input() and return their answer."""
+    default_msg = "[Y/n]" if default else "[y/N]"
+    while True:
+        sys.stdout.write("%s %s " % (question, default_msg))
+        c = input().lower().strip()
+        if c == '':
+            return default
+        elif c in ("y", "ye", "yes"):
+            return True
+        elif c in ("n", "no"):
+            return False
+        else:
+            sys.stdout.write("Please respond with yes/y or no/n\n")
