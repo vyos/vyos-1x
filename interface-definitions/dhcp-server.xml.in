@@ -414,7 +414,7 @@
                   </leafNode>
                   <leafNode name="time-offset">
                     <properties>
-                      <help>Offset of the client's subnet in seconds from Coordinated Universal Time (UTC)</help>
+                      <help>Client subnet offset in seconds from Coordinated Universal Time (UTC)</help>
                       <valueHelp>
                         <format>[-]N</format>
                         <description>Time offset (number, may be negative)</description>

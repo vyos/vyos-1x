@@ -1,23 +1,48 @@
 TMPL_DIR := templates-cfg
 OP_TMPL_DIR := templates-op
+BUILD_DIR := build
+CFLAGS :=
+
+src = $(wildcard interface-definitions/*.xml.in)
+obj = $(src:.xml.in=.xml)
+
+%.xml: %.xml.in
+	@echo Generating $(BUILD_DIR)/$@ from $<
+	# -ansi      This turns off certain features of GCC that are incompatible
+	#            with ISO C90. Without this regexes containing '/' as in an URL
+	#            won't work
+	# -x c       By default GCC guesses the input language from its file extension,
+	#            thus XML is unknown. Force it to C language
+	# -E         Stop after the preprocessing stage
+	# -undef     Do not predefine any system-specific or GCC-specific macros.
+	# -nostdinc  Do not search the standard system directories for header files
+	# -P         Inhibit generation of linemarkers in the output from the
+	#            preprocessor
+	@$(CC) -ansi -x c -E -undef -nostdinc -P -I$(CURDIR)/interface-definitions -o $(BUILD_DIR)/$@ -c $<
+
+$(BUILD_DIR):
+	install -d -m 0755 $(BUILD_DIR)/interface-definitions
+	install -d -m 0755 $(BUILD_DIR)/op-mode-definitions
 
 .PHONY: interface_definitions
 .ONESHELL:
-interface_definitions:
+interface_definitions: $(BUILD_DIR) $(obj)
 	mkdir -p $(TMPL_DIR)
 
-	find $(CURDIR)/interface-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
+	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/interfaces/node.def
 	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/bridge/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -f $(TMPL_DIR)/protocols/static/node.def
 	rm -f $(TMPL_DIR)/system/node.def
@@ -56,8 +81,9 @@ all: clean interface_definitions op_mode_definitions
 
 .PHONY: clean
 clean:
-	rm -rf $(TMPL_DIR)/*
-	rm -rf $(OP_TMPL_DIR)/*
+	rm -rf $(BUILD_DIR)
+	rm -rf $(TMPL_DIR)
+	rm -rf $(OP_TMPL_DIR)
 
 .PHONY: test
 test:

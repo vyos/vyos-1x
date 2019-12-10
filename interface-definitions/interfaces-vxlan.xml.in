@@ -16,38 +16,9 @@
           </valueHelp>
         </properties>
         <children>
-          <leafNode name="address">
-            <properties>
-              <help>IP address</help>
-              <valueHelp>
-                <format>ipv4net</format>
-                <description>IPv4 address and prefix length</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6net</format>
-                <description>IPv6 address and prefix length</description>
-              </valueHelp>
-              <multi/>
-              <constraint>
-                <validator name="ip-cidr"/>
-              </constraint>
-            </properties>
-          </leafNode>
-          <leafNode name="description">
-            <properties>
-              <help>Interface description</help>
-              <constraint>
-                <regex>^.{1,256}$</regex>
-              </constraint>
-              <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
-            </properties>
-          </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/address-ipv4-ipv6.xml.i>
+          #include <include/interface-description.xml.i>
+          #include <include/interface-disable.xml.i>
           <leafNode name="group">
             <properties>
               <help>Multicast group address for VXLAN interface</help>
@@ -62,25 +33,8 @@
           </leafNode>
           <node name="ip">
             <children>
-              <leafNode name="arp-cache-timeout">
-                <properties>
-                  <help>ARP cache entry timeout in seconds</help>
-                  <valueHelp>
-                    <format>1-86400</format>
-                    <description>ARP cache entry timout in seconds (default 30)</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-86400"/>
-                  </constraint>
-                  <constraintErrorMessage>ARP cache entry timeout must be between 1 and 86400 seconds</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="enable-proxy-arp">
-                <properties>
-                  <help>Enable proxy-arp on this interface</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/interface-arp-cache-timeout.xml.i>
+              #include <include/interface-enable-proxy-arp.xml.i>
             </children>
           </node>
           <leafNode name="link">
@@ -95,19 +49,7 @@
               </completionHelp>
             </properties>
           </leafNode>
-          <leafNode name="mtu">
-            <properties>
-              <help>Maximum Transmission Unit (MTU)</help>
-              <valueHelp>
-                <format>1450-9000</format>
-                <description>Maximum Transmission Unit</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1450-9000"/>
-              </constraint>
-              <constraintErrorMessage>MTU must be between 1450 and 9000</constraintErrorMessage>
-            </properties>
-          </leafNode>
+          #include <include/interface-mtu-1450-9000.xml.i>
           <leafNode name="remote">
             <properties>
               <help>Remote address of VXLAN tunnel</help>

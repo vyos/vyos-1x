@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="bonding" owner="${vyos_conf_scripts_dir}/interfaces-bonding.py">
+        <properties>
+          <help>Bonding interface name</help>
+          <priority>320</priority>
+          <constraint>
+            <regex>bond[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Bonding interface must be named bondN</constraintErrorMessage>
+          <valueHelp>
+            <format>bondN</format>
+            <description>Bonding interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
+          <node name="arp-monitor">
+            <properties>
+              <help>ARP link monitoring parameters</help>
+            </properties>
+            <children>
+              <leafNode name="interval">
+                <properties>
+                  <help>ARP link monitoring interval</help>
+                  <valueHelp>
+                    <format>0-4294967295</format>
+                    <description>Specifies the ARP link monitoring frequency in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="target">
+                <properties>
+                  <help>IP address used for ARP monitoring</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Network Time Protocol (NTP) IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/interface-description.xml.i>
+          #include <include/dhcp-dhcpv6-options.xml.i>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-disable.xml.i>
+          <leafNode name="hash-policy">
+            <properties>
+              <help>Bonding transmit hash policy</help>
+              <completionHelp>
+                <list>layer2 layer2+3 layer3+4</list>
+              </completionHelp>
+              <valueHelp>
+                <format>layer2</format>
+                <description>use MAC addresses to generate the hash (802.3ad, default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>layer2+3</format>
+                <description>combine MAC address and IP address to make hash</description>
+              </valueHelp>
+              <valueHelp>
+                <format>layer3+4</format>
+                <description>combine IP address and port to make hash</description>
+              </valueHelp>
+              <constraint>
+                <regex>(layer2\+3|layer3\+4|layer2)</regex>
+              </constraint>
+              <constraintErrorMessage>hash-policy must be layer2 layer2+3 or layer3+4</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="ip">
+            <children>
+              #include <include/interface-arp-cache-timeout.xml.i>
+              #include <include/interface-enable-proxy-arp.xml.i>
+              #include <include/interface-proxy-arp-pvlan.xml.i>
+            </children>
+          </node>
+          #include <include/interface-mac.xml.i>
+          <leafNode name="mode">
+            <properties>
+              <help>Bonding mode</help>
+              <completionHelp>
+                <list>802.3ad active-backup broadcast round-robin transmit-load-balance adaptive-load-balance xor-hash</list>
+              </completionHelp>
+              <valueHelp>
+                <format>802.3ad</format>
+                <description>IEEE 802.3ad Dynamic link aggregation (Default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>active-backup</format>
+                <description>Fault tolerant: only one slave in the bond is active</description>
+              </valueHelp>
+              <valueHelp>
+                <format>broadcast</format>
+                <description>Fault tolerant: transmits everything on all slave interfaces</description>
+              </valueHelp>
+              <valueHelp>
+                <format>round-robin</format>
+                <description>Load balance: transmit packets in sequential order</description>
+              </valueHelp>
+              <valueHelp>
+                <format>transmit-load-balance</format>
+                <description>Load balance: adapts based on transmit load and speed</description>
+              </valueHelp>
+              <valueHelp>
+                <format>adaptive-load-balance</format>
+                <description>Load balance: adapts based on transmit and receive plus ARP</description>
+              </valueHelp>
+              <valueHelp>
+                <format>xor-hash</format>
+                <description>Distribute based on MAC address</description>
+              </valueHelp>
+              <constraint>
+                <regex>(802.3ad|active-backup|broadcast|round-robin|transmit-load-balance|adaptive-load-balance|xor-hash)</regex>
+              </constraint>
+              <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, transmit-load-balance, adaptive-load-balance, or xor</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="member">
+            <properties>
+              <help>Bridge member interfaces</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Member interface name</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --bondable</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/interface-mtu-68-9000.xml.i>
+          <leafNode name="primary">
+            <properties>
+              <help>Primary device interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py --bondable</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          #include <include/vif-s.xml.i>
+          #include <include/vif.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

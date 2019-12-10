@@ -28,7 +28,7 @@
                 <regex>^[a-zA-Z0-9]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
-            </properties>  
+            </properties>
           </leafNode>
           <node name="authentication">
             <properties>
@@ -127,7 +127,7 @@
                   </leafNode>
                   <leafNode name="fail-time">
                     <properties>
-                      <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                      <help>If server does not responds mark it as unavailable for this amount of time in seconds</help>
                     </properties>
                   </leafNode>
                 </children>
@@ -293,7 +293,7 @@
               </properties>
             </leafNode>
             </children>
-          </node> 
+          </node>
            <node name="dnsv6-servers">
             <properties>
               <help>IPv6 Domain Name Service (DNS) server</help>
@@ -481,7 +481,7 @@
                   </leafNode>
                   <leafNode name="prefer">
                     <properties>
-                      <help>Ask client for MPPE, if it rejects don't fail</help>
+                      <help>Ask client for MPPE, if it rejects do not fail</help>
                       <valueless />
                     </properties>
                   </leafNode>
@@ -526,7 +526,7 @@
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>
                     <format>deny</format>
-                    <description>Don't negotiate IPv4</description>
+                    <description>Do not negotiate IPv4</description>
                   </valueHelp>
                   <valueHelp>
                     <format>allow</format>
@@ -534,7 +534,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>prefer</format>
-                    <description>Ask client for IPv4 negotiation, don't fail if it rejects</description>
+                    <description>Ask client for IPv4 negotiation, do not fail if it rejects</description>
                   </valueHelp>
                   <valueHelp>
                     <format>require</format>
@@ -551,7 +551,7 @@
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>
                     <format>deny</format>
-                    <description>Don't negotiate IPv6</description>
+                    <description>Do not negotiate IPv6</description>
                   </valueHelp>
                   <valueHelp>
                     <format>allow</format>
@@ -559,7 +559,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>prefer</format>
-                    <description>Ask client for IPv6 negotiation, don't fail if it rejects</description>
+                    <description>Ask client for IPv6 negotiation, do not fail if it rejects</description>
                   </valueHelp>
                   <valueHelp>
                     <format>require</format>
@@ -603,8 +603,8 @@
               </leafNode>
               <leafNode name="ipv6-accept-peer-intf-id">
                 <properties>
-                  <help>Accept peer's interface identifier</help>
-                  <valueless /> 
+                  <help>Accept peer interface identifier</help>
+                  <valueless />
                 </properties>
               </leafNode>
             </children>

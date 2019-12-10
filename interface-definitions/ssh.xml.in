@@ -83,7 +83,7 @@
           </leafNode>
           <leafNode name="disable-host-validation">
             <properties>
-              <help>Don't validate the remote host name with DNS</help>
+              <help>Disable IP Address to Hostname lookup</help>
               <valueless/>
             </properties>
           </leafNode>
@@ -171,7 +171,7 @@
             <properties>
               <help>how often send keep alives in seconds</help>
               <constraint>
-                <validator name="numeric" argument="--range 1-65535"/> 
+                <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
             </properties>
           </leafNode>

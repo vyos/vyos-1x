@@ -300,7 +300,7 @@
                           <constraint>
                             <regex>([0-9A-Fa-f]{1,2}[:])*([0-9A-Fa-f]{1,2})</regex>
                           </constraint>
-                          <constraintErrorMessage>Invalid DUID. Must be in the format h[[:h]...] where each \"h\" is 1 to 2 hex characters.</constraintErrorMessage>
+                          <constraintErrorMessage>Invalid DUID, must be in the format h[[:h]...]</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="ipv6-address">

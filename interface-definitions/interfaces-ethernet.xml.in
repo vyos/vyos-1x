@@ -1,0 +1,273 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="ethernet" owner="${vyos_conf_scripts_dir}/interfaces-ethernet.py">
+        <properties>
+          <help>Ethernet interface name</help>
+          <priority>318</priority>
+          <constraint>
+            <regex>((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$</regex>
+          </constraint>
+          <constraintErrorMessage>Invalid Ethernet interface name</constraintErrorMessage>
+          <valueHelp>
+            <format>ethN</format>
+            <description>Ethernet interface name</description>
+          </valueHelp>
+          <valueHelp>
+            <format>en[ospx]N</format>
+            <description>Ethernet interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/interface-description.xml.i>
+          #include <include/dhcp-dhcpv6-options.xml.i>
+          <leafNode name="disable-flow-control">
+            <properties>
+              <help>Disable Ethernet flow control (pause frames)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-disable.xml.i>
+          <leafNode name="duplex">
+            <properties>
+              <help>Duplex mode</help>
+              <completionHelp>
+                <list>auto half full</list>
+              </completionHelp>
+              <valueHelp>
+                <format>auto</format>
+                <description>Auto negotiation (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>half</format>
+                <description>Half duplex</description>
+              </valueHelp>
+              <valueHelp>
+                <format>full</format>
+                <description>Full duplex</description>
+              </valueHelp>
+              <constraint>
+                <regex>(auto|half|full)</regex>
+              </constraint>
+              <constraintErrorMessage>duplex must be auto, half or full</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="hw-id">
+            <properties>
+              <help>Media Access Control (MAC) address</help>
+              <valueHelp>
+                <format>h:h:h:h:h:h</format>
+                <description>Hardware (MAC) address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="mac-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="ip">
+            <children>
+              #include <include/interface-arp-cache-timeout.xml.i>
+              #include <include/interface-enable-proxy-arp.xml.i>
+              #include <include/interface-proxy-arp-pvlan.xml.i>
+            </children>
+          </node>
+          #include <include/interface-mac.xml.i>
+          #include <include/interface-mtu-68-9000.xml.i>
+          <node name="offload-options">
+            <properties>
+              <help>Configurable offload options</help>
+            </properties>
+            <children>
+              <leafNode name="generic-receive">
+                <properties>
+                  <help>Configure GRO (generic receive offload)</help>
+                  <completionHelp>
+                    <list>on off</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>on</format>
+                    <description>Enable GRO (generic receive offload)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>off</format>
+                    <description>Disable GRO (generic receive offload)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(on|off)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="generic-segmentation">
+                <properties>
+                  <help>Configure GSO (generic segmentation offload)</help>
+                  <completionHelp>
+                    <list>on off</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>on</format>
+                    <description>Enable GSO (generic segmentation offload)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>off</format>
+                    <description>Disable GSO (generic segmentation offload)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(on|off)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="scatter-gather">
+                <properties>
+                  <help>Configure scatter-gather option</help>
+                  <completionHelp>
+                    <list>on off</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>on</format>
+                    <description>Enable scatter-gather</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>off</format>
+                    <description>Disable scatter-gather</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(on|off)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="tcp-segmentation">
+                <properties>
+                  <help>Configure TSO (TCP segmentation offloading)</help>
+                  <completionHelp>
+                    <list>on off</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>on</format>
+                    <description>Enable TSO (TCP segmentation offloading)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>off</format>
+                    <description>Disable TSO (TCP segmentation offloading)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(on|off)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="udp-fragmentation">
+                <properties>
+                  <help>Configure UDP fragmentation offloading</help>
+                  <completionHelp>
+                    <list>on off</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>on</format>
+                    <description>Enable UDP fragmentation offloading</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>off</format>
+                    <description>Disable UDP fragmentation offloading</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(on|off)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="smp-affinity">
+            <properties>
+              <help>CPU interrupt affinity mask</help>
+              <completionHelp>
+                <list>auto 10 100 1000 2500 5000 10000</list>
+              </completionHelp>
+              <valueHelp>
+                <format>auto</format>
+                <description>Auto negotiation (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hex</format>
+                <description>Bitmask representing CPUs that this NIC will interrupt</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hex,hex</format>
+                <description>Bitmasks representing CPUs for interrupt and receive processing</description>
+              </valueHelp>
+              <constraint>
+                <regex>(auto)</regex>
+                <regex>[0-9a-f]+(|,[0-9a-f]+)$</regex>
+              </constraint>
+              <constraintErrorMessage>IRQ affinity mask must be hex value or auto</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="speed">
+            <properties>
+              <help>Link speed</help>
+              <completionHelp>
+                <list>auto 10 100 1000 2500 5000 10000 25000 40000 50000 100000</list>
+              </completionHelp>
+              <valueHelp>
+                <format>auto</format>
+                <description>Auto negotiation (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>10</format>
+                <description>10 Mbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>100</format>
+                <description>100 Mbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>1000</format>
+                <description>1 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>2500</format>
+                <description>2.5 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>5000</format>
+                <description>5 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>10000</format>
+                <description>10 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>25000</format>
+                <description>25 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>40000</format>
+                <description>40 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>50000</format>
+                <description>50 Gbit/sec</description>
+              </valueHelp>
+              <valueHelp>
+                <format>100000</format>
+                <description>100 Gbit/sec</description>
+              </valueHelp>
+              <constraint>
+                <regex>(auto|10|100|1000|2500|5000|10000|25000|40000|50000|100000)</regex>
+              </constraint>
+              <constraintErrorMessage>Speed must be auto, 10, 100, 1000, 2500, 5000, 10000, 25000, 40000, 50000 or 100000</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/vif-s.xml.i>
+          #include <include/vif.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

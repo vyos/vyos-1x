@@ -107,7 +107,7 @@ class Config(object):
         # Session config ("active") only exists in conf mode.
         # In op mode, we'll just use the same running config for both active and session configs.
         if self.in_session():
-            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', 'showConfig'])
+            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
             session_config_text = running_config_text
 
@@ -194,7 +194,8 @@ class Config(object):
         else:
             # libvyosconfig exists() works only for _nodes_, not _values_
             # libvyattacfg one also worked for values, so we emulate that case here
-            path = re.split(r'\s+', path)
+            if isinstance(path, str):
+                path = re.split(r'\s*', path)
             path_without_value = path[:-1]
             path_str = " ".join(path_without_value)
             try:

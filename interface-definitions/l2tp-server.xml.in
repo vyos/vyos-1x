@@ -359,7 +359,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>prefer</format>
-                        <description>ask client for mppe, if it rejects don't fail</description>
+                        <description>Ask client for mppe, if it rejects do not fail</description>
                       </valueHelp>
                       <valueHelp>
                         <format>require</format>
@@ -471,7 +471,7 @@
                           </leafNode>
                           <leafNode name="fail-time">
                             <properties>
-                              <help>If server doesn't responds mark it as unavailable for this amount of time in seconds</help>
+                              <help>If server doesn not responds mark it unavailable for this time (seconds)</help>
                             </properties>
                           </leafNode>
                         </children>
