@@ -99,7 +99,7 @@ class Config(object):
         # Running config can be obtained either from op or conf mode, it always succeeds
         # (if config system is initialized at all).
         if os.path.isfile('/tmp/vyos-config-status'):
-            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', 'showConfig'])
+            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
             with open('/opt/vyatta/etc/config/config.boot') as f:
                 running_config_text = f.read()
