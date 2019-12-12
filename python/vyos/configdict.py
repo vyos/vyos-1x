@@ -179,16 +179,18 @@ def vlan_to_dict(conf):
         vlan['egress_qos'] = conf.return_value('egress-qos')
 
     # egress changes QoS require VLAN interface recreation
-    if vlan['egress_qos'] != conf.return_effective_value('egress-qos'):
-        vlan['egress_qos_changed'] = True
+    if conf.return_effective_value('egress-qos'):
+        if vlan['egress_qos'] != conf.return_effective_value('egress-qos'):
+            vlan['egress_qos_changed'] = True
 
     # VLAN ingress QoS
     if conf.exists('ingress-qos'):
         vlan['ingress_qos'] = conf.return_value('ingress-qos')
 
     # ingress changes QoS require VLAN interface recreation
-    if vlan['ingress_qos'] != conf.return_effective_value('ingress-qos'):
-        vlan['ingress_qos_changed'] = True
+    if conf.return_effective_value('ingress-qos'):
+        if vlan['ingress_qos'] != conf.return_effective_value('ingress-qos'):
+            vlan['ingress_qos_changed'] = True
 
     # ethertype is mandatory on vif-s nodes and only exists here!
     # check if this is a vif-s node at all:
