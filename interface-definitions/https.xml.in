@@ -51,30 +51,6 @@
               </leafNode>
             </children>
           </tagNode>
-          <node name="certificates">
-            <properties>
-              <help>TLS certificates</help>
-            </properties>
-            <children>
-              <node name="system-generated-certificate" owner="${vyos_conf_scripts_dir}/vyos_cert.py">
-                <properties>
-                  <help>Use an automatically generated self-signed certificate</help>
-                  <valueless/>
-                </properties>
-                <children>
-                  <leafNode name="lifetime">
-                    <properties>
-                      <help>Lifetime in days; default is 365</help>
-                      <valueHelp>
-                        <format>1-65535</format>
-                        <description>Number of days</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
-            </children>
-          </node>
           <node name="api" owner="${vyos_conf_scripts_dir}/http-api.py">
             <properties>
               <help>VyOS HTTP API configuration</help>
@@ -125,6 +101,29 @@
                   <hidden/>
                 </properties>
               </leafNode>
+            </children>
+          </node>
+          <node name="certificates">
+            <properties>
+              <help>TLS certificates</help>
+            </properties>
+            <children>
+              <node name="system-generated-certificate" owner="${vyos_conf_scripts_dir}/vyos_cert.py">
+                <properties>
+                  <help>Use an automatically generated self-signed certificate</help>
+                </properties>
+                <children>
+                  <leafNode name="lifetime">
+                    <properties>
+                      <help>Lifetime in days; default is 365</help>
+                      <valueHelp>
+                        <format>1-65535</format>
+                        <description>Number of days</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
         </children>
