@@ -81,6 +81,7 @@ Depends: python3,
   crda,
   wireless-regdb,
   pmacct (>= 1.6.0),
+  python3-certbot-nginx,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
