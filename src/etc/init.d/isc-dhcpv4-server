@@ -3,22 +3,22 @@
 #
 
 ### BEGIN INIT INFO
-# Provides:          isc-dhcpv6-server
+# Provides:          isc-dhcpv4-server
 # Required-Start:    $remote_fs $network $syslog
 # Required-Stop:     $remote_fs $network $syslog
 # Should-Start:      $local_fs slapd $named
 # Should-Stop:       $local_fs slapd
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: IPv6 DHCP server
-# Description:       Dynamic Host Configuration Protocol Server for IPv6
+# Short-Description: IPv4 DHCP server
+# Description:       Dynamic Host Configuration Protocol Server for IPv4
 ### END INIT INFO
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 test -f /usr/sbin/dhcpd || exit 0
 
-DHCPD_DEFAULT="${DHCPD_DEFAULT:-/etc/default/isc-dhcpv6-server}"
+DHCPD_DEFAULT="${DHCPD_DEFAULT:-/etc/default/isc-dhcpv4-server}"
 
 # It is not safe to start if we don't have a default configuration...
 if [ ! -f "$DHCPD_DEFAULT" ]; then
@@ -31,15 +31,15 @@ fi
 # Read init script configuration
 [ -f "$DHCPD_DEFAULT" ] && . "$DHCPD_DEFAULT"
 
-NAME=dhcpdv6
-DESC="ISC DHCP server IPv6"
+NAME=dhcpd
+DESC="ISC DHCP server"
 # fallback to default config file
-DHCPD_CONF=${DHCPD_CONF:-/etc/dhcp/dhcpdv6.conf}
-# try to read pid file name from config file, with fallback to /var/run/dhcpdv6.pid
+DHCPD_CONF=${DHCPD_CONF:-/etc/dhcp/dhcpd.conf}
+# try to read pid file name from config file, with fallback to /var/run/dhcpd.pid
 if [ -z "$DHCPD_PID" ]; then
 	DHCPD_PID=$(sed -n -e 's/^[ \t]*pid-file-name[ \t]*"(.*)"[ \t]*;.*$/\1/p' < "$DHCPD_CONF" 2>/dev/null | head -n 1)
 fi
-DHCPD_PID="${DHCPD_PID:-/var/run/dhcpdv6.pid}"
+DHCPD_PID="${DHCPD_PID:-/var/run/dhcpd.pid}"
 
 test_config()
 {
@@ -49,7 +49,7 @@ test_config()
 		/usr/sbin/dhcpd -t $OPTIONS -cf "$DHCPD_CONF"
 		exit 1
 	fi
-	touch /var/lib/dhcp/dhcpdv6.leases
+	touch /var/lib/dhcp/dhcpd.leases
 }
 
 # single arg is -v for messages, -q for none
