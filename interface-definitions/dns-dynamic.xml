@@ -120,6 +120,10 @@
                         <format>zoneedit</format>
                         <description>zoneedit.com Services</description>
                       </valueHelp>
+                      <constraint>
+                        <regex>(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Please choose from the list of allowed services</constraintErrorMessage>
                     </properties>
                     <children>
                       <leafNode name="host-name">
@@ -141,10 +145,9 @@
                       <leafNode name="protocol">
                         <properties>
                           <help>ddclient protocol used for DDNS service [REQUIRED FOR CUSTOM]</help>
-                          <valueHelp>
-                            <format>protocol</format>
-                            <description>ddclient protocol</description>
-                          </valueHelp>
+                          <completionHelp>
+                              <list>changeip cloudflare dnspark dslreports1 dyndns2 easydns namecheap noip sitelutions zoneedit1</list>
+                          </completionHelp>
                           <valueHelp>
                             <format>changeip</format>
                             <description>changeip protocol</description>
@@ -185,6 +188,10 @@
                             <format>zoneedit1</format>
                             <description>zoneedit1 protocol</description>
                           </valueHelp>
+                          <constraint>
+                            <regex>(changeip|cloudflare|dnspark|dslreports1|dyndns2|easydns|namecheap|noip|sitelutions|zoneedit1)</regex>
+                          </constraint>
+                          <constraintErrorMessage>Please choose from the list of allowed protocols</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="server">
