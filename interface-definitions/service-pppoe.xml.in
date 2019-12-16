@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/accel_pppoe.py">
+      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/service-pppoe.py">
         <properties>
           <help>Point to Point over Ethernet (PPPoE) Server</help>
           <priority>900</priority>
