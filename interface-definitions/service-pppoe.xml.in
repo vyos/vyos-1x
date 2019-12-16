@@ -30,6 +30,26 @@
               <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="session-control">
+            <properties>
+              <help>control sessions count</help>
+              <constraint>
+                <regex>(deny|disable)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid value</constraintErrorMessage>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disables session control</description>
+              </valueHelp>
+              <valueHelp>
+                <format>deny</format>
+                <description>Deny second session authorization</description>
+              </valueHelp>
+              <completionHelp>
+                <list>deny disable</list>
+              </completionHelp>
+            </properties>
+          </leafNode>
           <node name="authentication">
             <properties>
               <help>Authentication for remote access PPPoE Server</help>
