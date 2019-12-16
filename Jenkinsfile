@@ -88,8 +88,16 @@ pipeline {
             steps {
                 script {
                     dir('build') {
-                        git branch: getGitBranchName(),
-                            url: getGitRepoURL()
+                        scm {
+                            git {
+                                remote {
+                                    name(getGitRepoName())
+                                    url(getGitRepoURL())
+                                    refspec('+refs/pull/*:refs/remotes/origin/pr/*')
+                                }
+                                branch('${sha1}')
+                            }
+                        }
                     }
                 }
             }

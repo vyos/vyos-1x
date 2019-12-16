@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/accel_pppoe.py">
+      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/service-pppoe.py">
         <properties>
           <help>Point to Point over Ethernet (PPPoE) Server</help>
           <priority>900</priority>
@@ -28,6 +28,26 @@
                 <regex>^[a-zA-Z0-9]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="session-control">
+            <properties>
+              <help>control sessions count</help>
+              <constraint>
+                <regex>(deny|disable)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid value</constraintErrorMessage>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disables session control</description>
+              </valueHelp>
+              <valueHelp>
+                <format>deny</format>
+                <description>Deny second session authorization</description>
+              </valueHelp>
+              <completionHelp>
+                <list>deny disable</list>
+              </completionHelp>
             </properties>
           </leafNode>
           <node name="authentication">
