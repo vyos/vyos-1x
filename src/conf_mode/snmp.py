@@ -552,7 +552,7 @@ def verify(snmp):
             if not os.path.isfile(ext['script']):
                 print ("WARNING: script: {} doesn't exist".format(ext['script']))
             else:
-                os.chmod(ext['script'], S_IRWXU|S_IXGRP|S_IXOTH)
+                os.chmod(ext['script'], S_IRWXU|S_IXGRP|S_IXOTH|stat.S_IROTH)
 
     for listen in snmp['listen_address']:
         addr = listen[0]
