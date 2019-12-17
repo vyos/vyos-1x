@@ -88,14 +88,8 @@ pipeline {
             steps {
                 script {
                     dir('build') {
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: getGitBranchName()]],
-                            doGenerateSubmoduleConfigurations: false,
-                            extensions: [[$class: 'CleanCheckout']],
-                            submoduleCfg: [],
-                            userRemoteConfigs: [[refspec: "+refs/pull/*:refs/remotes/origin/* +refs/heads/*:refs/remotes/origin/*", url: getGitRepoURL()]]
-                        ])
+                        git branch: getGitBranchName(),
+                            url: getGitRepoURL()
                     }
                 }
             }
