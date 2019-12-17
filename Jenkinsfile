@@ -88,16 +88,18 @@ pipeline {
             steps {
                 script {
                     dir('build') {
-                        scm {
-                            git {
-                                remote {
-                                    name(getGitRepoName())
-                                    url(getGitRepoURL())
-                                    refspec('+refs/pull/*:refs/remotes/origin/pr/*')
-                                }
-                                branch('${sha1}')
-                            }
-                        }
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: getGitBranchName()]],
+                            doGenerateSubmoduleConfigurations: false,
+                            extensions: [[$class: 'CleanCheckout']],
+                            submoduleCfg: [],
+                            userRemoteConfigs: [[
+                                refspec: '+refs/pull/*/head' +
+                                         ':refs/remotes/origin/*',
+                                url: getGitRepoURL()
+                            ]]
+                        ])
                     }
                 }
             }
