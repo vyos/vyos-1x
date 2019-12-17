@@ -94,11 +94,7 @@ pipeline {
                             doGenerateSubmoduleConfigurations: false,
                             extensions: [[$class: 'CleanCheckout']],
                             submoduleCfg: [],
-                            userRemoteConfigs: [[
-                                refspec: '+refs/pull/*/head' +
-                                         ':refs/remotes/origin/*',
-                                url: getGitRepoURL()
-                            ]]
+                            userRemoteConfigs: [[refspec: "+refs/pull/*/head:refs/remotes/origin/PR-* +refs/heads/*:refs/remotes/origin/*", url: getGitRepoURL()]]
                         ])
                     }
                 }
