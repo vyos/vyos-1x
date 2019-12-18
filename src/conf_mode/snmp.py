@@ -36,6 +36,7 @@ config_file_daemon = r'/etc/snmp/snmpd.conf'
 config_file_access = r'/usr/share/snmp/snmpd.conf'
 config_file_user   = r'/var/lib/snmp/snmpd.conf'
 config_file_init   = r'/etc/default/snmpd'
+default_script_dir = r'/config/user-data/'
 
 # SNMP OIDs used to mark auth/priv type
 OIDs = {
@@ -201,7 +202,7 @@ group {{ u.group }} usm {{ u.name }}
 
 {% if script_ext %}
 # extension scripts
-{%- for ext in script_ext|sort %}
+{%- for ext in script_ext|sort(attribute='name') %}
 extend {{ ext.name }} {{ ext.script }}
 {%- endfor %}
 {% endif %}
@@ -348,9 +349,14 @@ def get_config():
     #
     if conf.exists('script-extensions'):
         for extname in conf.list_nodes('script-extensions extension-name'):
+            conf_script = conf.return_value('script-extensions extension-name {} script'.format(extname))
+            # if script has not absolute path, use pre configured path
+            if "/" not in conf_script:
+                conf_script = default_script_dir + conf_script
+
             extension = {
                 'name': extname,
-                'script' : conf.return_value('script-extensions extension-name {} script'.format(extname))
+                'script' : conf_script
             }
 
             snmp['script_ext'].append(extension)
@@ -546,7 +552,7 @@ def verify(snmp):
     if snmp is None:
         return None
 
-    ### check if the configured script actually exist under /config/user-data
+    ### check if the configured script actually exist
     if snmp['script_ext']:
         for ext in snmp['script_ext']:
             if not os.path.isfile(ext['script']):
