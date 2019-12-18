@@ -37,16 +37,11 @@ HostKey /etc/ssh/ssh_host_rsa_key
 HostKey /etc/ssh/ssh_host_dsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
 HostKey /etc/ssh/ssh_host_ed25519_key
-UsePrivilegeSeparation yes
-KeyRegenerationInterval 3600
-ServerKeyBits 1024
 SyslogFacility AUTH
 LoginGraceTime 120
 StrictModes yes
-RSAAuthentication yes
 PubkeyAuthentication yes
 IgnoreRhosts yes
-RhostsRSAAuthentication no
 HostbasedAuthentication no
 PermitEmptyPasswords no
 ChallengeResponseAuthentication no
@@ -58,7 +53,7 @@ TCPKeepAlive yes
 Banner /etc/issue.net
 Subsystem sftp /usr/lib/openssh/sftp-server
 UsePAM yes
-HostKey /etc/ssh/ssh_host_key
+HostKey /etc/ssh/ssh_host_rsa_key
 
 # Specifies whether sshd should look up the remote host name,
 # and to check that the resolved host name for the remote IP

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2019 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -190,7 +190,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
-    if os.system('systemctl -q is-active isc-dhcp-server.service') != 0:
+    if os.system('systemctl -q is-active isc-dhcpv4-server.service') != 0:
         print("WARNING: DHCP server is configured but not started. Data may be stale.")
 
     if args.leases:

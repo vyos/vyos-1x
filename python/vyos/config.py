@@ -126,7 +126,7 @@ class Config(object):
         # It may cause problems with exists() when it's used for checking values,
         # since values may contain whitespace.
         if isinstance(path, str):
-            path = re.split(r'\s*', path)
+            path = re.split(r'\s+', path)
         elif isinstance(path, list):
             pass
         else:
@@ -161,7 +161,7 @@ class Config(object):
         # XXX: for small strings in-place concatenation is not a problem
         if isinstance(path, str):
             if path:
-                self._level = re.split(r'\s*', path)
+                self._level = re.split(r'\s+', path)
             else:
                 self._level = []
         elif isinstance(path, list):
@@ -195,7 +195,7 @@ class Config(object):
             # libvyosconfig exists() works only for _nodes_, not _values_
             # libvyattacfg one also worked for values, so we emulate that case here
             if isinstance(path, str):
-                path = re.split(r'\s*', path)
+                path = re.split(r'\s+', path)
             path_without_value = path[:-1]
             path_str = " ".join(path_without_value)
             try:
