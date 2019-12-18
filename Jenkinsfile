@@ -73,7 +73,7 @@ pipeline {
     agent {
         docker {
             args '--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006'
-            image 'vyos/vyos-build:equuleus'
+            image 'vyos/vyos-build:current'
             alwaysPull true
         }
     }
@@ -123,9 +123,6 @@ pipeline {
                         // every option over and over again!
 
                         def VYOS_REPO_PATH = '/home/sentrium/web/dev.packages.vyos.net/public_html/repositories/' + getGitBranchName() + '/'
-                        if (getGitBranchName() != "equuleus")
-                            VYOS_REPO_PATH += 'vyos/'
-
                         def SSH_OPTS = '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
                         def SSH_REMOTE = 'khagen@10.217.48.113'
 
