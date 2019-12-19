@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="igmp-proxy">
+        <properties>
+          <help>Restart the IGMP proxy process</help>
+        </properties>
+        <command>sudo systemctl restart igmpproxy.service</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
