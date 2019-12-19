@@ -23,12 +23,24 @@ import json
 import signal
 import traceback
 import re
-
+import logging
 import zmq
 
 import jinja2
 
 debug = True
+
+# Configure logging
+logger = logging.getLogger(__name__)
+# set stream as output
+logs_handler = logging.StreamHandler()
+logger.addHandler(logs_handler)
+
+if debug:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+
 
 DATA_DIR = "/var/lib/vyos/"
 STATE_FILE = os.path.join(DATA_DIR, "hostsd.state")
@@ -107,12 +119,12 @@ STATE = {
 
 def make_resolv_conf(data):
     resolv_conf = resolv_tmpl.render(data)
-    print("Writing /etc/resolv.conf")
+    logger.info("Writing /etc/resolv.conf")
     with open(RESOLV_CONF_FILE, 'w') as f:
         f.write(resolv_conf)
 
 def make_hosts_file(state):
-    print("Writing /etc/hosts")
+    logger.info("Writing /etc/hosts")
     hosts = hosts_tmpl.render(state)
     with open(HOSTS_FILE, 'w') as f:
         f.write(hosts)
@@ -228,13 +240,13 @@ def handle_message(msg_json):
     make_resolv_conf(STATE)
     make_hosts_file(STATE)
 
-    print("Saving state to {0}".format(STATE_FILE))
+    logger.info("Saving state to {0}".format(STATE_FILE))
     with open(STATE_FILE, 'w') as f:
         json.dump(STATE, f)
 
 def exit_handler(sig, frame):
     """ Clean up the state when shutdown correctly """
-    print("Cleaning up state")
+    logger.info("Cleaning up state")
     os.unlink(STATE_FILE)
     sys.exit(0)
 
@@ -250,8 +262,8 @@ if __name__ == '__main__':
                 data = json.load(f)
                 STATE = data
             except:
-                print(traceback.format_exc())
-                print("Failed to load the state file, using default")
+                logger.exception(traceback.format_exc())
+                logger.exception("Failed to load the state file, using default")
 
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -260,9 +272,8 @@ if __name__ == '__main__':
     while True:
         #  Wait for next request from client
         message = socket.recv().decode()
-        print("Received a configuration change request")
-        if debug:
-            print("Request data: {0}".format(message))
+        logger.info("Received a configuration change request")
+        logger.debug("Request data: {0}".format(message))
 
         resp = {}
 
@@ -272,11 +283,10 @@ if __name__ == '__main__':
         except ValueError as e:
             resp['error'] = str(e)
         except:
-            print(traceback.format_exc())
+            logger.exception(traceback.format_exc())
             resp['error'] = "Internal error"
 
-        if debug:
-            print("Sent response: {0}".format(resp))
+        logger.debug("Sent response: {0}".format(resp))
 
         #  Send reply back to client
         socket.send(json.dumps(resp).encode())
