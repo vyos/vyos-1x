@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- flow-accounting op mode commands -->
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="flow-accounting">
+        <properties>
+          <help>Show flow accounting statistics</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action show</command>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Show flow accounting statistics for specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action show --interface $4</command>
+            <children>
+              <tagNode name="host">
+                <properties>
+                  <help>Show flow accounting statistics for specified interface/host</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action show --interface $4 --host $6</command>
+              </tagNode>
+              <tagNode name="port">
+                <properties>
+                  <help>Show flow accounting statistics for specified interface/port</help>
+                  <completionHelp>
+                    <list>1-65535</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action show --interface $4 --ports $6</command>
+              </tagNode>
+              <tagNode name="top">
+                <properties>
+                  <help>Show top N flows for specified interface</help>
+                  <completionHelp>
+                    <list>1-100</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action show --interface $4 --top $6</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <leafNode name="flow-accounting">
+        <properties>
+          <help>Restart flow-accounting service</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action restart</command>
+      </leafNode>
+    </children>
+  </node>
+  <node name="clear">
+    <children>
+      <node name="flow-accounting">
+        <properties>
+          <help>Clear flow accounting</help>
+        </properties>
+        <children>
+          <leafNode name="counters">
+            <properties>
+              <help>Clear flow accounting statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action clear</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
