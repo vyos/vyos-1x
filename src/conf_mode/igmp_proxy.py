@@ -20,6 +20,7 @@ import sys
 import os
 import jinja2
 
+from netifaces import interfaces
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -51,11 +52,11 @@ quickleave
 {% endif -%}
 
 {% for interface in interfaces %}
-# Configuration for {{ interface.interface }} ({{ interface.role }} interface)
+# Configuration for {{ interface.name }} ({{ interface.role }} interface)
 {% if interface.role == 'disabled' -%}
-phyint {{ interface.interface }} disabled
+phyint {{ interface.name }} disabled
 {%- else -%}
-phyint {{ interface.interface }} {{ interface.role }} ratelimit 0 threshold {{ interface.threshold }}
+phyint {{ interface.name }} {{ interface.role }} ratelimit 0 threshold {{ interface.threshold }}
 {%- endif -%}
 {%- for subnet in interface.alt_subnet %}
         altnet {{ subnet }}
@@ -91,7 +92,7 @@ def get_config():
     for intf in conf.list_nodes('interface'):
         conf.set_level('protocols igmp-proxy interface {0}'.format(intf))
         interface = {
-            'interface': intf,
+            'name': intf,
             'alt_subnet': [],
             'role': 'downstream',
             'threshold': '1',
@@ -130,6 +131,8 @@ def verify(igmp_proxy):
 
     upstream = 0
     for interface in igmp_proxy['interfaces']:
+        if interface['name'] not in interfaces():
+            raise ConfigError('Interface "{}" does not exist'.format(interface['name']))
         if "upstream" == interface['role']:
             upstream += 1
 
