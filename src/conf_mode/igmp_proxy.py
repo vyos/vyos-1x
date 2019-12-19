@@ -50,17 +50,17 @@ config_tmpl = """
 quickleave
 {% endif -%}
 
-{% for i in interface %}
-# Configuration for {{ i.interface }} ({{ i.role }} interface)
-{% if i.role == 'disabled' -%}
-phyint {{ i.interface }} disabled
+{% for interface in interfaces %}
+# Configuration for {{ interface.interface }} ({{ interface.role }} interface)
+{% if interface.role == 'disabled' -%}
+phyint {{ interface.interface }} disabled
 {%- else -%}
-phyint {{ i.interface }} {{ i.role }} ratelimit 0 threshold {{ i.threshold }}
+phyint {{ interface.interface }} {{ interface.role }} ratelimit 0 threshold {{ interface.threshold }}
 {%- endif -%}
-{%- for subnet in i.alt_subnet %}
+{%- for subnet in interface.alt_subnet %}
         altnet {{ subnet }}
 {%- endfor %}
-{%- for subnet in i.whitelist %}
+{%- for subnet in interface.whitelist %}
         whitelist {{ subnet }}
 {%- endfor %}
 {% endfor %}
@@ -69,7 +69,7 @@ phyint {{ i.interface }} {{ i.role }} ratelimit 0 threshold {{ i.threshold }}
 default_config_data = {
     'disable': False,
     'disable_quickleave': False,
-    'interface': [],
+    'interfaces': [],
 }
 
 def get_config():
@@ -111,7 +111,7 @@ def get_config():
             interface['whitelist'] = conf.return_values('whitelist')
 
         # Append interface configuration to global configuration list
-        igmp_proxy['interface'].append(interface)
+        igmp_proxy['interfaces'].append(interface)
 
     return igmp_proxy
 
@@ -125,12 +125,12 @@ def verify(igmp_proxy):
         return None
 
     # at least two interfaces are required, one upstream and one downstream
-    if len(igmp_proxy['interface']) < 2:
+    if len(igmp_proxy['interfaces']) < 2:
         raise ConfigError('Must define an upstream and at least 1 downstream interface!')
 
     upstream = 0
-    for i in igmp_proxy['interface']:
-        if "upstream" == i['role']:
+    for interface in igmp_proxy['interfaces']:
+        if "upstream" == interface['role']:
             upstream += 1
 
     if upstream == 0:
