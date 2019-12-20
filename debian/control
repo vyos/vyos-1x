@@ -73,6 +73,7 @@ Depends: python3,
   iw,
   crda,
   wireless-regdb,
+  pmacct (>= 1.6.0),
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
