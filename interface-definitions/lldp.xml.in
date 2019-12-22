@@ -233,6 +233,19 @@
                       </leafNode>
                     </children>
                   </node>
+                  <leafNode name="elin">
+                    <properties>
+                      <help>ECS ELIN (Emergency location identifier number)</help>
+                      <valueHelp>
+                        <format>0-9999999999</format>
+                        <description>Emergency Call Service ELIN number (between 10-25 numbers)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[0-9]{10,25}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>ELIN number must be between 10-25 numbers</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
             </children>

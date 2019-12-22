@@ -41,6 +41,13 @@ configure system description "VyOS {{ options.description }}"
 configure system interface pattern "{{ options.listen_on | join(",") }}"
 {% endif %}
 
+{% for loc in location %}
+{%- if loc.elin %}
+configure ports {{ loc.name }} med location elin "{{ loc.elin }}"
+{%- endif %}
+{% endfor %}
+
+
 """
 
 default_config_data = {
@@ -99,7 +106,7 @@ def get_location_intf(config, name):
 
     config.set_level('{} location'.format(path))
     civic_based = {}
-    elin = None
+    elin = ''
     coordinate_based = {}
 
     if config.exists('civic-based'):
