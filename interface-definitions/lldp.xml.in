@@ -27,6 +27,7 @@
               <leafNode name="disable">
                 <properties>
                   <help>Disable lldp on this interface</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <node name="location">
