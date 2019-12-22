@@ -283,13 +283,17 @@
           </node>
           <leafNode name="management-address">
             <properties>
-              <help>IPv4 management address</help>
+              <help>Management IP Address</help>
               <valueHelp>
                 <format>ipv4</format>
-                <description>IP address to listen for incoming connections</description>
+                <description>IPv4 Management Address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 Management Address</description>
               </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
+                <validator name="ip-address"/>
               </constraint>
             </properties>
           </leafNode>
