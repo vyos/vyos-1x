@@ -20,7 +20,7 @@
                 <description>Location data for a specific interface</description>
               </valueHelp>
               <completionHelp>
-                <script> ${vyatta_sbindir}/vyatta-interfaces.pl --show all </script>
+                <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
               </completionHelp>
             </properties>
             <children>
@@ -244,21 +244,25 @@
               <leafNode name="cdp">
                 <properties>
                   <help>Listen for CDP for Cisco routers/switches</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="edp">
                 <properties>
                   <help>Listen for EDP for Extreme routers/switches</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="fdp">
                 <properties>
                   <help>Listen for FDP for Foundry routers/switches</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="sonmp">
                 <properties>
                   <help>Listen for SONMP for Nortel routers/switches</help>
+                  <valueless/>
                 </properties>
               </leafNode>
             </children>
@@ -266,6 +270,13 @@
           <leafNode name="management-address">
             <properties>
               <help>IPv4 management address</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IP address to listen for incoming connections</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
             </properties>
           </leafNode>
           <node name="snmp">
