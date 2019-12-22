@@ -299,6 +299,7 @@ def apply(lldp):
         # LLDP service has been terminated
         os.system('sudo systemctl stop lldpd.service')
         os.unlink(config_file)
+        os.unlink(vyos_config_file)
 
 if __name__ == '__main__':
     try:
