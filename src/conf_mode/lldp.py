@@ -37,6 +37,9 @@ vyos_tmpl = """
 
 configure system platform VyOS
 configure system description "VyOS {{ description }}"
+{% if listen_on %}
+configure system interface pattern "{{ listen_on | join(",") }}"
+{% endif %}
 
 """
 
@@ -65,6 +68,10 @@ def get_options(config):
     options['edp'] = config.exists('edp')
     options['fdp'] = config.exists('fdp')
     options['sonmp'] = config.exists('sonmp')
+
+    # start with an unknown version information
+    options['description'] = 'unknown'
+    options['listen_on'] = []
 
     return options
 
@@ -243,18 +250,28 @@ def generate(lldp):
     if lldp is None:
         return
 
-    version = 'unknown'
     with open('/opt/vyatta/etc/version', 'r') as f:
         tmp = f.read()
-        version = tmp.split()[1]
+        lldp['options']['description'] = tmp.split()[1]
 
-    lldp['options']['description'] = version
 
+    # generate listen on interfaces
+    for intf in lldp['interface_list']:
+        tmp = ''
+        # add exclamation mark if interface is disabled
+        if intf['disable']:
+            tmp = '!'
+
+        tmp += intf['name']
+        lldp['options']['listen_on'].append(tmp)
+
+    # generate /etc/default/lldpd
     tmpl = jinja2.Template(lldp_tmpl)
     config_text = tmpl.render(lldp['options'])
     with open(config_file, 'w') as f:
         f.write(config_text)
 
+    # generate /etc/lldpd.d/01-vyos.conf
     tmpl = jinja2.Template(vyos_tmpl)
     config_text = tmpl.render(lldp['options'])
     with open(vyos_config_file, 'w') as f:
