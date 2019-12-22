@@ -1,0 +1,288 @@
+<?xml version="1.0"?>
+
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="lldp" owner="${vyos_sbindir}/vyos-update-lldp.py">
+        <properties>
+          <help>LLDP settings</help>
+          <priority>985</priority>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Location data for interface</help>
+              <valueHelp>
+                <format>all</format>
+                <description>Location data all interfaces</description>
+              </valueHelp>
+              <valueHelp>
+                <format>&lt;intf&gt;</format>
+                <description>Location data for a specific interface</description>
+              </valueHelp>
+              <completionHelp>
+                <script> ${vyatta_sbindir}/vyatta-interfaces.pl --show all </script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable lldp on this interface</help>
+                </properties>
+              </leafNode>
+              <node name="location">
+                <properties>
+                  <help>LLDP-MED location data [REQUIRED]</help>
+                </properties>
+                <children>
+                  <node name="civic-based">
+                    <properties>
+                      <help>Civic-based location data</help>
+                    </properties>
+                    <children>
+                      <tagNode name="ca-type">
+                        <properties>
+                          <help>LLDP-MED Civic Address type [REQUIRED]</help>
+                          <valueHelp>
+                            <format>0</format>
+                            <description>Language</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>1</format>
+                            <description>National subdivisions</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>2</format>
+                            <description>County, parish, district</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>3</format>
+                            <description>City, township</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>4</format>
+                            <description>City division, borough, ward</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>5</format>
+                            <description>Neighborhood, block</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>6</format>
+                            <description>Street</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>16</format>
+                            <description>Leading street direction</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>17</format>
+                            <description>Trailing street suffix</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>18</format>
+                            <description>Street suffix</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>19</format>
+                            <description>House number</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>20</format>
+                            <description>House number suffix</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>21</format>
+                            <description>Landmark or vanity address</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>22</format>
+                            <description>Additional location info</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>23</format>
+                            <description>Name</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>24</format>
+                            <description>Postal/ZIP code</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>25</format>
+                            <description>Building</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>26</format>
+                            <description>Unit</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>27</format>
+                            <description>Floor</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>28</format>
+                            <description>Room number</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>29</format>
+                            <description>Place type</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>128</format>
+                            <description>Script</description>
+                          </valueHelp>
+                          <constraintErrorMessage>ca-type must between 0-128</constraintErrorMessage>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-128"/>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="ca-value">
+                            <properties>
+                              <help>Civic address value for ca-type [REQUIRED]</help>
+                              <constraintErrorMessage>ca-value must be less than 256 characters</constraintErrorMessage>
+                              <constraint>
+                                <regex>^[A-Za-z0-9\ \-\_\.\,]{0,255}$</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <leafNode name="country-code">
+                        <properties>
+                          <help>Country code [REQUIRED]</help>
+                          <valueHelp>
+                            <format>&lt;AA&gt;</format>
+                            <description>Two letter ISO 3166 country code</description>
+                          </valueHelp>
+                          <constraintErrorMessage>country-code must be 2 characters</constraintErrorMessage>
+                          <constraint>
+                            <regex>^[a-zA-Z]{2}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="coordinate-based">
+                    <properties>
+                      <help>Coordinate based location</help>
+                    </properties>
+                    <children>
+                      <leafNode name="altitude">
+                        <properties>
+                          <help>Altitude in meters</help>
+                          <valueHelp>
+                            <format>[+-]&lt;meters&gt;</format>
+                            <description>Altitude in meters</description>
+                          </valueHelp>
+                          <constraintErrorMessage>Altitude should be a positive or negative number</constraintErrorMessage>
+                          <constraint>
+                            <validator name="numeric"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="datum">
+                        <properties>
+                          <help>Coordinate datum type</help>
+                          <valueHelp>
+                            <format>WGS84</format>
+                            <description>WGS84 (default)</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>NAD83</format>
+                            <description>NAD83</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>MLLW</format>
+                            <description>NAD83/MLLW</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <list>WGS84 NAD83 MLLW</list>
+                          </completionHelp>
+                          <constraintErrorMessage>Datum should be WGS84, NAD83, or MLLW</constraintErrorMessage>
+                          <constraint>
+                            <regex>^(WGS84|NAD83|MLLW)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="latitude">
+                        <properties>
+                          <help>Latitude [REQUIRED]</help>
+                          <valueHelp>
+                            <format>&lt;latitude&gt;</format>
+                            <description>Latitude (example "37.524449N")</description>
+                          </valueHelp>
+                          <constraintErrorMessage>Latitude should be a number followed by S or N</constraintErrorMessage>
+                          <constraint>
+                            <regex>^(\d+)(\.\d+)?[nNsS]$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="longitude">
+                        <properties>
+                          <help>Longitude [REQUIRED]</help>
+                          <valueHelp>
+                            <format>&lt;longitude&gt;</format>
+                            <description>Longitude (example "122.267255W")</description>
+                          </valueHelp>
+                          <constraintErrorMessage>Longiture should be a number followed by E or W</constraintErrorMessage>
+                          <constraint>
+                            <regex>^(\d+)(\.\d+)?[eEwW]$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="legacy-protocols">
+            <properties>
+              <help>Legacy (vendor specific) protocols</help>
+            </properties>
+            <children>
+              <leafNode name="cdp">
+                <properties>
+                  <help>Listen for CDP for Cisco routers/switches</help>
+                </properties>
+              </leafNode>
+              <leafNode name="edp">
+                <properties>
+                  <help>Listen for EDP for Extreme routers/switches</help>
+                </properties>
+              </leafNode>
+              <leafNode name="fdp">
+                <properties>
+                  <help>Listen for FDP for Foundry routers/switches</help>
+                </properties>
+              </leafNode>
+              <leafNode name="sonmp">
+                <properties>
+                  <help>Listen for SONMP for Nortel routers/switches</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="management-address">
+            <properties>
+              <help>IPv4 management address</help>
+            </properties>
+          </leafNode>
+          <node name="snmp">
+            <properties>
+              <help>SNMP parameters for LLDP</help>
+            </properties>
+            <children>
+              <leafNode name="enable">
+                <properties>
+                  <help>Enable SNMP queries of the LLDP database</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
