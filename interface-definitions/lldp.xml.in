@@ -287,6 +287,7 @@
               <leafNode name="enable">
                 <properties>
                   <help>Enable SNMP queries of the LLDP database</help>
+                  <valueless/>
                 </properties>
               </leafNode>
             </children>
