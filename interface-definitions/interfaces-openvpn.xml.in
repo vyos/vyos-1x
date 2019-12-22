@@ -7,7 +7,7 @@
           <help>OpenVPN tunnel interface name</help>
           <priority>460</priority>
           <constraint>
-            <regex>^vtun[0-9]+$</regex>
+            <regex>vtun[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>OpenVPN tunnel interface must be named vtunN</constraintErrorMessage>
           <valueHelp>
