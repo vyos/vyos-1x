@@ -1,9 +1,8 @@
 <?xml version="1.0"?>
-
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="lldp" owner="${vyos_sbindir}/vyos-update-lldp.py">
+      <node name="lldp" owner="${vyos_conf_scripts_dir}/lldp.py">
         <properties>
           <help>LLDP settings</help>
           <priority>985</priority>
