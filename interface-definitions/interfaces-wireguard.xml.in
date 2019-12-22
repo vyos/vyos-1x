@@ -8,7 +8,7 @@
           <priority>459</priority>
           <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->
           <constraint>
-            <regex>wg[0-9]{1,4}</regex>
+            <regex>wg[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>illegal interface name</constraintErrorMessage>
           <valueHelp>
