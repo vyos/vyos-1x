@@ -44,7 +44,7 @@ configure system interface pattern "{{ options.listen_on | join(",") }}"
 configure system ip management pattern "{{ options.addr }}"
 {%- endif %}
 {%- for loc in location -%}
-{%- if loc.elin -%}
+{%- if loc.elin %}
 configure ports {{ loc.name }} med location elin "{{ loc.elin }}"
 {%- endif %}
 {% endfor %}
