@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="lldp">
+        <properties>
+          <help>Show LLDP (Link Layer Discovery Protocol)</help>
+        </properties>
+        <children>
+          <node name="neighbors">
+            <properties>
+              <help>Show LLDP neighbors</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/lldp_op.py --all</command>
+            <children>
+              <node name="detail">
+                <properties>
+                  <help>Show LLDP neighbor details</help>
+                </properties>
+                <command>/usr/sbin/lldpctl -f plain</command>
+              </node>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show LLDP for specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/lldp_op.py --interface $4</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
