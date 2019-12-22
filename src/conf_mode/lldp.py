@@ -47,6 +47,11 @@ configure system ip management pattern "{{ options.addr }}"
 {%- if loc.elin %}
 configure ports {{ loc.name }} med location elin "{{ loc.elin }}"
 {%- endif %}
+{%- if loc.coordinate_based %}
+configure ports {{ loc.name }} med location coordinate {% if loc.coordinate_based.latitude %}latitude {{ loc.coordinate_based.latitude }}{% endif %} {% if loc.coordinate_based.longitude %}longitude {{ loc.coordinate_based.longitude }}{% endif %} {% if loc.coordinate_based.altitude %}altitude {{ loc.coordinate_based.altitude }} m{% endif %} {% if loc.coordinate_based.datum %}datum {{ loc.coordinate_based.datum }}{% endif %}
+{%- endif %}
+
+
 {% endfor %}
 """
 
@@ -122,16 +127,22 @@ def get_location_intf(config, name):
             }
             civic_based['ca_type'].append(ca_type)
 
-    elif config.exists('elin'):
+    if config.exists('elin'):
         elin = config.return_value('elin')
 
-    elif config.exists('coordinate-based'):
+    if config.exists('coordinate-based'):
         config.set_level('{} location coordinate-based'.format(path))
 
-        coordinate_based['altitude'] = config.return_value('altitude')
         coordinate_based['latitude'] = config.return_value('latitude')
         coordinate_based['longitude'] = config.return_value('longitude')
-        coordinate_based['datum'] = config.return_value('datum')
+
+        coordinate_based['altitude'] = '0'
+        if config.exists('altitude'):
+            coordinate_based['altitude'] = config.return_value('altitude')
+
+        coordinate_based['datum'] = 'WGS84'
+        if config.exists('datum'):
+            coordinate_based['datum'] = config.return_value('datum')
 
     intf = {
         'name': name,
