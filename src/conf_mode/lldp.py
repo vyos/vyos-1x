@@ -96,8 +96,6 @@ def get_interface_list(config):
 def get_location_intf(config, name):
     path = 'service lldp interface {0}'.format(name)
     config.set_level(path)
-    if config.exists('location'):
-        return 0
 
     config.set_level('{} location'.format(path))
     civic_based = {}
@@ -106,19 +104,16 @@ def get_location_intf(config, name):
 
     if config.exists('civic-based'):
         config.set_level('{} location civic-based'.format(path))
-        cc = config.return_value('country-code')
-        civic_based['country_code'] = cc
+        civic_based['country_code'] = config.return_value('country-code')
         civic_based['ca_type'] = []
-        ca_types_names = config.list_nodes('ca-type')
-        if ca_types_names:
-            for ca_types_name in ca_types_names:
-                config.set_level('{0} location civic-based ca-type {1}'.format(path, ca_types_name))
-                ca_val = config.return_value('ca-value')
-                ca_type = {
-                    'name': ca_types_name,
-                    'ca_val': ca_val
-                }
-                civic_based['ca_type'].append(ca_type)
+        for ca_types_name in config.list_nodes('ca-type'):
+            config.set_level('{} location civic-based ca-type {}'.format(path, ca_types_name))
+            ca_val = config.return_value('ca-value')
+            ca_type = {
+                'name': ca_types_name,
+                'ca_val': ca_val
+            }
+            civic_based['ca_type'].append(ca_type)
 
     elif config.exists('elin'):
         elin = config.return_value('elin')
