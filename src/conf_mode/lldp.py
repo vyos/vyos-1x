@@ -21,6 +21,7 @@ import jinja2
 
 from copy import deepcopy
 from vyos.config import Config
+from vyos.validate import is_addr_assigned,is_loopback_addr
 from vyos import ConfigError
 
 # Please be careful if you edit the template.
@@ -40,8 +41,8 @@ configure system description "VyOS {{ options.description }}"
 {%- if listen_on -%}
 configure system interface pattern "{{ options.listen_on | join(",") }}"
 {%- endif %}
-{% if options.addr -%}
-configure system ip management pattern "{{ options.addr }}"
+{% if options.mgmt_addr -%}
+configure system ip management pattern {{ options.mgmt_addr | join(",") }}
 {%- endif %}
 {%- for loc in location -%}
 {%- if loc.elin %}
@@ -66,7 +67,17 @@ def get_options(config):
     config.set_level('service lldp')
 
     options['listen_vlan'] = config.exists('listen-vlan')
-    options['addr'] = config.return_value('management-address')
+    options['mgmt_addr'] = []
+    for addr in config.return_values('management-address'):
+        if is_addr_assigned(addr) and not is_loopback_addr(addr):
+            options['mgmt_addr'].append(addr)
+        else:
+            message = 'WARNING: LLDP management address {0} invalid - '.format(addr)
+            if is_loopback_addr(addr):
+                message += '(loopback address).'
+            else:
+                message += 'address not found.'
+            print(message)
 
     snmp = config.exists('snmp enable')
     options["snmp"] = snmp

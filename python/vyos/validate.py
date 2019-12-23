@@ -112,6 +112,12 @@ def is_addr_assigned(addr):
 
     return False
 
+def is_loopback_addr(addr):
+    """
+    Check if supplied IPv4/IPv6 address is a loopback address
+    """
+    return ipaddress.ip_address(addr).is_loopback
+
 def is_subnet_connected(subnet, primary=False):
     """
     Verify is the given IPv4/IPv6 subnet is connected to any interface on this

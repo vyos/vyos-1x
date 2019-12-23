@@ -295,6 +295,7 @@
               <constraint>
                 <validator name="ip-address"/>
               </constraint>
+              <multi/>
             </properties>
           </leafNode>
           <node name="snmp">
