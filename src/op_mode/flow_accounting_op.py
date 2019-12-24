@@ -20,6 +20,7 @@ import argparse
 import re
 import ipaddress
 import subprocess
+import os.path
 from tabulate import tabulate
 
 # some default values
@@ -83,7 +84,7 @@ def _get_ifaces_dict():
     process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, universal_newlines=True)
     stdout, stderr = process.communicate()
     if not process.returncode == 0:
-        print("Failed to get interfaces list: command \"{}\" returned exit code: {}".format(command, process.returncode()))
+        print("Failed to get interfaces list: command \"{}\" returned exit code: {}".format(command, process.returncode))
         sys.exit(1)
 
     # read output
@@ -106,7 +107,7 @@ def _get_flows_list():
     process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, universal_newlines=True)
     stdout, stderr = process.communicate()
     if not process.returncode == 0:
-        print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode(), stderr))
+        print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode, stderr))
         sys.exit(1)
 
     # read output
@@ -180,6 +181,11 @@ def _flows_table_print(flows):
     except KeyboardInterrupt:
         sys.exit(0)
 
+# check if in-memory table is active
+def _check_imt():
+    if not os.path.exists(uacctd_pipefile):
+        print("In-memory table is not available")
+        sys.exit(1)
 
 # define program arguments
 cmd_args_parser = argparse.ArgumentParser(description='show flow-accounting')
@@ -210,6 +216,7 @@ if cmd_args.action == 'restart':
 
 # clear in-memory collected flows
 if cmd_args.action == 'clear':
+    _check_imt()
     # run command to clear flows
     command = "/usr/bin/pmacct -e -p {}".format(uacctd_pipefile)
     return_code = subprocess.call(command.split(' '))
@@ -219,6 +226,7 @@ if cmd_args.action == 'clear':
 
 # show table with flows
 if cmd_args.action == 'show':
+    _check_imt()
     # get interfaces index and names
     ifaces_dict = _get_ifaces_dict()
     # get flows

@@ -154,7 +154,7 @@ def _iptables_get_nflog():
         process = subprocess.Popen(iptables_command, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
         stdout, stderr = process.communicate()
         if not process.returncode == 0:
-            print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode(), stderr))
+            print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode, stderr))
             sys.exit(1)
         iptables_out = stdout.splitlines()
 
@@ -196,7 +196,7 @@ def _iptables_config(configured_ifaces):
 
     # create missed rules
     for iface_extended in configured_ifaces_extended:
-        rule_definition = "{0} -i {1} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-range {2} --nflog-threshold 100".format(iptables_nflog_chain, iface_extended['iface'], default_captured_packet_size)
+        rule_definition = "{0} -i {1} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {2} --nflog-threshold 100".format(iptables_nflog_chain, iface_extended['iface'], default_captured_packet_size)
         iptable_commands.append("sudo {0} -t {1} -I {2}".format(iface_extended['iptables_variant'], iptables_nflog_table, rule_definition))
 
     # change iptables
