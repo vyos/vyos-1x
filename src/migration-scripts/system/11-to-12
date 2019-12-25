@@ -27,7 +27,7 @@ for host in config.list_nodes(cbase):
     if re.search(':[0-9]{1,5}$',host):
         h = re.search('^[a-zA-Z\-0-9\.]+', host).group(0)
         p = re.sub(':', '', re.search(':[0-9]+$', host).group(0))
-        config.set(cbase + [h])        
+        config.set(cbase + [h])
         config.set(cbase + [h, 'port'], value=p)
         for fac in config.list_nodes(cbase + [host, 'facility']):
             config.set(cbase + [h, 'facility', fac])

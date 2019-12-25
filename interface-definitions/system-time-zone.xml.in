@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <leafNode name="time-zone" owner="${vyos_conf_scripts_dir}/timezone.py">
+        <properties>
+          <help>Local time zone (default UTC)</help>
+          <priority>100</priority>
+          <completionHelp>
+            <script>find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/:: | sort</script>
+          </completionHelp>
+          <constraint>
+            <validator name="timezone" argument="--validate"/>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
