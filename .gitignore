@@ -126,3 +126,6 @@ debian/.debhelper/
 *.vpw
 *.vpwhist
 *.vtg
+
+# VIM
+*.swp
