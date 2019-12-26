@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 
-# Fixup non existent time-zones. Some systems have time-zone set to:
-# - Los* (Los_Angeles)
-# - Den* (Denver)
-# ... but thos are no real IANA assigned time zones. In the past the have been
-# silently remapped. Time to clean it up!
+# Fixup non existent time-zones. Some systems have time-zone set to: Los*
+# (Los_Angeles), Den* (Denver), New* (New_York) ... but those are no real IANA
+# assigned time zones. In the past they have been silently remapped.
+#
+# Time to clean it up!
+#
+# Migrate all configured timezones to real IANA assigned timezones!
 
 import re
 import sys
 
 from vyos.configtree import ConfigTree
+from subprocess import Popen, PIPE, STDOUT
+
+def _cmd(cmd):
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
+    tmp = p.communicate()[0].strip()
+    return tmp.decode()
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")
@@ -28,6 +36,10 @@ if not config.exists(tz_base):
 else:
     tz = config.return_value(tz_base)
 
+    # retrieve all valid timezones
+    tz_data = _cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+    tz_data = tz_data.split('\n')
+
     if re.match(r'[Ll][Oo][Ss].+', tz):
         tz = 'America/Los_Angeles'
     elif re.match(r'[Dd][Ee][Nn].+', tz):
@@ -44,6 +56,9 @@ else:
         tz = 'America/Phoenix'
     elif re.match(r'GMT(.+)?', tz):
         tz = 'Etc/' + tz
+    elif tz not in tz_data:
+        # assign default UTC timezone
+        tz = 'UTC'
 
     # replace timezone data is required
     config.set(tz_base, value=tz)
