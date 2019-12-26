@@ -142,7 +142,7 @@
                               <help>Civic address value for ca-type [REQUIRED]</help>
                               <constraintErrorMessage>ca-value must be less than 256 characters</constraintErrorMessage>
                               <constraint>
-                                <regex>^[A-Za-z0-9\ \-\_\.\,]{0,255}$</regex>
+                                <regex>[A-Za-z0-9\ \-\_\.\,]{0,255}$</regex>
                               </constraint>
                             </properties>
                           </leafNode>
@@ -157,7 +157,7 @@
                           </valueHelp>
                           <constraintErrorMessage>country-code must be 2 characters</constraintErrorMessage>
                           <constraint>
-                            <regex>^[a-zA-Z]{2}$</regex>
+                            <regex>[a-zA-Z]{2}$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -201,7 +201,7 @@
                           </completionHelp>
                           <constraintErrorMessage>Datum should be WGS84, NAD83, or MLLW</constraintErrorMessage>
                           <constraint>
-                            <regex>^(WGS84|NAD83|MLLW)$</regex>
+                            <regex>(WGS84|NAD83|MLLW)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -214,7 +214,7 @@
                           </valueHelp>
                           <constraintErrorMessage>Latitude should be a number followed by S or N</constraintErrorMessage>
                           <constraint>
-                            <regex>^(\d+)(\.\d+)?[nNsS]$</regex>
+                            <regex>(\d+)(\.\d+)?[nNsS]$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -227,7 +227,7 @@
                           </valueHelp>
                           <constraintErrorMessage>Longiture should be a number followed by E or W</constraintErrorMessage>
                           <constraint>
-                            <regex>^(\d+)(\.\d+)?[eEwW]$</regex>
+                            <regex>(\d+)(\.\d+)?[eEwW]$</regex>
                           </constraint>
                         </properties>
                       </leafNode>

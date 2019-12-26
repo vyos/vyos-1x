@@ -23,7 +23,7 @@
                     <list>L2 L3</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(L2|L3)</regex>
+                    <regex>(L2|L3)</regex>
                   </constraint>
                   <valueHelp>
                     <format>L2</format>
@@ -42,7 +42,7 @@
                     <list>shared vlan</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(shared|vlan)</regex>
+                    <regex>(shared|vlan)</regex>
                   </constraint>
                   <valueHelp>
                     <format>shared</format>
@@ -196,7 +196,7 @@
                     <list>local radius noauth</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(local|radius|noauth)</regex>
+                    <regex>(local|radius|noauth)</regex>
                   </constraint>
                   <valueHelp>
                     <format>local</format>

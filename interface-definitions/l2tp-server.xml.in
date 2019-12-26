@@ -120,7 +120,7 @@
                             <description>Use X.509 certificate for IPsec authentication</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(pre-shared-secret|x509)</regex>
+                            <regex>(pre-shared-secret|x509)</regex>
                           </constraint>
                           <completionHelp>
                             <list>pre-shared-secret x509</list>
@@ -342,7 +342,7 @@
                         <description>Require the peer to authenticate itself using MS-CHAPv2 [Microsoft Challenge Handshake Authentication Protocol, Version 2].</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(pap|chap|mschap|mschap-v2)</regex>
+                        <regex>(pap|chap|mschap|mschap-v2)</regex>
                       </constraint>
                       <completionHelp>
                         <list>pap chap mschap mschap-v2</list>
@@ -366,7 +366,7 @@
                         <description>ask client for mppe, if it rejects drop connection</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(deny|prefer|require)</regex>
+                        <regex>(deny|prefer|require)</regex>
                       </constraint>
                       <completionHelp>
                         <list>deny prefer require</list>
@@ -385,7 +385,7 @@
                         <description>Use a RADIUS server to autenticate users</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(local|radius)</regex>
+                        <regex>(local|radius)</regex>
                       </constraint>
                       <completionHelp>
                         <list>local radius</list>

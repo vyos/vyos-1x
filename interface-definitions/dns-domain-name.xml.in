@@ -48,7 +48,7 @@
             <properties>
               <help>DNS domain completion order</help>
               <constraint>
-                <regex>^[-a-zA-Z0-9.]+$</regex>
+                <regex>[-a-zA-Z0-9.]+$</regex>
               </constraint>
               <constraintErrorMessage>Invalid domain name</constraintErrorMessage>
               <multi/>
@@ -74,7 +74,7 @@
             <properties>
               <help>Host name for static address mapping</help>
               <constraint>
-                <regex>^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$</regex>
+                <regex>[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$</regex>
               </constraint>
               <constraintErrorMessage>invalid hostname</constraintErrorMessage>
             </properties>
@@ -83,7 +83,7 @@
                 <properties>
                   <help>Alias for this address</help>
                   <constraint>
-                    <regex>^.{1,63}$</regex>
+                    <regex>.{1,63}$</regex>
                   </constraint>
                   <constraintErrorMessage>invalid alias hostname, needs to be between 1 and 63 charactes</constraintErrorMessage>
                   <multi />

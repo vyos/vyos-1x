@@ -12,7 +12,7 @@
             <properties>
               <help>Logging to specific terminal of given user</help>
               <constraint>
-                <regex>^[a-z_][a-z0-9_-]{1,31}[$]?</regex>
+                <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
               </constraint>
               <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
               <valueHelp>
@@ -394,7 +394,7 @@
                     <properties>
                       <help>Number of saved files (default is 5)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
                     </properties>
@@ -403,7 +403,7 @@
                     <properties>
                       <help>Size of log files (in kbytes, default is 256)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
                     </properties>
@@ -591,7 +591,7 @@
             <properties>
               <help>Logging to a file</help>
               <constraint>
-                <regex>^[a-zA-Z0-9\-_.]{1,255}</regex>
+                <regex>[a-zA-Z0-9\-_.]{1,255}</regex>
               </constraint>
               <constraintErrorMessage>illegal characters in filename or filename longer than 255 characters</constraintErrorMessage>
             </properties>
@@ -605,7 +605,7 @@
                     <properties>
                       <help>Number of saved files (default is 5)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
                     </properties>
@@ -614,7 +614,7 @@
                     <properties>
                       <help>Size of log files (in kbytes, default is 256)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
                     </properties>

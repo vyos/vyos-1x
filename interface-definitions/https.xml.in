@@ -27,7 +27,7 @@
               <constraint>
                 <validator name="ipv4-address"/>
                 <validator name="ipv6-address"/>
-                <regex>^\*$</regex>
+                <regex>\*$</regex>
               </constraint>
             </properties>
             <children>

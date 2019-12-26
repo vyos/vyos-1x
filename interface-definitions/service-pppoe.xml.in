@@ -25,7 +25,7 @@
             <properties>
               <help>Access concentrator name</help>
               <constraint>
-                <regex>^[a-zA-Z0-9]{1,100}</regex>
+                <regex>[a-zA-Z0-9]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
             </properties>
@@ -119,7 +119,7 @@
                     <description>Use a RADIUS server to autenticate users</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(local|radius)</regex>
+                    <regex>(local|radius)</regex>
                   </constraint>
                   <completionHelp>
                     <list>local radius</list>
@@ -412,7 +412,7 @@
                 <properties>
                   <help>Acceptable rate of connections (e.g. 1/min, 60/sec)</help>
                   <constraint>
-                    <regex>^[0-9]+\/(min|sec)$</regex>
+                    <regex>[0-9]+\/(min|sec)$</regex>
                   </constraint>
                   <constraintErrorMessage>illegal value</constraintErrorMessage>
                 </properties>
@@ -433,7 +433,7 @@
             <properties>
               <help>Service name</help>
               <constraint>
-                <regex>^[a-zA-Z0-9\-]{1,100}</regex>
+                <regex>[a-zA-Z0-9\-]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>servicename can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
             </properties>
@@ -541,7 +541,7 @@
                 <properties>
                   <help>IPv4 (IPCP) negotiation algorithm</help>
                   <constraint>
-                    <regex>^(deny|allow|prefer|require)</regex>
+                    <regex>(deny|allow|prefer|require)</regex>
                   </constraint>
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>
@@ -566,7 +566,7 @@
                 <properties>
                   <help>IPv6 (IPCP6) negotiation algorithm</help>
                   <constraint>
-                    <regex>^(deny|allow|prefer|require)</regex>
+                    <regex>(deny|allow|prefer|require)</regex>
                   </constraint>
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>

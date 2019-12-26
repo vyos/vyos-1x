@@ -13,7 +13,7 @@
             <properties>
               <help>Community name [REQUIRED]</help>
               <constraint>
-                <regex>^[a-zA-Z0-9\-_]{1,100}</regex>
+                <regex>[a-zA-Z0-9\-_]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Community string is limited to alphanumerical characters only with a total lenght of 100</constraintErrorMessage>
             </properties>
@@ -183,7 +183,7 @@
                 <properties>
                   <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
                   <constraint>
-                    <regex>^(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
+                    <regex>(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
                   </constraint>
                   <constraintErrorMessage>ID must contain an even number (from 2 to 36) of hex digits</constraintErrorMessage>
                 </properties>
@@ -272,7 +272,7 @@
                         <properties>
                           <help>Defines the encrypted key for authentication</help>
                           <constraint>
-                            <regex>^0x[0-9a-f]*$</regex>
+                            <regex>0x[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
                         </properties>
@@ -281,7 +281,7 @@
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -329,7 +329,7 @@
                         <properties>
                           <help>Defines the encrypted key for privacy protocol</help>
                           <constraint>
-                            <regex>^0x[0-9a-f]*$</regex>
+                            <regex>0x[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
                         </properties>
@@ -338,7 +338,7 @@
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -416,7 +416,7 @@
                 <properties>
                   <help>Specifies the user with name username</help>
                   <constraint>
-                    <regex>^[^\(\)\|\-]+$</regex>
+                    <regex>[^\(\)\|\-]+$</regex>
                   </constraint>
                   <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
                 </properties>
@@ -430,7 +430,7 @@
                         <properties>
                           <help>Defines the encrypted key for authentication</help>
                           <constraint>
-                            <regex>^0x[0-9a-f]*$</regex>
+                            <regex>0x[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
                         </properties>
@@ -439,7 +439,7 @@
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -502,7 +502,7 @@
                         <properties>
                           <help>Defines the encrypted key for privacy protocol</help>
                           <constraint>
-                            <regex>^0x[0-9a-f]*$</regex>
+                            <regex>0x[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
                         </properties>
@@ -511,7 +511,7 @@
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -543,7 +543,7 @@
                 <properties>
                   <help>Specifies the view with name viewname</help>
                   <constraint>
-                    <regex>^[^\(\)\|\-]+$</regex>
+                    <regex>[^\(\)\|\-]+$</regex>
                   </constraint>
                   <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
                 </properties>
@@ -552,7 +552,7 @@
                     <properties>
                       <help>Specifies the oid</help>
                       <constraint>
-                        <regex>^[0-9]+(\.[0-9]+)*$</regex>
+                        <regex>[0-9]+(\.[0-9]+)*$</regex>
                       </constraint>
                       <constraintErrorMessage>OID must start from a number</constraintErrorMessage>
                     </properties>
@@ -566,7 +566,7 @@
                         <properties>
                           <help>Defines a bit-mask that is indicating which subidentifiers of the associated subtree OID should be regarded as significant</help>
                           <constraint>
-                            <regex>^[0-9a-f]{2}([\.:][0-9a-f]{2})*$</regex>
+                            <regex>[0-9a-f]{2}([\.:][0-9a-f]{2})*$</regex>
                           </constraint>
                           <constraintErrorMessage>MASK is a list of hex octets, separated by '.' or ':'</constraintErrorMessage>
                         </properties>

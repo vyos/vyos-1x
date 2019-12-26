@@ -156,7 +156,7 @@
                     <description>NetFlow engine-id for v9 / IPFIX</description>
                   </valueHelp>
                   <constraint>
-                   <regex>^(\d|[1-9]\d{1,8}|[1-3]\d{9}|4[01]\d{8}|42[0-8]\d{7}|429[0-3]\d{6}|4294[0-8]\d{5}|42949[0-5]\d{4}|429496[0-6]\d{3}|4294967[01]\d{2}|42949672[0-8]\d|429496729[0-5])$|^(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5]):(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])$</regex>
+                   <regex>(\d|[1-9]\d{1,8}|[1-3]\d{9}|4[01]\d{8}|42[0-8]\d{7}|429[0-3]\d{6}|4294[0-8]\d{5}|42949[0-5]\d{4}|429496[0-6]\d{3}|4294967[01]\d{2}|42949672[0-8]\d|429496729[0-5])$|^(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5]):(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])$</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -375,7 +375,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>^auto$</regex>
+                    <regex>auto$</regex>
                   </constraint>
                 </properties>
               </leafNode>

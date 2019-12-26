@@ -78,7 +78,7 @@
                     <description>Use a RADIUS server to autenticate users</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(local|radius)</regex>
+                    <regex>(local|radius)</regex>
                   </constraint>
                   <completionHelp>
                     <list>local radius</list>
@@ -105,7 +105,7 @@
                     <description>Require the peer to authenticate itself using MS-CHAPv2 [Microsoft Challenge Handshake Authentication Protocol, Version 2].</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(pap|chap|mschap|mschap-v2)</regex>
+                    <regex>(pap|chap|mschap|mschap-v2)</regex>
                   </constraint>
                   <completionHelp>
                     <list>pap chap mschap mschap-v2</list>

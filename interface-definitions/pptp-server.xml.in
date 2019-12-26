@@ -155,7 +155,7 @@
                         <description>ask client for mppe, if it rejects drop connection</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(deny|prefer|require)</regex>
+                        <regex>(deny|prefer|require)</regex>
                       </constraint>
                       <completionHelp>
                         <list>deny prefer require</list>
@@ -174,7 +174,7 @@
                         <description>Use a RADIUS server to autenticate users</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(local|radius)</regex>
+                        <regex>(local|radius)</regex>
                       </constraint>
                       <completionHelp>
                         <list>local radius</list>
