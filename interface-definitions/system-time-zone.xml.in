@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <leafNode name="time-zone" owner="${vyos_conf_scripts_dir}/timezone.py">
+      <leafNode name="time-zone" owner="${vyos_conf_scripts_dir}/system-timezone.py">
         <properties>
           <help>Local time zone (default UTC)</help>
           <priority>100</priority>
