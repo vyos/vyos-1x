@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="ip" owner="${vyos_conf_scripts_dir}/system-ip.py">
+        <properties>
+          <help>IPv4 Settings</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <node name="arp">
+            <properties>
+              <help>Parameters for ARP cache</help>
+            </properties>
+            <children>
+              <leafNode name="table-size">
+                <properties>
+                  <help>Maximum number of entries to keep in the ARP cache</help>
+                  <completionHelp>
+                    <list>1024 2048 4096 8192 16384 32768</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(1024|2048|4096|8192|16384|32768)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="disable-forwarding">
+            <properties>
+              <help>Disable IPv4 forwarding on all interfaces</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <node name="multipath">
+            <properties>
+              <help>IPv4 multipath settings</help>
+            </properties>
+            <children>
+              <leafNode name="ignore-unreachable-nexthops">
+                <properties>
+                  <help>Ignore next hops that are not in the ARP table</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="layer4-hashing">
+                <properties>
+                  <help>Use layer 4 information for ECMP hashing</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
