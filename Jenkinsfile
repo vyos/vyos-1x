@@ -69,11 +69,20 @@ def projectProperties = [
 properties(projectProperties)
 setDescription()
 
+node('Docker') {
+    stage('Define Agent') {
+        script {
+            // create container name on demand
+            env.DOCKER_IMAGE = "vyos/vyos-build:" + getGitBranchName()
+        }
+    }
+}
+
 pipeline {
     agent {
         docker {
-            args '--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006'
-            image 'vyos/vyos-build:current'
+            args "--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006"
+            image "${env.DOCKER_IMAGE}"
             alwaysPull true
         }
     }
@@ -121,8 +130,12 @@ pipeline {
                     sshagent(['SSH-dev.packages.vyos.net']) {
                         // build up some fancy groovy variables so we do not need to write/copy
                         // every option over and over again!
+                        def RELEASE = getGitBranchName()
+                        if (getGitBranchName() == "master") {
+                            RELEASE = 'current'
+                        }
 
-                        def VYOS_REPO_PATH = '/home/sentrium/web/dev.packages.vyos.net/public_html/repositories/' + getGitBranchName() + '/'
+                        def VYOS_REPO_PATH = '/home/sentrium/web/dev.packages.vyos.net/public_html/repositories/' + RELEASE + '/'
                         def SSH_OPTS = '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
                         def SSH_REMOTE = 'khagen@10.217.48.113'
 
@@ -130,7 +143,6 @@ pipeline {
 
                         files = findFiles(glob: '*.deb')
                         files.each { PACKAGE ->
-                            def RELEASE = getGitBranchName()
                             def ARCH = sh(returnStdout: true, script: "dpkg-deb -f ${PACKAGE} Architecture").trim()
                             def SUBSTRING = sh(returnStdout: true, script: "dpkg-deb -f ${PACKAGE} Package").trim()
                             def SSH_DIR = '~/VyOS/' + RELEASE + '/' + ARCH
