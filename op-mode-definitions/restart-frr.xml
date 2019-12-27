@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="frr">
+        <properties>
+          <help>Restart FRRouting daemons</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/restart_frr.py --action restart</command>
+        <children>
+          <leafNode name="bfdd">
+            <properties>
+              <help>Restart Bidirectional Forwarding Detection daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon bfdd</command>
+          </leafNode>
+          <leafNode name="bgpd">
+            <properties>
+              <help>Restart Border Gateway Protocol daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon bgpd</command>
+          </leafNode>
+          <leafNode name="ospfd">
+            <properties>
+              <help>Restart OSPFv2 daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ospfd</command>
+          </leafNode>
+          <leafNode name="ospf6d">
+            <properties>
+              <help>Restart OSPFv3 daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ospf6d</command>
+          </leafNode>
+          <leafNode name="ripd">
+            <properties>
+              <help>Restart Routing Information Protocol daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ripd</command>
+          </leafNode>
+          <leafNode name="ripngd">
+            <properties>
+              <help>Restart RIPng daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ripngd</command>
+          </leafNode>
+          <leafNode name="staticd">
+            <properties>
+              <help>Restart Static Route daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon staticd</command>
+          </leafNode>
+          <leafNode name="zebra">
+            <properties>
+              <help>Restart IP routing manager daemon</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon zebra</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
