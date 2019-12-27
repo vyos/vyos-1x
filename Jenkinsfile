@@ -73,7 +73,11 @@ node('Docker') {
     stage('Define Agent') {
         script {
             // create container name on demand
-            env.DOCKER_IMAGE = "vyos/vyos-build:" + getGitBranchName()
+            def branchName = getGitBranchName()
+            if (branchName == "master") {
+                branchName = "current"
+            }
+            env.DOCKER_IMAGE = "vyos/vyos-build:" + branchName
         }
     }
 }
