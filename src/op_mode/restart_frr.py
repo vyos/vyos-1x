@@ -24,6 +24,8 @@ from logging.handlers import SysLogHandler
 # some default values
 watchfrr = '/usr/lib/frr/watchfrr.sh'
 vtysh = '/usr/bin/vtysh'
+frrconfig = '/etc/frr/frr.conf'
+frrconfig_tmp = '/etc/frr/frr.conf.temporary'
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -32,15 +34,32 @@ logs_handler.setFormatter(logging.Formatter('%(filename)s: %(message)s'))
 logger.addHandler(logs_handler)
 logger.setLevel(logging.INFO)
 
+# save or restore current config file
+def _save_and_restore(action):
+    if action == "save":
+        command = "sudo mv {} {}".format(frrconfig, frrconfig_tmp)
+        logmsg = "Permanent configuration saved to {}".format(frrconfig_tmp)
+    if action == "restore":
+        command = "sudo mv {} {}".format(frrconfig_tmp, frrconfig)
+        logmsg = "Permanent configuration restored from {}".format(frrconfig_tmp)
+
+    return_code = subprocess.call(command, shell=True)
+    if not return_code == 0:
+        logger.error("Failed to rename permanent config: \"{}\" returned exit code: {}".format(command, return_code))
+        return False
+
+    logger.info(logmsg)
+    return True
+
 # write active config to file
 def _write_config():
     command = "sudo {} -n -c write ".format(vtysh)
     return_code = subprocess.call(command, shell=True)
     if not return_code == 0:
         logger.error("Failed to save active config: \"{}\" returned exit code: {}".format(command, return_code))
-        print("Failed to save active config: \"{}\" returned exit code: {}".format(command, return_code))
-        sys.exit(1)
-    logger.info("Active config saved to /etc/frr/frr.conf")
+        return False
+    logger.info("Active config saved to {}".format(frrconfig))
+    return True
 
 # check if daemon is running
 def _daemon_check(daemon):
@@ -83,7 +102,16 @@ cmd_args = cmd_args_parser.parse_args()
 # main logic
 # restart daemon
 if cmd_args.action == 'restart':
-    _write_config()
+    if not _save_and_restore('save'):
+        logger.error("Failed to rename permanent comfig")
+        print("Failed to rename permanent comfig")
+        sys.exit(1)
+
+    if not _write_config():
+        print("Failed to save active config")
+        _save_and_restore('restore')
+        sys.exit(1)
+
     if cmd_args.daemon:
         # check all daemons if they are running
         if not _check_args_daemon(cmd_args.daemon):
@@ -93,11 +121,15 @@ if cmd_args.action == 'restart':
         for daemon in cmd_args.daemon:
             if not _daemon_restart(daemon):
                 print("Failed to restart daemon: {}".format(daemon))
+                _save_and_restore('restore')
                 sys.exit(1)
     else:
         # run command to restart FRR
         if not _daemon_restart(''):
             print("Failed to restart FRRouting")
+            _save_and_restore('restore')
             sys.exit(1)
+
+    _save_and_restore('restore')
 
 sys.exit(0)
