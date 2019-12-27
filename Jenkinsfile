@@ -136,6 +136,9 @@ pipeline {
                         }
 
                         def VYOS_REPO_PATH = '/home/sentrium/web/dev.packages.vyos.net/public_html/repositories/' + RELEASE + '/'
+                        if (getGitBranchName() == "crux")
+                            VYOS_REPO_PATH += 'vyos/'
+
                         def SSH_OPTS = '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
                         def SSH_REMOTE = 'khagen@10.217.48.113'
 
