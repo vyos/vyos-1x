@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+#
+# Delete 'system ipv6 blacklist' option as the IPv6 module can no longer be
+# blacklisted as it is required by e.g. WireGuard and thus will always be
+# loaded.
+
+import os
+import sys
+
+ipv6_blacklist_file = '/etc/modprobe.d/vyatta_blacklist_ipv6.conf'
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+ip_base = ['system', 'ipv6']
+if not config.exists(ip_base):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # delete 'system ipv6 blacklist' node
+    if config.exists(ip_base + ['blacklist']):
+        config.delete(ip_base + ['blacklist'])
+        if os.path.isfile(ipv6_blacklist_file):
+            os.unlink(ipv6_blacklist_file)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

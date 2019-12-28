@@ -8,12 +8,6 @@
           <priority>290</priority>
         </properties>
         <children>
-          <leafNode name="blacklist">
-            <properties>
-              <help>Prevent IPv6 Kernel Module from being loaded</help>
-              <valueless/>
-            </properties>
-          </leafNode>
           <leafNode name="disable-forwarding">
             <properties>
               <help>Disable IPv6 forwarding on all interfaces</help>

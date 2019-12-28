@@ -22,11 +22,9 @@ from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
 
-ipv6_blacklist_file = '/etc/modprobe.d/vyos_blacklist_ipv6.conf'
 ipv6_disable_file = '/etc/modprobe.d/vyos_disable_ipv6.conf'
 
 default_config_data = {
-    'blacklist': False,
     'reboot_message': False,
     'ipv6_forward': '1',
     'disable_addr_assignment': False,
@@ -44,10 +42,6 @@ def get_config():
     conf = Config()
     conf.set_level('system ipv6')
     if conf.exists(''):
-        ip_opt['blacklist'] = conf.exists('blacklist')
-        if conf.exists_effective('blacklist') != conf.exists('blacklist'):
-            ip_opt['reboot_message'] = True
-
         ip_opt['disable_addr_assignment'] = conf.exists('disable')
         if conf.exists_effective('disable') != conf.exists('disable'):
             ip_opt['reboot_message'] = True
@@ -73,14 +67,6 @@ def generate(ip_opt):
     pass
 
 def apply(ip_opt):
-    # disable IPv6 kernel module
-    if ip_opt['blacklist']:
-        with open(ipv6_blacklist_file, 'w') as f:
-            f.write('blacklist ipv6')
-    else:
-        if os.path.exists(ipv6_blacklist_file):
-            os.unlink(ipv6_blacklist_file)
-
     # disable IPv6 address assignment
     if ip_opt['disable_addr_assignment']:
         with open(ipv6_disable_file, 'w') as f:
@@ -90,7 +76,7 @@ def apply(ip_opt):
             os.unlink(ipv6_disable_file)
 
     if ip_opt['reboot_message']:
-        print('Changing IPv6 blacklist/disable parameter will only take affect\n' \
+        print('Changing IPv6 disable parameter will only take affect\n' \
               'when the system is rebooted.')
 
     # configure multipath
