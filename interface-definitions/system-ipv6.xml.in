@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="ipv6" owner="${vyos_conf_scripts_dir}/system-ipv6.py">
+        <properties>
+          <help>IPv6 Settings</help>
+          <priority>290</priority>
+        </properties>
+        <children>
+          <leafNode name="blacklist">
+            <properties>
+              <help>Prevent IPv6 Kernel Module from being loaded</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-forwarding">
+            <properties>
+              <help>Disable IPv6 forwarding on all interfaces</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable assignment of IPv6 addresses on all interfaces</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <node name="multipath">
+            <properties>
+              <help>IPv4 multipath settings</help>
+            </properties>
+            <children>
+              <leafNode name="layer4-hashing">
+                <properties>
+                  <help>Use layer 4 information for ECMP hashing</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="neighbor">
+            <properties>
+              <help>Parameters for Neighbor cache</help>
+            </properties>
+            <children>
+              <leafNode name="table-size">
+                <properties>
+                  <help>Maximum number of entries to keep in the Neighbor cache</help>
+                  <completionHelp>
+                    <list>1024 2048 4096 8192 16384 32768</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(1024|2048|4096|8192|16384|32768)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="strict-dad">
+            <properties>
+              <help>Disable IPv6 operation on interface when DAD fails on LL addr</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
