@@ -69,11 +69,24 @@ def projectProperties = [
 properties(projectProperties)
 setDescription()
 
+node('Docker') {
+    stage('Define Agent') {
+        script {
+            // create container name on demand
+            def branchName = getGitBranchName()
+            if (branchName == "master") {
+                branchName = "current"
+            }
+            env.DOCKER_IMAGE = "vyos/vyos-build:" + branchName
+        }
+    }
+}
+
 pipeline {
     agent {
         docker {
-            args '--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006'
-            image 'vyos/vyos-build:current'
+            args "--sysctl net.ipv6.conf.lo.disable_ipv6=0 -e GOSU_UID=1006 -e GOSU_GID=1006"
+            image "${env.DOCKER_IMAGE}"
             alwaysPull true
         }
     }
@@ -127,6 +140,9 @@ pipeline {
                         }
 
                         def VYOS_REPO_PATH = '/home/sentrium/web/dev.packages.vyos.net/public_html/repositories/' + RELEASE + '/'
+                        if (getGitBranchName() == "crux")
+                            VYOS_REPO_PATH += 'vyos/'
+
                         def SSH_OPTS = '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
                         def SSH_REMOTE = 'khagen@10.217.48.113'
 
