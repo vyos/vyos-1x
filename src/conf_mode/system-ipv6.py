@@ -109,7 +109,6 @@ def apply(ip_opt):
     for root, dirs, files in os.walk('/proc/sys/net/ipv6/conf'):
         for name in files:
             if name == "accept_dad":
-                print(os.path.join(root, name))
                 with open(os.path.join(root, name), 'w') as f:
                     f.write(str(ip_opt['strict_dad']))
 
