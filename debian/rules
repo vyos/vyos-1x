@@ -1,7 +1,6 @@
 #!/usr/bin/make -f
 
 DIR := debian/vyos-smoketest
-VYOS_SBIN_DIR := usr/sbin/
 VYOS_BIN_DIR := usr/bin/
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
 VYOS_DATA_DIR := /usr/share/vyos
@@ -9,8 +8,6 @@ VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := /opt/vyatta/share/vyatta-op/templates
 
 MIGRATION_SCRIPTS_DIR := /opt/vyatta/etc/config-migrate/migrate/
-
-SBINDIR := $(DIR)/usr/sbin
 
 %:
 	dh $@ --with python3, --with quilt
@@ -24,5 +21,5 @@ override_dh_auto_install:
 	cp -r scripts/* $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/smoke
 
 	# Install system programs
-	mkdir -p $(SBINDIR)
-	cp -r bin/* $(SBINDIR)
+	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
+	cp -r bin/* $(DIR)/$(VYOS_BIN_DIR)
