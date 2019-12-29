@@ -32,14 +32,15 @@ from vyos import ConfigError
 ra_conn_name = "remote-access"
 charon_conf_file = "/etc/strongswan.d/charon.conf"
 ipsec_secrets_flie = "/etc/ipsec.secrets"
-ipsec_ra_conn_file = "/etc/ipsec.d/tunnels/"+ra_conn_name
+ipsec_ra_conn_dir = "/etc/ipsec.d/tunnels/"
+ipsec_ra_conn_file = ipsec_ra_conn_dir + ra_conn_name
 ipsec_conf_flie = "/etc/ipsec.conf"
-ca_cert_path = '/etc/ipsec.d/cacerts'
-server_cert_path = '/etc/ipsec.d/certs'
-server_key_path = '/etc/ipsec.d/private'
+ca_cert_path = "/etc/ipsec.d/cacerts"
+server_cert_path = "/etc/ipsec.d/certs"
+server_key_path = "/etc/ipsec.d/private"
 delim_ipsec_l2tp_begin = "### VyOS L2TP VPN Begin ###"
 delim_ipsec_l2tp_end = "### VyOS L2TP VPN End ###"
-charon_pidfile = '/var/run/charon.pid'
+charon_pidfile = "/var/run/charon.pid"
 
 l2pt_ipsec_conf = '''
 {{delim_ipsec_l2tp_begin}}
@@ -147,21 +148,27 @@ def get_config():
 
 ### ipsec secret l2tp
 def write_ipsec_secrets(c):
-  tmpl = jinja2.Template(l2pt_ipsec_secrets_conf, trim_blocks=True)
-  l2pt_ipsec_secrets_txt = tmpl.render(c)
-  old_umask = os.umask(0o077)
-  open(ipsec_secrets_flie,'w').write(l2pt_ipsec_secrets_txt)
-  os.umask(old_umask)
-  sl.syslog(sl.LOG_NOTICE, ipsec_secrets_flie + ' written')
+    tmpl = jinja2.Template(l2pt_ipsec_secrets_conf, trim_blocks=True)
+    l2pt_ipsec_secrets_txt = tmpl.render(c)
+    old_umask = os.umask(0o077)
+    open(ipsec_secrets_flie,'w').write(l2pt_ipsec_secrets_txt)
+    os.umask(old_umask)
+    sl.syslog(sl.LOG_NOTICE, ipsec_secrets_flie + ' written')
 
 ### ipsec remote access connection config
 def write_ipsec_ra_conn(c):
-  tmpl = jinja2.Template(l2tp_ipsec_ra_conn_conf, trim_blocks=True)
-  ipsec_ra_conn_txt = tmpl.render(c)
-  old_umask = os.umask(0o077)
-  open(ipsec_ra_conn_file,'w').write(ipsec_ra_conn_txt)
-  os.umask(old_umask)
-  sl.syslog(sl.LOG_NOTICE, ipsec_ra_conn_file + ' written')
+    tmpl = jinja2.Template(l2tp_ipsec_ra_conn_conf, trim_blocks=True)
+    ipsec_ra_conn_txt = tmpl.render(c)
+    old_umask = os.umask(0o077)
+
+    # Create tunnels directory if does not exist
+    if not os.path.exists(ipsec_ra_conn_dir):
+        os.makedirs(ipsec_ra_conn_dir)
+        sl.syslog(sl.LOG_NOTICE, ipsec_ra_conn_dir  + " created")
+
+    open(ipsec_ra_conn_file,'w').write(ipsec_ra_conn_txt)
+    os.umask(old_umask)
+    sl.syslog(sl.LOG_NOTICE, ipsec_ra_conn_file + ' written')
 
 ### Remove config from file by delimiter
 def remove_confs(delim_begin, delim_end, conf_file):
