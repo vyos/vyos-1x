@@ -57,7 +57,8 @@ def apply(opt):
 
     # Ctrl-Alt-Delete action
     if opt['ctrl_alt_del'] == 'ignore':
-        os.unlink('/lib/systemd/system/ctrl-alt-del.target')
+        if os.path.exists(systemd_ctrl_alt_del):
+            os.unlink('/lib/systemd/system/ctrl-alt-del.target')
 
     elif opt['ctrl_alt_del'] == 'reboot':
         if os.path.exists(systemd_ctrl_alt_del):
