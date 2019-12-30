@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="options" owner="${vyos_conf_scripts_dir}/system-options.py">
+        <properties>
+          <help>System Options</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <leafNode name="ctrl-alt-del-action">
+            <properties>
+              <help>Ctrl-Alt-Delete action</help>
+              <completionHelp>
+                <list>ignore reboot poweroff</list>
+              </completionHelp>
+              <valueHelp>
+                <format>ignore</format>
+                <description>Ignore Ctrl-Alt-Delete</description>
+              </valueHelp>
+              <valueHelp>
+                <format>reboot</format>
+                <description>Reboot VyOS</description>
+              </valueHelp>
+              <valueHelp>
+                <format>poweroff</format>
+                <description>Poweroff VyOS</description>
+              </valueHelp>
+              <constraint>
+                <regex>(ignore|reboot|poweroff)</regex>
+              </constraint>
+              <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
+            </properties>
+           </leafNode>
+           <leafNode name="reboot-on-panic">
+             <properties>
+               <help>Reboot system on kernel panic</help>
+               <valueless/>
+             </properties>
+           </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

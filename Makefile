@@ -46,7 +46,6 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -f $(TMPL_DIR)/protocols/static/node.def
 	rm -f $(TMPL_DIR)/system/node.def
-	rm -f $(TMPL_DIR)/system/options/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 

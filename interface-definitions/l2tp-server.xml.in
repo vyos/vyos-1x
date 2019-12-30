@@ -28,9 +28,9 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="outside-nexthop">
+              <leafNode name="gateway-address">
                 <properties>
-                  <help>Nexthop IP address for reaching the VPN clients</help>
+                  <help>Gatway address uses as client tunnel termination point</help>
                   <constraint>
                     <validator name="ipv4-address"/>
                   </constraint>
