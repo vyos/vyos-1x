@@ -215,7 +215,7 @@ init_config_tmpl = """
 
 [Service]
 ExecStart=
-ExecStart=/usr/sbin/snmpd -Ls0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -smux,mteTrigger,mteTriggerConf,ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
+ExecStart=/usr/sbin/snmpd -LS6d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -smux,mteTrigger,mteTriggerConf,ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
 
 """
 
