@@ -24,6 +24,7 @@ from vyos import ConfigError
 systemd_ctrl_alt_del = '/lib/systemd/system/ctrl-alt-del.target'
 
 default_config_data = {
+    'beep_if_fully_booted': False,
     'ctrl_alt_del': 'ignore',
     'reboot_on_panic': True
 }
@@ -36,6 +37,7 @@ def get_config():
         if conf.exists('ctrl-alt-del-action'):
             opt['ctrl_alt_del'] = conf.return_value('ctrl-alt-del-action')
 
+        opt['beep_if_fully_booted'] = conf.exists('beep-if-fully-booted')
         opt['reboot_on_panic'] = conf.exists('reboot-on-panic')
 
     return opt
@@ -47,10 +49,16 @@ def generate(opt):
     pass
 
 def apply(opt):
+    # Beep action
+    if opt['beep_if_fully_booted']:
+        os.system('systemctl enable vyos-beep.service >/dev/null 2>&1')
+    else:
+        os.system('systemctl disable vyos-beep.service >/dev/null 2>&1')
 
     # Ctrl-Alt-Delete action
     if opt['ctrl_alt_del'] == 'ignore':
-        os.unlink('/lib/systemd/system/ctrl-alt-del.target')
+        if os.path.exists(systemd_ctrl_alt_del):
+            os.unlink('/lib/systemd/system/ctrl-alt-del.target')
 
     elif opt['ctrl_alt_del'] == 'reboot':
         if os.path.exists(systemd_ctrl_alt_del):
