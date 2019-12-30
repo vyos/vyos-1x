@@ -1,7 +1,7 @@
 [Unit]
 Description=Beep after system start
 DefaultDependencies=no
-After=multi-user.target
+After=vyos.target
 
 [Service]
 Type=oneshot
