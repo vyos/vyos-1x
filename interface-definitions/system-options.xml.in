@@ -5,9 +5,15 @@
       <node name="options" owner="${vyos_conf_scripts_dir}/system-options.py">
         <properties>
           <help>System Options</help>
-          <priority>400</priority>
+          <priority>9999</priority>
         </properties>
         <children>
+          <leafNode name="beep-if-fully-booted">
+            <properties>
+              <help>plays sound via system speaker when you can login</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="ctrl-alt-del-action">
             <properties>
               <help>Ctrl-Alt-Delete action</help>
