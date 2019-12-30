@@ -24,10 +24,14 @@
               <help>Multicast group address for VXLAN interface</help>
               <valueHelp>
                 <format>ipv4</format>
-                <description>Multicast group address</description>
+                <description>Multicast IPv4 group address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Multicast IPv6 group address</description>
               </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
+                <validator name="ip-address"/>
               </constraint>
             </properties>
           </leafNode>
@@ -55,10 +59,14 @@
               <help>Remote address of VXLAN tunnel</help>
               <valueHelp>
                 <format>ipv4</format>
-                <description>Remote address of VXLAN tunnel</description>
+                <description>Remote IPv4 address of VXLAN tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote IPv6 address of VXLAN tunnel</description>
               </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
+                <validator name="ip-address"/>
               </constraint>
             </properties>
           </leafNode>
