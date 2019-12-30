@@ -20,12 +20,13 @@ import argparse
 import subprocess
 import logging
 from logging.handlers import SysLogHandler
+from pathlib import Path
+import psutil
 
 # some default values
 watchfrr = '/usr/lib/frr/watchfrr.sh'
 vtysh = '/usr/bin/vtysh'
-frrconfig = '/etc/frr/frr.conf'
-frrconfig_tmp = '/etc/frr/frr.conf.temporary'
+frrconfig_tmp = '/tmp/frr_restart'
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -34,36 +35,79 @@ logs_handler.setFormatter(logging.Formatter('%(filename)s: %(message)s'))
 logger.addHandler(logs_handler)
 logger.setLevel(logging.INFO)
 
-# save or restore current config file
-def _save_and_restore(action):
-    if action == "save":
-        command = "sudo mv {} {}".format(frrconfig, frrconfig_tmp)
-        logmsg = "Permanent configuration saved to {}".format(frrconfig_tmp)
-    if action == "restore":
-        command = "sudo mv {} {}".format(frrconfig_tmp, frrconfig)
-        logmsg = "Permanent configuration restored from {}".format(frrconfig_tmp)
+# check if it is safe to restart FRR
+def _check_safety():
+    try:
+        # print warning
+        answer = input("WARNING: This is a potentially unsafe function! You may lose the connection to the router or active configuration after running this command. Use it at your own risk! Continue? [y/N]: ")
+        if not answer.lower() == "y":
+            logger.error("User aborted command")
+            return False
 
-    return_code = subprocess.call(command, shell=True)
-    if not return_code == 0:
-        logger.error("Failed to rename permanent config: \"{}\" returned exit code: {}".format(command, return_code))
+        # check if another restart process already running
+        if len([process for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']) if 'python' in process.info['name'] and 'restart_frr.py' in process.info['cmdline'][1]]) > 1:
+            logger.error("Another restart_frr.py already running")
+            answer = input("Another restart_frr.py process is already running. It is unsafe to continue. Do you want to process anyway? [y/N]: ")
+            if not answer.lower() == "y":
+                return False
+
+        # check if watchfrr.sh is running
+        for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+            if 'bash' in process.info['name'] and watchfrr in process.info['cmdline']:
+                logger.error("Another {} already running".format(watchfrr))
+                answer = input("Another {} process is already running. It is unsafe to continue. Do you want to process anyway? [y/N]: ".format(watchfrr))
+                if not answer.lower() == "y":
+                    return False
+
+        # check if vtysh is running
+        for process in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+            if 'vtysh' in process.info['name']:
+                logger.error("The vtysh is running by another task")
+                answer = input("The vtysh is running by another task. It is unsafe to continue. Do you want to process anyway? [y/N]: ")
+                if not answer.lower() == "y":
+                    return False
+
+        # check if temporary directory exists
+        if Path(frrconfig_tmp).exists():
+            logger.error("The temporary directory \"{}\" already exists".format(frrconfig_tmp))
+            answer = input("The temporary directory \"{}\" already exists. It is unsafe to continue. Do you want to process anyway? [y/N]: ".format(frrconfig_tmp))
+            if not answer.lower() == "y":
+                return False
+    except:
+        logger.error("Something goes wrong in _check_safety()")
         return False
 
-    logger.info(logmsg)
+    # return True if all check was passed or user confirmed to ignore they results
     return True
 
 # write active config to file
 def _write_config():
-    command = "sudo {} -n -c write ".format(vtysh)
+    # create temporary directory
+    Path(frrconfig_tmp).mkdir(parents=False, exist_ok=True)
+    # save frr.conf to it
+    command = "{} -n -w --config_dir {} 2> /dev/null".format(vtysh, frrconfig_tmp)
     return_code = subprocess.call(command, shell=True)
     if not return_code == 0:
         logger.error("Failed to save active config: \"{}\" returned exit code: {}".format(command, return_code))
         return False
-    logger.info("Active config saved to {}".format(frrconfig))
+    logger.info("Active config saved to {}".format(frrconfig_tmp))
     return True
+
+# clear and remove temporary directory
+def _cleanup():
+    tmpdir = Path(frrconfig_tmp)
+    try:
+        if tmpdir.exists():
+            for file in tmpdir.iterdir():
+                file.unlink()
+            tmpdir.rmdir()
+    except:
+        logger.error("Failed to remove temporary directory {}".format(frrconfig_tmp))
+        print("Failed to remove temporary directory {}".format(frrconfig_tmp))
 
 # check if daemon is running
 def _daemon_check(daemon):
-    command = "sudo {} print_status {}".format(watchfrr, daemon)
+    command = "{} print_status {}".format(watchfrr, daemon)
     return_code = subprocess.call(command, shell=True)
     if not return_code == 0:
         logger.error("Daemon \"{}\" is not running".format(daemon))
@@ -74,14 +118,30 @@ def _daemon_check(daemon):
 
 # restart daemon
 def _daemon_restart(daemon):
-    command = "sudo {} restart {}".format(watchfrr, daemon)
+    command = "{} restart {}".format(watchfrr, daemon)
     return_code = subprocess.call(command, shell=True)
     if not return_code == 0:
         logger.error("Failed to restart daemon \"{}\"".format(daemon))
         return False
 
-    # return True if restarted sucessfully
+    # return True if restarted successfully
     logger.info("Daemon \"{}\" restarted".format(daemon))
+    return True
+
+# reload old config
+def _reload_config(daemon):
+    if daemon != '':
+        command = "{} -n -b --config_dir {} -d {} 2> /dev/null".format(vtysh, frrconfig_tmp, daemon)
+    else:
+        command = "{} -n -b --config_dir {} 2> /dev/null".format(vtysh, frrconfig_tmp)
+
+    return_code = subprocess.call(command, shell=True)
+    if not return_code == 0:
+        logger.error("Failed to reinstall configuration")
+        return False
+
+    # return True if restarted successfully
+    logger.info("Configuration reinstalled successfully")
     return True
 
 # check all daemons if they are running
@@ -102,34 +162,35 @@ cmd_args = cmd_args_parser.parse_args()
 # main logic
 # restart daemon
 if cmd_args.action == 'restart':
-    if not _save_and_restore('save'):
-        logger.error("Failed to rename permanent comfig")
-        print("Failed to rename permanent comfig")
+    # check if it is safe to restart FRR
+    if not _check_safety():
+        print("\nOne of the safety checks was failed or user aborted command. Exiting.")
         sys.exit(1)
 
     if not _write_config():
         print("Failed to save active config")
-        _save_and_restore('restore')
+        _cleanup()
         sys.exit(1)
 
-    if cmd_args.daemon:
-        # check all daemons if they are running
+    # a little trick to make further commands more clear
+    if not cmd_args.daemon:
+        cmd_args.daemon = ['']
+
+    # check all daemons if they are running
+    if cmd_args.daemon != ['']:
         if not _check_args_daemon(cmd_args.daemon):
             print("Warning: some of listed daemons are not running")
 
-        # run command to restart daemon
-        for daemon in cmd_args.daemon:
-            if not _daemon_restart(daemon):
-                print("Failed to restart daemon: {}".format(daemon))
-                _save_and_restore('restore')
-                sys.exit(1)
-    else:
-        # run command to restart FRR
-        if not _daemon_restart(''):
-            print("Failed to restart FRRouting")
-            _save_and_restore('restore')
+    # run command to restart daemon
+    for daemon in cmd_args.daemon:
+        if not _daemon_restart(daemon):
+            print("Failed to restart daemon: {}".format(daemon))
+            _cleanup()
             sys.exit(1)
+        # reinstall old configuration
+        _reload_config(daemon)
 
-    _save_and_restore('restore')
+    # cleanup after all actions
+    _cleanup()
 
 sys.exit(0)
