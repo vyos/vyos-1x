@@ -1603,7 +1603,7 @@ class WireGuardIf(Interface):
         super().op_show_interface_stats()
 
 
-class VXLANIf(Interface, ):
+class VXLANIf(Interface):
     """
     The VXLAN protocol is a tunnelling protocol designed to solve the
     problem of limited VLAN IDs (4096) in IEEE 802.1q. With VXLAN the
