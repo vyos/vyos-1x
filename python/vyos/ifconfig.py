@@ -1679,11 +1679,13 @@ class GeneveIf(Interface):
     def __init__(self, ifname, config=''):
         if config:
             self._ifname = ifname
-
             if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
                 cmd = 'ip link add name {} type geneve id {} remote {}' \
                        .format(self._ifname, config['vni'], config['remote'])
                 self._cmd(cmd)
+
+                # interface is always A/D down. It needs to be enabled explicitly
+                self.set_state('down')
 
         super().__init__(ifname, type='geneve')
 
