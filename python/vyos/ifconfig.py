@@ -1666,7 +1666,7 @@ class VXLANIf(Interface, ):
         }
         return config
 
-class GeneveIf(Interface, ):
+class GeneveIf(Interface):
     """
     Geneve: Generic Network Virtualization Encapsulation
 

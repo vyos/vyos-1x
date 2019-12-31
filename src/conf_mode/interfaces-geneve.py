@@ -111,10 +111,10 @@ def generate(geneve):
 def apply(geneve):
     # Check if GENEVE interface already exists
     if geneve['intf'] in interfaces():
-        v = GeneveIf(geneve['intf'])
+        g = GeneveIf(geneve['intf'])
         # GENEVE is super picky and the tunnel always needs to be recreated,
         # thus we can simply always delete it first.
-        v.remove()
+        g.remove()
 
     if not geneve['deleted']:
         # GENEVE interface needs to be created on-block
@@ -127,28 +127,28 @@ def apply(geneve):
         conf['remote'] = geneve['remote']
 
         # Finally create the new interface
-        v = GeneveIf(geneve['intf'], config=conf)
+        g = GeneveIf(geneve['intf'], config=conf)
         # update interface description used e.g. by SNMP
-        v.set_alias(geneve['description'])
+        g.set_alias(geneve['description'])
         # Maximum Transfer Unit (MTU)
-        v.set_mtu(geneve['mtu'])
+        g.set_mtu(geneve['mtu'])
 
         # configure ARP cache timeout in milliseconds
-        v.set_arp_cache_tmo(geneve['ip_arp_cache_tmo'])
+        g.set_arp_cache_tmo(geneve['ip_arp_cache_tmo'])
         # Enable proxy-arp on this interface
-        v.set_proxy_arp(geneve['ip_proxy_arp'])
+        g.set_proxy_arp(geneve['ip_proxy_arp'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the
         # interface above
         for addr in geneve['address']:
-            v.add_addr(addr)
+            g.add_addr(addr)
 
-        # As the bond interface is always disabled first when changing
+        # As the GENEVE interface is always disabled first when changing
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not geneve['disable']:
-            v.set_state('up')
+            g.set_state('up')
 
     return None
 
