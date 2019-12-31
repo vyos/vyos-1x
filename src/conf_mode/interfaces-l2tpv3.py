@@ -55,6 +55,16 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists('interfaces l2tpv3 ' + l2tpv3['intf']):
         l2tpv3['deleted'] = True
+        # to delete the l2tpv3 interface we need to current
+        # tunnel_id and session_id
+        if conf.exists_effective('interfaces l2tpv3 {} tunnel-id'.format(l2tpv3['intf'])):
+            l2tpv3['tunnel_id'] = conf.return_effective_value(
+                'interfaces l2tpv3 {} tunnel-id'.format(l2tpv3['intf']))
+
+        if conf.exists_effective('interfaces l2tpv3 {} session-id'.format(l2tpv3['intf'])):
+            l2tpv3['session_id'] = conf.return_effective_value(
+                'interfaces l2tpv3 {} session-id'.format(l2tpv3['intf']))
+
         return l2tpv3
 
     # set new configuration level
@@ -172,20 +182,21 @@ def generate(l2tpv3):
 
 
 def apply(l2tpv3):
+    # L2TPv3 interface needs to be created/deleted on-block, instead of
+    # passing a ton of arguments, I just use a dict that is managed by
+    # vyos.ifconfig
+    conf = deepcopy(L2TPv3If.get_config())
+
     # Check if L2TPv3 interface already exists
     if l2tpv3['intf'] in interfaces():
-        l = L2TPv3If(l2tpv3['intf'])
-        # L2TPv3 is super picky and the tunnel always needs to be recreated,
-        # thus we can simply always delete it first.
+        # L2TPv3 is picky when changing tunnels/sessions, thus we can simply
+        # always delete it first.
+        conf['session_id'] = l2tpv3['session_id']
+        conf['tunnel_id'] = l2tpv3['tunnel_id']
+        l = L2TPv3If(l2tpv3['intf'], config=conf)
         l.remove()
 
-
     if not l2tpv3['deleted']:
-        # L2TPv3 interface needs to be created on-block
-        # instead of passing a ton of arguments, I just use a dict
-        # that is managed by vyos.ifconfig
-        conf = deepcopy(L2TPv3If.get_config())
-
         conf['peer_tunnel_id'] = l2tpv3['peer_tunnel_id']
         conf['local_port'] = l2tpv3['local_port']
         conf['remote_port'] = l2tpv3['remote_port']

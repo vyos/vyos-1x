@@ -1714,8 +1714,10 @@ class L2TPv3If(Interface):
     monitoring may be performed.
     """
     def __init__(self, ifname, config=''):
+        self._config = {}
         if config:
             self._ifname = ifname
+            self._config = config
             if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
                 # create tunnel interface
                 cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])
@@ -1729,7 +1731,7 @@ class L2TPv3If(Interface):
 
                 # setup session
                 cmd = 'ip l2tp add session name {} '.format(self._ifname)
-                cmd += 'tunnel_id  {} '.format(config['tunnel_id'])
+                cmd += 'tunnel_id {} '.format(config['tunnel_id'])
                 cmd += 'session_id {} '.format(config['session_id'])
                 cmd += 'peer_session_id  {} '.format(config['peer_session_id'])
                 self._cmd(cmd)
@@ -1753,10 +1755,14 @@ class L2TPv3If(Interface):
             # interface is always A/D down. It needs to be enabled explicitly
             self.set_state('down')
 
-            #cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])
+            if self._config['tunnel_id'] and self._config['session_id']:
+                cmd = 'ip l2tp del session tunnel_id {} '.format(self._config['tunnel_id'])
+                cmd += 'session_id {} '.format(self._config['session_id'])
+                self._cmd(cmd)
 
-        # call remove of parent class
-        super().remove()
+            if self._config['tunnel_id']:
+                cmd = 'ip l2tp del tunnel tunnel_id {} '.format(self._config['tunnel_id'])
+                self._cmd(cmd)
 
     @staticmethod
     def get_config():
