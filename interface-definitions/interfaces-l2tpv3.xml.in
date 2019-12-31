@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="l2tpv3" owner="${vyos_conf_scripts_dir}/interfaces-l2tpv3.py">
+        <properties>
+          <help>Layer 2 Tunnel Protocol Version 3 (L2TPv3) interface</help>
+          <priority>800</priority>
+          <constraint>
+            <regex>l2tpeth[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>L2TPv3 interface must be named l2tpethN</constraintErrorMessage>
+          <valueHelp>
+            <format>l2tpethN</format>
+            <description>L2TPv3 interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/address-ipv4-ipv6.xml.i>
+          #include <include/interface-description.xml.i>
+          <leafNode name="destination-port">
+            <properties>
+              <help>UDP destination port for L2TPv3 tunnel (default: 5000)</help>
+              <valueHelp>
+                <format>1-65535</format>
+                <description>Numeric IP port</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          #include <include/interface-disable.xml.i>
+          <leafNode name="encapsulation">
+            <properties>
+              <help>Encapsulation type (defualt: UDP)</help>
+              <completionHelp>
+                <list>udp ip</list>
+              </completionHelp>
+              <valueHelp>
+                <format>udp</format>
+                <description>UDP encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ip</format>
+                <description>IP encapsulation</description>
+              </valueHelp>
+              <constraint>
+                <regex>(udp|ip)</regex>
+              </constraint>
+              <constraintErrorMessage>Encapsulation must be UDP or IP</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="local-ip">
+            <properties>
+              <help>Local IP address for L2TPv3 tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Local IPv4 address of tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Local IPv6 address of tunnel</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          #include <include/interface-mtu-68-9000.xml.i>
+          <leafNode name="peer-session-id">
+            <properties>
+              <help>Peer session identifier</help>
+              <valueHelp>
+                <format>1-429496729</format>
+                <description>L2TPv3 peer session identifier</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-429496729"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="peer-tunnel-id">
+            <properties>
+              <help>Peer tunnel identifier</help>
+              <valueHelp>
+                <format>1-429496729</format>
+                <description>L2TPv3 peer tunnel identifier</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-429496729"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="remote-ip">
+            <properties>
+              <help>Remote IP address for L2TPv3 tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote IPv4 address of tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote IPv6 address of tunnel</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="session-id">
+            <properties>
+              <help>Session identifier</help>
+              <valueHelp>
+                <format>1-429496729</format>
+                <description>L2TPv3 session identifier</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-429496729"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="source-port">
+            <properties>
+              <help>UDP source port for L2TPv3 tunnel (default: 5000)</help>
+              <valueHelp>
+                <format>1-65535</format>
+                <description>Numeric IP port</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="tunnel-id">
+            <properties>
+              <help>Local tunnel identifier</help>
+              <valueHelp>
+                <format>1-429496729</format>
+                <description>L2TPv3 local tunnel identifier</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-429496729"/>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

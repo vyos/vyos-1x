@@ -1603,7 +1603,7 @@ class WireGuardIf(Interface):
         super().op_show_interface_stats()
 
 
-class VXLANIf(Interface, ):
+class VXLANIf(Interface):
     """
     The VXLAN protocol is a tunnelling protocol designed to solve the
     problem of limited VLAN IDs (4096) in IEEE 802.1q. With VXLAN the
@@ -1666,7 +1666,7 @@ class VXLANIf(Interface, ):
         }
         return config
 
-class GeneveIf(Interface, ):
+class GeneveIf(Interface):
     """
     Geneve: Generic Network Virtualization Encapsulation
 
@@ -1679,11 +1679,13 @@ class GeneveIf(Interface, ):
     def __init__(self, ifname, config=''):
         if config:
             self._ifname = ifname
-
             if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
                 cmd = 'ip link add name {} type geneve id {} remote {}' \
                        .format(self._ifname, config['vni'], config['remote'])
                 self._cmd(cmd)
+
+                # interface is always A/D down. It needs to be enabled explicitly
+                self.set_state('down')
 
         super().__init__(ifname, type='geneve')
 
@@ -1700,5 +1702,87 @@ class GeneveIf(Interface, ):
         config = {
             'vni': 0,
             'remote': ''
+        }
+        return config
+
+class L2TPv3If(Interface):
+    """
+    The Linux bonding driver provides a method for aggregating multiple network
+    interfaces into a single logical "bonded" interface. The behavior of the
+    bonded interfaces depends upon the mode; generally speaking, modes provide
+    either hot standby or load balancing services. Additionally, link integrity
+    monitoring may be performed.
+    """
+    def __init__(self, ifname, config=''):
+        self._config = {}
+        if config:
+            self._ifname = ifname
+            self._config = config
+            if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
+                # create tunnel interface
+                cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])
+                cmd += 'peer_tunnel_id {} '.format(config['peer_tunnel_id'])
+                cmd += 'udp_sport {} '.format(config['local_port'])
+                cmd += 'udp_dport {} '.format(config['remote_port'])
+                cmd += 'encap {} '.format(config['encapsulation'])
+                cmd += 'local {} '.format(config['local_address'])
+                cmd += 'remote {} '.format(config['remote_address'])
+                self._cmd(cmd)
+
+                # setup session
+                cmd = 'ip l2tp add session name {} '.format(self._ifname)
+                cmd += 'tunnel_id {} '.format(config['tunnel_id'])
+                cmd += 'session_id {} '.format(config['session_id'])
+                cmd += 'peer_session_id  {} '.format(config['peer_session_id'])
+                self._cmd(cmd)
+
+                # interface is always A/D down. It needs to be enabled explicitly
+                self.set_state('down')
+
+        super().__init__(ifname, type='l2tp')
+
+    def remove(self):
+        """
+        Remove interface from operating system. Removing the interface
+        deconfigures all assigned IP addresses.
+        Example:
+        >>> from vyos.ifconfig import L2TPv3If
+        >>> i = L2TPv3If('l2tpeth0')
+        >>> i.remove()
+        """
+
+        if os.path.exists('/sys/class/net/{}'.format(self._ifname)):
+            # interface is always A/D down. It needs to be enabled explicitly
+            self.set_state('down')
+
+            if self._config['tunnel_id'] and self._config['session_id']:
+                cmd = 'ip l2tp del session tunnel_id {} '.format(self._config['tunnel_id'])
+                cmd += 'session_id {} '.format(self._config['session_id'])
+                self._cmd(cmd)
+
+            if self._config['tunnel_id']:
+                cmd = 'ip l2tp del tunnel tunnel_id {} '.format(self._config['tunnel_id'])
+                self._cmd(cmd)
+
+    @staticmethod
+    def get_config():
+        """
+        L2TPv3 interfaces require a configuration when they are added using
+        iproute2. This static method will provide the configuration dictionary
+        used by this class.
+
+        Example:
+        >> dict = L2TPv3If().get_config()
+        """
+        config = {
+            'peer_tunnel_id': '',
+            'local_port': 0,
+            'remote_port': 0,
+            'encapsulation': 'udp',
+            'local_address': '',
+            'remote_address': '',
+            'session_id': '',
+            'tunnel_id': '',
+            'peer_session_id': ''
         }
         return config
