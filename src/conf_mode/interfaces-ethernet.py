@@ -19,7 +19,8 @@ import os
 from copy import deepcopy
 from sys import exit
 
-from vyos.ifconfig import EthernetIf, VLANIf
+from vyos.ifconfig import EthernetIf
+from vyos.ifconfig_vlan import apply_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -56,68 +57,6 @@ default_config_data = {
     'vif': [],
     'vif_remove': []
 }
-
-
-def apply_vlan_config(vlan, config):
-    """
-    Generic function to apply a VLAN configuration from a dictionary
-    to a VLAN interface
-    """
-
-    if type(vlan) != type(VLANIf("lo")):
-        raise TypeError()
-
-    # get DHCP config dictionary and update values
-    opt = vlan.get_dhcp_options()
-
-    if config['dhcp_client_id']:
-        opt['client_id'] = config['dhcp_client_id']
-
-    if config['dhcp_hostname']:
-        opt['hostname'] = config['dhcp_hostname']
-
-    if config['dhcp_vendor_class_id']:
-        opt['vendor_class_id'] = config['dhcp_vendor_class_id']
-
-    # store DHCP config dictionary - used later on when addresses are aquired
-    vlan.set_dhcp_options(opt)
-
-    # get DHCPv6 config dictionary and update values
-    opt = vlan.get_dhcpv6_options()
-
-    if config['dhcpv6_prm_only']:
-        opt['dhcpv6_prm_only'] = True
-
-    if config['dhcpv6_temporary']:
-        opt['dhcpv6_temporary'] = True
-
-    # store DHCPv6 config dictionary - used later on when addresses are aquired
-    vlan.set_dhcpv6_options(opt)
-
-    # update interface description used e.g. within SNMP
-    vlan.set_alias(config['description'])
-    # ignore link state changes
-    vlan.set_link_detect(config['disable_link_detect'])
-    # Maximum Transmission Unit (MTU)
-    vlan.set_mtu(config['mtu'])
-    # Change VLAN interface MAC address
-    if config['mac']:
-        vlan.set_mac(config['mac'])
-
-    # enable/disable VLAN interface
-    if config['disable']:
-        vlan.set_state('down')
-    else:
-        vlan.set_state('up')
-
-    # Configure interface address(es)
-    # - not longer required addresses get removed first
-    # - newly addresses will be added second
-    for addr in config['address_remove']:
-        vlan.del_addr(addr)
-    for addr in config['address']:
-        vlan.add_addr(addr)
-
 
 def get_config():
     eth = deepcopy(default_config_data)

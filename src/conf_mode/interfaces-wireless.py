@@ -26,7 +26,8 @@ from grp import getgrnam
 from subprocess import Popen, PIPE
 from psutil import pid_exists
 
-from vyos.ifconfig import EthernetIf, VLANIf
+from vyos.ifconfig import EthernetIf
+from vyos.ifconfig_vlan import apply_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -883,41 +884,6 @@ def get_wpa_suppl_config_name(intf):
 def subprocess_cmd(command):
     p = Popen(command, stdout=PIPE, shell=True)
     p.communicate()
-
-
-def apply_vlan_config(vlan, config):
-    """
-    Generic function to apply a VLAN configuration from a dictionary
-    to a VLAN interface
-    """
-
-    if type(vlan) != type(VLANIf("lo")):
-        raise TypeError()
-
-    # update interface description used e.g. within SNMP
-    vlan.set_alias(config['description'])
-    # ignore link state changes
-    vlan.set_link_detect(config['disable_link_detect'])
-    # Maximum Transmission Unit (MTU)
-    vlan.set_mtu(config['mtu'])
-    # Change VLAN interface MAC address
-    if config['mac']:
-        vlan.set_mac(config['mac'])
-
-    # enable/disable VLAN interface
-    if config['disable']:
-        vlan.set_state('down')
-    else:
-        vlan.set_state('up')
-
-    # Configure interface address(es)
-    # - not longer required addresses get removed first
-    # - newly addresses will be added second
-    for addr in config['address_remove']:
-        vlan.del_addr(addr)
-    for addr in config['address']:
-        vlan.add_addr(addr)
-
 
 def get_config():
     wifi = deepcopy(default_config_data)
