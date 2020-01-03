@@ -41,6 +41,10 @@ default_config_data = {
     'disable_link_detect': 1,
     'forwarding_delay': 14,
     'hello_time': 2,
+    'ip_disable_arp_filter': 1,
+    'ip_enable_arp_accept': 0,
+    'ip_enable_arp_announce': 0,
+    'ip_enable_arp_ignore': 0,
     'igmp_querier': 0,
     'intf': '',
     'mac' : '',
@@ -129,6 +133,22 @@ def get_config():
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
         bridge['arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
+
+    # ARP filter configuration
+    if conf.exists('ip disable-arp-filter'):
+        bridge['ip_disable_arp_filter'] = 0
+
+    # ARP enable accept
+    if conf.exists('ip enable-arp-accept'):
+        bridge['ip_enable_arp_accept'] = 1
+
+    # ARP enable announce
+    if conf.exists('ip enable-arp-announce'):
+        bridge['ip_enable_arp_announce'] = 1
+
+    # ARP enable ignore
+    if conf.exists('ip enable-arp-ignore'):
+        bridge['ip_enable_arp_ignore'] = 1
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):
@@ -220,6 +240,14 @@ def apply(bridge):
         br.set_forward_delay(bridge['forwarding_delay'])
         # set hello time
         br.set_hello_time(bridge['hello_time'])
+        # configure ARP filter configuration
+        br.set_arp_filter(bridge['ip_disable_arp_filter'])
+        # configure ARP accept
+        br.set_arp_accept(bridge['ip_enable_arp_accept'])
+        # configure ARP announce
+        br.set_arp_announce(bridge['ip_enable_arp_announce'])
+        # configure ARP ignore
+        br.set_arp_ignore(bridge['ip_enable_arp_ignore'])
         # set max message age
         br.set_max_age(bridge['max_age'])
         # set bridge priority

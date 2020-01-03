@@ -460,6 +460,14 @@
               <valueless/>
             </properties>
           </leafNode>
+          <node name="ip">
+            <children>
+              #include <include/interface-disable-arp-filter.xml.i>
+              #include <include/interface-enable-arp-accept.xml.i>
+              #include <include/interface-enable-arp-announce.xml.i>
+              #include <include/interface-enable-arp-ignore.xml.i>
+            </children>
+          </node>
           <leafNode name="hw-id">
             <properties>
               <help>Media Access Control (MAC) address</help>

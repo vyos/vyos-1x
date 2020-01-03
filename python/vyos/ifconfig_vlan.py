@@ -55,6 +55,14 @@ def apply_vlan_config(vlan, config):
     vlan.set_alias(config['description'])
     # ignore link state changes
     vlan.set_link_detect(config['disable_link_detect'])
+    # configure ARP filter configuration
+    vlan.set_arp_filter(config['ip_disable_arp_filter'])
+    # configure ARP accept
+    vlan.set_arp_accept(config['ip_enable_arp_accept'])
+    # configure ARP announce
+    vlan.set_arp_announce(config['ip_enable_arp_announce'])
+    # configure ARP ignore
+    vlan.set_arp_ignore(config['ip_enable_arp_ignore'])
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
     # Change VLAN interface MAC address

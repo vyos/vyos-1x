@@ -36,6 +36,7 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/interfaces/node.def
 	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif-s/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/bridge/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif/node.tag/ip/node.def
@@ -43,6 +44,7 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -f $(TMPL_DIR)/protocols/static/node.def
 	rm -f $(TMPL_DIR)/system/node.def

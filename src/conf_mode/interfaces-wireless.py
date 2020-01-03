@@ -816,6 +816,10 @@ default_config_data = {
     'hw_id' : '',
     'intf': '',
     'isolate_stations' : False,
+    'ip_disable_arp_filter': 1,
+    'ip_enable_arp_accept': 0,
+    'ip_enable_arp_announce': 0,
+    'ip_enable_arp_ignore': 0,
     'mac' : '',
     'max_stations' : '',
     'mgmt_frame_protection' : 'disabled',
@@ -1112,6 +1116,22 @@ def get_config():
     if conf.exists('isolate-stations'):
         wifi['isolate_stations'] = True
 
+    # ARP filter configuration
+    if conf.exists('ip disable-arp-filter'):
+        wifi['ip_disable_arp_filter'] = 0
+
+    # ARP enable accept
+    if conf.exists('ip enable-arp-accept'):
+        wifi['ip_enable_arp_accept'] = 1
+
+    # ARP enable announce
+    if conf.exists('ip enable-arp-announce'):
+        wifi['ip_enable_arp_announce'] = 1
+
+    # ARP enable ignore
+    if conf.exists('ip enable-arp-ignore'):
+        wifi['ip_enable_arp_ignore'] = 1
+
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         wifi['mac'] = conf.return_value('mac')
@@ -1372,6 +1392,15 @@ def apply(wifi):
             w.set_mac(wifi['mac'])
         else:
             w.set_mac(wifi['hw_id'])
+
+        # configure ARP filter configuration
+        w.set_arp_filter(wifi['ip_disable_arp_filter'])
+        # configure ARP accept
+        w.set_arp_accept(wifi['ip_enable_arp_accept'])
+        # configure ARP announce
+        w.set_arp_announce(wifi['ip_enable_arp_announce'])
+        # configure ARP ignore
+        w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
 
         # enable interface
         if not wifi['disable']:

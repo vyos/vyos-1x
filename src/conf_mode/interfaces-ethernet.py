@@ -41,6 +41,10 @@ default_config_data = {
     'flow_control': 'on',
     'hw_id': '',
     'ip_arp_cache_tmo': 30,
+    'ip_disable_arp_filter': 1,
+    'ip_enable_arp_accept': 0,
+    'ip_enable_arp_announce': 0,
+    'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
     'intf': '',
@@ -136,6 +140,22 @@ def get_config():
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
         eth['ip_arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
+
+    # ARP filter configuration
+    if conf.exists('ip disable-arp-filter'):
+        eth['ip_disable_arp_filter'] = 0
+
+    # ARP enable accept
+    if conf.exists('ip enable-arp-accept'):
+        eth['ip_enable_arp_accept'] = 1
+
+    # ARP enable announce
+    if conf.exists('ip enable-arp-announce'):
+        eth['ip_enable_arp_announce'] = 1
+
+    # ARP enable ignore
+    if conf.exists('ip enable-arp-ignore'):
+        eth['ip_enable_arp_ignore'] = 1
 
     # Enable proxy-arp on this interface
     if conf.exists('ip enable-proxy-arp'):
@@ -292,6 +312,14 @@ def apply(eth):
         e.set_flow_control(eth['flow_control'])
         # configure ARP cache timeout in milliseconds
         e.set_arp_cache_tmo(eth['ip_arp_cache_tmo'])
+        # configure ARP filter configuration
+        e.set_arp_filter(eth['ip_disable_arp_filter'])
+        # configure ARP accept
+        e.set_arp_accept(eth['ip_enable_arp_accept'])
+        # configure ARP announce
+        e.set_arp_announce(eth['ip_enable_arp_announce'])
+        # configure ARP ignore
+        e.set_arp_ignore(eth['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         e.set_proxy_arp(eth['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface

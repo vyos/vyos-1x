@@ -32,6 +32,10 @@ default_config_data = {
     'group': '',
     'intf': '',
     'ip_arp_cache_tmo': 30,
+    'ip_disable_arp_filter': 1,
+    'ip_enable_arp_accept': 0,
+    'ip_enable_arp_announce': 0,
+    'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'link': '',
     'mtu': 1450,
@@ -78,6 +82,22 @@ def get_config():
     # ARP cache entry timeout in seconds
     if conf.exists('ip arp-cache-timeout'):
         vxlan['ip_arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
+
+    # ARP filter configuration
+    if conf.exists('ip disable-arp-filter'):
+        vxlan['ip_disable_arp_filter'] = 0
+
+    # ARP enable accept
+    if conf.exists('ip enable-arp-accept'):
+        vxlan['ip_enable_arp_accept'] = 1
+
+    # ARP enable announce
+    if conf.exists('ip enable-arp-announce'):
+        vxlan['ip_enable_arp_announce'] = 1
+
+    # ARP enable ignore
+    if conf.exists('ip enable-arp-ignore'):
+        vxlan['ip_enable_arp_ignore'] = 1
 
     # Enable proxy-arp on this interface
     if conf.exists('ip enable-proxy-arp'):
@@ -168,6 +188,14 @@ def apply(vxlan):
 
         # configure ARP cache timeout in milliseconds
         v.set_arp_cache_tmo(vxlan['ip_arp_cache_tmo'])
+        # configure ARP filter configuration
+        v.set_arp_filter(bond['ip_disable_arp_filter'])
+        # configure ARP accept
+        v.set_arp_accept(bond['ip_enable_arp_accept'])
+        # configure ARP announce
+        v.set_arp_announce(bond['ip_enable_arp_announce'])
+        # configure ARP ignore
+        v.set_arp_ignore(bond['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
 

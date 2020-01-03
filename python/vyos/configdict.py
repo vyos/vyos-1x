@@ -119,6 +119,10 @@ def vlan_to_dict(conf):
         'disable_link_detect': 1,
         'egress_qos': '',
         'egress_qos_changed': False,
+        'ip_disable_arp_filter': 1,
+        'ip_enable_arp_accept': 0,
+        'ip_enable_arp_announce': 0,
+        'ip_enable_arp_ignore': 0,
         'ingress_qos': '',
         'ingress_qos_changed': False,
         'mac': '',
@@ -165,6 +169,22 @@ def vlan_to_dict(conf):
     # disable VLAN interface
     if conf.exists('disable'):
         vlan['disable'] = True
+
+    # ARP filter configuration
+    if conf.exists('ip disable-arp-filter'):
+        vlan['ip_disable_arp_filter'] = 0
+
+    # ARP enable accept
+    if conf.exists('ip enable-arp-accept'):
+        vlan['ip_enable_arp_accept'] = 1
+
+    # ARP enable announce
+    if conf.exists('ip enable-arp-announce'):
+        vlan['ip_enable_arp_announce'] = 1
+
+    # ARP enable ignore
+    if conf.exists('ip enable-arp-ignore'):
+        vlan['ip_enable_arp_ignore'] = 1
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):

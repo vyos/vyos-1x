@@ -261,6 +261,91 @@ class Interface:
         return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
                                  .format(self._ifname), (int(tmo) * 1000))
 
+    def set_arp_filter(self, arp_filter):
+        """
+        Filter ARP requests
+
+        1 - Allows you to have multiple network interfaces on the same
+            subnet, and have the ARPs for each interface be answered
+            based on whether or not the kernel would route a packet from
+            the ARP'd IP out that interface (therefore you must use source
+            based routing for this to work). In other words it allows control
+            of which cards (usually 1) will respond to an arp request.
+
+        0 - (default) The kernel can respond to arp requests with addresses
+            from other interfaces. This may seem wrong but it usually makes
+            sense, because it increases the chance of successful communication.
+            IP addresses are owned by the complete host on Linux, not by
+            particular interfaces. Only for more complex setups like load-
+            balancing, does this behaviour cause problems.
+        """
+        if int(arp_filter) >= 0 and int(arp_filter) <= 1:
+            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_filter'
+                                     .format(self._ifname), arp_filter)
+        else:
+           raise ValueError("Value out of range")
+
+    def set_arp_accept(self, arp_accept):
+        """
+        Define behavior for gratuitous ARP frames who's IP is not
+        already present in the ARP table:
+        0 - don't create new entries in the ARP table
+        1 - create new entries in the ARP table
+
+        Both replies and requests type gratuitous arp will trigger the
+        ARP table to be updated, if this setting is on.
+
+        If the ARP table already contains the IP address of the
+        gratuitous arp frame, the arp table will be updated regardless
+        if this setting is on or off.
+        """
+        if int(arp_accept) >= 0 and int(arp_accept) <= 1:
+            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_accept'
+                                     .format(self._ifname), arp_accept)
+        else:
+           raise ValueError("Value out of range")
+
+    def set_arp_announce(self, arp_announce):
+        """
+        Define different restriction levels for announcing the local
+        source IP address from IP packets in ARP requests sent on
+        interface:
+        0 - (default) Use any local address, configured on any interface
+        1 - Try to avoid local addresses that are not in the target's
+            subnet for this interface. This mode is useful when target
+            hosts reachable via this interface require the source IP
+            address in ARP requests to be part of their logical network
+            configured on the receiving interface. When we generate the
+            request we will check all our subnets that include the
+            target IP and will preserve the source address if it is from
+            such subnet.
+
+        Increasing the restriction level gives more chance for
+        receiving answer from the resolved target while decreasing
+        the level announces more valid sender's information.
+        """
+        if int(arp_announce) >= 0 and int(arp_announce) <= 1:
+            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_announce'
+                                     .format(self._ifname), arp_announce)
+        else:
+           raise ValueError("Value out of range")
+
+    def set_arp_ignore(self, arp_ignore):
+        """
+        Define different modes for sending replies in response to received ARP
+        requests that resolve local target IP addresses:
+
+        0 - (default): reply for any local target IP address, configured
+            on any interface
+        1 - reply only if the target IP address is local address
+            configured on the incoming interface
+        """
+        if int(arp_ignore) >= 0 and int(arp_ignore) <= 1:
+            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_ignore'
+                                     .format(self._ifname), arp_ignore)
+        else:
+           raise ValueError("Value out of range")
+
     def set_link_detect(self, link_filter):
         """
         Configure kernel response in packets received on interfaces that are 'down'

@@ -32,6 +32,14 @@
         <constraintErrorMessage>Ethertype must be 0x88A8 or 0x8100</constraintErrorMessage>
       </properties>
     </leafNode>
+    <node name="ip">
+      <children>
+        #include <include/interface-disable-arp-filter.xml.i>
+        #include <include/interface-enable-arp-accept.xml.i>
+        #include <include/interface-enable-arp-announce.xml.i>
+        #include <include/interface-enable-arp-ignore.xml.i>
+      </children>
+    </node>
     #include <include/interface-mac.xml.i>
     #include <include/interface-mtu-68-9000.xml.i>
     <tagNode name="vif-c">
