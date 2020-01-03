@@ -39,4 +39,36 @@
       </leafNode>
     </children>
   </node>
+  <node name="reset">
+    <properties>
+      <help>Reset a service</help>
+    </properties>
+    <children>
+      <node name="pppoe-server">
+        <properties>
+          <help>Reset PPPoE server sessions</help>
+        </properties>
+        <children>
+          <leafNode name="all">
+            <properties>
+              <help>Terminate all pppoe-server users</help>
+            </properties>
+            <command>/usr/bin/accel-cmd terminate all</command>
+          </leafNode>
+          <tagNode name="interface">
+            <properties>
+              <help>Terminate a ppp interface</help>
+            </properties>
+            <command>/usr/bin/accel-cmd terminate if "$4"</command>
+          </tagNode>
+          <tagNode name="username">
+            <properties>
+              <help>Terminate specified users</help>
+            </properties>
+            <command>/usr/bin/accel-cmd terminate match username "$4"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
