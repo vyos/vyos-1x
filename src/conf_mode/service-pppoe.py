@@ -247,7 +247,7 @@ ac-name={{concentrator}}
 interface={{int}}
 {% if interface[int]['vlans'] %}
 vlan_mon={{interface[int]['vlans']|join(',')}}
-interface=re:{{int}}\.(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})
+interface=re:{{int}}\.\d+
 {% endif %}
 {% endfor -%}
 {% endif -%}
