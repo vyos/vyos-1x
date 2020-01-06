@@ -725,7 +725,18 @@ def apply(snmp):
             os.makedirs(nonvolatiledir)
             os.chmod(nonvolatiledir, stat.S_IWUSR | stat.S_IRUSR)
             # get uid for user 'snmp'
-            snmp_uid = pwd.getpwnam('snmp').pw_uid
+            # jessie snmp user = snmp
+            # buster snmp user = Debian-snmp
+            # keep it backwards compatible for Crux
+
+            un = [x[0] for x in pwd.getpwall()]
+            # debian snmp uid is 114 per default across releases
+            snmp_uid = 114
+            if 'snmp' in un:
+                snmp_uid = pwd.getpwnam('snmp').pw_uid
+            elif 'Debian-snmp' in un:
+                snmp_uid = pwd.getpwnam('Debian-snmp').pw_uid
+
             os.chown(nonvolatiledir, snmp_uid, -1)
 
             # move SNMP certificate files from volatile location to non volatile /config/snmp
