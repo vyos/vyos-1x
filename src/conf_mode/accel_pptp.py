@@ -84,10 +84,11 @@ wins2={{wins[1]}}
 {% endif %}
 
 [pptp]
+ifname=pptp%d
 {% if outside_addr %}
 bind={{outside_addr}}
 {% endif %}
-verbose=5
+verbose=1
 ppp-max-mtu={{mtu}}
 mppe={{authentication['mppe']}}
 echo-interval=10
