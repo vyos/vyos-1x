@@ -302,7 +302,6 @@ def chk_con():
             cnt += 1
             if cnt == 100:
                 raise("failed to start pppoe server")
-                break
 
 # chap_secrets file if auth mode local
 
