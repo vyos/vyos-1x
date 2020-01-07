@@ -19,6 +19,7 @@
 import sys
 import os
 import re
+import subprocess
 import jinja2
 
 from vyos.config import Config
@@ -313,15 +314,11 @@ def verify(c):
 
 
 def apply(c):
-    if not c and os.path.exists('/var/run/rsyslogd.pid'):
-        os.system("sudo systemctl stop syslog.socket")
-        os.system("sudo systemctl stop rsyslog")
-    else:
-        if not os.path.exists('/var/run/rsyslogd.pid'):
-            os.system("sudo systemctl start rsyslog >/dev/null")
-        else:
-            os.system("sudo systemctl restart rsyslog >/dev/null")
+    if not c:
+        subprocess.call(['sudo', 'systemctl', 'stop', 'syslog'])
+        return 0
 
+    subprocess.call(['sudo', 'systemctl', 'restart', 'syslog'])
 
 if __name__ == '__main__':
     try:
