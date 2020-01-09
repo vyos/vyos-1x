@@ -70,11 +70,11 @@
                     <properties>
                       <help>Service being used for Dynamic DNS [REQUIRED]</help>
                       <completionHelp>
-                        <list>custom afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
+                        <list>&lt;custom&gt; afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>custom</format>
-                        <description>Custom or predefined service</description>
+                        <format>&lt;custom&gt;</format>
+                        <description>Service with a custom name</description>
                       </valueHelp>
                       <valueHelp>
                         <format>afraid</format>
@@ -121,9 +121,9 @@
                         <description>zoneedit.com Services</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit)</regex>
+                        <regex>^(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit|\w+)$</regex>
                       </constraint>
-                      <constraintErrorMessage>Please choose from the list of allowed services</constraintErrorMessage>
+                      <constraintErrorMessage>You can use only predefined list of services or word characters (_, a-z, A-Z, 0-9) as service name</constraintErrorMessage>
                     </properties>
                     <children>
                       <leafNode name="host-name">
