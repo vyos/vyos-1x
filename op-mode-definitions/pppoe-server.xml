@@ -71,4 +71,34 @@
       </node>
     </children>
   </node>
+  <node name="set">
+    <children>
+      <node name="pppoe-server">
+        <properties>
+          <help>Set PPPoE server maintenance mode</help>
+        </properties>
+        <children>
+          <node name="maintenance-mode">
+            <properties>
+              <help>Set PPPoE server maintenance mode</help>
+            </properties>
+            <children>
+              <leafNode name="enable">
+                <properties>
+                  <help>Deny new connections and stop to serve pppoe after disconnect last session</help>
+                </properties>
+                <command>/usr/bin/accel-cmd shutdown soft</command>
+              </leafNode>
+              <leafNode name="cancel">
+                <properties>
+                  <help>Cancel maintenance mode</help>
+                </properties>
+                <command>/usr/bin/accel-cmd shutdown cancel</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
