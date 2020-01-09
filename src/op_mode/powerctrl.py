@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, time as type_time, date as type_date
 from subprocess import check_output, CalledProcessError, STDOUT
 from vyos.util import ask_yes_no
 
+systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
 def parse_time(s):
   try:
@@ -45,33 +46,40 @@ def parse_date(s):
 
 def get_shutdown_status():
   try:
-    output = check_output(["/bin/systemctl", "status", "systemd-shutdownd.service"]).decode()
-    return output
+    if os.path.exists(systemd_sched_file):
+      # Get scheduled from systemd file
+      with open(systemd_sched_file, 'r') as f:
+        data = f.read().rstrip('\n')
+        r_data = {}
+        for line in data.splitlines():
+          tmp_split = line.split("=")
+          if tmp_split[0] == "USEC":
+            # Convert USEC to  human readable format
+            r_data['DATETIME'] = datetime.utcfromtimestamp(int(tmp_split[1])/1000000).strftime('%Y-%m-%d %H:%M:%S')
+          else:
+            r_data[tmp_split[0]] = tmp_split[1]
+        return r_data
+    return None
   except CalledProcessError:
     return None
 
 def check_shutdown():
   output = get_shutdown_status()
-  if output:
-    r = re.findall(r'Status: \"(.*)\"\n', output)
-    if r:
-        # When available, that line is like
-        # Status: "Shutting down at Thu 1970-01-01 00:00:00 UTC (poweroff)..."
-        print(r[0])
-    else:
-        # Sometimes status string is not available immediately
-        # after service startup
-        print("Poweroff or reboot is scheduled")
+  if output and 'MODE' in output:
+    if output['MODE'] == 'reboot':
+      print("Reboot is scheduled", output['DATETIME'])
+    elif output['MODE'] == 'poweroff':
+        print("Poweroff is scheduled", output['DATETIME'])
   else:
-    print("Poweroff or reboot is not scheduled")
+    print("Reboot or poweroff is not scheduled")
 
 def cancel_shutdown():
   output = get_shutdown_status()
-  if output:
+  if output and 'MODE' in output:
     try:
       timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
       cmd = check_output(["/sbin/shutdown","-c","--no-wall"])
-      message = "Scheduled reboot or poweroff has been cancelled %s" % timenow
+      message = "Scheduled %s has been cancelled %s" % (output['MODE'], timenow)
       os.system("wall %s" % message)
     except CalledProcessError as e:
       sys.exit("Could not cancel a reboot or poweroff: %s" % e)
