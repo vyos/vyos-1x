@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="mpls">
+        <children>
+          <node name="ldp">
+            <properties>
+              <help>Label Distribution Protocol (LDP)</help>
+            </properties>
+            <children>
+              <node name="binding">
+                <properties>
+                  <help>Label Information Base</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show mpls ldp binding"</command>
+              </node>
+              <node name="discovery">
+                <properties>
+                  <help>Discovery hello information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show mpls ldp discovery"</command>
+              </node>
+             <node name="interface">
+                <properties>
+                  <help>LDP interface information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show mpls ldp interface"</command>
+              </node>
+              <node name="neighbor">
+               <properties>
+                 <help>LDP neighbor information</help>
+               </properties>
+               <command>/usr/bin/vtysh -c "show mpls ldp neighbor"</command>
+                <children>
+                 <node name="detail">
+                   <properties>
+                     <help>Show neighbor detail</help>
+                   </properties>
+                   <command>/usr/bin/vtysh -c "show mpls ldp neighbor detail"</command>
+                 </node>
+               </children>
+              </node>
+            </children>
+          </node>
+          <node name="pseudowire">
+            <properties>
+              <help>Show MPLS pseudowire interfaces</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show mpls pseudowires"</command>
+          </node>
+          <node name="table">
+            <properties>
+              <help>Show MPLS table</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show mpls table"</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
