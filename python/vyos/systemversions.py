@@ -16,12 +16,15 @@
 import os
 import re
 import sys
+import json
+
 import vyos.defaults
 
 def get_system_versions():
     """
-    Get component versions from running system; critical failure if
-    unable to read migration directory.
+    Get component versions from running system: read vyatta directory
+    structure for versions, then read vyos JSON file. It is a critical
+    error if either migration directory or JSON file is unreadable.
     """
     system_versions = {}
 
@@ -35,5 +38,26 @@ def get_system_versions():
         if re.match(r'[\w,-]+@\d+', info):
             pair = info.split('@')
             system_versions[pair[0]] = int(pair[1])
+
+    version_dict = {}
+    path = vyos.defaults.version_file
+
+    if os.path.isfile(path):
+        with open(path, 'r') as f:
+            try:
+                version_dict = json.load(f)
+            except ValueError as err:
+                print(f"\nValue error in {path}: {err}")
+                sys.exit(1)
+
+        for k, v in version_dict.items():
+            if not isinstance(v, int):
+                print(f"\nType error in {path}; expecting Dict[str, int]")
+                sys.exit(1)
+            existing = system_versions.get(k)
+            if existing is None:
+                system_versions[k] = v
+            elif v > existing:
+                system_versions[k] = v
 
     return system_versions
