@@ -29,10 +29,22 @@
   <start>
     <element name="interfaceDefinition">
       <zeroOrMore>
+        <ref name="syntaxVersion"/>
+      </zeroOrMore>
+      <zeroOrMore>
         <ref name="node"/>
       </zeroOrMore>
     </element>
   </start>
+  <!-- interfaceDefinition may contain syntax version attribute lists. -->
+  <define name="syntaxVersion">
+    <element name="syntaxVersion">
+      <interleave>
+        <ref name="componentAttr"/>
+        <ref name="versionAttr"/>
+      </interleave>
+    </element>
+  </define>
   <!--
     node tag may contain node, leafNode, or tagNode tags
     Those are intermediate configuration nodes that may only contain
@@ -183,6 +195,12 @@
         </optional>
       </interleave>
     </element>
+  </define>
+  <define name="componentAttr">
+    <attribute name="component"/>
+  </define>
+  <define name="versionAttr">
+    <attribute name="version"/>
   </define>
   <!-- All nodes must have "name" attribute -->
   <define name="nodeNameAttr">

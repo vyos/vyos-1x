@@ -1,6 +1,7 @@
 TMPL_DIR := templates-cfg
 OP_TMPL_DIR := templates-op
 BUILD_DIR := build
+DATA_DIR := data
 CFLAGS :=
 
 src = $(wildcard interface-definitions/*.xml.in)
@@ -77,8 +78,13 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
 
+.PHONY: component_versions
+.ONESHELL:
+component_versions: $(BUILD_DIR) $(obj)
+	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
+
 .PHONY: all
-all: clean interface_definitions op_mode_definitions
+all: clean interface_definitions op_mode_definitions component_versions
 
 .PHONY: clean
 clean:

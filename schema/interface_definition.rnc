@@ -24,7 +24,14 @@
 # Interface definition starts with interfaceDefinition tag that may contain node tags
 start = element interfaceDefinition
 {
+    syntaxVersion*,
     node*
+}
+
+# interfaceDefinition may contain syntax version attribute lists.
+syntaxVersion = element syntaxVersion
+{
+    (componentAttr & versionAttr)
 }
 
 # node tag may contain node, leafNode, or tagNode tags
@@ -95,6 +102,16 @@ properties = element properties
 
     # These are meaningful only for tag nodes
     (element keepChildOrder { empty })?
+}
+
+componentAttr = attribute component
+{
+    text
+}
+
+versionAttr = attribute version
+{
+    text
 }
 
 # All nodes must have "name" attribute

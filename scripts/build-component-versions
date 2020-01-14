@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import argparse
+import json
+
+from lxml import etree as ET
+
+parser = argparse.ArgumentParser()
+parser.add_argument('INPUT_DIR', type=str,
+                    help="Directory containing XML interface definition files")
+parser.add_argument('OUTPUT_DIR', type=str,
+                    help="Output directory for JSON file")
+
+args = parser.parse_args()
+
+input_dir = args.INPUT_DIR
+output_dir = args.OUTPUT_DIR
+
+version_dict = {}
+
+for filename in os.listdir(input_dir):
+    filepath = os.path.join(input_dir, filename)
+    print(filepath)
+    try:
+        xml = ET.parse(filepath)
+    except Exception as e:
+        print("Failed to load interface definition file {0}".format(filename))
+        print(e)
+        sys.exit(1)
+
+    root = xml.getroot()
+    version_data = root.iterfind("syntaxVersion")
+    for ver in version_data:
+        component = ver.get("component")
+        version = int(ver.get("version"))
+
+        v = version_dict.get(component)
+        if v is None:
+            version_dict[component] = version
+        elif version > v:
+            version_dict[component] = version
+
+out_file = os.path.join(output_dir, 'component-versions.json')
+with open(out_file, 'w') as f:
+    json.dump(version_dict, f, indent=4, sort_keys=True)
