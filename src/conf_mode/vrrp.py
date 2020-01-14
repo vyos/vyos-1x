@@ -37,6 +37,7 @@ config_tmpl = """
 
 global_defs {
     dynamic_interfaces
+    script_user root
 }
 
 {% for group in groups -%}
@@ -117,6 +118,10 @@ vrrp_instance {{ group.name }} {
     {% if group.fault_script -%}
         notify_fault "/usr/libexec/vyos/system/vrrp-script-wrapper.py --state fault --group {{ group.name }} --interface {{ group.interface }} {{ group.fault_script }}"
     {% endif -%}
+
+    {% if group.stop_script -%}
+        notify_stop "/usr/libexec/vyos/system/vrrp-script-wrapper.py --state stop --group {{ group.name }} --interface {{ group.interface }} {{ group.stop_script }}"
+    {% endif -%}
 }
 
 {% endfor -%}
@@ -178,6 +183,7 @@ def get_config():
         group["master_script"] = config.return_value("transition-script master")
         group["backup_script"] = config.return_value("transition-script backup")
         group["fault_script"] = config.return_value("transition-script fault")
+        group["stop_script"] = config.return_value("transition-script stop")
 
         if config.exists("no-preempt"):
             group["preempt"] = False
