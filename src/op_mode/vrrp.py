@@ -32,6 +32,7 @@ def print_summary():
         # Replace with inotify or similar if it proves problematic
         time.sleep(0.2)
         json_data = vyos.keepalived.get_json_data()
+        vyos.keepalived.remove_vrrp_data("json")
     except:
         print("VRRP information is not available")
         sys.exit(1)
@@ -63,6 +64,7 @@ def print_statistics():
         time.sleep(0.2)
         output = vyos.keepalived.get_statistics()
         print(output)
+        vyos.keepalived.remove_vrrp_data("stats")
     except:
         print("VRRP statistics are not available")
         sys.exit(1)
@@ -73,6 +75,7 @@ def print_state_data():
         time.sleep(0.2)
         output = vyos.keepalived.get_state_data()
         print(output)
+        vyos.keepalived.remove_vrrp_data("state")
     except:
         print("VRRP information is not available")
         sys.exit(1)
