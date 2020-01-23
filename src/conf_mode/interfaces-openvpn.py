@@ -426,7 +426,7 @@ def get_config():
     # disable ncp-ciphers support
     if conf.exists('encryption disable-ncp'):
         openvpn['disable_ncp'] = True
-    
+
     # data encryption algorithm ncp-list
     if conf.exists('encryption ncp-ciphers'):
         _ncp_ciphers = []
@@ -456,7 +456,7 @@ def get_config():
                 _ncp_ciphers.append('aes-256-gcm')
                 _ncp_ciphers.append('AES-256-GCM')
         openvpn['ncp_ciphers'] = ':'.join(_ncp_ciphers)
-    
+
     # hash algorithm
     if conf.exists('hash'):
         openvpn['hash'] = conf.return_value('hash')
@@ -994,6 +994,11 @@ def apply(openvpn):
         Interface(openvpn['intf']).set_alias(openvpn['description'])
     except:
         pass
+
+    # TAP interface needs to be brought up explicitly
+    if openvpn['type'] == 'tap':
+        if not openvpn['disable']:
+            Interface(openvpn['intf']).set_state('up')
 
     return None
 
