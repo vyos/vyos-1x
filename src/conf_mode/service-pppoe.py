@@ -288,6 +288,8 @@ chap_secrets_conf = '''
 # if it takes longer than 100 * 0.5 secs, exception is being raised
 # not sure if that's the best way to check it, but it worked so far quite well
 #
+
+
 def _chk_con():
     cnt = 0
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -301,6 +303,7 @@ def _chk_con():
             if cnt == 100:
                 raise("failed to start pppoe server")
 
+
 def _write_chap_secrets(c):
     tmpl = jinja2.Template(chap_secrets_conf, trim_blocks=True)
     chap_secrets_txt = tmpl.render(c)
@@ -308,6 +311,7 @@ def _write_chap_secrets(c):
     open(chap_secrets, 'w').write(chap_secrets_txt)
     os.umask(old_umask)
     sl.syslog(sl.LOG_NOTICE, chap_secrets + ' written')
+
 
 def _accel_cmd(cmd=''):
     if not cmd:
@@ -319,6 +323,7 @@ def _accel_cmd(cmd=''):
     except:
         return 1
 
+
 def get_config():
     c = Config()
     if not c.exists('service pppoe-server'):
@@ -326,28 +331,28 @@ def get_config():
 
     config_data = {
         'concentrator': 'vyos-ac',
-      'authentication': {
-        'local-users': {
+        'authentication': {
+            'local-users': {
+            },
+            'mode': 'local',
+            'radiussrv': {},
+            'radiusopt': {}
         },
-          'mode': 'local',
-        'radiussrv': {},
-        'radiusopt': {}
-      },
-      'client_ip_pool': '',
-      'client_ip_subnets': [],
-      'client_ipv6_pool': {},
-      'interface': {},
-      'ppp_gw': '',
-      'svc_name': '',
-      'dns': [],
-      'dnsv6': [],
-      'wins': [],
-      'mtu': '1492',
-      'ppp_options': {},
-      'limits': {},
-      'snmp': 'disable',
-      'sesscrtl': 'replace',
-      'pado_delay' : ''
+        'client_ip_pool': '',
+        'client_ip_subnets': [],
+        'client_ipv6_pool': {},
+        'interface': {},
+        'ppp_gw': '',
+        'svc_name': '',
+        'dns': [],
+        'dnsv6': [],
+        'wins': [],
+        'mtu': '1492',
+        'ppp_options': {},
+        'limits': {},
+        'snmp': 'disable',
+        'sesscrtl': 'replace',
+        'pado_delay': ''
     }
 
     c.set_level(['service', 'pppoe-server'])
@@ -361,7 +366,7 @@ def get_config():
             config_data['interface'][intfc] = {'vlans': []}
             if c.exists(['interface', intfc, 'vlan-id']):
                 config_data['interface'][intfc]['vlans'] += c.return_values(
-                    ['interface', intfc , 'vlan-id'])
+                    ['interface', intfc, 'vlan-id'])
             if c.exists(['interface', intfc, 'vlan-range']):
                 config_data['interface'][intfc]['vlans'] += c.return_values(
                     ['interface', intfc, 'vlan-range'])
@@ -369,9 +374,11 @@ def get_config():
         config_data['ppp_gw'] = c.return_value(['local-ip'])
     if c.exists(['dns-servers']):
         if c.return_value(['dns-servers', 'server-1']):
-            config_data['dns'].append(c.return_value(['dns-servers', 'server-1']))
+            config_data['dns'].append(
+                c.return_value(['dns-servers', 'server-1']))
         if c.return_value(['dns-servers', 'server-2']):
-            config_data['dns'].append(c.return_value(['dns-servers', 'server-2']))
+            config_data['dns'].append(
+                c.return_value(['dns-servers', 'server-2']))
     if c.exists(['dnsv6-servers']):
         if c.return_value(['dnsv6-servers', 'server-1']):
             config_data['dnsv6'].append(
@@ -384,9 +391,11 @@ def get_config():
                 c.return_value(['dnsv6-servers', 'server-3']))
     if c.exists(['wins-servers']):
         if c.return_value(['wins-servers', 'server-1']):
-            config_data['wins'].append(c.return_value(['wins-servers', 'server-1']))
+            config_data['wins'].append(
+                c.return_value(['wins-servers', 'server-1']))
         if c.return_value(['wins-servers', 'server-2']):
-            config_data['wins'].append(c.return_value(['wins-servers', 'server-2']))
+            config_data['wins'].append(
+                c.return_value(['wins-servers', 'server-2']))
     if c.exists(['client-ip-pool']):
         if c.exists(['client-ip-pool', 'start']):
             config_data['client_ip_pool'] = c.return_value(
@@ -569,19 +578,19 @@ def get_config():
         config_data['sesscrtl'] = c.return_value(['session-control'])
 
     if c.exists(['pado-delay']):
-      config_data['pado_delay'] = '0'
-      a = {}
-      for id in c.list_nodes(['pado-delay']):
-        if not c.return_value(['pado-delay', id, 'sessions']):
-          a[id] = 0
-        else:
-          a[id] = c.return_value(['pado-delay', id, 'sessions'])
+        config_data['pado_delay'] = '0'
+        a = {}
+        for id in c.list_nodes(['pado-delay']):
+            if not c.return_value(['pado-delay', id, 'sessions']):
+                a[id] = 0
+            else:
+                a[id] = c.return_value(['pado-delay', id, 'sessions'])
 
-      for k in sorted(a.keys()):
-        if k != sorted(a.keys())[-1]:
-          config_data['pado_delay'] += ",{0}:{1}".format(k,a[k])
-        else:
-          config_data['pado_delay'] += ",{0}:{1}".format('-1',a[k])
+        for k in sorted(a.keys()):
+            if k != sorted(a.keys())[-1]:
+                config_data['pado_delay'] += ",{0}:{1}".format(k, a[k])
+            else:
+                config_data['pado_delay'] += ",{0}:{1}".format('-1', a[k])
 
     return config_data
 
@@ -671,6 +680,7 @@ def apply(c):
     else:
         _accel_cmd('restart')
         sl.syslog(sl.LOG_NOTICE, "reloading config via daemon restart")
+
 
 if __name__ == '__main__':
     try:
