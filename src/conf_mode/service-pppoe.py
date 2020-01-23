@@ -254,7 +254,9 @@ interface=re:{{int}}\.\d+
 {% if svc_name %}
 service-name={{svc_name}}
 {% endif -%}
-pado-delay=0
+{% if pado_delay %}
+pado-delay={{pado_delay}}
+{% endif %}
 
 {% if limits %}
 [connlimit]
@@ -282,15 +284,11 @@ chap_secrets_conf = '''
 {% endfor %}
 '''
 #
-# inline helper functions
-#
 # depending on hw and threads, daemon needs a little to start
 # if it takes longer than 100 * 0.5 secs, exception is being raised
 # not sure if that's the best way to check it, but it worked so far quite well
 #
-
-
-def chk_con():
+def _chk_con():
     cnt = 0
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
@@ -303,10 +301,7 @@ def chk_con():
             if cnt == 100:
                 raise("failed to start pppoe server")
 
-# chap_secrets file if auth mode local
-
-
-def write_chap_secrets(c):
+def _write_chap_secrets(c):
     tmpl = jinja2.Template(chap_secrets_conf, trim_blocks=True)
     chap_secrets_txt = tmpl.render(c)
     old_umask = os.umask(0o077)
@@ -314,8 +309,7 @@ def write_chap_secrets(c):
     os.umask(old_umask)
     sl.syslog(sl.LOG_NOTICE, chap_secrets + ' written')
 
-
-def accel_cmd(cmd=''):
+def _accel_cmd(cmd=''):
     if not cmd:
         return None
     try:
@@ -324,13 +318,6 @@ def accel_cmd(cmd=''):
         return ret
     except:
         return 1
-
-# check ig local-ip is in client pool subnet
-
-
-#
-# inline helper functions end
-#
 
 def get_config():
     c = Config()
@@ -359,7 +346,8 @@ def get_config():
       'ppp_options': {},
       'limits': {},
       'snmp': 'disable',
-      'sesscrtl': 'replace'
+      'sesscrtl': 'replace',
+      'pado_delay' : ''
     }
 
     c.set_level(['service', 'pppoe-server'])
@@ -580,6 +568,21 @@ def get_config():
     if c.exists(['session-control']):
         config_data['sesscrtl'] = c.return_value(['session-control'])
 
+    if c.exists(['pado-delay']):
+      config_data['pado_delay'] = '0'
+      a = {}
+      for id in c.list_nodes(['pado-delay']):
+        if not c.return_value(['pado-delay', id, 'sessions']):
+          a[id] = 0
+        else:
+          a[id] = c.return_value(['pado-delay', id, 'sessions'])
+
+      for k in sorted(a.keys()):
+        if k != sorted(a.keys())[-1]:
+          config_data['pado_delay'] += ",{0}:{1}".format(k,a[k])
+        else:
+          config_data['pado_delay'] += ",{0}:{1}".format('-1',a[k])
+
     return config_data
 
 
@@ -645,7 +648,7 @@ def generate(c):
     open(pppoe_conf, 'w').write(config_text)
 
     if c['authentication']['local-users']:
-        write_chap_secrets(c)
+        _write_chap_secrets(c)
 
     return c
 
@@ -653,7 +656,7 @@ def generate(c):
 def apply(c):
     if c == None:
         if os.path.exists(pidfile):
-            accel_cmd('shutdown hard')
+            _accel_cmd('shutdown hard')
             if os.path.exists(pidfile):
                 os.remove(pidfile)
         return None
@@ -661,12 +664,12 @@ def apply(c):
     if not os.path.exists(pidfile):
         ret = subprocess.call(
             ['/usr/sbin/accel-pppd', '-c', pppoe_conf, '-p', pidfile, '-d'])
-        chk_con()
+        _chk_con()
         if ret != 0 and os.path.exists(pidfile):
             os.remove(pidfile)
             raise ConfigError('accel-pppd failed to start')
     else:
-        accel_cmd('restart')
+        _accel_cmd('restart')
         sl.syslog(sl.LOG_NOTICE, "reloading config via daemon restart")
 
 if __name__ == '__main__':
