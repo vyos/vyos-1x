@@ -129,3 +129,6 @@ debian/.debhelper/
 
 # VIM
 *.swp
+
+# vyos-1x JSON version
+data/component-versions.json
