@@ -27,6 +27,7 @@ for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
 
         if mode & S_IXOTH:
             try:
+                print('Running Testcase: ' + test_file)
                 os.system(test_file)
             except Exception as e:
                 print('Testcase "{}" raised an exception'.format(test_file))
