@@ -140,6 +140,7 @@ class Config(object):
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         out = p.stdout.read()
         p.wait()
+        p.communicate()
         if p.returncode != 0:
             raise VyOSError()
         else:

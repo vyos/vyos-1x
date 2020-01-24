@@ -121,6 +121,7 @@ class ConfigSession(object):
         p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=self.__session_env)
         result = p.wait()
         output = p.stdout.read().decode()
+        p.communicate()
         if result != 0:
             raise ConfigSessionError(output)
         return output
