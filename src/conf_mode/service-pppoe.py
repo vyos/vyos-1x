@@ -49,7 +49,7 @@ pppoe
 radius
 {% endif %}
 ippool
-{% if client_ipv6_pool %}
+{% if ppp_options['ipv6'] != 'deny' %}
 ipv6pool
 ipv6_nd
 ipv6_dhcp
