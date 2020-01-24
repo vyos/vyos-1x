@@ -25,13 +25,11 @@ import vyos.util as util
 RESOLV_CONF = '/etc/resolv.conf'
 
 test_servers = ['192.0.2.10', '2001:db8:1::100']
-
 base_path = ['system', 'name-server']
 
-
 def get_name_servers():
-  resolv_conf = util.read_file(RESOLV_CONF)
-  return re.findall(r'\n?nameserver\s+(.*)', resolv_conf)
+    resolv_conf = util.read_file(RESOLV_CONF)
+    return re.findall(r'\n?nameserver\s+(.*)', resolv_conf)
 
 class TestSystemNameServer(unittest.TestCase):
     def setUp(self):
