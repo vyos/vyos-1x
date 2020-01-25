@@ -57,8 +57,8 @@ def is_ipv6_link_local(addr):
     Check addr if it is an IPv6 link-local address/network. Returns True/False
     """
 
+    addr = addr.split('%')[0]
     if is_ipv6(addr):
-        addr = addr.split('%')[0]
         if ipaddress.IPv6Address(addr).is_link_local:
             return True
 
