@@ -1,8 +1,8 @@
 #!/usr/bin/make -f
 
-DIR := debian/vyos-1x
 VYOS_SBIN_DIR := usr/sbin/
 VYOS_BIN_DIR := usr/bin/
+DIR := debian/tmp
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
 VYOS_DATA_DIR := /usr/share/vyos
 VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
