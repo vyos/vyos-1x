@@ -83,7 +83,7 @@ Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
 Package: vyos-1x-vmware
-Architecture: all
+Architecture: amd64 i386
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
