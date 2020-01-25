@@ -112,8 +112,7 @@ tests/templates/*
 
 # Debian packaging
 debian/files
-debian/vyos-1x
-debian/vyos-1x.*
+debian/tmp
 debian/debhelper-build-stamp
 debian/.debhelper/
 

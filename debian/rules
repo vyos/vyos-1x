@@ -19,7 +19,7 @@ override_dh_auto_build:
 	make all
 
 override_dh_auto_install:
-	dh_install -pvyos-1x
+	dh_auto_install
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
 
 	# Install scripts
