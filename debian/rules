@@ -1,14 +1,14 @@
 #!/usr/bin/make -f
 
-VYOS_SBIN_DIR := usr/sbin/
-VYOS_BIN_DIR := usr/bin/
 DIR := debian/tmp
+VYOS_SBIN_DIR := usr/sbin
+VYOS_BIN_DIR := usr/bin
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
-VYOS_DATA_DIR := /usr/share/vyos
-VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
-VYOS_OP_TMPL_DIR := /opt/vyatta/share/vyatta-op/templates
+VYOS_DATA_DIR := usr/share/vyos
+VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
+VYOS_OP_TMPL_DIR := opt/vyatta/share/vyatta-op/templates
 
-MIGRATION_SCRIPTS_DIR := /opt/vyatta/etc/config-migrate/migrate/
+MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
 SERVICES_DIR := usr/libexec/vyos/services
 
