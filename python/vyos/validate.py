@@ -58,6 +58,7 @@ def is_ipv6_link_local(addr):
     """
 
     if is_ipv6(addr):
+        addr = addr.split('%')[0]
         if ipaddress.IPv6Address(addr).is_link_local:
             return True
 
