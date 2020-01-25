@@ -90,6 +90,23 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._base_path = ['interfaces', 'bridge']
         self._interfaces = ['br0']
 
+    def test_add_remove_member(self):
+        members = list_interfaces_of_type("ethernet")
+
+        for intf in self._interfaces:
+            cost = 1000
+            priority = 10
+
+            self.session.set(self._base_path + [intf, 'stp'])
+            for member in members:
+                self.session.set(self._base_path + [intf, 'member', 'interface', member])
+                self.session.set(self._base_path + [intf, 'member', 'interface', member, 'cost', str(cost)])
+                self.session.set(self._base_path + [intf, 'member', 'interface', member, 'priority', str(priority)])
+                cost += 1
+                priority += 1
+
+        self.session.commit()
+
 
 if __name__ == '__main__':
     unittest.main()
