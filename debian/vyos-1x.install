@@ -1,4 +1,5 @@
-etc/
+etc/init.d
+etc/vyos
 lib/
 opt/
 usr/
