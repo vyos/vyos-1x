@@ -72,8 +72,8 @@ class BondInterfaceTest(BasicInterfaceTest.BaseTest):
         for intf in self._interfaces:
             for member in members:
                 # We can not enslave an interface when there is an address
-                # assigned - thus we do not allow it in case someone
-                # runs vyos-smoketest on his production device
+                # assigned - take care here - or find them dynamically if a user
+                # runs vyos-smoketest on his production device?
                 self.session.set(self._base_path + [intf, 'member', 'interface', member])
 
         self.session.commit()
