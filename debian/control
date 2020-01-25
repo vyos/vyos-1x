@@ -81,3 +81,13 @@ Depends: python3,
   ${misc:Depends}
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
+
+Package: vyos-1x-vmware
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ open-vm-tools
+Description: VyOS configuration scripts and data for VMware
+ Adds configuration files required for VyOS running on VMware hosts.
+
