@@ -39,7 +39,7 @@
                   <help>IP address used for ARP monitoring</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>Network Time Protocol (NTP) IPv4 address</description>
+                    <description>Specify IPv4 address of ARP requests when interval is enabled</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
