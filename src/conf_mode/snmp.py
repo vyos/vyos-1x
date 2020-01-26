@@ -96,6 +96,9 @@ sysServices 14
 master agentx
 agentXPerms 0777 0777
 pass .1.3.6.1.2.1.31.1.1.1.18 /opt/vyatta/sbin/if-mib-alias
+smuxpeer .1.3.6.1.2.1.83
+smuxpeer .1.3.6.1.2.1.157
+smuxsocket localhost
 
 # linkUp/Down configure the Event MIB tables to monitor
 # the ifTable for network interfaces being taken up or down
