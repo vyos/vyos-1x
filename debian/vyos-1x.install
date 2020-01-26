@@ -1,5 +1,6 @@
 etc/init.d
 etc/vyos
+etc/systemd
 lib/
 opt/
 usr/
