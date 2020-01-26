@@ -121,22 +121,8 @@ def get_location_intf(config, name):
     config.set_level(path)
 
     config.set_level('{} location'.format(path))
-    civic_based = {}
     elin = ''
     coordinate_based = {}
-
-    if config.exists('civic-based'):
-        config.set_level('{} location civic-based'.format(path))
-        civic_based['country_code'] = config.return_value('country-code')
-        civic_based['ca_type'] = []
-        for ca_types_name in config.list_nodes('ca-type'):
-            config.set_level('{} location civic-based ca-type {}'.format(path, ca_types_name))
-            ca_val = config.return_value('ca-value')
-            ca_type = {
-                'name': ca_types_name,
-                'ca_val': ca_val
-            }
-            civic_based['ca_type'].append(ca_type)
 
     if config.exists('elin'):
         elin = config.return_value('elin')
@@ -157,7 +143,6 @@ def get_location_intf(config, name):
 
     intf = {
         'name': name,
-        'civic_based': civic_based,
         'elin': elin,
         'coordinate_based': coordinate_based
 
@@ -202,33 +187,6 @@ def verify(lldp):
 
     # check location
     for location in lldp['location']:
-        # check civic-based
-        if len(location['civic_based']) > 0:
-            if len(location['coordinate_based']) > 0 or location['elin']:
-                raise ConfigError('Can only configure 1 location type for interface {0}'.format(location['name']))
-
-            # check country-code
-            if not location['civic_based']['country_code']:
-                raise ConfigError('Invalid location for interface {0}:\n' \
-                                  'must configure the country code'.format(location['name']))
-
-            if not re.match(r'^[a-zA-Z]{2}$', location['civic_based']['country_code']):
-                raise ConfigError('Invalid location for interface {0}:\n' \
-                                  'country-code must be 2 characters'.format(location['name']))
-            # check ca-type
-            if len(location['civic_based']['ca_type']) < 0:
-                raise ConfigError('Invalid location for interface {0}:\n' \
-                                  'must define at least 1 ca-type'.format(location['name']))
-
-            for ca_type in location['civic_based']['ca_type']:
-                if not int(ca_type['name']) in range(0, 129):
-                    raise ConfigError('Invalid location for interface {0}:\n' \
-                                      'ca-type must between 0-128'.format(location['name']))
-
-                if not ca_type['ca_val']:
-                    raise ConfigError('Invalid location for interface {0}:\n' \
-                                      'must configure the ca-value for ca-type {1}'.format(location["name"],ca_type['name']))
-
         # check coordinate-based
         elif len(location['coordinate_based']) > 0:
             # check longitude and latitude
