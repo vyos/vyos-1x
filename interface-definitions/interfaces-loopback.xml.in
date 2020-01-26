@@ -4,7 +4,7 @@
     <children>
       <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/interfaces-loopback.py">
         <properties>
-          <help>Loopback interface</help>
+          <help>Loopback Interface</help>
           <priority>300</priority>
           <constraint>
             <regex>lo$</regex>

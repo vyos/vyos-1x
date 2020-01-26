@@ -4,7 +4,7 @@
     <children>
       <tagNode name="ethernet" owner="${vyos_conf_scripts_dir}/interfaces-ethernet.py">
         <properties>
-          <help>Ethernet interface name</help>
+          <help>Ethernet Interface</help>
           <priority>318</priority>
           <constraint>
             <regex>((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$</regex>

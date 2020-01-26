@@ -4,7 +4,7 @@
     <children>
       <tagNode name="bonding" owner="${vyos_conf_scripts_dir}/interfaces-bonding.py">
         <properties>
-          <help>Bonding interface name</help>
+          <help>Bonding Interface/Link Aggregation</help>
           <priority>320</priority>
           <constraint>
             <regex>bond[0-9]+$</regex>

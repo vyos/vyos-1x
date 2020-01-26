@@ -4,7 +4,7 @@
     <children>
       <tagNode name="l2tpv3" owner="${vyos_conf_scripts_dir}/interfaces-l2tpv3.py">
         <properties>
-          <help>Layer 2 Tunnel Protocol Version 3 (L2TPv3) interface</help>
+          <help>Layer 2 Tunnel Protocol Version 3 (L2TPv3) Interface</help>
           <priority>800</priority>
           <constraint>
             <regex>l2tpeth[0-9]+$</regex>
