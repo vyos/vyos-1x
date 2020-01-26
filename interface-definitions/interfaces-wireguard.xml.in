@@ -10,7 +10,7 @@
           <constraint>
             <regex>wg[0-9]+$</regex>
           </constraint>
-          <constraintErrorMessage>illegal interface name</constraintErrorMessage>
+          <constraintErrorMessage>WireGuard interface must be named wgN</constraintErrorMessage>
           <valueHelp>
             <format>wgN</format>
             <description>WireGuard interface name</description>
