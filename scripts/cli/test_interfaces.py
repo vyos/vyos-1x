@@ -104,7 +104,10 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 self.session.set(self._base_path + [intf, 'member', 'interface', member, 'priority', str(priority)])
                 cost += 1
                 priority += 1
+        self.session.commit()
 
+        for intf in self._interfaces:
+            self.session.delete(self._base_path + [intf, 'member'])
         self.session.commit()
 
 
