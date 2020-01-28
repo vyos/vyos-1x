@@ -228,7 +228,7 @@ class Config(object):
         except VyOSError:
             return False
 
-    def show_config(self, path=[], default=None):
+    def show_config(self, path=[], default=None, effective=False):
         """
         Args:
             path (str list): Configuration tree path, or empty
@@ -237,6 +237,18 @@ class Config(object):
         Returns:
             str: working configuration
         """
+
+        # FIXUP: by default, showConfig will give you a diff
+        # if there are uncommitted changes.
+        # The config parser obviously cannot work with diffs,
+        # so we need to supress diff production using appropriate
+        # options for getting either running (active)
+        # or proposed (working) config.
+        if effective:
+            path = ['--show-active-only'] + path
+        else:
+            path = ['--show-working-only'] + path
+
         if isinstance(path, list):
             path = " ".join(path)
         try:
@@ -250,7 +262,7 @@ class Config(object):
         Args: path (str list): Configuration tree path, can be empty
         Returns: a dict representation of the config
         """
-        res = self.show_config(self._make_path(path))
+        res = self.show_config(self._make_path(path), effective=effective)
         config_tree = vyos.configtree.ConfigTree(res)
         config_dict = json.loads(config_tree.to_json())
         return config_dict
