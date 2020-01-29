@@ -17,15 +17,39 @@
 import sys
 import os
 
+from pwd import getpwall, getpwnam
+from subprocess import Popen, PIPE, STDOUT
+
 from vyos.config import Config
+from vyos.configdict import list_diff
 from vyos import ConfigError
+
 
 default_config_data = {
     'deleted': False,
     'radius_server': [],
     'radius_source': '',
-    'user': []
+    'add_users': [],
+    'del_users': []
 }
+
+def get_local_users():
+    """Returns list of dynamically allocated users (see Debian Policy Manual)"""
+    local_users = []
+    for p in getpwall():
+        username = p[0]
+        uid = getpwnam(username).pw_uid
+        if uid in range(1000, 29999):
+            if username not in ['radius_user', 'radius_priv_user']:
+                local_users.append(username)
+
+    return local_users
+
+def get_crypt_pw(password):
+    command = '/usr/bin/mkpasswd --method=sha-512 {}'.format(password)
+    p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
+    tmp = p.communicate()[0].strip()
+    return tmp.decode()
 
 def get_config():
     login = default_config_data
@@ -36,11 +60,13 @@ def get_config():
         login['deleted'] = True
         return login
 
-    if conf.exists(base_level + ['radius', 'source-address']):
+    conf.set_level(base_level)
+
+    if conf.exists(['radius', 'source-address']):
         login['radius_source'] = conf.return_value(['radius', 'source-address'])
 
     # Read in all RADIUS servers and store to list
-    for server in conf.list_nodes(base_level + ['radius', 'server']):
+    for server in conf.list_nodes(['radius', 'server']):
         radius = {
             'address': server,
             'key': '',
@@ -65,11 +91,12 @@ def get_config():
         login['radius_server'].append(radius)
 
     # Read in all local users and store to list
-    for username in conf.list_nodes(base_level + ['user']):
+    conf.set_level(base_level)
+    for username in conf.list_nodes(['user']):
         user = {
             'name': username,
             'password_plaintext': '',
-            'password_encrypted': '',
+            'password_encrypted': '!',
             'public_keys': [],
             'full_name': '',
             'home_dir': '/home/' + username,
@@ -83,6 +110,14 @@ def get_config():
         # Encrypted password
         if conf.exists(['authentication', 'encrypted-password']):
             user['password_encrypted'] = conf.return_value(['authentication', 'encrypted-password'])
+
+        # User real name
+        if conf.exists(['full-name']):
+            user['full_name'] = conf.return_value(['full-name'])
+
+        # User home-directory
+        if conf.exists(['home-directory']):
+            user['home_dir'] = conf.return_value(['home-directory'])
 
         # Read in public keys
         for id in conf.list_nodes(['authentication', 'public-keys']):
@@ -109,29 +144,75 @@ def get_config():
             # Append individual public key to list of user keys
             user['public_keys'].append(key)
 
-        # set proper config level
-        conf.set_level(base_level + ['user', username])
+        login['add_users'].append(user)
 
-        # User real name
-        if conf.exists(['full-name']):
-            user['full_name'] = conf.return_value(['full-name'])
-
-        # User home-directory
-        if conf.exists(['home-directory']):
-            user['home_dir'] = conf.return_value(['home-directory'])
 
     return login
 
 def verify(login):
+
     pass
 
 def generate(login):
-    import pprint
-    pprint.pprint(login)
+    # users no longer existing in the running configuration need to be deleted
+    local_users = get_local_users()
+    cli_users = [tmp['name'] for tmp in login['add_users']]
+    # create a list of all users, cli and users
+    all_users = list(set(local_users+cli_users))
+
+    # Remove any normal users that dos not exist in the current configuration.
+    # This can happen if user is added but configuration was not saved and
+    # system is rebooted.
+    login['del_users'] = [tmp for tmp in all_users if tmp not in cli_users]
+
+    # calculate users encrypted password
+    for user in login['add_users']:
+        if user['password_plaintext']:
+            user['password_encrypted'] = get_crypt_pw(user['password_plaintext'])
+            user['password_plaintext'] = ''
+
+            # remove old plaintext password
+            # and set new encrypted password
+            os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password '' >/dev/null".format(user['name']))
+            os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}' >/dev/null".format(user['name'], user['password_encrypted']))
 
     pass
 
 def apply(login):
+    for user in login['add_users']:
+        # make new user using vyatta shell and make home directory (-m),
+        # default group of 100 (users)
+        cmd = "useradd -m -N"
+        # check if user already exists:
+        if user['name'] in get_local_users():
+            # update existing account
+            cmd = "usermod"
+
+        # encrypted password must be quited in '' else it won't work!
+        cmd += " -p '{}'".format(user['password_encrypted'])
+        cmd += " -s /bin/vbash"
+        if user['full_name']:
+            cmd += " -c {}".format(user['full_name'])
+
+        if user['home_dir']:
+            cmd += " -d '{}'".format(user['home_dir'])
+
+        cmd += " -G frrvty,vyattacfg,sudo,adm,dip,disk"
+        cmd += " {}".format(user['name'])
+
+        try:
+            os.system(cmd)
+        except Exception as e:
+            print('Adding user "{}" raised an exception'.format(user))
+
+
+    for user in login['del_users']:
+        try:
+            # Remove user account but leave home directory to be safe
+            os.system('userdel {}'.format(user))
+        except Exception as e:
+            print('Deleting user "{}" raised an exception'.format(user))
+
     pass
 
 if __name__ == '__main__':
