@@ -38,7 +38,7 @@ vyos_tmpl = """
 
 configure system platform VyOS
 configure system description "VyOS {{ options.description }}"
-{%- if listen_on -%}
+{% if options.listen_on -%}
 configure system interface pattern "{{ options.listen_on | join(",") }}"
 {%- endif %}
 {% if options.mgmt_addr -%}
