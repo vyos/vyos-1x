@@ -188,7 +188,7 @@ def verify(lldp):
     # check location
     for location in lldp['location']:
         # check coordinate-based
-        elif len(location['coordinate_based']) > 0:
+        if len(location['coordinate_based']) > 0:
             # check longitude and latitude
             if not location['coordinate_based']['longitude']:
                 raise ConfigError('Must define longitude for interface {0}'.format(location['name']))
