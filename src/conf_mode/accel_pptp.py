@@ -32,7 +32,6 @@ pidfile = r'/var/run/accel_pptp.pid'
 pptp_cnf_dir = r'/etc/accel-ppp/pptp'
 chap_secrets = pptp_cnf_dir + '/chap-secrets'
 pptp_conf = pptp_cnf_dir + '/pptp.config'
-# accel-pppd -d -c /etc/accel-ppp/pppoe/pppoe.config -p /var/run/accel_pppoe.pid
 
 ### config path creation
 if not os.path.exists(pptp_cnf_dir):
@@ -137,14 +136,8 @@ chap_secrets_conf = '''
 {% endif %}
 {% endfor %}
 '''
-###
-# inline helper functions
-###
-# depending on hw and threads, daemon needs a little to start
-# if it takes longer than 100 * 0.5 secs, exception is being raised
-# not sure if that's the best way to check it, but it worked so far quite well 
-###
-def chk_con():
+
+def _chk_con():
   cnt = 0
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   while True:
@@ -159,7 +152,7 @@ def chk_con():
         break
 
 ### chap_secrets file if auth mode local
-def write_chap_secrets(c):
+def _write_chap_secrets(c):
   tmpl = jinja2.Template(chap_secrets_conf, trim_blocks=True)
   chap_secrets_txt = tmpl.render(c)
   old_umask = os.umask(0o077)
@@ -167,7 +160,7 @@ def write_chap_secrets(c):
   os.umask(old_umask)
   sl.syslog(sl.LOG_NOTICE, chap_secrets + ' written')
 
-def accel_cmd(cmd=''):
+def _accel_cmd(cmd=''):
   if not cmd:
     return None
   try:
@@ -182,10 +175,10 @@ def accel_cmd(cmd=''):
 
 def get_config():
   c = Config()
-  if not c.exists('vpn pptp remote-access '):
+  if not c.exists(['vpn', 'pptp', 'remote-access']):
     return None
 
-  c.set_level('vpn pptp remote-access')
+  c.set_level(['vpn', 'pptp', 'remote-access'])
   config_data = {
     'authentication'  : {
         'mode'          : 'local',
@@ -204,21 +197,21 @@ def get_config():
 
   ### general options ###
 
-  if c.exists('dns-servers server-1'):
-    config_data['dns'].append( c.return_value('dns-servers server-1'))
-  if c.exists('dns-servers server-2'):
-    config_data['dns'].append( c.return_value('dns-servers server-2'))
-  if c.exists('wins-servers server-1'):
-    config_data['wins'].append( c.return_value('wins-servers server-1'))
-  if c.exists('wins-servers server-2'):
-    config_data['wins'].append( c.return_value('wins-servers server-2'))
-  if c.exists('outside-address'):
-    config_data['outside_addr'] = c.return_value('outside-address')
+  if c.exists(['dns-servers', 'server-1']):
+    config_data['dns'].append( c.return_value(['dns-servers', 'server-1']))
+  if c.exists(['dns-servers', 'server-2']):
+    config_data['dns'].append( c.return_value(['dns-servers', 'server-2']))
+  if c.exists(['wins-servers', 'server-1']):
+    config_data['wins'].append( c.return_value(['wins-servers', 'server-1']))
+  if c.exists(['wins-servers', 'server-2']):
+    config_data['wins'].append( c.return_value(['wins-servers', 'server-2']))
+  if c.exists(['outside-address']):
+    config_data['outside_addr'] = c.return_value(['outside-address'])
 
   ### auth local 
-  if c.exists('authentication mode local'):
-    if c.exists('authentication local-users username'):
-      for usr in c.list_nodes('authentication local-users username'):
+  if c.exists(['authentication', 'mode', 'local']):
+    if c.exists(['authentication', 'local-users', 'username']):
+      for usr in c.list_nodes(['authentication', 'local-users', 'username']):
         config_data['authentication']['local-users'].update(
           {
             usr : {
@@ -229,65 +222,64 @@ def get_config():
           }
         )
 
-        if c.exists('authentication local-users username ' + usr + ' password'):
-          config_data['authentication']['local-users'][usr]['passwd'] = c.return_value('authentication local-users username ' + usr + ' password')
-        if c.exists('authentication local-users username ' + usr + ' disable'):
+        if c.exists(['authentication', 'local-users', 'username', usr, 'password']):
+          config_data['authentication']['local-users'][usr]['passwd'] = c.return_value(['authentication', 'local-users', 'username', usr, 'password'])
+        if c.exists(['authentication', 'local-users', 'username', usr, 'disable']):
           config_data['authentication']['local-users'][usr]['state'] = 'disable'
-        if c.exists('authentication local-users username ' + usr + ' static-ip'):
-          config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
+        if c.exists(['authentication', 'local-users', 'username', usr, 'static-ip']):
+          config_data['authentication']['local-users'][usr]['ip'] = c.return_value(['authentication', 'local-users', 'username', usr, 'static-ip'])
 
   ### authentication mode radius servers and settings
 
-  if c.exists('authentication mode radius'):
+  if c.exists(['authentication', 'mode', 'radius']):
     config_data['authentication']['mode'] = 'radius'
-    rsrvs = c.list_nodes('authentication radius server')
+    rsrvs = c.list_nodes(['authentication', 'radius', 'server'])
     for rsrv in rsrvs:
-      if c.return_value('authentication radius server ' + rsrv + ' fail-time') == None:
+      if not c.return_value(['authentication', 'radius', 'server', rsrv, 'fail-time']):
         ftime = '0'
       else:
-        ftime = str(c.return_value('authentication radius server ' + rsrv + ' fail-time'))
-      if c.return_value('authentication radius-server ' + rsrv + ' req-limit') == None:
+        ftime = c.return_value(['authentication', 'radius', 'server', rsrv, 'fail-time'])
+      if not c.return_value(['authentication', 'radius-server', rsrv, 'req-limit']):
         reql = '0'
       else:
-        reql = str(c.return_value('authentication radius server ' + rsrv + ' req-limit'))
+        reql = c.return_value(['authentication', 'radius', 'server', rsrv, 'req-limit'])
 
       config_data['authentication']['radiussrv'].update(
         {
           rsrv  : {
-            'secret'  : c.return_value('authentication radius server ' + rsrv + ' key'),
+            'secret'  : c.return_value(['authentication', 'radius', 'server', rsrv, 'key']),
             'fail-time' : ftime,
             'req-limit' : reql
             }
         }
       )
 
-  if c.exists('client-ip-pool'):
-    if c.exists('client-ip-pool start'):
-      config_data['client_ip_pool'] = c.return_value('client-ip-pool start')
-    if c.exists('client-ip-pool stop'):
-      config_data['client_ip_pool'] += '-' + re.search('[0-9]+$', c.return_value('client-ip-pool stop')).group(0)
-  if c.exists('mtu'):
-    config_data['mtu'] = c.return_value('mtu')
-
+  if c.exists(['client-ip-pool']):
+    if c.exists(['client-ip-pool', 'start']):
+      config_data['client_ip_pool'] = c.return_value(['client-ip-pool', 'start'])
+    if c.exists(['client-ip-pool', 'stop']):
+      config_data['client_ip_pool'] += '-' + re.search('[0-9]+$', c.return_value(['client-ip-pool', 'stop'])).group(0)
+  if c.exists(['mtu']):
+    config_data['mtu'] = c.return_value(['mtu'])
 
   ### gateway address 
-  if c.exists('gateway-address'):
-    config_data['gw_ip'] = c.return_value('gateway-address') 
+  if c.exists(['gateway-address']):
+    config_data['gw_ip'] = c.return_value(['gateway-address'])
   else:
     config_data['gw_ip'] = re.sub('[0-9]+$','1',config_data['client_ip_pool'])    
   
-  if c.exists('authentication require'):
-    if c.return_value('authentication require') == 'pap':
+  if c.exists(['authentication', 'require']):
+    if c.return_value(['authentication', 'require']) == 'pap':
       config_data['authentication']['auth_proto'] = 'auth_pap'
-    if c.return_value('authentication require') == 'chap':
+    if c.return_value(['authentication', 'require']) == 'chap':
       config_data['authentication']['auth_proto'] = 'auth_chap_md5'
-    if c.return_value('authentication require') == 'mschap':
+    if c.return_value(['authentication', 'require']) == 'mschap':
       config_data['authentication']['auth_proto'] = 'auth_mschap_v1'
-    if c.return_value('authentication require') == 'mschap-v2':
+    if c.return_value(['authentication', 'require']) == 'mschap-v2':
       config_data['authentication']['auth_proto'] = 'auth_mschap_v2'
   
-    if c.exists('authentication mppe'):
-      config_data['authentication']['mppe'] = c.return_value('authentication mppe')
+    if c.exists(['authentication', 'mppe']):
+      config_data['authentication']['mppe'] = c.return_value(['authentication', 'mppe'])
   
   return config_data
 
@@ -330,27 +322,27 @@ def generate(c):
   open(pptp_conf,'w').write(config_text)
 
   if c['authentication']['local-users']:
-    write_chap_secrets(c)
+    _write_chap_secrets(c)
 
   return c
 
 def apply(c):
   if c == None:
     if os.path.exists(pidfile):
-      accel_cmd('shutdown hard')
+      _accel_cmd('shutdown hard')
       if os.path.exists(pidfile):
         os.remove(pidfile)
     return None
 
   if not os.path.exists(pidfile):
     ret = subprocess.call(['/usr/sbin/accel-pppd','-c',pptp_conf,'-p',pidfile,'-d'])
-    chk_con()
+    _chk_con()
     if ret !=0 and os.path.exists(pidfile):
       os.remove(pidfile)
       raise ConfigError('accel-pppd failed to start')
   else:
     ### if gw ip changes, only restart doesn't work
-    accel_cmd('restart')
+    _accel_cmd('restart')
     sl.syslog(sl.LOG_NOTICE, "reloading config via daemon restart")
 
 if __name__ == '__main__':
