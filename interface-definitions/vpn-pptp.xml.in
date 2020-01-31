@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="vpn">
     <children>
-      <node name="pptp" owner="${vyos_conf_scripts_dir}/accel_pptp.py">
+      <node name="pptp" owner="${vyos_conf_scripts_dir}/vpn-pptp.py">
         <properties>
           <help>Point to Point Tunneling Protocol (PPTP) Virtual Private Network (VPN)</help>
         </properties>
