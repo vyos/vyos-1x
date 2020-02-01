@@ -1060,17 +1060,6 @@ class VLANIf(Interface):
         super().remove()
 
 
-    def set_state(self, state):
-        """
-        Change individual VLAN interface state.
-
-        It makes only sense to change the state of an individual VLAN if the
-        parent interface is up
-        """
-        parent_state = self.get_state()
-        if parent_state == 'up':
-            super().set_state(state)
-
     def add_vlan(self, vlan_id, ethertype='', ingress_qos='', egress_qos=''):
         """
         A virtual LAN (VLAN) is any broadcast domain that is partitioned and
