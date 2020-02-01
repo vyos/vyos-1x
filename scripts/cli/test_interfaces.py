@@ -76,6 +76,13 @@ class DummyInterfaceTest(BasicInterfaceTest.BaseTest):
          self._interfaces = ['dum0', 'dum1', 'dum2']
 
 
+class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
+    def setUp(self):
+         super().setUp()
+         self._base_path = ['interfaces', 'loopback']
+         self._interfaces = ['lo']
+
+
 class BondInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
          super().setUp()
