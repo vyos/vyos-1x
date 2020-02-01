@@ -69,6 +69,13 @@ class BasicInterfaceTest:
                         self.assertTrue(is_intf_addr_assigned(intf, addr['addr']))
 
 
+class DummyInterfaceTest(BasicInterfaceTest.BaseTest):
+    def setUp(self):
+         super().setUp()
+         self._base_path = ['interfaces', 'dummy']
+         self._interfaces = ['dum0', 'dum1', 'dum2']
+
+
 class BondInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
          super().setUp()
