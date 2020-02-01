@@ -1067,11 +1067,9 @@ class VLANIf(Interface):
         It makes only sense to change the state of an individual VLAN if the
         parent interface is up
         """
-        parent_state = Interface(self._ifname).get_state()
+        parent_state = self.get_state()
         if parent_state == 'up':
             super().set_state(state)
-        else:
-            self._debug_msg('Parent interface down -> VLAN interface down')
 
     def add_vlan(self, vlan_id, ethertype='', ingress_qos='', egress_qos=''):
         """
@@ -1147,17 +1145,6 @@ class EthernetIf(VLANIf):
     """
     def __init__(self, ifname):
         super().__init__(ifname)
-
-    def set_state(self, state):
-        """
-        Enable (up) / Disable (down) an interface
-        """
-
-        # As we inherit from VLANIf we need to call the Interface.set_state()
-        # method directly as otherwise the interface will be dead-locked and
-        # always stay down.
-        Interface.set_state(self, state)
-
 
     def get_driver_name(self):
         """
@@ -1391,15 +1378,6 @@ class BondIf(VLANIf):
              i = Interface(slave['ifname'])
              i.set_state(slave['state'])
 
-    def set_state(self, state):
-        """
-        Enable (up) / Disable (down) an interface
-        """
-
-        # As we inherit from VLANIf we need to call the Interface.set_state()
-        # method directly as otherwise the interface will be dead-locked and
-        # always stay down.
-        Interface.set_state(self, state)
 
     def set_hash_policy(self, mode):
         """
