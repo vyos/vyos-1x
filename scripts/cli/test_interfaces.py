@@ -35,6 +35,20 @@ class BasicInterfaceTest:
             self.session.delete(self._base_path)
             self.session.commit()
 
+        def test_add_description(self):
+            """ Check if description can be added to interface """
+            for intf in self._interfaces:
+                test_string='Description-Test-{}'.format(intf)
+                self.session.set(self._base_path + [intf, 'description', test_string])
+            self.session.commit()
+
+            # Validate interface description
+            for intf in self._interfaces:
+                test_string='Description-Test-{}'.format(intf)
+                with open('/sys/class/net/{}/ifalias'.format(intf), 'r') as f:
+                    tmp = f.read().rstrip()
+                    self.assertTrue(tmp, test_string)
+
         def test_add_address(self):
             """ Check if address can be added to interface """
 
