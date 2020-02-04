@@ -18,10 +18,12 @@ import os
 import re
 import unittest
 
+from vyos.validate import is_ipv4
+from psutil import process_iter
+
 import vyos.config
 import vyos.configsession
 import vyos.util as util
-from vyos.validate import is_ipv4
 
 SNMPD_CONF = '/etc/snmp/snmpd.conf'
 
@@ -42,8 +44,8 @@ class TestSystemNameServer(unittest.TestCase):
         self.session.delete(base_path)
         self.session.commit()
 
-    def test_snmpv2(self):
-        """ Check if SNMPv2 can be configured and service runs """
+    def test_snmp(self):
+        """ Check if SNMP can be configured and service runs """
         clients = ['192.0.2.1', '2001:db8::1']
         networks = ['192.0.2.128/25', '2001:db8:babe::/48']
         listen = ['127.0.0.1', '::1']
@@ -55,11 +57,12 @@ class TestSystemNameServer(unittest.TestCase):
                 self.session.set(base_path + ['community', community, 'client', client])
             for network in networks:
                 self.session.set(base_path + ['community', community, 'network', network])
-            for addr in listen:
-                self.session.set(base_path + ['listen-address', addr])
 
-            self.session.set(base_path + ['contact', 'maintainers@vyos.io'])
-            self.session.set(base_path + ['location', 'qemu'])
+        for addr in listen:
+            self.session.set(base_path + ['listen-address', addr])
+
+        self.session.set(base_path + ['contact', 'maintainers@vyos.io'])
+        self.session.set(base_path + ['location', 'qemu'])
 
         self.session.commit()
 
@@ -75,6 +78,9 @@ class TestSystemNameServer(unittest.TestCase):
                 expected += ',udp6:[{}]:161'.format(addr)
 
         self.assertTrue(expected in config)
+
+        # Check for running process
+        self.assertTrue("snmpd" in (p.name() for p in process_iter()))
 
 if __name__ == '__main__':
     unittest.main()
