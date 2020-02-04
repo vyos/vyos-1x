@@ -82,6 +82,29 @@ class TestSystemNameServer(unittest.TestCase):
         # Check for running process
         self.assertTrue("snmpd" in (p.name() for p in process_iter()))
 
+    def test_snmpv3(self):
+        """ Check if SNMPv3 can be configured and service runs"""
+
+        self.session.set(base_path + ['v3', 'engineid', '0xaffedeadbeef'])
+        self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
+        # check validate() - a view must be created before this can be comitted
+        with self.assertRaises(vyos.configsession.ConfigSessionError):
+            self.session.commit()
+
+        self.session.set(base_path + ['v3', 'view', 'default', 'oid', '1'])
+        self.session.set(base_path + ['v3', 'group', 'default', 'view', 'default'])
+        self.session.commit()
+
+        # create user
+        for authpriv in ['auth', 'privacy']:
+            self.session.set(base_path + ['v3', 'user', 'vyos', authpriv, 'plaintext-key', 'vyos1234'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'group', 'default'])
+
+        # TODO: read in config file and check values
+
+        # Check for running process
+        self.assertTrue("snmpd" in (p.name() for p in process_iter()))
+
 if __name__ == '__main__':
     unittest.main()
 
