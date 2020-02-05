@@ -133,8 +133,10 @@ def apply(radius):
                           /etc/nsswitch.conf"
 
             os.system(cmd)
-        except:
-            print('RADIUS configuration failed')
+
+        except Exception as e:
+            raise ConfigError('RADIUS configuration failed: {}'.format(e))
+
     else:
         try:
             # Disable RADIUS in PAM
@@ -147,8 +149,9 @@ def apply(radius):
                    /etc/nsswitch.conf"
 
             os.system(cmd)
-        except:
-            print('Removing RADIUS configuration failed')
+
+        except Exception as e:
+            raise ConfigError('Removing RADIUS configuration failed'.format(e))
 
     return None
 
