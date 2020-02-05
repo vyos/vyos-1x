@@ -9,6 +9,7 @@ Build-Depends: debhelper (>= 9),
   quilt,
   python3-lxml,
   python3-nose,
+  python3-paramiko,
   python3-coverage
 Standards-Version: 3.9.6
 
