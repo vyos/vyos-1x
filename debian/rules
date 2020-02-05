@@ -74,6 +74,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/etc
 	cp -r src/etc/* $(DIR)/etc
 
+	# Install PAM configuration snippets
+	mkdir -p $(DIR)/usr/share/pam-configs
+	cp -r src/pam-configs/* $(DIR)/usr/share/pam-configs
+
 	# Install systemd service units
 	mkdir -p $(DIR)/lib/systemd/system
 	cp -r src/systemd/* $(DIR)/lib/systemd/system
