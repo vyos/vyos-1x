@@ -56,9 +56,11 @@ def get_config():
     conf = Config()
     base_level = ['system', 'login', 'user']
 
-    if not conf.exists(base_level):
-        login['deleted'] = True
-        return login
+    # We do not need to check if the nodes exist or not and bail out early
+    # ... this would interrupt the following logic on determine which users
+    # should be deleted and which users should stay.
+    #
+    # All fine so far!
 
     # Read in all local users and store to list
     for username in conf.list_nodes(base_level):
@@ -115,13 +117,6 @@ def get_config():
 
         login['add_users'].append(user)
 
-    return login
-
-def verify(login):
-    # TODO: should we be able to delete ourself?
-    pass
-
-def generate(login):
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
     cli_users = [tmp['name'] for tmp in login['add_users']]
@@ -133,6 +128,16 @@ def generate(login):
     # system is rebooted.
     login['del_users'] = [tmp for tmp in all_users if tmp not in cli_users]
 
+    return login
+
+def verify(login):
+    cur_user = os.environ['SUDO_USER']
+    if cur_user in login['del_users']:
+        raise ConfigError('Attempting to delete current user: {}'.format(cur_user))
+
+    pass
+
+def generate(login):
     # calculate users encrypted password
     for user in login['add_users']:
         if user['password_plaintext']:
