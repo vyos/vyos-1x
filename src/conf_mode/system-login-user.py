@@ -118,6 +118,7 @@ def get_config():
     return login
 
 def verify(login):
+    # TODO: should we be able to delete ourself?
     pass
 
 def generate(login):
@@ -156,16 +157,16 @@ def apply(login):
             cmd = "usermod"
 
         # encrypted password must be quited in '' else it won't work!
-        cmd += " -p '{}'".format(user['password_encrypted'])
-        cmd += " -s /bin/vbash"
+        cmd += ' -p "{}"'.format(user['password_encrypted'])
+        cmd += ' -s /bin/vbash'
         if user['full_name']:
-            cmd += " -c {}".format(user['full_name'])
+            cmd += ' -c "{}"'.format(user['full_name'])
 
         if user['home_dir']:
-            cmd += " -d '{}'".format(user['home_dir'])
+            cmd += ' -d "{}"'.format(user['home_dir'])
 
-        cmd += " -G frrvty,vyattacfg,sudo,adm,dip,disk"
-        cmd += " {}".format(user['name'])
+        cmd += ' -G frrvty,vyattacfg,sudo,adm,dip,disk'
+        cmd += ' {}'.format(user['name'])
 
         try:
             os.system(cmd)
@@ -197,10 +198,11 @@ def apply(login):
             os.chmod(key_file, S_IRUSR | S_IWUSR)
 
         except Exception as e:
-            print('Adding user "{}" raised an exception'.format(user))
+            print('Adding user "{}" raised an exception: {}'.format(user['name'], e))
 
     for user in login['del_users']:
         try:
+            # TODO: check if user is logged in and force logout
             # Remove user account but leave home directory to be safe
             os.system('userdel {}'.format(user))
         except Exception as e:
