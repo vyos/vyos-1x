@@ -20,6 +20,7 @@ import os
 from pwd import getpwall, getpwnam
 from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
 from subprocess import Popen, PIPE, STDOUT
+from psutil import users
 
 from vyos.config import Config
 from vyos.configdict import list_diff
@@ -207,9 +208,14 @@ def apply(login):
 
     for user in login['del_users']:
         try:
-            # TODO: check if user is logged in and force logout
+            # Logout user if he is logged in
+            if user in list(set([tmp[0] for tmp in users()])):
+                print('{} is logged in, forcing logout'.format(user))
+                os.system('pkill -HUP -u {}'.format(user))
+
             # Remove user account but leave home directory to be safe
-            os.system('userdel {}'.format(user))
+            os.system('userdel -r {} 2>/dev/null'.format(user))
+
         except Exception as e:
             raise ConfigError('Deleting user "{}" raised an exception: {}'.format(user, e))
 
