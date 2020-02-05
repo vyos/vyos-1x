@@ -203,7 +203,7 @@ def apply(login):
             os.chmod(key_file, S_IRUSR | S_IWUSR)
 
         except Exception as e:
-            print('Adding user "{}" raised an exception: {}'.format(user['name'], e))
+            raise ConfigError('Adding user "{}" raised an exception: {}'.format(user['name'], e))
 
     for user in login['del_users']:
         try:
@@ -211,7 +211,7 @@ def apply(login):
             # Remove user account but leave home directory to be safe
             os.system('userdel {}'.format(user))
         except Exception as e:
-            print('Deleting user "{}" raised an exception'.format(user))
+            raise ConfigError('Deleting user "{}" raised an exception: {}'.format(user, e))
 
     return None
 
