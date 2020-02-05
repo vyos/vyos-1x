@@ -119,11 +119,36 @@ def generate(radius):
 
 def apply(radius):
     if len(radius['server']) > 0:
-        # Enable RADIUS in PAM
-        os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --enable radius")
+        try:
+            # Enable RADIUS in PAM
+            os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --enable radius")
+
+            # Make NSS system aware of RADIUS, too
+            cmd = "sed -i -e \'/\smapname/b\' \
+                          -e \'/^passwd:/s/\s\s*/&mapuid /\' \
+                          -e \'/^passwd:.*#/s/#.*/mapname &/\' \
+                          -e \'/^passwd:[^#]*$/s/$/ mapname &/\' \
+                          -e \'/^group:.*#/s/#.*/ mapname &/\' \
+                          -e \'/^group:[^#]*$/s/: */&mapname /\' \
+                          /etc/nsswitch.conf"
+
+            os.system(cmd)
+        except:
+            print('RADIUS configuration failed')
     else:
-        # Disable RADIUS in PAM
-        os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --remove radius")
+        try:
+            # Disable RADIUS in PAM
+            os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --remove radius")
+
+            cmd = "'sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
+                   -e \'/^passwd:.*[ \t]mapname/s/[ \t]mapname//\' \
+                   -e \'/^group:.*[ \t]mapname/s/[ \t]mapname//\' \
+                   -e \'s/[ \t]*$//\' \
+                   /etc/nsswitch.conf"
+
+            os.system(cmd)
+        except:
+            print('Removing RADIUS configuration failed')
 
     return None
 
