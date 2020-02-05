@@ -33,7 +33,7 @@
           #include <include/interface-disable.xml.i>
           <leafNode name="encapsulation">
             <properties>
-              <help>Encapsulation type (defualt: UDP)</help>
+              <help>Encapsulation type (default: UDP)</help>
               <completionHelp>
                 <list>udp ip</list>
               </completionHelp>
