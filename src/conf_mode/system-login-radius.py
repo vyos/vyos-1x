@@ -142,7 +142,7 @@ def apply(radius):
             # Disable RADIUS in PAM
             os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --remove radius")
 
-            cmd = "'sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
+            cmd = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
                    -e \'/^passwd:.*[ \t]mapname/s/[ \t]mapname//\' \
                    -e \'/^group:.*[ \t]mapname/s/[ \t]mapname//\' \
                    -e \'s/[ \t]*$//\' \
