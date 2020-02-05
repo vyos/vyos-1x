@@ -162,17 +162,18 @@ def apply(login):
             # update existing account
             cmd = "usermod"
 
-        # encrypted password must be quited in '' else it won't work!
-        cmd += ' -p "{}"'.format(user['password_encrypted'])
-        cmd += ' -s /bin/vbash'
+        # we need to use '' quotes when passing formatted data to the shell
+        # else it will not work as some data parts are lost in translation
+        cmd += " -p '{}'".format(user['password_encrypted'])
+        cmd += " -s /bin/vbash"
         if user['full_name']:
-            cmd += ' -c "{}"'.format(user['full_name'])
+            cmd += " -c '{}'".format(user['full_name'])
 
         if user['home_dir']:
-            cmd += ' -d "{}"'.format(user['home_dir'])
+            cmd += " -d '{}'".format(user['home_dir'])
 
-        cmd += ' -G frrvty,vyattacfg,sudo,adm,dip,disk'
-        cmd += ' {}'.format(user['name'])
+        cmd += " -G frrvty,vyattacfg,sudo,adm,dip,disk"
+        cmd += " {}".format(user['name'])
 
         try:
             os.system(cmd)
