@@ -73,7 +73,7 @@ def get_config():
 
     # Read in all RADIUS servers and store to list
     for server in conf.list_nodes(['server']):
-        radius = {
+        server_cfg = {
             'address': server,
             'key': '',
             'port': '1812',
@@ -83,18 +83,18 @@ def get_config():
 
         # RADIUS shared secret
         if conf.exists(['key']):
-            radius['key'] = conf.return_value(['key'])
+            server_cfg['key'] = conf.return_value(['key'])
 
         # RADIUS authentication port
         if conf.exists(['port']):
-            radius['port'] = conf.return_value(['port'])
+            server_cfg['port'] = conf.return_value(['port'])
 
         # RADIUS session timeout
         if conf.exists(['timeout']):
-            radius['timeout'] = conf.return_value(['timeout'])
+            server_cfg['timeout'] = conf.return_value(['timeout'])
 
         # Append individual RADIUS server configuration to global server list
-        radius['server'].append(radius)
+        radius['server'].append(server_cfg)
 
     return radius
 
