@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
 
-# converts opertator accts. to admin level accts.
+# Operator accounts have been deprecated due to a security issue. Those accounts
+# will be converted to regular admin accounts.
 
 import sys
-
 from vyos.configtree import ConfigTree
 
 if (len(sys.argv) < 1):
-  print("Must specify file name!")
-  sys.exit(1)
+    print("Must specify file name!")
+    sys.exit(1)
 
 file_name = sys.argv[1]
 
 with open(file_name, 'r') as f:
-  config_file = f.read()
+    config_file = f.read()
 
 config = ConfigTree(config_file)
 
 if not config.exists(['system', 'login', 'user']):
-  # Nothing to do, which shouldn't happen anyway
-  # only if you wipe the config and reboot.
+    # Nothing to do, which shouldn't happen anyway
+    # only if you wipe the config and reboot.
     sys.exit(0)
 else:
-  for usr in config.list_nodes(['system', 'login', 'user']):
-    if config.return_value(['system', 'login', 'user', usr, 'level']) == 'operator':
-      config.set(['system', 'login', 'user', usr, 'level'], value="admin", replace=True)
+    for usr in config.list_nodes(['system', 'login', 'user']):
+        if config.return_value(['system', 'login', 'user', usr, 'level']) == 'operator':
+            config.set(['system', 'login', 'user', usr, 'level'], value="admin", replace=True)
 
-  try:
-    open(file_name,'w').write(config.to_string())
-  except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    try:
+        open(file_name,'w').write(config.to_string())
 
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
