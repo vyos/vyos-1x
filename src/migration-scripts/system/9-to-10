@@ -24,8 +24,9 @@ if not config.exists(base_level):
     sys.exit(0)
 else:
     for user in config.list_nodes(base_level):
-        if config.return_value(base_level + [user, 'level']) == 'operator':
-            config.set(base_level + [user, 'level'], value="admin", replace=True)
+        if config.exists(base_level + [user, 'level']):
+            if config.return_value(base_level + [user, 'level']) == 'operator':
+                config.set(base_level + [user, 'level'], value="admin", replace=True)
 
     try:
         open(file_name,'w').write(config.to_string())
