@@ -16,15 +16,16 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
+base_level = ['system', 'login', 'user']
 
-if not config.exists(['system', 'login', 'user']):
+if not config.exists(base_level):
     # Nothing to do, which shouldn't happen anyway
     # only if you wipe the config and reboot.
     sys.exit(0)
 else:
-    for usr in config.list_nodes(['system', 'login', 'user']):
-        if config.return_value(['system', 'login', 'user', usr, 'level']) == 'operator':
-            config.set(['system', 'login', 'user', usr, 'level'], value="admin", replace=True)
+    for user in config.list_nodes(base_level):
+        if config.return_value(base_level + [user, 'level']) == 'operator':
+            config.set(base_level + [user, 'level'], value="admin", replace=True)
 
     try:
         open(file_name,'w').write(config.to_string())
