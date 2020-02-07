@@ -30,6 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--state", type=str, help="VRRP state")
 parser.add_argument("-g", "--group", type=str, help="VRRP group")
 parser.add_argument("-i", "--interface", type=str, help="Network interface")
+parser.add_argument("-f", "--force", type=str, help="enable|disable force mode")
 parser.add_argument("script", nargs='+')
 
 syslog.openlog('vyos-vrrp-wrapper')
@@ -48,12 +49,13 @@ args.script = " ".join(args.script)
 # in command line options to avoid executing scripts if no real transition occured.
 # This is necessary because keepalived does not keep persistent state data even between
 # config reloads and will cheerfully execute everything whether it's required or not.
+if args.force != "enable":
+    old_state = vyos.keepalived.get_old_state(args.group)
+else:
+    old_state = None
 
-old_state = vyos.keepalived.get_old_state(args.group)
-
+exitcode = 0
 if (old_state is None) or (old_state != args.state):
-    exitcode = 0
-
     # Run the script and save the new state
 
     # Change the process GID to the config owners group to avoid screwing up
