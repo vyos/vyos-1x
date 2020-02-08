@@ -15,9 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 
-from stat import *
+from sys import exit
+from stat import S_IXOTH
+from subprocess import Popen, PIPE
 
 success = True
 for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
@@ -26,14 +27,16 @@ for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
         mode = os.stat(test_file).st_mode
 
         if mode & S_IXOTH:
-            try:
-                print('Running Testcase: ' + test_file)
-                os.system(test_file)
-            except Exception as e:
-                print('Testcase "{}" raised an exception'.format(test_file))
+            print('Running Testcase: ' + test_file)
+            process = Popen([test_file], stdout=PIPE)
+            (output, err) = process.communicate()
+            exit_code = process.wait()
+            # We do not want an instant fail - other tests should be run, too
+            if exit_code != 0:
                 success = False
 
 if success:
-    sys.exit(0)
+    exit(0)
 
-sys.exit(1)
+print("ERROR: One or more tests failed!")
+exit(1)
