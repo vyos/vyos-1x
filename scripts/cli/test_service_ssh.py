@@ -40,6 +40,9 @@ class TestServiceSSH(unittest.TestCase):
         """ Check if SSH service can be configured and runs """
         self.session.set(base_path)
 
+        # commit changes
+        self.session.commit()
+
         # Check for running process
         self.assertTrue("sshd" in (p.name() for p in process_iter()))
 
