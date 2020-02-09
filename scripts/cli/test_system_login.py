@@ -37,6 +37,7 @@ class TestSystemLogin(unittest.TestCase):
             self.session.delete(base_path + ['user', user])
 
         self.session.commit()
+        del self.session
 
     def test_user(self):
         """ Check if user can be created and we can SSH to localhost """

@@ -35,6 +35,8 @@ class BasicInterfaceTest:
             self.session.delete(self._base_path)
             self.session.commit()
 
+            del self.session
+
         def test_add_description(self):
             """ Check if description can be added to interface """
             for intf in self._interfaces:

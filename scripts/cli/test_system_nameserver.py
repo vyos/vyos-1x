@@ -37,9 +37,12 @@ class TestSystemNameServer(unittest.TestCase):
         env = self.session.get_session_env()
         self.config = Config(session_env=env)
 
+    def tearDown(self):
         # Delete existing name servers
         self.session.delete(base_path)
         self.session.commit()
+
+        del self.session
 
     def test_add_server(self):
         """ Check if server is added to resolv.conf """
