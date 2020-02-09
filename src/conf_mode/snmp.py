@@ -776,6 +776,7 @@ def apply(snmp):
                         }
                         # No need to take care about the VyOS internal user
                         if cfg['user'] == snmp['vyos_user']:
+                            ready = True
                             continue
 
                         # Now update the running configuration
@@ -785,9 +786,6 @@ def apply(snmp):
                         os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['priv_pw']))
                         os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
                         os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
-
-                        # set marker
-                        ready = True
 
         # Enable AgentX in FRR
         os.system('vtysh -c "configure terminal" -c "agentx" >/dev/null')
