@@ -16,9 +16,9 @@
 
 import os
 import unittest
-import vyos.config
-import vyos.configsession
 
+from vyos.config import Config
+from vyos.configsession import ConfigSession, ConfigSessionError
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
 from vyos.interfaces import list_interfaces_of_type
@@ -26,9 +26,9 @@ from vyos.interfaces import list_interfaces_of_type
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
         def setUp(self):
-            self.session = vyos.configsession.ConfigSession(os.getpid())
+            self.session = ConfigSession(os.getpid())
             env = self.session.get_session_env()
-            self.config = vyos.config.Config(session_env=env)
+            self.config = Config(session_env=env)
             self._test_addr = ['192.0.2.1/25', '2001:db8:1::ffff/64']
 
         def tearDown(self):
@@ -136,6 +136,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         for intf in self._interfaces:
             self.session.delete(self._base_path + [intf, 'member'])
+
         self.session.commit()
 
 

@@ -18,8 +18,8 @@ import os
 import re
 import unittest
 
-import vyos.config
-import vyos.configsession
+from vyos.config import Config
+from vyos.configsession import ConfigSession, ConfigSessionError
 import vyos.util as util
 
 RESOLV_CONF = '/etc/resolv.conf'
@@ -33,9 +33,9 @@ def get_name_servers():
 
 class TestSystemNameServer(unittest.TestCase):
     def setUp(self):
-        self.session = vyos.configsession.ConfigSession(os.getpid())
+        self.session = ConfigSession(os.getpid())
         env = self.session.get_session_env()
-        self.config = vyos.config.Config(session_env=env)
+        self.config = Config(session_env=env)
 
         # Delete existing name servers
         self.session.delete(base_path)

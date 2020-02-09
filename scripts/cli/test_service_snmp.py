@@ -21,28 +21,29 @@ import unittest
 from vyos.validate import is_ipv4
 from psutil import process_iter
 
-import vyos.config
-import vyos.configsession
+from vyos.config import Config
+from vyos.configsession import ConfigSession, ConfigSessionError
 import vyos.util as util
 
 SNMPD_CONF = '/etc/snmp/snmpd.conf'
-
 base_path = ['service', 'snmp']
 
 def get_config_value(key):
     tmp = util.read_file(SNMPD_CONF)
     return re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
 
-class TestSystemNameServer(unittest.TestCase):
+class TestSNMPService(unittest.TestCase):
     def setUp(self):
-        self.session = vyos.configsession.ConfigSession(os.getpid())
+        self.session = ConfigSession(os.getpid())
         env = self.session.get_session_env()
-        self.config = vyos.config.Config(session_env=env)
+        self.config = Config(session_env=env)
 
     def tearDown(self):
         # Delete SNNP configuration
         self.session.delete(base_path)
         self.session.commit()
+
+        del self.session
 
     def test_snmp(self):
         """ Check if SNMP can be configured and service runs """
@@ -82,13 +83,14 @@ class TestSystemNameServer(unittest.TestCase):
         # Check for running process
         self.assertTrue("snmpd" in (p.name() for p in process_iter()))
 
+
     def test_snmpv3(self):
         """ Check if SNMPv3 can be configured and service runs"""
 
         self.session.set(base_path + ['v3', 'engineid', '0xaffedeadbeef'])
         self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
         # check validate() - a view must be created before this can be comitted
-        with self.assertRaises(vyos.configsession.ConfigSessionError):
+        with self.assertRaises(ConfigSessionError):
             self.session.commit()
 
         self.session.set(base_path + ['v3', 'view', 'default', 'oid', '1'])

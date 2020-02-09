@@ -18,18 +18,18 @@ import os
 import re
 import unittest
 
-import vyos.config
-import vyos.configsession
+from vyos.config import Config
+from vyos.configsession import ConfigSession, ConfigSessionError
 import vyos.util as util
 
 base_path = ['system', 'login']
 users = ['vyos1', 'vyos2']
 
-class TestSystemLoginServer(unittest.TestCase):
+class TestSystemLogin(unittest.TestCase):
     def setUp(self):
-        self.session = vyos.configsession.ConfigSession(os.getpid())
+        self.session = ConfigSession(os.getpid())
         env = self.session.get_session_env()
-        self.config = vyos.config.Config(session_env=env)
+        self.config = Config(session_env=env)
 
     def tearDown(self):
         # Delete SNNP configuration
@@ -40,6 +40,7 @@ class TestSystemLoginServer(unittest.TestCase):
 
     def test_user(self):
         """ Check if user can be created and we can SSH to localhost """
+        self.session.set(['service', 'ssh', 'port', '22'])
 
         for user in users:
             name = "VyOS Roxx " + user
