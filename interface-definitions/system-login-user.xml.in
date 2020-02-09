@@ -52,9 +52,6 @@
                       <leafNode name="key">
                         <properties>
                           <help>Public key value (base64-encoded)</help>
-                          <completionHelp>
-                            <script>echo 'The key is usually several hundred bytes long (because of the size of the public key encoding). Use the loadkey tool to input key from a URL or file.'</script>
-                          </completionHelp>
                         </properties>
                       </leafNode>
                       <leafNode name="options">
