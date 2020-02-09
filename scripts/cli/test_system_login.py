@@ -33,7 +33,7 @@ class TestSystemLogin(unittest.TestCase):
         self.config = Config(session_env=env)
 
     def tearDown(self):
-        # Delete SNNP configuration
+        # Delete individual users from configuration
         for user in users:
             self.session.delete(base_path + ['user', user])
 
