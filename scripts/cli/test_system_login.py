@@ -18,6 +18,7 @@ import os
 import re
 import unittest
 
+from subprocess import Popen, PIPE
 from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
 import vyos.util as util
@@ -52,6 +53,18 @@ class TestSystemLogin(unittest.TestCase):
             self.session.set(base_path + ['user', user, 'home-directory', home_dir])
 
         self.session.commit()
+
+        for user in users:
+            cmd = ['su','-', user]
+            proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            tmp = "{}\nuname -a".format(user)
+            proc.stdin.write(tmp.encode())
+            proc.stdin.flush()
+            (stdout, stderr) = proc.communicate()
+
+            # stdout is something like this:
+            # b'Linux vyos 4.19.101-amd64-vyos #1 SMP Sun Feb 2 10:18:07 UTC 2020 x86_64 GNU/Linux\n'
+            self.assertTrue(len(stdout) > 40)
 
 if __name__ == '__main__':
     unittest.main()
