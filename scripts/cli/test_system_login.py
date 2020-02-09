@@ -18,8 +18,6 @@ import os
 import re
 import unittest
 
-from paramiko import SSHClient, WarningPolicy
-
 import vyos.config
 import vyos.configsession
 import vyos.util as util
@@ -52,29 +50,6 @@ class TestSystemLoginServer(unittest.TestCase):
             self.session.set(base_path + ['user', user, 'home-directory', home_dir])
 
         self.session.commit()
-
-        # check if we can login via SSH
-        for user in users:
-            # check if homedir has been created
-            self.assertTrue(os.path.isdir("/tmp/" + user))
-
-            ssh = SSHClient()
-            ssh.set_missing_host_key_policy(WarningPolicy)
-
-            try:
-                ssh.connect('localhost', username=user, password=user)
-                stdin, stdout, stderr = ssh.exec_command('who')
-                print(stdout.read().decode())
-            except Exception as e:
-                print(e)
-                self.assertTrue(False)
-
-            ssh.close()
-
-            # check if homedir has been created
-            # this can only be done after we have connected via ssh and
-            # pam_mkhomedir was executes
-            self.assertTrue(os.path.isdir("/tmp/" + user))
 
 if __name__ == '__main__':
     unittest.main()
