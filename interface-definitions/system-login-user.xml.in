@@ -33,7 +33,6 @@
                         <regex>\$6\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{86}</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid encrypted password for $VAR(../../@).</constraintErrorMessage>
-
                     </properties>
                   </leafNode>
                   <leafNode name="plaintext-password">
@@ -90,7 +89,7 @@
                             <description/>
                           </valueHelp>
                           <constraint>
-                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519s)</regex>
+                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
