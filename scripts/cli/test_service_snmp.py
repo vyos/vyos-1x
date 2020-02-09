@@ -23,13 +23,13 @@ from psutil import process_iter
 
 from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
-import vyos.util as util
+from vyos.util import read_file
 
 SNMPD_CONF = '/etc/snmp/snmpd.conf'
 base_path = ['service', 'snmp']
 
 def get_config_value(key):
-    tmp = util.read_file(SNMPD_CONF)
+    tmp = read_file(SNMPD_CONF)
     return re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
 
 class TestSNMPService(unittest.TestCase):
