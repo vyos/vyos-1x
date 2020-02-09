@@ -746,7 +746,7 @@ def apply(snmp):
         snmpReady = False
         while not snmpReady:
             while not os.path.exists(config_file_user):
-                sleep(1)
+                sleep(0.1)
 
             with open(config_file_user, 'r') as f:
                 for line in f:
