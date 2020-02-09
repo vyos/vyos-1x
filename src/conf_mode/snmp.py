@@ -767,10 +767,6 @@ def apply(snmp):
             with open(config_file_user, 'r') as f:
                 engineID = ''
                 for line in f:
-                    if line.startswith('oldEngineID'):
-                        string = line.split(' ')
-                        engineID = string[1]
-
                     if line.startswith('usmUser'):
                         string = line.split(' ')
                         cfg = {
