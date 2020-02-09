@@ -39,7 +39,7 @@ vyos_tmpl = """
 configure system platform VyOS
 configure system description "VyOS {{ options.description }}"
 {% if options.listen_on -%}
-configure system interface pattern "{{ options.listen_on | join(",") }}"
+configure system interface pattern "{{ ( options.listen_on | select('equalto','all') | map('replace','all','*') | list + options.listen_on | select('equalto','!all') | map('replace','!all','!*') | list + options.listen_on | reject('equalto','all') | reject('equalto','!all') | list ) | unique | join(",") }}"
 {%- endif %}
 {% if options.mgmt_addr -%}
 configure system ip management pattern {{ options.mgmt_addr | join(",") }}
