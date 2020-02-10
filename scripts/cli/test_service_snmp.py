@@ -78,11 +78,7 @@ class TestSNMPService(unittest.TestCase):
             else:
                 expected += ',udp6:[{}]:161'.format(addr)
 
-        try:
-            self.assertTrue(expected in config)
-        except:
-            print("expected: {}".format(expected))
-            print("config: {}".format(config))
+        self.assertTrue(expected in config)
 
         # Check for running process
         self.assertTrue("snmpd" in (p.name() for p in process_iter()))
