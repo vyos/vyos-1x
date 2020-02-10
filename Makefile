@@ -106,3 +106,6 @@ docs:
 	sphinx-apidoc -o sphinx/source/  python/
 	cd sphinx/
 	PYTHONPATH=../python make html
+
+deb:
+	dpkg-buildpackage -uc -us -tc -b
