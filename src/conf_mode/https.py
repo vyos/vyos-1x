@@ -162,6 +162,9 @@ def get_config():
     return https
 
 def verify(https):
+    if https is None:
+        return None
+
     if https['certbot']:
         for sb in https['server_block_list']:
             if sb['certbot']:
