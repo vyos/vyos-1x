@@ -14,7 +14,7 @@
                   <help>System loging banner post-login</help>
                 </properties>
               </leafNode>
-              <leafNode name="post-login">
+              <leafNode name="pre-login">
                 <properties>
                   <help>System loging banner pre-login</help>
                 </properties>
