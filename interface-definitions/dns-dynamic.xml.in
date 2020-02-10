@@ -207,6 +207,11 @@
                           </valueHelp>
                         </properties>
                       </leafNode>
+                      <leafNode name="zone">
+                        <properties>
+                          <help>DNS zone to update (only available with CloudFlare)</help>
+                        </properties>
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="use-web">

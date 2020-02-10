@@ -66,9 +66,8 @@ password='{{ srv.password }}',
 {% if srv.server -%}
 server={{ srv.server }},
 {% endif -%}
-{% if 'cloudflare' in srv.protocol -%}
-{% set zone = host.split('.',1) -%}
-zone={{ zone[1] }},
+{% if srv.zone -%}
+zone={{ srv.zone }},
 {% endif -%}
 {{ host }}
 {% endfor %}
@@ -157,7 +156,8 @@ def get_config():
                 'password': '',
                 'protocol': '',
                 'server': '',
-                'custom' : False
+                'custom' : False,
+                'zone' : ''
             }
 
             # preload protocol from default service mapping
@@ -180,6 +180,13 @@ def get_config():
 
             if conf.exists('service {0} server'.format(service)):
                 srv['server'] = conf.return_value('service {0} server'.format(service))
+
+            if conf.exists('service {0} zone'.format(service)):
+                srv['zone'] = conf.return_value('service {0} zone'.format(service))
+            elif srv['provider'] == 'cloudflare':
+                # default populate zone entry with bar.tld if
+                # host-name is foo.bar.tld
+                srv['zone'] = srv['host'][0].split('.',1)[1]
 
             node['service'].append(srv)
 
@@ -236,6 +243,10 @@ def verify(dyndns):
 
                 if not service['server']:
                     raise ConfigError('Set server for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+
+            if service['zone']:
+                if service['provider'] != 'cloudflare':
+                    raise ConfigError('Zone option not allowed for "{0}", it can only be used for CloudFlare'.format(service['provider']))
 
     return None
 
