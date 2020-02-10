@@ -253,6 +253,9 @@ class Config(object):
             path = " ".join(path)
         try:
             out = self._run(self._make_command('showConfig', path))
+            # ugly but can not see a better way to handle this
+            if out == 'Configuration under specified path is empty\n':
+                return ''
             return out
         except VyOSError:
             return(default)
