@@ -18,7 +18,6 @@ from sys import exit
 from vyos.config import Config
 
 motd="""
-
 The programs included with the Debian GNU/Linux system are free software;
 the exact distribution terms for each program are described in the
 individual files in /usr/share/doc/*/copyright.
