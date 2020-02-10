@@ -133,6 +133,16 @@ class Config(object):
             raise TypeError("Path must be a whitespace-separated string or a list")
         return (self._level + path)
 
+    def _soft_fail(self, command, code, out):
+        # _soft_fail allows to intercept known program failures
+        # and handle them gracefully, by ignoring them and
+        # returning the inital data, or something else.
+        return {
+            'showConfig': {
+                3: '',  # VYOS_EMPTY_CONFIG,
+            }
+        }.get(command,{}).get(code,None)
+
     def _run(self, cmd):
         if self.__session_env:
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
@@ -141,6 +151,9 @@ class Config(object):
         out = p.stdout.read()
         p.wait()
         p.communicate()
+        soft = self._soft_fail(cmd, p.returncode, out)
+        if soft is not None:
+            return soft
         if p.returncode != 0:
             raise VyOSError()
         else:
