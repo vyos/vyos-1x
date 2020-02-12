@@ -1,0 +1,38 @@
+# replace MTU with value from configuration
+
+# get MTU value via Python
+# as configuration is not available to cli-shell-api at the first boot, we must use vyos.config, which contain workaround for this, instead clean shell
+function get_mtu {
+python3 - <<PYEND
+from vyos.config import Config
+import os
+import re
+
+# check if interface is not VLAN and fix name if necessary
+interface_name = os.getenv('interface', '')
+regex_filter = re.compile('^(?P<interface>\w+)\.(?P<vid>\d+)$')
+if regex_filter.search(interface_name):
+    iface = regex_filter.search(interface_name).group('interface')
+    vid = regex_filter.search(interface_name).group('vid')
+    interface_name = "{} vif {}".format(iface, vid)
+
+# initialize config
+config = Config()
+if config.exists('interfaces'):
+    iface_types = config.list_nodes('interfaces')
+    for iface_type in iface_types:
+        # check if configuration contain MTU value for interface and return (print) it
+        if config.exists("interfaces {} {} mtu".format(iface_type, interface_name)):
+            print(format(config.return_value("interfaces {} {} mtu".format(iface_type, interface_name))))
+PYEND
+}
+
+# check if DHCP server return MTU value
+if [ -n "$new_interface_mtu" ]; then
+    # try to get MTU from config and replace original one
+    configured_mtu="$(get_mtu)"
+    if [[ -n $configured_mtu ]] ; then
+        logmsg info "Replacing MTU value for $interface with preconfigured one: $configured_mtu"
+        new_interface_mtu="$configured_mtu"
+    fi
+fi

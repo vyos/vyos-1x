@@ -1,0 +1,27 @@
+# skip all of this if dhclient-script running by stop command defined below
+if [ -z ${CONTROLLED_STOP} ] ; then
+    # stop dhclient for this interface, if it is not current one
+    # get PID for current dhclient
+    current_dhclient=`ps --no-headers --format ppid --pid $$ | awk '{ print $1 }'`
+
+    # get PID for master process (current can be a fork)
+    master_dhclient=`ps --no-headers --format ppid --pid $current_dhclient | awk '{ print $1 }'`
+
+    # get IP version for current dhclient
+    ipversion_arg=`ps --no-headers --format args --pid $current_dhclient | awk '{ print $2 }'`
+
+    # get list of all dhclient running for current interface
+    dhclients_pids=(`ps --no-headers --format pid,args -C dhclient | awk -v IFACE="/sbin/dhclient $ipversion_arg .*$interface$" '$0 ~ IFACE { print $1 }'`)
+
+    logmsg info "Current dhclient PID: $current_dhclient, Parent PID: $master_dhclient, IP version: $ipversion_arg, All dhclients for interface $interface: ${dhclients_pids[@]}"
+    # stop all dhclients for current interface, except current one
+    for dhclient in ${dhclients_pids[@]}; do
+        if ([ $dhclient -ne $current_dhclient ] && [ $dhclient -ne $master_dhclient ]); then
+            logmsg info "Stopping dhclient with PID: ${dhclient}"
+            # get path to PID-file of dhclient process
+            local dhclient_pidfile=`ps --no-headers --format args --pid $dhclient | awk 'match($0, ".*-pf (/.*pid) .*", PF) { print PF[1] }'`
+            # stop dhclient with native command - this will run dhclient-script with correct reason unlike simple kill
+            dhclient -e CONTROLLED_STOP=yes -x -pf $dhclient_pidfile
+        fi
+    done
+fi
