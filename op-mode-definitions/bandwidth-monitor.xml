@@ -8,7 +8,7 @@
         </properties>
         <children>
           <tagNode name="interface">
-            <command>bmon -p $4</command>
+            <command>bmon -b -p $4</command>
             <properties>
               <help>Monitor bandwidth usage on specified interface</help>
               <completionHelp>
