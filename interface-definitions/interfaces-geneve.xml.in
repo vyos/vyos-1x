@@ -4,7 +4,7 @@
     <children>
       <tagNode name="geneve" owner="${vyos_conf_scripts_dir}/interfaces-geneve.py">
         <properties>
-          <help>Generic Network Virtualization Encapsulation (GENEVE)</help>
+          <help>Generic Network Virtualization Encapsulation (GENEVE) Interface</help>
           <priority>460</priority>
           <constraint>
             <regex>gnv[0-9]+$</regex>

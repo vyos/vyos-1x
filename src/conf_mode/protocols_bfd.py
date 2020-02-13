@@ -163,10 +163,15 @@ def verify(bfd):
     conf = Config()
 
     for peer in bfd['new_peers']:
-        # IPv6 peers require an explicit local address/interface combination
-        if vyos.validate.is_ipv6(peer['remote']):
+        # IPv6 link local peers require an explicit local address/interface
+        if vyos.validate.is_ipv6_link_local(peer['remote']):
             if not (peer['src_if'] and peer['src_addr']):
-                raise ConfigError('BFD IPv6 peers require explicit local address and interface setting')
+                raise ConfigError('BFD IPv6 link-local peers require explicit local address and interface setting')
+
+        # IPv6 peers require an explicit local address
+        if vyos.validate.is_ipv6(peer['remote']):
+            if not peer['src_addr']:
+                raise ConfigError('BFD IPv6 peers require explicit local address setting')
 
         # multihop require source address
         if peer['multihop'] and not peer['src_addr']:

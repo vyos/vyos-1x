@@ -601,6 +601,10 @@
               <tagNode name="extension-name">
                 <properties>
                   <help>Extension name</help>
+                  <constraint>
+                    <regex>^[a-z0-9\.\-\_]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Script extension contains invalid characters</constraintErrorMessage>
                 </properties>
                 <children>
                   <leafNode name="script">
@@ -609,6 +613,10 @@
                       <completionHelp>
                         <script>ls /config/user-data</script>
                       </completionHelp>
+                      <constraint>
+                        <regex>^[a-z0-9\.\-\_\/]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>Script extension contains invalid characters</constraintErrorMessage>
                     </properties>
                   </leafNode>
                 </children>

@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="ipoe-server" owner="${vyos_conf_scripts_dir}/ipoe_server.py">
+      <node name="ipoe-server" owner="${vyos_conf_scripts_dir}/service-ipoe.py">
         <properties>
           <help>Internet Protocol over Ethernet (IPoE) Server</help>
           <priority>900</priority>

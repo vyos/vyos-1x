@@ -4,7 +4,7 @@
     <children>
       <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/interfaces-bridge.py">
         <properties>
-          <help>Bridge interface name</help>
+          <help>Bridge Interface</help>
           <priority>470</priority>
           <constraint>
             <regex>br[0-9]+$</regex>

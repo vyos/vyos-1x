@@ -295,4 +295,6 @@ root = xml.getroot()
 
 nodes = root.iterfind("*")
 for n in nodes:
+    if n.tag == "syntaxVersion":
+        continue
     process_node(n, [output_dir])

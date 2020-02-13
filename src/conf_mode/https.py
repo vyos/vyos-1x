@@ -22,6 +22,7 @@ import os
 import jinja2
 
 import vyos.defaults
+import vyos.certbot_util
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -56,7 +57,12 @@ server {
         server_name {{ name }};
 {% endfor %}
 
-{% if server.vyos_cert %}
+{% if server.certbot %}
+        ssl_certificate /etc/letsencrypt/live/{{ server.certbot_dir }}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{{ server.certbot_dir }}/privkey.pem;
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+{% elif server.vyos_cert %}
         include {{ server.vyos_cert.conf }};
 {% else %}
         #
@@ -91,9 +97,9 @@ server {
 default_server_block = {
     'address'   : '*',
     'name'      : ['_'],
-    # api       :
-    # vyos_cert :
-    # le_cert   :
+    'api'       : {},
+    'vyos_cert' : {},
+    'certbot'   : False
 }
 
 def get_config():
@@ -121,12 +127,26 @@ def get_config():
         server_block_list.append(default_server_block)
 
     vyos_cert_data = {}
-    if conf.exists('certificates'):
-        if conf.exists('certificates system-generated-certificate'):
-            vyos_cert_data = vyos.defaults.vyos_cert_data
+    if conf.exists('certificates system-generated-certificate'):
+        vyos_cert_data = vyos.defaults.vyos_cert_data
     if vyos_cert_data:
         for block in server_block_list:
             block['vyos_cert'] = vyos_cert_data
+
+    certbot = False
+    certbot_domains = []
+    if conf.exists('certificates certbot domain-name'):
+        certbot_domains = conf.return_values('certificates certbot domain-name')
+    if certbot_domains:
+        certbot = True
+        for domain in certbot_domains:
+            sub_list = vyos.certbot_util.choose_server_block(server_block_list,
+                                                             domain)
+            if sub_list:
+                for sb in sub_list:
+                    sb['certbot'] = True
+                    # certbot organizes certificates by first domain
+                    sb['certbot_dir'] = certbot_domains[0]
 
     api_data = {}
     if conf.exists('api'):
@@ -138,10 +158,19 @@ def get_config():
         for block in server_block_list:
             block['api'] = api_data
 
-    https = {'server_block_list' : server_block_list}
+    https = {'server_block_list' : server_block_list, 'certbot': certbot}
     return https
 
 def verify(https):
+    if https is None:
+        return None
+
+    if https['certbot']:
+        for sb in https['server_block_list']:
+            if sb['certbot']:
+                return None
+        raise ConfigError("At least one 'listen-address x.x.x.x server-name' "
+                          "matching the 'certbot domain-name' is required.")
     return None
 
 def generate(https):

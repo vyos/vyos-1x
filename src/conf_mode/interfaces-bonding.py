@@ -52,6 +52,7 @@ default_config_data = {
     'mac': '',
     'mode': '802.3ad',
     'member': [],
+    'shutdown_required': False,
     'mtu': 1500,
     'primary': '',
     'vif_s': [],
@@ -193,7 +194,12 @@ def get_config():
 
     # Bonding mode
     if conf.exists('mode'):
-        bond['mode'] = get_bond_mode(conf.return_value('mode'))
+        act_mode = conf.return_value('mode')
+        eff_mode = conf.return_effective_value('mode')
+        if not (act_mode == eff_mode):
+            bond['shutdown_required'] = True
+
+        bond['mode'] = get_bond_mode(act_mode)
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -202,6 +208,9 @@ def get_config():
     # determine bond member interfaces (currently configured)
     if conf.exists('member interface'):
         bond['member'] = conf.return_values('member interface')
+        eff_member = conf.return_effective_values('member interface')
+        if not (bond['member'] == eff_member):
+            bond['shutdown_required'] = True
 
     # Primary device interface
     if conf.exists('primary'):
@@ -333,7 +342,6 @@ def verify(bond):
 def generate(bond):
     return None
 
-
 def apply(bond):
     b = BondIf(bond['intf'])
 
@@ -341,15 +349,6 @@ def apply(bond):
         # delete interface
         b.remove()
     else:
-        # Some parameters can not be changed when the bond is up.
-        # Always disable the bond prior changing anything
-        b.set_state('down')
-
-        # The bonding mode can not be changed when there are interfaces enslaved
-        # to this bond, thus we will free all interfaces from the bond first!
-        for intf in b.get_slaves():
-            b.del_port(intf)
-
         # ARP link monitoring frequency, reset miimon when arp-montior is inactive
         # this is done inside BondIf automatically
         b.set_arp_interval(bond['arp_mon_intvl'])
@@ -398,7 +397,7 @@ def apply(bond):
         if bond['dhcpv6_temporary']:
             opt['dhcpv6_temporary'] = True
 
-        # store DHCPv6 config dictionary - used later on when addresses are aquired
+        # store DHCPv6 config dictionary - used later on when addresses are required
         b.set_dhcpv6_options(opt)
 
         # ignore link state changes
@@ -424,8 +423,6 @@ def apply(bond):
         if bond['mac']:
             b.set_mac(bond['mac'])
 
-        # Bonding policy
-        b.set_mode(bond['mode'])
         # Maximum Transmission Unit (MTU)
         b.set_mtu(bond['mtu'])
 
@@ -433,15 +430,30 @@ def apply(bond):
         if bond['primary']:
             b.set_primary(bond['primary'])
 
-        # Add (enslave) interfaces to bond
-        for intf in bond['member']:
-            b.add_port(intf)
+        # Some parameters can not be changed when the bond is up.
+        if bond['shutdown_required']:
+            # Disable bond prior changing of certain properties
+            b.set_state('down')
+
+            # The bonding mode can not be changed when there are interfaces enslaved
+            # to this bond, thus we will free all interfaces from the bond first!
+            for intf in b.get_slaves():
+                b.del_port(intf)
+
+            # Bonding policy/mode
+            b.set_mode(bond['mode'])
+
+            # Add (enslave) interfaces to bond
+            for intf in bond['member']:
+                b.add_port(intf)
 
         # As the bond interface is always disabled first when changing
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not bond['disable']:
             b.set_state('up')
+        else:
+            b.set_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

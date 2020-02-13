@@ -20,6 +20,7 @@ import sys
 import os
 import subprocess
 import json
+from copy import deepcopy
 
 import vyos.defaults
 from vyos.config import Config
@@ -35,7 +36,13 @@ dependencies = [
 ]
 
 def get_config():
-    http_api = vyos.defaults.api_data
+    http_api = deepcopy(vyos.defaults.api_data)
+    x = http_api.get('api_keys')
+    if x is None:
+        default_key = None
+    else:
+        default_key = x[0]
+    keys_added = False
 
     conf = Config()
     if not conf.exists('service https api'):
@@ -59,6 +66,11 @@ def get_config():
                 key = conf.return_value('keys id {0} key'.format(name))
                 new_key = { 'id': name, 'key': key }
                 http_api['api_keys'].append(new_key)
+                keys_added = True
+
+    if keys_added and default_key:
+        if default_key in http_api['api_keys']:
+            http_api['api_keys'].remove(default_key)
 
     return http_api
 

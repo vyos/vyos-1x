@@ -88,28 +88,28 @@
               <leafNode name="protocols">
                 <properties>
                   <help>Authentication protocol for remote access peer SSTP VPN</help>
+                  <completionHelp>
+                    <list>pap chap mschap mschap-v2</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>pap</format>
-                    <description>Require the peer to authenticate itself using PAP [Password Authentication Protocol].</description>
+                    <description>Authentication via PAP (Password Authentication Protocol)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>chap</format>
-                    <description>Require the peer to authenticate itself using CHAP [Challenge Handshake Authentication Protocol].</description>
+                    <description>Authentication via CHAP (Challenge Handshake Authentication Protocol)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>mschap</format>
-                    <description>Require the peer to authenticate itself using CHAP [Challenge Handshake Authentication Protocol].</description>
+                    <description>Authentication via MS-CHAP (Microsoft Challenge Handshake Authentication Protocol)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>mschap-v2</format>
-                    <description>Require the peer to authenticate itself using MS-CHAPv2 [Microsoft Challenge Handshake Authentication Protocol, Version 2].</description>
+                    <description>Authentication via MS-CHAPv2 (Microsoft Challenge Handshake Authentication Protocol, version 2)</description>
                   </valueHelp>
                   <constraint>
                     <regex>(pap|chap|mschap|mschap-v2)</regex>
                   </constraint>
-                  <completionHelp>
-                    <list>pap chap mschap mschap-v2</list>
-                  </completionHelp>
                     <multi />
                 </properties>
               </leafNode>
@@ -292,6 +292,10 @@
                   <leafNode name="subnet">
                     <properties>
                       <help>Client IP subnet (CIDR notation)</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 address and prefix length</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv4-prefix"/>
                       </constraint>

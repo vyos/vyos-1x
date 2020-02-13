@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="login">
+        <properties>
+          <help>User Login</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <tagNode name="user" owner="${vyos_conf_scripts_dir}/system-login-user.py">
+            <properties>
+              <help>User account information</help>
+              <constraint>
+                <regex>[a-zA-Z0-9\-_\.]{1,100}</regex>
+              </constraint>
+              <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
+            </properties>
+            <children>
+              <node name="authentication">
+                <properties>
+                  <help>Password authentication</help>
+                </properties>
+                <children>
+                  <leafNode name="encrypted-password">
+                    <properties>
+                      <help>Encrypted password</help>
+                      <constraint>
+                        <regex>(\*|\!)</regex>
+                        <regex>[a-zA-Z0-9\.\/]{13}$</regex>
+                        <regex>\$1\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{22}</regex>
+                        <regex>\$5\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{43}</regex>
+                        <regex>\$6\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{86}</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid encrypted password for $VAR(../../@).</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="plaintext-password">
+                    <properties>
+                      <help>Plaintext password used for encryption</help>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="public-keys">
+                    <properties>
+                      <help>Remote access public keys</help>
+                      <valueHelp>
+                        <format>&gt;identifier&lt;</format>
+                        <description>Key identifier used by ssh-keygen (usually of form user@host)</description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="key">
+                        <properties>
+                          <help>Public key value (base64-encoded)</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="options">
+                        <properties>
+                          <help>Optional public key options</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="type">
+                        <properties>
+                          <help></help>
+                          <completionHelp>
+                            <list>ssh-dss ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521 ssh-ed25519</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>ssh-dss</format>
+                            <description/>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ssh-rsa</format>
+                            <description/>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ecdsa-sha2-nistp256</format>
+                            <description/>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ecdsa-sha2-nistp384</format>
+                            <description/>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ssh-ed25519</format>
+                            <description/>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+			  </node>
+              <leafNode name="full-name">
+                <properties>
+                  <help>Full name of the user (use quotes for names with spaces)</help>
+                  <constraint>
+                    <regex>[^:]*$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Cannot use ':' in full name</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="home-directory">
+                <properties>
+                  <help>Home directory</help>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

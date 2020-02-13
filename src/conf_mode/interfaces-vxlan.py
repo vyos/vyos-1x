@@ -189,13 +189,13 @@ def apply(vxlan):
         # configure ARP cache timeout in milliseconds
         v.set_arp_cache_tmo(vxlan['ip_arp_cache_tmo'])
         # configure ARP filter configuration
-        v.set_arp_filter(bond['ip_disable_arp_filter'])
+        v.set_arp_filter(vxlan['ip_disable_arp_filter'])
         # configure ARP accept
-        v.set_arp_accept(bond['ip_enable_arp_accept'])
+        v.set_arp_accept(vxlan['ip_enable_arp_accept'])
         # configure ARP announce
-        v.set_arp_announce(bond['ip_enable_arp_announce'])
+        v.set_arp_announce(vxlan['ip_enable_arp_announce'])
         # configure ARP ignore
-        v.set_arp_ignore(bond['ip_enable_arp_ignore'])
+        v.set_arp_ignore(vxlan['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
 

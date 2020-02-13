@@ -63,6 +63,7 @@ Depends: python3,
   openvpn,
   openvpn-auth-ldap,
   openvpn-auth-radius,
+  libpam-radius-auth (>= 1.5.0),
   mtr-tiny,
   telnet,
   traceroute,
@@ -71,13 +72,28 @@ Depends: python3,
   ssl-cert,
   nginx-light,
   lldpd,
+  iperf,
+  iperf3,
+  frr,
+  dbus,
   hostapd (>= 0.6.8),
   wpasupplicant (>= 0.6.7),
   iw,
   crda,
   wireless-regdb,
   pmacct (>= 1.6.0),
+  python3-certbot-nginx,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
+
+Package: vyos-1x-vmware
+Architecture: amd64 i386
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ open-vm-tools
+Description: VyOS configuration scripts and data for VMware
+ Adds configuration files required for VyOS running on VMware hosts.
+

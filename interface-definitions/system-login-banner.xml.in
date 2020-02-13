@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="login">
+        <children>
+          <node name="banner" owner="${vyos_conf_scripts_dir}/system-login-banner.py">
+            <properties>
+              <help>System login banners</help>
+            </properties>
+            <children>
+              <leafNode name="post-login">
+                <properties>
+                  <help>System loging banner post-login</help>
+                </properties>
+              </leafNode>
+              <leafNode name="pre-login">
+                <properties>
+                  <help>System loging banner pre-login</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
