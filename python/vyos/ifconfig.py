@@ -826,6 +826,9 @@ class LoopbackIf(Interface):
         """
         # remove all assigned IP addresses from interface
         for addr in self.get_addr():
+            if addr in ["127.0.0.1/8", "::1/128"]:
+                # Do not allow deletion of the default loopback addresses
+                continue
             self.del_addr(addr)
 
         # question: do we also delerte the loopback address? 127.0.0.1/8
