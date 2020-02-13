@@ -1,14 +1,14 @@
 #!/usr/bin/make -f
 
-DIR := debian/vyos-1x
-VYOS_SBIN_DIR := usr/sbin/
-VYOS_BIN_DIR := usr/bin/
+DIR := debian/tmp
+VYOS_SBIN_DIR := usr/sbin
+VYOS_BIN_DIR := usr/bin
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
-VYOS_DATA_DIR := /usr/share/vyos
-VYOS_CFG_TMPL_DIR := /opt/vyatta/share/vyatta-cfg/templates
-VYOS_OP_TMPL_DIR := /opt/vyatta/share/vyatta-op/templates
+VYOS_DATA_DIR := usr/share/vyos
+VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
+VYOS_OP_TMPL_DIR := opt/vyatta/share/vyatta-op/templates
 
-MIGRATION_SCRIPTS_DIR := /opt/vyatta/etc/config-migrate/migrate/
+MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
 SERVICES_DIR := usr/libexec/vyos/services
 
@@ -19,7 +19,7 @@ override_dh_auto_build:
 	make all
 
 override_dh_auto_install:
-	dh_install -pvyos-1x
+	dh_auto_install
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
 
 	# Install scripts
@@ -73,6 +73,10 @@ override_dh_auto_install:
 	# Install etc configuration files
 	mkdir -p $(DIR)/etc
 	cp -r src/etc/* $(DIR)/etc
+
+	# Install PAM configuration snippets
+	mkdir -p $(DIR)/usr/share/pam-configs
+	cp -r src/pam-configs/* $(DIR)/usr/share/pam-configs
 
 	# Install systemd service units
 	mkdir -p $(DIR)/lib/systemd/system

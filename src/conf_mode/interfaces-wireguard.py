@@ -53,7 +53,7 @@ def _migrate_default_keys():
 
 def get_config():
     c = Config()
-    if not c.exists('interfaces wireguard'):
+    if not c.exists(['interfaces', 'wireguard']):
         return None
 
     dflt_cnf = {
@@ -80,57 +80,57 @@ def get_config():
         print("ERROR: VYOS_TAGNODE_VALUE undefined")
         sys.exit(1)
 
-    c.set_level('interfaces wireguard')
+    c.set_level(['interfaces', 'wireguard'])
 
     # interface removal state
     if not c.exists(ifname) and c.exists_effective(ifname):
         wg['delete'] = True
 
     if not wg['delete']:
-        c.set_level('interfaces wireguard {}'.format(ifname))
-        if c.exists('address'):
-            wg['addr'] = c.return_values('address')
+        c.set_level(['interfaces', 'wireguard', ifname])
+        if c.exists(['address']):
+            wg['addr'] = c.return_values(['address'])
 
         # determine addresses which need to be removed
-        eff_addr = c.return_effective_values('address')
+        eff_addr = c.return_effective_values(['address'])
         wg['addr_remove'] = list_diff(eff_addr, wg['addr'])
 
         # ifalias description
-        if c.exists('description'):
-            wg['descr'] = c.return_value('description')
+        if c.exists(['description']):
+            wg['descr'] = c.return_value(['description'])
 
         # link state
-        if c.exists('disable'):
+        if c.exists(['disable']):
             wg['state'] = 'down'
 
         # local port to listen on
-        if c.exists('port'):
-            wg['lport'] = c.return_value('port')
+        if c.exists(['port']):
+            wg['lport'] = c.return_value(['port'])
 
         # fwmark value
-        if c.exists('fwmark'):
-            wg['fwmark'] = c.return_value('fwmark')
+        if c.exists(['fwmark']):
+            wg['fwmark'] = c.return_value(['fwmark'])
 
         # mtu
         if c.exists('mtu'):
             wg['mtu'] = c.return_value('mtu')
 
         # private key
-        if c.exists('private-key'):
+        if c.exists(['private-key']):
             wg['pk'] = "{0}/{1}/private.key".format(
-                kdir, c.return_value('private-key'))
+                kdir, c.return_value(['private-key']))
 
         # peer removal, wg identifies peers by its pubkey
-        peer_eff = c.list_effective_nodes('peer')
-        peer_rem = list_diff(peer_eff, c.list_nodes('peer'))
+        peer_eff = c.list_effective_nodes(['peer'])
+        peer_rem = list_diff(peer_eff, c.list_nodes(['peer']))
         for p in peer_rem:
             wg['peer_remove'].append(
-                c.return_effective_value('peer {} pubkey'.format(p)))
+                c.return_effective_value(['peer', p, 'pubkey']))
 
         # peer settings
-        if c.exists('peer'):
-            for p in c.list_nodes('peer'):
-                if not c.exists('peer ' + p + ' disable'):
+        if c.exists(['peer']):
+            for p in c.list_nodes(['peer']):
+                if not c.exists(['peer', p, 'disable']):
                     wg['peer'].update(
                         {
                             p: {
@@ -141,26 +141,24 @@ def get_config():
                         }
                     )
                     # peer allowed-ips
-                    if c.exists('peer ' + p + ' allowed-ips'):
+                    if c.exists(['peer', p, 'allowed-ips']):
                         wg['peer'][p]['allowed-ips'] = c.return_values(
-                            'peer ' + p + ' allowed-ips')
+                            ['peer', p, 'allowed-ips'])
                     # peer endpoint
-                    if c.exists('peer ' + p + ' endpoint'):
+                    if c.exists(['peer', p, 'endpoint']):
                         wg['peer'][p]['endpoint'] = c.return_value(
-                            'peer ' + p + ' endpoint')
+                            ['peer', p, 'endpoint'])
                     # persistent-keepalive
-                    if c.exists('peer ' + p + ' persistent-keepalive'):
+                    if c.exists(['peer', p, 'persistent-keepalive']):
                         wg['peer'][p]['persistent-keepalive'] = c.return_value(
-                            'peer ' + p + ' persistent-keepalive')
+                            ['peer', p, 'persistent-keepalive'])
                     # preshared-key
-                    if c.exists('peer ' + p + ' preshared-key'):
+                    if c.exists(['peer', p, 'preshared-key']):
                         wg['peer'][p]['psk'] = c.return_value(
-                            'peer ' + p + ' preshared-key')
+                            ['peer', p, 'preshared-key'])
                     # peer pubkeys
-                    key_eff = c.return_effective_value(
-                        'peer {peer} pubkey'.format(peer=p))
-                    key_cfg = c.return_value(
-                        'peer {peer} pubkey'.format(peer=p))
+                    key_eff = c.return_effective_value(['peer', p, 'pubkey'])
+                    key_cfg = c.return_value(['peer', p, 'pubkey'])
                     wg['peer'][p]['pubkey'] = key_cfg
 
                     # on a pubkey change we need to remove the pubkey first
@@ -171,7 +169,7 @@ def get_config():
 
                 # if a peer is disabled, we have to exec a remove for it's pubkey
                 else:
-                  peer_key = c.return_value('peer {peer} pubkey'.format(peer=p))
+                  peer_key = c.return_value(['peer', p, 'pubkey'])
                   wg['peer_remove'].append(peer_key)
     return wg
 

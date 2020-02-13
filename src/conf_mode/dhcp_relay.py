@@ -105,11 +105,6 @@ def verify(relay):
     if relay is None:
         return None
 
-    if len(relay['interface']) < 2:
-        # We can only issue a warning otherwise old configurations might break
-        print('WARNING: At least two interfaces are required for DHCP relay\n' \
-              'to work\n')
-
     if 'lo' in relay['interface']:
         raise ConfigError('DHCP relay does not support the loopback interface.')
 

@@ -4,13 +4,12 @@
     <children>
       <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/interfaces-wireguard.py">
         <properties>
-          <help>WireGuard interface name</help>
+          <help>WireGuard Interface</help>
           <priority>459</priority>
-          <!-- subsequent ones may be removed, just make sure ethernet ifs are present -->
           <constraint>
             <regex>wg[0-9]+$</regex>
           </constraint>
-          <constraintErrorMessage>illegal interface name</constraintErrorMessage>
+          <constraintErrorMessage>WireGuard interface must be named wgN</constraintErrorMessage>
           <valueHelp>
             <format>wgN</format>
             <description>WireGuard interface name</description>

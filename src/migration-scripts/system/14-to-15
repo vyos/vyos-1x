@@ -22,7 +22,6 @@ if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 else:
-    # delete 'system ipv6 blacklist' node
     if config.exists(base + ['reboot-on-panic']):
         reboot = config.return_value(base + ['reboot-on-panic'])
         config.delete(base + ['reboot-on-panic'])

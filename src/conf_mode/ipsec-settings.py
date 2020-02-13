@@ -248,7 +248,8 @@ def generate(data):
         write_ipsec_ra_conn(data)
         append_ipsec_conf(data)
     else:
-        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_ra_conn_file)
+        if os.path.exists(ipsec_ra_conn_file):
+            remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_ra_conn_file)
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_flie)
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
 

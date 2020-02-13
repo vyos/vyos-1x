@@ -1325,6 +1325,44 @@ class EthernetIf(VLANIf):
         cmd = '/sbin/ethtool -K {} ufo {}'.format(self._ifname, state)
         return self._cmd(cmd)
 
+class MACVLANIf(VLANIf):
+    """
+    Abstraction of a Linux MACvlan interface
+    """
+    def __init__(self, ifname, config=''):
+        self._ifname = ifname
+
+        if not os.path.exists('/sys/class/net/{}'.format(self._ifname)) and config:
+            cmd = 'ip link add {intf} link {link} type macvlan mode {mode}' \
+                   .format(intf=self._ifname, link=config['link'], mode=config['mode'])
+            self._cmd(cmd)
+
+        super().__init__(ifname, type='macvlan')
+
+    @staticmethod
+    def get_config():
+        """
+        VXLAN interfaces require a configuration when they are added using
+        iproute2. This static method will provide the configuration dictionary
+        used by this class.
+
+        Example:
+        >> dict = MACVLANIf().get_config()
+        """
+        config = {
+            'address': '',
+            'link': 0,
+            'mode': ''
+        }
+        return config
+
+    def set_mode(self, mode):
+        """
+        """
+
+        cmd = 'ip link set dev {} type macvlan mode {}'.format(self._ifname, mode)
+        return self._cmd(cmd)
+
 
 class BondIf(VLANIf):
     """

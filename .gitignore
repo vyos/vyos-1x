@@ -112,8 +112,7 @@ tests/templates/*
 
 # Debian packaging
 debian/files
-debian/vyos-1x
-debian/vyos-1x.*
+debian/tmp
 debian/debhelper-build-stamp
 debian/.debhelper/
 
@@ -129,3 +128,6 @@ debian/.debhelper/
 
 # VIM
 *.swp
+
+# vyos-1x JSON version
+data/component-versions.json

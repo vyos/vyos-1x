@@ -1,0 +1,14 @@
+Name: RADIUS authentication
+Default: yes
+Priority: 257
+Auth-Type: Primary
+Auth:
+    [authinfo_unavail=ignore success=end default=ignore] pam_radius_auth.so
+
+Account-Type: Primary
+Account:
+    [authinfo_unavail=ignore success=end perm_denied=bad default=ignore] pam_radius_auth.so
+
+Session-Type: Additional
+Session:
+    [authinfo_unavail=ignore success=ok default=ignore] pam_radius_auth.so

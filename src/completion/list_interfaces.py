@@ -40,12 +40,13 @@ elif args.bridgeable:
     interfaces = eth + bond + l2tpv3 + openvpn + vxlan + tunnel + wireless + geneve
 
 elif args.bondable:
+    interfaces = []
     eth = vyos.interfaces.list_interfaces_of_type("ethernet")
+
     # we need to filter out VLAN interfaces identified by a dot (.) in their name
     for intf in eth:
-        if '.' in intf:
-            eth.remove(intf)
-    interfaces = eth
+        if not '.' in intf:
+            interfaces.append(intf)
 
 else:
     interfaces = vyos.interfaces.list_interfaces()

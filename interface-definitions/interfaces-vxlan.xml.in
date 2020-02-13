@@ -4,7 +4,7 @@
     <children>
       <tagNode name="vxlan" owner="${vyos_conf_scripts_dir}/interfaces-vxlan.py">
         <properties>
-          <help>Virtual extensible LAN interface (VXLAN)</help>
+          <help>Virtual Extensible LAN (VXLAN) Interface</help>
           <priority>460</priority>
           <constraint>
             <regex>vxlan[0-9]+$</regex>
@@ -57,7 +57,7 @@
               </completionHelp>
             </properties>
           </leafNode>
-          #include <include/interface-mtu-1450-9000.xml.i>
+          #include <include/interface-mtu-1200-9000.xml.i>
           <leafNode name="remote">
             <properties>
               <help>Remote address of VXLAN tunnel</help>

@@ -23,7 +23,6 @@ import argparse
 import syslog
 
 import vyos.util
-import vyos.keepalived
 
 
 parser = argparse.ArgumentParser()
@@ -44,38 +43,22 @@ if not args.script or not args.state or not args.group \
 # to pass arguments to the script
 args.script = " ".join(args.script)
 
-# Get the old state if it exists and compare it to the current state received
-# in command line options to avoid executing scripts if no real transition occured.
-# This is necessary because keepalived does not keep persistent state data even between
-# config reloads and will cheerfully execute everything whether it's required or not.
+exitcode = 0
+# Change the process GID to the config owners group to avoid screwing up
+# running config permissions
+os.setgid(vyos.util.get_cfg_group_id())
+syslog.syslog(syslog.LOG_NOTICE, 'Running transition script {0} for VRRP group {1}'.format(args.script, args.group))
+try:
+    ret = subprocess.call("%s %s %s %s" % ( args.script, args.state, args.interface, args.group), shell=True)
+    if ret != 0:
+        syslog.syslog(syslog.LOG_ERR, "Transition script {0} failed, exit status: {1}".format(args.script, ret))
+        exitcode = ret
+except Exception as e:
+    syslog.syslog(syslog.LOG_ERR, "Failed to execute transition script {0}: {1}".format(args.script, e))
+    exitcode = 1
 
-old_state = vyos.keepalived.get_old_state(args.group)
-
-if (old_state is None) or (old_state != args.state):
-    exitcode = 0
-
-    # Run the script and save the new state
-
-    # Change the process GID to the config owners group to avoid screwing up
-    # running config permissions
-    os.setgid(vyos.util.get_cfg_group_id())
-
-    syslog.syslog(syslog.LOG_NOTICE, 'Running transition script {0} for VRRP group {1}'.format(args.script, args.group))
-    try:
-       ret = subprocess.call("%s %s %s %s" % ( args.script, args.state, args.interface, args.group), shell=True)
-       if ret != 0:
-           syslog.syslog(syslog.LOG_ERR, "Transition script {0} failed, exit status: {1}".format(args.script, ret))
-           exitcode = ret
-    except Exception as e:
-        syslog.syslog(syslog.LOG_ERR, "Failed to execute transition script {0}: {1}".format(args.script, e))
-        exitcode = 1
-
-    if exitcode == 0:
-        syslog.syslog(syslog.LOG_NOTICE, "Transition script {0} executed successfully".format(args.script))
-
-    vyos.keepalived.save_state(args.group, args.state)
-else:
-    syslog.syslog(syslog.LOG_NOTICE, "State of the group {0} has not changed, not running transition script".format(args.group))
+if exitcode == 0:
+    syslog.syslog(syslog.LOG_NOTICE, "Transition script {0} executed successfully".format(args.script))
 
 syslog.closelog()
 sys.exit(exitcode)
