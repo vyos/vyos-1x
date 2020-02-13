@@ -1,6 +1,7 @@
 etc/init.d
 etc/vyos
 etc/systemd
+etc/dhcp
 lib/
 opt/
 usr/

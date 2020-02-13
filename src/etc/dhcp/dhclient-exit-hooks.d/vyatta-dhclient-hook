@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Author: Stig Thormodsrud <stig@vyatta.com>
+# Date: 2007
+# Description: dhcp client hook
+
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2006, 2007, 2008 Vyatta, Inc.
+# All Rights Reserved.
+# **** End License ****
+
+# To enable this script set the following variable to "yes"
+RUN="yes"
+
+if [ "$RUN" = "yes" ]; then
+        LOG=/var/lib/dhcp/dhclient_"$interface"_lease
+        echo `date` > $LOG
+
+        for i in reason interface new_expiry new_dhcp_lease_time medium \
+                        alias_ip_address new_ip_address new_broadcast_address \
+                        new_subnet_mask new_domain_name new_network_number \
+                        new_domain_name_servers new_routers new_static_routes \
+			new_dhcp_server_identifier new_dhcp_message_type \
+                        old_ip_address old_subnet_mask old_domain_name \
+                        old_domain_name_servers old_routers \
+                        old_static_routes; do
+                echo $i=\'${!i}\' >> $LOG
+        done
+fi

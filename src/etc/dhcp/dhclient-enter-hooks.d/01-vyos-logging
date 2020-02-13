@@ -1,0 +1,20 @@
+# enable logging
+LOG_ENABLE="yes"
+LOG_STDERR="no"
+LOG_TAG="dhclient-script-vyos"
+
+function logmsg () {
+    # log message to journal
+    case $1 in
+        error) LOG_PRIO="daemon.err" ;;
+        info) LOG_PRIO="daemon.info" ;;
+    esac
+
+    if [ "${LOG_ENABLE}" == "yes" ] ; then
+        if [ "${LOG_STDERR}" == "yes" ] ; then
+            /usr/bin/logger -e --id=$$ -s -p ${LOG_PRIO} -t ${LOG_TAG} "${@:2}"
+        else
+            /usr/bin/logger -e --id=$$ -p ${LOG_PRIO} -t ${LOG_TAG} "${@:2}"
+        fi
+    fi
+}

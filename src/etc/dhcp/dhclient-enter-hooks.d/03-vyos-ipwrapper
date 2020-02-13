@@ -1,0 +1,76 @@
+# redefine ip command to use FRR when it is available
+
+# get status of FRR
+function frr_alive () {
+    /usr/lib/frr/watchfrr.sh all_status
+    if [ "$?" -eq "0" ] ; then
+        logmsg info "FRR status: running"
+        return 0
+    else
+        logmsg info "FRR status: not running"
+        return 1
+    fi
+}
+
+# convert ip route command to vtysh
+function iptovtysh () {
+    # prepare variables for vtysh command
+    VTYSH_DISTANCE="210"
+    VTYSH_TAG="210"
+    # convert default route to 0.0.0.0/0
+    if [ "$4" == "default" ] ; then
+        VTYSH_NETADDR="0.0.0.0/0"
+    else
+        VTYSH_NETADDR=$4
+    fi
+    # add /32 to ip addresses without netmasks
+    if [[ ! $VTYSH_NETADDR =~ ^.*/[[:digit:]]+$ ]] ; then
+        VTYSH_NETADDR="$VTYSH_NETADDR/32"
+    fi
+    # get gateway address
+    if [ "$5" == "via" ] ; then
+        VTYSH_GATEWAY=$6
+    fi
+    # get device name
+    if [ "$5" == "dev" ]; then
+        VTYSH_DEV=$6
+    elif [ "$7" == "dev" ]; then
+        VTYSH_DEV=$8
+    fi
+    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE"
+    # delete route if the command is "del"
+    if [ "$3" == "del" ] ; then
+        VTYSH_CMD="no $VTYSH_CMD"
+    fi
+    logmsg info "Converted vtysh command: \"$VTYSH_CMD\""
+}
+
+# delete the same route from kernel before adding new one
+function delroute () {
+    logmsg info "Checking if the route presented in kernel: $@"
+    if /usr/sbin/ip route show $@ | grep -qx "$1 " ; then
+        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@\""
+        /usr/sbin/ip route del $@
+    fi
+}
+
+# replace ip command with this wrapper
+function ip () {
+    # pass comand to system `ip` if this is not related to routes change
+    if [ "$2" != "route" ] ; then
+        logmsg info "Passing command to /usr/sbin/ip: \"$@\""
+        /usr/sbin/ip $@
+    else
+        # if we want to work with routes, try to use FRR first
+        if frr_alive ; then
+            delroute ${@:4}
+            iptovtysh $@
+            logmsg info "Sending command to vtysh"
+            vtysh -c "conf t" -c "$VTYSH_CMD"
+        else
+            # add ip route to kernel
+            logmsg info "Modifying routes in kernel: \"/usr/sbin/ip $@\""
+            /usr/sbin/ip $@
+        fi
+    fi
+}
