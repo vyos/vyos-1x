@@ -43,6 +43,10 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/ip/node.def
+	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/ip/node.def
