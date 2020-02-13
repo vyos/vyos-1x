@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="pseudo-ethernet" owner="${vyos_conf_scripts_dir}/interfaces-pseudo-ethernet.py">
+        <properties>
+          <help>Pseudo Ethernet</help>
+          <priority>319</priority>
+          <constraint>
+            <regex>peth[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Pseudo Ethernet interface must be named pethN</constraintErrorMessage>
+          <valueHelp>
+            <format>pethN</format>
+            <description>Pseudo Ethernet interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/interface-description.xml.i>
+          #include <include/dhcp-dhcpv6-options.xml.i>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-disable.xml.i>
+          <node name="ip">
+            <children>
+              #include <include/interface-arp-cache-timeout.xml.i>
+              #include <include/interface-disable-arp-filter.xml.i>
+              #include <include/interface-enable-arp-accept.xml.i>
+              #include <include/interface-enable-arp-announce.xml.i>
+              #include <include/interface-enable-arp-ignore.xml.i>
+              #include <include/interface-enable-proxy-arp.xml.i>
+              #include <include/interface-proxy-arp-pvlan.xml.i>
+            </children>
+          </node>
+          <leafNode name="link">
+            <properties>
+              <help>Lower link device</help>
+              <valueHelp>
+                <format>interface</format>
+                <description>Interface used for VXLAN underlay</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py -t ethernet</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          #include <include/interface-mac.xml.i>
+          <leafNode name="mode">
+            <properties>
+              <help>Receive mode (default: private)</help>
+              <completionHelp>
+                <list>private vepa bridge passthru</list>
+              </completionHelp>
+              <valueHelp>
+                <format>private</format>
+                <description>No communication with other pseudo-devices</description>
+              </valueHelp>
+              <valueHelp>
+                <format>vepa</format>
+                <description>Virtual Ethernet Port Aggregator reflective relay</description>
+              </valueHelp>
+              <valueHelp>
+                <format>bridge</format>
+                <description>Simple bridge between pseudo-devices</description>
+              </valueHelp>
+              <valueHelp>
+                <format>passthru</format>
+                <description>Promicious mode passthrough of underlying device</description>
+              </valueHelp>
+              <constraint>
+                <regex>(private|vepa|bridge|passthru)</regex>
+              </constraint>
+              <constraintErrorMessage>mode must be private, vepa, bridge or passthru</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/vif-s.xml.i>
+          #include <include/vif.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
