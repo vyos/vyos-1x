@@ -78,7 +78,8 @@ def auth_required(f):
 @auth_required
 def configure():
     session = app.config['vyos_session']
-    config = app.config['vyos_config']
+    env = session.get_session_env()
+    config = vyos.config.Config(session_env=env)
 
     strict_field = bottle.request.forms.get("strict")
     if strict_field == "true":
@@ -187,8 +188,9 @@ def configure():
 @app.route('/retrieve', method='POST')
 @auth_required
 def get_value():
-    config = app.config['vyos_config']
     session = app.config['vyos_session']
+    env = session.get_session_env()
+    config = vyos.config.Config(session_env=env)
 
     command = bottle.request.forms.get("data")
     command = json.loads(command)
@@ -235,7 +237,6 @@ def get_value():
 @app.route('/config-file', method='POST')
 @auth_required
 def config_file_op():
-    config = app.config['vyos_config']
     session = app.config['vyos_session']
 
     command = bottle.request.forms.get("data")
@@ -273,7 +274,6 @@ def config_file_op():
 @app.route('/image', method='POST')
 @auth_required
 def config_file_op():
-    config = app.config['vyos_config']
     session = app.config['vyos_session']
 
     command = bottle.request.forms.get("data")
@@ -324,11 +324,8 @@ if __name__ == '__main__':
         print("Failed to load the HTTP API server config: {0}".format(e))
 
     session = ConfigSession(os.getpid())
-    env = session.get_session_env()
-    config = vyos.config.Config(session_env=env)
 
     app.config['vyos_session'] = session
-    app.config['vyos_config'] = config
     app.config['vyos_keys'] = server_config['api_keys']
     app.config['vyos_debug'] = server_config['debug']
 
