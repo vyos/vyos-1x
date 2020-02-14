@@ -827,12 +827,12 @@ class LoopbackIf(Interface):
         # remove all assigned IP addresses from interface
         for addr in self.get_addr():
             if addr in ["127.0.0.1/8", "::1/128"]:
-                # Do not allow deletion of the default loopback addresses
+                # Do not allow deletion of the default loopback addresses as
+                # this will cause weird system behavior like snmp/ssh no longer
+                # operating as expected, see https://phabricator.vyos.net/T2034.
                 continue
+
             self.del_addr(addr)
-
-        # question: do we also delerte the loopback address? 127.0.0.1/8
-
 
 class DummyIf(Interface):
 
