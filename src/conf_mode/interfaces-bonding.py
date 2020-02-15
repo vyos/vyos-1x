@@ -283,6 +283,10 @@ def verify(bond):
 
     conf = Config()
     for intf in bond['member']:
+        # check if member interface is "real"
+        if intf not in interfaces():
+            raise ConfigError('interface {} does not exist!'.format(intf))
+
         # a bonding member interface is only allowed to be assigned to one bond!
         all_bonds = conf.list_nodes('interfaces bonding')
         # We do not need to check our own bond
