@@ -108,6 +108,10 @@ class BondInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
+        # check validate() - we can only add existing interfaces
+        self.session.set(self._base_path + [intf, 'member', 'interface', 'eth99'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
 
         # check if member deletion works as expected
         self.session.delete(self._base_path + [intf, 'member'])
