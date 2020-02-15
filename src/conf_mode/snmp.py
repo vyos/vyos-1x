@@ -537,6 +537,11 @@ def get_config():
 
 def verify(snmp):
     if snmp is None:
+        # we can not delete SNMP when LLDP is configured with SNMP
+        conf = Config()
+        if conf.exists('service lldp snmp enable'):
+            raise ConfigError('Can not delete SNMP service, as LLDP still uses SNMP!')
+
         return None
 
     ### check if the configured script actually exist
