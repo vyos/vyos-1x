@@ -108,9 +108,9 @@ class BondInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-        for intf in self._interfaces:
-            self.session.delete(self._base_path + [intf, 'member'])
 
+        # check if member deletion works as expected
+        self.session.delete(self._base_path + [intf, 'member'])
         self.session.commit()
 
 
