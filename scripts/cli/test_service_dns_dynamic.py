@@ -18,6 +18,7 @@ import re
 import os
 import unittest
 
+from getpass import getuser
 from psutil import process_iter
 from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
@@ -28,8 +29,20 @@ base_path = ['service', 'dns', 'dynamic']
 
 def get_config_value(key):
     tmp = read_file(DDCLIENT_CONF)
-    return re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    tmp = re.findall(r'\n?{}=+(.*)'.format(key), tmp)
+    tmp = tmp[0].rstrip(',')
+    return tmp
 
+def check_process():
+    """
+    Check for running process, process name changes dynamically e.g.
+    "ddclient - sleeping for 270 seconds", thus we need a different approach
+    """
+    running = False
+    for p in process_iter():
+        if "ddclient" in p.name():
+            running = True
+    return running
 
 class TestServiceDDNS(unittest.TestCase):
     def setUp(self):
@@ -47,26 +60,54 @@ class TestServiceDDNS(unittest.TestCase):
     def test_service(self):
         """ Check individual DDNS service providers """
         ddns = ['interface', 'eth0', 'service']
-        services = ['cloudflare']
+        services = ['cloudflare', 'afraid', 'dyndns', 'zoneedit']
 
         for service in services:
+            user = 'vyos_user'
+            password = 'vyos_pass'
+            zone = 'vyos.io'
+            self.session.delete(base_path)
             self.session.set(base_path + ddns + [service, 'host-name', 'test.ddns.vyos.io'])
-            self.session.set(base_path + ddns + [service, 'login', 'vyos_user'])
-            self.session.set(base_path + ddns + [service, 'password', 'vyos_pass'])
+            self.session.set(base_path + ddns + [service, 'login', user])
+            self.session.set(base_path + ddns + [service, 'password', password])
+            self.session.set(base_path + ddns + [service, 'zone', zone])
 
-        # commit changes
-        self.session.commit()
+            # commit changes
+            if service == 'cloudflare':
+                self.session.commit()
+            else:
+                # zone option only works on cloudflare, an exception is raised
+                # for all others
+                with self.assertRaises(ConfigSessionError):
+                    self.session.commit()
+                self.session.delete(base_path + ddns + [service, 'zone', 'vyos.io'])
+                # commit changes again - now it should work
+                self.session.commit()
 
-        # TODO: inspect generated configuration file
+            # we can only read the configuration file when we operate as 'root'
+            if getuser() == 'root':
+                protocol = get_config_value('protocol')
+                login = get_config_value('login')
+                pwd = get_config_value('password')
 
-        # Check for running process
-        # process name changes dynamically "ddclient - sleeping for 270 seconds"
-        # thus we need a different approach
-        running = False
-        for p in process_iter():
-            if "ddclient" in p.name():
-                running = True
-        self.assertTrue(running)
+                # some services need special treatment
+                protoname = service
+                if service == 'cloudflare':
+                    tmp = get_config_value('zone')
+                    self.assertTrue(tmp == zone)
+                elif service == 'afraid':
+                    protoname = 'freedns'
+                elif service == 'dyndns':
+                    protoname = 'dyndns2'
+                elif service == 'zoneedit':
+                    protoname = 'zoneedit1'
+
+                self.assertTrue(protocol == protoname)
+                self.assertTrue(login == user)
+                self.assertTrue(pwd == "'" + password + "'")
+
+            # Check for running process
+            self.assertTrue(check_process())
 
 
     def test_rfc2136(self):
@@ -97,13 +138,7 @@ class TestServiceDDNS(unittest.TestCase):
         # TODO: inspect generated configuration file
 
         # Check for running process
-        # process name changes dynamically "ddclient - sleeping for 270 seconds"
-        # thus we need a different approach
-        running = False
-        for p in process_iter():
-            if "ddclient" in p.name():
-                running = True
-        self.assertTrue(running)
+        self.assertTrue(check_process())
 
 if __name__ == '__main__':
     unittest.main()
