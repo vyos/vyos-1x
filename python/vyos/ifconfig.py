@@ -1538,9 +1538,15 @@ class BondIf(VLANIf):
         >>> BondIf('bond0').get_slaves()
         ['eth1', 'eth2']
         """
-        slaves = self._read_sysfs('/sys/class/net/{}/bonding/slaves'
-                                  .format(self._ifname))
-        return list(map(str, slaves.split()))
+        enslaved_ifs = []
+        # retrieve real enslaved interfaces from OS kernel
+        sysfs_bond = '/sys/class/net/{}'.format(self._ifname)
+        if os.path.isdir(sysfs_bond):
+            for directory in os.listdir():
+                if 'lower_' in directory:
+                    enslaved_ifs.append(directory.replace('lower_',''))
+
+        return enslaved_ifs
 
 
     def set_primary(self, interface):

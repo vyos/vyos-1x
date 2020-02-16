@@ -208,8 +208,13 @@ def get_config():
     # determine bond member interfaces (currently configured)
     if conf.exists('member interface'):
         bond['member'] = conf.return_values('member interface')
-        eff_member = conf.return_effective_values('member interface')
-        if not (bond['member'] == eff_member):
+
+        # We can not call conf.return_effective_values() as it would not work
+        # on reboots. Reboots/First boot will return that running config and
+        # saved config is the same, thus on a reboot the bond members will
+        # not be added all (https://phabricator.vyos.net/T2030)
+        live_members = BondIf(bond['intf']).get_slaves()
+        if not (bond['member'] == live_members):
             bond['shutdown_required'] = True
 
     # Primary device interface
