@@ -102,13 +102,13 @@ default_config_data = {
 def get_config():
     dyndns = default_config_data
     conf = Config()
-    if not conf.exists('service dns dynamic'):
+    base_level = ['service', 'dns', 'dynamic']
+
+    if not conf.exists(base_level):
         dyndns['deleted'] = True
         return dyndns
-    else:
-        conf.set_level('service dns dynamic')
 
-    for interface in conf.list_nodes('interface'):
+    for interface in conf.list_nodes(base_level + ['interface']):
         node = {
             'interface': interface,
             'rfc2136': [],
@@ -118,10 +118,9 @@ def get_config():
         }
 
         # set config level to e.g. "service dns dynamic interface eth0"
-        conf.set_level('service dns dynamic interface {0}'.format(interface))
-
+        conf.set_level(base_level + ['interface', interface])
         # Handle RFC2136 - Dynamic Updates in the Domain Name System
-        for rfc2136 in conf.list_nodes('rfc2136'):
+        for rfc2136 in conf.list_nodes(['rfc2136']):
             rfc = {
                 'name': rfc2136,
                 'keyfile': '',
@@ -131,25 +130,30 @@ def get_config():
                 'zone': ''
             }
 
-            if conf.exists('rfc2136 {0} key'.format(rfc2136)):
-                rfc['keyfile'] = conf.return_value('rfc2136 {0} key'.format(rfc2136))
+            # set config level
+            conf.set_level(base_level + ['interface', interface, 'rfc2136', rfc2136])
 
-            if conf.exists('rfc2136 {0} record'.format(rfc2136)):
-                rfc['record'] = conf.return_values('rfc2136 {0} record'.format(rfc2136))
+            if conf.exists(['key']):
+                rfc['keyfile'] = conf.return_value(['key'])
 
-            if conf.exists('rfc2136 {0} server'.format(rfc2136)):
-                rfc['server'] = conf.return_value('rfc2136 {0} server'.format(rfc2136))
+            if conf.exists(['record']):
+                rfc['record'] = conf.return_values(['record'])
 
-            if conf.exists('rfc2136 {0} ttl'.format(rfc2136)):
-                rfc['ttl'] = conf.return_value('rfc2136 {0} ttl'.format(rfc2136))
+            if conf.exists(['server']):
+                rfc['server'] = conf.return_value(['server'])
 
-            if conf.exists('rfc2136 {0} zone'.format(rfc2136)):
-                rfc['zone'] = conf.return_value('rfc2136 {0} zone'.format(rfc2136))
+            if conf.exists(['ttl']):
+                rfc['ttl'] = conf.return_value(['ttl'])
+
+            if conf.exists(['zone']):
+                rfc['zone'] = conf.return_value(['zone'])
 
             node['rfc2136'].append(rfc)
 
+        # set config level to e.g. "service dns dynamic interface eth0"
+        conf.set_level(base_level + ['interface', interface])
         # Handle DynDNS service providers
-        for service in conf.list_nodes('service'):
+        for service in conf.list_nodes(['service']):
             srv = {
                 'provider': service,
                 'host': [],
@@ -161,29 +165,32 @@ def get_config():
                 'zone' : ''
             }
 
+            # set config level
+            conf.set_level(base_level + ['interface', interface, 'service', service])
+
             # preload protocol from default service mapping
             if service in default_service_protocol.keys():
                 srv['protocol'] = default_service_protocol[service]
             else:
                 srv['custom'] = True
 
-            if conf.exists('service {0} login'.format(service)):
-                srv['login'] = conf.return_value('service {0} login'.format(service))
+            if conf.exists(['login']):
+                srv['login'] = conf.return_value(['login'])
 
-            if conf.exists('service {0} host-name'.format(service)):
-                srv['host'] = conf.return_values('service {0} host-name'.format(service))
+            if conf.exists(['host-name']):
+                srv['host'] = conf.return_values(['host-name'])
 
-            if conf.exists('service {0} protocol'.format(service)):
-                srv['protocol'] = conf.return_value('service {0} protocol'.format(service))
+            if conf.exists(['protocol']):
+                srv['protocol'] = conf.return_value(['protocol'])
 
-            if conf.exists('service {0} password'.format(service)):
-                srv['password'] = conf.return_value('service {0} password'.format(service))
+            if conf.exists(['password']):
+                srv['password'] = conf.return_value(['password'])
 
-            if conf.exists('service {0} server'.format(service)):
-                srv['server'] = conf.return_value('service {0} server'.format(service))
+            if conf.exists(['server']):
+                srv['server'] = conf.return_value(['server'])
 
-            if conf.exists('service {0} zone'.format(service)):
-                srv['zone'] = conf.return_value('service {0} zone'.format(service))
+            if conf.exists(['zone']):
+                srv['zone'] = conf.return_value(['zone'])
             elif srv['provider'] == 'cloudflare':
                 # default populate zone entry with bar.tld if
                 # host-name is foo.bar.tld
@@ -191,12 +198,15 @@ def get_config():
 
             node['service'].append(srv)
 
-        # Additional settings in CLI
-        if conf.exists('use-web skip'):
-            node['web_skip'] = conf.return_value('use-web skip')
+        # set config level back to top level
+        conf.set_level(base_level)
 
-        if conf.exists('use-web url'):
-            node['web_url'] = conf.return_value('use-web url')
+        # Additional settings in CLI
+        if conf.exists(['use-web', 'skip']):
+            node['web_skip'] = conf.return_value(['use-web', 'skip'])
+
+        if conf.exists(['use-web', 'url']):
+            node['web_url'] = conf.return_value(['use-web', 'url'])
 
         dyndns['interfaces'].append(node)
 
