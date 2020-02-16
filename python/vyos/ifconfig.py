@@ -1542,7 +1542,7 @@ class BondIf(VLANIf):
         # retrieve real enslaved interfaces from OS kernel
         sysfs_bond = '/sys/class/net/{}'.format(self._ifname)
         if os.path.isdir(sysfs_bond):
-            for directory in os.listdir():
+            for directory in os.listdir(sysfs_bond):
                 if 'lower_' in directory:
                     enslaved_ifs.append(directory.replace('lower_',''))
 
