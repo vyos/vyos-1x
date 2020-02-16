@@ -18,6 +18,7 @@ import os
 import sys
 import jinja2
 
+from stat import S_IRUSR, S_IWUSR
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -270,6 +271,9 @@ def generate(dyndns):
     config_text = tmpl.render(dyndns)
     with open(config_file, 'w') as f:
         f.write(config_text)
+
+    # Config file must be accessible only by its owner
+    os.chmod(config_file, S_IRUSR | S_IWUSR)
 
     return None
 
