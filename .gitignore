@@ -117,6 +117,9 @@ debian/debhelper-build-stamp
 debian/.debhelper/
 debian/vyos-1x
 debian/vyos-1x-vmware
+debian/vyos-1x.postinst.debhelper
+debian/vyos-1x.prerm.debhelper
+debian/vyos-1x.substvars
 
 # Sonar Cloud
 .scannerwork
