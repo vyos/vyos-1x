@@ -38,11 +38,11 @@ class TestServiceSSH(unittest.TestCase):
         env = self.session.get_session_env()
         self.config = Config(session_env=env)
 
-    def tearDown(self):
-        # Delete SSH configuration
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
         self.session.delete(base_path)
-        self.session.commit()
 
+    def tearDown(self):
         del self.session
 
     def test_ssh(self):
