@@ -55,7 +55,7 @@ class BasicInterfaceTest:
 
         def test_add_address(self):
             """
-            Check if address can be added to interface
+            Check if IPv4/IPv6 addresses can be added to interface.
             """
 
             # Add address
@@ -74,3 +74,24 @@ class BasicInterfaceTest:
 
                         self.assertTrue(is_intf_addr_assigned(intf, addr['addr']))
 
+
+        def test_change_mtu(self):
+            """
+            Check if MTU can be changed on interface.
+            Test MTU size will be 1400 bytes.
+            """
+            if self._test_mtu is False:
+                return None
+
+            # choose a MTU which works on every interface
+            mtu = '1400'
+            for intf in self._interfaces:
+                self.session.set(self._base_path + [intf, 'mtu', mtu])
+
+            self.session.commit()
+
+            # Validate interface description
+            for intf in self._interfaces:
+                with open('/sys/class/net/{}/mtu'.format(intf), 'r') as f:
+                    tmp = f.read().rstrip()
+                    self.assertTrue(tmp == mtu)

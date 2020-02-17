@@ -15,11 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from base_interfaces_test import *
+from vyos.interfaces import list_interfaces_of_type
 
-class BondInterfaceTest(BasicInterfaceTest.BaseTest):
+class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
          super().setUp()
+
          self._base_path = ['interfaces', 'bonding']
+         self._test_mtu = True
          self._interfaces = ['bond0']
 
     def test_add_remove_member(self):

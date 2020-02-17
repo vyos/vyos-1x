@@ -20,7 +20,9 @@ from vyos.interfaces import list_interfaces_of_type
 class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         super().setUp()
+
         self._base_path = ['interfaces', 'ethernet']
+        self._test_mtu = True
         self._interfaces = []
 
         # auto detect all ethernet interfaces

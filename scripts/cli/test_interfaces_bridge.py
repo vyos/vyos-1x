@@ -15,11 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from base_interfaces_test import *
+from vyos.interfaces import list_interfaces_of_type
 
 class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         super().setUp()
+
         self._base_path = ['interfaces', 'bridge']
+        self._test_mtu = True
         self._interfaces = ['br0']
 
     def test_add_remove_member(self):
