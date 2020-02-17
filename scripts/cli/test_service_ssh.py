@@ -28,7 +28,8 @@ base_path = ['service', 'ssh']
 
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
-    return re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    return tmp[0]
 
 
 class TestServiceSSH(unittest.TestCase):
@@ -53,11 +54,11 @@ class TestServiceSSH(unittest.TestCase):
         self.session.commit()
 
         # Check configured port
-        port = get_config_value('Port')[0]
+        port = get_config_value('Port')
         self.assertTrue("2222" in port)
 
         # Check DNS usage
-        dns = get_config_value('UseDNS')[0]
+        dns = get_config_value('UseDNS')
         self.assertTrue("no" in dns)
 
         # Check for running process
