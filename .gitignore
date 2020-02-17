@@ -1,0 +1,5 @@
+debian/.debhelper/
+debian/files
+debian/vyos-smoketest.debhelper.log
+debian/vyos-smoketest.substvars
+debian/vyos-smoketest/
