@@ -30,7 +30,8 @@ base_path = ['service', 'snmp']
 
 def get_config_value(key):
     tmp = read_file(SNMPD_CONF)
-    return re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    return tmp[0]
 
 class TestSNMPService(unittest.TestCase):
     def setUp(self):
@@ -70,7 +71,7 @@ class TestSNMPService(unittest.TestCase):
         # verify listen address, it will be returned as
         # ['unix:/run/snmpd.socket,udp:127.0.0.1:161,udp6:[::1]:161']
         # thus we need to transfor this into a proper list
-        config = get_config_value('agentaddress')[0]
+        config = get_config_value('agentaddress')
         expected = 'unix:/run/snmpd.socket'
         for addr in listen:
             if is_ipv4(addr):
@@ -100,6 +101,7 @@ class TestSNMPService(unittest.TestCase):
         # create user
         for authpriv in ['auth', 'privacy']:
             self.session.set(base_path + ['v3', 'user', 'vyos', authpriv, 'plaintext-key', 'vyos1234'])
+
         self.session.set(base_path + ['v3', 'user', 'vyos', 'group', 'default'])
 
         # TODO: read in config file and check values
