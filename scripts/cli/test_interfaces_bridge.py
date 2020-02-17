@@ -26,19 +26,27 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._interfaces = ['br0']
 
     def test_add_remove_member(self):
-        members = list_interfaces_of_type("ethernet")
+        members = []
+        # we need to filter out VLAN interfaces identified by a dot (.)
+        # in their name - just in case!
+        for tmp in list_interfaces_of_type("ethernet"):
+            if not '.' in tmp:
+                members.append(tmp)
 
         for intf in self._interfaces:
             cost = 1000
             priority = 10
 
             self.session.set(self._base_path + [intf, 'stp'])
+
+            # assign members to bridge interface
             for member in members:
                 self.session.set(self._base_path + [intf, 'member', 'interface', member])
                 self.session.set(self._base_path + [intf, 'member', 'interface', member, 'cost', str(cost)])
                 self.session.set(self._base_path + [intf, 'member', 'interface', member, 'priority', str(priority)])
                 cost += 1
                 priority += 1
+
         self.session.commit()
 
         for intf in self._interfaces:
