@@ -22,7 +22,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'bridge']
-        self._test_mtu = True
         self._interfaces = ['br0']
 
     def test_add_remove_member(self):
