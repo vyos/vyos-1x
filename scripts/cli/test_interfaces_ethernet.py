@@ -25,11 +25,11 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_mtu = True
         self._interfaces = []
 
-        # auto detect all ethernet interfaces
-        for interface in list_interfaces_of_type("ethernet"):
-            if '.' not in interface:
-                self._interfaces.append(interface)
-
+        # we need to filter out VLAN interfaces identified by a dot (.)
+        # in their name - just in case!
+        for tmp in list_interfaces_of_type("ethernet"):
+            if not '.' in tmp:
+                self._interfaces.append(tmp)
 
 
 if __name__ == '__main__':
