@@ -1264,8 +1264,15 @@ def verify(wifi):
     if wifi['type'] != 'monitor' and not wifi['ssid']:
         raise ConfigError('SSID must be set for {}'.format(wifi['intf']))
 
-    if wifi['type'] == 'access-point' and not wifi['channel']:
-        raise ConfigError('Channel must be set for {}'.format(wifi['intf']))
+    if wifi['type'] == 'access-point':
+        c = Config()
+        if not c.exists('system wifi-regulatory-domain'):
+            raise ConfigError('Wireless regulatory domain is mandatory,\n' \
+                              'use "set system wifi-regulatory-domain".')
+
+        if not wifi['channel']:
+            raise ConfigError('Channel must be set for {}'.format(wifi['intf']))
+
 
     if len(wifi['sec_wep_key']) > 4:
         raise ConfigError('No more then 4 WEP keys configurable')
@@ -1286,10 +1293,7 @@ def verify(wifi):
         if not radius['key']:
             raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
 
-    conf = Config()
-    if not conf.exists('system wifi-regulatory-domain'):
-        raise ConfigError('Wireless regulatory domain is mandatory.\n' \
-                          'Use "set system wifi-regulatory-domain" to set.')
+
 
     return None
 
@@ -1434,15 +1438,20 @@ def apply(wifi):
             apply_vlan_config(vlan, vif)
 
     # Physical interface is now configured. Proceed by starting hostapd or
-    # wpa_supplicant daemon
-    cmd  = 'start-stop-daemon --start --quiet'
+    # wpa_supplicant daemon. When type is monitor we can just skip this.
     if wifi['type'] == 'access-point':
+        cmd  = 'start-stop-daemon --start --quiet'
         cmd += ' --exec /usr/sbin/hostapd'
         # now pass arguments to hostapd binary
         cmd += ' -- -B'
         cmd += ' -P {}'.format(get_pid('hostapd', wifi['intf']))
         cmd += ' {}'.format(get_conf_file('hostapd', wifi['intf']))
+
+        # execute assembled command
+        subprocess_cmd(cmd)
+
     elif wifi['type'] == 'station':
+        cmd  = 'start-stop-daemon --start --quiet'
         cmd += ' --exec /sbin/wpa_supplicant'
         # now pass arguments to hostapd binary
         cmd += ' -- -s -B -D nl80211'
@@ -1450,8 +1459,8 @@ def apply(wifi):
         cmd += ' -i {}'.format(wifi['intf'])
         cmd += ' -c {}'.format(get_conf_file('wpa_supplicant', wifi['intf']))
 
-    # execute assembled command
-    subprocess_cmd(cmd)
+        # execute assembled command
+        subprocess_cmd(cmd)
 
     return None
 
