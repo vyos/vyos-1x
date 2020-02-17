@@ -49,6 +49,7 @@ class TestServiceSSH(unittest.TestCase):
         """ Check if SSH service can be configured and runs """
         self.session.set(base_path + ['port', '2222'])
         self.session.set(base_path + ['disable-host-validation'])
+        self.session.set(base_path + ['disable-password-authentication'])
 
         # commit changes
         self.session.commit()
@@ -60,6 +61,10 @@ class TestServiceSSH(unittest.TestCase):
         # Check DNS usage
         dns = get_config_value('UseDNS')
         self.assertTrue("no" in dns)
+
+        # Check PasswordAuthentication
+        pwd = get_config_value('PasswordAuthentication')
+        self.assertTrue("no" in pwd)
 
         # Check for running process
         self.assertTrue("sshd" in (p.name() for p in process_iter()))
