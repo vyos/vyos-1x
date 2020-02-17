@@ -83,13 +83,13 @@ class Interface:
         >>> i = Interface('eth0')
         """
         self._ifname = str(ifname)
+        self._type = type
 
-        if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
+        if not os.path.exists('/sys/class/net/{}'.format(self._ifname)) and not type:
             raise Exception('interface "{}" not found'.format(self._ifname))
 
         if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
-            cmd = 'ip link add dev {} type {}'.format(self._ifname, type)
-            self._cmd(cmd)
+            self._create()
 
         # per interface DHCP config files
         self._dhcp_cfg_file = dhclient_base + self._ifname + '.conf'
@@ -118,6 +118,10 @@ class Interface:
 
         # list of assigned IP addresses
         self._addr = []
+
+    def _create (self):
+        cmd = 'ip link add dev {} type {}'.format(self._ifname, self._type)
+        self._cmd(cmd)
 
     def _debug_msg(self, msg):
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
@@ -179,6 +183,10 @@ class Interface:
         if type(self) == type(EthernetIf(self._ifname)):
             return
 
+        self._delete()
+
+
+    def _delete (self):
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
