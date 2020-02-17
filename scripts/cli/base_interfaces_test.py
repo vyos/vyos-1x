@@ -32,9 +32,15 @@ class BasicInterfaceTest:
             self._test_mtu = False
 
         def tearDown(self):
-            self.session.delete(self._base_path)
-            self.session.commit()
+            # we should not remove ethernet from the overall CLI
+            if 'ethernet' in self._base_path:
+                self.session.delete(self._base_path)
+                for intf in self._interfaces:
+                    self.session.set(self._base_path + [intf])
+            else:
+                self.session.delete(self._base_path)
 
+            self.session.commit()
             del self.session
 
         def test_add_description(self):
