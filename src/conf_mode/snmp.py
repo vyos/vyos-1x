@@ -701,92 +701,58 @@ def generate(snmp):
     return None
 
 def apply(snmp):
-    if snmp is not None:
+    if snmp is None:
+        return None
 
-        nonvolatiledir = '/config/snmp/tls'
-        volatiledir = '/etc/snmp/tls'
-        if not os.path.exists(nonvolatiledir):
-            os.makedirs(nonvolatiledir)
-            os.chmod(nonvolatiledir, stat.S_IWUSR | stat.S_IRUSR)
-            # get uid for user 'snmp'
-            # jessie snmp user = snmp
-            # buster snmp user = Debian-snmp
-            # keep it backwards compatible for Crux
+    # start SNMP daemon
+    os.system("systemctl restart snmpd.service")
 
-            un = [x[0] for x in pwd.getpwall()]
-            # debian snmp uid is 114 per default across releases
-            snmp_uid = 114
-            if 'snmp' in un:
-                snmp_uid = pwd.getpwnam('snmp').pw_uid
-            elif 'Debian-snmp' in un:
-                snmp_uid = pwd.getpwnam('Debian-snmp').pw_uid
+    # Passwords are not available immediately in the configuration file,
+    # after daemon startup - we wait until they have been processed by
+    # snmpd, which we see when a magic line appears in this file.
+    ready = False
+    while not ready:
+        while not os.path.exists(config_file_user):
+            sleep(0.5)
+            ready = True
 
-            os.chown(nonvolatiledir, snmp_uid, -1)
+    with open(config_file_user, 'r') as f:
+        for line in f:
+            # Search for our magic string inside the file
+            if 'usmUser' in line:
+                ready = True
+                break
 
-            # move SNMP certificate files from volatile location to non volatile /config/snmp
-            if os.path.exists(volatiledir) and os.path.isdir(volatiledir):
-                files = os.listdir(volatiledir)
-                for f in files:
-                    move(volatiledir + '/' + f, nonvolatiledir)
-                    os.chmod(nonvolatiledir + '/' + f, stat.S_IWUSR | stat.S_IRUSR)
+    # net-snmp is now regenerating the configuration file in the background
+    # thus we need to re-open and re-read the file as the content changed.
+    # After that we can no read the encrypted password from the config and
+    # replace the CLI plaintext password with its encrypted version.
+    os.environ["vyos_libexec_dir"] = "/usr/libexec/vyos"
+    with open(config_file_user, 'r') as f:
+        engineID = ''
+        for line in f:
+            if line.startswith('usmUser'):
+                string = line.split(' ')
+                cfg = {
+                    'user': string[4].replace(r'"', ''),
+                    'auth_pw': string[8],
+                    'priv_pw': string[10]
+                }
+                # No need to take care about the VyOS internal user
+                if cfg['user'] == snmp['vyos_user']:
+                    continue
 
-                os.rmdir(volatiledir)
-                os.symlink(nonvolatiledir, volatiledir)
+                # Now update the running configuration
+                #
+                # Currently when executing os.system() the environment does not
+                # have the vyos_libexec_dir variable set, see Phabricator T685.
+                os.system('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['auth_pw']))
+                os.system('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['priv_pw']))
+                os.system('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
+                os.system('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
 
-        if os.path.islink(volatiledir):
-            link = os.readlink(volatiledir)
-            if link != nonvolatiledir:
-                os.unlink(volatiledir)
-                os.symlink(nonvolatiledir, volatiledir)
-
-        # start SNMP daemon
-        os.system("systemctl daemon-reload")
-        os.system("systemctl restart snmpd.service")
-
-        # Passwords are not available immediately in the configuration file,
-        # after daemon startup - we wait until they have been processed by
-        # snmpd, which we see when a magic line appears in this file.
-        ready = False
-        while not ready:
-            while not os.path.exists(config_file_user):
-                sleep(0.1)
-
-            with open(config_file_user, 'r') as f:
-                for line in f:
-                    # Search for our magic string inside the file
-                    if 'usmUser' in line:
-                        ready = True
-                        break
-
-        # net-snmp is now regenerating the configuration file in the background
-        # thus we need to re-open and re-read the file as the content changed.
-        # After that we can no read the encrypted password from the config and
-        # replace the CLI plaintext password with its encrypted version.
-        with open(config_file_user, 'r') as f:
-            engineID = ''
-            for line in f:
-                if line.startswith('usmUser'):
-                    string = line.split(' ')
-                    cfg = {
-                        'user': string[4].replace(r'"', ''),
-                        'auth_pw': string[8],
-                        'priv_pw': string[10]
-                    }
-                    # No need to take care about the VyOS internal user
-                    if cfg['user'] == snmp['vyos_user']:
-                        ready = True
-                        continue
-
-                    # Now update the running configuration
-                    #
-                    # Currently when executing os.system() the environment does not have the vyos_libexec_dir variable set, see T685
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['auth_pw']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key {1} > /dev/null'.format(cfg['user'], cfg['priv_pw']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
-                    os.system('vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
-
-        # Enable AgentX in FRR
-        os.system('vtysh -c "configure terminal" -c "agentx" >/dev/null')
+    # Enable AgentX in FRR
+    os.system('vtysh -c "configure terminal" -c "agentx" >/dev/null')
 
     return None
 
