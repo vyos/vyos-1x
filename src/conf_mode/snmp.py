@@ -665,7 +665,7 @@ def generate(snmp):
     #
     # As we are manipulating the snmpd user database we have to stop it first!
     # This is even save if service is going to be removed
-    os.system("sudo systemctl stop snmpd.service")
+    os.system("systemctl stop snmpd.service")
     rmfile(config_file_client)
     rmfile(config_file_daemon)
     rmfile(config_file_access)
@@ -740,8 +740,8 @@ def apply(snmp):
                 os.symlink(nonvolatiledir, volatiledir)
 
         # start SNMP daemon
-        os.system("sudo systemctl daemon-reload")
-        os.system("sudo systemctl restart snmpd.service")
+        os.system("systemctl daemon-reload")
+        os.system("systemctl restart snmpd.service")
 
         # Passwords are not available immediately in the configuration file,
         # after daemon startup - we wait until they have been processed by
