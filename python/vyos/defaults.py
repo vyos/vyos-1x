@@ -13,23 +13,36 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
+env_file = os.path.join(os.environ.get("vyos_data_dir", "/usr/share/vyos/"),"vyos.env")
+
+env = {}
+with open(env_file, 'r') as envfile:
+    for line in envfile:
+        line = line.strip().replace(' ', '').replace('\t', '')
+        split = line.split('=')
+        if len(split) != 2:
+            continue
+        key, value = split
+        env[key] = os.environ.get(key, value)
 
 directories = {
-  "data": "/usr/share/vyos/",
-  "conf_mode": "/usr/libexec/vyos/conf_mode",
-  "config": "/opt/vyatta/etc/config",
-  "current": "/opt/vyatta/etc/config-migrate/current",
-  "migrate": "/opt/vyatta/etc/config-migrate/migrate",
-  "log": "/var/log/vyatta",
+  "data": env.get("vyos_data_dir", "/usr/share/vyos/"),
+  "conf_mode": env.get("vyos_conf_scripts_dir","/usr/libexec/vyos/conf_mode"),
+  "config": os.path.join(env.get("vyatta_sysconfdir", "/opt/vyatta/etc"),"config"),
+  "current": os.path.join(env.get("vyatta_sysconfdir", "/opt/vyatta/etc"), "config-migrate/current"),
+  "migrate": os.path.join(env.get("vyatta_sysconfdir", "/opt/vyatta/etc"), "config-migrate/migrate"),
+  "log": env.get("vyatta_log", "/var/log/vyatta"),
 }
 
 cfg_group = 'vyattacfg'
 
 cfg_vintage = 'vyatta'
 
-commit_lock = '/opt/vyatta/config/.lock'
+commit_lock = os.path.join(env.get('vyatta_configdir', '/opt/vyatta/config'), '.lock')
 
-version_file = '/usr/share/vyos/component-versions.json'
+version_file = os.path.join(directories['data'], 'component-versions.json')
 
 https_data = {
     'listen_addresses' : { '*': ['_'] }
