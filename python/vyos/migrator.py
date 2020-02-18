@@ -61,9 +61,6 @@ class Migrator(object):
         if self._set_vintage:
             self._config_file_vintage = self._set_vintage
 
-        if not self._config_file_vintage:
-            self._config_file_vintage = vyos.defaults.cfg_vintage
-
         if self._config_file_vintage not in ['vyatta', 'vyos']:
             raise MigratorError("Unknown vintage.")
 
