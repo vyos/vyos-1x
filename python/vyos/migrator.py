@@ -209,8 +209,7 @@ class VirtualMigrator(Migrator):
 
         cfg_versions = self.read_config_file_versions()
         if not cfg_versions:
-            raise MigratorError("Config file has no version information;"
-                                " virtual migration not possible.")
+            return
 
         if self.update_vintage():
             self._changed = True
