@@ -72,7 +72,7 @@ def main():
         migration = Migrator(config_file_name, force=force_on,
                              set_vintage=vintage)
     else:
-        migration = VirtualMigrator(config_file_name)
+        migration = VirtualMigrator(config_file_name, set_vintage=vintage)
 
     migration.run()
 

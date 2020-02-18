@@ -25,7 +25,7 @@ class MigratorError(Exception):
     pass
 
 class Migrator(object):
-    def __init__(self, config_file, force=False, set_vintage=None):
+    def __init__(self, config_file, force=False, set_vintage='vyos'):
         self._config_file = config_file
         self._force = force
         self._set_vintage = set_vintage
@@ -204,9 +204,6 @@ class Migrator(object):
         return self._changed
 
 class VirtualMigrator(Migrator):
-    def __init__(self, config_file, vintage='vyos'):
-        super().__init__(config_file, set_vintage = vintage)
-
     def run(self):
         cfg_file = self._config_file
 
