@@ -35,5 +35,5 @@ empty-node {
 
 trailing-leaf-node-without-value
 
-/* Trailing commend */
-/* Another trailing comment */
+// Trailing comment
+// Another trailing comment
