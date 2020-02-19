@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from copy import deepcopy
-
 from jinja2 import Template
 from subprocess import Popen, PIPE
 
@@ -118,6 +117,7 @@ def subprocess_cmd(command):
 def get_config():
     pppoe = deepcopy(default_config_data)
     conf = Config()
+    base_path = ['interfaces', 'pppoe']
 
     # determine tagNode instance
     try:
@@ -126,76 +126,76 @@ def get_config():
         print("Interface not specified")
 
     # Check if interface has been removed
-    if not conf.exists('interfaces pppoe ' + pppoe['intf']):
+    if not conf.exists(base_path + [pppoe['intf']]):
         pppoe['deleted'] = True
         return pppoe
 
     # set new configuration level
-    conf.set_level('interfaces pppoe ' + pppoe['intf'])
+    conf.set_level(base_path + [pppoe['intf']])
 
     # Access concentrator name (only connect to this concentrator)
-    if conf.exists('access-concentrator'):
-        pppoe['access_concentrator'] = conf.return_values('access-concentrator')
+    if conf.exists(['access-concentrator']):
+        pppoe['access_concentrator'] = conf.return_values(['access-concentrator'])
 
     # Access concentrator name (only connect to this concentrator)
-    if conf.exists('connect-on-demand'):
+    if conf.exists(['connect-on-demand']):
         pppoe['on_demand'] = True
 
     # Enable/Disable default route to peer when link comes up
-    if conf.exists('default-route'):
-        pppoe['default_route'] = conf.return_value('default-route')
+    if conf.exists(['default-route']):
+        pppoe['default_route'] = conf.return_value(['default-route'])
 
     # Retrieve interface description
-    if conf.exists('description'):
-        pppoe['description'] = conf.return_value('description')
+    if conf.exists(['description']):
+        pppoe['description'] = conf.return_value(['description'])
 
     # Disable this interface
-    if conf.exists('disable'):
+    if conf.exists(['disable']):
         pppoe['disable'] = True
 
     # Delay before disconnecting idle session (in seconds)
-    if conf.exists('idle-timeout'):
-        pppoe['idle_timeout'] = conf.return_value('idle-timeout')
+    if conf.exists(['idle-timeout']):
+        pppoe['idle_timeout'] = conf.return_value(['idle-timeout'])
 
     # Enable Stateless Address Autoconfiguration (SLAAC)
-    if conf.exists('ipv6 address autoconf'):
+    if conf.exists(['ipv6', 'address', 'autoconf']):
         pppoe['ipv6_autoconf'] = True
 
     # Activate IPv6 support on this connection
-    if conf.exists('ipv6 enable'):
+    if conf.exists(['ipv6', 'enable']):
         pppoe['ipv6_enable'] = True
 
     # IPv4 address of local end of the PPPoE link
-    if conf.exists('local-address'):
-        pppoe['local_address'] = conf.return_value('local-address')
+    if conf.exists(['local-address']):
+        pppoe['local_address'] = conf.return_value(['local-address'])
 
     # Physical Interface used for this PPPoE session
-    if conf.exists('link'):
+    if conf.exists(['link']):
         pppoe['link'] = conf.return_value('link')
 
     # Maximum Transmission Unit (MTU)
-    if conf.exists('mtu'):
-        pppoe['mtu'] = conf.return_value('mtu')
+    if conf.exists(['mtu']):
+        pppoe['mtu'] = conf.return_value(['mtu'])
 
     # IPv4 address of local end of the PPPoE link
-    if conf.exists('name-server'):
-        pppoe['name_server'] = conf.return_value('name-server')
+    if conf.exists(['name-server']):
+        pppoe['name_server'] = conf.return_value(['name-server'])
 
     # Password for authenticating local machine to PPPoE server
-    if conf.exists('password'):
-        pppoe['password'] = conf.return_value('password')
+    if conf.exists(['password']):
+        pppoe['password'] = conf.return_value(['password'])
 
     # IPv4 address of local end of the PPPoE link
-    if conf.exists('remote-address'):
-        pppoe['remote_address'] = conf.return_value('remote-address')
+    if conf.exists(['remote-address']):
+        pppoe['remote_address'] = conf.return_value(['remote-address'])
 
     # Service name, only connect to access concentrators advertising this
-    if conf.exists('service-name'):
-        pppoe['service_name'] = conf.return_value('service-name')
+    if conf.exists(['service-name']):
+        pppoe['service_name'] = conf.return_value(['service-name'])
 
     # Authentication name supplied to PPPoE server
-    if conf.exists('user-id'):
-        pppoe['user_id'] = conf.return_value('user-id')
+    if conf.exists(['user-id']):
+        pppoe['user_id'] = conf.return_value(['user-id'])
 
     return pppoe
 
