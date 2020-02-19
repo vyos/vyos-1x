@@ -15,9 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from base_interfaces_test import *
-
 from vyos.ifconfig import Interface
-
 
 class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     _base_path = ['interfaces', 'tunnel']
@@ -54,10 +52,9 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_mtu = True
         super().setUp()
 
-        self.session.set(['interfaces', 'dummy', 'dum444',
-                          'address', '169.254.0.1/24'])
-        self.session.set(
-            ['interfaces', 'dummy', 'dum666', 'address', '2002::1/16'])
+        base_path = ['interfaces', 'dummy']
+        self.session.set(base_path + ['dum444', 'address', '169.254.0.1/24'])
+        self.session.set(base_path + ['dum666', 'address', '2002::1/16'])
         self.session.commit()
 
         local = {
@@ -76,7 +73,6 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             for name in tunnel:
                 self.session.set(self._base_path + [intf, name, tunnel[name]])
             number += 1
-
 
 if __name__ == '__main__':
     unittest.main()
