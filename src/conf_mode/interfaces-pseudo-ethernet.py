@@ -232,7 +232,7 @@ def apply(peth):
 
         # It is safe to "re-create" the interface always, there is a sanity check
         # that the interface will only be create if its non existent
-        p = MACVLANIf(peth['intf'], config=conf)
+        p = MACVLANIf(peth['intf'], **conf)
     else:
         p = MACVLANIf(peth['intf'])
 

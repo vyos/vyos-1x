@@ -19,6 +19,7 @@ import jinja2
 import json
 import glob
 import time
+from copy import deepcopy
 
 import vyos.interfaces
 
@@ -66,12 +67,21 @@ interface "{{ intf }}" {
 """
 
 class Interface:
-    def __init__(self, ifname, type=None):
+    options = []
+    required = []
+    default = {
+        'type': '',
+    }
+
+    def __init__(self, ifname, **kargs):
         """
         This is the base interface class which supports basic IP/MAC address
         operations as well as DHCP(v6). Other interface which represent e.g.
         and ethernet bridge are implemented as derived classes adding all
         additional functionality.
+
+        For creation you will need to provide the interface type, otherwise
+        the existing interface is used
 
         DEBUG:
         This class has embedded debugging (print) which can be enabled by
@@ -82,28 +92,37 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> i = Interface('eth0')
         """
-        self._ifname = str(ifname)
 
-        if not os.path.exists('/sys/class/net/{}'.format(ifname)) and not type:
-            raise Exception('interface "{}" not found'.format(self._ifname))
+        self.config = deepcopy(self.default)
+        self.config['ifname'] = ifname
 
-        if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
-            cmd = 'ip link add dev {} type {}'.format(self._ifname, type)
-            self._cmd(cmd)
+        for k in self.options:
+            if k not in kargs:
+                raise ConfigError('invalid option {} for {}'.format(k,self.__class__))
+            self.config[k] = kargs[k]
+
+        for k in self.required:
+            if k not in self.config:
+                raise ConfigError('missing required option {} for {}'.format(k,self.__class__))
+
+        if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
+            if not self.config['type']:
+                raise Exception('interface "{}" not found'.format(self.config['ifname']))
+            self._create()
 
         # per interface DHCP config files
-        self._dhcp_cfg_file = dhclient_base + self._ifname + '.conf'
-        self._dhcp_pid_file = dhclient_base + self._ifname + '.pid'
-        self._dhcp_lease_file = dhclient_base + self._ifname + '.leases'
+        self._dhcp_cfg_file = dhclient_base + self.config['ifname'] + '.conf'
+        self._dhcp_pid_file = dhclient_base + self.config['ifname'] + '.pid'
+        self._dhcp_lease_file = dhclient_base + self.config['ifname'] + '.leases'
 
         # per interface DHCPv6 config files
-        self._dhcpv6_cfg_file = dhclient_base + self._ifname + '.v6conf'
-        self._dhcpv6_pid_file = dhclient_base + self._ifname + '.v6pid'
-        self._dhcpv6_lease_file = dhclient_base + self._ifname + '.v6leases'
+        self._dhcpv6_cfg_file = dhclient_base + self.config['ifname'] + '.v6conf'
+        self._dhcpv6_pid_file = dhclient_base + self.config['ifname'] + '.v6pid'
+        self._dhcpv6_lease_file = dhclient_base + self.config['ifname'] + '.v6leases'
 
         # DHCP options
         self._dhcp_options = {
-            'intf' : self._ifname,
+            'intf' : self.config['ifname'],
             'hostname' : '',
             'client_id' : '',
             'vendor_class_id' : ''
@@ -111,7 +130,7 @@ class Interface:
 
         # DHCPv6 options
         self._dhcpv6_options = {
-            'intf' : self._ifname,
+            'intf' : self.config['ifname'],
             'dhcpv6_prm_only' : False,
             'dhcpv6_temporary' : False
         }
@@ -119,9 +138,13 @@ class Interface:
         # list of assigned IP addresses
         self._addr = []
 
+    def _create(self):
+        cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
+        self._cmd(cmd)
+
     def _debug_msg(self, msg):
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
-            print('DEBUG/{:<6} {}'.format(self._ifname, msg))
+            print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
 
     def _cmd(self, command):
         p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
@@ -175,14 +198,32 @@ class Interface:
         for addr in self.get_addr():
             self.del_addr(addr)
 
+        # ---------------------------------------------------------------------
+        # A code refactoring is required as this type check is present as 
+        # Interface implement behaviour for one of it's sub-class.
+
+        # It is required as the current pattern for vlan is:
+        # Interface('name').remove() to delete an interface
+        # The code should be modified to have a class method called connect and
+        # have Interface.connect('name').remove()
+
+        # each subclass should register within Interface the pattern for that
+        # interface ie: (ethX, etc.) and use this to create an instance of
+        # the right class (EthernetIf, ...)
+
         # Ethernet interfaces can not be removed
-        if type(self) == type(EthernetIf(self._ifname)):
+        if self.__class__ == EthernetIf:
             return
 
+        # ---------------------------------------------------------------------
+
+        self._delete()
+
+    def _delete(self):
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
-        cmd = 'ip link del dev {}'.format(self._ifname)
+        cmd = 'ip link del dev {}'.format(self.config['ifname'])
         return self._cmd(cmd)
 
     def get_mtu(self):
@@ -195,7 +236,7 @@ class Interface:
         '1500'
         """
         return self._read_sysfs('/sys/class/net/{}/mtu'
-                                .format(self._ifname))
+                                .format(self.config['ifname']))
 
     def set_mtu(self, mtu):
         """
@@ -211,7 +252,7 @@ class Interface:
             raise ValueError('Invalid MTU size: "{}"'.format(mru))
 
         return self._write_sysfs('/sys/class/net/{}/mtu'
-                                 .format(self._ifname), mtu)
+                                 .format(self.config['ifname']), mtu)
 
     def set_mac(self, mac):
         """
@@ -245,7 +286,7 @@ class Interface:
 
         # Assemble command executed on system. Unfortunately there is no way
         # of altering the MAC address via sysfs
-        cmd = 'ip link set dev {} address {}'.format(self._ifname, mac)
+        cmd = 'ip link set dev {} address {}'.format(self.config['ifname'], mac)
         return self._cmd(cmd)
 
 
@@ -259,7 +300,7 @@ class Interface:
         >>> Interface('eth0').set_arp_cache_tmo(40)
         """
         return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
-                                 .format(self._ifname), (int(tmo) * 1000))
+                                 .format(self.config['ifname']), (int(tmo) * 1000))
 
     def set_arp_filter(self, arp_filter):
         """
@@ -281,7 +322,7 @@ class Interface:
         """
         if int(arp_filter) >= 0 and int(arp_filter) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_filter'
-                                     .format(self._ifname), arp_filter)
+                                     .format(self.config['ifname']), arp_filter)
         else:
            raise ValueError("Value out of range")
 
@@ -301,7 +342,7 @@ class Interface:
         """
         if int(arp_accept) >= 0 and int(arp_accept) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_accept'
-                                     .format(self._ifname), arp_accept)
+                                     .format(self.config['ifname']), arp_accept)
         else:
            raise ValueError("Value out of range")
 
@@ -326,7 +367,7 @@ class Interface:
         """
         if int(arp_announce) >= 0 and int(arp_announce) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_announce'
-                                     .format(self._ifname), arp_announce)
+                                     .format(self.config['ifname']), arp_announce)
         else:
            raise ValueError("Value out of range")
 
@@ -342,7 +383,7 @@ class Interface:
         """
         if int(arp_ignore) >= 0 and int(arp_ignore) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_ignore'
-                                     .format(self._ifname), arp_ignore)
+                                     .format(self.config['ifname']), arp_ignore)
         else:
            raise ValueError("Value out of range")
 
@@ -368,7 +409,7 @@ class Interface:
         """
         if int(link_filter) >= 0 and int(link_filter) <= 2:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
-                                     .format(self._ifname), link_filter)
+                                     .format(self.config['ifname']), link_filter)
         else:
             raise ValueError("Value out of range")
 
@@ -389,7 +430,7 @@ class Interface:
             ifalias = '\0'
 
         self._write_sysfs('/sys/class/net/{}/ifalias'
-                          .format(self._ifname), ifalias)
+                          .format(self.config['ifname']), ifalias)
 
     def get_state(self):
         """
@@ -400,7 +441,7 @@ class Interface:
         >>> Interface('eth0').get_state()
         'up'
         """
-        cmd = 'ip -json link show dev {}'.format(self._ifname)
+        cmd = 'ip -json link show dev {}'.format(self.config['ifname'])
         tmp = self._cmd(cmd)
         out = json.loads(tmp)
         return out[0]['operstate'].lower()
@@ -420,7 +461,7 @@ class Interface:
 
         # Assemble command executed on system. Unfortunately there is no way
         # to up/down an interface via sysfs
-        cmd = 'ip link set dev {} {}'.format(self._ifname, state)
+        cmd = 'ip link set dev {} {}'.format(self.config['ifname'], state)
         return self._cmd(cmd)
 
     def set_proxy_arp(self, enable):
@@ -433,7 +474,7 @@ class Interface:
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp'
-                                     .format(self._ifname), enable)
+                                     .format(self.config['ifname']), enable)
         else:
             raise ValueError("Value out of range")
 
@@ -463,7 +504,7 @@ class Interface:
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp_pvlan'
-                                     .format(self._ifname), enable)
+                                     .format(self.config['ifname']), enable)
         else:
             raise ValueError("Value out of range")
 
@@ -481,15 +522,15 @@ class Interface:
         ipv4 = []
         ipv6 = []
 
-        if AF_INET in ifaddresses(self._ifname).keys():
-            for v4_addr in ifaddresses(self._ifname)[AF_INET]:
+        if AF_INET in ifaddresses(self.config['ifname']).keys():
+            for v4_addr in ifaddresses(self.config['ifname'])[AF_INET]:
                 # we need to manually assemble a list of IPv4 address/prefix
                 prefix = '/' + \
                     str(IPv4Network('0.0.0.0/' + v4_addr['netmask']).prefixlen)
                 ipv4.append(v4_addr['addr'] + prefix)
 
-        if AF_INET6 in ifaddresses(self._ifname).keys():
-            for v6_addr in ifaddresses(self._ifname)[AF_INET6]:
+        if AF_INET6 in ifaddresses(self.config['ifname']).keys():
+            for v6_addr in ifaddresses(self.config['ifname'])[AF_INET6]:
                 # Note that currently expanded netmasks are not supported. That means
                 # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
                 # see https://docs.python.org/3/library/ipaddress.html
@@ -540,8 +581,8 @@ class Interface:
         elif addr == 'dhcpv6':
             self._set_dhcpv6()
         else:
-            if not is_intf_addr_assigned(self._ifname, addr):
-                cmd = 'ip addr add "{}" dev "{}"'.format(addr, self._ifname)
+            if not is_intf_addr_assigned(self.config['ifname'], addr):
+                cmd = 'ip addr add "{}" dev "{}"'.format(addr, self.config['ifname'])
                 return self._cmd(cmd)
 
     def del_addr(self, addr):
@@ -571,8 +612,8 @@ class Interface:
         elif addr == 'dhcpv6':
             self._del_dhcpv6()
         else:
-            if is_intf_addr_assigned(self._ifname, addr):
-                cmd = 'ip addr del "{}" dev "{}"'.format(addr, self._ifname)
+            if is_intf_addr_assigned(self.config['ifname'], addr):
+                cmd = 'ip addr del "{}" dev "{}"'.format(addr, self.config['ifname'])
                 return self._cmd(cmd)
 
 
@@ -637,7 +678,7 @@ class Interface:
         cmd += ' --exec /sbin/dhclient --'
         # now pass arguments to dhclient binary
         cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
-            self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
+            self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self.config['ifname'])
         return self._cmd(cmd)
 
 
@@ -672,7 +713,7 @@ class Interface:
         #    Hostname Option 12, length 10: "vyos"
         #
         cmd = '/sbin/dhclient -cf {} -pf {} -lf {} -r {}'.format(
-                self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self._ifname)
+                self._dhcp_cfg_file, self._dhcp_pid_file, self._dhcp_lease_file, self.config['ifname'])
         self._cmd(cmd)
 
         # cleanup old config file
@@ -720,7 +761,7 @@ class Interface:
 
         # no longer accept router announcements on this interface
         self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
-              .format(self._ifname), 0)
+              .format(self.config['ifname']), 0)
 
         # assemble command-line to start DHCPv6 client (dhclient)
         cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
@@ -736,7 +777,7 @@ class Interface:
         if dhcpv6['dhcpv6_temporary']:
             cmd += ' -T'
 
-        cmd += ' {}'.format(self._ifname)
+        cmd += ' {}'.format(self.config['ifname'])
         return self._cmd(cmd)
 
 
@@ -765,7 +806,7 @@ class Interface:
 
         # accept router announcements on this interface
         self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
-              .format(self._ifname), 1)
+              .format(self.config['ifname']), 1)
 
         # cleanup old config file
         if os.path.isfile(self._dhcpv6_cfg_file):
@@ -803,17 +844,20 @@ class Interface:
                     dev_dict[metric] = int(data)
             interface_stats[dev] = dev_dict
 
-        return interface_stats[self._ifname]
+        return interface_stats[self.config['ifname']]
 
 class LoopbackIf(Interface):
-
     """
     The loopback device is a special, virtual network interface that your router
     uses to communicate with itself.
     """
 
-    def __init__(self, ifname):
-        super().__init__(ifname, type='loopback')
+    default = {
+        'type': 'loopback',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
     def remove(self):
         """
@@ -835,15 +879,18 @@ class LoopbackIf(Interface):
             self.del_addr(addr)
 
 class DummyIf(Interface):
-
     """
     A dummy interface is entirely virtual like, for example, the loopback
     interface. The purpose of a dummy interface is to provide a device to route
     packets through without actually transmitting them.
     """
 
-    def __init__(self, ifname):
-        super().__init__(ifname, type='dummy')
+    default = {
+        'type': 'dummy',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
 
 class STPIf(Interface):
@@ -851,8 +898,13 @@ class STPIf(Interface):
     A spanning-tree capable interface. This applies only to bridge port member
     interfaces!
     """
-    def __init__(self, ifname):
-        super().__init__(ifname)
+
+    default = {
+        'type': 'stp',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
     def set_path_cost(self, cost):
         """
@@ -864,11 +916,11 @@ class STPIf(Interface):
         >>> Interface('eth0').set_path_cost(4)
         """
         if not os.path.isfile('/sys/class/net/{}/brport/path_cost'
-                              .format(self._ifname)):
-            raise TypeError('{} is not a bridge port member'.format(self._ifname))
+                              .format(self.config['ifname'])):
+            raise TypeError('{} is not a bridge port member'.format(self.config['ifname']))
 
         return self._write_sysfs('/sys/class/net/{}/brport/path_cost'
-                                 .format(self._ifname), cost)
+                                 .format(self.config['ifname']), cost)
 
     def set_path_priority(self, priority):
         """
@@ -880,15 +932,14 @@ class STPIf(Interface):
         >>> Interface('eth0').set_path_priority(4)
         """
         if not os.path.isfile('/sys/class/net/{}/brport/priority'
-                              .format(self._ifname)):
-            raise TypeError('{} is not a bridge port member'.format(self._ifname))
+                              .format(self.config['ifname'])):
+            raise TypeError('{} is not a bridge port member'.format(self.config['ifname']))
 
         return self._write_sysfs('/sys/class/net/{}/brport/priority'
-                                 .format(self._ifname), priority)
+                                 .format(self.config['ifname']), priority)
 
 
 class BridgeIf(Interface):
-
     """
     A bridge is a way to connect two Ethernet segments together in a protocol
     independent way. Packets are forwarded based on Ethernet address, rather
@@ -898,8 +949,12 @@ class BridgeIf(Interface):
     The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
     """
 
-    def __init__(self, ifname):
-        super().__init__(ifname, type='bridge')
+    default = {
+        'type': 'bridge',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
     def set_ageing_time(self, time):
         """
@@ -912,7 +967,7 @@ class BridgeIf(Interface):
         """
         time = int(time) * 100
         return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
-                                 .format(self._ifname), time)
+                                 .format(self.config['ifname']), time)
 
     def set_forward_delay(self, time):
         """
@@ -924,7 +979,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').forward_delay(15)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
-                                 .format(self._ifname), (int(time) * 100))
+                                 .format(self.config['ifname']), (int(time) * 100))
 
     def set_hello_time(self, time):
         """
@@ -936,7 +991,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').set_hello_time(2)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
-                                 .format(self._ifname), (int(time) * 100))
+                                 .format(self.config['ifname']), (int(time) * 100))
 
     def set_max_age(self, time):
         """
@@ -948,7 +1003,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').set_max_age(30)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
-                                 .format(self._ifname), (int(time) * 100))
+                                 .format(self.config['ifname']), (int(time) * 100))
 
     def set_priority(self, priority):
         """
@@ -959,7 +1014,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').set_priority(8192)
         """
         return self._write_sysfs('/sys/class/net/{}/bridge/priority'
-                                 .format(self._ifname), priority)
+                                 .format(self.config['ifname']), priority)
 
     def set_stp(self, state):
         """
@@ -972,7 +1027,7 @@ class BridgeIf(Interface):
 
         if int(state) >= 0 and int(state) <= 1:
             return self._write_sysfs('/sys/class/net/{}/bridge/stp_state'
-                                     .format(self._ifname), state)
+                                     .format(self.config['ifname']), state)
         else:
             raise ValueError("Value out of range")
 
@@ -992,7 +1047,7 @@ class BridgeIf(Interface):
         """
         if int(enable) >= 0 and int(enable) <= 1:
             return self._write_sysfs('/sys/class/net/{}/bridge/multicast_querier'
-                                     .format(self._ifname), enable)
+                                     .format(self.config['ifname']), enable)
         else:
             raise ValueError("Value out of range")
 
@@ -1006,7 +1061,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
-        cmd = 'ip link set dev {} master {}'.format(interface, self._ifname)
+        cmd = 'ip link set dev {} master {}'.format(interface, self.config['ifname'])
         return self._cmd(cmd)
 
     def del_port(self, interface):
@@ -1025,8 +1080,13 @@ class VLANIf(Interface):
     This class handels the creation and removal of a VLAN interface. It serves
     as base class for BondIf and EthernetIf.
     """
-    def __init__(self, ifname, type=None):
-        super().__init__(ifname, type)
+
+    default = {
+        'type': 'vlan',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
     def remove(self):
         """
@@ -1045,7 +1105,7 @@ class VLANIf(Interface):
         # As interfaces need to be deleted "in order" starting from Q-in-Q
         # we delete them first.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
-                        if re.match(self._ifname + r'(?:\.\d+)(?:\.\d+)', f)]
+                        if re.match(self.config['ifname'] + r'(?:\.\d+)(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -1054,7 +1114,7 @@ class VLANIf(Interface):
         # which probably acted as parent to Q-in-Q or have been regular 802.1q
         # interface.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net') \
-                        if re.match(self._ifname + r'(?:\.\d+)', f)]
+                        if re.match(self.config['ifname'] + r'(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -1088,7 +1148,7 @@ class VLANIf(Interface):
         >>> i = VLANIf('eth0')
         >>> i.add_vlan(10)
         """
-        vlan_ifname = self._ifname + '.' + str(vlan_id)
+        vlan_ifname = self.config['ifname'] + '.' + str(vlan_id)
         if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
             self._vlan_id = int(vlan_id)
 
@@ -1107,7 +1167,7 @@ class VLANIf(Interface):
 
             # create interface in the system
             cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
-                   .format(intf=self._ifname, vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
+                   .format(intf=self.config['ifname'], vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
             self._cmd(cmd)
 
         # return new object mapping to the newly created interface
@@ -1127,7 +1187,7 @@ class VLANIf(Interface):
         >>> i = VLANIf('eth0.10')
         >>> i.del_vlan()
         """
-        vlan_ifname = self._ifname + '.' + str(vlan_id)
+        vlan_ifname = self.config['ifname'] + '.' + str(vlan_id)
         VLANIf(vlan_ifname).remove()
 
 
@@ -1135,8 +1195,17 @@ class EthernetIf(VLANIf):
     """
     Abstraction of a Linux Ethernet Interface
     """
-    def __init__(self, ifname):
-        super().__init__(ifname)
+
+    default = {
+        'type': 'ethernet',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
+
+    def _delete (self):
+        # Ethernet interfaces can not be removed
+        pass
 
     def get_driver_name(self):
         """
@@ -1149,7 +1218,7 @@ class EthernetIf(VLANIf):
         >>> i.get_driver_name()
         'vmxnet3'
         """
-        link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self._ifname))
+        link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self.config['ifname']))
         return os.path.basename(link)
 
     def set_flow_control(self, enable):
@@ -1172,7 +1241,7 @@ class EthernetIf(VLANIf):
             return
 
         # Get current flow control settings:
-        cmd = '/sbin/ethtool --show-pause {0}'.format(self._ifname)
+        cmd = '/sbin/ethtool --show-pause {0}'.format(self.config['ifname'])
         tmp = self._cmd(cmd)
 
         # The above command returns - with tabs:
@@ -1192,7 +1261,7 @@ class EthernetIf(VLANIf):
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
         cmd = '/sbin/ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
-              self._ifname, enable)
+              self.config['ifname'], enable)
         try:
             # An exception will be thrown if the settings are not changed
             return self._cmd(cmd)
@@ -1225,7 +1294,7 @@ class EthernetIf(VLANIf):
             return
 
         # Get current speed and duplex settings:
-        cmd = '/sbin/ethtool {0}'.format(self._ifname)
+        cmd = '/sbin/ethtool {0}'.format(self.config['ifname'])
         tmp = self._cmd(cmd)
 
         if re.search("\tAuto-negotiation: on", tmp):
@@ -1250,7 +1319,7 @@ class EthernetIf(VLANIf):
                 # bail out early as nothing is to change
                 return
 
-        cmd = '/sbin/ethtool -s {}'.format(self._ifname)
+        cmd = '/sbin/ethtool -s {}'.format(self.config['ifname'])
         if speed == 'auto' or duplex == 'auto':
             cmd += ' autoneg on'
         else:
@@ -1269,7 +1338,7 @@ class EthernetIf(VLANIf):
         if state not in ['on', 'off']:
             raise ValueError('state must be "on" or "off"')
 
-        cmd = '/sbin/ethtool -K {} gro {}'.format(self._ifname, state)
+        cmd = '/sbin/ethtool -K {} gro {}'.format(self.config['ifname'], state)
         return self._cmd(cmd)
 
 
@@ -1283,7 +1352,7 @@ class EthernetIf(VLANIf):
         if state not in ['on', 'off']:
             raise ValueError('state must be "on" or "off"')
 
-        cmd = '/sbin/ethtool -K {} gso {}'.format(self._ifname, state)
+        cmd = '/sbin/ethtool -K {} gso {}'.format(self.config['ifname'], state)
         return self._cmd(cmd)
 
 
@@ -1297,7 +1366,7 @@ class EthernetIf(VLANIf):
         if state not in ['on', 'off']:
             raise ValueError('state must be "on" or "off"')
 
-        cmd = '/sbin/ethtool -K {} sg {}'.format(self._ifname, state)
+        cmd = '/sbin/ethtool -K {} sg {}'.format(self.config['ifname'], state)
         return self._cmd(cmd)
 
 
@@ -1311,7 +1380,7 @@ class EthernetIf(VLANIf):
         if state not in ['on', 'off']:
             raise ValueError('state must be "on" or "off"')
 
-        cmd = '/sbin/ethtool -K {} tso {}'.format(self._ifname, state)
+        cmd = '/sbin/ethtool -K {} tso {}'.format(self.config['ifname'], state)
         return self._cmd(cmd)
 
 
@@ -1325,22 +1394,25 @@ class EthernetIf(VLANIf):
         if state not in ['on', 'off']:
             raise ValueError('state must be "on" or "off"')
 
-        cmd = '/sbin/ethtool -K {} ufo {}'.format(self._ifname, state)
+        cmd = '/sbin/ethtool -K {} ufo {}'.format(self.config['ifname'], state)
         return self._cmd(cmd)
 
 class MACVLANIf(VLANIf):
     """
     Abstraction of a Linux MACvlan interface
     """
-    def __init__(self, ifname, config=''):
-        self._ifname = ifname
 
-        if not os.path.exists('/sys/class/net/{}'.format(self._ifname)) and config:
-            cmd = 'ip link add {intf} link {link} type macvlan mode {mode}' \
-                   .format(intf=self._ifname, link=config['link'], mode=config['mode'])
-            self._cmd(cmd)
+    options = VLANIf.options + ['link', 'mode']
+    default = {
+        'type': 'macvlan',
+    }
 
-        super().__init__(ifname, type='macvlan')
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
+
+    def _create(self):
+        cmd = 'ip link add {intf} link {link} type macvlan mode {mode}'.format(**self.config)
+        self._cmd(cmd)
 
     @staticmethod
     def get_config():
@@ -1363,7 +1435,7 @@ class MACVLANIf(VLANIf):
         """
         """
 
-        cmd = 'ip link set dev {} type macvlan mode {}'.format(self._ifname, mode)
+        cmd = 'ip link set dev {} type macvlan mode {}'.format(self.config['ifname'], mode)
         return self._cmd(cmd)
 
 
@@ -1375,8 +1447,13 @@ class BondIf(VLANIf):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
-    def __init__(self, ifname):
-        super().__init__(ifname, type='bond')
+
+    default = {
+        'type': 'bond',
+    }
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
     def remove(self):
         """
@@ -1424,7 +1501,7 @@ class BondIf(VLANIf):
         if not mode in ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']:
             raise ValueError("Value out of range")
         return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
-                                 .format(self._ifname), mode)
+                                 .format(self.config['ifname']), mode)
 
     def set_arp_interval(self, interval):
         """
@@ -1457,10 +1534,10 @@ class BondIf(VLANIf):
             link monitoring. A value of 100 is a good starting point.
             """
             return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
-                                     .format(self._ifname), interval)
+                                     .format(self.config['ifname']), interval)
         else:
             return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
-                                     .format(self._ifname), interval)
+                                     .format(self.config['ifname']), interval)
 
     def get_arp_ip_target(self):
         """
@@ -1479,7 +1556,7 @@ class BondIf(VLANIf):
         '192.0.2.1'
         """
         return self._read_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
-                                .format(self._ifname))
+                                .format(self.config['ifname']))
 
     def set_arp_ip_target(self, target):
         """
@@ -1499,7 +1576,7 @@ class BondIf(VLANIf):
         '192.0.2.1'
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
-                                 .format(self._ifname), target)
+                                 .format(self.config['ifname']), target)
 
     def add_port(self, interface):
         """
@@ -1516,7 +1593,7 @@ class BondIf(VLANIf):
         Interface(interface).set_state('down')
 
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
-                                 .format(self._ifname), '+' + interface)
+                                 .format(self.config['ifname']), '+' + interface)
 
     def del_port(self, interface):
         """
@@ -1527,7 +1604,7 @@ class BondIf(VLANIf):
         >>> BondIf('bond0').del_port('eth1')
         """
         return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
-                                 .format(self._ifname), '-' + interface)
+                                 .format(self.config['ifname']), '-' + interface)
 
     def get_slaves(self):
         """
@@ -1540,7 +1617,7 @@ class BondIf(VLANIf):
         """
         enslaved_ifs = []
         # retrieve real enslaved interfaces from OS kernel
-        sysfs_bond = '/sys/class/net/{}'.format(self._ifname)
+        sysfs_bond = '/sys/class/net/{}'.format(self.config['ifname'])
         if os.path.isdir(sysfs_bond):
             for directory in os.listdir(sysfs_bond):
                 if 'lower_' in directory:
@@ -1569,7 +1646,7 @@ class BondIf(VLANIf):
             interface = '\0'
 
         return self._write_sysfs('/sys/class/net/{}/bonding/primary'
-                                 .format(self._ifname), interface)
+                                 .format(self.config['ifname']), interface)
 
     def set_mode(self, mode):
         """
@@ -1592,9 +1669,23 @@ class BondIf(VLANIf):
             raise ValueError("Value out of range")
 
         return self._write_sysfs('/sys/class/net/{}/bonding/mode'
-                                 .format(self._ifname), mode)
+                                 .format(self.config['ifname']), mode)
 
 class WireGuardIf(Interface):
+    options = ['port', 'private-key', 'pubkey', 'psk', 'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
+
+    default = {
+        'type': 'wireguard',
+        'port': 0,
+        'private-key': None,
+        'pubkey': None,
+        'psk': '/dev/null',
+        'allowed-ips': [],
+        'fwmark': 0x00,
+        'endpoint': None,
+        'keepalive': 0
+    }
+
     """
     Wireguard interface class, contains a comnfig dictionary since
     wireguard VPN is being comnfigured via the wg command rather than
@@ -1614,19 +1705,8 @@ class WireGuardIf(Interface):
     'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     """
 
-    def __init__(self, ifname):
-        super().__init__(ifname, type='wireguard')
-
-        self.config = {
-            'port': 0,
-            'private-key': None,
-            'pubkey': None,
-            'psk': '/dev/null',
-            'allowed-ips': [],
-            'fwmark': 0x00,
-            'endpoint': None,
-            'keepalive': 0
-        }
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
     def update(self):
         if not self.config['private-key']:
@@ -1635,7 +1715,7 @@ class WireGuardIf(Interface):
             # fmask permission check?
             pass
 
-        cmd = "wg set {} ".format(self._ifname)
+        cmd = "wg set {} ".format(self.config['ifname'])
         cmd += "listen-port {} ".format(self.config['port'])
         cmd += "fwmark {} ".format(str(self.config['fwmark']))
         cmd += "private-key {} ".format(self.config['private-key'])
@@ -1667,18 +1747,18 @@ class WireGuardIf(Interface):
         and the interface is needed, to remove the entry.
         """
         cmd = "wg set {0} peer {1} remove".format(
-            self._ifname, str(peerkey))
+            self.config['ifname'], str(peerkey))
         return self._cmd(cmd)
 
     def op_show_interface(self):
-        wgdump = vyos.interfaces.wireguard_dump().get(self._ifname,None)
+        wgdump = vyos.interfaces.wireguard_dump().get(self.config['ifname'],None)
 
         c = Config()
-        c.set_level(["interfaces","wireguard",self._ifname])
+        c.set_level(["interfaces","wireguard",self.config['ifname']])
         description = c.return_effective_value(["description"])
         ips = c.return_effective_values(["address"])
 
-        print ("interface: {}".format(self._ifname))
+        print ("interface: {}".format(self.config['ifname']))
         if (description):
             print ("  description: {}".format(description))
 
@@ -1755,28 +1835,36 @@ class VXLANIf(Interface):
     For more information please refer to:
     https://www.kernel.org/doc/Documentation/networking/vxlan.txt
     """
-    def __init__(self, ifname, config=''):
-        if config:
-            self._ifname = ifname
 
-            if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
-                # we assume that by default a multicast interface is created
-                group = 'group {}'.format(config['group'])
+    default = {
+        'type': 'vxlan',
+        'vni': 0,
+        'dev': '',
+        'group': '',
+        'remote': '',
+        'port': 8472,   # The Linux implementation of VXLAN pre-dates
+                        # the IANA's selection of a standard destination port
+    }
 
-                # if remote host is specified we ignore the multicast address
-                if config['remote']:
-                    group = 'remote {}'.format(config['remote'])
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
-                # an underlay device is not always specified
-                dev = ''
-                if config['dev']:
-                    dev = 'dev {}'.format(config['dev'])
+    def _create(self):
+        # we assume that by default a multicast interface is created
+        group = 'group {}'.format(self.config['group'])
 
-                cmd = 'ip link add {intf} type vxlan id {vni} {grp_rem} {dev} dstport {port}' \
-                       .format(intf=self._ifname, vni=config['vni'], grp_rem=group, dev=dev, port=config['port'])
-                self._cmd(cmd)
+        # if remote host is specified we ignore the multicast address
+        if config['remote']:
+            group = 'remote {}'.format(self.config['remote'])
 
-        super().__init__(ifname, type='vxlan')
+        # an underlay device is not always specified
+        dev = ''
+        if self.config['dev']:
+            dev = 'dev {}'.format(self.config['dev'])
+
+        cmd = 'ip link add {intf} type vxlan id {vni} {grp_rem} {dev} dstport {port}' \
+            .format(intf=self.config['ifname'], vni=self.config['vni'], grp_rem=group, dev=dev, port=self.config['port'])
+        self._cmd(cmd)
 
     @staticmethod
     def get_config():
@@ -1808,18 +1896,21 @@ class GeneveIf(Interface):
     https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels/#geneve
     https://lwn.net/Articles/644938/
     """
-    def __init__(self, ifname, config=''):
-        if config:
-            self._ifname = ifname
-            if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
-                cmd = 'ip link add name {} type geneve id {} remote {}' \
-                       .format(self._ifname, config['vni'], config['remote'])
-                self._cmd(cmd)
 
-                # interface is always A/D down. It needs to be enabled explicitly
-                self.set_state('down')
+    default = {
+        'type': 'geneve',
+    }
 
-        super().__init__(ifname, type='geneve')
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
+
+    def _create (self):
+        cmd = 'ip link add name {} type geneve id {} remote {}' \
+                .format(self.config['ifname'], config['vni'], config['remote'])
+        self._cmd(cmd)
+
+        # interface is always A/D down. It needs to be enabled explicitly
+        self.set_state('down')
 
     @staticmethod
     def get_config():
@@ -1845,33 +1936,36 @@ class L2TPv3If(Interface):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
-    def __init__(self, ifname, config=''):
-        self._config = {}
-        if config:
-            self._ifname = ifname
-            self._config = config
-            if not os.path.exists('/sys/class/net/{}'.format(self._ifname)):
-                # create tunnel interface
-                cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])
-                cmd += 'peer_tunnel_id {} '.format(config['peer_tunnel_id'])
-                cmd += 'udp_sport {} '.format(config['local_port'])
-                cmd += 'udp_dport {} '.format(config['remote_port'])
-                cmd += 'encap {} '.format(config['encapsulation'])
-                cmd += 'local {} '.format(config['local_address'])
-                cmd += 'remote {} '.format(config['remote_address'])
-                self._cmd(cmd)
 
-                # setup session
-                cmd = 'ip l2tp add session name {} '.format(self._ifname)
-                cmd += 'tunnel_id {} '.format(config['tunnel_id'])
-                cmd += 'session_id {} '.format(config['session_id'])
-                cmd += 'peer_session_id  {} '.format(config['peer_session_id'])
-                self._cmd(cmd)
+    options = Interface.options + \
+        ['tunnel_id','peer_tunnel_id','local_port','remote_port','encapsulation','local_address','remote_address']
+    default = {
+        'type': 'l2tp',
+    }
 
-                # interface is always A/D down. It needs to be enabled explicitly
-                self.set_state('down')
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
 
-        super().__init__(ifname, type='l2tp')
+    def _create (self):
+        # create tunnel interface
+        cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])
+        cmd += 'peer_tunnel_id {} '.format(config['peer_tunnel_id'])
+        cmd += 'udp_sport {} '.format(config['local_port'])
+        cmd += 'udp_dport {} '.format(config['remote_port'])
+        cmd += 'encap {} '.format(config['encapsulation'])
+        cmd += 'local {} '.format(config['local_address'])
+        cmd += 'remote {} '.format(config['remote_address'])
+        self._cmd(cmd)
+
+        # setup session
+        cmd = 'ip l2tp add session name {} '.format(self.config['ifname'])
+        cmd += 'tunnel_id {} '.format(config['tunnel_id'])
+        cmd += 'session_id {} '.format(config['session_id'])
+        cmd += 'peer_session_id  {} '.format(config['peer_session_id'])
+        self._cmd(cmd)
+
+        # interface is always A/D down. It needs to be enabled explicitly
+        self.set_state('down')
 
     def remove(self):
         """
@@ -1883,7 +1977,7 @@ class L2TPv3If(Interface):
         >>> i.remove()
         """
 
-        if os.path.exists('/sys/class/net/{}'.format(self._ifname)):
+        if os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
             # interface is always A/D down. It needs to be enabled explicitly
             self.set_state('down')
 

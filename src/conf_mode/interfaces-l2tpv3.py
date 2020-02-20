@@ -193,7 +193,7 @@ def apply(l2tpv3):
         # always delete it first.
         conf['session_id'] = l2tpv3['session_id']
         conf['tunnel_id'] = l2tpv3['tunnel_id']
-        l = L2TPv3If(l2tpv3['intf'], config=conf)
+        l = L2TPv3If(l2tpv3['intf'], **conf)
         l.remove()
 
     if not l2tpv3['deleted']:
@@ -208,7 +208,7 @@ def apply(l2tpv3):
         conf['peer_session_id'] = l2tpv3['peer_session_id']
 
         # Finally create the new interface
-        l = L2TPv3If(l2tpv3['intf'], config=conf)
+        l = L2TPv3If(l2tpv3['intf'], **conf)
         # update interface description used e.g. by SNMP
         l.set_alias(l2tpv3['description'])
         # Maximum Transfer Unit (MTU)
