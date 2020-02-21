@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-# Change syntax of wireless interfaces
+# De-nest PPPoE interfaces
 # Migrate boolean nodes to valueless
 
-from sys import exit
+import sys
 from vyos.configtree import ConfigTree
 
 def migrate_dialer(config, tree, intf):
@@ -14,8 +14,10 @@ def migrate_dialer(config, tree, intf):
         # format as tag node to avoid loading problems
         config.set_tag(['interfaces', 'pppoe'])
 
+        # We need to assign a real interface to our dialer
+        config.set(new_base + ['link'], value=intf)
+
         default_route = tree + [pppoe, 'default-route']
-        print(default_route)
         if config.exists(default_route):
             tmp = config.return_value(default_route)
             config.set(new_base + ['default-route'], value=tmp)
@@ -93,13 +95,9 @@ if __name__ == '__main__':
                         intf = "{}.{}".format(interface, vlan)
                         migrate_dialer(config, pppoe_if, intf)
 
-
-    print(config.to_string())
-    exit(1)
-
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
-        exit(1)
+        sys.exit(1)
