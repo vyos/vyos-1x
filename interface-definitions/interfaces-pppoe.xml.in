@@ -5,7 +5,7 @@
       <tagNode name="pppoe" owner="${vyos_conf_scripts_dir}/interfaces-pppoe.py">
         <properties>
           <help>Point-to-Point Protocol over Ethernet (PPPoE)</help>
-          <priority>320</priority>
+          <priority>321</priority>
           <constraint>
             <regex>pppoe[0-9]+$</regex>
             <validator name="numeric" argument="--range 1-99"/>
