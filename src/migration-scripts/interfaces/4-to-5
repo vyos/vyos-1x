@@ -14,7 +14,42 @@ def migrate_dialer(config, tree, intf):
         # format as tag node to avoid loading problems
         config.set_tag(['interfaces', 'pppoe'])
 
-        # We need to assign a real interface to our dialer
+        #
+        # Firewall migrieren
+        #
+        firewall = tree + [pppoe, 'firewall']
+        if config.exists(firewall):
+            config.copy(firewall, new_base + ['firewall'])
+
+        policy = tree + [pppoe, 'policy']
+        if config.exists(policy):
+            config.copy(policy, new_base + ['policy'])
+
+        #
+        # QoS migrieren
+        #
+        redirect = tree + [pppoe, 'redirect']
+        if config.exists(redirect):
+            config.copy(redirect, new_base + ['redirect'])
+
+        traffic_policy = tree + [pppoe, 'traffic-policy']
+        if config.exists(traffic_policy):
+            config.copy(traffic_policy, new_base + ['traffic-policy'])
+
+        #
+        # Quagga migrieren
+        #
+        ip = tree + [pppoe, 'ip']
+        if config.exists(ip):
+            config.copy(ip, new_base + ['ip'])
+
+        ipv6 = tree + [pppoe, 'ipv6']
+        if config.exists(ipv6):
+            config.copy(ipv6, new_base + ['ipv6'])
+
+        #
+        # Interface migration
+        #
         config.set(new_base + ['link'], value=intf)
 
         default_route = tree + [pppoe, 'default-route']
@@ -47,6 +82,7 @@ def migrate_dialer(config, tree, intf):
             tmp = config.return_value(userid)
             config.set(new_base + ['user-id'], value=tmp)
 
+        # remove enable-ipv6 node and rather place it under ipv6 node
         ipv6_enable = tree + [pppoe, 'enable-ipv6']
         if config.exists(ipv6_enable):
             config.set(new_base + ['ipv6', 'enable'])
@@ -55,9 +91,6 @@ def migrate_dialer(config, tree, intf):
         if config.exists(ipv6_slaac):
             config.set(new_base + ['ipv6', 'address', 'autoconf'])
 
-        # Firewall migrieren
-        # QoS migrieren
-        # Quagga migrieren
 
 if __name__ == '__main__':
 
@@ -79,7 +112,8 @@ if __name__ == '__main__':
 
         for interface in config.list_nodes(['interfaces', link_type]):
             # check if PPPoE exists
-            pppoe_if = ['interfaces', link_type, interface, 'pppoe']
+            base_if = ['interfaces', link_type, interface]
+            pppoe_if = base_if + ['pppoe']
             if config.exists(pppoe_if):
                 for dialer in  config.list_nodes(pppoe_if):
                     migrate_dialer(config, pppoe_if, interface)
@@ -87,12 +121,14 @@ if __name__ == '__main__':
                 # Delete old PPPoE interface
                 config.delete(pppoe_if)
 
-            # also migrate VLANs
-            if not config.exists(['interfaces', link_type, interface, 'vif']):
+            # bail out early if there are no VLAN interfaces to migrate
+            if not config.exists(base_if + ['vif']):
                 continue
 
-            for vlan in config.list_nodes(['interfaces', link_type, interface, 'vif']):
-                pppoe_if = ['interfaces', link_type, interface, 'vif', vlan, 'pppoe']
+            # Migrate PPPoE interfaces attached to a VLAN
+            for vlan in config.list_nodes(base_if + ['vif']):
+                vlan_if = base_if + ['vif', vlan]
+                pppoe_if = vlan_if + ['pppoe']
                 if config.exists(pppoe_if):
                     for dialer in  config.list_nodes(pppoe_if):
                         intf = "{}.{}".format(interface, vlan)
@@ -100,6 +136,10 @@ if __name__ == '__main__':
 
                     # Delete old PPPoE interface
                     config.delete(pppoe_if)
+
+                    # Add interface description that this is required for PPPoE
+                    if not config.exists(vlan_if + ['description']):
+                        config.set(vlan_if + ['description'], value='PPPoE link interface')
 
     try:
         with open(file_name, 'w') as f:
