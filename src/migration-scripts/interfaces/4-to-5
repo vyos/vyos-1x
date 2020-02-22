@@ -55,9 +55,9 @@ def migrate_dialer(config, tree, intf):
         if config.exists(ipv6_slaac):
             config.set(new_base + ['ipv6', 'address', 'autoconf'])
 
-        # Delete old PPPoE interface
-        config.delete(tree + [pppoe])
-
+        # Firewall migrieren
+        # QoS migrieren
+        # Quagga migrieren
 
 if __name__ == '__main__':
 
@@ -84,6 +84,9 @@ if __name__ == '__main__':
                 for dialer in  config.list_nodes(pppoe_if):
                     migrate_dialer(config, pppoe_if, interface)
 
+                # Delete old PPPoE interface
+                config.delete(pppoe_if)
+
             # also migrate VLANs
             if not config.exists(['interfaces', link_type, interface, 'vif']):
                 continue
@@ -94,6 +97,9 @@ if __name__ == '__main__':
                     for dialer in  config.list_nodes(pppoe_if):
                         intf = "{}.{}".format(interface, vlan)
                         migrate_dialer(config, pppoe_if, intf)
+
+                    # Delete old PPPoE interface
+                    config.delete(pppoe_if)
 
     try:
         with open(file_name, 'w') as f:
