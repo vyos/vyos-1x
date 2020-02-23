@@ -20,8 +20,10 @@ from sys import exit
 from copy import deepcopy
 from jinja2 import Template
 from subprocess import Popen, PIPE
+from time import sleep
 
 from vyos.config import Config
+from vyos.ifconfig import Interface
 from vyos import ConfigError
 from netifaces import interfaces
 
@@ -239,6 +241,24 @@ def apply(pppoe):
         # Dial PPPoE connection
         cmd = 'systemctl start ppp@{}.service'.format(pppoe['intf'])
         subprocess_cmd(cmd)
+
+    # better late then sorry ... but we can only set interface alias after
+    # pppd has been launched and created the interface
+    cnt = 0
+    while pppoe['intf'] not in interfaces():
+        cnt += 1
+        if cnt == 50:
+            break
+
+        # sleep 250ms
+        sleep(0.250)
+
+    try:
+        # we need to catch the exception if the interface is not up due to
+        # reason stated above
+        Interface(pppoe['intf']).set_alias(pppoe['description'])
+    except:
+        pass
 
     return None
 
