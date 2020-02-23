@@ -231,6 +231,10 @@ def generate(pppoe):
     return None
 
 def apply(pppoe):
+    if pppoe['deleted']:
+        # bail out early
+        return None
+
     if not pppoe['disable']:
         # Dial PPPoE connection
         cmd = 'systemctl start ppp@{}.service'.format(pppoe['intf'])
