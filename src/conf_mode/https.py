@@ -47,8 +47,8 @@ server {
         # SSL configuration
         #
 {% if server.address == '*' %}
-        listen 443 ssl;
-        listen [::]:443 ssl;
+        listen {{ server.port }} ssl;
+        listen [::]:{{ server.port }} ssl;
 {% else %}
         listen {{ server.address }}:{{ server.port }} ssl;
 {% endif %}

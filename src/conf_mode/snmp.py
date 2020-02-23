@@ -710,18 +710,20 @@ def apply(snmp):
     # Passwords are not available immediately in the configuration file,
     # after daemon startup - we wait until they have been processed by
     # snmpd, which we see when a magic line appears in this file.
-    ready = False
-    while not ready:
+    while True:
         while not os.path.exists(config_file_user):
             sleep(0.5)
-            ready = True
 
-    with open(config_file_user, 'r') as f:
-        for line in f:
-            # Search for our magic string inside the file
-            if 'usmUser' in line:
-                ready = True
-                break
+        try:
+            with open(config_file_user, 'r') as f:
+                for line in f:
+                    # Search for our magic string inside the file
+                    if 'usmUser' in line:
+                        break
+        except IOError:
+            continue
+        else:
+            break
 
     # net-snmp is now regenerating the configuration file in the background
     # thus we need to re-open and re-read the file as the content changed.

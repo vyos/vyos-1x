@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+
+# De-nest PPPoE interfaces
+# Migrate boolean nodes to valueless
+
+import sys
+from vyos.configtree import ConfigTree
+
+def migrate_dialer(config, tree, intf):
+    for pppoe in config.list_nodes(tree):
+        # assemble string, 0 -> pppoe0
+        new_base = ['interfaces', 'pppoe']
+        pppoe_base = new_base + ['pppoe' + pppoe]
+        config.set(new_base)
+        # format as tag node to avoid loading problems
+        config.set_tag(new_base)
+
+        # Copy the entire old node to the new one before migrating individual
+        # parts
+        config.copy(tree + [pppoe], pppoe_base)
+
+        # Instead of letting the user choose between auto and none
+        # where auto is default, it makes more sesne to just offer
+        # an option to disable the default behavior (declutter CLI)
+        if config.exists(pppoe_base + ['name-server']):
+            tmp = config.return_value(pppoe_base + ['name-server'])
+            if tmp == "none":
+                config.set(pppoe_base + ['no-peer-dns'])
+            config.delete(pppoe_base + ['name-server'])
+
+        # Migrate user-id and password nodes under an 'authentication'
+        # node
+        if config.exists(pppoe_base + ['user-id']):
+            user = config.return_value(pppoe_base + ['user-id'])
+            config.set(pppoe_base + ['authentication', 'user'], value=user)
+            config.delete(pppoe_base + ['user-id'])
+
+        if config.exists(pppoe_base + ['password']):
+            pwd = config.return_value(pppoe_base + ['password'])
+            config.set(pppoe_base + ['authentication', 'password'], value=pwd)
+            config.delete(pppoe_base + ['password'])
+
+        # remove enable-ipv6 node and rather place it under ipv6 node
+        if config.exists(pppoe_base + ['enable-ipv6']):
+            config.set(pppoe_base + ['ipv6', 'enable'])
+            config.delete(pppoe_base + ['enable-ipv6'])
+
+        # Source interface migration
+        config.set(pppoe_base + ['source-interface'], value=intf)
+
+        # Remove IPv6 router-advert nodes as this makes no sense on a
+        # client diale rinterface to send RAs back into the network
+        # https://phabricator.vyos.net/T2055
+        ipv6_ra = pppoe_base + ['ipv6', 'router-advert']
+        if config.exists(ipv6_ra):
+            config.delete(ipv6_ra)
+
+
+if __name__ == '__main__':
+    if (len(sys.argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = sys.argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    pppoe_links = ['bonding', 'ethernet']
+
+    for link_type in pppoe_links:
+        if not config.exists(['interfaces', link_type]):
+            continue
+
+        for interface in config.list_nodes(['interfaces', link_type]):
+            # check if PPPoE exists
+            base_if = ['interfaces', link_type, interface]
+            pppoe_if = base_if + ['pppoe']
+            if config.exists(pppoe_if):
+                for dialer in  config.list_nodes(pppoe_if):
+                    migrate_dialer(config, pppoe_if, interface)
+
+                # Delete old PPPoE interface
+                config.delete(pppoe_if)
+
+            # bail out early if there are no VLAN interfaces to migrate
+            if not config.exists(base_if + ['vif']):
+                continue
+
+            # Migrate PPPoE interfaces attached to a VLAN
+            for vlan in config.list_nodes(base_if + ['vif']):
+                vlan_if = base_if + ['vif', vlan]
+                pppoe_if = vlan_if + ['pppoe']
+                if config.exists(pppoe_if):
+                    for dialer in  config.list_nodes(pppoe_if):
+                        intf = "{}.{}".format(interface, vlan)
+                        migrate_dialer(config, pppoe_if, intf)
+
+                    # Delete old PPPoE interface
+                    config.delete(pppoe_if)
+
+                    # Add interface description that this is required for PPPoE
+                    if not config.exists(vlan_if + ['description']):
+                        config.set(vlan_if + ['description'], value='PPPoE link interface')
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
