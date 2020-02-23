@@ -78,9 +78,9 @@ replacedefaultroute
 {% endif %}
 mtu {{ mtu }}
 mru {{ mtu }}
-user "{{ user_id }}"
-password "{{ password }}"
-{% if 'auto' in name_server -%}
+user "{{ auth_username }}"
+password "{{ auth_password }}"
+{% if name_server -%}
 usepeerdns
 {% endif %}
 {% if ipv6_enable -%}
@@ -91,6 +91,8 @@ usepeerdns
 
 default_config_data = {
     'access_concentrator': '',
+    'auth_username': '',
+    'auth_password': '',
     'on_demand': False,
     'default_route': 'auto',
     'deleted': False,
@@ -103,10 +105,8 @@ default_config_data = {
     'local_address': '',
     'mtu': '1492',
     'name_server': 'auto',
-    'password': '',
     'remote_address': '',
     'service_name': '',
-    'user_id': '',
     'source_interface': ''
 }
 
@@ -136,6 +136,14 @@ def get_config():
     # Access concentrator name (only connect to this concentrator)
     if conf.exists(['access-concentrator']):
         pppoe['access_concentrator'] = conf.return_values(['access-concentrator'])
+
+    # Authentication name supplied to PPPoE server
+    if conf.exists(['authentication', 'user']):
+        pppoe['auth_username'] = conf.return_value(['authentication', 'user'])
+
+    # Password for authenticating local machine to PPPoE server
+    if conf.exists(['authentication', 'password']):
+        pppoe['auth_password'] = conf.return_value(['authentication', 'password'])
 
     # Access concentrator name (only connect to this concentrator)
     if conf.exists(['connect-on-demand']):
@@ -181,21 +189,13 @@ def get_config():
     if conf.exists(['name-server']):
         pppoe['name_server'] = conf.return_value(['name-server'])
 
-    # Password for authenticating local machine to PPPoE server
-    if conf.exists(['password']):
-        pppoe['password'] = conf.return_value(['password'])
-
-    # IPv4 address of local end of the PPPoE link
+    # IPv4 address for remote end of PPPoE session
     if conf.exists(['remote-address']):
         pppoe['remote_address'] = conf.return_value(['remote-address'])
 
     # Service name, only connect to access concentrators advertising this
     if conf.exists(['service-name']):
         pppoe['service_name'] = conf.return_value(['service-name'])
-
-    # Authentication name supplied to PPPoE server
-    if conf.exists(['user-id']):
-        pppoe['user_id'] = conf.return_value(['user-id'])
 
     return pppoe
 

@@ -26,6 +26,23 @@
               <constraintErrorMessage>Access concentrator name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
             </properties>
           </leafNode>
+          <node name="authentication">
+            <properties>
+              <help>Authentication settings</help>
+            </properties>
+            <children>
+              <leafNode name="user">
+                <properties>
+                  <help>User name</help>
+                </properties>
+              </leafNode>
+              <leafNode name="password">
+                <properties>
+                  <help>Password</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="connect-on-demand">
             <properties>
               <help>Automatic establishment of PPPOE connection when traffic is sent</help>
@@ -143,11 +160,6 @@
               <constraintErrorMessage>Must be either 'auto' or 'none'</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="password">
-            <properties>
-              <help>Password for authenticating local machine to PPPoE server</help>
-            </properties>
-          </leafNode>
           <leafNode name="remote-address">
             <properties>
               <help>IPv4 address of remote end of the PPPoE link</help>
@@ -167,11 +179,6 @@
                 <regex>[a-zA-Z0-9]+$</regex>
               </constraint>
               <constraintErrorMessage>Service name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
-            </properties>
-          </leafNode>
-          <leafNode name="user-id">
-            <properties>
-              <help>Authentication name supplied to PPPoE server</help>
             </properties>
           </leafNode>
         </children>

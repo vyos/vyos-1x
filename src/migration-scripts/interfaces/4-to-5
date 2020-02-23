@@ -19,6 +19,17 @@ def migrate_dialer(config, tree, intf):
         # parts
         config.copy(tree + [pppoe], pppoe_base)
 
+        # Migrate user-id and password nodes under an 'authentication'
+        # node
+        if config.exists(pppoe_base + ['user-id']):
+            user = config.return_value(pppoe_base + ['user-id'])
+            config.set(pppoe_base + ['authentication', 'user'], value=user)
+            config.delete(pppoe_base + ['user-id'])
+
+        if config.exists(pppoe_base + ['password']):
+            pwd = config.return_value(pppoe_base + ['password'])
+            config.set(pppoe_base + ['authentication', 'password'], value=pwd)
+            config.delete(pppoe_base + ['password'])
 
         # remove enable-ipv6 node and rather place it under ipv6 node
         if config.exists(pppoe_base + ['enable-ipv6']):
