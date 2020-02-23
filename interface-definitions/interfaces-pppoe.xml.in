@@ -56,17 +56,8 @@
               </valueHelp>
             </properties>
           </leafNode>
-          <leafNode name="description">
-            <properties>
-              <help>Interface description</help>
-            </properties>
-          </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-description.xml.i>
+          #include <include/interface-disable.xml.i>
           <leafNode name="idle-timeout">
             <properties>
               <help>Delay before disconnecting idle session (in seconds)</help>
