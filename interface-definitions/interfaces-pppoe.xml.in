@@ -90,11 +90,11 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="link">
+          <leafNode name="source-interface">
             <properties>
               <help>Physical Interface used for this PPPoE session</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --pppoelink</script>
+                <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
               </completionHelp>
             </properties>
           </leafNode>

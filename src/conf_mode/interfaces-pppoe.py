@@ -64,7 +64,7 @@ noauth
 noproxyarp
 
 plugin rp-pppoe.so
-{{ link }}
+{{ source_interface }}
 persist
 ifname {{ intf }}
 ipparam {{ intf }}
@@ -100,14 +100,14 @@ default_config_data = {
     'idle_timeout': '',
     'ipv6_autoconf': False,
     'ipv6_enable': False,
-    'link': '',
     'local_address': '',
     'mtu': '1492',
     'name_server': 'auto',
     'password': '',
     'remote_address': '',
     'service_name': '',
-    'user_id': ''
+    'user_id': '',
+    'source_interface': ''
 }
 
 def subprocess_cmd(command):
@@ -165,13 +165,13 @@ def get_config():
     if conf.exists(['ipv6', 'enable']):
         pppoe['ipv6_enable'] = True
 
-    # IPv4 address of local end of the PPPoE link
+    # IPv4 address of local end of PPPoE link
     if conf.exists(['local-address']):
         pppoe['local_address'] = conf.return_value(['local-address'])
 
     # Physical Interface used for this PPPoE session
-    if conf.exists(['link']):
-        pppoe['link'] = conf.return_value('link')
+    if conf.exists(['source-interface']):
+        pppoe['source_interface'] = conf.return_value('source-interface')
 
     # Maximum Transmission Unit (MTU)
     if conf.exists(['mtu']):
@@ -204,8 +204,8 @@ def verify(pppoe):
         # bail out early
         return None
 
-    if not pppoe['link']:
-        raise ConfigError('Physical link interface for PPPoE missing')
+    if not pppoe['source_interface']:
+        raise ConfigError('PPPoE source interface is missing')
 
     return None
 

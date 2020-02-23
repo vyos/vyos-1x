@@ -9,91 +9,28 @@ from vyos.configtree import ConfigTree
 def migrate_dialer(config, tree, intf):
     for pppoe in config.list_nodes(tree):
         # assemble string, 0 -> pppoe0
-        new_base = ['interfaces', 'pppoe', 'pppoe' + pppoe]
+        new_base = ['interfaces', 'pppoe']
+        pppoe_base = new_base + ['pppoe' + pppoe]
         config.set(new_base)
         # format as tag node to avoid loading problems
-        config.set_tag(['interfaces', 'pppoe'])
+        config.set_tag(new_base)
 
-        #
-        # Firewall migrieren
-        #
-        firewall = tree + [pppoe, 'firewall']
-        if config.exists(firewall):
-            config.copy(firewall, new_base + ['firewall'])
+        # Copy the entire old node to the new one before migrating individual
+        # parts
+        config.copy(tree + [pppoe], pppoe_base)
 
-        policy = tree + [pppoe, 'policy']
-        if config.exists(policy):
-            config.copy(policy, new_base + ['policy'])
-
-        #
-        # QoS migrieren
-        #
-        redirect = tree + [pppoe, 'redirect']
-        if config.exists(redirect):
-            config.copy(redirect, new_base + ['redirect'])
-
-        traffic_policy = tree + [pppoe, 'traffic-policy']
-        if config.exists(traffic_policy):
-            config.copy(traffic_policy, new_base + ['traffic-policy'])
-
-        #
-        # Quagga migrieren
-        #
-        ip = tree + [pppoe, 'ip']
-        if config.exists(ip):
-            config.copy(ip, new_base + ['ip'])
-
-        ipv6 = tree + [pppoe, 'ipv6']
-        if config.exists(ipv6):
-            config.copy(ipv6, new_base + ['ipv6'])
-
-        #
-        # Interface migration
-        #
-        config.set(new_base + ['link'], value=intf)
-
-        default_route = tree + [pppoe, 'default-route']
-        if config.exists(default_route):
-            tmp = config.return_value(default_route)
-            config.set(new_base + ['default-route'], value=tmp)
-
-        disable = tree + [pppoe, 'disable']
-        if config.exists(disable):
-            tmp = config.return_value(disable)
-            config.set(new_base + ['disable'], value=tmp)
-
-        mtu = tree + [pppoe, 'mtu']
-        if config.exists(mtu):
-            tmp = config.return_value(mtu)
-            config.set(new_base + ['mtu'], value=tmp)
-
-        nameserver = tree + [pppoe, 'name-server']
-        if config.exists(nameserver):
-            tmp = config.return_value(nameserver)
-            config.set(new_base + ['name-server'], value=tmp)
-
-        password = tree + [pppoe, 'password']
-        if config.exists(password):
-            tmp = config.return_value(password)
-            config.set(new_base + ['password'], value=tmp)
-
-        userid = tree + [pppoe, 'user-id']
-        if config.exists(userid):
-            tmp = config.return_value(userid)
-            config.set(new_base + ['user-id'], value=tmp)
 
         # remove enable-ipv6 node and rather place it under ipv6 node
-        ipv6_enable = tree + [pppoe, 'enable-ipv6']
-        if config.exists(ipv6_enable):
-            config.set(new_base + ['ipv6', 'enable'])
+        if config.exists(pppoe_base + ['enable-ipv6']):
+            config.set(pppoe_base + ['ipv6', 'enable'])
+            config.delete(pppoe_base + ['enable-ipv6'])
 
-        ipv6_slaac = tree + [pppoe, 'ipv6', 'address', 'autoconf']
-        if config.exists(ipv6_slaac):
-            config.set(new_base + ['ipv6', 'address', 'autoconf'])
+        # Source interface migration
+        config.set(pppoe_base + ['source-interface'], value=intf)
+
 
 
 if __name__ == '__main__':
-
     if (len(sys.argv) < 1):
         print("Must specify file name!")
         exit(1)
