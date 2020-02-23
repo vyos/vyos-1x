@@ -39,6 +39,12 @@ def migrate_dialer(config, tree, intf):
         # Source interface migration
         config.set(pppoe_base + ['source-interface'], value=intf)
 
+        # Remove IPv6 router-advert nodes as this makes no sense on a
+        # client diale rinterface to send RAs back into the network
+        # https://phabricator.vyos.net/T2055
+        ipv6_ra = pppoe_base + ['ipv6', 'router-advert']
+        if config.exists(ipv6_ra):
+            config.delete(ipv6_ra)
 
 
 if __name__ == '__main__':
