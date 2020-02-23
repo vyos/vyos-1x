@@ -1,6 +1,6 @@
 <leafNode name="disable">
   <properties>
-    <help>Set interface to Administratively down</help>
+    <help>Administratively disable interface</help>
     <valueless/>
   </properties>
 </leafNode>
