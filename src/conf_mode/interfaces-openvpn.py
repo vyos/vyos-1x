@@ -51,7 +51,6 @@ config_tmpl = """
 verb 3
 status /opt/vyatta/etc/openvpn/status/{{ intf }}.status 30
 writepid /var/run/openvpn/{{ intf }}.pid
-daemon openvpn-{{ intf }}
 
 dev-type {{ type }}
 dev {{ intf }}
@@ -224,7 +223,7 @@ cipher aes-256-cbc
 
 {%- if ncp_ciphers %}
 ncp-ciphers {{ncp_ciphers}}
-{% endif %} 
+{% endif %}
 {%- if disable_ncp %}
 ncp-disable
 {% endif %}
@@ -968,6 +967,7 @@ def apply(openvpn):
     cmd += ' --exec /usr/sbin/openvpn'
     # now pass arguments to openvpn binary
     cmd += ' --'
+    cmd += ' --daemon openvpn-' + openvpn['intf']
     cmd += ' --config ' + get_config_name(openvpn['intf'])
 
     # execute assembled command
