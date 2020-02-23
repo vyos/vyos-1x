@@ -19,6 +19,15 @@ def migrate_dialer(config, tree, intf):
         # parts
         config.copy(tree + [pppoe], pppoe_base)
 
+        # Instead of letting the user choose between auto and none
+        # where auto is default, it makes more sesne to just offer
+        # an option to disable the default behavior (declutter CLI)
+        if config.exists(pppoe_base + ['name-server']):
+            tmp = config.return_value(pppoe_base + ['name-server'])
+            if tmp == "none":
+                config.set(pppoe_base + ['no-peer-dns'])
+            config.delete(pppoe_base + ['name-server'])
+
         # Migrate user-id and password nodes under an 'authentication'
         # node
         if config.exists(pppoe_base + ['user-id']):

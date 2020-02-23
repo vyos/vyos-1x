@@ -104,7 +104,7 @@ default_config_data = {
     'ipv6_enable': False,
     'local_address': '',
     'mtu': '1492',
-    'name_server': 'auto',
+    'name_server': True,
     'remote_address': '',
     'service_name': '',
     'source_interface': ''
@@ -185,9 +185,9 @@ def get_config():
     if conf.exists(['mtu']):
         pppoe['mtu'] = conf.return_value(['mtu'])
 
-    # IPv4 address of local end of the PPPoE link
-    if conf.exists(['name-server']):
-        pppoe['name_server'] = conf.return_value(['name-server'])
+    # Do not use DNS servers provided by the peer
+    if conf.exists(['no-peer-dns']):
+        pppoe['name_server'] = False
 
     # IPv4 address for remote end of PPPoE session
     if conf.exists(['remote-address']):

@@ -140,24 +140,10 @@
               <constraintErrorMessage>MTU must be between 68 and 1500</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="name-server">
+          <leafNode name="no-peer-dns">
             <properties>
-              <help>Enable/Disable use of name server entries from peer</help>
-              <completionHelp>
-                <list>auto none</list>
-              </completionHelp>
-              <valueHelp>
-                <format>auto</format>
-                <description>Install default route when link comes up</description>
-              </valueHelp>
-              <valueHelp>
-                <format>none</format>
-                <description>Do not install default route when link comes up</description>
-              </valueHelp>
-              <constraint>
-                <regex>(auto|none)</regex>
-              </constraint>
-              <constraintErrorMessage>Must be either 'auto' or 'none'</constraintErrorMessage>
+              <help>Do not use DNS servers provided by the peer</help>
+              <valueless/>
             </properties>
           </leafNode>
           <leafNode name="remote-address">
