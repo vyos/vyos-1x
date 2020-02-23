@@ -34,26 +34,26 @@
           </leafNode>
           <leafNode name="default-route">
             <properties>
-              <help>Enable/Disable default route to peer when link comes up</help>
+              <help>Default route insertion behaviour (default: auto)</help>
               <completionHelp>
                 <list>auto none force</list>
               </completionHelp>
-              <valueHelp>
-                <format>auto</format>
-                <description>Install default route when link comes up</description>
-              </valueHelp>
-              <valueHelp>
-                <format>none</format>
-                <description>Do not install default route when link comes up</description>
-              </valueHelp>
-              <valueHelp>
-                <format>force</format>
-                <description>Install default route and replace pre-existing when link comes up</description>
-              </valueHelp>
               <constraint>
                 <regex>(auto|none|force)</regex>
               </constraint>
-              <constraintErrorMessage>Must be either 'auto', 'none' or 'force'</constraintErrorMessage>
+              <constraintErrorMessage>PPPoE default-route option must be 'auto', 'none', or 'force'</constraintErrorMessage>
+              <valueHelp>
+                <format>auto</format>
+                <description>Automatically install a default route</description>
+              </valueHelp>
+              <valueHelp>
+                <format>none</format>
+                <description>Do not install a default route</description>
+              </valueHelp>
+              <valueHelp>
+                <format>force</format>
+                <description>Replace existing default route</description>
+              </valueHelp>
             </properties>
           </leafNode>
           <leafNode name="description">
