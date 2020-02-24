@@ -234,7 +234,6 @@ ipv6-peer-intf-id={{ppp_options['ipv6-peer-intf-id']}}
 ipv6-accept-peer-intf-id={{ppp_options['ipv6-accept-peer-intf-id']}}
 {% endif %}
 {% endif %}
-
 mtu={{mtu}}
 
 [pppoe]
@@ -251,9 +250,11 @@ interface=re:{{int}}\.\d+
 {% endif %}
 {% endfor -%}
 {% endif -%}
+
 {% if svc_name %}
-service-name={{svc_name}}
+service-name={{svc_name|join(',')}}
 {% endif -%}
+
 {% if pado_delay %}
 pado-delay={{pado_delay}}
 {% endif %}
@@ -343,7 +344,7 @@ def get_config():
         'client_ipv6_pool': {},
         'interface': {},
         'ppp_gw': '',
-        'svc_name': '',
+        'svc_name': [],
         'dns': [],
         'dnsv6': [],
         'wins': [],
@@ -360,7 +361,7 @@ def get_config():
     if c.exists(['access-concentrator']):
         config_data['concentrator'] = c.return_value(['access-concentrator'])
     if c.exists(['service-name']):
-        config_data['svc_name'] = c.return_value(['service-name'])
+        config_data['svc_name'] = c.return_values(['service-name'])
     if c.exists(['interface']):
         for intfc in c.list_nodes(['interface']):
             config_data['interface'][intfc] = {'vlans': []}

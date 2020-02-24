@@ -436,6 +436,7 @@
                 <regex>[a-zA-Z0-9\-]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>servicename can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
+              <multi/>
             </properties>
           </leafNode>
           <node name="wins-servers">
