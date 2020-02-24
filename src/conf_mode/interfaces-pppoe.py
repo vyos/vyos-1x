@@ -88,6 +88,9 @@ usepeerdns
 {% if ipv6_enable -%}
 +ipv6
 {% endif %}
+{% if service_name -%}
+rp_pppoe_service "{{ service_name }}"
+{% endif %}
 
 """
 
