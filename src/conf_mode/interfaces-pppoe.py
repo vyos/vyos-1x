@@ -209,6 +209,9 @@ def verify(pppoe):
     if not pppoe['source_interface']:
         raise ConfigError('PPPoE source interface is missing')
 
+    if pppoe['source_interface'] not in interfaces():
+        raise ConfigError('PPPoE source interface does not exist')
+
     return None
 
 def generate(pppoe):
