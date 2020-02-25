@@ -24,6 +24,13 @@
               <tagNode name="server">
                 <properties>
                   <help>RADIUS server configuration</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>RADIUS server IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
                 </properties>
                 <children>
                   <leafNode name="key">
