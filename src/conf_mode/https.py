@@ -96,6 +96,7 @@ server {
 
 default_server_block = {
     'address'   : '*',
+    'port'      : '443',
     'name'      : ['_'],
     'api'       : {},
     'vyos_cert' : {},
