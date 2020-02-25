@@ -250,14 +250,15 @@ def apply(pppoe):
         return None
 
     if not pppoe['disable']:
-        # make logfile owned by root / vyattacfg
-        uid = getpwnam('root').pw_uid
-        gid = getgrnam('vyattacfg').gr_gid
-        os.chown(pppoe['logfile'], uid, gid)
-
         # dial PPPoE connection
         cmd = 'systemctl start ppp@{}.service'.format(pppoe['intf'])
         subprocess_cmd(cmd)
+
+        # make logfile owned by root / vyattacfg
+        if os.path.isfile(pppoe['logfile']):
+            uid = getpwnam('root').pw_uid
+            gid = getgrnam('vyattacfg').gr_gid
+            os.chown(pppoe['logfile'], uid, gid)
 
     # better late then sorry ... but we can only set interface alias after
     # pppd has been launched and created the interface
