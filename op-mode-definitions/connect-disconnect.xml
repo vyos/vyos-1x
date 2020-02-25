@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="connect">
+    <properties>
+      <help>Establish a connection</help>
+    </properties>
+    <children>
+      <tagNode name="interface">
+        <properties>
+          <help>Bring up a connection-oriented network interface</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
+      </tagNode>
+    </children>
+  </node>
+  <node name="disconnect">
+    <properties>
+      <help>Take down a connection</help>
+    </properties>
+    <children>
+      <tagNode name="interface">
+        <properties>
+          <help>Take down a connection-oriented network interface</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --disconnect "$3"</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
