@@ -33,14 +33,20 @@
                   </constraint>
                 </properties>
                 <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Temporary disable this server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="key">
                     <properties>
-                      <help>RADIUS shared secret key</help>
+                      <help>Shared secret key</help>
                     </properties>
                   </leafNode>
                   <leafNode name="port">
                     <properties>
-                      <help>RADIUS authentication port</help>
+                      <help>Authentication port</help>
                       <valueHelp>
                         <format>1-65535</format>
                         <description>Numeric IP port (default: 1812)</description>
@@ -52,7 +58,7 @@
                   </leafNode>
                   <leafNode name="timeout">
                     <properties>
-                      <help>Timeout for RADIUS session</help>
+                      <help>Session timeout</help>
                       <valueHelp>
                         <format>1-30</format>
                         <description>Session timeout in seconds (default: 2)</description>
