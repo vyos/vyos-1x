@@ -24,10 +24,10 @@ def escape_backslash(string: str) -> str:
     result = p.sub(r'\\\\', string)
     return result
 
-def strip_version(s):
-    """ Split a config string into the config section and the version string """
+def extract_version(s):
+    """ Extract the version string from the config string """
     t = re.split('(^//)', s, maxsplit=1, flags=re.MULTILINE)
-    return (t[0], ''.join(t[1:]))
+    return (s, ''.join(t[1:]))
 
 def check_path(path):
     # Necessary type checking
@@ -126,7 +126,7 @@ class ConfigTree(object):
         self.__destroy = self.__lib.destroy
         self.__destroy.argtypes = [c_void_p]
 
-        config_section, version_section = strip_version(config_string)
+        config_section, version_section = extract_version(config_string)
         config_section = escape_backslash(config_section)
         config = self.__from_string(config_section.encode())
         if config is None:
