@@ -4,7 +4,7 @@
     <children>
       <node name="login" owner="${vyos_conf_scripts_dir}/system-login.py">
         <properties>
-          <help>User Login</help>
+          <help>System User Login Configuration</help>
           <priority>400</priority>
         </properties>
         <children>
