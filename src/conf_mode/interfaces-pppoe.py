@@ -21,6 +21,8 @@ from copy import deepcopy
 from jinja2 import Template
 from subprocess import Popen, PIPE
 from time import sleep
+from pwd import getpwnam
+from grp import getgrnam
 
 from vyos.config import Config
 from vyos.ifconfig import Interface
@@ -71,7 +73,7 @@ persist
 ifname {{ intf }}
 ipparam {{ intf }}
 debug
-logfile /var/log/vyatta/ppp_{{ intf }}.log
+logfile {{ logfile }}
 {% if 'auto' in default_route -%}
 defaultroute
 {% elif 'force' in default_route -%}
@@ -91,6 +93,8 @@ usepeerdns
 
 """
 
+PPP_LOGFILE = '/var/log/vyatta/ppp_{}.log'
+
 default_config_data = {
     'access_concentrator': '',
     'auth_username': '',
@@ -105,6 +109,7 @@ default_config_data = {
     'ipv6_autoconf': False,
     'ipv6_enable': False,
     'local_address': '',
+    'logfile': '',
     'mtu': '1492',
     'name_server': True,
     'remote_address': '',
@@ -124,6 +129,7 @@ def get_config():
     # determine tagNode instance
     try:
         pppoe['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+        pppoe['logfile'] = PPP_LOGFILE.format(pppoe['intf'])
     except KeyError as E:
         print("Interface not specified")
 
@@ -241,7 +247,12 @@ def apply(pppoe):
         return None
 
     if not pppoe['disable']:
-        # Dial PPPoE connection
+        # make logfile owned by root / vyattacfg
+        uid = getpwnam('root').pw_uid
+        gid = getgrnam('vyattacfg').gr_gid
+        os.chown(pppoe['logfile'], uid, gid)
+
+        # dial PPPoE connection
         cmd = 'systemctl start ppp@{}.service'.format(pppoe['intf'])
         subprocess_cmd(cmd)
 
