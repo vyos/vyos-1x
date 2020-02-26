@@ -17,10 +17,8 @@
 from base_interfaces_test import BasicInterfaceTest
 from vyos.ifconfig import Interface
 
-class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
-    _base_path = ['interfaces', 'tunnel']
-    _interfaces = []
 
+class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     # encoding, tunnel endpoint (v4/v6), address (v4/v6)
     _valid = [
         ('gre', 4, 4),
@@ -47,11 +45,13 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     }
 
     def setUp(self):
-        for number in range(len(self._valid)):
-            self._interfaces.append('tun%d' % (number+1))
-        self._test_mtu = True
         super().setUp()
 
+        self._base_path = ['interfaces', 'tunnel']
+        self._interfaces = ['tun%d' % (n+1) for n in range(len(self._valid))]
+        self._test_mtu = True
+
+        # creating two dummy interface as to use as local-ip for the tunnels
         base_path = ['interfaces', 'dummy']
         self.session.set(base_path + ['dum444', 'address', '169.254.0.1/24'])
         self.session.set(base_path + ['dum666', 'address', '2002::1/16'])
