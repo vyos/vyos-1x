@@ -17,7 +17,9 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+
 from vyos.interfaces import list_interfaces_of_type
+from vyos.configsession import ConfigSessionError
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
