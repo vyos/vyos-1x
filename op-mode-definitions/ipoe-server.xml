@@ -1,5 +1,41 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ipoe-server">
+        <properties>
+          <help>Clear ipoe-server sessions or process</help>
+        </properties>
+        <children>
+          <node name="session">
+            <properties>
+              <help>Clear ipoe-server session</help>
+            </properties>
+            <children>
+              <tagNode name="username">
+                <properties>
+                  <help>Clear ipoe-server session by username</help>
+                  <completionHelp>
+                    <script>/usr/bin/accel-cmd -p 2002 show sessions username | sed -e 's/ \r//g' | tail -n +3</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/accel-cmd -p 2002 terminate username $5</command>
+              </tagNode>
+              <tagNode name="sid">
+                <properties>
+                  <help>Clear ipoe-server session by sid</help>
+                  <completionHelp>
+                    <script>/usr/bin/accel-cmd -p 2002 show sessions sid | sed -e 's/ \r//g' | tail -n +3</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/accel-cmd -p 2002 terminate sid $5</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="show">
     <children>
       <node name="ipoe-server">
@@ -11,7 +47,7 @@
             <properties>
               <help>Show active IPoE server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2002 show sessions ifname,called-sid,calling-sid,ip,ip6,ip6-dp,rate-limit,state,uptime,sid</command>
+            <command>/usr/bin/accel-cmd -p 2002 show sessions ifname,username,called-sid,calling-sid,ip,ip6,ip6-dp,rate-limit,state,uptime,sid</command>
           </leafNode>
           <leafNode name="statistics">
             <properties>
