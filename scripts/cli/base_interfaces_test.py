@@ -15,7 +15,6 @@
 import os
 import unittest
 
-from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
@@ -25,8 +24,6 @@ class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
         def setUp(self):
             self.session = ConfigSession(os.getpid())
-            env = self.session.get_session_env()
-            self.config = Config(session_env=env)
 
             self._test_addr = ['192.0.2.1/25', '2001:db8:1::ffff/64']
             self._test_mtu = False

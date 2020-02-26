@@ -19,7 +19,6 @@ import os
 import unittest
 
 from psutil import process_iter
-from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
 
@@ -35,9 +34,6 @@ def get_config_value(key):
 class TestServiceSSH(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        env = self.session.get_session_env()
-        self.config = Config(session_env=env)
-
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         self.session.delete(base_path)

@@ -18,7 +18,6 @@ import os
 import re
 import unittest
 
-from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
 import vyos.util as util
 
@@ -34,8 +33,6 @@ def get_name_servers():
 class TestSystemNameServer(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        env = self.session.get_session_env()
-        self.config = Config(session_env=env)
 
     def tearDown(self):
         # Delete existing name servers

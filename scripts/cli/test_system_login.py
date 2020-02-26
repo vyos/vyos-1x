@@ -19,7 +19,6 @@ import re
 import unittest
 
 from subprocess import Popen, PIPE
-from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
 import vyos.util as util
 
@@ -29,8 +28,6 @@ users = ['vyos1', 'vyos2']
 class TestSystemLogin(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        env = self.session.get_session_env()
-        self.config = Config(session_env=env)
 
     def tearDown(self):
         # Delete individual users from configuration

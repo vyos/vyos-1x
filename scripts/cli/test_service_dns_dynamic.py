@@ -20,7 +20,6 @@ import unittest
 
 from getpass import getuser
 from psutil import process_iter
-from vyos.config import Config
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
 
@@ -47,8 +46,6 @@ def check_process():
 class TestServiceDDNS(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        env = self.session.get_session_env()
-        self.config = Config(session_env=env)
 
     def tearDown(self):
         # Delete DDNS configuration
