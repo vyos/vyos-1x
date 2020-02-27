@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
-from base_interfaces_test import BasicInterfaceTest
-from vyos.ifconfig import Interface
+from vyos.configsession import ConfigSession
 
+from base_interfaces_test import BasicInterfaceTest
 
 class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     # encoding, tunnel endpoint (v4/v6), address (v4/v6)
@@ -36,45 +37,73 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         ('sit', 4, 6),
     ]
 
+    local = {
+        4: '10.100.{}.1/24',
+        6:  '2001:db8:{}::1/64',
+    }
+
     remote = {
         4: '192.0.{}.1',
         6: '2002::{}:1',
     }
 
-    addrs = {
+    address = {
         4: '10.100.{}.1/24',
         6:  '2001:db8:{}::1/64',
     }
 
     def setUp(self):
+        local = {}
+        remote = {}
+        address = {}
+
+        self._intf_dummy = ['interfaces', 'dummy']
+        self._base_path = ['interfaces', 'tunnel']
+        self._interfaces = ['tun{}'.format(n) for n in range(len(self._valid))]
+
+        self._test_mtu = True
         super().setUp()
 
-        self._base_path = ['interfaces', 'tunnel']
-        self._interfaces = ['tun%d' % (n+1) for n in range(len(self._valid))]
-        self._test_mtu = True
+        for number in range(len(self._valid)):
+            dum4 = 'dum4{}'.format(number)
+            dum6 = 'dum6{}'.format(number)
 
-        # creating two dummy interface as to use as local-ip for the tunnels
-        base_path = ['interfaces', 'dummy']
-        self.session.set(base_path + ['dum444', 'address', '169.254.0.1/24'])
-        self.session.set(base_path + ['dum666', 'address', '2002::1/16'])
+            ipv4 = self.local[4].format(number)
+            ipv6 = self.local[6].format(number)
+
+            local.setdefault(4, {})[number] = ipv4
+            local.setdefault(6, {})[number] = ipv6
+
+            ipv4 = self.remote[4].format(number)
+            ipv6 = self.remote[6].format(number)
+
+            remote.setdefault(4, {})[number] = ipv4
+            remote.setdefault(6, {})[number] = ipv6
+
+            ipv4 = self.address[4].format(number)
+            ipv6 = self.address[6].format(number)
+
+            address.setdefault(4, {})[number] = ipv4
+            address.setdefault(6, {})[number] = ipv6
+
+            self.session.set(self._intf_dummy + [dum4, 'address', ipv4])
+            self.session.set(self._intf_dummy + [dum6, 'address', ipv6])
         self.session.commit()
 
-        local = {
-            4: Interface('dum444').get_addr()[0].split('/')[0],
-            6: Interface('dum666').get_addr()[0].split('/')[0],
-        }
-
-        number = 1
-        for encap, p2p, addr in self._valid:
+        for number, (encap, p2p, addr) in enumerate(self._valid):
             intf = 'tun%d' % number
             tunnel = {}
             tunnel['encapsulation'] = encap
-            tunnel['local-ip'] = local[p2p].format(number)
-            tunnel['remote-ip'] = self.remote[p2p].format(number)
-            tunnel['address'] = self.addrs[addr].format(number)
+            tunnel['local-ip'] = local[p2p][number].split('/')[0]
+            tunnel['remote-ip'] = remote[p2p][number].split('/')[0]
+            tunnel['address'] = address[addr][number]
             for name in tunnel:
                 self.session.set(self._base_path + [intf, name, tunnel[name]])
-            number += 1
+
+    def tearDown(self):
+        self.session.delete(self._intf_dummy)
+        super().tearDown()
+
 
 if __name__ == '__main__':
     unittest.main()
