@@ -180,7 +180,7 @@ def apply(vxlan):
         conf['port'] = vxlan['remote_port']
 
         # Finally create the new interface
-        v = VXLANIf(vxlan['intf'], config=conf)
+        v = VXLANIf(vxlan['intf'], **conf)
         # update interface description used e.g. by SNMP
         v.set_alias(vxlan['description'])
         # Maximum Transfer Unit (MTU)

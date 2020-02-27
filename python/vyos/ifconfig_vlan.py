@@ -21,7 +21,7 @@ def apply_vlan_config(vlan, config):
     to a VLAN interface
     """
 
-    if type(vlan) != type(VLANIf("lo")):
+    if vlan.__class__ != VLANIf:
         raise TypeError()
 
     # get DHCP config dictionary and update values

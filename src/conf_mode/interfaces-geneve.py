@@ -127,7 +127,7 @@ def apply(geneve):
         conf['remote'] = geneve['remote']
 
         # Finally create the new interface
-        g = GeneveIf(geneve['intf'], config=conf)
+        g = GeneveIf(geneve['intf'], **conf)
         # update interface description used e.g. by SNMP
         g.set_alias(geneve['description'])
         # Maximum Transfer Unit (MTU)
