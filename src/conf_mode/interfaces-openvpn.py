@@ -161,6 +161,10 @@ cert {{ tls_cert }}
 key {{ tls_key }}
 {% endif %}
 
+{%- if tls_crypt %}
+tls-crypt {{ tls_crypt }}
+{% endif %}
+
 {%- if tls_crl %}
 crl-verify {{ tls_crl }}
 {% endif %}
@@ -318,6 +322,7 @@ default_config_data = {
     'tls_crl': '',
     'tls_dh': '',
     'tls_key': '',
+    'tls_crypt': '',
     'tls_role': '',
     'tls_version_min': '',
     'type': 'tun',
@@ -633,6 +638,11 @@ def get_config():
          openvpn['tls_key'] = conf.return_value('tls key-file')
          openvpn['tls'] = True
 
+    # File containing key to encrypt control channel packets
+    if conf.exists('tls crypt-file'):
+         openvpn['tls_crypt'] = conf.return_value('tls crypt-file')
+         openvpn['tls'] = True
+
     # Role in TLS negotiation
     if conf.exists('tls role'):
          openvpn['tls_role'] = conf.return_value('tls role')
@@ -800,6 +810,9 @@ def verify(openvpn):
             if not openvpn['tls_key']:
                 raise ConfigError('Must specify "tls key-file"')
 
+        if openvpn['tls_auth'] and openvpn['tls_crypt']:
+            raise ConfigError('TLS auth and crypt are mutually exclusive')
+
         if not checkCertHeader('-----BEGIN CERTIFICATE-----', openvpn['tls_ca_cert']):
             raise ConfigError('Specified ca-cert-file "{}" is invalid'.format(openvpn['tls_ca_cert']))
 
@@ -814,6 +827,10 @@ def verify(openvpn):
         if openvpn['tls_key']:
             if not checkCertHeader('-----BEGIN (?:RSA )?PRIVATE KEY-----', openvpn['tls_key']):
                 raise ConfigError('Specified key-file "{}" is not valid'.format(openvpn['tls_key']))
+
+        if openvpn['tls_crypt']:
+            if not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', openvpn['tls_crypt']):
+                raise ConfigError('Specified TLS crypt-file "{}" is invalid'.format(openvpn['tls_crypt']))
 
         if openvpn['tls_crl']:
             if not checkCertHeader('-----BEGIN X509 CRL-----', openvpn['tls_crl']):
