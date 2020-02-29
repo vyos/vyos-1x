@@ -25,7 +25,8 @@ class BasicInterfaceTest:
         def setUp(self):
             self.session = ConfigSession(os.getpid())
 
-            self._test_addr = ['192.0.2.1/25', '2001:db8:1::ffff/64']
+            self._test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
+                                '2001:db8:1::ffff/64', '2001:db8:101::1/112']
             self._test_mtu = False
 
         def tearDown(self):
