@@ -96,13 +96,13 @@ class Interface:
         self.config = deepcopy(self.default)
         self.config['ifname'] = ifname
 
-        for k in self.options:
-            if k not in kargs:
+        for k in kargs:
+            if k not in self.options:
                 raise ConfigError('invalid option {} for {}'.format(k,self.__class__))
             self.config[k] = kargs[k]
 
         for k in self.required:
-            if k not in self.config:
+            if k not in kargs:
                 raise ConfigError('missing required option {} for {}'.format(k,self.__class__))
 
         if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
