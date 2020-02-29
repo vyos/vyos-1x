@@ -167,6 +167,9 @@ shared-network {{ network.name }} {
         option bootfile-name "{{ subnet.bootfile_name }}";
         filename "{{ subnet.bootfile_name }}";
         {%- endif -%}
+        {%- if subnet.bootfile_rootpath %}
+        option root-path "{{ subnet.bootfile_rootpath }}";
+        {%- endif -%}
         {%- if subnet.bootfile_server %}
         next-server {{ subnet.bootfile_server }};
         {%- endif -%}
@@ -392,6 +395,7 @@ def get_config():
                         'address': str(ip_network(net).network_address),
                         'netmask': str(ip_network(net).netmask),
                         'bootfile_name': '',
+                        'bootfile_rootpath': '',
                         'bootfile_server': '',
                         'client_prefix_length': '',
                         'default_router': '',
@@ -425,6 +429,9 @@ def get_config():
                     # Used to identify a bootstrap file
                     if conf.exists('bootfile-name'):
                         subnet['bootfile_name'] = conf.return_value('bootfile-name')
+
+                    if conf.exists('bootfile-rootpath'):
+                        subnet['bootfile_rootpath'] = conf.return_value('bootfile-rootpath')
 
                     # Specify host address of the server from which the initial boot file
                     # (specified above) is to be loaded. Should be a numeric IP address or

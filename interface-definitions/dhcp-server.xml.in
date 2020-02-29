@@ -94,6 +94,11 @@
                       <help>Bootstrap file name</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="bootfile-rootpath">
+                    <properties>
+                      <help>This option specifies the path-name that contains the client's root disk.</help>
+                    </properties>
+                  </leafNode>
                   <leafNode name="bootfile-server">
                     <properties>
                       <help>Server (IP address or domain name) from which the initial
