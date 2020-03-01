@@ -67,6 +67,9 @@ noauth
 # the "proxyarp" parameter set disables the "defaultroute" option.
 noproxyarp
 
+# Unlimited connection attempts
+maxfail 0
+
 plugin rp-pppoe.so
 {{ source_interface }}
 persist
