@@ -3,12 +3,18 @@ Default: yes
 Priority: 257
 Auth-Type: Primary
 Auth:
+    [default=ignore success=1] pam_succeed_if.so uid eq 1001 quiet
+    [default=ignore success=ignore] pam_succeed_if.so uid eq 1002 quiet
     [authinfo_unavail=ignore success=end default=ignore] pam_radius_auth.so
 
 Account-Type: Primary
 Account:
+    [default=ignore success=1] pam_succeed_if.so uid eq 1001 quiet
+    [default=ignore success=ignore] pam_succeed_if.so uid eq 1002 quiet
     [authinfo_unavail=ignore success=end perm_denied=bad default=ignore] pam_radius_auth.so
 
 Session-Type: Additional
 Session:
+    [default=ignore success=1] pam_succeed_if.so uid eq 1001 quiet
+    [default=ignore success=ignore] pam_succeed_if.so uid eq 1002 quiet
     [authinfo_unavail=ignore success=ok default=ignore] pam_radius_auth.so
