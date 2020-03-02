@@ -1411,7 +1411,7 @@ class MACVLANIf(VLANIf):
         super().__init__(ifname, **kargs)
 
     def _create(self):
-        cmd = 'ip link add {intf} link {link} type macvlan mode {mode}'.format(**self.config)
+        cmd = 'ip link add {ifname} link {link} type macvlan mode {mode}'.format(**self.config)
         self._cmd(cmd)
 
     @staticmethod
