@@ -56,6 +56,10 @@ def get_config():
     if not c.exists(['interfaces', 'wireguard']):
         return None
 
+    # determine tagNode instance
+    if 'VYOS_TAGNODE_VALUE' not in os.environ:
+        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
+
     dflt_cnf = {
         'intfc': '',
         'addr': [],
@@ -71,14 +75,10 @@ def get_config():
         'pk': '{}/default/private.key'.format(kdir)
     }
 
-    if os.getenv('VYOS_TAGNODE_VALUE'):
-        ifname = str(os.environ['VYOS_TAGNODE_VALUE'])
-        wg = deepcopy(dflt_cnf)
-        wg['intfc'] = ifname
-        wg['descr'] = ifname
-    else:
-        print("ERROR: VYOS_TAGNODE_VALUE undefined")
-        sys.exit(1)
+    ifname = str(os.environ['VYOS_TAGNODE_VALUE'])
+    wg = deepcopy(dflt_cnf)
+    wg['intfc'] = ifname
+    wg['descr'] = ifname
 
     c.set_level(['interfaces', 'wireguard'])
 

@@ -894,10 +894,10 @@ def get_config():
     conf = Config()
 
     # determine tagNode instance
-    try:
-        wifi['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    except KeyError as E:
-        print("Interface not specified")
+    if 'VYOS_TAGNODE_VALUE' not in os.environ:
+        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
+
+    wifi['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
     # check if wireless interface has been removed
     cfg_base = 'interfaces wireless ' + wifi['intf']

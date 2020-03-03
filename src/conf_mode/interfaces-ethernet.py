@@ -67,10 +67,10 @@ def get_config():
     conf = Config()
 
     # determine tagNode instance
-    try:
-        eth['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    except KeyError as E:
-        print("Interface not specified")
+    if 'VYOS_TAGNODE_VALUE' not in os.environ:
+        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
+
+    eth['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
     # check if ethernet interface has been removed
     cfg_base = ['interfaces', 'ethernet', eth['intf']]

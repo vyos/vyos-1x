@@ -42,10 +42,10 @@ def get_config():
     conf = Config()
 
     # determine tagNode instance
-    try:
-        geneve['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    except KeyError as E:
-        print("Interface not specified")
+    if 'VYOS_TAGNODE_VALUE' not in os.environ:
+        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
+
+    geneve['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
     # Check if interface has been removed
     if not conf.exists('interfaces geneve ' + geneve['intf']):

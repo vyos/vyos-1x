@@ -133,11 +133,11 @@ def get_config():
     base_path = ['interfaces', 'pppoe']
 
     # determine tagNode instance
-    try:
-        pppoe['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-        pppoe['logfile'] = PPP_LOGFILE.format(pppoe['intf'])
-    except KeyError as E:
-        print("Interface not specified")
+    if 'VYOS_TAGNODE_VALUE' not in os.environ:
+        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
+
+    pppoe['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+    pppoe['logfile'] = PPP_LOGFILE.format(pppoe['intf'])
 
     # Check if interface has been removed
     if not conf.exists(base_path + [pppoe['intf']]):
