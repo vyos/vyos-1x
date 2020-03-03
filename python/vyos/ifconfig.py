@@ -407,11 +407,12 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_link_detect(1)
         """
-        if int(link_filter) >= 0 and int(link_filter) <= 2:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/link_filter'
-                                     .format(self.config['ifname']), link_filter)
-        else:
-            raise ValueError("Value out of range")
+        sysfs_file = '/proc/sys/net/ipv4/conf/{0}/link_filter'.format(self.config['ifname'])
+        if os.path.exists(sysfs_file):
+            if int(link_filter) >= 0 and int(link_filter) <= 2:
+                return self._write_sysfs(sysfs_file, link_filter)
+            else:
+                raise ValueError("Value out of range")
 
     def set_alias(self, ifalias=None):
         """
@@ -1218,8 +1219,12 @@ class EthernetIf(VLANIf):
         >>> i.get_driver_name()
         'vmxnet3'
         """
-        link = os.readlink('/sys/class/net/{}/device/driver/module'.format(self.config['ifname']))
-        return os.path.basename(link)
+        sysfs_file = '/sys/class/net/{}/device/driver/module'.format(self.config['ifname'])
+        if os.path.exists(sysfs_file):
+            link = os.readlink(sysfs_file)
+            return os.path.basename(link)
+        else:
+            return None
 
     def set_flow_control(self, enable):
         """
