@@ -168,3 +168,56 @@ def is_subnet_connected(subnet, primary=False):
                     return True
 
     return False
+
+
+def assert_boolean(b):
+    if int(b) not in (0, 1):
+        raise ValueError(f'Value {b} out of range')
+
+
+def assert_range(value, lower=0, count=3):
+    if int(value) not in range(lower,lower+count):
+        raise ValueError("Value out of range")
+
+
+def assert_list(s, l):
+    if s not in l:
+        o = ' or '.join([f'"{n}"' for n in l])
+        raise ValueError(f'state must be {o}, got {s}')
+
+
+def assert_number(n):
+    if not n.isnumeric():
+        raise ValueError(f'{n} must be a number')
+
+
+def assert_positive(n, smaller=0):
+    assert_number(n)
+    if int(n) < smaller:
+        raise ValueError(f'{n} is smaller than {limit}')
+
+
+def assert_mtu(mtu, min=68, max=9000):
+    assert_number(mtu)
+    if int(mtu) < min or int(mtu) > max:
+        raise ValueError(f'Invalid MTU size: "{mtu}"')
+
+
+def assert_mac(m):
+    octets = [int(i, 16) for i in m.split(':')]
+
+    # a mac address consits out of 6 octets
+    if len(octets) != 6:
+        raise ValueError(f'wrong number of MAC octets: {octets}')
+
+    # validate against the first mac address byte if it's a multicast
+    # address
+    if octets[0] & 1:
+        raise ValueError(f'{m} is a multicast MAC address')
+
+    # overall mac address is not allowed to be 00:00:00:00:00:00
+    if sum(octets) == 0:
+        raise ValueError('00:00:00:00:00:00 is not a valid MAC address')
+
+    if octets[:5] == (0, 0, 94, 0, 1):
+        raise ValueError(f'{m} is a VRRP MAC address')
