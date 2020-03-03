@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vrf" owner="${vyos_conf_scripts_dir}/vrf.py">
+    <properties>
+      <help>VRF configuration</help>
+      <!-- must be before any interface creation -->
+      <priority>210</priority>
+    </properties>
+    <children>
+      <node name="disable-bind-to-all">
+        <properties>
+          <help>Disable services running on the default VRF from other VRF (ssh, bgp, ...)</help>
+        </properties>
+        <children>
+          <leafNode name="ipv4">
+            <properties>
+              <valueless/>
+              <help>Enable binding across all VRF domains for IPv4</help>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+      <tagNode name="name">
+        <properties>
+          <help>Virtual Routing and Forwarding</help>
+          <constraint>
+            <validator name="interface-name"/>
+          </constraint>
+          <constraintErrorMessage>VRF name not allowed or to long</constraintErrorMessage>
+          <valueHelp>
+            <format>name</format>
+            <description>the vrf name must not contain '/' and be 16 characters or less</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="table">
+            <properties>
+              <help>The routing table to associate to this VRF</help>
+              <constraint>
+                <validator name="numeric" argument="--range 1-2147483647"/>
+              </constraint>
+              <constraintErrorMessage>Invalid kernel table number</constraintErrorMessage>
+              <valueHelp>
+                <format>number</format>
+                <description>the VRF must be a number between 1 and 2^31-1</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Description of the VRF role</help>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
