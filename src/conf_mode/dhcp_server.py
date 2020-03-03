@@ -139,7 +139,7 @@ shared-network {{ network.name }} {
         option netbios-name-servers {{ subnet.wins_server | join(', ') }};
         {%- endif %}
         {%- if subnet.static_route %}
-        option rfc3442-static-route {{ subnet.static_route }};
+        option rfc3442-static-route {{ subnet.static_route }}{% if subnet.rfc3442_default_router %}, {{ subnet.rfc3442_default_router }}{% endif %};
         option windows-static-route {{ subnet.static_route }};
         {%- endif %}
         {%- if subnet.ip_forwarding %}
@@ -315,6 +315,26 @@ def dhcp_slice_range(exclude_list, range_list):
 
     return output
 
+def dhcp_static_route(static_subnet, static_router):
+    # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
+    # Option format is:
+    # <netmask>, <network-byte1>, <network-byte2>, <network-byte3>, <router-byte1>, <router-byte2>, <router-byte3>
+    # where bytes with the value 0 are omitted.
+    net = ip_network(static_subnet)
+    # add netmask
+    string = str(net.prefixlen) + ','
+    # add network bytes
+    if net.prefixlen:
+        width = net.prefixlen // 8
+        if net.prefixlen % 8:
+            width += 1
+        string += ','.join(map(str,tuple(net.network_address.packed)[:width])) + ','
+
+    # add router bytes
+    string += ','.join(static_router.split('.'))
+
+    return string
+
 def get_config():
     dhcp = default_config_data
     conf = Config()
@@ -395,6 +415,7 @@ def get_config():
                         'bootfile_server': '',
                         'client_prefix_length': '',
                         'default_router': '',
+                        'rfc3442_default_router': '',
                         'dns_server': [],
                         'domain_name': '',
                         'domain_search': [],
@@ -443,6 +464,7 @@ def get_config():
                     # Default router IP address on the client's subnet
                     if conf.exists('default-router'):
                         subnet['default_router'] = conf.return_value('default-router')
+                        subnet['rfc3442_default_router'] = dhcp_static_route("0.0.0.0/0", subnet['default_router'])
 
                     # Specifies a list of Domain Name System (STD 13, RFC 1035) name servers available to
                     # the client. Servers should be listed in order of preference.
@@ -586,24 +608,7 @@ def get_config():
                         subnet['static_router'] = conf.return_value('static-route router')
 
                     if subnet['static_router'] and subnet['static_subnet']:
-                        # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
-                        # Option format is:
-                        # <netmask>, <network-byte1>, <network-byte2>, <network-byte3>, <router-byte1>, <router-byte2>, <router-byte3>
-                        # where bytes with the value 0 are omitted.
-                        net = ip_network(subnet['static_subnet'])
-                        # add netmask
-                        string = str(net.prefixlen) + ','
-                        # add network bytes
-                        if net.prefixlen:
-                            width = net.prefixlen // 8
-                            if net.prefixlen % 8:
-                                width += 1
-                            string += ','.join(map(str,tuple(net.network_address.packed)[:width])) + ','
-
-                        # add router bytes
-                        string += ','.join(subnet['static_router'].split('.'))
-
-                        subnet['static_route'] = string
+                        subnet['static_route'] = dhcp_static_route(subnet['static_subnet'], subnet['static_router'])
 
                     # HACKS AND TRICKS
                     #
