@@ -594,17 +594,14 @@ def get_config():
                         # add netmask
                         string = str(net.prefixlen) + ','
                         # add network bytes
-                        bytes = str(net.network_address).split('.')
-                        for b in bytes:
-                            if b != '0':
-                                string += b + ','
+                        if net.prefixlen:
+                            width = net.prefixlen // 8
+                            if net.prefixlen % 8:
+                                width += 1
+                            string += ','.join(map(str,tuple(net.network_address.packed)[:width])) + ','
 
                         # add router bytes
-                        bytes = subnet['static_router'].split('.')
-                        for b in bytes:
-                            string += b
-                            if b is not bytes[-1]:
-                                string += ','
+                        string += ','.join(subnet['static_router'].split('.'))
 
                         subnet['static_route'] = string
 
