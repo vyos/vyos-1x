@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <!-- HTTPS configuration -->
 <interfaceDefinition>
+  <syntaxVersion component='https' version='1'></syntaxVersion>
   <node name="service">
     <children>
       <node name="https" owner="${vyos_conf_scripts_dir}/https.py">
@@ -9,28 +10,37 @@
           <priority>1001</priority>
         </properties>
         <children>
-          <tagNode name="listen-address">
+          <tagNode name="virtual-host">
             <properties>
-              <help>Addresses to listen for HTTPS requests</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>HTTPS IPv4 address</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6</format>
-                <description>HTTPS IPv6 address</description>
-              </valueHelp>
-              <valueHelp>
-                <format>'*'</format>
-                <description>any</description>
-              </valueHelp>
+              <help>Identifier for virtual host</help>
               <constraint>
-                <validator name="ipv4-address"/>
-                <validator name="ipv6-address"/>
-                <regex>\*$</regex>
+                <regex>[a-zA-Z0-9-_.:]{1,255}</regex>
               </constraint>
+              <constraintErrorMessage>illegal characters in identifier or identifier longer than 255 characters</constraintErrorMessage>
             </properties>
             <children>
+              <leafNode name="listen-address">
+                <properties>
+                  <help>Address to listen for HTTPS requests</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                   <description>HTTPS IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>HTTPS IPv6 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>'*'</format>
+                    <description>any</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                    <regex>\*$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name='listen-port'>
                 <properties>
                   <help>Port to listen for HTTPS requests; default 443</help>
@@ -45,7 +55,7 @@
               </leafNode>
               <leafNode name="server-name">
                 <properties>
-                  <help>Server names: exact, wildcard, regex, or '_' (any)</help>
+                  <help>Server names: exact, wildcard, or regex</help>
                   <multi/>
                 </properties>
               </leafNode>

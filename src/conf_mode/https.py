@@ -18,6 +18,7 @@
 
 import sys
 import os
+from copy import deepcopy
 
 import jinja2
 
@@ -111,21 +112,21 @@ def get_config():
     else:
         conf.set_level('service https')
 
-    if conf.exists('listen-address'):
-        for addr in conf.list_nodes('listen-address'):
-            server_block = {'address' : addr}
-            server_block['port'] = '443'
-            server_block['name'] = ['_']
-            if conf.exists('listen-address {0} listen-port'.format(addr)):
-                port = conf.return_value('listen-address {0} listen-port'.format(addr))
+    if not conf.exists('virtual-host'):
+        server_block_list.append(default_server_block)
+    else:
+        for vhost in conf.list_nodes('virtual-host'):
+            server_block = deepcopy(default_server_block)
+            if conf.exists(f'virtual-host {vhost} listen-address'):
+                addr = conf.return_value(f'virtual-host {vhost} listen-address')
+                server_block['address'] = addr
+            if conf.exists(f'virtual-host {vhost} listen-port'):
+                port = conf.return_value(f'virtual-host {vhost} listen-port')
                 server_block['port'] = port
-            if conf.exists('listen-address {0} server-name'.format(addr)):
-                names = conf.return_values('listen-address {0} server-name'.format(addr))
+            if conf.exists(f'virtual-host {vhost} server-name'):
+                names = conf.return_values(f'virtual-host {vhost} server-name')
                 server_block['name'] = names[:]
             server_block_list.append(server_block)
-
-    if not server_block_list:
-        server_block_list.append(default_server_block)
 
     vyos_cert_data = {}
     if conf.exists('certificates system-generated-certificate'):
@@ -170,7 +171,7 @@ def verify(https):
         for sb in https['server_block_list']:
             if sb['certbot']:
                 return None
-        raise ConfigError("At least one 'listen-address x.x.x.x server-name' "
+        raise ConfigError("At least one 'virtual-host <id> server-name' "
                           "matching the 'certbot domain-name' is required.")
     return None
 
