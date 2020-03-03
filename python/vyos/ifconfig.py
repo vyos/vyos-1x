@@ -66,11 +66,192 @@ interface "{{ intf }}" {
 
 """
 
-class Interface:
+class Control:
+    _command_get = {}
+    _command_set = {}
+
+    def _debug_msg(self, msg):
+        if os.path.isfile('/tmp/vyos.ifconfig.debug'):
+            print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
+
+    def _cmd(self, command):
+        p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
+        tmp = p.communicate()[0].strip()
+        self._debug_msg("cmd '{}'".format(command))
+        if tmp.decode():
+            self._debug_msg("returned:\n{}".format(tmp.decode()))
+
+        # do we need some error checking code here?
+        return tmp.decode()
+
+    def _get_command(self, config, name):
+        """
+        Using the defined names, set data write to sysfs.
+        """
+        cmd = self._command_get[name]['shellcmd'].format(**config)
+        return self._cmd(cmd)
+
+    def _set_command(self, config, name, value):
+        """
+        Using the defined names, set data write to sysfs.
+        """
+        if not value:
+            return None
+
+        # the code can pass int as int
+        value = str(value)
+
+        validate = self._command_set[name].get('validate', None)
+        if validate:
+            validate(value)
+
+        config = {**config, **{'value': value}}
+
+        convert = self._command_set[name].get('convert', None)
+        if convert:
+            value = convert(value)
+
+        cmd = self._command_set[name]['shellcmd'].format(**config)
+        return self._cmd(cmd)
+
+    _sysfs_get = {}
+    _sysfs_set = {}
+
+    def _read_sysfs(self, filename):
+        """
+        Provide a single primitive w/ error checking for reading from sysfs.
+        """
+        value = None
+        with open(filename, 'r') as f:
+            value = f.read().rstrip('\n')
+
+        self._debug_msg("read '{}' < '{}'".format(value, filename))
+        return value
+
+    def _write_sysfs(self, filename, value):
+        """
+        Provide a single primitive w/ error checking for writing to sysfs.
+        """
+        self._debug_msg("write '{}' > '{}'".format(value, filename))
+        if os.path.isfile(filename):
+            with open(filename, 'w') as f:
+                f.write(str(value))
+            return True
+        return False
+
+    def _get_sysfs(self, config, name):
+        """
+        Using the defined names, get data write from sysfs.
+        """
+        filename = self._sysfs_get[name]['location'].format(config)
+        if not filename:
+            return None
+        return self._read_sysfs(filename)
+
+    def _set_sysfs(self, config, name, value):
+        """
+        Using the defined names, set data write to sysfs.
+        """
+        if not value:
+            return None
+
+        # the code can pass int as int
+        value = str(value)
+
+        validate = self._sysfs_set[name].get('validate', None)
+        if validate:
+            validate(value)
+
+        config = {**config, **{'value': value}}
+
+        convert = self._sysfs_set[name].get('convert', None)
+        if convert:
+            value = convert(value)
+
+        commited = self._write_sysfs(self._sysfs_set[name]['location'].format(**config), value)
+        if not commited:
+            errmsg = self._sysfs_set.get('errormsg','')
+            if errmsg:
+                raise TypeError(errmsg.format(**config))
+        return commited
+
+    def get_interface(self, name):
+        if name in self._sysfs_get:
+            return self._get_sysfs(self.config, name)
+        if name in self._command_get:
+            return self._get_command(self.config, name)
+        raise KeyError(f'{name} is not a attribute of the interface we can get')
+
+    def set_interface(self, name, value):
+        if name in self._sysfs_set:
+            return self._set_sysfs(self.config, name, value)
+        if name in self._command_set:
+            return self._set_command(self.config, name, value)
+        raise KeyError(f'{name} is not a attribute of the interface we can set')
+
+
+class Interface(Control):
     options = []
     required = []
     default = {
         'type': '',
+    }
+
+    _command_set = {
+        'mac': {
+            'validate': assert_mac,
+            'shellcmd': 'ip link set dev {ifname} address {value}',
+        },
+    }
+
+    _sysfs_get = {
+        'mtu': {
+            'location': '/sys/class/net/{ifname}/mtu',
+        },
+    }
+
+    _sysfs_set = {
+        'alias': {
+            'convert': lambda name: name if name else '\0',
+            'location': '/sys/class/net/{ifname}/ifalias',
+        },
+        'mtu': {
+            'validate': assert_mtu,
+            'location': '/sys/class/net/{ifname}/mtu',
+        },
+        'arp_cache_tmo': {
+            'convert': lambda tmo: (int(tmo) * 1000),
+            'location': '/proc/sys/net/ipv4/neigh/{ifname}/base_reachable_time_ms',
+        },
+        'arp_filter': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_filter',
+        },
+        'arp_accept': {
+            'validate': lambda arp: assert_range(arp,0,2),
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_accept',
+        },
+        'arp_announce': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_announce',
+        },
+        'arp_ignore': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
+        },
+        'proxy_arp': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp',
+        },
+        'proxy_arp_pvlan': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp_pvlan',
+        },
+        # link_detect vs link_filter name weirdness
+        'link_detect': {
+            'validate': lambda link: assert_range(link,0,3),
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/link_filter',
+        },
     }
 
     def __init__(self, ifname, **kargs):
@@ -142,41 +323,6 @@ class Interface:
         cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
         self._cmd(cmd)
 
-    def _debug_msg(self, msg):
-        if os.path.isfile('/tmp/vyos.ifconfig.debug'):
-            print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
-
-    def _cmd(self, command):
-        p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-        tmp = p.communicate()[0].strip()
-        self._debug_msg("cmd '{}'".format(command))
-        if tmp.decode():
-            self._debug_msg("returned:\n{}".format(tmp.decode()))
-
-        # do we need some error checking code here?
-        return tmp.decode()
-
-    def _read_sysfs(self, filename):
-        """
-        Provide a single primitive w/ error checking for reading from sysfs.
-        """
-        value = None
-        with open(filename, 'r') as f:
-            value = f.read().rstrip('\n')
-
-        self._debug_msg("read '{}' < '{}'".format(value, filename))
-        return value
-
-    def _write_sysfs(self, filename, value):
-        """
-        Provide a single primitive w/ error checking for writing to sysfs.
-        """
-        self._debug_msg("write '{}' > '{}'".format(value, filename))
-        with open(filename, 'w') as f:
-            f.write(str(value))
-
-        return None
-
     def remove(self):
         """
         Remove interface from operating system. Removing the interface
@@ -235,8 +381,7 @@ class Interface:
         >>> Interface('eth0').get_mtu()
         '1500'
         """
-        return self._read_sysfs('/sys/class/net/{}/mtu'
-                                .format(self.config['ifname']))
+        return self.get_interface('mtu')
 
     def set_mtu(self, mtu):
         """
@@ -248,11 +393,7 @@ class Interface:
         >>> Interface('eth0').get_mtu()
         '1400'
         """
-        if mtu < 68 or mtu > 9000:
-            raise ValueError('Invalid MTU size: "{}"'.format(mru))
-
-        return self._write_sysfs('/sys/class/net/{}/mtu'
-                                 .format(self.config['ifname']), mtu)
+        return self.set_interface('mtu', mtu)
 
     def set_mac(self, mac):
         """
@@ -262,33 +403,7 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_mac('00:50:ab:cd:ef:01')
         """
-        # on interface removal (ethernet) an empty string is passed - ignore it
-        if not mac:
-            return None
-
-        # a mac address consits out of 6 octets
-        octets = len(mac.split(':'))
-        if octets != 6:
-            raise ValueError('wrong number of MAC octets: {} '.format(octets))
-
-        # validate against the first mac address byte if it's a multicast
-        # address
-        if int(mac.split(':')[0], 16) & 1:
-            raise ValueError('{} is a multicast MAC address'.format(mac))
-
-        # overall mac address is not allowed to be 00:00:00:00:00:00
-        if sum(int(i, 16) for i in mac.split(':')) == 0:
-            raise ValueError('00:00:00:00:00:00 is not a valid MAC address')
-
-        # check for VRRP mac address
-        if mac.split(':')[0] == '0' and addr.split(':')[1] == '0' and mac.split(':')[2] == '94' and mac.split(':')[3] == '0' and mac.split(':')[4] == '1':
-            raise ValueError('{} is a VRRP MAC address'.format(mac))
-
-        # Assemble command executed on system. Unfortunately there is no way
-        # of altering the MAC address via sysfs
-        cmd = 'ip link set dev {} address {}'.format(self.config['ifname'], mac)
-        return self._cmd(cmd)
-
+        self.set_interface('mac', mac)
 
     def set_arp_cache_tmo(self, tmo):
         """
@@ -299,8 +414,7 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_arp_cache_tmo(40)
         """
-        return self._write_sysfs('/proc/sys/net/ipv4/neigh/{0}/base_reachable_time_ms'
-                                 .format(self.config['ifname']), (int(tmo) * 1000))
+        return self.set_interface('arp_cache_tmo', tmo)
 
     def set_arp_filter(self, arp_filter):
         """
@@ -320,11 +434,7 @@ class Interface:
             particular interfaces. Only for more complex setups like load-
             balancing, does this behaviour cause problems.
         """
-        if int(arp_filter) >= 0 and int(arp_filter) <= 1:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_filter'
-                                     .format(self.config['ifname']), arp_filter)
-        else:
-           raise ValueError("Value out of range")
+        return self.set_interface('arp_filter', arp_filter)
 
     def set_arp_accept(self, arp_accept):
         """
@@ -340,11 +450,7 @@ class Interface:
         gratuitous arp frame, the arp table will be updated regardless
         if this setting is on or off.
         """
-        if int(arp_accept) >= 0 and int(arp_accept) <= 1:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_accept'
-                                     .format(self.config['ifname']), arp_accept)
-        else:
-           raise ValueError("Value out of range")
+        return self.set_interface('arp_accept', arp_accept)
 
     def set_arp_announce(self, arp_announce):
         """
@@ -365,11 +471,7 @@ class Interface:
         receiving answer from the resolved target while decreasing
         the level announces more valid sender's information.
         """
-        if int(arp_announce) >= 0 and int(arp_announce) <= 1:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_announce'
-                                     .format(self.config['ifname']), arp_announce)
-        else:
-           raise ValueError("Value out of range")
+        return self.set_interface('arp_announce', arp_announce)
 
     def set_arp_ignore(self, arp_ignore):
         """
@@ -381,11 +483,7 @@ class Interface:
         1 - reply only if the target IP address is local address
             configured on the incoming interface
         """
-        if int(arp_ignore) >= 0 and int(arp_ignore) <= 1:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{0}/arp_ignore'
-                                     .format(self.config['ifname']), arp_ignore)
-        else:
-           raise ValueError("Value out of range")
+        return self.set_interface('arp_ignore', arp_ignore)
 
     def set_link_detect(self, link_filter):
         """
@@ -407,14 +505,9 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_link_detect(1)
         """
-        sysfs_file = '/proc/sys/net/ipv4/conf/{0}/link_filter'.format(self.config['ifname'])
-        if os.path.exists(sysfs_file):
-            if int(link_filter) >= 0 and int(link_filter) <= 2:
-                return self._write_sysfs(sysfs_file, link_filter)
-            else:
-                raise ValueError("Value out of range")
+        return self.set_interface('link_detect', link_filter)
 
-    def set_alias(self, ifalias=None):
+    def set_alias(self, ifalias=''):
         """
         Set interface alias name used by e.g. SNMP
 
@@ -426,12 +519,7 @@ class Interface:
 
         >>> Interface('eth0').set_ifalias('')
         """
-        if not ifalias:
-            # clear interface alias
-            ifalias = '\0'
-
-        self._write_sysfs('/sys/class/net/{}/ifalias'
-                          .format(self.config['ifname']), ifalias)
+        self.set_interface('alias', ifalias)
 
     def get_state(self):
         """
@@ -473,11 +561,7 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_proxy_arp(1)
         """
-        if int(enable) >= 0 and int(enable) <= 1:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp'
-                                     .format(self.config['ifname']), enable)
-        else:
-            raise ValueError("Value out of range")
+        self.set_interface('proxy_arp', enable)
 
     def set_proxy_arp_pvlan(self, enable):
         """
@@ -503,11 +587,7 @@ class Interface:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
-        if int(enable) >= 0 and int(enable) <= 1:
-            return self._write_sysfs('/proc/sys/net/ipv4/conf/{}/proxy_arp_pvlan'
-                                     .format(self.config['ifname']), enable)
-        else:
-            raise ValueError("Value out of range")
+        self.set_interface('proxy_arp_pvlan', enable)
 
     def get_addr(self):
         """
@@ -899,6 +979,20 @@ class STPIf(Interface):
     A spanning-tree capable interface. This applies only to bridge port member
     interfaces!
     """
+    _sysfs_set = {**Interface._sysfs_set, **{
+        'path_cost': {
+            # XXX: we should set a maximum
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/brport/path_cost',
+            'errormsg': '{ifname} is not a bridge port member'
+        },
+        'path_priority': {
+            # XXX: we should set a maximum
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/brport/priority',
+            'errormsg': '{ifname} is not a bridge port member'
+        },
+    }}
 
     default = {
         'type': 'stp',
@@ -916,12 +1010,7 @@ class STPIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_path_cost(4)
         """
-        if not os.path.isfile('/sys/class/net/{}/brport/path_cost'
-                              .format(self.config['ifname'])):
-            raise TypeError('{} is not a bridge port member'.format(self.config['ifname']))
-
-        return self._write_sysfs('/sys/class/net/{}/brport/path_cost'
-                                 .format(self.config['ifname']), cost)
+        self.set_interface('path_cost', cost)
 
     def set_path_priority(self, priority):
         """
@@ -932,13 +1021,7 @@ class STPIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_path_priority(4)
         """
-        if not os.path.isfile('/sys/class/net/{}/brport/priority'
-                              .format(self.config['ifname'])):
-            raise TypeError('{} is not a bridge port member'.format(self.config['ifname']))
-
-        return self._write_sysfs('/sys/class/net/{}/brport/priority'
-                                 .format(self.config['ifname']), priority)
-
+        self.set_interface('path_priority', priority)
 
 class BridgeIf(Interface):
     """
@@ -949,6 +1032,53 @@ class BridgeIf(Interface):
 
     The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
     """
+
+    _sysfs_set = {**Interface._sysfs_set, **{
+        'ageing_time': {
+            'validate': assert_positive,
+            'convert': lambda time: int(time) * 100,
+            'location': '/sys/class/net/{ifname}/bridge/ageing_time',
+        },
+        'forward_delay': {
+            'validate': assert_positive,
+            'convert': lambda time: int(time) * 100,
+            'location': '/sys/class/net/{ifname}/bridge/forward_delay',
+        },
+        'hello_time': {
+            'validate': assert_positive,
+            'convert': lambda time: int(time) * 100,
+            'location': '/sys/class/net/{ifname}/bridge/hello_time',
+        },
+        'max_age': {
+            'validate': assert_positive,
+            'convert': lambda time: int(time) * 100,
+            'location': '/sys/class/net/{ifname}/bridge/max_age',
+        },
+        'priority': {
+            'validate': assert_positive,
+            'convert': lambda time: int(time) * 100,
+            'location': '/sys/class/net/{ifname}/bridge/priority',
+        },
+        'stp': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifconfig}/bridge/stp_state',
+        },
+        'multicast_querier': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/bridge/multicast_querier',
+        },
+    }}
+
+    _command_set = {**Interface._command_set, **{
+        'add_port': {
+            'validate': assert_boolean,
+            'shellcmd': 'ip link set dev {value} master {ifname}',
+        },
+        'del_port': {
+            'validate': assert_boolean,
+            'shellcmd': 'ip link set dev {value} nomaster',
+        },
+    }}
 
     default = {
         'type': 'bridge',
@@ -966,9 +1096,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import BridgeIf
         >>> BridgeIf('br0').ageing_time(2)
         """
-        time = int(time) * 100
-        return self._write_sysfs('/sys/class/net/{}/bridge/ageing_time'
-                                 .format(self.config['ifname']), time)
+        self.set_interface('ageing_time', time)
 
     def set_forward_delay(self, time):
         """
@@ -979,8 +1107,8 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import BridgeIf
         >>> BridgeIf('br0').forward_delay(15)
         """
-        return self._write_sysfs('/sys/class/net/{}/bridge/forward_delay'
-                                 .format(self.config['ifname']), (int(time) * 100))
+        self.set_interface('forward_delay', time)
+
 
     def set_hello_time(self, time):
         """
@@ -991,8 +1119,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import BridgeIf
         >>> BridgeIf('br0').set_hello_time(2)
         """
-        return self._write_sysfs('/sys/class/net/{}/bridge/hello_time'
-                                 .format(self.config['ifname']), (int(time) * 100))
+        self.set_interface('hello_time', time)
 
     def set_max_age(self, time):
         """
@@ -1003,8 +1130,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').set_max_age(30)
         """
-        return self._write_sysfs('/sys/class/net/{}/bridge/max_age'
-                                 .format(self.config['ifname']), (int(time) * 100))
+        self.set_interface('max_age', time)
 
     def set_priority(self, priority):
         """
@@ -1014,8 +1140,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import BridgeIf
         >>> BridgeIf('br0').set_priority(8192)
         """
-        return self._write_sysfs('/sys/class/net/{}/bridge/priority'
-                                 .format(self.config['ifname']), priority)
+        self.set_interface('priority', time)
 
     def set_stp(self, state):
         """
@@ -1025,12 +1150,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import BridgeIf
         >>> BridgeIf('br0').set_stp(1)
         """
-
-        if int(state) >= 0 and int(state) <= 1:
-            return self._write_sysfs('/sys/class/net/{}/bridge/stp_state'
-                                     .format(self.config['ifname']), state)
-        else:
-            raise ValueError("Value out of range")
+        self.set_interface('stp', state)
 
 
     def set_multicast_querier(self, enable):
@@ -1046,11 +1166,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').set_multicast_querier(1)
         """
-        if int(enable) >= 0 and int(enable) <= 1:
-            return self._write_sysfs('/sys/class/net/{}/bridge/multicast_querier'
-                                     .format(self.config['ifname']), enable)
-        else:
-            raise ValueError("Value out of range")
+        self.set_interface('multicast_querier', enable)
 
 
     def add_port(self, interface):
@@ -1062,8 +1178,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
-        cmd = 'ip link set dev {} master {}'.format(interface, self.config['ifname'])
-        return self._cmd(cmd)
+        return self.set_interface('add_port', interface)
 
     def del_port(self, interface):
         """
@@ -1073,8 +1188,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import Interface
         >>> BridgeIf('br0').del_port('eth1')
         """
-        cmd = 'ip link set dev {} nomaster'.format(interface)
-        return self._cmd(cmd)
+        return self.set_interface('del_port', interface)
 
 class VLANIf(Interface):
     """
@@ -1196,6 +1310,29 @@ class EthernetIf(VLANIf):
     """
     Abstraction of a Linux Ethernet Interface
     """
+
+    _command_set = {**Interface._command_set, **{
+        'gro': {
+            'validate': lambda v: assert_list(v,['on','off']),
+            'shellcmd': '/sbin/ethtool -K {ifname} gro {value}',
+        },
+        'gso': {
+            'validate': lambda v: assert_list(v,['on','off']),
+            'shellcmd': '/sbin/ethtool -K {ifname} gso {value}',
+        },
+        'sg': {
+            'validate': lambda v: assert_list(v,['on','off']),
+            'shellcmd': '/sbin/ethtool -K {ifname} sg {value}',
+        },
+        'tso': {
+            'validate': lambda v: assert_list(v,['on','off']),
+            'shellcmd': '/sbin/ethtool -K {ifname} tso {value}',
+        },
+        'ufo': {
+            'validate': lambda v: assert_list(v,['on','off']),
+            'shellcmd': '/sbin/ethtool -K {ifname} ufo {value}',
+        },
+    }}
 
     default = {
         'type': 'ethernet',
@@ -1340,11 +1477,7 @@ class EthernetIf(VLANIf):
         >>> i = EthernetIf('eth0')
         >>> i.set_gro('on')
         """
-        if state not in ['on', 'off']:
-            raise ValueError('state must be "on" or "off"')
-
-        cmd = '/sbin/ethtool -K {} gro {}'.format(self.config['ifname'], state)
-        return self._cmd(cmd)
+        return self.set_interface('gro', state)
 
 
     def set_gso(self, state):
@@ -1354,11 +1487,7 @@ class EthernetIf(VLANIf):
         >>> i = EthernetIf('eth0')
         >>> i.set_gso('on')
         """
-        if state not in ['on', 'off']:
-            raise ValueError('state must be "on" or "off"')
-
-        cmd = '/sbin/ethtool -K {} gso {}'.format(self.config['ifname'], state)
-        return self._cmd(cmd)
+        return self.set_interface('gso', state)
 
 
     def set_sg(self, state):
@@ -1368,11 +1497,7 @@ class EthernetIf(VLANIf):
         >>> i = EthernetIf('eth0')
         >>> i.set_sg('on')
         """
-        if state not in ['on', 'off']:
-            raise ValueError('state must be "on" or "off"')
-
-        cmd = '/sbin/ethtool -K {} sg {}'.format(self.config['ifname'], state)
-        return self._cmd(cmd)
+        return self.set_interface('sg', state)
 
 
     def set_tso(self, state):
@@ -1382,11 +1507,7 @@ class EthernetIf(VLANIf):
         >>> i = EthernetIf('eth0')
         >>> i.set_tso('on')
         """
-        if state not in ['on', 'off']:
-            raise ValueError('state must be "on" or "off"')
-
-        cmd = '/sbin/ethtool -K {} tso {}'.format(self.config['ifname'], state)
-        return self._cmd(cmd)
+        return self.set_interface('tso', state)
 
 
     def set_ufo(self, state):
@@ -1453,6 +1574,45 @@ class BondIf(VLANIf):
     monitoring may be performed.
     """
 
+    _sysfs_set = {**Interface._sysfs_set, **{
+        'bond_hash_policy': {
+            'validate': lambda v: assert_list(v,['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']),
+            'location': '/sys/class/net/{ifname}/bonding/xmit_hash_policy',
+        },
+        'bond_miimon': {
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/bonding/miimon'
+        },
+        'bond_arp_interval': {
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/bonding/arp_interval'
+        },
+        'bond_arp_ip_target': {
+            # XXX: no validation of the IP
+            'location': '/sys/class/net/{ifname}/bonding/arp_ip_target',
+        },
+        'bond_add_port': {
+            'location': '/sys/class/net/{ifname}+{value}/bonding/slaves',
+        },
+        'bond_del_port': {
+            'location': '/sys/class/net/{ifname}-{value}/bonding/slaves',
+        },
+        'bond_primary': {
+            'convert': lambda name: name if name else '\0',
+            'location': '/sys/class/net/{ifname}/bonding/primary',
+        },
+        'bond_mode': {
+            'validate': lambda v: assert_list(v,['balance-rr', 'active-backup', 'balance-xor', 'broadcast', '802.3ad', 'balance-tlb', 'balance-alb']),
+            'location': '/sys/class/net/{ifname}/bonding/mode',
+        },
+    }}
+
+    _sysfs_get = {**Interface._sysfs_get, **{
+        'bond_arp_ip_target': {
+            'location': '/sys/class/net/{ifname}/bonding/arp_ip_target',
+        }
+    }}
+
     default = {
         'type': 'bond',
     }
@@ -1503,10 +1663,7 @@ class BondIf(VLANIf):
         >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').set_hash_policy('layer2+3')
         """
-        if not mode in ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']:
-            raise ValueError("Value out of range")
-        return self._write_sysfs('/sys/class/net/{}/bonding/xmit_hash_policy'
-                                 .format(self.config['ifname']), mode)
+        self.set_interface('bond_hash_policy', mode)
 
     def set_arp_interval(self, interval):
         """
@@ -1538,11 +1695,9 @@ class BondIf(VLANIf):
             inspected for link failures. A value of zero disables MII
             link monitoring. A value of 100 is a good starting point.
             """
-            return self._write_sysfs('/sys/class/net/{}/bonding/miimon'
-                                     .format(self.config['ifname']), interval)
+            return self.set_interface('bond_miimon', interval)
         else:
-            return self._write_sysfs('/sys/class/net/{}/bonding/arp_interval'
-                                     .format(self.config['ifname']), interval)
+            return self.set_interface('bond_arp_interval', interval)
 
     def get_arp_ip_target(self):
         """
@@ -1560,8 +1715,7 @@ class BondIf(VLANIf):
         >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
-        return self._read_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
-                                .format(self.config['ifname']))
+        return self.get_interface('bond_arp_ip_target')
 
     def set_arp_ip_target(self, target):
         """
@@ -1580,8 +1734,7 @@ class BondIf(VLANIf):
         >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
-        return self._write_sysfs('/sys/class/net/{}/bonding/arp_ip_target'
-                                 .format(self.config['ifname']), target)
+        return self.set_interface('bond_arp_ip_target', target)
 
     def add_port(self, interface):
         """
@@ -1596,9 +1749,7 @@ class BondIf(VLANIf):
         # interface is in 'up' state, the following Kernel error will  be thrown:
         # bond0: eth1 is up - this may be due to an out of date ifenslave.
         Interface(interface).set_state('down')
-
-        return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
-                                 .format(self.config['ifname']), '+' + interface)
+        return self.set_interface('bond_add_port', interface)
 
     def del_port(self, interface):
         """
@@ -1608,8 +1759,7 @@ class BondIf(VLANIf):
         >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').del_port('eth1')
         """
-        return self._write_sysfs('/sys/class/net/{}/bonding/slaves'
-                                 .format(self.config['ifname']), '-' + interface)
+        return self.set_interface('bond_del_port', interface)
 
     def get_slaves(self):
         """
@@ -1646,12 +1796,7 @@ class BondIf(VLANIf):
         >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').set_primary('eth2')
         """
-        if not interface:
-            # reset primary interface
-            interface = '\0'
-
-        return self._write_sysfs('/sys/class/net/{}/bonding/primary'
-                                 .format(self.config['ifname']), interface)
+        return self.set_interface('bond_primary', interface)
 
     def set_mode(self, mode):
         """
@@ -1668,13 +1813,7 @@ class BondIf(VLANIf):
         >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').set_mode('802.3ad')
         """
-        if not mode in [
-            'balance-rr', 'active-backup', 'balance-xor', 'broadcast',
-                        '802.3ad', 'balance-tlb', 'balance-alb']:
-            raise ValueError("Value out of range")
-
-        return self._write_sysfs('/sys/class/net/{}/bonding/mode'
-                                 .format(self.config['ifname']), mode)
+        return self.set_interface('bond_mode', mode)
 
 class WireGuardIf(Interface):
     options = ['port', 'private-key', 'pubkey', 'psk', 'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
