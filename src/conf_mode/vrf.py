@@ -196,6 +196,34 @@ def apply(vrf_config):
         with open(f'/sys/class/net/{name}/ifalias', 'w') as f:
             f.write(vrf['description'])
 
+    # Linux routing uses rules to find tables - routing targets are then
+    # looked up in those tables. If the lookup got a matching route, the
+    # process ends.
+    #
+    # TL;DR; first table with a matching entry wins!
+    #
+    # You can see your routing table lookup rules using "ip rule", sadly the
+    # local lookup is hit before any VRF lookup. Pinging an addresses from the
+    # VRF will usually find a hit in the local table, and never reach the VRF
+    # routing table - this is usually not what you want. Thus we will
+    # re-arrange the tables and move the local lookup furhter down once VRFs
+    # are enabled.
+
+    # set "normal" non VRF table lookups
+    add_pref = '0'
+    del_pref = '32765'
+
+    # Lookup table is adjusted if we are in VRF mode
+    if vrf_config['vrf_add']:
+        add_pref = '32765'
+        del_pref = '0'
+
+    # Configure table lookups
+    _cmd(f'ip -4 rule add pref {add_pref} table local')
+    _cmd(f'ip -4 rule del pref {del_pref}')
+    _cmd(f'ip -6 rule add pref {add_pref} table local')
+    _cmd(f'ip -6 rule del pref {del_pref}')
+
     return None
 
 if __name__ == '__main__':
