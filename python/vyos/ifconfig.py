@@ -143,7 +143,7 @@ class Control:
         """
         Using the defined names, get data write from sysfs.
         """
-        filename = self._sysfs_get[name]['location'].format(config)
+        filename = self._sysfs_get[name]['location'].format(**config)
         if not filename:
             return None
         return self._read_sysfs(filename)
