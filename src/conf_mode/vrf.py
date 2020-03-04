@@ -152,18 +152,18 @@ def apply(command):
             # RTNETLINK answers: Operation not supported
             # so require to remove vrf and change all existing the interfaces
 
-            if os.system(f'sudo ip link delete dev {name}'):
+            if os.system(f'ip link delete dev {name}'):
                 continue
             action = 'add'
 
         if action == 'add':
             commands = [
-                f'sudo ip link add {name} type vrf table {table}',
-                f'sudo ip link set dev {name} up',
-                f'sudo ip -4 rule add oif {name} lookup {table}',
-                f'sudo ip -4 rule add iif {name} lookup {table}',
-                f'sudo ip -6 rule add oif {name} lookup {table}',
-                f'sudo ip -6 rule add iif {name} lookup {table}',
+                f'ip link add {name} type vrf table {table}',
+                f'ip link set dev {name} up',
+                f'ip -4 rule add oif {name} lookup {table}',
+                f'ip -4 rule add iif {name} lookup {table}',
+                f'ip -6 rule add oif {name} lookup {table}',
+                f'ip -6 rule add iif {name} lookup {table}',
             ]
 
             for command in commands:
