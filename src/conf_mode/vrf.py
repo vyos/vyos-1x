@@ -24,6 +24,7 @@ from vyos.configdict import list_diff
 from vyos import ConfigError
 
 default_config_data = {
+    'deleted': False,
     'vrf_add': [],
     'vrf_existing': [],
     'vrf_remove': []
@@ -63,49 +64,71 @@ def get_config():
     if not conf.exists(cfg_base):
         # get all currently effetive VRFs and mark them for deletion
         vrf_config['vrf_remove'] = conf.list_effective_nodes(cfg_base + ['name'])
-        return vrf_config
+    else:
+        # Determine vrf interfaces (currently effective) - to determine which
+        # vrf interface is no longer present and needs to be removed
+        eff_vrf = conf.list_effective_nodes(cfg_base + ['name'])
+        act_vrf = conf.list_nodes(cfg_base + ['name'])
+        vrf_config['vrf_remove'] = list_diff(eff_vrf, act_vrf)
 
-    # Determine vrf interfaces (currently effective) - to determine which
-    # vrf interface is no longer present and needs to be removed
-    eff_vrf = conf.list_effective_nodes(cfg_base + ['name'])
-    act_vrf = conf.list_nodes(cfg_base + ['name'])
-    vrf_config['vrf_remove'] = list_diff(eff_vrf, act_vrf)
+        # read in individual VRF definition and build up
+        # configuration
+        for name in conf.list_nodes(cfg_base + ['name']):
+            vrf_inst = {
+                'description' : '\0',
+                'members': [],
+                'name' : name,
+                'table' : '',
+                'table_mod': False
+            }
+            conf.set_level(cfg_base + ['name', name])
 
-    # read in individual VRF definition and build up
-    # configuration
-    for name in conf.list_nodes(cfg_base + ['name']):
+            if conf.exists(['table']):
+                # VRF table can't be changed on demand, thus we need to read in the
+                # current and the effective routing table number
+                act_table = conf.return_value(['table'])
+                eff_table = conf.return_effective_value(['table'])
+                vrf_inst['table'] = act_table
+                if eff_table and eff_table != act_table:
+                    vrf_inst['table_mod'] = True
+
+            if conf.exists(['description']):
+                vrf_inst['description'] = conf.return_value(['description'])
+
+            # find member interfaces of this particulat VRF
+            vrf_inst['members'] = interfaces_with_vrf(name)
+
+            # append individual VRF configuration to global configuration list
+            vrf_config['vrf_add'].append(vrf_inst)
+
+    # check VRFs which need to be removed as they are not allowed to have
+    # interfaces attached
+    tmp = []
+    for name in vrf_config['vrf_remove']:
         vrf_inst = {
-            'description' : '\0',
             'members': [],
             'name' : name,
-            'table' : '',
-            'table_mod': False
         }
-        conf.set_level(cfg_base + ['name', name])
-
-        if conf.exists(['table']):
-            # VRF table can't be changed on demand, thus we need to read in the
-            # current and the effective routing table number
-            act_table = conf.return_value(['table'])
-            eff_table = conf.return_effective_value(['table'])
-            vrf_inst['table'] = act_table
-            if eff_table and eff_table != act_table:
-                vrf_inst['table_mod'] = True
-
-        if conf.exists(['description']):
-            vrf_inst['description'] = conf.return_value(['description'])
 
         # find member interfaces of this particulat VRF
         vrf_inst['members'] = interfaces_with_vrf(name)
 
-        # append individual VRF configuration to global configuration list
-        vrf_config['vrf_add'].append(vrf_inst)
+        # append individual VRF configuration to temporary configuration list
+        tmp.append(vrf_inst)
 
+    # replace values in vrf_remove with list of dictionaries
+    # as we need it in verify() - we can't delete a VRF with members attached
+    vrf_config['vrf_remove'] = tmp
     return vrf_config
 
 
 def verify(vrf_config):
     # ensure VRF is not assigned to any interface
+    for vrf in vrf_config['vrf_remove']:
+        if len(vrf['members']) > 0:
+            raise ConfigError('VRF "{}" can not be deleted as it has active members'.format(vrf['name']))
+
+    # routing table id can't be changed - OS restriction
     for vrf in vrf_config['vrf_add']:
         if vrf['table_mod']:
             raise ConfigError('VRF routing table id modification is not possible')
