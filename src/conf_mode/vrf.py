@@ -181,12 +181,11 @@ def apply(vrf_config):
         table = vrf['table']
 
         if not os.path.isdir(f'/sys/class/net/{name}'):
+            # For each VRF apart from your default context create a VRF
+            # interface with a separate routing table
             _cmd(f'ip link add {name} type vrf table {table}')
+            # Start VRf
             _cmd(f'ip link set dev {name} up')
-            _cmd(f'ip -4 rule add oif {name} lookup {table}')
-            _cmd(f'ip -4 rule add iif {name} lookup {table}')
-            _cmd(f'ip -6 rule add oif {name} lookup {table}')
-            _cmd(f'ip -6 rule add iif {name} lookup {table}')
 
         # set VRF description for e.g. SNMP monitoring
         with open(f'/sys/class/net/{name}/ifalias', 'w') as f:
