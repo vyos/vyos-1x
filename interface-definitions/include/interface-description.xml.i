@@ -1,9 +1,9 @@
 <leafNode name="description">
   <properties>
-    <help>Interface description</help>
+    <help>Interface specific description</help>
     <constraint>
       <regex>.{1,256}$</regex>
     </constraint>
-    <constraintErrorMessage>Interface description too long (limit 256 characters)</constraintErrorMessage>
+    <constraintErrorMessage>Description too long (limit 256 characters)</constraintErrorMessage>
   </properties>
 </leafNode>

@@ -202,6 +202,12 @@ class Interface(Control):
             'validate': assert_mac,
             'shellcmd': 'ip link set dev {ifname} address {value}',
         },
+        'add_vrf': {
+            'shellcmd': 'ip link set dev {ifname} master {value}',
+        },
+        'del_vrf': {
+            'shellcmd': 'ip link set dev {ifname} nomaster {value}',
+        },
     }
 
     _sysfs_get = {
@@ -344,7 +350,7 @@ class Interface(Control):
             self.del_addr(addr)
 
         # ---------------------------------------------------------------------
-        # A code refactoring is required as this type check is present as 
+        # A code refactoring is required as this type check is present as
         # Interface implement behaviour for one of it's sub-class.
 
         # It is required as the current pattern for vlan is:
@@ -403,6 +409,26 @@ class Interface(Control):
         >>> Interface('eth0').set_mac('00:50:ab:cd:ef:01')
         """
         self.set_interface('mac', mac)
+
+    def add_vrf(self, vrf):
+        """
+        Add interface to given VRF instance.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').add_vrf('foo')
+        """
+        self.set_interface('add_vrf', vrf)
+
+    def del_vrf(self, vrf):
+        """
+        Remove interface from given VRF instance.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').del_vrf('foo')
+        """
+        self.set_interface('del_vrf', vrf)
 
     def set_arp_cache_tmo(self, tmo):
         """

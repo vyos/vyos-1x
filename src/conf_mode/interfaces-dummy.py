@@ -18,6 +18,7 @@ import os
 
 from copy import deepcopy
 from sys import exit
+from netifaces import interfaces
 
 from vyos.ifconfig import DummyIf
 from vyos.configdict import list_diff
@@ -30,7 +31,8 @@ default_config_data = {
     'deleted': False,
     'description': '',
     'disable': False,
-    'intf': ''
+    'intf': '',
+    'vrf': ''
 }
 
 def get_config():
@@ -69,9 +71,17 @@ def get_config():
     act_addr = conf.return_values('address')
     dummy['address_remove'] = list_diff(eff_addr, act_addr)
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        dummy['vrf'] = conf.return_value('vrf')
+
     return dummy
 
 def verify(dummy):
+    vrf_name = dummy['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+
     return None
 
 def generate(dummy):
@@ -94,6 +104,12 @@ def apply(dummy):
             d.del_addr(addr)
         for addr in dummy['address']:
             d.add_addr(addr)
+
+        # assign to VRF
+        if dummy['vrf']:
+            d.add_vrf(dummy['vrf'])
+        else:
+            d.del_vrf(dummy['vrf'])
 
         # disable interface on demand
         if dummy['disable']:
