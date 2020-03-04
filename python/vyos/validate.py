@@ -187,7 +187,7 @@ def assert_list(s, l):
 
 
 def assert_number(n):
-    if not n.isnumeric():
+    if not str(n).isnumeric():
         raise ValueError(f'{n} must be a number')
 
 
