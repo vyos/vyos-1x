@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="vrf" owner="${vyos_conf_scripts_dir}/vrf.py">
     <properties>
-      <help>VRF configuration</help>
+      <help>Virtual Routing and Forwarding</help>
       <!-- must be before any interface creation -->
       <priority>210</priority>
     </properties>
@@ -35,14 +35,14 @@
         <children>
           <leafNode name="table">
             <properties>
-              <help>The routing table to associate to this VRF</help>
+              <help>Routing table associated with this instance</help>
               <constraint>
                 <validator name="numeric" argument="--range 1-2147483647"/>
               </constraint>
               <constraintErrorMessage>Invalid kernel table number</constraintErrorMessage>
               <valueHelp>
-                <format>number</format>
-                <description>the VRF must be a number between 1 and 2^31-1</description>
+                <format>1-2147483647</format>
+                <description>Routing table ID</description>
               </valueHelp>
             </properties>
           </leafNode>
