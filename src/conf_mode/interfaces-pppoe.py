@@ -23,6 +23,7 @@ from subprocess import Popen, PIPE
 from time import sleep
 from pwd import getpwnam
 from grp import getgrnam
+from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 
 from vyos.config import Config
 from vyos.ifconfig import Interface
@@ -96,6 +97,21 @@ usepeerdns
 {% if service_name -%}
 rp_pppoe_service "{{ service_name }}"
 {% endif %}
+
+"""
+
+config_pppoe_ipv6_up_tmpl = """
+#!/bin/sh
+
+logger -t PPPoE/{{ intf }} "1:$1 2:$2 3:$3 4:$4 5:$5 6:$6 "
+
+if [ "$6" != "{{ intf }}" ]; then
+    exit
+fi
+
+echo 0 > /proc/sys/net/ipv6/conf/{{ intf }}/forwarding
+echo 2 > /proc/sys/net/ipv6/conf/{{ intf }}/accept_ra
+echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconf
 
 """
 
@@ -228,6 +244,7 @@ def verify(pppoe):
 
 def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
+    script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd = 'systemctl stop ppp@{}.service'.format(pppoe['intf'])
@@ -238,12 +255,24 @@ def generate(pppoe):
         if os.path.exists(config_file_pppoe):
             os.unlink(config_file_pppoe)
 
+        if os.path.exists(script_file)
+            os.unlink(config_file_pppoe)
+
     else:
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
         with open(config_file_pppoe, 'w') as f:
             f.write(config_text)
+
+        if pppoe['ipv6_enable']:
+            script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
+            tmpl = Template(config_pppoe_ipv6_up_tmpl)
+            config_text = tmpl.render(pppoe)
+            with open(script_file, 'w') as f:
+                f.write(config_text)
+
+            os.chmod(script_file, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
     return None
 
