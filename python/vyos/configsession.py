@@ -29,6 +29,7 @@ SAVE_CONFIG = ['/opt/vyatta/sbin/vyatta-save-config.pl']
 INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image']
 REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
+SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -181,5 +182,10 @@ class ConfigSession(object):
         return out
 
     def generate(self, cmd):
-        out = self.__run_command(GENERATE + cmd)
+        out = self.__run_command(GENERATE + cmd.split())
         return out
+
+    def show(self, cmd):
+        out = self.__run_command(SHOW + cmd.split())
+        return out
+

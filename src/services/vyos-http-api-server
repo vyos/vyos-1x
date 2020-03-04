@@ -308,6 +308,49 @@ def config_file_op():
     return success(res)
 
 
+@app.route('/generate', method='POST')
+@auth_required
+def generate_op():
+    session = app.config['vyos_session']
+
+    command = bottle.request.forms.get("data")
+    command = json.loads(command)
+
+    try:
+        cmd = command['cmd']
+        res = session.generate(cmd)
+    except KeyError:
+        return error(400, "Missing required field \"cmd\"")
+    except VyOSError as e:
+        return error(400, str(e))
+    except Exception as e:
+        print(traceback.format_exc(), file=sys.stderr)
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+@app.route('/show', method='POST')
+@auth_required
+def show_op():
+    session = app.config['vyos_session']
+
+    command = bottle.request.forms.get("data")
+    command = json.loads(command)
+
+    try:
+        cmd = command['cmd']
+        res = session.show(cmd)
+    except KeyError:
+        return error(400, "Missing required field \"cmd\"")
+    except VyOSError as e:
+        return error(400, str(e))
+    except Exception as e:
+        print(traceback.format_exc(), file=sys.stderr)
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+
 if __name__ == '__main__':
     # systemd's user and group options don't work, do it by hand here,
     # else no one else will be able to commit
