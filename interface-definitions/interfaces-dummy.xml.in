@@ -19,6 +19,7 @@
           #include <include/address-ipv4-ipv6.xml.i>
           #include <include/interface-description.xml.i>
           #include <include/interface-disable.xml.i>
+          #include <include/interface-vrf.xml.i>
         </children>
       </tagNode>
     </children>
