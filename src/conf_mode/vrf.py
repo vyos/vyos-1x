@@ -22,7 +22,6 @@ from subprocess import check_call, CalledProcessError
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos import ConfigError
-from vyos import vrf
 
 default_config_data = {
     'vrf_add': [],
