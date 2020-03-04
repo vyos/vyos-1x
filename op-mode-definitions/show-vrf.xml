@@ -6,19 +6,17 @@
         <properties>
           <help>Show VRF information</help>
         </properties>
-        <command>${vyos_completion_dir}/list_vrf.py -e</command>
-        <children>
-          <tagNode name="name">
-            <properties>
-              <help>Show VRF information for an interface</help>
-                <completionHelp>
-                  <script>${vyos_completion_dir}/list_vrf.py</script>
-                </completionHelp>
-            </properties>
-            <command>${vyos_completion_dir}/list_vrf.py -e "$4"</command>
-          </tagNode>
-        </children>
+        <command>${vyos_op_scripts_dir}/show_vrf.py -e</command>
       </node>
+      <tagNode name="vrf">
+        <properties>
+          <help>Show information on specific VRF instance</help>
+            <completionHelp>
+              <path>vrf name</path>
+            </completionHelp>
+        </properties>
+        <command>${vyos_op_scripts_dir}/show_vrf.py -e "$3"</command>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>
