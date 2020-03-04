@@ -16,6 +16,7 @@
 
 from sys import exit
 from vyos.config import Config
+from vyos import ConfigError
 
 motd="""
 The programs included with the Debian GNU/Linux system are free software;
@@ -49,15 +50,25 @@ def get_config():
     # Post-Login banner
     if conf.exists(['post-login']):
         tmp = conf.return_value(['post-login'])
-        tmp = tmp.replace('\\n','\n')
-        tmp = tmp.replace('\\t','\t')
+        # post-login banner can be empty as well
+        if tmp:
+            tmp = tmp.replace('\\n','\n')
+            tmp = tmp.replace('\\t','\t')
+        else:
+            tmp = ''
+
         banner['motd'] = tmp
 
     # Pre-Login banner
     if conf.exists(['pre-login']):
         tmp = conf.return_value(['pre-login'])
-        tmp = tmp.replace('\\n','\n')
-        tmp = tmp.replace('\\t','\t')
+        # pre-login banner can be empty as well
+        if tmp:
+            tmp = tmp.replace('\\n','\n')
+            tmp = tmp.replace('\\t','\t')
+        else:
+            tmp = ''
+
         banner['issue'] = banner['issue_net'] = tmp
 
     return banner
