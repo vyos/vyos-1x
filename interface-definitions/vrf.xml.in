@@ -7,19 +7,12 @@
       <priority>210</priority>
     </properties>
     <children>
-      <node name="disable-bind-to-all">
+      <leafNode name="bind-to-all">
         <properties>
-          <help>Disable services running on the default VRF from other VRF (ssh, bgp, ...)</help>
+          <help>Enable binding services to all VRFs</help>
+          <valueless/>
         </properties>
-        <children>
-          <leafNode name="ipv4">
-            <properties>
-              <valueless/>
-              <help>Enable binding across all VRF domains for IPv4</help>
-            </properties>
-          </leafNode>
-        </children>
-      </node>
+      </leafNode>
       <tagNode name="name">
         <properties>
           <help>VRF instance name</help>

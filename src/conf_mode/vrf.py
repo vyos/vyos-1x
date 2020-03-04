@@ -24,6 +24,7 @@ from vyos.configdict import list_diff
 from vyos import ConfigError
 
 default_config_data = {
+    'bind_to_all': 0,
     'deleted': False,
     'vrf_add': [],
     'vrf_existing': [],
@@ -40,7 +41,6 @@ def _cmd(command):
         pass
         raise ConfigError(f'Error operationg on VRF: {e}')
 
-
 def interfaces_with_vrf(match):
     matched = []
     config = Config()
@@ -55,7 +55,6 @@ def interfaces_with_vrf(match):
                     matched.append(name)
     return matched
 
-
 def get_config():
     conf = Config()
     vrf_config = deepcopy(default_config_data)
@@ -65,6 +64,11 @@ def get_config():
         # get all currently effetive VRFs and mark them for deletion
         vrf_config['vrf_remove'] = conf.list_effective_nodes(cfg_base + ['name'])
     else:
+
+        # Should services be allowed to bind to all VRFs?
+        if conf.exists(['bind-to-all']):
+            vrf_config['bind_to_all'] = 1
+
         # Determine vrf interfaces (currently effective) - to determine which
         # vrf interface is no longer present and needs to be removed
         eff_vrf = conf.list_effective_nodes(cfg_base + ['name'])
@@ -121,7 +125,6 @@ def get_config():
     vrf_config['vrf_remove'] = tmp
     return vrf_config
 
-
 def verify(vrf_config):
     # ensure VRF is not assigned to any interface
     for vrf in vrf_config['vrf_remove']:
@@ -137,7 +140,6 @@ def verify(vrf_config):
 
     return None
 
-
 def generate(vrf_config):
     return None
 
@@ -145,8 +147,9 @@ def apply(vrf_config):
     # https://github.com/torvalds/linux/blob/master/Documentation/networking/vrf.txt
 
     # set the default VRF global behaviour
-    #sysctl('net.ipv4.tcp_l3mdev_accept', command['bind']['ipv4'])
-    #sysctl('net.ipv4.udp_l3mdev_accept', command['bind']['ipv4'])
+    bind_all = vrf_config['bind_to_all']
+    _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
+    _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
 
     for vrf_name in vrf_config['vrf_remove']:
         if os.path.isdir(f'/sys/class/net/{vrf_name}'):
