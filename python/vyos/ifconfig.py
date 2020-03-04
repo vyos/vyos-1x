@@ -1036,32 +1036,31 @@ class BridgeIf(Interface):
     _sysfs_set = {**Interface._sysfs_set, **{
         'ageing_time': {
             'validate': assert_positive,
-            'convert': lambda time: int(time) * 100,
+            'convert': lambda t: int(t) * 100,
             'location': '/sys/class/net/{ifname}/bridge/ageing_time',
         },
         'forward_delay': {
             'validate': assert_positive,
-            'convert': lambda time: int(time) * 100,
+            'convert': lambda t: int(t) * 100,
             'location': '/sys/class/net/{ifname}/bridge/forward_delay',
         },
         'hello_time': {
             'validate': assert_positive,
-            'convert': lambda time: int(time) * 100,
+            'convert': lambda t: int(t) * 100,
             'location': '/sys/class/net/{ifname}/bridge/hello_time',
         },
         'max_age': {
             'validate': assert_positive,
-            'convert': lambda time: int(time) * 100,
+            'convert': lambda t: int(t) * 100,
             'location': '/sys/class/net/{ifname}/bridge/max_age',
         },
         'priority': {
             'validate': assert_positive,
-            'convert': lambda time: int(time) * 100,
             'location': '/sys/class/net/{ifname}/bridge/priority',
         },
         'stp': {
             'validate': assert_boolean,
-            'location': '/sys/class/net/{ifconfig}/bridge/stp_state',
+            'location': '/sys/class/net/{ifname}/bridge/stp_state',
         },
         'multicast_querier': {
             'validate': assert_boolean,
@@ -1071,11 +1070,9 @@ class BridgeIf(Interface):
 
     _command_set = {**Interface._command_set, **{
         'add_port': {
-            'validate': assert_boolean,
             'shellcmd': 'ip link set dev {value} master {ifname}',
         },
         'del_port': {
-            'validate': assert_boolean,
             'shellcmd': 'ip link set dev {value} nomaster',
         },
     }}
@@ -1140,7 +1137,7 @@ class BridgeIf(Interface):
         >>> from vyos.ifconfig import BridgeIf
         >>> BridgeIf('br0').set_priority(8192)
         """
-        self.set_interface('priority', time)
+        self.set_interface('priority', priority)
 
     def set_stp(self, state):
         """
