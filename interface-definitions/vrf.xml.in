@@ -46,11 +46,7 @@
               </valueHelp>
             </properties>
           </leafNode>
-          <leafNode name="description">
-            <properties>
-              <help>Description of the VRF role</help>
-            </properties>
-          </leafNode>
+          #include <include/interface-description.xml.i>
         </children>
       </tagNode>
     </children>
