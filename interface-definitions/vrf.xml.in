@@ -22,14 +22,14 @@
       </node>
       <tagNode name="name">
         <properties>
-          <help>Virtual Routing and Forwarding</help>
+          <help>VRF instance name</help>
           <constraint>
-            <validator name="interface-name"/>
+            <regex>[^/\s]{1,16}$</regex>
           </constraint>
-          <constraintErrorMessage>VRF name not allowed or to long</constraintErrorMessage>
+          <constraintErrorMessage>VRF instance name must be 16 characters or less</constraintErrorMessage>
           <valueHelp>
             <format>name</format>
-            <description>the vrf name must not contain '/' and be 16 characters or less</description>
+            <description>Instance name</description>
           </valueHelp>
         </properties>
         <children>
