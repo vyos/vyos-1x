@@ -18,21 +18,33 @@ import os
 
 from sys import exit
 from copy import deepcopy
+from subprocess import check_call, CalledProcessError
 from vyos.config import Config
+from vyos.configdict import list_diff
 from vyos import ConfigError
 from vyos import vrf
 
+default_config_data = {
+    'vrf_add': [],
+    'vrf_existing': [],
+    'vrf_remove': []
+}
 
-# https://github.com/torvalds/linux/blob/master/Documentation/networking/vrf.txt
+def _cmd(command):
+    """
+    Run any arbitrary command on the system
+    """
+    try:
+        check_call(command.split())
+    except CalledProcessError as e:
+        pass
+        raise ConfigError(f'Error operationg on VRF: {e}')
 
 
-def sysctl(name, value):
-    os.system('sysctl -wq {}={}'.format(name, value))
-
-def interfaces_with_vrf (match, effective):
+def interfaces_with_vrf(match):
     matched = []
     config = Config()
-    section = config.get_config_dict('interfaces', effective)
+    section = config.get_config_dict('interfaces')
     for type in section:
         interfaces = section[type]
         for name in interfaces:
@@ -43,137 +55,98 @@ def interfaces_with_vrf (match, effective):
                     matched.append(name)
     return matched
 
+
 def get_config():
-    command = {
-        'bind':{},
-        'vrf':[],
-        'int': {},  # per vrf name list of interfaces which will have it
-    }
+    conf = Config()
+    vrf_config = deepcopy(default_config_data)
 
-    config = Config()
+    cfg_base = ['vrf']
+    if not conf.exists(cfg_base):
+        # get all currently effetive VRFs and mark them for deletion
+        vrf_config['vrf_remove'] = conf.list_effective_nodes(cfg_base + ['name'])
+        return vrf_config
 
-    old = {}
-    new = {}
+    # Determine vrf interfaces (currently effective) - to determine which
+    # vrf interface is no longer present and needs to be removed
+    eff_vrf = conf.list_effective_nodes(cfg_base + ['name'])
+    act_vrf = conf.list_nodes(cfg_base + ['name'])
+    vrf_config['vrf_remove'] = list_diff(eff_vrf, act_vrf)
 
-    if config.exists_effective('vrf'):
-        old = deepcopy(config.get_config_dict('vrf', True))
-
-    if config.exists('vrf'):
-        new = deepcopy(config.get_config_dict('vrf', False))
-
-    integer = lambda _: '1' if _ else '0'
-    command['bind']['ipv4'] = integer('ipv4' not in new.get('disable-bind-to-all', {}))
-    command['bind']['ipv6'] = integer('ipv6' not in new.get('disable-bind-to-all', {}))
-
-    old_names = old.get('name', [])
-    new_names = new.get('name', [])
-    all_names = list(set(old_names) | set(new_names))
-    del_names = list(set(old_names).difference(new_names))
-    mod_names = list(set(old_names).intersection(new_names))
-    add_names = list(set(new_names).difference(old_names))
-
-    for name in all_names:
-        v = {
-            'name': name,
-            'action': 'miss',
-            'table': -1,
-            'check': -1,
+    # read in individual VRF definition and build up
+    # configuration
+    for name in conf.list_nodes(cfg_base + ['name']):
+        vrf_inst = {
+            'description' : '\0',
+            'members': [],
+            'name' : name,
+            'table' : '',
+            'table_mod': False
         }
+        conf.set_level(cfg_base + ['name', name])
 
-        if name in new_names:
-            v['table'] = new.get('name', {}).get(name, {}).get('table', -1)
-            v['check'] = old.get('name', {}).get(name, {}).get('table', -1)
+        if conf.exists(['table']):
+            # VRF table can't be changed on demand, thus we need to read in the
+            # current and the effective routing table number
+            act_table = conf.return_value(['table'])
+            eff_table = conf.return_effective_value(['table'])
+            vrf_inst['table'] = act_table
+            if eff_table and eff_table != act_table:
+                vrf_inst['table_mod'] = True
 
-        if name in add_names:
-            v['action'] = 'add'
-        elif name in del_names:
-            v['action'] = 'delete'
-        elif name in mod_names:
-            if v['table'] != -1:
-                if v['check'] == -1:
-                    v['action'] = 'add'
-            else: 
-                v['action'] = 'modify'
+        if conf.exists(['description']):
+            vrf_inst['description'] = conf.return_value(['description'])
 
-        command['vrf'].append(v)
+        # find member interfaces of this particulat VRF
+        vrf_inst['members'] = interfaces_with_vrf(name)
 
-    for v in vrf.list_vrfs():
-        name = v['ifname']
-        command['int'][name] = interfaces_with_vrf(name,False)
+        # append individual VRF configuration to global configuration list
+        vrf_config['vrf_add'].append(vrf_inst)
 
-    return command
+    return vrf_config
 
 
-def verify(command):
-    for v in command['vrf']:
-        action = v['action']
-        name = v['name']
-        if action == 'modify' and v['table'] != v['check']:
-            raise ConfigError(f'set vrf name {name}: modification of vrf table is not supported yet')
-        if action == 'delete' and name in command['int']:
-            interface = ', '.join(command['int'][name])
-            if interface:
-                raise ConfigError(f'delete vrf name {name}: can not delete vrf as it is used on {interface}')
+def verify(vrf_config):
+    # ensure VRF is not assigned to any interface
+    for vrf in vrf_config['vrf_add']:
+        if vrf['table_mod']:
+            raise ConfigError('VRF routing table id modification is not possible')
 
-    return command
+    # add test to see if routing table already exists or not?
+
+    return None
 
 
-def generate(command):
-    return command
+def generate(vrf_config):
+    return None
 
+def apply(vrf_config):
+    # https://github.com/torvalds/linux/blob/master/Documentation/networking/vrf.txt
 
-def apply(command):
     # set the default VRF global behaviour
-    sysctl('net.ipv4.tcp_l3mdev_accept', command['bind']['ipv4'])
-    sysctl('net.ipv4.udp_l3mdev_accept', command['bind']['ipv4'])
+    #sysctl('net.ipv4.tcp_l3mdev_accept', command['bind']['ipv4'])
+    #sysctl('net.ipv4.udp_l3mdev_accept', command['bind']['ipv4'])
 
-    errors = []
-    for v in command['vrf']:
-        name = v['name']
-        action = v['action']
-        table = v['table']
+    for vrf_name in vrf_config['vrf_remove']:
+        if os.path.isdir(f'/sys/class/net/{vrf_name}'):
+            _cmd(f'ip link delete dev {vrf_name}')
 
-        errors.append(f'could not {action} vrf {name}')
+    for vrf in vrf_config['vrf_add']:
+        name = vrf['name']
+        table = vrf['table']
 
-        if action == 'miss':
-            continue
+        if not os.path.isdir(f'/sys/class/net/{name}'):
+            _cmd(f'ip link add {name} type vrf table {table}')
+            _cmd(f'ip link set dev {name} up')
+            _cmd(f'ip -4 rule add oif {name} lookup {table}')
+            _cmd(f'ip -4 rule add iif {name} lookup {table}')
+            _cmd(f'ip -6 rule add oif {name} lookup {table}')
+            _cmd(f'ip -6 rule add iif {name} lookup {table}')
 
-        if action == 'delete':
-            if os.system(f'sudo ip link delete dev {name}'):
-                continue
-            errors.pop()
-            continue
+        # set VRF description for e.g. SNMP monitoring
+        with open(f'/sys/class/net/{name}/ifalias', 'w') as f:
+            f.write(vrf['description'])
 
-        if action == 'modify':
-            # > uname -a
-            # Linux vyos 4.19.101-amd64-vyos #1 SMP Sun Feb 2 10:18:07 UTC 2020 x86_64 GNU/Linux
-            # > ip link add my-vrf type vrf table 100
-            # > ip link set my-vrf type vrf table 200
-            # RTNETLINK answers: Operation not supported
-            # so require to remove vrf and change all existing the interfaces
-
-            if os.system(f'ip link delete dev {name}'):
-                continue
-            action = 'add'
-
-        if action == 'add':
-            commands = [
-                f'ip link add {name} type vrf table {table}',
-                f'ip link set dev {name} up',
-                f'ip -4 rule add oif {name} lookup {table}',
-                f'ip -4 rule add iif {name} lookup {table}',
-                f'ip -6 rule add oif {name} lookup {table}',
-                f'ip -6 rule add iif {name} lookup {table}',
-            ]
-
-            for command in commands:
-                if os.system(command):
-                    errors[-1] += ' ('+command+')'
-                    continue
-            errors.pop()
-
-    if errors:
-        raise ConfigError(', '.join(errors))
+    return None
 
 if __name__ == '__main__':
     try:
