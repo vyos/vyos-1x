@@ -186,6 +186,11 @@ def apply(vrf_config):
             _cmd(f'ip link add {name} type vrf table {table}')
             # Start VRf
             _cmd(f'ip link set dev {name} up')
+            # The kernel Documentation/networking/vrf.txt also recommends
+            # adding unreachable routes to the VRF routing tables so that routes
+            # afterwards are taken.
+            _cmd(f'ip -4 route add vrf {name} unreachable default metric 4278198272')
+            _cmd(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
 
         # set VRF description for e.g. SNMP monitoring
         with open(f'/sys/class/net/{name}/ifalias', 'w') as f:
