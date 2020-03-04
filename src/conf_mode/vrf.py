@@ -54,8 +54,7 @@ def _cmd(command):
     try:
         check_call(command.split())
     except CalledProcessError as e:
-        pass
-        raise ConfigError(f'Error operationg on VRF: {e}')
+        raise ConfigError(f'Error changing VRF: {e}')
 
 def interfaces_with_vrf(match):
     matched = []
