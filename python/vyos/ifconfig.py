@@ -277,10 +277,9 @@ class Interface(Control):
         self.config = deepcopy(self.default)
         self.config['ifname'] = ifname
 
-        for k in kargs:
-            if k not in self.options:
-                raise ConfigError('invalid option {} for {}'.format(k,self.__class__))
-            self.config[k] = kargs[k]
+        for k in self.options:
+            if k in kargs:
+                self.config[k] = kargs[k]
 
         for k in self.required:
             if k not in kargs:
@@ -1281,8 +1280,8 @@ class VLANIf(Interface):
                 opt_e = 'egress-qos-map ' + egress_qos
 
             # create interface in the system
-            cmd = 'ip link add link {intf} name {intf}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
-                   .format(intf=self.config['ifname'], vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
+            cmd = 'ip link add link {ifname} name {ifname}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
+                .format(ifname=self.config['ifname'], vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
             self._cmd(cmd)
 
         # return new object mapping to the newly created interface
@@ -1537,7 +1536,7 @@ class MACVLANIf(VLANIf):
         super().__init__(ifname, **kargs)
 
     def _create(self):
-        cmd = 'ip link add {intf} link {link} type macvlan mode {mode}'.format(**self.config)
+        cmd = 'ip link add {ifname} link {link} type macvlan mode {mode}'.format(**self.config)
         self._cmd(cmd)
 
     @staticmethod
@@ -2006,8 +2005,7 @@ class VXLANIf(Interface):
         if self.config['dev']:
             dev = 'dev {}'.format(self.config['dev'])
 
-        cmd = 'ip link add {intf} type vxlan id {vni} {grp_rem} {dev} dstport {port}' \
-            .format(intf=self.config['ifname'], vni=self.config['vni'], grp_rem=group, dev=dev, port=self.config['port'])
+        cmd = 'ip link add {ifname} type vxlan id {vni} {group} {dev} dstport {port}'.format(**config)
         self._cmd(cmd)
 
     @staticmethod
