@@ -277,7 +277,7 @@ def verify(pppoe):
 
 def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
-    script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
+    ipv6_ifup_script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd = 'systemctl stop ppp@{}.service'.format(pppoe['intf'])
@@ -288,14 +288,14 @@ def generate(pppoe):
         if os.path.exists(config_file_pppoe):
             os.unlink(config_file_pppoe)
 
-        if os.path.exists(script_file):
-            os.unlink(config_file_pppoe)
+        if os.path.exists(ipv6_ifup_script_file):
+            os.unlink(ipv6_ifup_script_file)
 
     else:
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
-        with open(config_file_pppoe, 'w') as f:
+        with open(ipv6_ifup_script_file, 'w') as f:
             f.write(config_text)
 
         script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
