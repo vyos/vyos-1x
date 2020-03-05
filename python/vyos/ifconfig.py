@@ -2020,7 +2020,7 @@ class VXLANIf(Interface):
         group = 'group {}'.format(self.config['group'])
 
         # if remote host is specified we ignore the multicast address
-        if config['remote']:
+        if self.config['remote']:
             group = 'remote {}'.format(self.config['remote'])
 
         # an underlay device is not always specified
