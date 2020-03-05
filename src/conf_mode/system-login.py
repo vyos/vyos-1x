@@ -196,6 +196,14 @@ def verify(login):
     if cur_user in login['del_users']:
         raise ConfigError('Attempting to delete current user: {}'.format(cur_user))
 
+    for user in login['add_users']:
+        for key in user['public_keys']:
+            if not key['type']:
+                raise ConfigError('SSH public key type missing for "{}"!'.format(key['name']))
+
+            if not key['key']:
+                raise ConfigError('SSH public key for id "{}" missing!'.format(key['name']))
+
     # At lease one RADIUS server must not be disabled
     if len(login['radius_server']) > 0:
         fail = True
