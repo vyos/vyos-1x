@@ -19,7 +19,7 @@ import jinja2
 
 from sys import exit
 from copy import deepcopy
-from subprocess import check_call, CalledProcessError
+from subprocess import check_output, CalledProcessError
 
 from vyos.config import Config
 from vyos.configdict import list_diff
@@ -50,11 +50,8 @@ default_config_data = {
 }
 
 def _cmd(command):
-    """
-    Run any arbitrary command on the system
-    """
     try:
-        check_call(command.split())
+        check_output(command.split())
     except CalledProcessError as e:
         raise ConfigError(f'Error changing VRF: {e}')
 
