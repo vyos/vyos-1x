@@ -171,7 +171,12 @@ def generate(vrf_config):
     return None
 
 def apply(vrf_config):
-    # https://github.com/torvalds/linux/blob/master/Documentation/networking/vrf.txt
+    # Documentation
+    #
+    # - https://github.com/torvalds/linux/blob/master/Documentation/networking/vrf.txt
+    # - https://github.com/Mellanox/mlxsw/wiki/Virtual-Routing-and-Forwarding-(VRF)
+    # - https://netdevconf.info/1.1/proceedings/slides/ahern-vrf-tutorial.pdf
+    # - https://netdevconf.info/1.2/slides/oct6/02_ahern_what_is_l3mdev_slides.pdf
 
     # set the default VRF global behaviour
     bind_all = vrf_config['bind_to_all']
