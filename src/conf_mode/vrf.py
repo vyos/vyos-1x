@@ -20,8 +20,10 @@ import jinja2
 from sys import exit
 from copy import deepcopy
 from subprocess import check_call, CalledProcessError
+
 from vyos.config import Config
 from vyos.configdict import list_diff
+from vyos.ifconfig import Interface
 from vyos import ConfigError
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
@@ -94,7 +96,7 @@ def get_config():
         # configuration
         for name in conf.list_nodes(cfg_base + ['name']):
             vrf_inst = {
-                'description' : '\0',
+                'description' : '',
                 'members': [],
                 'name' : name,
                 'table' : '',
@@ -196,8 +198,7 @@ def apply(vrf_config):
             _cmd(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
 
         # set VRF description for e.g. SNMP monitoring
-        with open(f'/sys/class/net/{name}/ifalias', 'w') as f:
-            f.write(vrf['description'])
+        Interface(name).set_alias(vrf['description'])
 
     # Linux routing uses rules to find tables - routing targets are then
     # looked up in those tables. If the lookup got a matching route, the
