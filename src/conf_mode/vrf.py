@@ -19,6 +19,7 @@ import jinja2
 
 from sys import exit
 from copy import deepcopy
+from json import loads
 from subprocess import check_output, CalledProcessError
 
 from vyos.config import Config
@@ -54,6 +55,11 @@ def _cmd(command):
         check_output(command.split())
     except CalledProcessError as e:
         raise ConfigError(f'Error changing VRF: {e}')
+
+def list_rules():
+    command = 'ip -j -4 rule show'
+    answer = loads(check_output(command.split()).decode())
+    return [_ for _ in answer if _]
 
 def interfaces_with_vrf(match):
     matched = []
@@ -219,20 +225,24 @@ def apply(vrf_config):
     # re-arrange the tables and move the local lookup furhter down once VRFs
     # are enabled.
 
-    # set "normal" non VRF table lookups
-    add_pref = '0'
-    del_pref = '32765'
+    # get current preference on local table
+    local_pref = [r.get('priority') for r in list_rules() if r.get('table') == 'local'][0]
 
-    # Lookup table is adjusted if we are in VRF mode
-    if vrf_config['vrf_add']:
-        add_pref = '32765'
-        del_pref = '0'
+    # change preference when VRFs are enabled and local lookup table is default
+    if not local_pref and vrf_config['vrf_add']:
+        _cmd(f'ip -4 rule add pref 32765 table local')
+        _cmd(f'ip -4 rule del pref 0')
+        _cmd(f'ip -6 rule add pref 32765 table local')
+        _cmd(f'ip -6 rule del pref 0')
 
-    # Configure table lookups
-    _cmd(f'ip -4 rule add pref {add_pref} table local')
-    _cmd(f'ip -4 rule del pref {del_pref}')
-    _cmd(f'ip -6 rule add pref {add_pref} table local')
-    _cmd(f'ip -6 rule del pref {del_pref}')
+    # return to default lookup preference when no VRF is configured
+    if not vrf_config['vrf_add']:
+        _cmd(f'ip -4 rule add pref 0 table local')
+        _cmd(f'ip -4 rule del pref 1000')
+        _cmd(f'ip -4 rule del pref 32765')
+        _cmd(f'ip -6 rule add pref 0 table local')
+        _cmd(f'ip -6 rule del pref 1000')
+        _cmd(f'ip -6 rule del pref 32765')
 
     return None
 
