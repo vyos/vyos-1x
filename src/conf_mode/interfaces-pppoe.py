@@ -295,13 +295,13 @@ def generate(pppoe):
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
-        with open(ipv6_ifup_script_file, 'w') as f:
+        with open(config_file_pppoe, 'w') as f:
             f.write(config_text)
 
         script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
         tmpl = Template(config_pppoe_ipv6_up_tmpl)
         config_text = tmpl.render(pppoe)
-        with open(script_file, 'w') as f:
+        with open(ipv6_ifup_script_file, 'w') as f:
             f.write(config_text)
 
         os.chmod(script_file, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
