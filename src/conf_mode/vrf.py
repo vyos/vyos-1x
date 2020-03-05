@@ -230,19 +230,19 @@ def apply(vrf_config):
 
     # change preference when VRFs are enabled and local lookup table is default
     if not local_pref and vrf_config['vrf_add']:
-        _cmd(f'ip -4 rule add pref 32765 table local')
-        _cmd(f'ip -4 rule del pref 0')
-        _cmd(f'ip -6 rule add pref 32765 table local')
-        _cmd(f'ip -6 rule del pref 0')
+        for af in ['-4', '-6']:
+            _cmd(f'ip {af} rule add pref 32765 table local')
+            _cmd(f'ip {af} rule del pref 0')
 
     # return to default lookup preference when no VRF is configured
     if not vrf_config['vrf_add']:
-        _cmd(f'ip -4 rule add pref 0 table local')
-        _cmd(f'ip -4 rule del pref 1000')
-        _cmd(f'ip -4 rule del pref 32765')
-        _cmd(f'ip -6 rule add pref 0 table local')
-        _cmd(f'ip -6 rule del pref 1000')
-        _cmd(f'ip -6 rule del pref 32765')
+        for af in ['-4', '-6']:
+            _cmd(f'ip {af} rule add pref 0 table local')
+            _cmd(f'ip {af} rule del pref 32765')
+
+            # clean out l3mdev-table rule if present
+            if 1000 in [r.get('priority') for r in list_rules() if r.get('priority') == 1000]:
+                _cmd(f'ip {af} rule del pref 1000')
 
     return None
 
