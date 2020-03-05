@@ -146,10 +146,14 @@ def verify(vrf_config):
         if len(vrf['members']) > 0:
             raise ConfigError('VRF "{}" can not be deleted as it has active members'.format(vrf['name']))
 
-    # routing table id can't be changed - OS restriction
     for vrf in vrf_config['vrf_add']:
+        # table id is mandatory
+        if not vrf['table']:
+            raise ConfigError('VRF "{}": table id is mandatory'.format(vrf['name']))
+
+        # routing table id can't be changed - OS restriction
         if vrf['table_mod']:
-            raise ConfigError('VRF routing table id modification is not possible')
+            raise ConfigError('VRF "{}": modification of table id is not possible'.format(vrf['name']))
 
     # add test to see if routing table already exists or not?
 
