@@ -134,8 +134,11 @@ def verify(vxlan):
     if vxlan['mtu'] < 1500:
         print('WARNING: RFC7348 recommends VXLAN tunnels preserve a 1500 byte MTU')
 
-    if vxlan['group'] and not vxlan['link']:
-        raise ConfigError('Multicast VXLAN requires an underlaying interface ')
+    if vxlan['group']:
+        if not vxlan['link']:
+            raise ConfigError('Multicast VXLAN requires an underlaying interface ')
+        if not vxlan['link'] in interfaces():
+            raise ConfigError('VXLAN source interface does not exist')
 
     if not (vxlan['group'] or vxlan['remote']):
         raise ConfigError('Group or remote must be configured')
