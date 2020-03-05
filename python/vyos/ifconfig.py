@@ -2002,6 +2002,8 @@ class VXLANIf(Interface):
     https://www.kernel.org/doc/Documentation/networking/vxlan.txt
     """
 
+    options = ['group', 'remote', 'dev', 'port', 'vni']
+
     default = {
         'type': 'vxlan',
         'vni': 0,
