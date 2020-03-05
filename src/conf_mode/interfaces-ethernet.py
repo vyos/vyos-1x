@@ -250,7 +250,7 @@ def verify(eth):
             bond_member = conf.return_values('interfaces bonding ' + bond + ' member interface')
             if eth['intf'] in bond_member:
                 if eth['address']:
-                    raise ConfigError('Can not assign address to interface {} which is a member of {}').format(eth['intf'], bond)
+                    raise ConfigError('Can not assign address to interface {} which is a member of {}'.format(eth['intf'], bond))
 
     # DHCPv6 parameters-only and temporary address are mutually exclusive
     for vif_s in eth['vif_s']:
