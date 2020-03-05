@@ -196,6 +196,9 @@ def verify(peth):
     if not peth['link']:
         raise ConfigError('Link device must be set for virtual ethernet {}'.format(peth['intf']))
 
+    if not peth['link'] in interfaces():
+        raise ConfigError('Pseudo-ethernet source interface does not exist')
+
     return None
 
 def generate(peth):
