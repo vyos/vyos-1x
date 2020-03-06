@@ -58,7 +58,8 @@ default_config_data = {
     'vif_s': [],
     'vif_s_remove': [],
     'vif': [],
-    'vif_remove': []
+    'vif_remove': [],
+    'vrf': ''
 }
 
 
@@ -221,8 +222,10 @@ def get_config():
     if conf.exists('primary'):
         bond['primary'] = conf.return_value('primary')
 
-    # re-set configuration level to parse new nodes
-    conf.set_level(cfg_base)
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        bond['vrf'] = conf.return_value('vrf')
+
     # get vif-s interfaces (currently effective) - to determine which vif-s
     # interface is no longer present and needs to be removed
     eff_intf = conf.list_effective_nodes('vif-s')
@@ -265,6 +268,9 @@ def verify(bond):
             raise ConfigError('Interface "{}" is not part of the bond' \
                               .format(bond['primary']))
 
+    vrf_name = bond['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     # DHCPv6 parameters-only and temporary address are mutually exclusive
     for vif_s in bond['vif_s']:
@@ -471,6 +477,12 @@ def apply(bond):
             b.del_addr(addr)
         for addr in bond['address']:
             b.add_addr(addr)
+
+        # assign to VRF
+        if bond['vrf']:
+            b.add_vrf(bond['vrf'])
+        else:
+            b.del_vrf(bond['vrf'])
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in bond['vif_s_remove']:
