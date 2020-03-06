@@ -52,7 +52,8 @@ default_config_data = {
     'member': [],
     'member_remove': [],
     'priority': 32768,
-    'stp': 0
+    'stp': 0,
+    'vrf': ''
 }
 
 def get_config():
@@ -191,11 +192,19 @@ def get_config():
     if conf.exists('stp'):
         bridge['stp'] = 1
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        bridge['vrf'] = conf.return_value('vrf')
+
     return bridge
 
 def verify(bridge):
     if bridge['dhcpv6_prm_only'] and bridge['dhcpv6_temporary']:
         raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+    vrf_name = bridge['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     conf = Config()
     for br in conf.list_nodes('interfaces bridge'):
@@ -285,6 +294,12 @@ def apply(bridge):
 
         # store DHCPv6 config dictionary - used later on when addresses are aquired
         br.set_dhcpv6_options(opt)
+
+        # assign to VRF
+        if bridge['vrf']:
+            br.add_vrf(bridge['vrf'])
+        else:
+            br.del_vrf(bridge['vrf'])
 
         # Change interface MAC address
         if bridge['mac']:
