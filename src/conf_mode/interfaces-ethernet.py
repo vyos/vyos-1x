@@ -16,8 +16,9 @@
 
 import os
 
-from copy import deepcopy
 from sys import exit
+from copy import deepcopy
+from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig_vlan import apply_vlan_config
@@ -59,7 +60,8 @@ default_config_data = {
     'vif_s': [],
     'vif_s_remove': [],
     'vif': [],
-    'vif_remove': []
+    'vif_remove': [],
+    'vrf': ''
 }
 
 def get_config():
@@ -197,6 +199,10 @@ def get_config():
     if conf.exists('speed'):
         eth['speed'] = conf.return_value('speed')
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        eth['vrf'] = conf.return_value('vrf')
+
     # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
     # get vif-s interfaces (currently effective) - to determine which vif-s
@@ -242,6 +248,10 @@ def verify(eth):
 
     if eth['dhcpv6_prm_only'] and eth['dhcpv6_temporary']:
         raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+    vrf_name = eth['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     conf = Config()
     # some options can not be changed when interface is enslaved to a bond
@@ -366,6 +376,12 @@ def apply(eth):
             e.del_addr(addr)
         for addr in eth['address']:
             e.add_addr(addr)
+
+        # assign to VRF
+        if eth['vrf']:
+            e.add_vrf(eth['vrf'])
+        else:
+            e.del_vrf(eth['vrf'])
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in eth['vif_s_remove']:
