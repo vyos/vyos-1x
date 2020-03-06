@@ -1248,6 +1248,9 @@ def get_config():
             conf.set_level(cfg_base + ' vif ' + vif)
             wifi['vif'].append(vlan_to_dict(conf))
 
+    # disable interface
+    if conf.exists('disable'):
+        wifi['disable'] = True
 
     # retrieve configured regulatory domain
     conf.set_level('system')
@@ -1406,8 +1409,10 @@ def apply(wifi):
         # configure ARP ignore
         w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
 
-        # enable interface
-        if not wifi['disable']:
+        # Enable/Disable interface
+        if wifi['disable']:
+            w.set_state('down')
+        else:
             w.set_state('up')
 
         # Configure interface address(es)
