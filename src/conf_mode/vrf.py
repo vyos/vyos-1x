@@ -84,6 +84,8 @@ def get_config():
         # get all currently effetive VRFs and mark them for deletion
         vrf_config['vrf_remove'] = conf.list_effective_nodes(cfg_base + ['name'])
     else:
+        # set configuration level base
+        conf.set_level(cfg_base)
 
         # Should services be allowed to bind to all VRFs?
         if conf.exists(['bind-to-all']):
@@ -91,13 +93,13 @@ def get_config():
 
         # Determine vrf interfaces (currently effective) - to determine which
         # vrf interface is no longer present and needs to be removed
-        eff_vrf = conf.list_effective_nodes(cfg_base + ['name'])
-        act_vrf = conf.list_nodes(cfg_base + ['name'])
+        eff_vrf = conf.list_effective_nodes(['name'])
+        act_vrf = conf.list_nodes(['name'])
         vrf_config['vrf_remove'] = list_diff(eff_vrf, act_vrf)
 
         # read in individual VRF definition and build up
         # configuration
-        for name in conf.list_nodes(cfg_base + ['name']):
+        for name in conf.list_nodes(['name']):
             vrf_inst = {
                 'description' : '',
                 'members': [],
@@ -124,6 +126,9 @@ def get_config():
 
             # append individual VRF configuration to global configuration list
             vrf_config['vrf_add'].append(vrf_inst)
+
+    # set configuration level base
+    conf.set_level(cfg_base)
 
     # check VRFs which need to be removed as they are not allowed to have
     # interfaces attached
