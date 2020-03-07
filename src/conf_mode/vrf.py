@@ -61,7 +61,7 @@ def list_rules():
     answer = loads(check_output(command.split()).decode())
     return [_ for _ in answer if _]
 
-def interfaces_with_vrf(c, match):
+def vrf_interfaces(c, match):
     matched = []
     old_level = c.get_level()
     c.set_level(['interfaces'])
@@ -77,6 +77,17 @@ def interfaces_with_vrf(c, match):
 
     c.set_level(old_level)
     return matched
+
+def vrf_routing(c, match):
+    matched = []
+    old_level = c.get_level()
+    c.set_level(['protocols', 'vrf'])
+    if match in c.list_nodes([]):
+        matched.append(match)
+
+    c.set_level(old_level)
+    return matched
+
 
 def get_config():
     conf = Config()
@@ -124,9 +135,6 @@ def get_config():
             if conf.exists(['description']):
                 vrf_inst['description'] = conf.return_value(['description'])
 
-            # find member interfaces of this particulat VRF
-            vrf_inst['members'] = interfaces_with_vrf(conf, name)
-
             # append individual VRF configuration to global configuration list
             vrf_config['vrf_add'].append(vrf_inst)
 
@@ -138,12 +146,16 @@ def get_config():
     tmp = []
     for name in vrf_config['vrf_remove']:
         vrf_inst = {
-            'members': [],
-            'name' : name,
+            'interfaces': [],
+            'name': name,
+            'routes': []
         }
 
         # find member interfaces of this particulat VRF
-        vrf_inst['members'] = interfaces_with_vrf(conf, name)
+        vrf_inst['interfaces'] = vrf_interfaces(conf, name)
+
+        # find routing protocols used by this VRF
+        vrf_inst['routes'] = vrf_routing(conf, name)
 
         # append individual VRF configuration to temporary configuration list
         tmp.append(vrf_inst)
@@ -156,8 +168,11 @@ def get_config():
 def verify(vrf_config):
     # ensure VRF is not assigned to any interface
     for vrf in vrf_config['vrf_remove']:
-        if len(vrf['members']) > 0:
+        if len(vrf['interfaces']) > 0:
             raise ConfigError('VRF {} can not be deleted. It has active member interfaces!'.format(vrf['name']))
+
+        if len(vrf['routes']) > 0:
+            raise ConfigError('VRF {} can not be deleted. It has routing protocols attached!'.format(vrf['name']))
 
     table_ids = []
     for vrf in vrf_config['vrf_add']:
