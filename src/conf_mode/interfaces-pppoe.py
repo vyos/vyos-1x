@@ -277,7 +277,7 @@ def verify(pppoe):
 
 def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
-    ipv6_ifup_script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
+    ipv6_if_up_script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd = 'systemctl stop ppp@{}.service'.format(pppoe['intf'])
@@ -288,8 +288,8 @@ def generate(pppoe):
         if os.path.exists(config_file_pppoe):
             os.unlink(config_file_pppoe)
 
-        if os.path.exists(ipv6_ifup_script_file):
-            os.unlink(ipv6_ifup_script_file)
+        if os.path.exists(ipv6_if_up_script_file):
+            os.unlink(ipv6_if_up_script_file)
 
     else:
         # Create PPP configuration files
@@ -298,13 +298,14 @@ def generate(pppoe):
         with open(config_file_pppoe, 'w') as f:
             f.write(config_text)
 
-        script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
         tmpl = Template(config_pppoe_ipv6_up_tmpl)
         config_text = tmpl.render(pppoe)
-        with open(ipv6_ifup_script_file, 'w') as f:
+        with open(ipv6_if_up_script_file, 'w') as f:
             f.write(config_text)
 
-        os.chmod(script_file, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
+        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
+                  S_IROTH | S_IXOTH
+        os.chmod(ipv6_if_up_script_file, bitmask)
 
     return None
 
