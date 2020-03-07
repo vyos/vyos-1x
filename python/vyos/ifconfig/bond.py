@@ -48,10 +48,10 @@ class BondIf(VLANIf):
             'location': '/sys/class/net/{ifname}/bonding/arp_ip_target',
         },
         'bond_add_port': {
-            'location': '/sys/class/net/{ifname}+{value}/bonding/slaves',
+            'location': '/sys/class/net/{ifname}/bonding/slaves',
         },
         'bond_del_port': {
-            'location': '/sys/class/net/{ifname}-{value}/bonding/slaves',
+            'location': '/sys/class/net/{ifname}/bonding/slaves',
         },
         'bond_primary': {
             'convert': lambda name: name if name else '\0',
@@ -204,7 +204,7 @@ class BondIf(VLANIf):
         # interface is in 'up' state, the following Kernel error will  be thrown:
         # bond0: eth1 is up - this may be due to an out of date ifenslave.
         Interface(interface).set_state('down')
-        return self.set_interface('bond_add_port', interface)
+        return self.set_interface('bond_add_port', f'+{interface}')
 
     def del_port(self, interface):
         """
@@ -214,7 +214,7 @@ class BondIf(VLANIf):
         >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').del_port('eth1')
         """
-        return self.set_interface('bond_del_port', interface)
+        return self.set_interface('bond_del_port', f'-{interface}')
 
     def get_slaves(self):
         """
