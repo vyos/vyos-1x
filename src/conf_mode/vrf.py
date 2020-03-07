@@ -157,21 +157,21 @@ def verify(vrf_config):
     # ensure VRF is not assigned to any interface
     for vrf in vrf_config['vrf_remove']:
         if len(vrf['members']) > 0:
-            raise ConfigError('VRF "{}" can not be deleted as it has active members'.format(vrf['name']))
+            raise ConfigError('VRF {} can not be deleted. It has active member interfaces!'.format(vrf['name']))
 
     table_ids = []
     for vrf in vrf_config['vrf_add']:
         # table id is mandatory
         if not vrf['table']:
-            raise ConfigError('VRF "{}" table id is mandatory'.format(vrf['name']))
+            raise ConfigError('VRF {} table id is mandatory!'.format(vrf['name']))
 
         # routing table id can't be changed - OS restriction
         if vrf['table_mod']:
-            raise ConfigError('VRF "{}" modification of table id is not possible'.format(vrf['name']))
+            raise ConfigError('VRF {} table id modification is not possible!'.format(vrf['name']))
 
         # VRf routing table ID must be unique on the system
         if vrf['table'] in table_ids:
-            raise ConfigError('VRF "{}" routing table id "{}" not unique'.format(vrf['name'], vrf['table']))
+            raise ConfigError('VRF {} table id "{}" is not unique!'.format(vrf['name'], vrf['table']))
         table_ids.append(vrf['table'])
 
     return None
