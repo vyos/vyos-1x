@@ -760,6 +760,8 @@ network={
     ssid="{{ ssid }}"
 {%- if sec_wpa_passphrase %}
     psk="{{ sec_wpa_passphrase }}"
+{% else %}
+    key_mgmt=NONE
 {% endif %}
 }
 
