@@ -1,5 +1,6 @@
 etc/dhcp
 etc/init.d
+etc/ppp
 etc/rsyslog.d
 etc/systemd
 etc/vyos
