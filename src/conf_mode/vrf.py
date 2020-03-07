@@ -61,10 +61,11 @@ def list_rules():
     answer = loads(check_output(command.split()).decode())
     return [_ for _ in answer if _]
 
-def interfaces_with_vrf(match):
+def interfaces_with_vrf(c, match):
     matched = []
-    config = Config()
-    section = config.get_config_dict('interfaces')
+    old_level = c.get_level()
+    c.set_level(['interfaces'])
+    section = c.get_config_dict([])
     for type in section:
         interfaces = section[type]
         for name in interfaces:
@@ -73,6 +74,8 @@ def interfaces_with_vrf(match):
                 v = interface.get('vrf', '')
                 if v == match:
                     matched.append(name)
+
+    c.set_level(old_level)
     return matched
 
 def get_config():
@@ -122,7 +125,7 @@ def get_config():
                 vrf_inst['description'] = conf.return_value(['description'])
 
             # find member interfaces of this particulat VRF
-            vrf_inst['members'] = interfaces_with_vrf(name)
+            vrf_inst['members'] = interfaces_with_vrf(conf, name)
 
             # append individual VRF configuration to global configuration list
             vrf_config['vrf_add'].append(vrf_inst)
@@ -140,7 +143,7 @@ def get_config():
         }
 
         # find member interfaces of this particulat VRF
-        vrf_inst['members'] = interfaces_with_vrf(name)
+        vrf_inst['members'] = interfaces_with_vrf(conf, name)
 
         # append individual VRF configuration to temporary configuration list
         tmp.append(vrf_inst)
