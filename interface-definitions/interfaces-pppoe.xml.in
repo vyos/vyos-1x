@@ -75,6 +75,7 @@
           </leafNode>
           #include <include/interface-description.xml.i>
           #include <include/interface-disable.xml.i>
+          #include <include/interface-vrf.xml.i>
           <leafNode name="idle-timeout">
             <properties>
               <help>Delay before disconnecting idle session (in seconds)</help>

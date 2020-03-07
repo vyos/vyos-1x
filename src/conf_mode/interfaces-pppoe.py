@@ -148,6 +148,26 @@ echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconfigure
 {% endif %}
 """
 
+config_pppoe_ip_pre_up_tmpl = """#!/bin/sh
+
+# As PPPoE is an "on demand" interface we need to re-configure it when it
+# becomes up
+
+if [ "$6" != "pppoe0" ]; then
+    exit
+fi
+
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+
+{% if vrf -%}
+logger -t pppd[$DIALER_PID] "configuring dialer interface $6 for VRF {{ vrf }}"
+ip link set dev {{ intf }} master {{ vrf }}
+{% endif %}
+
+"""
+
 PPP_LOGFILE = '/var/log/vyatta/ppp_{}.log'
 
 default_config_data = {
@@ -169,7 +189,8 @@ default_config_data = {
     'name_server': True,
     'remote_address': '',
     'service_name': '',
-    'source_interface': ''
+    'source_interface': '',
+    'vrf': ''
 }
 
 def subprocess_cmd(command):
@@ -260,6 +281,10 @@ def get_config():
     if conf.exists(['service-name']):
         pppoe['service_name'] = conf.return_value(['service-name'])
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        pppoe['vrf'] = conf.return_value('vrf')
+
     return pppoe
 
 def verify(pppoe):
@@ -273,10 +298,15 @@ def verify(pppoe):
     if not pppoe['source_interface'] in interfaces():
         raise ConfigError('PPPoE source interface does not exist')
 
+    vrf_name = pppoe['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF {vrf_name} does not exist')
+
     return None
 
 def generate(pppoe):
     config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
+    ip_pre_up_script_file = '/etc/ppp/ip-pre-up.d/9999-vyos-vrf-{}'.format(pppoe['intf'])
     ipv6_if_up_script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
 
     # Always hang-up PPPoE connection prior generating new configuration file
@@ -291,11 +321,19 @@ def generate(pppoe):
         if os.path.exists(ipv6_if_up_script_file):
             os.unlink(ipv6_if_up_script_file)
 
+        if os.path.exists(ip_pre_up_script_file):
+            os.unlink(ip_pre_up_script_file)
+
     else:
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
         with open(config_file_pppoe, 'w') as f:
+            f.write(config_text)
+
+        tmpl = Template(config_pppoe_ip_pre_up_tmpl)
+        config_text = tmpl.render(pppoe)
+        with open(ip_pre_up_script_file, 'w') as f:
             f.write(config_text)
 
         tmpl = Template(config_pppoe_ipv6_up_tmpl)
@@ -305,6 +343,7 @@ def generate(pppoe):
 
         bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
                   S_IROTH | S_IXOTH
+        os.chmod(ip_pre_up_script_file, bitmask)
         os.chmod(ipv6_if_up_script_file, bitmask)
 
     return None
