@@ -168,8 +168,6 @@ ip link set dev {{ intf }} master {{ vrf }}
 
 """
 
-PPP_LOGFILE = '/var/log/vyatta/ppp_{}.log'
-
 default_config_data = {
     'access_concentrator': '',
     'auth_username': '',
@@ -207,7 +205,7 @@ def get_config():
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     pppoe['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    pppoe['logfile'] = PPP_LOGFILE.format(pppoe['intf'])
+    pppoe['logfile'] = f"/var/log/vyatta/ppp_{pppoe['intf']}.log"
 
     # Check if interface has been removed
     if not conf.exists(base_path + [pppoe['intf']]):
@@ -296,7 +294,7 @@ def verify(pppoe):
         raise ConfigError('PPPoE source interface missing')
 
     if not pppoe['source_interface'] in interfaces():
-        raise ConfigError('PPPoE source interface does not exist')
+        raise ConfigError(f"PPPoE source interface {pppoe['source_interface']} does not exist")
 
     vrf_name = pppoe['vrf']
     if vrf_name and vrf_name not in interfaces():
@@ -305,12 +303,12 @@ def verify(pppoe):
     return None
 
 def generate(pppoe):
-    config_file_pppoe = '/etc/ppp/peers/{}'.format(pppoe['intf'])
-    ip_pre_up_script_file = '/etc/ppp/ip-pre-up.d/9999-vyos-vrf-{}'.format(pppoe['intf'])
-    ipv6_if_up_script_file = '/etc/ppp/ipv6-up.d/50-vyos-{}-autoconf'.format(pppoe['intf'])
+    config_file_pppoe = f"/etc/ppp/peers/{pppoe['intf']}"
+    ip_pre_up_script_file = f"/etc/ppp/ip-pre-up.d/9999-vyos-vrf-{pppoe['intf']}"
+    ipv6_if_up_script_file = f"/etc/ppp/ipv6-up.d/50-vyos-{pppoe['intf']}-autoconf"
 
     # Always hang-up PPPoE connection prior generating new configuration file
-    cmd = 'systemctl stop ppp@{}.service'.format(pppoe['intf'])
+    cmd = f"systemctl stop ppp@{pppoe['intf']}.service"
     subprocess_cmd(cmd)
 
     if pppoe['deleted']:
@@ -355,7 +353,7 @@ def apply(pppoe):
 
     if not pppoe['disable']:
         # dial PPPoE connection
-        cmd = 'systemctl start ppp@{}.service'.format(pppoe['intf'])
+        cmd = f"systemctl start ppp@{pppoe['intf']}.service"
         subprocess_cmd(cmd)
 
         # make logfile owned by root / vyattacfg
