@@ -838,7 +838,8 @@ default_config_data = {
     'ssid' : '',
     'type' : 'monitor',
     'vif': [],
-    'vif_remove': []
+    'vif_remove': [],
+    'vrf': ''
 }
 
 def get_conf_file(conf_type, intf):
@@ -1150,6 +1151,10 @@ def get_config():
     if conf.exists('mode'):
         wifi['mode'] = conf.return_value('mode')
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        wifi['vrf'] = conf.return_value('vrf')
+
     # Wireless physical device
     if conf.exists('phy'):
         wifi['phy'] = conf.return_value('phy')
@@ -1278,7 +1283,6 @@ def verify(wifi):
         if not wifi['channel']:
             raise ConfigError('Channel must be set for {}'.format(wifi['intf']))
 
-
     if len(wifi['sec_wep_key']) > 4:
         raise ConfigError('No more then 4 WEP keys configurable')
 
@@ -1297,6 +1301,10 @@ def verify(wifi):
     for radius in wifi['sec_wpa_radius']:
         if not radius['key']:
             raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
+
+    vrf_name = wifi['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     # use common function to verify VLAN configuration
     verify_vlan_config(wifi)
@@ -1395,6 +1403,12 @@ def apply(wifi):
 
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])
+
+        # assign to VRF
+        if wifi['vrf']:
+            d.add_vrf(wifi['vrf'])
+        else:
+            d.del_vrf(wifi['vrf'])
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed

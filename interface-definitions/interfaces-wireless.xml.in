@@ -454,6 +454,7 @@
           </leafNode>
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-disable.xml.i>
+          #include <include/interface-vrf.xml.i>
           <leafNode name="expunge-failing-stations">
             <properties>
               <help>Disassociate stations based on excessive transmission failures</help>
