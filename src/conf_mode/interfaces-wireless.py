@@ -643,6 +643,7 @@ radius_client_addr={{ sec_wpa_radius_source }}
 {% endif %}
 
 {% for radius in sec_wpa_radius -%}
+{%- if not radius.disabled -%}
 # RADIUS authentication server
 auth_server_addr={{ radius.server }}
 auth_server_port={{ radius.port }}
@@ -652,6 +653,7 @@ auth_server_shared_secret={{ radius.key }}
 acct_server_addr={{ radius.server }}
 acct_server_port={{ radius.acc_port }}
 acct_server_shared_secret={{ radius.key }}
+{% endif %}
 {% endif %}
 {% endfor %}
 
@@ -1211,6 +1213,7 @@ def get_config():
         radius = {
             'server' : server,
             'acc_port' : '',
+            'disabled': False,
             'port' : 1812,
             'key' : ''
         }
@@ -1222,6 +1225,10 @@ def get_config():
         # receive RADIUS accounting info
         if conf.exists('accounting'):
             radius['acc_port'] = radius['port'] + 1
+
+        # Check if RADIUS server was temporary disabled
+        if conf.exists(['disable']):
+            radius['disabled'] = True
 
         # RADIUS server shared-secret
         if conf.exists('key'):
