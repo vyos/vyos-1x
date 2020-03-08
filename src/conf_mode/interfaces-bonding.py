@@ -21,7 +21,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.ifconfig import BondIf
-from vyos.ifconfig_vlan import apply_vlan_config
+from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -272,25 +272,8 @@ def verify(bond):
     if vrf_name and vrf_name not in interfaces():
         raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
-    # DHCPv6 parameters-only and temporary address are mutually exclusive
-    for vif_s in bond['vif_s']:
-        if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
-        for vif_c in vif_s['vif_c']:
-            if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
-                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
-    for vif in bond['vif']:
-        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
-
-    for vif_s in bond['vif_s']:
-        for vif in bond['vif']:
-            if vif['id'] == vif_s['id']:
-                raise ConfigError('Can not use identical ID on vif and vif-s interface')
-
+    # use common function to verify VLAN configuration
+    verify_vlan_config(bond)
 
     conf = Config()
     for intf in bond['member']:

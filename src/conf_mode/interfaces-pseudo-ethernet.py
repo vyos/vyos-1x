@@ -21,6 +21,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.ifconfig import MACVLANIf
+from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
@@ -198,6 +199,9 @@ def verify(peth):
 
     if not peth['link'] in interfaces():
         raise ConfigError('Pseudo-ethernet source interface does not exist')
+
+    # use common function to verify VLAN configuration
+    verify_vlan_config(peth)
 
     return None
 

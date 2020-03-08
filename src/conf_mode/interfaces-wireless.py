@@ -27,7 +27,7 @@ from subprocess import Popen, PIPE
 from psutil import pid_exists
 
 from vyos.ifconfig import EthernetIf
-from vyos.ifconfig_vlan import apply_vlan_config
+from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -1298,7 +1298,8 @@ def verify(wifi):
         if not radius['key']:
             raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
 
-
+    # use common function to verify VLAN configuration
+    verify_vlan_config(wifi)
 
     return None
 

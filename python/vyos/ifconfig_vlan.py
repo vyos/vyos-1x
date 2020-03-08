@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from netifaces import interfaces
 from vyos.ifconfig import VLANIf
+from vyos import ConfigError
 
 def apply_vlan_config(vlan, config):
     """
@@ -65,6 +67,13 @@ def apply_vlan_config(vlan, config):
     vlan.set_arp_ignore(config['ip_enable_arp_ignore'])
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
+
+    # assign to VRF
+    if config['vrf']:
+        vlan.add_vrf(config['vrf'])
+    else:
+        vlan.del_vrf(config['vrf'])
+
     # Change VLAN interface MAC address
     if config['mac']:
         vlan.set_mac(config['mac'])
@@ -83,3 +92,39 @@ def apply_vlan_config(vlan, config):
     for addr in config['address']:
         vlan.add_addr(addr)
 
+def verify_vlan_config(config):
+    """
+    Generic function to verify VLAN config consistency. Instead of re-
+    implementing this function in multiple places use single source \o/
+    """
+
+    for vif_s in config['vif_s']:
+        for vif in config['vif']:
+            if vif['id'] == vif_s['id']:
+                raise ConfigError('Can not use identical ID on vif and vif-s interface')
+
+        # DHCPv6 parameters-only and temporary address are mutually exclusive
+        if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+            vrf_name = vif_s['vrf']
+            if vrf_name and vrf_name not in interfaces():
+                raise ConfigError(f'VRF "{vrf_name}" does not exist')
+
+        for vif_c in vif_s['vif_c']:
+            # DHCPv6 parameters-only and temporary address are mutually exclusive
+            if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
+                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+            vrf_name = vif_c['vrf']
+            if vrf_name and vrf_name not in interfaces():
+                raise ConfigError(f'VRF "{vrf_name}" does not exist')
+
+    for vif in config['vif']:
+        # DHCPv6 parameters-only and temporary address are mutually exclusive
+        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+        vrf_name = vif['vrf']
+        if vrf_name and vrf_name not in interfaces():
+            raise ConfigError(f'VRF "{vrf_name}" does not exist')

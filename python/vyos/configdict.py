@@ -126,7 +126,8 @@ def vlan_to_dict(conf):
         'ingress_qos': '',
         'ingress_qos_changed': False,
         'mac': '',
-        'mtu': 1500
+        'mtu': 1500,
+        'vrf': ''
     }
     # retrieve configured interface addresses
     if conf.exists('address'):
@@ -193,6 +194,10 @@ def vlan_to_dict(conf):
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
         vlan['mtu'] = int(conf.return_value('mtu'))
+
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        vlan['vrf'] = conf.return_value('vrf')
 
     # VLAN egress QoS
     if conf.exists('egress-qos'):

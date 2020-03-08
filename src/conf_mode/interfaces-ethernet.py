@@ -21,7 +21,7 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf
-from vyos.ifconfig_vlan import apply_vlan_config
+from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
@@ -262,19 +262,8 @@ def verify(eth):
                 if eth['address']:
                     raise ConfigError('Can not assign address to interface {} which is a member of {}'.format(eth['intf'], bond))
 
-    # DHCPv6 parameters-only and temporary address are mutually exclusive
-    for vif_s in eth['vif_s']:
-        if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
-        for vif_c in vif_s['vif_c']:
-            if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
-                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
-    for vif in eth['vif']:
-        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
+    # use common function to verify VLAN configuration
+    verify_vlan_config(eth)
     return None
 
 def generate(eth):
