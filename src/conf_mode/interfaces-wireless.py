@@ -640,6 +640,12 @@ wpa_key_mgmt=WPA-EAP
 # IP addresses, but this field can be used to force a specific address to be
 # used, e.g., when the device has multiple IP addresses.
 radius_client_addr={{ sec_wpa_radius_source }}
+
+# The own IP address of the access point (used as NAS-IP-Address)
+own_ip_addr={{ sec_wpa_radius_source }}
+{% else %}
+# The own IP address of the access point (used as NAS-IP-Address)
+own_ip_addr=127.0.0.1
 {% endif %}
 
 {% for radius in sec_wpa_radius -%}
