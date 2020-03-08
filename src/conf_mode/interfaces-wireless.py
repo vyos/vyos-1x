@@ -25,6 +25,7 @@ from grp import getgrnam
 
 from subprocess import Popen, PIPE
 from psutil import pid_exists
+from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
