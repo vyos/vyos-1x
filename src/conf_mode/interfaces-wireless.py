@@ -1406,9 +1406,9 @@ def apply(wifi):
 
         # assign to VRF
         if wifi['vrf']:
-            d.add_vrf(wifi['vrf'])
+            w.add_vrf(wifi['vrf'])
         else:
-            d.del_vrf(wifi['vrf'])
+            w.del_vrf(wifi['vrf'])
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed
