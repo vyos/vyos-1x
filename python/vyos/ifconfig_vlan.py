@@ -98,6 +98,20 @@ def verify_vlan_config(config):
     implementing this function in multiple places use single source \o/
     """
 
+    for vif in config['vif']:
+        # DHCPv6 parameters-only and temporary address are mutually exclusive
+        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
+            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+
+        vrf_name = vif['vrf']
+        if vrf_name and vrf_name not in interfaces():
+            raise ConfigError(f'VRF "{vrf_name}" does not exist')
+
+    # e.g. wireless interface has no vif_s support
+    # thus we bail out eraly.
+    if 'vif_s' not in config.keys():
+        return
+
     for vif_s in config['vif_s']:
         for vif in config['vif']:
             if vif['id'] == vif_s['id']:
@@ -120,11 +134,4 @@ def verify_vlan_config(config):
             if vrf_name and vrf_name not in interfaces():
                 raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
-    for vif in config['vif']:
-        # DHCPv6 parameters-only and temporary address are mutually exclusive
-        if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-        vrf_name = vif['vrf']
-        if vrf_name and vrf_name not in interfaces():
-            raise ConfigError(f'VRF "{vrf_name}" does not exist')
