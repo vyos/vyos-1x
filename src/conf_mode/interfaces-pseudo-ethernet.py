@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.ifconfig import MACVLANIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.configdict import list_diff
+from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -309,6 +309,35 @@ def apply(peth):
         p.del_addr(addr)
     for addr in peth['address']:
         p.add_addr(addr)
+
+    # remove no longer required service VLAN interfaces (vif-s)
+    for vif_s in peth['vif_s_remove']:
+        p.del_vlan(vif_s)
+
+    # create service VLAN interfaces (vif-s)
+    for vif_s in peth['vif_s']:
+        s_vlan = p.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
+        apply_vlan_config(s_vlan, vif_s)
+
+        # remove no longer required client VLAN interfaces (vif-c)
+        # on lower service VLAN interface
+        for vif_c in vif_s['vif_c_remove']:
+            s_vlan.del_vlan(vif_c)
+
+        # create client VLAN interfaces (vif-c)
+        # on lower service VLAN interface
+        for vif_c in vif_s['vif_c']:
+            c_vlan = s_vlan.add_vlan(vif_c['id'])
+            apply_vlan_config(c_vlan, vif_c)
+
+    # remove no longer required VLAN interfaces (vif)
+    for vif in peth['vif_remove']:
+        p.del_vlan(vif)
+
+    # create VLAN interfaces (vif)
+    for vif in peth['vif']:
+        vlan = p.add_vlan(vif['id'])
+        apply_vlan_config(vlan, vif)
 
     return None
 
