@@ -15,12 +15,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import jinja2
 
 from subprocess import check_output
 from json import loads
 
+vrf_out_tmpl = """
+VRF name          state     mac address        flags                     interfaces
+--------          -----     -----------        -----                     ----------
+{%- for v in vrf %}
+{{"%-16s"|format(v.ifname)}}  {{ "%-8s"|format(v.operstate | lower())}}  {{"%-17s"|format(v.address | lower())}}  {{ v.flags|join(',')|lower()}}  {{v.members|join(',')|lower()}}
+{%- endfor %}
+
+"""
+
 def list_vrfs():
     command = 'ip -j -br link show type vrf'
+    answer = loads(check_output(command.split()).decode())
+    return [_ for _ in answer if _]
+
+def list_vrf_members(vrf):
+    command = f'ip -j -br link show master {vrf}'
     answer = loads(check_output(command.split()).decode())
     return [_ for _ in answer if _]
 
@@ -34,15 +49,19 @@ parser.add_argument('interface', metavar='I', type=str, nargs='?',
 args = parser.parse_args()
 
 if args.extensive:
-    print('{:16}  {:7}  {:17}  {}'.format('interface', 'state', 'mac', 'flags'))
-    print('{:16}  {:7}  {:17}  {}'.format('---------', '-----', '---', '-----'))
+    data = { 'vrf': [] }
     for vrf in list_vrfs():
         name = vrf['ifname']
         if args.interface and name != args.interface:
             continue
-        state = vrf['operstate'].lower()
-        mac = vrf['address'].lower()
-        info = ','.join([_.lower() for _ in vrf['flags']])
-        print(f'{name:16}  {state:7}  {mac:17}  {info}')
+
+        vrf['members'] = []
+        for member in list_vrf_members(name):
+            vrf['members'].append(member['ifname'])
+        data['vrf'].append(vrf)
+
+    tmpl = jinja2.Template(vrf_out_tmpl)
+    print(tmpl.render(data))
+
 else:
     print(" ".join([vrf['ifname'] for vrf in list_vrfs()]))
