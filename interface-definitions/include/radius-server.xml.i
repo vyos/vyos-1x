@@ -50,19 +50,6 @@
             </constraint>
           </properties>
         </leafNode>
-        <leafNode name="timeout">
-          <properties>
-            <help>Session timeout</help>
-            <valueHelp>
-              <format>1-30</format>
-              <description>Session timeout in seconds (default: 2)</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-30"/>
-            </constraint>
-            <constraintErrorMessage>Timeout must be between 1 and 30 seconds</constraintErrorMessage>
-          </properties>
-        </leafNode>
       </children>
     </tagNode>
   </children>
