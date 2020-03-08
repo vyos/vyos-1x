@@ -53,7 +53,8 @@ default_config_data = {
     'vif_s': [],
     'vif_s_remove': [],
     'vif': [],
-    'vif_remove': []
+    'vif_remove': [],
+    'vrf': ''
 }
 
 def get_config():
@@ -159,6 +160,10 @@ def get_config():
     if conf.exists(['mode']):
         peth['mode'] = conf.return_value(['mode'])
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        peth['vrf'] = conf.return_value('vrf')
+
     # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
     # get vif-s interfaces (currently effective) - to determine which vif-s
@@ -200,9 +205,12 @@ def verify(peth):
     if not peth['link'] in interfaces():
         raise ConfigError('Pseudo-ethernet source interface does not exist')
 
+    vrf_name = peth['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
-
     return None
 
 def generate(peth):
@@ -288,6 +296,12 @@ def apply(peth):
     p.set_proxy_arp(peth['ip_proxy_arp'])
     # Enable private VLAN proxy ARP on this interface
     p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
+
+    # assign to VRF
+    if peth['vrf']:
+        p.add_vrf(peth['vrf'])
+    else:
+        p.del_vrf(peth['vrf'])
 
     # Change interface MAC address
     if peth['mac']:
