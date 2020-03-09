@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2019 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,13 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-
-# Between 1.2.3 and 1.2.4, FRR added per-neighbor enforce-first-as option.
-# Unfortunately they also removed the global enforce-first-as option,
-# which broke all old configs that used to have it.
-#
-# To emulate the effect of the original option, we insert it in every neighbor
-# if the config used to have the original global option
 
 import sys
 
@@ -52,16 +45,11 @@ else:
         # There's actually no BGP, just its empty shell
         sys.exit(0)
 
-    # Check if BGP enforce-first-as option is set
-    enforce_first_as_path = ['protocols', 'bgp', asn, 'parameters', 'enforce-first-as']
-    if config.exists(enforce_first_as_path):
-        # Delete the obsolete option
-        config.delete(enforce_first_as_path)
-
-        # Now insert it in every peer
-        peers = config.list_nodes(['protocols', 'bgp', asn, 'neighbor'])
-        for p in peers:
-            config.set(['protocols', 'bgp', asn, 'neighbor', p, 'enforce-first-as'])
+    # Check if BGP scan-time parameter exist
+    scan_time_param = ['protocols', 'bgp', asn, 'parameters', 'scan-time']
+    if config.exists(scan_time_param):
+        # Delete BGP scan-time parameter
+        config.delete(scan_time_param)
     else:
         # Do nothing
         sys.exit(0)
@@ -73,4 +61,3 @@ else:
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
         sys.exit(1)
-
