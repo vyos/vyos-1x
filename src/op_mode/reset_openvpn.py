@@ -64,6 +64,7 @@ if __name__ == '__main__':
         cmd += ' --exec /usr/sbin/openvpn'
         # now pass arguments to openvpn binary
         cmd += ' --'
+        cmd += ' --daemon openvpn-' + interface
         cmd += ' --config ' + get_config_name(interface)
 
         subprocess_cmd(cmd)
