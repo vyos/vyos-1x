@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+# Between 1.2.3 and 1.2.4, FRR added per-neighbor enforce-first-as option.
+# Unfortunately they also removed the global enforce-first-as option,
+# which broke all old configs that used to have it.
+#
+# To emulate the effect of the original option, we insert it in every neighbor
+# if the config used to have the original global option
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['protocols', 'bgp']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # Check if BGP is actually configured and obtain the ASN
+    asn_list = config.list_nodes(['protocols', 'bgp'])
+    if asn_list:
+        # There's always just one BGP node, if any
+        asn = asn_list[0]
+    else:
+        # There's actually no BGP, just its empty shell
+        sys.exit(0)
+
+    # Check if BGP enforce-first-as option is set
+    enforce_first_as_path = ['protocols', 'bgp', asn, 'parameters', 'enforce-first-as']
+    if config.exists(enforce_first_as_path):
+        # Delete the obsolete option
+        config.delete(enforce_first_as_path)
+
+        # Now insert it in every peer
+        peers = config.list_nodes(['protocols', 'bgp', asn, 'neighbor'])
+        for p in peers:
+            config.set(['protocols', 'bgp', asn, 'neighbor', p, 'enforce-first-as'])
+    else:
+        # Do nothing
+        sys.exit(0)
+
+    # Save a new configuration file
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
+

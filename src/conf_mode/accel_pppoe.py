@@ -54,7 +54,7 @@ auth_chap_md5
 auth_mschap_v1
 auth_mschap_v2
 #pppd_compat
-#shaper
+shaper
 {% if snmp == 'enable' or snmp == 'enable-ma' %}
 net-snmp
 {% endif %}
@@ -76,7 +76,7 @@ level=5
 {% if snmp == 'enable-ma' %}
 [snmp]
 master=1
-{% endif %}
+{% endif -%}
 
 [client-ip-range]
 disable
@@ -101,24 +101,24 @@ gw-ip-address={{ppp_gw}}
 {% for prfx in client_ipv6_pool['delegate-prefix']: %}
 delegate={{prfx}}
 {% endfor %}
-{% endif %}
+{% endif -%}
 
 {% if dns %}
 [dns]
 {% if dns[0] %}
 dns1={{dns[0]}}
-{% endif %}
+{% endif -%}
 {% if dns[1] %}
 dns2={{dns[1]}}
-{% endif %}
-{% endif %}
+{% endif -%}
+{% endif -%}
 
 {% if dnsv6 %}
 [dnsv6]
 {% for srv in dnsv6: %}
 dns={{srv}}
 {% endfor %}
-{% endif %}
+{% endif -%}
 
 {% if wins %}
 [wins]
@@ -127,13 +127,13 @@ wins1={{wins[0]}}
 {% endif %}
 {% if wins[1] %}
 wins2={{wins[1]}}
-{% endif %}
-{% endif %}
+{% endif -%}
+{% endif -%}
 
 {% if authentication['mode'] == 'local' %}
 [chap-secrets]
 chap-secrets=/etc/accel-ppp/pppoe/chap-secrets
-{% endif %}
+{% endif -%}
 
 {% if authentication['mode'] == 'radius' %}
 [radius]
@@ -156,14 +156,23 @@ nas-identifier={{authentication['radiusopt']['nas-id']}}
 {% endif %}
 {% if authentication['radiusopt']['nas-ip'] %}
 nas-ip-address={{authentication['radiusopt']['nas-ip']}}
-{% endif %}
+{% endif -%}
 {% if authentication['radiusopt']['dae-srv'] %}
 dae-server={{authentication['radiusopt']['dae-srv']['ip-addr']}}:\
 {{authentication['radiusopt']['dae-srv']['port']}},\
 {{authentication['radiusopt']['dae-srv']['secret']}}
-{% endif %}
+{% endif -%}
 gw-ip-address={{ppp_gw}}
 verbose=1
+
+{% if authentication['radiusopt']['shaper'] %}
+[shaper]
+verbose=1
+attr={{authentication['radiusopt']['shaper']['attr']}}
+{% if authentication['radiusopt']['shaper']['vendor'] %}
+vendor={{authentication['radiusopt']['shaper']['vendor']}}
+{% endif -%}
+{% endif -%}
 {% endif %}
 
 [ppp]
@@ -245,10 +254,15 @@ tcp=127.0.0.1:2001
 
 ### pppoe chap secrets
 chap_secrets_conf = '''
-# username  server  password  acceptable local IP addresses
+# username  server  password  acceptable local IP addresses   shaper
 {% for user in authentication['local-users'] %}
 {% if authentication['local-users'][user]['state'] == 'enabled' %}
+{% if (authentication['local-users'][user]['upload']) and (authentication['local-users'][user]['download']) %}
+{{user}}\t*\t{{authentication['local-users'][user]['passwd']}}\t{{authentication['local-users'][user]['ip']}}\t\
+{{authentication['local-users'][user]['download']}}/{{authentication['local-users'][user]['upload']}}
+{% else %}
 {{user}}\t*\t{{authentication['local-users'][user]['passwd']}}\t{{authentication['local-users'][user]['ip']}}
+{% endif %}
 {% endif %}
 {% endfor %}
 '''
@@ -389,9 +403,11 @@ def get_config():
         config_data['authentication']['local-users'].update(
           {
             usr : {
-              'passwd' : '',
-              'state'  : 'enabled',
-              'ip'     : '*'
+              'passwd'    : None,
+              'state'     : 'enabled',
+              'ip'        : '*',
+              'upload'    : None,
+              'download'  : None
             }
           }
         )
@@ -401,7 +417,11 @@ def get_config():
           config_data['authentication']['local-users'][usr]['state'] = 'disable'
         if c.exists('authentication local-users username ' + usr + ' static-ip'):
           config_data['authentication']['local-users'][usr]['ip'] = c.return_value('authentication local-users username ' + usr + ' static-ip')
-   
+        if c.exists('authentication local-users username ' + usr + ' rate-limit download'):
+          config_data['authentication']['local-users'][usr]['download'] = c.return_value('authentication local-users username ' + usr + ' rate-limit download')
+        if c.exists('authentication local-users username ' + usr + ' rate-limit upload'):
+          config_data['authentication']['local-users'][usr]['upload'] = c.return_value('authentication local-users username ' + usr + ' rate-limit upload')
+
     ### authentication mode radius servers and settings
 
   if c.exists('authentication mode radius'):
@@ -426,28 +446,42 @@ def get_config():
         }
       )
 
-  #### advanced radius-setting
-      if c.exists('authentication radius-settings'): 
-        if c.exists('authentication radius-settings acct-timeout'):
-          config_data['authentication']['radiusopt']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
-        if c.exists('authentication radius-settings max-try'):
-          config_data['authentication']['radiusopt']['max-try'] = c.return_value('authentication radius-settings max-try') 
-        if c.exists('authentication radius-settings timeout'):
-          config_data['authentication']['radiusopt']['timeout'] = c.return_value('authentication radius-settings timeout')
-        if c.exists('authentication radius-settings nas-identifier'):
-          config_data['authentication']['radiusopt']['nas-id'] = c.return_value('authentication radius-settings nas-identifier')
-        if c.exists('authentication radius-settings nas-ip-address'):
-          config_data['authentication']['radiusopt']['nas-ip'] = c.return_value('authentication radius-settings nas-ip-address')
-        if c.exists('authentication radius-settings dae-server'):
-          config_data['authentication']['radiusopt'].update(
-            {
-              'dae-srv' : {
-                'ip-addr' : c.return_value('authentication radius-settings dae-server ip-address'),
-                'port'    : c.return_value('authentication radius-settings dae-server port'), 
-                'secret'  : str(c.return_value('authentication radius-settings dae-server secret'))
-              }
+    #### advanced radius-setting
+    if c.exists('authentication radius-settings'):
+      if c.exists('authentication radius-settings acct-timeout'):
+        config_data['authentication']['radiusopt']['acct-timeout'] = c.return_value('authentication radius-settings acct-timeout')
+      if c.exists('authentication radius-settings max-try'):
+        config_data['authentication']['radiusopt']['max-try'] = c.return_value('authentication radius-settings max-try')
+      if c.exists('authentication radius-settings timeout'):
+        config_data['authentication']['radiusopt']['timeout'] = c.return_value('authentication radius-settings timeout')
+      if c.exists('authentication radius-settings nas-identifier'):
+        config_data['authentication']['radiusopt']['nas-id'] = c.return_value('authentication radius-settings nas-identifier')
+      if c.exists('authentication radius-settings nas-ip-address'):
+        config_data['authentication']['radiusopt']['nas-ip'] = c.return_value('authentication radius-settings nas-ip-address')
+      if c.exists('authentication radius-settings dae-server'):
+        config_data['authentication']['radiusopt'].update(
+          {
+            'dae-srv' : {
+              'ip-addr' : c.return_value('authentication radius-settings dae-server ip-address'),
+              'port'    : c.return_value('authentication radius-settings dae-server port'),
+              'secret'  : str(c.return_value('authentication radius-settings dae-server secret'))
             }
-          )
+          }
+        )
+      #### filter-id is the internal accel default if attribute is empty
+      #### set here as default for visibility which may change in the future
+      if c.exists('authentication radius-settings rate-limit enable'):
+        if not c.exists('authentication radius-settings rate-limit attribute'):
+          config_data['authentication']['radiusopt']['shaper'] = {
+            'attr'  : 'Filter-Id'
+          }
+        else:
+          config_data['authentication']['radiusopt']['shaper'] = {
+          'attr'  : c.return_value('authentication radius-settings rate-limit attribute')
+          }
+        if c.exists('authentication radius-settings rate-limit vendor'):
+          config_data['authentication']['radiusopt']['shaper']['vendor'] = c.return_value('authentication radius-settings rate-limit vendor')
+
 
   if c.exists('mtu'):
     config_data['mtu'] = c.return_value('mtu')
@@ -496,10 +530,17 @@ def verify(c):
   if c['authentication']['mode'] == 'local':
     if not c['authentication']['local-users']:
       raise ConfigError('pppoe-server authentication local-users required')
-  
+
     for usr in c['authentication']['local-users']:
       if not c['authentication']['local-users'][usr]['passwd']:
         raise ConfigError('user ' + usr + ' requires a password')
+      ### if up/download is set, check that both have a value
+      if c['authentication']['local-users'][usr]['upload']:
+        if not c['authentication']['local-users'][usr]['download']:
+          raise ConfigError('user ' + usr + ' requires download speed value')
+      if c['authentication']['local-users'][usr]['download']:
+        if not c['authentication']['local-users'][usr]['upload']:
+          raise ConfigError('user ' + usr + ' requires upload speed value')
 
   if c['authentication']['mode'] == 'radius':
     if len(c['authentication']['radiussrv']) == 0:

@@ -78,48 +78,52 @@
                       </valueHelp>
                       <valueHelp>
                         <format>afraid</format>
-                        <description/>
+                        <description>afraid.org Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>changeip</format>
-                        <description/>
+                        <description>changeip.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>cloudflare</format>
-                        <description/>
+                        <description>cloudflare.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>dnspark</format>
-                        <description/>
+                        <description>dnspark.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>dslreports</format>
-                        <description/>
+                        <description>dslreports.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>dyndns</format>
-                        <description/>
+                        <description>dyndns.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>easydns</format>
-                        <description/>
+                        <description>easydns.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>namecheap</format>
-                        <description/>
+                        <description>namecheap.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>noip</format>
-                        <description/>
+                        <description>noip.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>sitelutions</format>
-                        <description/>
+                        <description>sitelutions.com Services</description>
                       </valueHelp>
                       <valueHelp>
                         <format>zoneedit</format>
-                        <description/>
+                        <description>zoneedit.com Services</description>
                       </valueHelp>
+                      <constraint>
+                        <regex>(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Please choose from the list of allowed services</constraintErrorMessage>
                     </properties>
                     <children>
                       <leafNode name="host-name">
@@ -141,50 +145,53 @@
                       <leafNode name="protocol">
                         <properties>
                           <help>ddclient protocol used for DDNS service [REQUIRED FOR CUSTOM]</help>
-                          <valueHelp>
-                            <format>protocol</format>
-                            <description>ddclient protocol</description>
-                          </valueHelp>
+                          <completionHelp>
+                              <list>changeip cloudflare dnspark dslreports1 dyndns2 easydns namecheap noip sitelutions zoneedit1</list>
+                          </completionHelp>
                           <valueHelp>
                             <format>changeip</format>
-                            <description/>
+                            <description>changeip protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>cloudflare</format>
-                            <description/>
+                            <description>cloudflare protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>dnspark</format>
-                            <description/>
+                            <description>dnspark protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>dslreports1</format>
-                            <description/>
+                            <description>dslreports1 protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>dyndns2</format>
-                            <description/>
+                            <description>dyndns2 protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>easydns</format>
-                            <description/>
+                            <description>easydns protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>namecheap</format>
-                            <description/>
+                            <description>namecheap protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>noip</format>
-                            <description/>
+                            <description>noip protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>sitelutions</format>
-                            <description/>
+                            <description>sitelutions protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>zoneedit1</format>
-                            <description/>
+                            <description>zoneedit1 protocol</description>
                           </valueHelp>
+                          <constraint>
+                            <regex>(changeip|cloudflare|dnspark|dslreports1|dyndns2|easydns|namecheap|noip|sitelutions|zoneedit1)</regex>
+                          </constraint>
+                          <constraintErrorMessage>Please choose from the list of allowed protocols</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="server">
