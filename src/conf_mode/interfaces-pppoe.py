@@ -20,7 +20,6 @@ from sys import exit
 from copy import deepcopy
 from jinja2 import Template
 from subprocess import Popen, PIPE
-from time import sleep
 from pwd import getpwnam
 from grp import getgrnam
 from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
@@ -261,7 +260,7 @@ def get_config():
 
     # Physical Interface used for this PPPoE session
     if conf.exists(['source-interface']):
-        pppoe['source_interface'] = conf.return_value('source-interface')
+        pppoe['source_interface'] = conf.return_value(['source-interface'])
 
     # Maximum Transmission Unit (MTU)
     if conf.exists(['mtu']):
@@ -281,7 +280,7 @@ def get_config():
 
     # retrieve VRF instance
     if conf.exists('vrf'):
-        pppoe['vrf'] = conf.return_value('vrf')
+        pppoe['vrf'] = conf.return_value(['vrf'])
 
     return pppoe
 
