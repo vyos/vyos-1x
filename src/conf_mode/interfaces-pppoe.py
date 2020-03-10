@@ -95,6 +95,9 @@ ipv6cp-use-ipaddr
 {% if service_name -%}
 rp_pppoe_service "{{ service_name }}"
 {% endif %}
+{% if on_demand %}
+demand
+{% endif %}
 
 """
 
