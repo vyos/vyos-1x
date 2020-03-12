@@ -33,6 +33,8 @@ TRACE_FILE = '/tmp/boot-config-trace'
 
 CFG_GROUP = 'vyattacfg'
 
+trace_config = False
+
 if 'log' in directories:
     LOG_DIR = directories['log']
 else:
@@ -45,6 +47,9 @@ try:
         cmdline = f.read()
     if 'vyos-debug' in cmdline:
         os.environ['VYOS_DEBUG'] = 'yes'
+    if 'vyos-config-debug' in cmdline:
+        os.environ['VYOS_DEBUG'] = 'yes'
+        trace_config = True
 except Exception as e:
     print('{0}'.format(e))
 
@@ -130,8 +135,9 @@ if __name__ == '__main__':
             config_file = f.read()
     except Exception:
         write_config_status(1)
-        failsafe(default_file_name)
-        trace_to_file(TRACE_FILE)
+        if trace_config:
+            failsafe(default_file_name)
+            trace_to_file(TRACE_FILE)
         sys.exit(1)
 
     try:
@@ -146,8 +152,9 @@ if __name__ == '__main__':
         # If here, there is no use doing session.discard, as we have no
         # recoverable config environment, and will only throw an error
         write_config_status(1)
-        failsafe(default_file_name)
-        trace_to_file(TRACE_FILE)
+        if trace_config:
+            failsafe(default_file_name)
+            trace_to_file(TRACE_FILE)
         sys.exit(1)
 
     time_elapsed_load = time_end_load - time_begin_load
