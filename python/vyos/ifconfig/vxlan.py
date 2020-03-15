@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-
+from vyos import ConfigError
 from vyos.ifconfig.interface import Interface
 
 
@@ -54,20 +54,23 @@ class VXLANIf(Interface):
         super().__init__(ifname, **kargs)
 
     def _create(self):
-        # we assume that by default a multicast interface is created
-        group = 'group {}'.format(self.config['group'])
-
-        # if remote host is specified we ignore the multicast address
+        cmd = ''
         if self.config['remote']:
-            group = 'remote {}'.format(self.config['remote'])
+            # an underlay device is only mandatory with multicast, not unicast
+            dev = ''
+            if self.config['dev']:
+                dev = 'dev {}'.format(self.config['dev'])
+            # iproute2 command for unicast
+            cmd = 'ip link add {ifname} type vxlan id {vni} remote {remote} {dev_optional} dstport {port}'.format(
+                **self.config, dev_optional=dev)
+        else:
+            if not self.config['dev']:
+                raise ConfigError(
+                    f'VXLAN "{self.config["ifname"]}" is missing mandatory underlay interface for a multicast network.')
+            # iproute2 command for multicast
+            cmd = 'ip link add {ifname} type vxlan id {vni} group {group} dev {dev} dstport {port}'.format(
+                **self.config)
 
-        # an underlay device is not always specified
-        dev = ''
-        if self.config['dev']:
-            dev = 'dev {}'.format(self.config['dev'])
-
-        cmd = 'ip link add {ifname} type vxlan id {vni} {group} {dev} dstport {port}'.format(
-            **config)
         self._cmd(cmd)
 
     @staticmethod
