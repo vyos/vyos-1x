@@ -238,6 +238,9 @@ def verify(eth):
     if eth['deleted']:
         return None
 
+    if eth['intf'] not in interfaces():
+        raise ConfigError(f"Interface ethernet {eth['intf']} does not exist")
+
     if eth['speed'] == 'auto':
         if eth['duplex'] != 'auto':
             raise ConfigError('If speed is hardcoded, duplex must be hardcoded, too')
@@ -260,7 +263,7 @@ def verify(eth):
             bond_member = conf.return_values('interfaces bonding ' + bond + ' member interface')
             if eth['intf'] in bond_member:
                 if eth['address']:
-                    raise ConfigError('Can not assign address to interface {} which is a member of {}'.format(eth['intf'], bond))
+                    raise ConfigError(f"Can not assign address to interface {eth['intf']} which is a member of {bond}")
 
     # use common function to verify VLAN configuration
     verify_vlan_config(eth)
