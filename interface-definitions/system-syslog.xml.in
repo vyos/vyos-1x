@@ -184,10 +184,14 @@
                 <validator name="ip-address"/>
                 <validator name="fqdn"/>
               </constraint>
-              <constraintErrorMessage>Invalid host FQDN or IP address</constraintErrorMessage>
+              <constraintErrorMessage>Invalid host (FQDN or IP address)</constraintErrorMessage>
               <valueHelp>
-                <format>x.x.x.x or host.domain.tld</format>
-                <description>Remote host name or IP address</description>
+                <format>ipv4</format>
+                <description>Remote syslog server IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Remote syslog server FQDN</description>
               </valueHelp>
             </properties>
             <children>
