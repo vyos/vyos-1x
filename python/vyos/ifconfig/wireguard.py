@@ -16,6 +16,7 @@
 
 import os
 
+import vyos
 from vyos.ifconfig.interface import Interface
 
 class WireGuardIf(Interface):
@@ -101,7 +102,7 @@ class WireGuardIf(Interface):
         wgdump = vyos.interfaces.wireguard_dump().get(
             self.config['ifname'], None)
 
-        c = Config()
+        c = vyos.config.Config()
         c.set_level(["interfaces", "wireguard", self.config['ifname']])
         description = c.return_effective_value(["description"])
         ips = c.return_effective_values(["address"])
