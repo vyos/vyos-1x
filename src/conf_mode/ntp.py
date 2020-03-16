@@ -42,8 +42,6 @@ restrict default noquery nopeer notrap nomodify
 restrict 127.0.0.1
 restrict -6 ::1
 
-# Do not listen on any interface address by default
-interface ignore wildcard
 #
 # Configurable section
 #
@@ -65,6 +63,7 @@ restrict {{ n.address }} mask {{ n.netmask }} nomodify notrap nopeer
 
 {% if listen_address -%}
 # NTP should listen on configured addresses only
+interface ignore wildcard
 {% for a in listen_address -%}
 interface listen {{ a }}
 {% endfor -%}
