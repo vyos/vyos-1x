@@ -741,12 +741,6 @@ class Interface(Control):
         with open(self._dhcpv6_cfg_file, 'w') as f:
             f.write(dhcpv6_text)
 
-        # https://bugs.launchpad.net/ubuntu/+source/ifupdown/+bug/1447715
-        #
-        # wee need to wait for IPv6 DAD to finish once and interface is added
-        # this suxx :-(
-        sleep(5)
-
         # no longer accept router announcements on this interface
         self._write_sysfs('/proc/sys/net/ipv6/conf/{}/accept_ra'
               .format(self.config['ifname']), 0)
