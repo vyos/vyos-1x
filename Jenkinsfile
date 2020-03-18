@@ -36,7 +36,7 @@ def isCustomBuild() {
     def gitURI = 'git@github.com:vyos/' + getGitRepoName()
     def httpURI = 'https://github.com/vyos/' + getGitRepoName()
 
-    return ! ((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI))
+    return !((getGitRepoURL() == gitURI) || (getGitRepoURL() == httpURI)) || env.CHANGE_ID
 }
 
 def setDescription() {
@@ -74,7 +74,13 @@ node('Docker') {
         script {
             // create container name on demand
             def branchName = getGitBranchName()
-            if (branchName == "master") {
+            // Adjust PR target branch name so we can re-map it to the proper
+            // Docker image. CHANGE_ID is set only for pull requests, so it is
+            // safe to access the pullRequest global variable
+            if (env.CHANGE_ID) {
+                branchName = "${env.CHANGE_TARGET}".toLowerCase()
+            }
+            if (branchName.equals("master")) {
                 branchName = "current"
             }
             env.DOCKER_IMAGE = "vyos/vyos-build:" + branchName
@@ -92,7 +98,6 @@ pipeline {
     }
     options {
         disableConcurrentBuilds()
-        skipDefaultCheckout()
         timeout(time: 30, unit: 'MINUTES')
         timestamps()
     }
@@ -101,8 +106,7 @@ pipeline {
             steps {
                 script {
                     dir('build') {
-                        git branch: getGitBranchName(),
-                            url: getGitRepoURL()
+                        checkout scm
                     }
                 }
             }
