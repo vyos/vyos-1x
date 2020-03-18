@@ -42,6 +42,13 @@ default_config_data = {
     'tunnel_id': ''
 }
 
+def check_kmod():
+    modules = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
+    for module in modules:
+        if not os.path.exists(f'/sys/module/{module}'):
+            if os.system(f'modprobe {module}') != 0:
+                raise ConfigError(f'Loading Kernel module {module} failed')
+
 def get_config():
     l2tpv3 = deepcopy(default_config_data)
     conf = Config()
@@ -152,34 +159,7 @@ def verify(l2tpv3):
 
 
 def generate(l2tpv3):
-    if l2tpv3['deleted']:
-        # bail out early
-        return None
-
-    # initialize kernel module if not loaded
-    if not os.path.isdir('/sys/module/l2tp_eth'):
-        if os.system('modprobe l2tp_eth') != 0:
-            raise ConfigError("failed loading l2tp_eth kernel module")
-
-    if not os.path.isdir('/sys/module/l2tp_netlink'):
-        if os.system('modprobe l2tp_netlink') != 0:
-            raise ConfigError("failed loading l2tp_netlink kernel module")
-
-    if not os.path.isdir('/sys/module/l2tp_ip'):
-        if os.system('modprobe l2tp_ip') != 0:
-            raise ConfigError("failed loading l2tp_ip kernel module")
-
-    if l2tpv3['encapsulation'] == 'ip':
-        if not os.path.isdir('/sys/module/l2tp_ip'):
-            if os.system('modprobe l2tp_ip') != 0:
-                raise ConfigError("failed loading l2tp_ip kernel module")
-
-        if not os.path.isdir('/sys/module/l2tp_ip6 '):
-            if os.system('modprobe l2tp_ip6 ') != 0:
-                raise ConfigError("failed loading l2tp_ip6 kernel module")
-
     return None
-
 
 def apply(l2tpv3):
     # L2TPv3 interface needs to be created/deleted on-block, instead of
@@ -230,6 +210,7 @@ def apply(l2tpv3):
 
 if __name__ == '__main__':
     try:
+        check_kmod()
         c = get_config()
         verify(c)
         generate(c)
