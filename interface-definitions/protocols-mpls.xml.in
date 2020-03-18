@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<!-- Multiprotocol Label Switching (MPLS) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="mpls" owner="${vyos_conf_scripts_dir}/protocols_mpls.py">
+        <properties>
+          <help>Multiprotocol Label Switching (MPLS)</help>
+          <priority>299</priority>
+        </properties>
+        <children>
+          <node name="ldp">
+            <properties>
+              <help>LDP options</help>
+            </properties>
+            <children>
+              <leafNode name="router-id">
+                <properties>
+                  <help>x.x.x.x Label Switch Router (LSR) id</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>LSR ipv4 id</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="neighbor">
+                <properties>
+                  <help>LDP Id of neighbor</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>neighbor IPv4 id</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="password">
+                    <properties>
+                      <help>Peer password</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="discovery">
+                <properties>
+                  <help>Discovery parameters</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Discovery parameters</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="transport-ipv4-address">
+                    <properties>
+                      <help>Transport ipv4 address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 bind as transport</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="transport-ipv6-address">
+                    <properties>
+                      <help>Transport ipv6 address</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 bind as transport</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="interface">
+                <properties>
+                  <help>Listen interface for LDP</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
