@@ -264,6 +264,11 @@ def process_node(n, tmpl_dir):
     if node_type == "tagNode":
         props["tag"] = "True"
 
+    if node_type != "leafNode":
+        if "multi" in props:
+            raise ValueError("<multi/> tag is only allowed in <leafNode>")
+        if "valueless" in props:
+            raise ValueError("<valueless/> is only allowed in <leafNode>")
 
     nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
     if not os.path.exists(nodedef_path):
