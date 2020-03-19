@@ -365,7 +365,7 @@ def fixup_permission(filename, permission=S_IRUSR):
 def checkCertHeader(header, filename):
     """
     Verify if filename contains specified header.
-    Returns True on success or on file not found to not trigger the exceptions
+    Returns True if match is found, False if no match or file is not found
     """
     if not os.path.isfile(filename):
         return False
@@ -375,7 +375,7 @@ def checkCertHeader(header, filename):
             if re.match(header, line):
                 return True
 
-    return True
+    return False
 
 def get_config():
     openvpn = deepcopy(default_config_data)
