@@ -16,6 +16,11 @@
           </valueHelp>
         </properties>
         <children>
+          <leafNode name="apn">
+            <properties>
+              <help>Access Point Name (APN)</help>
+            </properties>
+          </leafNode>
           <node name="backup">
             <properties>
               <help>Insert backup default route</help>
@@ -37,26 +42,19 @@
             </children>
           </node>
           #include <include/interface-description.xml.i>
+          #include <include/interface-disable.xml.i>
           <leafNode name="device">
             <properties>
               <help>System device name (default: ttyUSB0)</help>
               <valueHelp>
-                <format>&gt;ttyXXX%lt;</format>
+                <format>ttyXXX</format>
                 <description>System TTY device name</description>
               </valueHelp>
             </properties>
           </leafNode>
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-mtu-68-9000.xml.i>
-          <leafNode name="network">
-            <properties>
-              <help>Carrier network to define dial strings</help>
-              <completionHelp>
-                <script>ls /etc/ppp/peers/chat</script>
-              </completionHelp>
-            </properties>
-          </leafNode>
-          <leafNode name="no-dns">
+          <leafNode name="no-peer-dns">
             <properties>
               <help>Do not use peer supplied DNS server information</help>
               <valueless/>
