@@ -658,6 +658,11 @@ def get_config():
     if conf.exists('use-lzo-compression'):
         openvpn['compress_lzo'] = True
 
+    # Special case when using EC certificates:
+    # if key-file is EC and dh-file is unset, set tls_dh to 'none'
+    if not openvpn['tls_dh'] and openvpn['tls_key'] and checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
+        openvpn['tls_dh'] = 'none'
+
     return openvpn
 
 def verify(openvpn):
@@ -692,7 +697,7 @@ def verify(openvpn):
         if not openvpn['remote_host']:
             raise ConfigError('Must specify "remote-host" in client mode')
 
-        if openvpn['tls_dh']:
+        if openvpn['tls_dh'] and openvpn['tls_dh'] != 'none':
             raise ConfigError('Cannot specify "tls dh-file" in client mode')
 
     #
@@ -742,8 +747,8 @@ def verify(openvpn):
         if openvpn['protocol'] == 'tcp-passive' and len(openvpn['remote_host']) > 1:
             raise ConfigError('Cannot specify more than 1 "remote-host" with "tcp-passive"')
 
-        if not openvpn['tls_dh']:
-            raise ConfigError('Must specify "tls dh-file" in server mode')
+        if not openvpn['tls_dh'] and not checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
+            raise ConfigError('Must specify "tls dh-file" when not using EC keys in server mode')
 
         if not openvpn['server_subnet']:
             if not openvpn['bridge_member']:
@@ -825,7 +830,7 @@ def verify(openvpn):
                 raise ConfigError('Specified cert-file "{}" is invalid'.format(openvpn['tls_cert']))
 
         if openvpn['tls_key']:
-            if not checkCertHeader('-----BEGIN (?:RSA )?PRIVATE KEY-----', openvpn['tls_key']):
+            if not checkCertHeader('-----BEGIN (?:RSA |EC )?PRIVATE KEY-----', openvpn['tls_key']):
                 raise ConfigError('Specified key-file "{}" is not valid'.format(openvpn['tls_key']))
 
         if openvpn['tls_crypt']:
@@ -836,7 +841,7 @@ def verify(openvpn):
             if not checkCertHeader('-----BEGIN X509 CRL-----', openvpn['tls_crl']):
                 raise ConfigError('Specified crl-file "{} not valid'.format(openvpn['tls_crl']))
 
-        if openvpn['tls_dh']:
+        if openvpn['tls_dh'] and openvpn['tls_dh'] != 'none':
             if not checkCertHeader('-----BEGIN DH PARAMETERS-----', openvpn['tls_dh']):
                 raise ConfigError('Specified dh-file "{}" is not valid'.format(openvpn['tls_dh']))
 
@@ -849,7 +854,7 @@ def verify(openvpn):
                 if openvpn['protocol'] == 'tcp-passive':
                     raise ConfigError('Cannot specify "tcp-passive" when "tls role" is "active"')
 
-                if openvpn['tls_dh']:
+                if openvpn['tls_dh'] and openvpn['tls_dh'] != 'none':
                     raise ConfigError('Cannot specify "tls dh-file" when "tls role" is "active"')
 
             elif openvpn['tls_role'] == 'passive':
@@ -858,6 +863,12 @@ def verify(openvpn):
 
                 if not openvpn['tls_dh']:
                     raise ConfigError('Must specify "tls dh-file" when "tls role" is "passive"')
+
+        if openvpn['tls_key'] and checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
+            if openvpn['tls_dh'] and openvpn['tls_dh'] != 'none':
+                print('Warning: using dh-file and EC keys simultaneously will lead to DH ciphers being used instead of ECDH')
+            else:
+                print('Diffie-Hellman prime file is unspecified, assuming ECDH')
 
     #
     # Auth user/pass
