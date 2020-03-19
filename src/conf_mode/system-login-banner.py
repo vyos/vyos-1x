@@ -25,6 +25,7 @@ individual files in /usr/share/doc/*/copyright.
 
 Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
 permitted by applicable law.
+
 """
 
 PRELOGIN_FILE = r'/etc/issue'
@@ -32,8 +33,8 @@ PRELOGIN_NET_FILE = r'/etc/issue.net'
 POSTLOGIN_FILE = r'/etc/motd'
 
 default_config_data = {
-    'issue': 'Welcome to VyOS - \n \l',
-    'issue_net': 'Welcome to VyOS',
+    'issue': 'Welcome to VyOS - \n \l\n',
+    'issue_net': 'Welcome to VyOS\n',
     'motd': motd
 }
 
@@ -54,6 +55,8 @@ def get_config():
         if tmp:
             tmp = tmp.replace('\\n','\n')
             tmp = tmp.replace('\\t','\t')
+            # always add newline character
+            tmp += '\n'
         else:
             tmp = ''
 
@@ -66,6 +69,8 @@ def get_config():
         if tmp:
             tmp = tmp.replace('\\n','\n')
             tmp = tmp.replace('\\t','\t')
+            # always add newline character
+            tmp += '\n'
         else:
             tmp = ''
 
