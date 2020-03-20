@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="service">
+  <node name="vpn">
     <children>
-      <node name="sstp-server" owner="${vyos_conf_scripts_dir}/accel_sstp.py">
+      <node name="sstp" owner="${vyos_conf_scripts_dir}/vpn_sstp.py">
         <properties>
-          <help>Secure Socket Tunneling Protocol (SSTP) Server</help>
+          <help>Secure Socket Tunneling Protocol (SSTP) server</help>
           <priority>900</priority>
         </properties>
         <children>
