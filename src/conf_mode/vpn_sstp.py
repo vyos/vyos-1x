@@ -100,27 +100,26 @@ chap-secrets=/etc/accel-ppp/sstp/chap-secrets
 [radius]
 verbose=1
 {% for r in radius_server %}
-server={{ r.server }},{{ r.secret }},req-limit={{ r.req_limit }},fail-time={{ r.fail_time }}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit={{ r.req_limit }},fail-time={{ r.fail_time }}
 {% endfor -%}
 
-{% if radius_acct_tmo  %}
 acct-timeout={{ radius_acct_tmo }}
-{% endif -%}
-{% if radius_timeout %}
 timeout={{ radius_timeout }}
-{% endif -%}
-{% if rad_max_try %}
-max-try={{ rad_max_try }}
-{% endif -%}
+max-try={{ radius_max_try }}
+
 {% if radius_nas_id %}
 nas-identifier={{ radius_nas_id }}
 {% endif -%}
 {% if radius_nas_ip %}
 nas-ip-address={{ radius_nas_ip }}
 {% endif -%}
+{% if radius_source_address %}
+bind={{ radius_source_address }}
+{% endif -%}
 
-{% if radius_dae %}
-dae-server={{ radius_dae.server }}:{{ radius_dae.port }},{{ radius_dae.secret }}
+
+{% if radius_dynamic_author %}
+dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {% endif -%}
 {% endif %}
 
@@ -207,14 +206,15 @@ default_config_data = {
     'auth_mode' : 'local',
     'auth_proto' : [],
     'radius_server' : [],
-    'radius_acct_tmo' : '',
-    'radius_max_try' : '',
-    'radius_timeout' : '',
+    'radius_acct_tmo' : '3',
+    'radius_max_try' : '3',
+    'radius_timeout' : '3',
     'radius_nas_id' : '',
     'radius_nas_ip' : '',
+    'radius_source_address' : '',
     'radius_shaper_attr' : '',
     'radius_shaper_vendor': '',
-    'radius_dae' : {},
+    'radius_dynamic_author' : '',
     'ssl_ca' : '',
     'ssl_cert' : '',
     'ssl_key' : '',
@@ -279,76 +279,84 @@ def get_config():
 
     #
     # RADIUS auth and settings
-    conf.set_level(base_path)
-    if conf.exists(['authentication', 'radius-server']):
-        for server in conf.list_nodes(['authentication', 'radius-server']):
+    conf.set_level(base_path + ['authentication', 'radius'])
+    if conf.exists(['server']):
+        for server in conf.list_nodes(['server']):
             radius = {
                 'server' : server,
-                'secret' : '',
+                'key' : '',
                 'fail_time' : 0,
+                'port' : '1812',
                 'req_limit' : 0
             }
 
-            conf.set_level(base_path + ['authentication', 'radius-server', server])
-
-            if conf.exists(['secret']):
-                radius['secret'] = conf.return_value(['secret'])
+            conf.set_level(base_path + ['authentication', 'radius', 'server', server])
 
             if conf.exists(['fail-time']):
                 radius['fail-time'] = conf.return_value(['fail-time'])
 
+            if conf.exists(['port']):
+                radius['port'] = conf.return_value(['port'])
+
             if conf.exists(['req-limit']):
                 radius['req_limit'] = conf.return_value(['req-limit'])
 
-            sstp['radius_server'].append(radius)
+            if conf.exists(['key']):
+                radius['key'] = conf.return_value(['key'])
 
+            if not conf.exists(['disable']):
+                sstp['radius_server'].append(radius)
+
+        #
         # advanced radius-setting
-        conf.set_level(base_path + ['authentication', 'radius-settings'])
-        if conf.exists([]):
-            if conf.exists(['acct-timeout']):
-                sstp['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
+        conf.set_level(base_path + ['authentication', 'radius'])
 
-            if conf.exists(['max-try']):
-                sstp['radius_max_try'] = conf.return_value(['max-try'])
+        if conf.exists(['acct-timeout']):
+            sstp['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
 
-            if conf.exists(['timeout']):
-                sstp['radius_timeout'] = conf.return_value(['timeout'])
+        if conf.exists(['max-try']):
+            sstp['radius_max_try'] = conf.return_value(['max-try'])
 
-            if conf.exists(['nas-identifier']):
-                sstp['radius_nas_id'] = conf.return_value(['nas-identifier'])
+        if conf.exists(['timeout']):
+            sstp['radius_timeout'] = conf.return_value(['timeout'])
 
-            if conf.exists(['nas-ip-address']):
-                sstp['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+        if conf.exists(['nas-identifier']):
+            sstp['radius_nas_id'] = conf.return_value(['nas-identifier'])
 
-            # Dynamic Authorization Extensions (DOA)/
-            # Change Of Authentication (COA)
-            if conf.exists(['dae-server']):
-                dae = {
-                    'port' : '',
-                    'server' : '',
-                    'secret' : ''
-                }
+        if conf.exists(['nas-ip-address']):
+            sstp['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
 
-                if conf.exists(['ip-address']):
-                    dae['server'] = conf.return_value(['ip-address'])
+        if conf.exists(['source-address']):
+            sstp['radius_source_address'] = conf.return_value(['source-address'])
 
-                if conf.exists(['port']):
-                    dae['port'] = conf.return_value(['port'])
+        # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
+        if conf.exists(['dynamic-author']):
+            dae = {
+                'port' : '',
+                'server' : '',
+                'key' : ''
+            }
 
-                if conf.exists(['secret']):
-                    dae['secret'] = conf.return_value(['secret'])
+            if conf.exists(['dynamic-author', 'server']):
+                dae['server'] = conf.return_value(['dynamic-author', 'server'])
 
-                sstp['radius_dae'] = dae
+            if conf.exists(['dynamic-author', 'port']):
+                dae['port'] = conf.return_value(['dynamic-author', 'port'])
 
-            if conf.exists(['rate-limit', 'enable']):
-                sstp['radius_shaper_attr'] = 'Filter-Id'
-                c_attr = ['rate-limit', 'enable', 'attribute']
-                if conf.exists(c_attr):
-                    sstp['radius_shaper_attr'] = conf.return_value(c_attr)
+            if conf.exists(['dynamic-author', 'key']):
+                dae['key'] = conf.return_value(['dynamic-author', 'key'])
 
-                c_vendor = ['rate-limit', 'enable', 'vendor']
-                if conf.exists(c_vendor):
-                    sstp['radius_shaper_vendor'] = conf.return_value(c_vendor)
+            sstp['radius_dynamic_author'] = dae
+
+        if conf.exists(['rate-limit', 'enable']):
+            sstp['radius_shaper_attr'] = 'Filter-Id'
+            c_attr = ['rate-limit', 'enable', 'attribute']
+            if conf.exists(c_attr):
+                sstp['radius_shaper_attr'] = conf.return_value(c_attr)
+
+            c_vendor = ['rate-limit', 'enable', 'vendor']
+            if conf.exists(c_vendor):
+                sstp['radius_shaper_vendor'] = conf.return_value(c_vendor)
 
     #
     # authentication protocols
@@ -466,8 +474,8 @@ def verify(sstp):
             raise ConfigError('RADIUS authentication requires at least one server')
 
         for radius in sstp['radius_server']:
-            if not radius['secret']:
-                raise ConfigError(f"Missing RADIUS secret for server {{ radius['server'] }}")
+            if not radius['key']:
+                raise ConfigError(f"Missing RADIUS secret for server {{ radius['key'] }}")
 
 def generate(sstp):
     if sstp is None:
@@ -486,6 +494,9 @@ def generate(sstp):
             f.write(config_text)
 
         os.chmod(chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP )
+    else:
+        if os.path.exists(chap_secrets):
+             os.unlink(chap_secrets)
 
     return sstp
 
@@ -525,6 +536,7 @@ def apply(sstp):
 
     else:
         accel_cmd('restart')
+
 
 if __name__ == '__main__':
     try:

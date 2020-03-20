@@ -14,7 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 # - migrate from "service sstp-server" to "vpn sstp"
+# - remove primary/secondary identifier from nameserver
+# - migrate RADIUS configuration to a more uniform syntax accross the system
+#   - authentication radius-server x.x.x.x to authentication radius server x.x.x.x
+#   - authentication radius-settings to authentication radius
 
 import os
 import sys
@@ -58,8 +63,50 @@ else:
 
         config.delete(dns_base)
 
-    print(config.to_string())
-    sys.exit(1)
+
+    # migrate radius options - copy subtree
+    # thus must happen before migration of the individual RADIUS servers
+    old_options = new_base + ['authentication', 'radius-settings']
+    new_options = new_base + ['authentication', 'radius']
+    config.copy(old_options, new_options)
+    config.delete(old_options)
+
+
+    # migrate radius dynamic author / change of authorisation server
+    dae_old = new_base + ['authentication', 'radius', 'dae-server']
+    if config.exists(dae_old):
+        config.rename(dae_old, 'dynamic-author')
+        dae_new = new_base + ['authentication', 'radius', 'dynamic-author']
+
+        if config.exists(dae_new + ['ip-address']):
+            config.rename(dae_new + ['ip-address'], 'server')
+
+        if config.exists(dae_new + ['secret']):
+            config.rename(dae_new + ['secret'], 'key')
+
+
+    # migrate radius server
+    radius_server = new_base + ['authentication', 'radius-server']
+    if config.exists(radius_server):
+        for server in config.list_nodes(radius_server):
+            base = radius_server + [server]
+            new = new_base + ['authentication', 'radius', 'server', server]
+
+            # convert secret to key
+            if config.exists(base + ['secret']):
+                tmp = config.return_value(base + ['secret'])
+                config.set(new + ['key'], value=tmp)
+
+            if config.exists(base + ['fail-time']):
+                tmp = config.return_value(base + ['fail-time'])
+                config.set(new + ['fail-time'], value=tmp)
+
+            if config.exists(base + ['req-limit']):
+                tmp = config.return_value(base + ['req-limit'])
+                config.set(new + ['req-limit'], value=tmp)
+
+        config.set_tag(new_base + ['authentication', 'radius', 'server'])
+        config.delete(radius_server)
 
     try:
         with open(file_name, 'w') as f:
