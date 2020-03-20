@@ -55,13 +55,16 @@ class Control:
 
         validate = self._command_set[name].get('validate', None)
         if validate:
-            validate(value)
-
-        config = {**config, **{'value': value}}
+            try:
+                validate(value)
+            except Exception as e:
+                raise e.__class__(f'Could not set {name}. {e}')
 
         convert = self._command_set[name].get('convert', None)
         if convert:
             value = convert(value)
+
+        config = {**config, **{'value': value}}
 
         cmd = self._command_set[name]['shellcmd'].format(**config)
         return self._cmd(cmd)
