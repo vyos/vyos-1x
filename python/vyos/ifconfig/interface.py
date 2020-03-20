@@ -170,13 +170,15 @@ class Interface(Control):
             if k in kargs:
                 self.config[k] = kargs[k]
 
-        for k in self.required:
-            if k not in kargs:
-                raise ConfigError('missing required option {} for {}'.format(k,self.__class__))
-
         if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
             if not self.config['type']:
                 raise Exception('interface "{}" not found'.format(self.config['ifname']))
+
+            for k in self.required:
+                if k not in kargs:
+                    name = self.default['type']
+                    raise ConfigError(f'missing required option {k} for {name} {ifname} creation')
+
             self._create()
 
         # per interface DHCP config files
