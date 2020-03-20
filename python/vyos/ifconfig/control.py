@@ -29,12 +29,13 @@ class Control:
     def _cmd(self, command):
         p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
         tmp = p.communicate()[0].strip()
-        self._debug_msg("cmd '{}'".format(command))
-        if tmp.decode():
-            self._debug_msg("returned:\n{}".format(tmp.decode()))
-
-        # do we need some error checking code here?
-        return tmp.decode()
+        self._debug_msg(f"cmd '{command}'")
+        decoded = tmp.decode()
+        if decoded:
+            self._debug_msg(f"returned:\n{decoded}")
+        if p.returncode != 0:
+            raise RuntimeError(f'{command}\nreturned: {decoded}')
+        return decoded
 
     def _get_command(self, config, name):
         """
