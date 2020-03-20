@@ -373,15 +373,15 @@ def get_config():
 
     #
     # read in SSL certs
-    conf.set_level(base_path + ['sstp-settings', 'ssl-certs'])
-    if conf.exists(['ca']):
-        sstp['ssl_ca'] = conf.return_value(['ca'])
+    conf.set_level(base_path + ['ssl'])
+    if conf.exists(['ca-cert-file']):
+        sstp['ssl_ca'] = conf.return_value(['ca-cert-file'])
 
-    if conf.exists(['server-cert']):
-        sstp['ssl_cert'] = conf.return_value(['server-cert'])
+    if conf.exists(['cert-file']):
+        sstp['ssl_cert'] = conf.return_value(['cert-file'])
 
-    if conf.exists(['server-key']):
-        sstp['ssl_key'] = conf.return_value(['server-key'])
+    if conf.exists(['key-file']):
+        sstp['ssl_key'] = conf.return_value(['key-file'])
 
 
     #

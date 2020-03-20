@@ -21,6 +21,7 @@
 #   - authentication radius-server x.x.x.x to authentication radius server x.x.x.x
 #   - authentication radius-settings to authentication radius
 #   - do not migrate radius server req-limit, use default of unlimited
+# - migrate SSL certificate path
 
 import os
 import sys
@@ -104,6 +105,22 @@ else:
 
         config.set_tag(new_base + ['authentication', 'radius', 'server'])
         config.delete(radius_server)
+
+    # migrate SSL certificates
+    old_ssl = new_base + ['sstp-settings', 'ssl-certs']
+    new_ssl = new_base + ['ssl']
+    config.copy(old_ssl, new_ssl)
+    config.delete(old_ssl)
+
+    if config.exists(new_ssl + ['ca']):
+        config.rename(new_ssl + ['ca'], 'ca-cert-file')
+
+    if config.exists(new_ssl + ['server-cert']):
+        config.rename(new_ssl + ['server-cert'], 'cert-file')
+
+    if config.exists(new_ssl + ['server-key']):
+        config.rename(new_ssl + ['server-key'], 'key-file')
+
 
     try:
         with open(file_name, 'w') as f:

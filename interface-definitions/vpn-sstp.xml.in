@@ -252,42 +252,35 @@
               </node>
             </children>
           </node>
-          <node name="sstp-settings">
+          <node name="ssl">
             <properties>
-              <help>SSTP settings</help>
+              <help>SSL Certificate, SSL Key and CA (/config/user-data/sstp)</help>
             </properties>
             <children>
-              <node name="ssl-certs">
+              <leafNode name="ca-cert-file">
                 <properties>
-                  <help>SSL Certificate, SSL Key and CA (/config/user-data/sstp)</help>
+                  <help>Certificate Authority certificate</help>
+                  <completionHelp>
+                    <script>if [ -e /config/user-data/sstp ]; then ls /config/user-data/sstp; fi</script>
+                  </completionHelp>
                 </properties>
-                <children>
-                  <leafNode name="ca">
-                    <properties>
-                      <help>Certificate Authority certificate</help>
-                      <completionHelp>
-                        <script>if [ -e /config/user-data/sstp ]; then ls /config/user-data/sstp; fi</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="server-cert">
-                    <properties>
-                      <help>Server Certificate</help>
-                      <completionHelp>
-                        <script>if [ -e /config/user-data/sstp ]; then ls /config/user-data/sstp; fi</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="server-key">
-                    <properties>
-                      <help>Privat Key of the Server Certificate</help>
-                      <completionHelp>
-                        <script>if [ -e /config/user-data/sstp ]; then ls /config/user-data/sstp; fi</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              </leafNode>
+              <leafNode name="cert-file">
+                <properties>
+                  <help>Server Certificate</help>
+                  <completionHelp>
+                    <script>if [ -e /config/user-data/sstp ]; then ls /config/user-data/sstp; fi</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="key-file">
+                <properties>
+                  <help>Privat Key of the Server Certificate</help>
+                  <completionHelp>
+                    <script>if [ -e /config/user-data/sstp ]; then ls /config/user-data/sstp; fi</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <node name="network-settings">
