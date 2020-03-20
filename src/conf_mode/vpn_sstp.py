@@ -100,7 +100,7 @@ chap-secrets=/etc/accel-ppp/sstp/chap-secrets
 [radius]
 verbose=1
 {% for r in radius_server %}
-server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit={{ r.req_limit }},fail-time={{ r.fail_time }}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
 {% endfor -%}
 
 acct-timeout={{ radius_acct_tmo }}
@@ -286,8 +286,7 @@ def get_config():
                 'server' : server,
                 'key' : '',
                 'fail_time' : 0,
-                'port' : '1812',
-                'req_limit' : 0
+                'port' : '1812'
             }
 
             conf.set_level(base_path + ['authentication', 'radius', 'server', server])
@@ -297,9 +296,6 @@ def get_config():
 
             if conf.exists(['port']):
                 radius['port'] = conf.return_value(['port'])
-
-            if conf.exists(['req-limit']):
-                radius['req_limit'] = conf.return_value(['req-limit'])
 
             if conf.exists(['key']):
                 radius['key'] = conf.return_value(['key'])

@@ -20,6 +20,7 @@
 # - migrate RADIUS configuration to a more uniform syntax accross the system
 #   - authentication radius-server x.x.x.x to authentication radius server x.x.x.x
 #   - authentication radius-settings to authentication radius
+#   - do not migrate radius server req-limit, use default of unlimited
 
 import os
 import sys
@@ -100,10 +101,6 @@ else:
             if config.exists(base + ['fail-time']):
                 tmp = config.return_value(base + ['fail-time'])
                 config.set(new + ['fail-time'], value=tmp)
-
-            if config.exists(base + ['req-limit']):
-                tmp = config.return_value(base + ['req-limit'])
-                config.set(new + ['req-limit'], value=tmp)
 
         config.set_tag(new_base + ['authentication', 'radius', 'server'])
         config.delete(radius_server)

@@ -118,11 +118,6 @@
                 <children>
                   <tagNode name="server">
                     <children>
-                      <leafNode name="req-limit">
-                        <properties>
-                          <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                        </properties>
-                      </leafNode>
                       <leafNode name="fail-time">
                         <properties>
                           <help>If server does not responds mark it as unavailable for this time (seconds)</help>
