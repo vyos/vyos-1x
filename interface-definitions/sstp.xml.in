@@ -349,14 +349,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="mtu">
-                <properties>
-                  <help>Maximum Transmission Unit (MTU)</help>
-                  <constraint>
-                    <validator name="numeric" argument="--range 128-16384"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/interface-mtu-68-1500.xml.i>
             </children>
           </node>
           <node name="ppp-settings">
