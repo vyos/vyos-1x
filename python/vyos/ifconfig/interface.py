@@ -77,6 +77,10 @@ class Interface(Control):
     }
 
     _command_set = {
+        'state': {
+            'validate': lambda v: assert_list(v, ['up', 'down']),
+            'shellcmd': 'ip link set dev {ifname} {value}',
+        },
         'mac': {
             'validate': assert_mac,
             'shellcmd': 'ip link set dev {ifname} address {value}',
@@ -452,13 +456,7 @@ class Interface(Control):
         >>> Interface('eth0').get_state()
         'down'
         """
-        if state not in ['up', 'down']:
-            raise ValueError('state must be "up" or "down"')
-
-        # Assemble command executed on system. Unfortunately there is no way
-        # to up/down an interface via sysfs
-        cmd = 'ip link set dev {} {}'.format(self.config['ifname'], state)
-        return self._cmd(cmd)
+        return self.set_interface('state', state)
 
     def set_proxy_arp(self, enable):
         """
