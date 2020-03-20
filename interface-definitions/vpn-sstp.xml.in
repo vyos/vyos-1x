@@ -5,7 +5,7 @@
       <node name="sstp" owner="${vyos_conf_scripts_dir}/vpn_sstp.py">
         <properties>
           <help>Secure Socket Tunneling Protocol (SSTP) server</help>
-          <priority>900</priority>
+          <priority>901</priority>
         </properties>
         <children>
           <node name="authentication">
@@ -318,37 +318,19 @@
                   </leafNode>
                 </children>
               </node>
-              <node name="dns-server">
+              <leafNode name="name-server">
                 <properties>
                   <help>DNS servers propagated to clients</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
                 </properties>
-                <children>
-                  <leafNode name="primary-dns">
-                    <properties>
-                      <help>Primary DNS Server</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="secondary-dns">
-                    <properties>
-                      <help>Secondary DNS Server</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              </leafNode>
               #include <include/interface-mtu-68-1500.xml.i>
             </children>
           </node>

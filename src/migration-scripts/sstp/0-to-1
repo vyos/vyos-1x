@@ -45,6 +45,19 @@ else:
     config.copy(old_base, new_base)
     config.delete(old_base)
 
+    # migrate DNS servers
+    dns_base = new_base + ['network-settings', 'dns-server']
+    if config.exists(dns_base):
+        if config.exists(dns_base + ['primary-dns']):
+            dns = config.return_value(dns_base + ['primary-dns'])
+            config.set(new_base + ['network-settings', 'name-server'], value=dns, replace=False)
+
+        if config.exists(dns_base + ['secondary-dns']):
+            dns = config.return_value(dns_base + ['secondary-dns'])
+            config.set(new_base + ['network-settings', 'name-server'], value=dns, replace=False)
+
+        config.delete(dns_base)
+
     print(config.to_string())
     sys.exit(1)
 

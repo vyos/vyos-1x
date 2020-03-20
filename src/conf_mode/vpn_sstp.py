@@ -91,12 +91,9 @@ gw-ip-address={{gw}}
 
 {% if dnsv4 %}
 [dns]
-{% if dnsv4['primary'] %}
-dns1={{dnsv4['primary']}}
-{% endif -%}
-{% if dnsv4['secondary'] %}
-dns2={{dnsv4['secondary']}}
-{% endif -%}
+{% for dns in dnsv4 -%}
+dns{{ loop.index }}={{ dns }}
+{% endfor -%}
 {% endif %}
 
 {% if authentication['mode'] == 'local' %}
@@ -252,7 +249,7 @@ def get_config():
     },
     'ip_pool'         : [],
     'gw'              : None,
-    'dnsv4'           : {},
+    'dnsv4'           : [],
     'mtu'             : None,
     'ppp'             : {},
   }
@@ -352,10 +349,8 @@ def get_config():
     config_data['ip_pool'] = c.return_values('network-settings client-ip-settings subnet')
   if c.exists('network-settings client-ip-settings gateway-address'):
     config_data['gw'] = c.return_value('network-settings client-ip-settings gateway-address')
-  if c.exists('network-settings dns-server primary-dns'):
-    config_data['dnsv4']['primary'] = c.return_value('network-settings dns-server primary-dns')
-  if c.exists('network-settings dns-server secondary-dns'):
-    config_data['dnsv4']['secondary'] = c.return_value('network-settings dns-server secondary-dns')
+  if c.exists('network-settings name-server'):
+    config_data['dnsv4'] = c.return_values('network-settings name-server')
   if c.exists('network-settings mtu'):
     config_data['mtu'] = c.return_value('network-settings mtu')
 
@@ -374,6 +369,7 @@ def get_config():
 def verify(c):
   if c == None:
     return None
+
   ### vertify auth settings
   if c['authentication']['mode'] == 'local':
     if not c['authentication']['local-users']:
@@ -389,6 +385,9 @@ def verify(c):
       if c['authentication']['local-users'][usr]['download']:
         if not c['authentication']['local-users'][usr]['upload']:
           raise ConfigError('user ' + usr + ' requires upload speed value')
+
+  if len(c['dnsv4']) > 2:
+    raise ConfigError("Only 2 DNS name-servers can be configured")
 
   if not c['certs']['ca'] or not c['certs']['server-key'] or not c['certs']['server-cert']:
     raise ConfigError('service sstp-server sstp-settings ssl-certs needs the ssl certificates set up')
