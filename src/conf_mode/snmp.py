@@ -17,14 +17,13 @@
 import os
 import jinja2
 
-import vyos.version
-import vyos.validate
-
 from binascii import hexlify
 from time import sleep
 from stat import S_IRWXU, S_IXGRP, S_IXOTH, S_IROTH, S_IRGRP
 from sys import exit
 
+from vyos.validate import is_ipv4, is_addr_assigned
+from vyos.version import get_version_data
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -239,7 +238,7 @@ def get_config():
     else:
         conf.set_level('service snmp')
 
-    version_data = vyos.version.get_version_data()
+    version_data = get_version_data()
     snmp['version'] = version_data['version']
 
     # create an internal snmpv3 user of the form 'vyosxxxxxxxxxxxxxxxx'
@@ -263,7 +262,7 @@ def get_config():
             # Subnet of SNMP client(s) allowed to contact system
             if conf.exists('community {0} network'.format(name)):
                 for addr in conf.return_values('community {0} network'.format(name)):
-                    if vyos.validate.is_ipv4(addr):
+                    if is_ipv4(addr):
                         community['network_v4'].append(addr)
                     else:
                         community['network_v6'].append(addr)
@@ -271,7 +270,7 @@ def get_config():
             # IP address of SNMP client allowed to contact system
             if conf.exists('community {0} client'.format(name)):
                 for addr in conf.return_values('community {0} client'.format(name)):
-                    if vyos.validate.is_ipv4(addr):
+                    if is_ipv4(addr):
                         community['network_v4'].append(addr)
                     else:
                         community['network_v6'].append(addr)
@@ -554,7 +553,7 @@ def verify(snmp):
         addr = listen[0]
         port = listen[1]
 
-        if vyos.validate.is_ipv4(addr):
+        if is_ipv4(addr):
             # example: udp:127.0.0.1:161
             listen = 'udp:' + addr + ':' + port
         else:
@@ -563,7 +562,7 @@ def verify(snmp):
 
         # We only wan't to configure addresses that exist on the system.
         # Hint the user if they don't exist
-        if vyos.validate.is_addr_assigned(addr):
+        if is_addr_assigned(addr):
             snmp['listen_on'].append(listen)
         else:
             print('WARNING: SNMP listen address {0} not configured!'.format(addr))
