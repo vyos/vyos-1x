@@ -95,6 +95,7 @@ Architecture: amd64 i386
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
+ vyos-1x,
  open-vm-tools
 Description: VyOS configuration scripts and data for VMware
  Adds configuration files required for VyOS running on VMware hosts.
