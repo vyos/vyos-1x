@@ -69,10 +69,10 @@ else:
     # migrate radius options - copy subtree
     # thus must happen before migration of the individual RADIUS servers
     old_options = new_base + ['authentication', 'radius-settings']
-    new_options = new_base + ['authentication', 'radius']
-    config.copy(old_options, new_options)
-    config.delete(old_options)
-
+    if config.exists(old_options):
+        new_options = new_base + ['authentication', 'radius']
+        config.copy(old_options, new_options)
+        config.delete(old_options)
 
     # migrate radius dynamic author / change of authorisation server
     dae_old = new_base + ['authentication', 'radius', 'dae-server']
