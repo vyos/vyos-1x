@@ -1,3 +1,9 @@
+vyos-1x (1.3.0-17) unstable; urgency=medium
+
+  * vyos-1x-vmware: add dependency on vyos-1x
+
+ -- Christian Poessinger <christian@poessinger.com>  Sat, 21 Mar 2020 20:47:22 +0100
+
 vyos-1x (1.3.0-16) unstable; urgency=low
 
   * [arp] moving 'show arp' to 'show protocols static arp'
