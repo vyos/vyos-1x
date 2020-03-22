@@ -35,3 +35,4 @@ from vyos.ifconfig.tunnel import IPIP6If
 from vyos.ifconfig.tunnel import IP6IP6If
 from vyos.ifconfig.tunnel import SitIf
 from vyos.ifconfig.tunnel import Sit6RDIf
+from vyos.ifconfig.wireless import WiFiIf
