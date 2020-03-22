@@ -798,7 +798,7 @@ def verify(dhcp):
 
     if not listen_ok:
         raise ConfigError('DHCP server configuration error!\n' \
-                          'None of configured DHCP subnets does not have appropriate\n' \
+                          'None of configured DHCP subnets has an appropriate\n' \
                           'primary IP address on any broadcast interface.')
 
     return None
