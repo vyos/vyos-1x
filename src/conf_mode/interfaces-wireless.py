@@ -1144,6 +1144,10 @@ def get_config():
     if conf.exists('ip enable-arp-ignore'):
         wifi['ip_enable_arp_ignore'] = 1
 
+    # Wireless physical device
+    if conf.exists('physical-device'):
+        wifi['phy'] = conf.return_value('physical-device')
+
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         wifi['mac'] = conf.return_value('mac')
@@ -1163,10 +1167,6 @@ def get_config():
     # retrieve VRF instance
     if conf.exists('vrf'):
         wifi['vrf'] = conf.return_value('vrf')
-
-    # Wireless physical device
-    if conf.exists('phy'):
-        wifi['phy'] = conf.return_value('phy')
 
     # Transmission power reduction in dBm
     if conf.exists('reduce-transmit-power'):
