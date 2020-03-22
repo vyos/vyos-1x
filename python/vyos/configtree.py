@@ -90,7 +90,7 @@ class ConfigTreeError(Exception):
 
 
 class ConfigTree(object):
-    def __init__(self, config_string, libpath='/usr/lib/libvyosconfig.so.0'):
+    def __init__(self, config_string, libpath='libvyosconfig.so.0'):
         self.__config = None
         self.__lib = cdll.LoadLibrary(libpath)
 
