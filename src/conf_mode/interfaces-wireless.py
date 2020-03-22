@@ -1288,6 +1288,9 @@ def verify(wifi):
     if wifi['type'] != 'monitor' and not wifi['ssid']:
         raise ConfigError('SSID must be set for {}'.format(wifi['intf']))
 
+    if not wifi['phy']:
+        raise ConfigError('You must specify physical-device')
+
     if wifi['type'] == 'access-point':
         c = Config()
         if not c.exists('system wifi-regulatory-domain'):
