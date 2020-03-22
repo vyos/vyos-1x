@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
+
 from vyos import ConfigError
 from vyos.ifconfig.interface import Interface
 
@@ -70,8 +72,8 @@ class VXLANIf(Interface):
 
         self._cmd(cmd)
 
-    @staticmethod
-    def get_config():
+    @classmethod
+    def get_config(cls):
         """
         VXLAN interfaces require a configuration when they are added using
         iproute2. This static method will provide the configuration dictionary
@@ -80,12 +82,4 @@ class VXLANIf(Interface):
         Example:
         >> dict = VXLANIf().get_config()
         """
-        config = {
-            'vni': 0,
-            'dev': '',
-            'group': '',
-            'port': 8472,  # The Linux implementation of VXLAN pre-dates
-            # the IANA's selection of a standard destination port
-            'remote': ''
-        }
-        return config
+        return deepcopy(cls.default)
