@@ -22,10 +22,12 @@ from sys import exit
 from stat import S_IRWXU,S_IRGRP,S_IXGRP,S_IROTH,S_IXOTH
 from pwd import getpwnam
 from grp import getgrnam
+from re import findall
 
 from subprocess import Popen, PIPE
 from psutil import pid_exists
 from netifaces import interfaces
+from netaddr import *
 
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
@@ -1329,6 +1331,26 @@ def verify(wifi):
     return None
 
 def generate(wifi):
+
+    if not wifi['mac']:
+        # http://wiki.stocksy.co.uk/wiki/Multiple_SSIDs_with_hostapd
+        # generate locally administered MAC address from used phy interface
+        with open('/sys/class/ieee80211/{}/addresses'.format(wifi['phy']), 'r') as f:
+            tmp = EUI(f.read().rstrip()).value
+            # mask last nibble from the MAC address
+            tmp &= 0xfffffffffff0
+            # set locally administered bit in MAC address
+            tmp |= 0x020000000000
+            # we now need to add an offset to our MAC address indicating this
+            # subinterfaces index
+            tmp += int(findall(r'\d+', wifi['intf'])[0])
+
+            # convert integer to "real" MAC address representation
+            mac = EUI(hex(tmp).split('x')[-1])
+            # change dialect to use : as delimiter instead of -
+            mac.dialect = mac_unix_expanded
+            wifi['mac'] = str(mac)
+
     pid = 0
     # always stop hostapd service first before reconfiguring it
     pidfile = get_pid('hostapd', wifi['intf'])
