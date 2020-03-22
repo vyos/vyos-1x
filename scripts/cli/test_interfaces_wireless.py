@@ -24,7 +24,26 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'wireless']
-        self._interfaces = ['wlan0', 'wlan1']
+        self._interfaces = ['wlan0']
+
+
+        def test_add_description(self):
+            """
+            A physical interface is mandatory thus we overwrite this function.
+            """
+            for intf in self._interfaces:
+                self.session.set(self._base_path + [intf, 'physical-device', 'phy0'])
+
+            super.test_add_description()
+
+        def test_add_address(self):
+            """
+            A physical interface is mandatory thus we overwrite this function.
+            """
+            for intf in self._interfaces:
+                self.session.set(self._base_path + [intf, 'physical-device', 'phy0'])
+
+            super.test_add_description()
 
 if __name__ == '__main__':
     os.system("modprobe mac80211_hwsim")
