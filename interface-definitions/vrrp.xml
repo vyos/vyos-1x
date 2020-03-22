@@ -197,6 +197,20 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="stop">
+                    <properties>
+                      <help>Script to run on VRRP state transition to stop</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mode-force">
+                    <properties>
+                      <help>Don't check previously VRRP scripts states</help>
+                       <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <leafNode name="virtual-address">

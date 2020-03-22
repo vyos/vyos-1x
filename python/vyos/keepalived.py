@@ -38,6 +38,15 @@ def vrrp_running():
 def keepalived_running():
     return vyos.util.process_running(pid_file)
 
+# Clear VRRP data after showing
+def remove_vrrp_data(data_file):
+    if data_file == "json" and os.path.exists(json_file):
+        os.remove(json_file)
+    elif data_file == "stats" and os.path.exists(stats_file):
+        os.remove(stats_file)
+    elif data_file == "state" and os.path.exists(state_file):
+        os.remove(state_file)
+
 def force_state_data_dump():
     pid = vyos.util.read_file(pid_file)
     os.kill(int(pid), signal.SIGUSR1)
