@@ -80,44 +80,16 @@ class VyOSError(Exception):
     pass
 
 
-class Config(object):
+class BaseConfig(object):
     """
-    The class of config access objects.
+    The base class of config access objects.
 
     Internally, in the current implementation, this object is *almost* stateless,
     the only state it keeps is relative *config path* for convenient access to config
     subtrees.
     """
-    def __init__(self, session_env=None, config_file='/opt/vyatta/etc/config/config.boot'):
-        self._cli_shell_api = "/bin/cli-shell-api"
+    def __init__(self):
         self._level = []
-        if session_env:
-            self.__session_env = session_env
-        else:
-            self.__session_env = None
-
-        # Running config can be obtained either from op or conf mode, it always succeeds
-        # (if config system is initialized at all).
-        if os.path.isfile('/tmp/vyos-config-status'):
-            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
-        else:
-            with open(config_file) as f:
-                running_config_text = f.read()
-
-        # Session config ("active") only exists in conf mode.
-        # In op mode, we'll just use the same running config for both active and session configs.
-        if self.in_session():
-            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
-        else:
-            session_config_text = running_config_text
-
-        self._session_config = vyos.configtree.ConfigTree(session_config_text)
-        self._running_config = vyos.configtree.ConfigTree(running_config_text)
-
-    def _make_command(self, op, path):
-        args = path.split()
-        cmd = [self._cli_shell_api, op] + args
-        return cmd
 
     def _make_path(self, path):
         # Backwards-compatibility stuff: original implementation used string paths
@@ -132,19 +104,6 @@ class Config(object):
         else:
             raise TypeError("Path must be a whitespace-separated string or a list")
         return (self._level + path)
-
-    def _run(self, cmd):
-        if self.__session_env:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
-        else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        out = p.stdout.read()
-        p.wait()
-        p.communicate()
-        if p.returncode != 0:
-            raise VyOSError()
-        else:
-            return out.decode('ascii')
 
     def set_level(self, path):
         """
@@ -179,6 +138,105 @@ class Config(object):
         """
         return(self._level)
 
+    def _exists(self, configtree, path):
+        if configtree.exists(self._make_path(path)):
+            return True
+        else:
+            # libvyosconfig exists() works only for _nodes_, not _values_
+            # libvyattacfg one also worked for values, so we emulate that case here
+            if isinstance(path, str):
+                path = re.split(r'\s+', path)
+            path_without_value = path[:-1]
+            path_str = " ".join(path_without_value)
+            try:
+                value = configtree.return_value(self._make_path(path_str))
+                return (value == path[-1])
+            except vyos.configtree.ConfigTreeError:
+                # node doesn't exist at all
+                return False
+
+    def _list_nodes(self, configtree, path, default):
+        try:
+            nodes = configtree.list_nodes(self._make_path(path))
+        except vyos.configtree.ConfigTreeError:
+            nodes = []
+
+        if not nodes:
+            return(default)
+        else:
+            return(nodes)
+
+    def _return_value(self, configtree, path, default):
+        try:
+            value = configtree.return_value(self._make_path(path))
+        except vyos.configtree.ConfigTreeError:
+            value = None
+
+        if not value:
+            return(default)
+        else:
+            return(value)
+
+    def _return_values(self, configtree, path, default):
+        try:
+            values = configtree.return_values(self._make_path(path))
+        except vyos.configtree.ConfigTreeError:
+            values = []
+
+        if not values:
+            return(default)
+        else:
+            return(values)
+
+
+class Config(BaseConfig):
+    """
+    The class of config access objects.
+    """
+    def __init__(self, session_env=None, config_file='/opt/vyatta/etc/config/config.boot'):
+        super().__init__()
+        self._cli_shell_api = "/bin/cli-shell-api"
+        if session_env:
+            self.__session_env = session_env
+        else:
+            self.__session_env = None
+
+        # Running config can be obtained either from op or conf mode, it always succeeds
+        # (if config system is initialized at all).
+        if os.path.isfile('/tmp/vyos-config-status'):
+            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
+        else:
+            with open(config_file) as f:
+                running_config_text = f.read()
+
+        # Session config ("active") only exists in conf mode.
+        # In op mode, we'll just use the same running config for both active and session configs.
+        if self.in_session():
+            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
+        else:
+            session_config_text = running_config_text
+
+        self._session_config = vyos.configtree.ConfigTree(session_config_text)
+        self._running_config = vyos.configtree.ConfigTree(running_config_text)
+
+    def _make_command(self, op, path):
+        args = path.split()
+        cmd = [self._cli_shell_api, op] + args
+        return cmd
+
+    def _run(self, cmd):
+        if self.__session_env:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
+        else:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        out = p.stdout.read()
+        p.wait()
+        p.communicate()
+        if p.returncode != 0:
+            raise VyOSError()
+        else:
+            return out.decode('ascii')
+
     def exists(self, path):
         """
         Checks if a node with given path exists in the running or proposed config
@@ -190,21 +248,7 @@ class Config(object):
             This function cannot be used outside a configuration sessions.
             In operational mode scripts, use ``exists_effective``.
         """
-        if self._session_config.exists(self._make_path(path)):
-            return True
-        else:
-            # libvyosconfig exists() works only for _nodes_, not _values_
-            # libvyattacfg one also worked for values, so we emulate that case here
-            if isinstance(path, str):
-                path = re.split(r'\s+', path)
-            path_without_value = path[:-1]
-            path_str = " ".join(path_without_value)
-            try:
-                value = self._session_config.return_value(self._make_path(path_str))
-                return (value == path[-1])
-            except vyos.configtree.ConfigTreeError:
-                # node doesn't exist at all
-                return False
+        return self._exists(self._session_config, path)
 
     def session_changed(self):
         """
@@ -340,15 +384,7 @@ class Config(object):
             This function cannot be used outside a configuration session.
             In operational mode scripts, use ``return_effective_value``.
         """
-        try:
-            value = self._session_config.return_value(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
-            value = None
-
-        if not value:
-            return(default)
-        else:
-            return(value)
+        return self._return_value(self._session_config, path, default)
 
     def return_values(self, path, default=[]):
         """
@@ -365,15 +401,7 @@ class Config(object):
             This function cannot be used outside a configuration session.
             In operational mode scripts, use ``return_effective_values``.
         """
-        try:
-            values = self._session_config.return_values(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
-            values = []
-
-        if not values:
-            return(default)
-        else:
-            return(values)
+        return self._return_values(self._session_config, path, default)
 
     def list_nodes(self, path, default=[]):
         """
@@ -386,15 +414,7 @@ class Config(object):
             string list: child node names
 
         """
-        try:
-            nodes = self._session_config.list_nodes(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
-            nodes = []
-
-        if not nodes:
-            return(default)
-        else:
-            return(nodes)
+        return self._list_nodes(self._session_config, path, default)
 
     def exists_effective(self, path):
         """
