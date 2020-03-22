@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
 
 from vyos.ifconfig.interface import Interface
 
@@ -30,18 +31,19 @@ class GeneveIf(Interface):
 
     default = {
         'type': 'geneve',
+        'vni': 0,
+        'remote': '',
     }
 
     def _create(self):
-        cmd = 'ip link add name {} type geneve id {} remote {}' \
-            .format(self.config['ifname'], config['vni'], config['remote'])
+        cmd = 'ip link add name {ifname} type geneve id {vni} remote {remote}'.format(**self.config)
         self._cmd(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_state('down')
 
-    @staticmethod
-    def get_config():
+    @classmethod
+    def get_config(cls):
         """
         GENEVE interfaces require a configuration when they are added using
         iproute2. This static method will provide the configuration dictionary
@@ -50,8 +52,4 @@ class GeneveIf(Interface):
         Example:
         >> dict = GeneveIf().get_config()
         """
-        config = {
-            'vni': 0,
-            'remote': ''
-        }
-        return config
+        return deepcopy(cls.default)
