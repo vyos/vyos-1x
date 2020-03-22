@@ -335,9 +335,10 @@ def dhcp_static_route(static_subnet, static_router):
 
     return string
 
-def get_config():
+def get_config(conf=None):
+    if conf is None:
+        conf = Config()
     dhcp = default_config_data
-    conf = Config()
     if not conf.exists('service dhcp-server'):
         return None
     else:
