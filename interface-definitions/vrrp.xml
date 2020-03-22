@@ -207,7 +207,7 @@
                   </leafNode>
                   <leafNode name="mode-force">
                     <properties>
-                      <help>Don't check previously VRRP scripts states</help>
+                      <help>Don't check previous VRRP state</help>
                        <valueless/>
                     </properties>
                   </leafNode>
