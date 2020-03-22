@@ -1332,29 +1332,24 @@ def verify(wifi):
     # use common function to verify VLAN configuration
     verify_vlan_config(wifi)
 
+    conf = Config()
+    # Only one wireless interface per phy can be in station mode
+    base = ['interfaces', 'wireless']
+    for phy in os.listdir('/sys/class/ieee80211'):
+        stations = []
+        for wlan in conf.list_nodes(base):
+            # the following node is mandatory
+            if conf.exists(base + [wlan, 'physical-device', phy]):
+                tmp = conf.return_value(base + [wlan, 'type'])
+                if tmp == 'station':
+                    stations.append(wlan)
+
+        if len(stations) > 1:
+            raise ConfigError('Only one station per wireless physical interface possible!')
+
     return None
 
 def generate(wifi):
-
-    if not wifi['mac']:
-        # http://wiki.stocksy.co.uk/wiki/Multiple_SSIDs_with_hostapd
-        # generate locally administered MAC address from used phy interface
-        with open('/sys/class/ieee80211/{}/addresses'.format(wifi['phy']), 'r') as f:
-            tmp = EUI(f.read().rstrip()).value
-            # mask last nibble from the MAC address
-            tmp &= 0xfffffffffff0
-            # set locally administered bit in MAC address
-            tmp |= 0x020000000000
-            # we now need to add an offset to our MAC address indicating this
-            # subinterfaces index
-            tmp += int(findall(r'\d+', wifi['intf'])[0])
-
-            # convert integer to "real" MAC address representation
-            mac = EUI(hex(tmp).split('x')[-1])
-            # change dialect to use : as delimiter instead of -
-            mac.dialect = mac_unix_expanded
-            wifi['mac'] = str(mac)
-
     pid = 0
     # always stop hostapd service first before reconfiguring it
     pidfile = get_pid('hostapd', wifi['intf'])
@@ -1389,6 +1384,25 @@ def generate(wifi):
             os.unlink(get_conf_file('wpa_supplicant', wifi['intf']))
 
         return None
+
+    if not wifi['mac']:
+        # http://wiki.stocksy.co.uk/wiki/Multiple_SSIDs_with_hostapd
+        # generate locally administered MAC address from used phy interface
+        with open('/sys/class/ieee80211/{}/addresses'.format(wifi['phy']), 'r') as f:
+            tmp = EUI(f.read().rstrip()).value
+            # mask last nibble from the MAC address
+            tmp &= 0xfffffffffff0
+            # set locally administered bit in MAC address
+            tmp |= 0x020000000000
+            # we now need to add an offset to our MAC address indicating this
+            # subinterfaces index
+            tmp += int(findall(r'\d+', wifi['intf'])[0])
+
+            # convert integer to "real" MAC address representation
+            mac = EUI(hex(tmp).split('x')[-1])
+            # change dialect to use : as delimiter instead of -
+            mac.dialect = mac_unix_expanded
+            wifi['mac'] = str(mac)
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['op_mode'] == 'ap':
