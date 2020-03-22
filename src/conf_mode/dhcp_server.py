@@ -803,7 +803,10 @@ def verify(dhcp):
 
     return None
 
-def generate(dhcp):
+def joinpath(prefix, path):
+    return os.path.join(prefix, path.lstrip('/'))
+
+def generate(dhcp, prefix='/'):
     if dhcp is None:
         return None
 
@@ -818,12 +821,12 @@ def generate(dhcp):
     # we can pass to ISC DHCPd
     config_text = config_text.replace("&quot;",'"')
 
-    with open(config_file, 'w') as f:
+    with open(joinpath(prefix, config_file), 'w') as f:
         f.write(config_text)
 
     tmpl = jinja2.Template(daemon_tmpl)
     config_text = tmpl.render(dhcp)
-    with open(daemon_config_file, 'w') as f:
+    with open(joinpath(prefix, daemon_config_file), 'w') as f:
         f.write(config_text)
 
     return None
