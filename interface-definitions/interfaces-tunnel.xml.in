@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="tunnel" owner="${vyos_conf_scripts_dir}/interfaces-tunnel.py">
+        <properties>
+          <help>Tunnel interface</help>
+          <priority>380</priority>
+          <constraint>
+            <regex>tun[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>tunnel interface must be named tunN</constraintErrorMessage>
+          <valueHelp>
+            <format>tunN</format>
+            <description>Tunnel interface name</description>
+          </valueHelp>
+        </properties>
+
+        <children>
+          #include <include/interface-description.xml.i>
+          #include <include/address-ipv4-ipv6.xml.i>
+          #include <include/interface-disable.xml.i>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-mtu-64-8024.xml.i>
+
+          <leafNode name="local-ip">
+            <properties>
+              <help>Local IP address for this tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Local IPv4 address for this tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Local IPv6 address for this tunnel [NOTICE: unavailable for mGRE tunnels]</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_local.py</script>
+              </completionHelp>
+              <constraint>
+                <!-- does it need fixing/changing to be more restrictive ? -->
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+
+          <leafNode name="remote-ip">
+            <properties>
+              <help>Remote IP address for this tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote IPv4 address for this tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote IPv6 address for this tunnel</description>
+              </valueHelp>
+              <constraint>
+                <!-- does it need fixing/changing to be more restrictive ? -->
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+
+          <leafNode name="6rd-prefix">
+            <properties>
+              <help>6rd network prefix</help>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+            </properties>
+          </leafNode>
+
+          <leafNode name="6rd-relay-prefix">
+            <properties>
+              <help>6rd relay prefix</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 prefix of interface for 6rd</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+              </constraint>
+            </properties>
+          </leafNode>
+
+          <leafNode name="dhcp-interface">
+            <properties>
+              <help>dhcp interface</help>
+              <valueHelp>
+                <format>interface</format>
+                <description>DHCP interface that supplies the local IP address for this tunnel</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <constraint>
+                <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+
+          <leafNode name="encapsulation">
+            <properties>
+              <help>Ignore link state changes</help>
+              <completionHelp>
+                <list>gre gre-bridge ipip sit ipip6 ip6ip6 ip6gre</list>
+              </completionHelp>
+              <valueHelp>
+                <format>gre-bridge</format>
+                <description>Generic Routing Encapsulation bridge interface</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipip</format>
+                <description>IP in IP encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sit</format>
+                <description>Simple Internet Transition encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipip6</format>
+                <description>IP in IP6 encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ip6ip6</format>
+                <description>IP6 in IP6 encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ip6gre</format>
+                <description>GRE over IPv6 network</description>
+              </valueHelp>
+              <constraint>
+                <regex>(gre|gre-bridge|ipip|sit|ipip6|ip6ip6|ip6gre)</regex>
+              </constraint>
+              <constraintErrorMessage>Must be one of 'gre' 'gre-bridge' 'ipip' 'sit' 'ipip6' 'ip6ip6' 'ip6gre'</constraintErrorMessage>
+            </properties>
+          </leafNode>
+
+          <leafNode name="multicast">
+            <properties>
+              <help>Multicast operation over tunnel</help>
+              <completionHelp>
+                <list>enable disable</list>
+              </completionHelp>
+              <valueHelp>
+                <format>enable</format>
+                <description>Enable Multicast</description>
+              </valueHelp>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disable Multicast (default)</description>
+              </valueHelp>
+              <constraint>
+                <regex>(enable|disable)</regex>
+              </constraint>
+              <constraintErrorMessage>Must be 'disable' or 'enable'</constraintErrorMessage>
+            </properties>
+          </leafNode>
+
+          <node name="parameters">
+            <properties>
+              <help>Tunnel parameters</help>
+            </properties>
+
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="ttl">
+                    <properties>
+                      <help>Time to live field</help>
+                      <valueHelp>
+                        <format>0-255</format>
+                        <description>Time to live (default 255)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                      <constraintErrorMessage>TTL must be between 0 and 255</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+
+                  <leafNode name="tos">
+                    <properties>
+                      <help>Type of Service (TOS)</help>
+                      <valueHelp>
+                        <format>0-99</format>
+                        <description>Type of Service (TOS)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-99"/>
+                      </constraint>
+                      <constraintErrorMessage>TOS must be between 0 and 99</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+
+                  <leafNode name="key">
+                    <properties>
+                      <help>Tunnel key</help>
+                      <valueHelp>
+                        <format>0-4294967295</format>
+                        <description>Tunnel key</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                      <constraintErrorMessage>key must be between 0-4294967295</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+
+              <node name="ipv6">
+                <properties>
+                  <help>IPv6 specific tunnel parameters</help>
+                </properties>
+
+                <children>
+                  <leafNode name="encaplimit">
+                    <properties>
+                      <help>Encaplimit field</help>
+                      <valueHelp>
+                        <format>0-255</format>
+                        <description>Encaplimit (default 4)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                      <constraintErrorMessage>key must be between 0-255</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+
+                  <leafNode name="flowlabel">
+                    <properties>
+                      <help>Flowlabel</help>
+                      <valueHelp>
+                        <format>0x0-0x0FFFFF</format>
+                        <description>Tunnel key, 'inherit' or hex value</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(0x){0,1}(0?[0-9A-Fa-f]{1,5})</regex>
+                      </constraint>
+                      <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+
+                  <leafNode name="hoplimit">
+                    <properties>
+                      <help>Hoplimit</help>
+                      <valueHelp>
+                        <format>0-255</format>
+                        <description>Hoplimit (default 64)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                      <constraintErrorMessage>hoplimit must be between 0-255</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+
+                  <leafNode name="tclass">
+                    <properties>
+                      <help>Traffic class (Tclass)</help>
+                      <valueHelp>
+                        <format>0x0-0x0FFFFF</format>
+                        <description>Traffic class, 'inherit' or hex value</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(0x){0,1}(0?[0-9A-Fa-f]{1,2})</regex>
+                      </constraint>
+                      <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

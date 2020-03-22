@@ -27,3 +27,11 @@ from vyos.ifconfig.stp import STPIf
 from vyos.ifconfig.vlan import VLANIf
 from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
+from vyos.ifconfig.tunnel import GREIf
+from vyos.ifconfig.tunnel import GRETapIf
+from vyos.ifconfig.tunnel import IP6GREIf
+from vyos.ifconfig.tunnel import IPIPIf
+from vyos.ifconfig.tunnel import IPIP6If
+from vyos.ifconfig.tunnel import IP6IP6If
+from vyos.ifconfig.tunnel import SitIf
+from vyos.ifconfig.tunnel import Sit6RDIf
