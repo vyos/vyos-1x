@@ -18,7 +18,7 @@ import os
 import unittest
 
 modules = {
-    "intel": ["e1000", "e1000e", "igb", "ixgb", "ixgbe", "ixgbevf", "i40e", "i40evf"],
+    "intel": ["e1000", "e1000e", "igb", "ixgb", "ixgbe", "ixgbevf", "i40e", "i40evf", "iavf"],
     "accel_ppp": ["ipoe", "vlan_mon"],
     "misc": ["wireguard"]
 }
