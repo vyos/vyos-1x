@@ -88,7 +88,7 @@ class Config(object):
     the only state it keeps is relative *config path* for convenient access to config
     subtrees.
     """
-    def __init__(self, session_env=None):
+    def __init__(self, session_env=None, config_file='/opt/vyatta/etc/config/config.boot'):
         self._cli_shell_api = "/bin/cli-shell-api"
         self._level = []
         if session_env:
@@ -101,7 +101,7 @@ class Config(object):
         if os.path.isfile('/tmp/vyos-config-status'):
             running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
-            with open('/opt/vyatta/etc/config/config.boot') as f:
+            with open(config_file) as f:
                 running_config_text = f.read()
 
         # Session config ("active") only exists in conf mode.
