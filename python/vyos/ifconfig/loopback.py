@@ -27,9 +27,6 @@ class LoopbackIf(Interface):
         'type': 'loopback',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def remove(self):
         """
         Loopback interface can not be deleted from operating system. We can

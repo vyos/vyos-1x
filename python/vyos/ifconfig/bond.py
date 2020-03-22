@@ -73,9 +73,6 @@ class BondIf(VLANIf):
         'type': 'bond',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def remove(self):
         """
         Remove interface from operating system. Removing the interface

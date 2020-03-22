@@ -50,9 +50,6 @@ class VXLANIf(Interface):
                         # the IANA's selection of a standard destination port
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def _create(self):
         cmd = ''
         if self.config['remote']:

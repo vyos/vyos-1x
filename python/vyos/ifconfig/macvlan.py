@@ -27,9 +27,6 @@ class MACVLANIf(VLANIf):
         'type': 'macvlan',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def _create(self):
         cmd = 'ip link add {ifname} link {link} type macvlan mode {mode}'.format(
             **self.config)

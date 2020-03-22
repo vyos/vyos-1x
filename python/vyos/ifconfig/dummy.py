@@ -27,6 +27,3 @@ class DummyIf(Interface):
     default = {
         'type': 'dummy',
     }
-
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)

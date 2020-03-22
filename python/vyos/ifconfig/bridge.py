@@ -76,9 +76,6 @@ class BridgeIf(Interface):
         'type': 'bridge',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def set_ageing_time(self, time):
         """
         Set bridge interface MAC address aging time in seconds. Internal kernel

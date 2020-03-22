@@ -35,9 +35,6 @@ class L2TPv3If(Interface):
         'type': 'l2tp',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def _create(self):
         # create tunnel interface
         cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])

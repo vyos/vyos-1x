@@ -53,9 +53,6 @@ class EthernetIf(VLANIf):
         'type': 'ethernet',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def _delete(self):
         # Ethernet interfaces can not be removed
         pass

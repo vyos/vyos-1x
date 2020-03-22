@@ -32,9 +32,6 @@ class GeneveIf(Interface):
         'type': 'geneve',
     }
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def _create(self):
         cmd = 'ip link add name {} type geneve id {} remote {}' \
             .format(self.config['ifname'], config['vni'], config['remote'])

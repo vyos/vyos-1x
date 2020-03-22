@@ -54,9 +54,6 @@ class WireGuardIf(Interface):
     'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     """
 
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
-
     def update(self):
         if not self.config['private-key']:
             raise ValueError("private key required")
