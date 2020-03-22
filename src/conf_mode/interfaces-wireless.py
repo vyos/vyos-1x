@@ -847,7 +847,7 @@ default_config_data = {
     'sec_wpa_passphrase' : '',
     'sec_wpa_radius' : [],
     'ssid' : '',
-    'type' : 'monitor',
+    'op_mode' : 'monitor',
     'vif': [],
     'vif_remove': [],
     'vrf': ''
@@ -1255,7 +1255,11 @@ def get_config():
 
     # Wireless device type for this interface
     if conf.exists('type'):
-        wifi['type'] = conf.return_value('type')
+        tmp = conf.return_value('type')
+        if tmp == 'access-point':
+            tmp = 'ap'
+
+        wifi['op_mode'] = tmp
 
     # re-set configuration level to parse new nodes
     conf.set_level(cfg_base)
@@ -1287,13 +1291,13 @@ def verify(wifi):
     if wifi['deleted']:
         return None
 
-    if wifi['type'] != 'monitor' and not wifi['ssid']:
+    if wifi['op_mode'] != 'monitor' and not wifi['ssid']:
         raise ConfigError('SSID must be set for {}'.format(wifi['intf']))
 
     if not wifi['phy']:
         raise ConfigError('You must specify physical-device')
 
-    if wifi['type'] == 'access-point':
+    if wifi['op_mode'] == 'ap':
         c = Config()
         if not c.exists('system wifi-regulatory-domain'):
             raise ConfigError('Wireless regulatory domain is mandatory,\n' \
@@ -1387,13 +1391,13 @@ def generate(wifi):
         return None
 
     # render appropriate new config files depending on access-point or station mode
-    if wifi['type'] == 'access-point':
+    if wifi['op_mode'] == 'ap':
         tmpl = Template(config_hostapd_tmpl)
         config_text = tmpl.render(wifi)
         with open(get_conf_file('hostapd', wifi['intf']), 'w') as f:
             f.write(config_text)
 
-    elif wifi['type'] == 'station':
+    elif wifi['op_mode'] == 'station':
         tmpl = Template(config_wpa_suppl_tmpl)
         config_text = tmpl.render(wifi)
         with open(get_conf_file('wpa_supplicant', wifi['intf']), 'w') as f:
@@ -1500,7 +1504,7 @@ def apply(wifi):
 
     # Physical interface is now configured. Proceed by starting hostapd or
     # wpa_supplicant daemon. When type is monitor we can just skip this.
-    if wifi['type'] == 'access-point':
+    if wifi['op_mode'] == 'ap':
         cmd  = 'start-stop-daemon --start --quiet'
         cmd += ' --exec /usr/sbin/hostapd'
         # now pass arguments to hostapd binary
@@ -1511,7 +1515,7 @@ def apply(wifi):
         # execute assembled command
         subprocess_cmd(cmd)
 
-    elif wifi['type'] == 'station':
+    elif wifi['op_mode'] == 'station':
         cmd  = 'start-stop-daemon --start --quiet'
         cmd += ' --exec /sbin/wpa_supplicant'
         # now pass arguments to hostapd binary
