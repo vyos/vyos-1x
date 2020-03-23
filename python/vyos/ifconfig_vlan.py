@@ -68,11 +68,8 @@ def apply_vlan_config(vlan, config):
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
 
-    # assign to VRF
-    if config['vrf']:
-        vlan.add_vrf(config['vrf'])
-    else:
-        vlan.del_vrf(config['vrf'])
+    # assign/remove VRF
+    vlan.set_vrf(config['vrf'])
 
     # Change VLAN interface MAC address
     if config['mac']:

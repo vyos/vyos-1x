@@ -21,6 +21,7 @@
           #include <include/address-ipv4-ipv6.xml.i>
           #include <include/interface-disable.xml.i>
           #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-vrf.xml.i>
           #include <include/interface-mtu-64-8024.xml.i>
 
           <leafNode name="local-ip">

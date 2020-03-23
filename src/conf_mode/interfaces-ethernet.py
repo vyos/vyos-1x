@@ -369,11 +369,8 @@ def apply(eth):
         for addr in eth['address']:
             e.add_addr(addr)
 
-        # assign to VRF
-        if eth['vrf']:
-            e.add_vrf(eth['vrf'])
-        else:
-            e.del_vrf(eth['vrf'])
+        # assign/remove VRF
+        e.set_vrf(eth['vrf'])
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in eth['vif_s_remove']:

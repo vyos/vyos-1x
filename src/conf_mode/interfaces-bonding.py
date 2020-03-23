@@ -461,11 +461,8 @@ def apply(bond):
         for addr in bond['address']:
             b.add_addr(addr)
 
-        # assign to VRF
-        if bond['vrf']:
-            b.add_vrf(bond['vrf'])
-        else:
-            b.del_vrf(bond['vrf'])
+        # assign/remove VRF
+        b.set_vrf(bond['vrf'])
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in bond['vif_s_remove']:

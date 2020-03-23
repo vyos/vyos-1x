@@ -1461,11 +1461,8 @@ def apply(wifi):
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])
 
-        # assign to VRF
-        if wifi['vrf']:
-            w.add_vrf(wifi['vrf'])
-        else:
-            w.del_vrf(wifi['vrf'])
+        # assign/remove VRF
+        w.set_vrf(wifi['vrf'])
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed

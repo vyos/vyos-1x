@@ -297,11 +297,8 @@ def apply(peth):
     # Enable private VLAN proxy ARP on this interface
     p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
 
-    # assign to VRF
-    if peth['vrf']:
-        p.add_vrf(peth['vrf'])
-    else:
-        p.del_vrf(peth['vrf'])
+    # assign/remove VRF
+    p.set_vrf(peth['vrf'])
 
     # Change interface MAC address
     if peth['mac']:

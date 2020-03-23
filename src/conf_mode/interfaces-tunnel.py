@@ -129,6 +129,7 @@ class ConfigurationState (Config):
 
 default_config_data = {
     # interface definition
+    'vrf': '',
     'addresses-add': [],
     'addresses-del': [],
     'state': 'up',
@@ -180,6 +181,7 @@ mapping = {
     'dhcp-interface':      ('dhcp-interface', False, None),
     'state':               ('disable', False, 'down'),
     'link_detect':         ('disable-link-detect', False, 2),
+    'vrf':                 ('vrf', False, None),
     'addresses-add':       ('address', True, None),
 }
 
@@ -326,7 +328,7 @@ def verify(conf):
     # what are the tunnel options we can set / modified / deleted
 
     kls = get_class(options)
-    valid = kls.updates + ['alias', 'addresses-add', 'addresses-del']
+    valid = kls.updates + ['alias', 'addresses-add', 'addresses-del', 'vrf']
 
     if changes['section'] == 'create':
         valid.extend(['type',])
@@ -466,7 +468,7 @@ def apply(conf):
         tunnel.set_interface(option, options[option])
 
     # set other interface properties
-    for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast'):
+    for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast', 'vrf'):
         tunnel.set_interface(option, options[option])
 
     # Configure interface address(es)
