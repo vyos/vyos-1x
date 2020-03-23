@@ -198,16 +198,19 @@ def get_config():
 
             node['service'].append(srv)
 
-        # set config level back to top level
-        conf.set_level(base_level)
-
+        # Set config back to appropriate level for these options
+        conf.set_level(base_level + ['interface', interface])
+        
         # Additional settings in CLI
         if conf.exists(['use-web', 'skip']):
             node['web_skip'] = conf.return_value(['use-web', 'skip'])
 
         if conf.exists(['use-web', 'url']):
             node['web_url'] = conf.return_value(['use-web', 'url'])
-
+        
+        # set config level back to top level
+        conf.set_level(base_level)
+        
         dyndns['interfaces'].append(node)
 
     return dyndns
