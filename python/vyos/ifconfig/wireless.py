@@ -26,12 +26,12 @@ class WiFiIf(VLANIf):
 
     default = {
         'type': 'wifi',
-        'phy': 'phy0',
-        'op_mode': 'monitor'
+        'phy': 'phy0'
     }
 
     def _create(self):
-        cmd = 'iw phy {phy} interface add {ifname} type {op_mode}' \
+        # all interfaces will be added in monitor mode
+        cmd = 'iw phy {phy} interface add {ifname} type monitor' \
             .format(**self.config)
         self._cmd(cmd)
 
@@ -56,8 +56,6 @@ class WiFiIf(VLANIf):
         >> conf = WiFiIf().get_config()
         """
         config = {
-            'phy': 'phy0',
-            'op_mode': 'monitor' # required for proper interface deletion, as
-                                 # _update() is called prior to remove()
+            'phy': 'phy0'
         }
         return config
