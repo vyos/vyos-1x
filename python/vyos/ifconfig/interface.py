@@ -89,7 +89,12 @@ class Interface(Control):
             'shellcmd': 'ip link set dev {ifname} master {value}',
         },
         'del_vrf': {
-            'shellcmd': 'ip link set dev {ifname} nomaster {value}',
+            'shellcmd': 'ip link set dev {ifname} nomaster',
+        },
+        'vrf': {
+            'force': True,
+            'convert': lambda v: f'master {v}' if v else 'nomaster',
+            'shellcmd': 'ip link set dev {ifname} {value}',
         },
     }
 
@@ -308,7 +313,7 @@ class Interface(Control):
         """
         self.set_interface('add_vrf', vrf)
 
-    def del_vrf(self, vrf):
+    def del_vrf(self, vrf=''):
         """
         Remove interface from given VRF instance.
 
