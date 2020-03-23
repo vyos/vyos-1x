@@ -35,11 +35,6 @@ class WiFiIf(VLANIf):
             .format(**self.config)
         self._cmd(cmd)
 
-        # place interface in administrative down state
-        # this should be improved in the long run to reduce the amount of
-        # interface flaps
-        self.set_state('down')
-
     def _delete(self):
         cmd = 'iw dev {ifname} del' \
             .format(**self.config)

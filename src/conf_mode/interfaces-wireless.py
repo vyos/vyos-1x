@@ -29,7 +29,7 @@ from psutil import pid_exists
 from netifaces import interfaces
 from netaddr import *
 
-from vyos.ifconfig import EthernetIf
+from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
@@ -58,12 +58,6 @@ interface={{ intf }}
 # Use driver=none if building hostapd as a standalone RADIUS server that does
 # not control any wireless/wired driver.
 driver=nl80211
-
-#
-# What about bridge?
-#   bridge=br0
-#   wds_sta=1
-#
 
 # Levels (minimum value for logged events):
 #  0 = verbose debugging
@@ -1420,13 +1414,24 @@ def generate(wifi):
     return None
 
 def apply(wifi):
-    w = EthernetIf(wifi['intf'])
     if wifi['deleted']:
+        w = WiFiIf(wifi['intf'])
         # delete interface
         w.remove()
     else:
-        # Some parts e.g. MAC address can't be changed when interface is up
-        w.set_state('down')
+        # WiFi interface needs to be created on-block (e.g. mode or physical
+        # interface) instead of passing a ton of arguments, I just use a dict
+        # that is managed by vyos.ifconfig
+        conf = deepcopy(WiFiIf.get_config())
+
+        # Assign WiFi instance configuration parameters to config dict
+        conf['phy'] = wifi['phy']
+
+        # Finally create the new interface
+        w = WiFiIf(wifi['intf'], **conf)
+
+        # assign/remove VRF
+        w.set_vrf(wifi['vrf'])
 
         # update interface description used e.g. within SNMP
         w.set_alias(wifi['description'])
@@ -1461,9 +1466,6 @@ def apply(wifi):
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])
 
-        # assign/remove VRF
-        w.set_vrf(wifi['vrf'])
-
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed
         if wifi['mac']:
@@ -1479,12 +1481,6 @@ def apply(wifi):
         w.set_arp_announce(wifi['ip_enable_arp_announce'])
         # configure ARP ignore
         w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
-
-        # Enable/Disable interface
-        if wifi['disable']:
-            w.set_state('down')
-        else:
-            w.set_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
@@ -1513,27 +1509,43 @@ def apply(wifi):
             vlan = e.add_vlan(vif['id'])
             apply_vlan_config(vlan, vif)
 
+        # Enable/Disable interface - interface is always placed in
+        # administrative down state in WiFiIf class
+        if not wifi['disable']:
+            w.set_state('up')
+
+
     # Physical interface is now configured. Proceed by starting hostapd or
     # wpa_supplicant daemon. When type is monitor we can just skip this.
     if wifi['op_mode'] == 'ap':
-        cmd  = 'start-stop-daemon --start --quiet'
+        cmd  = 'start-stop-daemon'
+        cmd += ' --start '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
+        cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
         cmd += ' --exec /usr/sbin/hostapd'
         # now pass arguments to hostapd binary
-        cmd += ' -- -B'
-        cmd += ' -P {}'.format(get_pid('hostapd', wifi['intf']))
-        cmd += ' {}'.format(get_conf_file('hostapd', wifi['intf']))
+        cmd += ' -- '
+        cmd += ' -B'
+        cmd += ' -P ' + get_pid('hostapd', wifi['intf'])
+        cmd += ' ' + get_conf_file('hostapd', wifi['intf'])
 
         # execute assembled command
         subprocess_cmd(cmd)
 
     elif wifi['op_mode'] == 'station':
-        cmd  = 'start-stop-daemon --start --quiet'
+        cmd  = 'start-stop-daemon'
+        cmd += ' --start '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
+        cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
         cmd += ' --exec /sbin/wpa_supplicant'
         # now pass arguments to hostapd binary
-        cmd += ' -- -s -B -D nl80211'
-        cmd += ' -P {}'.format(get_pid('wpa_supplicant', wifi['intf']))
-        cmd += ' -i {}'.format(wifi['intf'])
-        cmd += ' -c {}'.format(get_conf_file('wpa_supplicant', wifi['intf']))
+        cmd += ' -- '
+        cmd += ' -s -B -D nl80211'
+        cmd += ' -P ' + get_pid('wpa_supplicant', wifi['intf'])
+        cmd += ' -i ' + wifi['intf']
+        cmd += ' -c ' + get_conf_file('wpa_supplicant', wifi['intf'])
 
         # execute assembled command
         subprocess_cmd(cmd)
