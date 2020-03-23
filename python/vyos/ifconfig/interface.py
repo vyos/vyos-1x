@@ -93,6 +93,9 @@ class Interface(Control):
     }
 
     _sysfs_get = {
+        'mac': {
+            'location': '/sys/class/net/{ifname}/address',
+        },
         'mtu': {
             'location': '/sys/class/net/{ifname}/mtu',
         },
@@ -286,6 +289,17 @@ class Interface(Control):
         '1400'
         """
         return self.set_interface('mtu', mtu)
+
+    def get_mac(self):
+        """
+        Get current interface MAC (Media Access Contrl) address used.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_mac()
+        '00:50:ab:cd:ef:00'
+        """
+        self.get_interface('mac')
 
     def set_mac(self, mac):
         """
