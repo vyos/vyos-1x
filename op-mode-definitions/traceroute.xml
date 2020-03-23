@@ -12,7 +12,7 @@
             <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
           </completionHelp>
         </properties>
-        <command>traceroute $2</command>
+        <command>/usr/bin/traceroute $2</command>
       </tagNode>
       <tagNode name="ipv4">
         <properties>
@@ -21,7 +21,7 @@
             <list>&lt;hostname&gt; &lt;x.x.x.x&gt;</list>
           </completionHelp>
         </properties>
-        <command>traceroute -4 $3</command>
+        <command>/usr/bin/traceroute -4 $3</command>
       </tagNode>
       <tagNode name="ipv6">
         <properties>
@@ -30,7 +30,7 @@
             <list>&lt;hostname&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
           </completionHelp>
         </properties>
-        <command>traceroute -6 $3</command>
+        <command>/usr/bin/traceroute -6 $3</command>
       </tagNode>
       <tagNode name="vrf">
         <properties>
