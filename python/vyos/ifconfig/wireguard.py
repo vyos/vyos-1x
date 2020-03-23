@@ -18,6 +18,7 @@ import os
 
 import vyos
 from vyos.ifconfig.interface import Interface
+from datetime import timedelta
 
 class WireGuardIf(Interface):
     options = ['port', 'private-key', 'pubkey', 'psk',
