@@ -958,7 +958,10 @@ def apply(openvpn):
     # service as the configuration is not re-read. Stop daemon only if it's
     # running - it could have died or killed by someone evil
     if pid_exists(pid):
-        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd = 'start-stop-daemon'
+        cmd += ' --stop '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
         cmd += ' --pidfile ' + pidfile
         subprocess_cmd(cmd)
 
@@ -990,7 +993,10 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    cmd  = 'start-stop-daemon --start --quiet'
+    cmd = 'start-stop-daemon'
+    cmd += ' --start '
+    cmd += ' --quiet'
+    cmd += ' --oknodo'
     cmd += ' --pidfile ' + pidfile
     cmd += ' --exec /usr/sbin/openvpn'
     # now pass arguments to openvpn binary

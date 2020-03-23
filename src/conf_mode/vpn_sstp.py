@@ -497,7 +497,10 @@ def apply(sstp):
 
     if sstp is None:
         if pid_exists(pid):
-            cmd  = 'start-stop-daemon --stop --quiet'
+            cmd = 'start-stop-daemon'
+            cmd += ' --stop '
+            cmd += ' --quiet'
+            cmd += ' --oknodo'
             cmd += ' --pidfile ' + pidfile
             subprocess_cmd(cmd)
 
@@ -510,7 +513,10 @@ def apply(sstp):
         if os.path.exists(pidfile):
             os.remove(pidfile)
 
-        cmd  = 'start-stop-daemon --start --quiet'
+        cmd = 'start-stop-daemon'
+        cmd += ' --start '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
         cmd += ' --pidfile ' + pidfile
         cmd += ' --exec /usr/sbin/accel-pppd'
         # now pass arguments to accel-pppd binary

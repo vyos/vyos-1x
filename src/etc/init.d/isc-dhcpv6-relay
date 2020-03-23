@@ -31,11 +31,11 @@ DHCRELAYPID=/var/run/dhcv6relay.pid
 
 case "$1" in
 	start)
-		start-stop-daemon --start --quiet --pidfile $DHCRELAYPID \
+		start-stop-daemon --start --oknodo --quiet --pidfile $DHCRELAYPID \
 			--exec /usr/sbin/dhcrelay -- -q $OPTIONS -pf $DHCRELAYPID
 		;;
 	stop)
-		start-stop-daemon --stop --quiet --pidfile $DHCRELAYPID
+		start-stop-daemon --stop --oknodo --quiet --pidfile $DHCRELAYPID
 		;;
 	restart | force-reload)
 		$0 stop

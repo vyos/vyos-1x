@@ -48,7 +48,10 @@ if __name__ == '__main__':
                 pid = int(f.read())
 
             if pid_exists(pid):
-                cmd  = 'start-stop-daemon --stop --quiet'
+                cmd = 'start-stop-daemon'
+                cmd += ' --stop'
+                cmd += ' --oknodo'
+                cmd += ' --quiet'
                 cmd += ' --pidfile ' + pidfile
                 subprocess_cmd(cmd)
 
@@ -59,7 +62,10 @@ if __name__ == '__main__':
             sleep(0.250) # 250ms
 
         # re-start OpenVPN process
-        cmd  = 'start-stop-daemon --start --quiet'
+        cmd = 'start-stop-daemon'
+        cmd += ' --start'
+        cmd += ' --oknodo'
+        cmd += ' --quiet'
         cmd += ' --pidfile ' + get_pid_file(interface)
         cmd += ' --exec /usr/sbin/openvpn'
         # now pass arguments to openvpn binary
