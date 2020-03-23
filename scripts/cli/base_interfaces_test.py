@@ -22,12 +22,18 @@ from vyos.interfaces import list_interfaces_of_type
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
+        _test_mtu = False
+        _base_path = []
+        _options = {}
+        _interfaces = []
+
         def setUp(self):
             self.session = ConfigSession(os.getpid())
 
             self._test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
                                 '2001:db8:1::ffff/64', '2001:db8:101::1/112']
             self._test_mtu = False
+            self._options = {}
 
         def tearDown(self):
             # we should not remove ethernet from the overall CLI
@@ -48,6 +54,9 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 test_string='Description-Test-{}'.format(intf)
                 self.session.set(self._base_path + [intf, 'description', test_string])
+                for option in self._options.get(intf, []):
+                    self.session.set(self._base_path + [intf] + option.split())
+
             self.session.commit()
 
             # Validate interface description
@@ -66,6 +75,9 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 for addr in self._test_addr:
                     self.session.set(self._base_path + [intf, 'address', addr])
+                    for option in self._options.get(intf, []):
+                        self.session.set(self._base_path + [intf] + option.split())
+
                 self.session.commit()
 
             # Validate address
@@ -91,6 +103,8 @@ class BasicInterfaceTest:
             mtu = '1400'
             for intf in self._interfaces:
                 self.session.set(self._base_path + [intf, 'mtu', mtu])
+                for option in self._options.get(intf, []):
+                    self.session.set(self._base_path + [intf] + option.split())
 
             self.session.commit()
 
