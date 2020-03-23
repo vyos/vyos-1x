@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
+
 from vyos import ConfigError
 from vyos.ifconfig.interface import Interface
 
@@ -40,6 +42,12 @@ class VXLANIf(Interface):
 
     options = ['group', 'remote', 'dev', 'port', 'vni']
 
+    mapping = {
+        'ifname': 'add',
+        'vni':    'id',
+        'port':   'dstport',
+    }
+
     default = {
         'type': 'vxlan',
         'vni': 0,
@@ -51,27 +59,27 @@ class VXLANIf(Interface):
     }
 
     def _create(self):
-        cmd = ''
+        cmdline = set()
         if self.config['remote']:
-            # an underlay device is only mandatory with multicast, not unicast
-            dev = ''
-            if self.config['dev']:
-                dev = 'dev {}'.format(self.config['dev'])
-            # iproute2 command for unicast
-            cmd = 'ip link add {ifname} type vxlan id {vni} remote {remote} {dev_optional} dstport {port}'.format(
-                **self.config, dev_optional=dev)
+            cmdline = ('ifname', 'type', 'remote', 'dev', 'vni', 'port')
+        elif self.config['group'] and self.config['dev']:
+            cmdline = ('ifname', 'type', 'group', 'dev', 'vni', 'port')
         else:
-            if not self.config['dev']:
-                raise ConfigError(
-                    f'VXLAN "{self.config["ifname"]}" is missing mandatory underlay interface for a multicast network.')
-            # iproute2 command for multicast
-            cmd = 'ip link add {ifname} type vxlan id {vni} group {group} dev {dev} dstport {port}'.format(
-                **self.config)
+            intf = self.config['intf']
+            raise ConfigError(
+                f'VXLAN "{intf}" is missing mandatory underlay interface for a multicast network.')
+
+        cmd = 'ip link'
+        for key in cmdline:
+            value = self.config.get(key, '')
+            if not value:
+                continue
+            cmd += ' {} {}'.format(self.mapping.get(key, key), value)
 
         self._cmd(cmd)
 
-    @staticmethod
-    def get_config():
+    @classmethod
+    def get_config(cls):
         """
         VXLAN interfaces require a configuration when they are added using
         iproute2. This static method will provide the configuration dictionary
@@ -80,12 +88,4 @@ class VXLANIf(Interface):
         Example:
         >> dict = VXLANIf().get_config()
         """
-        config = {
-            'vni': 0,
-            'dev': '',
-            'group': '',
-            'port': 8472,  # The Linux implementation of VXLAN pre-dates
-            # the IANA's selection of a standard destination port
-            'remote': ''
-        }
-        return config
+        return deepcopy(cls.default)
