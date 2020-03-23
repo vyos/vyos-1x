@@ -105,11 +105,8 @@ def apply(dummy):
         for addr in dummy['address']:
             d.add_addr(addr)
 
-        # assign to VRF
-        if dummy['vrf']:
-            d.add_vrf(dummy['vrf'])
-        else:
-            d.del_vrf(dummy['vrf'])
+        # assign/remove VRF
+        d.set_vrf(dummy['vrf'])
 
         # disable interface on demand
         if dummy['disable']:

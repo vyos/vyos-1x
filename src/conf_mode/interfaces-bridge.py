@@ -295,11 +295,8 @@ def apply(bridge):
         # store DHCPv6 config dictionary - used later on when addresses are aquired
         br.set_dhcpv6_options(opt)
 
-        # assign to VRF
-        if bridge['vrf']:
-            br.add_vrf(bridge['vrf'])
-        else:
-            br.del_vrf(bridge['vrf'])
+        # assign/remove VRF
+        br.set_vrf(bridge['vrf'])
 
         # Change interface MAC address
         if bridge['mac']:

@@ -85,12 +85,6 @@ class Interface(Control):
             'validate': assert_mac,
             'shellcmd': 'ip link set dev {ifname} address {value}',
         },
-        'add_vrf': {
-            'shellcmd': 'ip link set dev {ifname} master {value}',
-        },
-        'del_vrf': {
-            'shellcmd': 'ip link set dev {ifname} nomaster',
-        },
         'vrf': {
             'force': True,
             'convert': lambda v: f'master {v}' if v else 'nomaster',
@@ -303,25 +297,16 @@ class Interface(Control):
         """
         self.set_interface('mac', mac)
 
-    def add_vrf(self, vrf):
+    def set_vrf(self, vrf=''):
         """
-        Add interface to given VRF instance.
+        Add/Remove interface from given VRF instance.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').add_vrf('foo')
+        >>> Interface('eth0').set_vrf('foo')
+        >>> Interface('eth0').set_vrf()
         """
-        self.set_interface('add_vrf', vrf)
-
-    def del_vrf(self, vrf=''):
-        """
-        Remove interface from given VRF instance.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').del_vrf('foo')
-        """
-        self.set_interface('del_vrf', vrf)
+        self.set_interface('vrf', vrf)
 
     def set_arp_cache_tmo(self, tmo):
         """
