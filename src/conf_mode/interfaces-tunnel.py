@@ -337,7 +337,7 @@ def verify(conf):
             raise ConfigError(f'Can not set "{create}" for tunnel {iftype} {ifname} at tunnel creation')
 
     for modify in actions['modify']:
-        if modify not in kls.updates:
+        if modify not in valid:
             raise ConfigError(f'Can not modify "{modify}" for tunnel {iftype} {ifname}. it must be set at tunnel creation')
 
     for delete in actions['delete']:
