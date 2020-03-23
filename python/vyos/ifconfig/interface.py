@@ -450,7 +450,7 @@ class Interface(Control):
 
     def get_state(self):
         """
-        Enable (up) / Disable (down) an interface
+        Get interface administrative state. Function will return 'up' or 'down'
 
         Example:
         >>> from vyos.ifconfig import Interface
@@ -460,11 +460,16 @@ class Interface(Control):
         cmd = 'ip -json link show dev {}'.format(self.config['ifname'])
         tmp = self._cmd(cmd)
         out = json.loads(tmp)
-        return out[0]['operstate'].lower()
+
+        state = 'down'
+        if 'UP' in out[0]['flags']:
+            state = 'up'
+
+        return state
 
     def set_state(self, state):
         """
-        Enable (up) / Disable (down) an interface
+        Set interface administrative state to be 'up' or 'down'
 
         Example:
         >>> from vyos.ifconfig import Interface
