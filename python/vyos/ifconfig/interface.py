@@ -309,6 +309,16 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_mac('00:50:ab:cd:ef:01')
         """
+
+        # If MAC is unchanged, bail out early
+        if mac == self.get_mac():
+            return None
+
+        # MAC address can only be changed if interface is in 'down' state
+        prev_state = self.get_state()
+        if prev_state == 'up':
+            self.set_state('down')
+
         self.set_interface('mac', mac)
 
     def set_vrf(self, vrf=''):
