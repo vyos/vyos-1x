@@ -19,12 +19,20 @@ from vyos.ifconfig.interface import Interface
 from vyos.validate import *
 
 
-class STPIf(Interface):
+class STP:
     """
     A spanning-tree capable interface. This applies only to bridge port member
     interfaces!
     """
-    _sysfs_set = {**Interface._sysfs_set, **{
+
+    @classmethod
+    def enable (cls, adaptee):
+        adaptee._sysfs_set = {**adaptee._sysfs_set, **cls._sysfs_set}
+        adaptee.set_path_cost = cls.set_path_cost
+        adaptee.set_path_priority = cls.set_path_priority
+        return adaptee
+
+    _sysfs_set = {
         'path_cost': {
             # XXX: we should set a maximum
             'validate': assert_positive,
@@ -37,14 +45,7 @@ class STPIf(Interface):
             'location': '/sys/class/net/{ifname}/brport/priority',
             'errormsg': '{ifname} is not a bridge port member'
         },
-    }}
-
-    default = {
-        'type': 'stp',
     }
-
-    def __init__(self, ifname, **kargs):
-        super().__init__(ifname, **kargs)
 
     def set_path_cost(self, cost):
         """

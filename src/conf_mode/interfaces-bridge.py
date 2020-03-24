@@ -20,7 +20,8 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BridgeIf, STPIf
+from vyos.ifconfig import BridgeIf
+from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
@@ -322,9 +323,10 @@ def apply(bridge):
         for addr in bridge['address']:
             br.add_addr(addr)
 
+        STPBridgeIf = STP.enable(BridgeIf)
         # configure additional bridge member options
         for member in bridge['member']:
-            i = STPIf(member['name'])
+            i = STPBridgeIf(member['name'])
             # configure ARP cache timeout
             i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
             # ignore link state changes

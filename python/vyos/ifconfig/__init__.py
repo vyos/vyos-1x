@@ -23,7 +23,6 @@ from vyos.ifconfig.ethernet import EthernetIf
 from vyos.ifconfig.geneve import GeneveIf
 from vyos.ifconfig.loopback import LoopbackIf
 from vyos.ifconfig.macvlan import MACVLANIf
-from vyos.ifconfig.stp import STPIf
 from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
 from vyos.ifconfig.vtun import VTunIf
