@@ -87,24 +87,25 @@ def apply(ip_opt):
         print('Changing IPv6 disable parameter will only take affect\n' \
               'when the system is rebooted.')
 
-    # configure multipath
-    sysctl('net.ipv6.fib_multipath_hash_policy', ip_opt['mp_layer4_hashing'])
+    if os.path.exists("/proc/sys/net/ipv6"):
+        # configure multipath
+        sysctl('net.ipv6.fib_multipath_hash_policy', ip_opt['mp_layer4_hashing'])
 
-    # apply neighbor table threshold values
-    sysctl('net.ipv6.neigh.default.gc_thresh3', ip_opt['neighbor_cache'])
-    sysctl('net.ipv6.neigh.default.gc_thresh2', ip_opt['neighbor_cache'] // 2)
-    sysctl('net.ipv6.neigh.default.gc_thresh1', ip_opt['neighbor_cache'] // 8)
+        # apply neighbor table threshold values
+        sysctl('net.ipv6.neigh.default.gc_thresh3', ip_opt['neighbor_cache'])
+        sysctl('net.ipv6.neigh.default.gc_thresh2', ip_opt['neighbor_cache'] // 2)
+        sysctl('net.ipv6.neigh.default.gc_thresh1', ip_opt['neighbor_cache'] // 8)
 
-    # enable/disable IPv6 forwarding
-    with open('/proc/sys/net/ipv6/conf/all/forwarding', 'w') as f:
-        f.write(ip_opt['ipv6_forward'])
+        # enable/disable IPv6 forwarding
+        with open('/proc/sys/net/ipv6/conf/all/forwarding', 'w') as f:
+            f.write(ip_opt['ipv6_forward'])
 
-    # configure IPv6 strict-dad
-    for root, dirs, files in os.walk('/proc/sys/net/ipv6/conf'):
-        for name in files:
-            if name == "accept_dad":
-                with open(os.path.join(root, name), 'w') as f:
-                    f.write(str(ip_opt['strict_dad']))
+        # configure IPv6 strict-dad
+        for root, dirs, files in os.walk('/proc/sys/net/ipv6/conf'):
+            for name in files:
+                if name == "accept_dad":
+                    with open(os.path.join(root, name), 'w') as f:
+                        f.write(str(ip_opt['strict_dad']))
 
 if __name__ == '__main__':
     try:
