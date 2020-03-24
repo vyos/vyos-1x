@@ -31,7 +31,7 @@ from time import sleep
 
 from vyos import ConfigError
 from vyos.config import Config
-from vyos.ifconfig import Interface
+from vyos.ifconfig import VTunIf
 from vyos.validate import is_addr_assigned
 
 user = 'openvpn'
@@ -1025,14 +1025,14 @@ def apply(openvpn):
     try:
         # we need to catch the exception if the interface is not up due to
         # reason stated above
-        Interface(openvpn['intf']).set_alias(openvpn['description'])
+        VTunIf(openvpn['intf']).set_alias(openvpn['description'])
     except:
         pass
 
     # TAP interface needs to be brought up explicitly
     if openvpn['type'] == 'tap':
         if not openvpn['disable']:
-            Interface(openvpn['intf']).set_state('up')
+            VTunIf(openvpn['intf']).set_state('up')
 
     return None
 
