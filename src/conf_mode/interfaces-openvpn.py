@@ -925,6 +925,11 @@ def generate(openvpn):
 
         fixup_permission(auth_file)
 
+    else:
+        # delete old auth file if present
+        if os.path.isfile('/tmp/openvpn-{}-pw'.format(interface)):
+            os.remove('/tmp/openvpn-{}-pw'.format(interface))
+
     # get numeric uid/gid
     uid = getpwnam(user).pw_uid
     gid = getgrnam(group).gr_gid
@@ -984,6 +989,10 @@ def apply(openvpn):
         directory = os.path.dirname(get_config_name(openvpn['intf']))
         if os.path.isdir(os.path.join(directory, 'ccd', openvpn['intf'])):
             rmtree(os.path.join(directory, 'ccd', openvpn['intf']), ignore_errors=True)
+
+        # cleanup auth file
+        if os.path.isfile('/tmp/openvpn-{}-pw'.format(openvpn['intf'])):
+            os.remove('/tmp/openvpn-{}-pw'.format(openvpn['intf']))
 
         return None
 
