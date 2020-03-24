@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Migrate IPv6 router advertisments from a nested interface configuration to
+# a denested "service router-advert"
+
+import sys
+from vyos.configtree import ConfigTree
+
+def copy_rtradv(c, old_base, interface):
+    base = ['service', 'router-advert', 'interface']
+
+    if c.exists(old_base):
+        if not c.exists(base):
+            c.set(base)
+            c.set_tag(base)
+
+        # take the old node as a whole and copy it to new new path,
+        # additional migrations will be done afterwards
+        new_base = base + [interface]
+        c.copy(old_base, new_base)
+        c.delete(old_base)
+
+        # cur-hop-limit has been renamed to hop-limit
+        if c.exists(new_base + ['cur-hop-limit']):
+            c.rename(new_base + ['cur-hop-limit'], 'hop-limit')
+
+        bool_cleanup = ['managed-flag', 'other-config-flag']
+        for bool in bool_cleanup:
+            if c.exists(new_base + [bool]):
+                tmp = c.return_value(new_base + [bool])
+                c.delete(new_base + [bool])
+                if tmp == 'true':
+                    c.set(new_base + [bool])
+
+        # max/min interval moved to subnode
+        intervals = ['max-interval', 'min-interval']
+        for interval in intervals:
+            if c.exists(new_base + [interval]):
+                tmp = c.return_value(new_base + [interval])
+                c.delete(new_base + [interval])
+                min_max = interval.split('-')[0]
+                c.set(new_base + ['interval', min_max], value=tmp)
+
+        # cleanup boolean nodes in individual prefix
+        prefix_base = new_base + ['prefix']
+        if c.exists(prefix_base):
+            for prefix in config.list_nodes(prefix_base):
+                bool_cleanup = ['autonomous-flag', 'on-link-flag']
+                for bool in bool_cleanup:
+                    if c.exists(prefix_base + [prefix, bool]):
+                        tmp = c.return_value(prefix_base + [prefix, bool])
+                        c.delete(prefix_base + [prefix, bool])
+                        if tmp == 'true':
+                            c.set(prefix_base + [prefix, bool])
+
+        # router advertisement can be individually disabled per interface
+        # the node has been renamed from send-advert {true | false} to no-send-advert
+        if c.exists(new_base + ['send-advert']):
+            tmp = c.return_value(new_base + ['send-advert'])
+            c.delete(new_base + ['send-advert'])
+            if tmp == 'false':
+                c.set(new_base + ['no-send-advert'])
+
+if __name__ == '__main__':
+    if (len(sys.argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = sys.argv[1]
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+
+    # list all individual interface types like dummy, ethernet and so on
+    for if_type in config.list_nodes(['interfaces']):
+        base_if_type = ['interfaces', if_type]
+
+        # for every individual interface we need to check if there is an
+        # ipv6 ra configured ... and also for every VIF (VLAN) interface
+        for intf in config.list_nodes(base_if_type):
+            old_base = base_if_type + [intf, 'ipv6', 'router-advert']
+            copy_rtradv(config, old_base, intf)
+
+            vif_base = base_if_type + [intf, 'vif']
+            if config.exists(vif_base):
+                for vif in config.list_nodes(vif_base):
+                    old_base = vif_base + [vif, 'ipv6', 'router-advert']
+                    vlan_name = f'{intf}.{vif}'
+                    copy_rtradv(config, old_base, vlan_name)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
