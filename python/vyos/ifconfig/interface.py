@@ -20,8 +20,6 @@ import glob
 import time
 from copy import deepcopy
 
-import vyos.interfaces
-
 from vyos.validate import *     # should not * include
 from vyos.config import Config  # not used anymore
 from vyos import ConfigError
