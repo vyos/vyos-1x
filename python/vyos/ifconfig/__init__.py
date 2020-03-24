@@ -28,6 +28,7 @@ from vyos.ifconfig.vlan import VLANIf
 from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
 from vyos.ifconfig.vtun import VTunIf
+from vyos.ifconfig.pppoe import PPPoEIf
 from vyos.ifconfig.tunnel import GREIf
 from vyos.ifconfig.tunnel import GRETapIf
 from vyos.ifconfig.tunnel import IP6GREIf
