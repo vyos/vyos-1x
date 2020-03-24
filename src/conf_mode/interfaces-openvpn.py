@@ -28,6 +28,7 @@ from psutil import pid_exists
 from pwd import getpwnam
 from subprocess import Popen, PIPE
 from time import sleep
+from shutil import rmtree
 
 from vyos import ConfigError
 from vyos.config import Config
@@ -899,6 +900,10 @@ def generate(openvpn):
     interface = openvpn['intf']
     directory = os.path.dirname(get_config_name(interface))
 
+    # we can't know which clients were deleted, remove all client configs
+    if os.path.isdir(os.path.join(directory, 'ccd', interface)):
+        rmtree(os.path.join(directory, 'ccd', interface), ignore_errors=True)
+
     # create config directory on demand
     openvpn_mkdir(directory)
     # create status directory on demand
@@ -977,11 +982,8 @@ def apply(openvpn):
 
         # cleanup client config dir
         directory = os.path.dirname(get_config_name(openvpn['intf']))
-        if os.path.isdir(directory + '/ccd/' + openvpn['intf']):
-            try:
-                os.remove(directory + '/ccd/' + openvpn['intf'] + '/*')
-            except:
-                pass
+        if os.path.isdir(os.path.join(directory, 'ccd', openvpn['intf'])):
+            rmtree(os.path.join(directory, 'ccd', openvpn['intf']), ignore_errors=True)
 
         return None
 
