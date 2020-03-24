@@ -16,14 +16,15 @@
 import os
 import re
 
-from vyos.ifconfig.vlan import VLANIf
 from vyos.ifconfig.interface import Interface
+from vyos.ifconfig.vlan import VLAN
 
 from vyos.validate import *
 
 
 @Interface.register
-class EthernetIf(VLANIf):
+@VLAN.enable
+class EthernetIf(Interface):
     """
     Abstraction of a Linux Ethernet Interface
     """
@@ -42,7 +43,8 @@ class EthernetIf(VLANIf):
         }
     }
 
-    _command_set = {**VLANIf._command_set, **{
+
+    _command_set = {**Interface._command_set, **{
         'gro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'shellcmd': '/sbin/ethtool -K {ifname} gro {value}',

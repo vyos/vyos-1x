@@ -15,11 +15,12 @@
 
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLANIf
+from vyos.ifconfig.vlan import VLAN
 
 
 @Interface.register
-class MACVLANIf(VLANIf):
+@VLAN.enable
+class MACVLANIf(Interface):
     """
     Abstraction of a Linux MACvlan interface
     """

@@ -14,7 +14,6 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from netifaces import interfaces
-from vyos.ifconfig import VLANIf
 from vyos import ConfigError
 
 def apply_vlan_config(vlan, config):

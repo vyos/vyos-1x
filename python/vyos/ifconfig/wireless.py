@@ -16,11 +16,12 @@
 import os
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLANIf
+from vyos.ifconfig.vlan import VLAN
 
 
 @Interface.register
-class WiFiIf(VLANIf):
+@VLAN.enable
+class WiFiIf(Interface):
     """
     Handle WIFI/WLAN interfaces.
     """
