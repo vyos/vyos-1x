@@ -41,13 +41,15 @@ class VLANIf(Interface):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
+        ifname = self.config['ifname']
+
         # Do we have sub interfaces (VLANs)? We apply a regex matching
         # subinterfaces (indicated by a .) of a parent interface.
         #
         # As interfaces need to be deleted "in order" starting from Q-in-Q
         # we delete them first.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net')
-                    if re.match(self.config['ifname'] + r'(?:\.\d+)(?:\.\d+)', f)]
+                    if re.match(ifname + r'(?:\.\d+)(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -56,7 +58,7 @@ class VLANIf(Interface):
         # which probably acted as parent to Q-in-Q or have been regular 802.1q
         # interface.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net')
-                    if re.match(self.config['ifname'] + r'(?:\.\d+)', f)]
+                    if re.match(ifname + r'(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -90,7 +92,7 @@ class VLANIf(Interface):
         >>> i.add_vlan(10)
         """
         vlan_ifname = self.config['ifname'] + '.' + str(vlan_id)
-        if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
+        if not os.path.exists(f'/sys/class/net/{vlan_ifname}'):
             self._vlan_id = int(vlan_id)
 
             if ethertype:
