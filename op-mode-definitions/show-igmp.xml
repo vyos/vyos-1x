@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="igmp">
+        <properties>
+         <help>Show IGMP (Internet Group Management Protocol) information</help>
+        </properties>
+        <children>
+          <leafNode name="groups">
+            <properties>
+              <help>IGMP groups information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip igmp groups"</command>
+          </leafNode>
+          <leafNode name="interfaces">
+            <properties>
+              <help>IGMP interfaces information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip igmp interface"</command>
+          </leafNode>
+          <leafNode name="join">
+            <properties>
+              <help>IGMP static join information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip igmp join"</command>
+          </leafNode>
+          <leafNode name="sources">
+            <properties>
+              <help>IGMP sources information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip igmp sources"</command>
+          </leafNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>IGMP statistics</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip igmp statistics"</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

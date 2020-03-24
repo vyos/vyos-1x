@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="pim">
+        <properties>
+         <help>Show PIM (Protocol Independent Multicast) information</help>
+        </properties>
+        <children>
+          <leafNode name="interfaces">
+            <properties>
+              <help>PIM interfaces information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim interface"</command>
+          </leafNode>
+          <leafNode name="join">
+            <properties>
+              <help>PIM join information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim join"</command>
+          </leafNode>
+          <leafNode name="neighbor">
+            <properties>
+              <help>PIM neighbor information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim neighbor"</command>
+          </leafNode>
+          <leafNode name="nexthop">
+            <properties>
+              <help>PIM cached nexthop rpf information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim nexthop"</command>
+          </leafNode>
+          <leafNode name="state">
+            <properties>
+              <help>PIM state information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim state"</command>
+          </leafNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>PIM statistics</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim statistics"</command>
+          </leafNode>
+          <leafNode name="rp">
+            <properties>
+              <help>PIM RP (Rendevous Point) information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim rp-info"</command>
+          </leafNode>
+          <leafNode name="rpf">
+            <properties>
+              <help>PIM cached source rpf information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim rpf"</command>
+          </leafNode>
+          <leafNode name="upstream">
+            <properties>
+              <help>PIM upstream information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip pim upstream"</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
