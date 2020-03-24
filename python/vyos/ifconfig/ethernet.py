@@ -90,7 +90,7 @@ class EthernetIf(VLANIf):
         if enable not in ['on', 'off']:
             raise ValueError("Value out of range")
 
-        if self.get_driver_name() in ['vmxnet3', 'virtio_net']:
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
             self._debug_msg('{} driver does not support changing flow control settings!'
                             .format(self.get_driver_name()))
             return
@@ -142,7 +142,7 @@ class EthernetIf(VLANIf):
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError("Value out of range (duplex)")
 
-        if self.get_driver_name() in ['vmxnet3', 'virtio_net']:
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
             self._debug_msg('{} driver does not support changing speed/duplex settings!'
                             .format(self.get_driver_name()))
             return
