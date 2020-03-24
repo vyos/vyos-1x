@@ -14,18 +14,27 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLANIf
 
 
+@Interface.register
 class MACVLANIf(VLANIf):
     """
     Abstraction of a Linux MACvlan interface
     """
 
-    options = VLANIf.options + ['link', 'mode']
     default = {
         'type': 'macvlan',
     }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'pseudo-ethernet',
+            'prefixes': ['peth', ],
+        },
+    }
+    options = Interface.options + ['link', 'mode']
 
     def _create(self):
         cmd = 'ip link add {ifname} link {link} type macvlan mode {mode}'.format(

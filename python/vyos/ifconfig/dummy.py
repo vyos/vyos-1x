@@ -17,6 +17,7 @@
 from vyos.ifconfig.interface import Interface
 
 
+@Interface.register
 class DummyIf(Interface):
     """
     A dummy interface is entirely virtual like, for example, the loopback
@@ -26,4 +27,11 @@ class DummyIf(Interface):
 
     default = {
         'type': 'dummy',
+    }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'dummy',
+            'prefixes': ['dum', ],
+        },
     }

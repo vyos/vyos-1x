@@ -42,6 +42,14 @@ class Interface(DHCP):
     default = {
         'type': '',
     }
+    definition = {
+        'section': '',
+        'prefixes': [],
+        'vlan': False,
+        'bondable': False,
+        'broadcast': False,
+        'bridgeable':  False,
+    }
 
     _command_set = {
         'state': {

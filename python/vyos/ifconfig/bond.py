@@ -21,6 +21,7 @@ from vyos.ifconfig.vlan import VLANIf
 from vyos.validate import *
 
 
+@Interface.register
 class BondIf(VLANIf):
     """
     The Linux bonding driver provides a method for aggregating multiple network
@@ -29,6 +30,19 @@ class BondIf(VLANIf):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
+
+    default = {
+        'type': 'bond',
+    }
+    definition = {
+        **Interface.definition,
+        ** {
+            'section': 'bonding',
+            'prefixes': ['bond', ],
+            'broadcast': True,
+            'bridgeable': True,
+        },
+    }
 
     _sysfs_set = {**VLANIf._sysfs_set, **{
         'bond_hash_policy': {
@@ -68,10 +82,6 @@ class BondIf(VLANIf):
             'location': '/sys/class/net/{ifname}/bonding/arp_ip_target',
         }
     }}
-
-    default = {
-        'type': 'bond',
-    }
 
     def remove(self):
         """

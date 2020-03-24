@@ -18,6 +18,8 @@ from vyos.ifconfig.interface import Interface
 
 from vyos.validate import *
 
+
+@Interface.register
 class BridgeIf(Interface):
     """
     A bridge is a way to connect two Ethernet segments together in a protocol
@@ -27,6 +29,18 @@ class BridgeIf(Interface):
 
     The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
     """
+
+    default = {
+        'type': 'bridge',
+    }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'bridge',
+            'prefixes': ['br', ],
+            'broadcast': True,
+        },
+    }
 
     _sysfs_set = {**Interface._sysfs_set, **{
         'ageing_time': {
@@ -72,9 +86,6 @@ class BridgeIf(Interface):
         },
     }}
 
-    default = {
-        'type': 'bridge',
-    }
 
     def set_ageing_time(self, time):
         """

@@ -17,14 +17,30 @@ import os
 import re
 
 from vyos.ifconfig.vlan import VLANIf
+from vyos.ifconfig.interface import Interface
 
 from vyos.validate import *
 
 
+@Interface.register
 class EthernetIf(VLANIf):
     """
     Abstraction of a Linux Ethernet Interface
     """
+
+    default = {
+        'type': 'ethernet',
+    }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'ethernet',
+            'prefixes': ['lan', 'eth', 'eno', 'ens', 'enp', 'enx'],
+            'bondable': True,
+            'broadcast': True,
+            'bridgeable': True,
+        }
+    }
 
     _command_set = {**VLANIf._command_set, **{
         'gro': {
@@ -48,10 +64,6 @@ class EthernetIf(VLANIf):
             'shellcmd': '/sbin/ethtool -K {ifname} ufo {value}',
         },
     }}
-
-    default = {
-        'type': 'ethernet',
-    }
 
     def _delete(self):
         # Ethernet interfaces can not be removed

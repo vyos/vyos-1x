@@ -19,6 +19,7 @@ from vyos import ConfigError
 from vyos.ifconfig.interface import Interface
 
 
+@Interface.register
 class VXLANIf(Interface):
     """
     The VXLAN protocol is a tunnelling protocol designed to solve the
@@ -40,14 +41,6 @@ class VXLANIf(Interface):
     https://www.kernel.org/doc/Documentation/networking/vxlan.txt
     """
 
-    options = ['group', 'remote', 'dev', 'port', 'vni']
-
-    mapping = {
-        'ifname': 'add',
-        'vni':    'id',
-        'port':   'dstport',
-    }
-
     default = {
         'type': 'vxlan',
         'vni': 0,
@@ -56,6 +49,21 @@ class VXLANIf(Interface):
         'remote': '',
         'port': 8472,   # The Linux implementation of VXLAN pre-dates
                         # the IANA's selection of a standard destination port
+    }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'vxlan',
+            'prefixes': ['vxlan', ],
+            'bridgeable': True,
+        }
+    }
+    options = ['group', 'remote', 'dev', 'port', 'vni']
+
+    mapping = {
+        'ifname': 'add',
+        'vni':    'id',
+        'port':   'dstport',
     }
 
     def _create(self):
