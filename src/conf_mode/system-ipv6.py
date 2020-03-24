@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos import ConfigError
 
 ipv6_disable_file = '/etc/modprobe.d/vyos_disable_ipv6.conf'
+grub_cfg_file = '/boot/grub/grub.cfg'
 
 default_config_data = {
     'reboot_message': False,
@@ -69,11 +70,18 @@ def generate(ip_opt):
 def apply(ip_opt):
     # disable IPv6 address assignment
     if ip_opt['disable_addr_assignment']:
+        # this file is useless, but it's an indicator for grub setup scripts
         with open(ipv6_disable_file, 'w') as f:
             f.write('options ipv6 disable_ipv6=1')
+
+        if os.path.exists(grub_cfg_file):
+            os.system("sed -i 's/ipv6.disable=[^[:space:]]*/ipv6.disable=1/;/^[[:space:]]*linux / {/ipv6.disable=/! s/$/ ipv6.disable=1/}' "+grub_cfg_file)
     else:
         if os.path.exists(ipv6_disable_file):
             os.unlink(ipv6_disable_file)
+
+        if os.path.exists(grub_cfg_file):
+            os.system("sed -i 's/ ipv6.disable=1//' "+grub_cfg_file)
 
     if ip_opt['reboot_message']:
         print('Changing IPv6 disable parameter will only take affect\n' \
