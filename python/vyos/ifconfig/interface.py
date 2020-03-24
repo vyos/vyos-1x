@@ -680,8 +680,11 @@ class Interface(Control):
         with open(self._dhcp_cfg_file, 'w') as f:
             f.write(dhcp_text)
 
-        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-            self._dhcp_pid_file
+        cmd = 'start-stop-daemon'
+        cmd += ' --start '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
+        cmd += ' --pidfile ' + self._dhcp_pid_file
         cmd += ' --exec /sbin/dhclient --'
         # now pass arguments to dhclient binary
         cmd += ' -4 -nw -cf {} -pf {} -lf {} {}'.format(
@@ -765,8 +768,11 @@ class Interface(Control):
               .format(self.config['ifname']), 0)
 
         # assemble command-line to start DHCPv6 client (dhclient)
-        cmd  = 'start-stop-daemon --start --quiet --pidfile ' + \
-            self._dhcpv6_pid_file
+        cmd = 'start-stop-daemon'
+        cmd += ' --start '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
+        cmd += ' --pidfile ' + self._dhcpv6_pid_file
         cmd += ' --exec /sbin/dhclient --'
         # now pass arguments to dhclient binary
         cmd += ' -6 -nw -cf {} -pf {} -lf {}'.format(
@@ -802,7 +808,11 @@ class Interface(Control):
             return None
 
         # stop dhclient
-        cmd = 'start-stop-daemon --stop --quiet --pidfile {}'.format(self._dhcpv6_pid_file)
+        cmd = 'start-stop-daemon'
+        cmd += ' --stop'
+        cmd += ' --oknodo'
+        cmd += ' --quiet'
+        cmd += ' --pidfile ' + self._dhcpv6_pid_file
         self._cmd(cmd)
 
         # accept router announcements on this interface

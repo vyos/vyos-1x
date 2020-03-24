@@ -72,7 +72,7 @@ case "$1" in
 	start)
 		test_config
 		log_daemon_msg "Starting $DESC" "$NAME"
-		start-stop-daemon --start --quiet --pidfile "$DHCPD_PID" \
+		start-stop-daemon --start --oknodo --quiet --pidfile "$DHCPD_PID" \
 			--exec /usr/sbin/dhcpd -- \
 			-q $OPTIONS -cf "$DHCPD_CONF" -pf "$DHCPD_PID" $INTERFACES
 		sleep 2
@@ -87,7 +87,7 @@ case "$1" in
 		;;
 	stop)
 		log_daemon_msg "Stopping $DESC" "$NAME"
-		start-stop-daemon --stop --quiet --pidfile "$DHCPD_PID"
+		start-stop-daemon --stop --oknodo --quiet --pidfile "$DHCPD_PID"
 		log_end_msg $?
 		rm -f "$DHCPD_PID"
 		;;

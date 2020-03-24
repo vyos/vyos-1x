@@ -120,7 +120,7 @@ class EthernetIf(VLANIf):
         try:
             # An exception will be thrown if the settings are not changed
             return self._cmd(cmd)
-        except CalledProcessError:
+        except RuntimeError:
             pass
 
     def set_speed_duplex(self, speed, duplex):

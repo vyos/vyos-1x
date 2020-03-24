@@ -1353,7 +1353,10 @@ def generate(wifi):
             pid = int(f.read())
 
     if pid_exists(pid):
-        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd = 'start-stop-daemon'
+        cmd += ' --stop '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
         cmd += ' --pidfile ' + pidfile
         subprocess_cmd(cmd)
 
@@ -1365,7 +1368,10 @@ def generate(wifi):
             pid = int(f.read())
 
     if pid_exists(pid):
-        cmd  = 'start-stop-daemon --stop --quiet'
+        cmd = 'start-stop-daemon'
+        cmd += ' --stop '
+        cmd += ' --quiet'
+        cmd += ' --oknodo'
         cmd += ' --pidfile ' + pidfile
         subprocess_cmd(cmd)
 
