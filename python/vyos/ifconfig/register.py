@@ -68,6 +68,13 @@ class Register:
         raise ValueError(f'No type found for interface name: {name}')
 
     @classmethod
+    def namesake(cls, name):
+        for prefix in cls._prefixes:
+            if name.startswith(prefix):
+                return True
+        return False
+
+    @classmethod
     def _listing (cls):
         interfaces = netifaces.interfaces()
 
@@ -90,7 +97,3 @@ class Register:
         if not section:
             return list(cls._listing())
         return [_ for _ in cls._listing() if cls._basename(_,False) in self.prefixes]
-
-
-# XXX: TODO - limit name for VRF interfaces
-

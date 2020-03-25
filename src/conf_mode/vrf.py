@@ -176,6 +176,9 @@ def verify(vrf_config):
 
     table_ids = []
     for vrf in vrf_config['vrf_add']:
+        if Interface.namesake(vrf['name']):
+            raise ConfigError(f"VRF {vrf['name']} name looks like an interface name!")
+
         # table id is mandatory
         if not vrf['table']:
             raise ConfigError(f"VRF {vrf['name']} table id is mandatory!")
