@@ -14,11 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# * remove "system login user <user> group" node, Why should be add a user to a
-#   3rd party group when the system is fully managed by CLI?
-# * remove "system login user <user> level" node
-#   This is the only privilege level left and also the default, what is the
-#   sense in keeping this orphaned node?
+# * Move server block directives under 'virtual-host' tag node, instead of
+#   relying on 'listen-address' tag node
 
 import sys
 
