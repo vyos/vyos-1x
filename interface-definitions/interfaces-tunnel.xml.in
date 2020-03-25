@@ -15,7 +15,6 @@
             <description>Tunnel interface name</description>
           </valueHelp>
         </properties>
-
         <children>
           #include <include/interface-description.xml.i>
           #include <include/address-ipv4-ipv6.xml.i>
@@ -23,7 +22,12 @@
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-vrf.xml.i>
           #include <include/interface-mtu-64-8024.xml.i>
-
+          <node name="ipv6">
+            <children>
+              #include <include/ipv6-disable-forwarding.xml.i>
+              #include <include/ipv6-dup-addr-detect-transmits.xml.i>
+            </children>
+          </node>
           <leafNode name="local-ip">
             <properties>
               <help>Local IP address for this tunnel</help>
@@ -44,7 +48,6 @@
               </constraint>
             </properties>
           </leafNode>
-
           <leafNode name="remote-ip">
             <properties>
               <help>Remote IP address for this tunnel</help>
@@ -62,7 +65,6 @@
               </constraint>
             </properties>
           </leafNode>
-
           <leafNode name="6rd-prefix">
             <properties>
               <help>6rd network prefix</help>
@@ -75,7 +77,6 @@
               </constraint>
             </properties>
           </leafNode>
-
           <leafNode name="6rd-relay-prefix">
             <properties>
               <help>6rd relay prefix</help>
@@ -88,7 +89,6 @@
               </constraint>
             </properties>
           </leafNode>
-
           <leafNode name="dhcp-interface">
             <properties>
               <help>dhcp interface</help>
@@ -104,7 +104,6 @@
               </constraint>
             </properties>
           </leafNode>
-
           <leafNode name="encapsulation">
             <properties>
               <help>Ignore link state changes</help>
@@ -141,7 +140,6 @@
               <constraintErrorMessage>Must be one of 'gre' 'gre-bridge' 'ipip' 'sit' 'ipip6' 'ip6ip6' 'ip6gre'</constraintErrorMessage>
             </properties>
           </leafNode>
-
           <leafNode name="multicast">
             <properties>
               <help>Multicast operation over tunnel</help>
@@ -162,12 +160,10 @@
               <constraintErrorMessage>Must be 'disable' or 'enable'</constraintErrorMessage>
             </properties>
           </leafNode>
-
           <node name="parameters">
             <properties>
               <help>Tunnel parameters</help>
             </properties>
-
             <children>
               <node name="ip">
                 <properties>
@@ -187,7 +183,6 @@
                       <constraintErrorMessage>TTL must be between 0 and 255</constraintErrorMessage>
                     </properties>
                   </leafNode>
-
                   <leafNode name="tos">
                     <properties>
                       <help>Type of Service (TOS)</help>
@@ -201,7 +196,6 @@
                       <constraintErrorMessage>TOS must be between 0 and 99</constraintErrorMessage>
                     </properties>
                   </leafNode>
-
                   <leafNode name="key">
                     <properties>
                       <help>Tunnel key</help>
@@ -217,12 +211,10 @@
                   </leafNode>
                 </children>
               </node>
-
               <node name="ipv6">
                 <properties>
                   <help>IPv6 specific tunnel parameters</help>
                 </properties>
-
                 <children>
                   <leafNode name="encaplimit">
                     <properties>
@@ -237,7 +229,6 @@
                       <constraintErrorMessage>key must be between 0-255</constraintErrorMessage>
                     </properties>
                   </leafNode>
-
                   <leafNode name="flowlabel">
                     <properties>
                       <help>Flowlabel</help>
@@ -251,7 +242,6 @@
                       <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
                     </properties>
                   </leafNode>
-
                   <leafNode name="hoplimit">
                     <properties>
                       <help>Hoplimit</help>
@@ -265,7 +255,6 @@
                       <constraintErrorMessage>hoplimit must be between 0-255</constraintErrorMessage>
                     </properties>
                   </leafNode>
-
                   <leafNode name="tclass">
                     <properties>
                       <help>Traffic class (Tclass)</help>

@@ -123,6 +123,8 @@ def vlan_to_dict(conf):
         'ip_enable_arp_accept': 0,
         'ip_enable_arp_announce': 0,
         'ip_enable_arp_ignore': 0,
+        'ipv6_forwarding': True,
+        'ipv6_dup_addr_detect': '1',
         'ingress_qos': '',
         'ingress_qos_changed': False,
         'mac': '',
@@ -186,6 +188,14 @@ def vlan_to_dict(conf):
     # ARP enable ignore
     if conf.exists('ip enable-arp-ignore'):
         vlan['ip_enable_arp_ignore'] = 1
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        vlan['ipv6_forwarding'] = False
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        vlan['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):

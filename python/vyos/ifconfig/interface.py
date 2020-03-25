@@ -115,6 +115,14 @@ class Interface(DHCP):
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
         },
+        'ipv6_forwarding': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
+        },
+        'ipv6_dad_transmits': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
+        },
         'proxy_arp': {
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp',
@@ -373,6 +381,40 @@ class Interface(DHCP):
             configured on the incoming interface
         """
         return self.set_interface('arp_ignore', arp_ignore)
+
+    def set_ipv6_forwarding(self, forwarding):
+        """
+        Configure IPv6 interface-specific Host/Router behaviour.
+
+        False:
+
+        By default, Host behaviour is assumed.  This means:
+
+        1. IsRouter flag is not set in Neighbour Advertisements.
+        2. If accept_ra is TRUE (default), transmit Router
+           Solicitations.
+        3. If accept_ra is TRUE (default), accept Router
+           Advertisements (and do autoconfiguration).
+        4. If accept_redirects is TRUE (default), accept Redirects.
+
+        True:
+
+        If local forwarding is enabled, Router behaviour is assumed.
+        This means exactly the reverse from the above:
+
+        1. IsRouter flag is set in Neighbour Advertisements.
+        2. Router Solicitations are not sent unless accept_ra is 2.
+        3. Router Advertisements are ignored unless accept_ra is 2.
+        4. Redirects are ignored.
+        """
+        return self.set_interface('ipv6_forwarding', forwarding)
+
+    def set_dad_messages(self, dad):
+        """
+        The amount of Duplicate Address Detection probes to send.
+        Default: 1
+        """
+        return self.set_interface('ipv6_dad_transmits', dad)
 
     def set_link_detect(self, link_filter):
         """

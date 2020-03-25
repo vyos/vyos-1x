@@ -45,6 +45,8 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
+    'ipv6_forwarding': True,
+    'ipv6_dup_addr_detect': '1',
     'intf': '',
     'link': '',
     'link_changed': False,
@@ -144,6 +146,14 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists(['ip', 'proxy-arp-pvlan']):
         peth['ip_proxy_arp_pvlan'] = 1
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        peth['ipv6_forwarding'] = False
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        peth['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
 
     # Lower link device
     if conf.exists(['link']):
@@ -296,6 +306,10 @@ def apply(peth):
     p.set_proxy_arp(peth['ip_proxy_arp'])
     # Enable private VLAN proxy ARP on this interface
     p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
+    # Disable IPv6 forwarding on this interface
+    p.set_ipv6_forwarding(peth['ipv6_forwarding'])
+    # IPv6 Duplicate Address Detection (DAD) tries
+    p.set_ipv6_dad_messages(peth['ipv6_dup_addr_detect'])
 
     # assign/remove VRF
     p.set_vrf(peth['vrf'])

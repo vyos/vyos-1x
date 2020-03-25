@@ -294,6 +294,8 @@ default_config_data = {
     'encryption': '',
     'hash': '',
     'intf': '',
+    'ipv6_forwarding': True,
+    'ipv6_dup_addr_detect': '1',
     'ping_restart': '60',
     'ping_interval': '10',
     'local_address': '',
@@ -489,6 +491,14 @@ def get_config():
     # Local port number to accept connections
     if conf.exists('local-port'):
         openvpn['local_port'] = conf.return_value('local-port')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        openvpn['ipv6_forwarding'] = False
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        openvpn['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
 
     # OpenVPN operation mode
     if conf.exists('mode'):
@@ -1036,7 +1046,14 @@ def apply(openvpn):
     try:
         # we need to catch the exception if the interface is not up due to
         # reason stated above
-        VTunIf(openvpn['intf']).set_alias(openvpn['description'])
+        o = VTunIf(openvpn['intf'])
+        # update interface description used e.g. within SNMP
+        o.set_alias(openvpn['description'])
+        # Disable IPv6 forwarding on this interface
+        o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        o.set_ipv6_dad_messages(openvpn['ipv6_dup_addr_detect'])
+
     except:
         pass
 

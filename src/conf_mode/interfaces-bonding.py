@@ -48,6 +48,8 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
+    'ipv6_forwarding': True,
+    'ipv6_dup_addr_detect': '1',
     'intf': '',
     'mac': '',
     'mode': '802.3ad',
@@ -188,6 +190,14 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists('ip proxy-arp-pvlan'):
         bond['ip_proxy_arp_pvlan'] = 1
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        bond['ipv6_forwarding'] = False
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        bond['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):
@@ -416,6 +426,10 @@ def apply(bond):
         b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
         b.set_proxy_arp_pvlan(bond['ip_proxy_arp_pvlan'])
+        # Disable IPv6 forwarding on this interface
+        b.set_ipv6_forwarding(bond['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        b.set_ipv6_dad_messages(bond['ipv6_dup_addr_detect'])
 
         # Change interface MAC address
         if bond['mac']:

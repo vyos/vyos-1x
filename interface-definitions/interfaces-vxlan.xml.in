@@ -45,6 +45,12 @@
               #include <include/interface-enable-proxy-arp.xml.i>
             </children>
           </node>
+          <node name="ipv6">
+            <children>
+              #include <include/ipv6-disable-forwarding.xml.i>
+              #include <include/ipv6-dup-addr-detect-transmits.xml.i>
+            </children>
+          </node>
           <leafNode name="link">
             <properties>
               <help>Underlay device of VXLAN interface</help>

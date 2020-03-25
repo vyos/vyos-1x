@@ -37,6 +37,8 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
+    'ipv6_forwarding': True,
+    'ipv6_dup_addr_detect': '1',
     'link': '',
     'mtu': 1450,
     'remote': '',
@@ -102,6 +104,14 @@ def get_config():
     # Enable proxy-arp on this interface
     if conf.exists('ip enable-proxy-arp'):
         vxlan['ip_proxy_arp'] = 1
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        vxlan['ipv6_forwarding'] = False
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        vxlan['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
 
     # VXLAN underlay interface
     if conf.exists('link'):
@@ -201,6 +211,10 @@ def apply(vxlan):
         v.set_arp_ignore(vxlan['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
+        # Disable IPv6 forwarding on this interface
+        v.set_ipv6_forwarding(vxlan['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        v.set_ipv6_dad_messages(vxlan['ipv6_dup_addr_detect'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the
