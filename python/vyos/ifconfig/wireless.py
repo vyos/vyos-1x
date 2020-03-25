@@ -15,19 +15,30 @@
 
 import os
 
-from vyos.ifconfig.vlan import VLANIf
+from vyos.ifconfig.interface import Interface
+from vyos.ifconfig.vlan import VLAN
 
-class WiFiIf(VLANIf):
+
+@Interface.register
+@VLAN.enable
+class WiFiIf(Interface):
     """
     Handle WIFI/WLAN interfaces.
     """
-
-    options = ['phy', 'op_mode']
 
     default = {
         'type': 'wifi',
         'phy': 'phy0'
     }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'wireless',
+            'prefixes': ['wlan', ],
+            'bridgeable': True,
+        }
+    }
+    options = ['phy', 'op_mode']
 
     def _create(self):
         # all interfaces will be added in monitor mode
@@ -54,3 +65,15 @@ class WiFiIf(VLANIf):
             'phy': 'phy0'
         }
         return config
+
+
+
+@Interface.register
+class WiFiModemIf(WiFiIf):
+    definition = {
+        **WiFiIf.definition,
+        **{
+            'section': 'wirelessmodem',
+            'prefixes': ['wlm', ],
+        }
+    }

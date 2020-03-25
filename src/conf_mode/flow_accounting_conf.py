@@ -22,7 +22,6 @@ import subprocess
 
 from vyos.config import Config
 from vyos import ConfigError
-import vyos.interfaces
 from vyos.ifconfig import Interface
 from jinja2 import Template
 
@@ -129,7 +128,7 @@ def _sflow_default_agentip(config):
         return config.return_value('protocols ospfv3 parameters router-id')
 
     # if router-id was not found, use first available ip of any interface
-    for iface in vyos.interfaces.list_interfaces():
+    for iface in Interface.listing():
         for address in Interface(iface).get_addr():
             # return an IP, if this is not loopback
             regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')
@@ -300,7 +299,7 @@ def verify(config):
 
     # check that all configured interfaces exists in the system
     for iface in config['interfaces']:
-        if not iface in vyos.interfaces.list_interfaces():
+        if not iface in Interface.listing():
             # chnged from error to warning to allow adding dynamic interfaces and interface templates
             # raise ConfigError("The {} interface is not presented in the system".format(iface))
             print("Warning: the {} interface is not presented in the system".format(iface))
@@ -328,7 +327,7 @@ def verify(config):
 
         # check if configured sFlow agent-id exist in the system
         agent_id_presented = None
-        for iface in vyos.interfaces.list_interfaces():
+        for iface in Interface.listing():
             for address in Interface(iface).get_addr():
                 # check an IP, if this is not loopback
                 regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')
@@ -348,7 +347,7 @@ def verify(config):
         # check if configured netflow source-ip exist in the system
         if config['netflow']['source-ip']:
             source_ip_presented = None
-            for iface in vyos.interfaces.list_interfaces():
+            for iface in Interface.listing():
                 for address in Interface(iface).get_addr():
                     # check an IP
                     regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')

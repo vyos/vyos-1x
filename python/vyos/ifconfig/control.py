@@ -17,8 +17,10 @@
 import os
 from subprocess import Popen, PIPE, STDOUT
 
+from vyos.ifconfig.register import Register
 
-class Control:
+
+class Control(Register):
     _command_get = {}
     _command_set = {}
 

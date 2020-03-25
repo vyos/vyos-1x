@@ -22,10 +22,8 @@ from datetime import timedelta
 import time
 from hurry.filesize import size,alternative
 
+@Interface.register
 class WireGuardIf(Interface):
-    options = ['port', 'private-key', 'pubkey', 'psk',
-               'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
-
     default = {
         'type': 'wireguard',
         'port': 0,
@@ -37,6 +35,16 @@ class WireGuardIf(Interface):
         'endpoint': None,
         'keepalive': 0
     }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'wireguard',
+            'prefixes': ['wg', ],
+            'bridgeable': True,
+        }
+    }
+    options = ['port', 'private-key', 'pubkey', 'psk',
+               'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
 
     """
     Wireguard interface class, contains a comnfig dictionary since

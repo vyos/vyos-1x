@@ -19,6 +19,7 @@ import os
 from vyos.ifconfig.interface import Interface
 
 
+@Interface.register
 class L2TPv3If(Interface):
     """
     The Linux bonding driver provides a method for aggregating multiple network
@@ -28,12 +29,19 @@ class L2TPv3If(Interface):
     monitoring may be performed.
     """
 
-    options = Interface.options + \
-        ['tunnel_id', 'peer_tunnel_id', 'local_port', 'remote_port',
-            'encapsulation', 'local_address', 'remote_address']
     default = {
         'type': 'l2tp',
     }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'l2tpeth',
+            'prefixes': ['l2tpeth', ],
+            'bridgeable': True,
+        }
+    }
+    options = Interface.options + \
+        ['tunnel_id', 'peer_tunnel_id', 'local_port', 'remote_port', 'encapsulation', 'local_address', 'remote_address']
 
     def _create(self):
         # create tunnel interface

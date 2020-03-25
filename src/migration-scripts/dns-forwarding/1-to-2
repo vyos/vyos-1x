@@ -23,8 +23,8 @@
 import sys
 
 from ipaddress import ip_interface
+from vyos.ifconfig import Interface
 from vyos.configtree import ConfigTree
-from vyos.interfaces import get_type_of_interface
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")
@@ -41,7 +41,10 @@ base = ['service', 'dns', 'forwarding']
 if not config.exists(base):
     # Nothing to do
     sys.exit(0)
+
 else:
+    # XXX: we can remove the else and un-indent this whole block
+
     if config.exists(base + ['listen-on']):
         listen_intf = config.return_values(base + ['listen-on'])
         # Delete node with abandoned command
@@ -60,7 +63,10 @@ else:
                 # this is a QinQ VLAN interface
                 intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
 
-            path = ['interfaces', get_type_of_interface(intf), intf, 'address']
+            section = Interface.section(intf)
+            if not section:
+                raise ValueError(f'Invalid interface name {intf}')
+            path = ['interfaces', section, intf, 'address']
 
             # retrieve corresponding interface addresses in CIDR format
             # those need to be converted in pure IP addresses without network information

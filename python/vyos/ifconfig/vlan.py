@@ -20,15 +20,23 @@ import re
 from vyos.ifconfig.interface import Interface
 
 
-class VLANIf(Interface):
+# This is an internal implementation class
+class VLAN:
     """
     This class handels the creation and removal of a VLAN interface. It serves
     as base class for BondIf and EthernetIf.
     """
 
-    default = {
-        'type': 'vlan',
-    }
+    _novlan_remove = lambda : None
+
+    @classmethod
+    def enable (cls,adaptee):
+        adaptee._novlan_remove = adaptee.remove
+        adaptee.remove = cls.remove
+        adaptee.add_vlan = cls.add_vlan
+        adaptee.del_vlan = cls.del_vlan
+        adaptee.definition['vlan'] = True
+        return adaptee
 
     def remove(self):
         """
@@ -41,13 +49,15 @@ class VLANIf(Interface):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
+        ifname = self.config['ifname']
+
         # Do we have sub interfaces (VLANs)? We apply a regex matching
         # subinterfaces (indicated by a .) of a parent interface.
         #
         # As interfaces need to be deleted "in order" starting from Q-in-Q
         # we delete them first.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net')
-                    if re.match(self.config['ifname'] + r'(?:\.\d+)(?:\.\d+)', f)]
+                    if re.match(ifname + r'(?:\.\d+)(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
             Interface(vlan).remove()
@@ -56,13 +66,14 @@ class VLANIf(Interface):
         # which probably acted as parent to Q-in-Q or have been regular 802.1q
         # interface.
         vlan_ifs = [f for f in os.listdir(r'/sys/class/net')
-                    if re.match(self.config['ifname'] + r'(?:\.\d+)', f)]
+                    if re.match(ifname + r'(?:\.\d+)', f)]
 
         for vlan in vlan_ifs:
-            Interface(vlan).remove()
+            # self.__class__ is already VLAN.enabled
+            self.__class__(vlan)._novlan_remove()
 
         # All subinterfaces are now removed, continue on the physical interface
-        super().remove()
+        self._novlan_remove()
 
     def add_vlan(self, vlan_id, ethertype='', ingress_qos='', egress_qos=''):
         """
@@ -85,12 +96,12 @@ class VLANIf(Interface):
                             to VLAN header prio field but for outgoing frames.
 
         Example:
-        >>> from vyos.ifconfig import VLANIf
-        >>> i = VLANIf('eth0')
+        >>> from vyos.ifconfig import MACVLANIf
+        >>> i = MACVLANIf('eth0')
         >>> i.add_vlan(10)
         """
         vlan_ifname = self.config['ifname'] + '.' + str(vlan_id)
-        if not os.path.exists('/sys/class/net/{}'.format(vlan_ifname)):
+        if not os.path.exists(f'/sys/class/net/{vlan_ifname}'):
             self._vlan_id = int(vlan_id)
 
             if ethertype:
@@ -114,7 +125,7 @@ class VLANIf(Interface):
         # return new object mapping to the newly created interface
         # we can now work on this object for e.g. IP address setting
         # or interface description and so on
-        return VLANIf(vlan_ifname)
+        return self.__class__(vlan_ifname)
 
     def del_vlan(self, vlan_id):
         """
@@ -123,9 +134,9 @@ class VLANIf(Interface):
         client processes.
 
         Example:
-        >>> from vyos.ifconfig import VLANIf
-        >>> i = VLANIf('eth0.10')
+        >>> from vyos.ifconfig import MACVLANIf
+        >>> i = MACVLANIf('eth0.10')
         >>> i.del_vlan()
         """
-        vlan_ifname = self.config['ifname'] + '.' + str(vlan_id)
-        VLANIf(vlan_ifname).remove()
+        ifname = self.config['ifname']
+        self.__class__(f'{ifname}.{vlan_id}')._novlan_remove()

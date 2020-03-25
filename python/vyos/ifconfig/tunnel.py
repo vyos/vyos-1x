@@ -38,6 +38,14 @@ class _Tunnel(Interface):
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/tunnel.c
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/ip6tunnel.c
     """
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'tunnel',
+            'prefixes': ['tun',],
+            'bridgeable': True,
+        },
+    }
 
     # TODO: This is surely used for more than tunnels
     # TODO: could be refactored elsewhere

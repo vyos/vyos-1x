@@ -17,6 +17,7 @@
 from vyos.ifconfig.interface import Interface
 
 
+@Interface.register
 class LoopbackIf(Interface):
     """
     The loopback device is a special, virtual network interface that your router
@@ -26,6 +27,16 @@ class LoopbackIf(Interface):
     default = {
         'type': 'loopback',
     }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'loopback',
+            'prefixes': ['lo', ],
+            'bridgeable': True,
+        }
+    }
+
+    name = 'loopback'
 
     def remove(self):
         """

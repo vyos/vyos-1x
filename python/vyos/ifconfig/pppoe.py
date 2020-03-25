@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,20 +18,16 @@ from vyos.ifconfig.interface import Interface
 
 
 @Interface.register
-class DummyIf(Interface):
-    """
-    A dummy interface is entirely virtual like, for example, the loopback
-    interface. The purpose of a dummy interface is to provide a device to route
-    packets through without actually transmitting them.
-    """
-
+class PPPoEIf(Interface):
     default = {
-        'type': 'dummy',
+        'type': 'pppoe',
     }
     definition = {
         **Interface.definition,
         **{
-            'section': 'dummy',
-            'prefixes': ['dum', ],
+            'section': 'pppoe',
+            'prefixes': ['pppoe', ],
         },
     }
+
+    # The _create and _delete need to be moved from interface-ppoe to here

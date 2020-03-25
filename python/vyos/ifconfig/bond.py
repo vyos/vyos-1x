@@ -16,12 +16,14 @@
 import os
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLANIf
+from vyos.ifconfig.vlan import VLAN
 
 from vyos.validate import *
 
 
-class BondIf(VLANIf):
+@Interface.register
+@VLAN.enable
+class BondIf(Interface):
     """
     The Linux bonding driver provides a method for aggregating multiple network
     interfaces into a single logical "bonded" interface. The behavior of the
@@ -30,7 +32,20 @@ class BondIf(VLANIf):
     monitoring may be performed.
     """
 
-    _sysfs_set = {**VLANIf._sysfs_set, **{
+    default = {
+        'type': 'bond',
+    }
+    definition = {
+        **Interface.definition,
+        ** {
+            'section': 'bonding',
+            'prefixes': ['bond', ],
+            'broadcast': True,
+            'bridgeable': True,
+        },
+    }
+
+    _sysfs_set = {**Interface._sysfs_set, **{
         'bond_hash_policy': {
             'validate': lambda v: assert_list(v, ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']),
             'location': '/sys/class/net/{ifname}/bonding/xmit_hash_policy',
@@ -63,15 +78,11 @@ class BondIf(VLANIf):
         },
     }}
 
-    _sysfs_get = {**VLANIf._sysfs_get, **{
+    _sysfs_get = {**Interface._sysfs_get, **{
         'bond_arp_ip_target': {
             'location': '/sys/class/net/{ifname}/bonding/arp_ip_target',
         }
     }}
-
-    default = {
-        'type': 'bond',
-    }
 
     def remove(self):
         """

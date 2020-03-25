@@ -18,6 +18,7 @@ from copy import deepcopy
 from vyos.ifconfig.interface import Interface
 
 
+@Interface.register
 class GeneveIf(Interface):
     """
     Geneve: Generic Network Virtualization Encapsulation
@@ -33,6 +34,14 @@ class GeneveIf(Interface):
         'type': 'geneve',
         'vni': 0,
         'remote': '',
+    }
+    definition = {
+        **Interface.definition,
+        **{
+            'section': 'geneve',
+            'prefixes': ['gnv', ],
+            'bridgeable': True,
+        }
     }
 
     def _create(self):
