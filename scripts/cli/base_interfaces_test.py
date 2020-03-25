@@ -18,7 +18,7 @@ import unittest
 from vyos.configsession import ConfigSession
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
-from vyos.interfaces import list_interfaces_of_type
+from vyos.ifconfig import Interface
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
