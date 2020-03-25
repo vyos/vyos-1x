@@ -57,7 +57,7 @@ class Register:
             return 'input'
 
         if name in cls._prefixes:
-            return cls._prefixes[name].defintion['section']
+            return cls._prefixes[name].definition['section']
         return ''
  
     @classmethod
@@ -68,28 +68,27 @@ class Register:
         raise ValueError(f'No type found for interface name: {name}')
 
     @classmethod
-    def _listing (cls):
+    def _listing (cls,section=''):
         interfaces = netifaces.interfaces()
 
         for ifname in interfaces:
-            if '@' in ifname:
-                # Tunnels: sit0@NONE, gre0@NONE, gretap0@NONE, erspan0@NONE, tunl0@NONE, ip6tnl0@NONE, ip6gre0@NONE
-                continue
-
             # XXX: Temporary hack as vti and input are not yet moved from vyatta to vyos
             if ifname.startswith('vti') or ifname.startswith('input'):
                 yield ifname
                 continue
 
-            if not cls.section(ifname):
+            ifsection = cls.section(ifname)
+            if not ifsection:
                 continue
+
+            if section and ifsection != section:
+                continue
+
             yield ifname
 
     @classmethod
     def listing(cls, section=''):
-        if not section:
-            return list(cls._listing())
-        return [_ for _ in cls._listing() if cls._basename(_,False) in self.prefixes]
+        return list(cls._listing(section))
 
 
 # XXX: TODO - limit name for VRF interfaces
