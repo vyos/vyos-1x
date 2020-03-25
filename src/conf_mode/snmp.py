@@ -121,7 +121,7 @@ SysDescr {{ description }}
 {%- endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161,udp6:161{% endif %}
+agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161{% if ipv6_enabled %},udp6:161{% endif %}{% endif %}
 
 # SNMP communities
 {%- for c in communities %}
@@ -207,6 +207,7 @@ extend {{ ext.name }} {{ ext.script }}
 default_config_data = {
     'listen_on': [],
     'listen_address': [],
+    'ipv6_enabled': 'True',
     'communities': [],
     'smux_peers': [],
     'location' : '',
@@ -236,6 +237,9 @@ def get_config():
     if not conf.exists('service snmp'):
         return None
     else:
+        if conf.exists('system ipv6 disable'):
+            snmp['ipv6_enabled'] = False
+
         conf.set_level('service snmp')
 
     version_data = get_version_data()
@@ -556,7 +560,7 @@ def verify(snmp):
         if is_ipv4(addr):
             # example: udp:127.0.0.1:161
             listen = 'udp:' + addr + ':' + port
-        else:
+        elif snmp['ipv6_enabled']:
             # example: udp6:[::1]:161
             listen = 'udp6:' + '[' + addr + ']' + ':' + port
 
