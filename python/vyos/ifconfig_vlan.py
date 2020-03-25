@@ -65,9 +65,9 @@ def apply_vlan_config(vlan, config):
     # configure ARP ignore
     vlan.set_arp_ignore(config['ip_enable_arp_ignore'])
     # Disable IPv6 forwarding on this interface
-    vlan.ipv6_forwarding(bond['ipv6_forwarding'])
+    vlan.set_ipv6_forwarding(config['ipv6_forwarding'])
     # IPv6 Duplicate Address Detection (DAD) tries
-    vlan.ipv6_dad_messages(bond['ipv6_dup_addr_detect'])
+    vlan.set_ipv6_dad_messages(config['ipv6_dup_addr_detect'])
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
 

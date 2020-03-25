@@ -51,6 +51,8 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ipv6/node.def
+	rm -f $(TMPL_DIR)/interfaces/l2tpv3/node.tag/ipv6/node.def
+	rm -f $(TMPL_DIR)/interfaces/openvpn/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/pppoe/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/pppoe/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/ip/node.def
@@ -61,6 +63,7 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ipv6/node.def
+	rm -f $(TMPL_DIR)/interfaces/tunnel/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/ip/node.def

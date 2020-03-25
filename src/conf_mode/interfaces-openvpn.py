@@ -294,8 +294,8 @@ default_config_data = {
     'encryption': '',
     'hash': '',
     'intf': '',
-    'ipv6_forwarding': True,
-    'ipv6_dup_addr_detect': '1',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'ping_restart': '60',
     'ping_interval': '10',
     'local_address': '',
@@ -494,11 +494,11 @@ def get_config():
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
-        openvpn['ipv6_forwarding'] = False
+        openvpn['ipv6_forwarding'] = 0
 
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
-        openvpn['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
+        openvpn['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # OpenVPN operation mode
     if conf.exists('mode'):

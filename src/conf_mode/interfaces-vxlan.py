@@ -37,8 +37,8 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
-    'ipv6_forwarding': True,
-    'ipv6_dup_addr_detect': '1',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'link': '',
     'mtu': 1450,
     'remote': '',
@@ -107,11 +107,11 @@ def get_config():
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
-        vxlan['ipv6_forwarding'] = False
+        vxlan['ipv6_forwarding'] = 0
 
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
-        vxlan['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
+        vxlan['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # VXLAN underlay interface
     if conf.exists('link'):

@@ -827,8 +827,8 @@ default_config_data = {
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
-    'ipv6_forwarding': True,
-    'ipv6_dup_addr_detect': '1',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'mac' : '',
     'max_stations' : '',
     'mgmt_frame_protection' : 'disabled',
@@ -1144,11 +1144,11 @@ def get_config():
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
-        wifi['ipv6_forwarding'] = False
+        wifi['ipv6_forwarding'] = 0
 
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
-        wifi['ipv6_dup_addr_detect'] = conf.return_value('dup-addr-detect-transmits')
+        wifi['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # Wireless physical device
     if conf.exists('physical-device'):
@@ -1498,9 +1498,9 @@ def apply(wifi):
         # configure ARP ignore
         w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
         # Disable IPv6 forwarding on this interface
-        w.set_ipv6_forwarding(bond['ipv6_forwarding'])
+        w.set_ipv6_forwarding(wifi['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
-        w.set_ipv6_dad_messages(bond['ipv6_dup_addr_detect'])
+        w.set_ipv6_dad_messages(wifi['ipv6_dup_addr_detect'])
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

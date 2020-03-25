@@ -116,11 +116,11 @@ class Interface(DHCP):
             'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
         },
         'ipv6_forwarding': {
-            'validate': assert_boolean,
+            'validate': lambda fwd: assert_range(fwd,0,2),
             'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
         },
         'ipv6_dad_transmits': {
-            'validate': assert_boolean,
+            'validate': assert_positive,
             'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
         },
         'proxy_arp': {
@@ -409,7 +409,7 @@ class Interface(DHCP):
         """
         return self.set_interface('ipv6_forwarding', forwarding)
 
-    def set_dad_messages(self, dad):
+    def set_ipv6_dad_messages(self, dad):
         """
         The amount of Duplicate Address Detection probes to send.
         Default: 1
