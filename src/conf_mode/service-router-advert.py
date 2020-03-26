@@ -42,7 +42,9 @@ interface {{ i.name }} {
 {% if i.default_lifetime %}
     AdvDefaultLifetime {{ i.default_lifetime }};
 {% endif %}
+{% if i.link_mtu %}
     AdvLinkMTU {{ i.link_mtu }};
+{% endif %}
     AdvOtherConfigFlag {{ i.other_config_flag }};
     AdvRetransTimer {{ i.retrans_timer }};
     AdvCurHopLimit {{ i.hop_limit }};
@@ -81,7 +83,7 @@ def get_config():
             'default_lifetime': '',
             'default_preference': 'medium',
             'dnssl': [],
-            'link_mtu': '0',
+            'link_mtu': '',
             'managed_flag': 'off',
             'interval_max': '600',
             'interval_min': '',

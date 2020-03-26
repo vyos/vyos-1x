@@ -75,6 +75,14 @@ def copy_rtradv(c, old_base, interface):
             if tmp == 'false':
                 c.set(new_base + ['no-send-advert'])
 
+        # link-mtu advertisement was formerly disabled by setting its value to 0
+        # ... this makes less sense - if it should not be send, just do not
+        # configure it
+        if c.exists(new_base + ['link-mtu']):
+            tmp = c.return_value(new_base + ['link-mtu'])
+            if tmp == '0':
+                c.delete(new_base + ['link-mtu'])
+
 if __name__ == '__main__':
     if (len(sys.argv) < 1):
         print("Must specify file name!")
