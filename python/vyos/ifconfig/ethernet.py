@@ -101,6 +101,8 @@ class EthernetIf(Interface):
         >>> i = EthernetIf('eth0')
         >>> i.set_flow_control(True)
         """
+        ifname = self.config['ifname']
+
         if enable not in ['on', 'off']:
             raise ValueError("Value out of range")
 
@@ -110,8 +112,15 @@ class EthernetIf(Interface):
             return
 
         # Get current flow control settings:
-        cmd = '/sbin/ethtool --show-pause {0}'.format(self.config['ifname'])
-        tmp = self._cmd(cmd)
+        cmd = f'/sbin/ethtool --show-pause {ifname}'
+        output, code = self._popen(cmd)
+        if code == 76:
+            # the interface does not support it
+            return ''
+        if code:
+            # never fail here as it prevent vyos to boot
+            print(f'unexpected return code {code} from {cmd}')
+            return ''
 
         # The above command returns - with tabs:
         #
@@ -119,23 +128,21 @@ class EthernetIf(Interface):
         # Autonegotiate:  on
         # RX:             off
         # TX:             off
-        if re.search("Autonegotiate:\ton", tmp):
+        if re.search("Autonegotiate:\ton", output):
             if enable == "on":
                 # flowcontrol is already enabled - no need to re-enable it again
                 # this will prevent the interface from flapping as applying the
                 # flow-control settings will take the interface down and bring
                 # it back up every time.
-                return
+                return ''
 
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
-        cmd = '/sbin/ethtool --pause {0} autoneg {1} tx {1} rx {1}'.format(
-              self.config['ifname'], enable)
-        try:
-            # An exception will be thrown if the settings are not changed
-            return self._cmd(cmd)
-        except RuntimeError:
-            pass
+        cmd = f'/sbin/ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
+        output, code = self._popen(cmd)
+        if code:
+            print(f'could not set flowcontrol for {ifname}')
+        return output
 
     def set_speed_duplex(self, speed, duplex):
         """
