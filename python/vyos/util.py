@@ -15,22 +15,23 @@
 
 import os
 import re
-import getpass
-import grp
-import time
-import subprocess
 import sys
-
 import psutil
 
 import vyos.defaults
 
+from getpass import getuser
+from grp import getgrnam
+from time import sleep
+from subprocess import check_output
+from ipaddress import ip_network
 
 def read_file(path):
     """ Read a file to string """
     with open(path, 'r') as f:
         data = f.read().strip()
     return data
+
 
 def colon_separated_to_dict(data_string, uniquekeys=False):
     """ Converts a string containing newline-separated entries
@@ -80,11 +81,13 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
 
     return data
 
+
 def process_running(pid_file):
     """ Checks if a process with PID in pid_file is running """
     with open(pid_file, 'r') as f:
         pid = f.read().strip()
     return psutil.pid_exists(int(pid))
+
 
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable
@@ -125,9 +128,11 @@ def seconds_to_human(s, separator=""):
 
     return result
 
+
 def get_cfg_group_id():
-    group_data = grp.getgrnam(vyos.defaults.cfg_group)
+    group_data = getgrnam(vyos.defaults.cfg_group)
     return group_data.gr_gid
+
 
 def file_is_persistent(path):
     if not re.match(r'^(/config|/opt/vyatta/etc/config)', os.path.dirname(path)):
@@ -136,6 +141,7 @@ def file_is_persistent(path):
         return (False, warning)
     else:
         return (True, None)
+
 
 def commit_in_progress():
     """ Not to be used in normal op mode scripts! """
@@ -154,7 +160,7 @@ def commit_in_progress():
     # Since this will be used in scripts that modify the config outside of the CLI
     # framework, those knowingly have root permissions.
     # For everything else, we add a safeguard.
-    id = subprocess.check_output(['/usr/bin/id', '-u']).decode().strip()
+    id = check_output(['/usr/bin/id', '-u']).decode().strip()
     if id != '0':
         raise OSError("This functions needs root permissions to return correct results")
 
@@ -171,12 +177,14 @@ def commit_in_progress():
     # Default case
     return False
 
+
 def wait_for_commit_lock():
     """ Not to be used in normal op mode scripts! """
 
     # Very synchronous approach to multiprocessing
     while commit_in_progress():
-        time.sleep(1)
+        sleep(1)
+
 
 def ask_yes_no(question, default=False) -> bool:
     """Ask a yes/no question via input() and return their answer."""
@@ -196,6 +204,6 @@ def ask_yes_no(question, default=False) -> bool:
 
 def is_admin() -> bool:
     """Look if current user is in sudo group"""
-    current_user = getpass.getuser()
-    (_, _, _, admin_group_members) = grp.getgrnam('sudo')
+    current_user = getuser()
+    (_, _, _, admin_group_members) = getgrnam('sudo')
     return current_user in admin_group_members
