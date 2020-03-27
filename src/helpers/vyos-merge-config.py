@@ -70,10 +70,7 @@ with tempfile.NamedTemporaryFile() as file_to_migrate:
 merge_config_tree = ConfigTree(config_file)
 
 effective_config = Config()
-
-output_effective_config = effective_config.show_config()
-
-effective_config_tree = ConfigTree(output_effective_config)
+effective_config_tree = effective_config._running_config
 
 effective_cmds = effective_config_tree.to_commands()
 merge_cmds = merge_config_tree.to_commands()
