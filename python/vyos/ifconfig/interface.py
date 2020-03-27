@@ -115,6 +115,10 @@ class Interface(DHCP):
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
         },
+        'ipv6_autoconf': {
+            'validate': lambda fwd: assert_range(fwd,0,2),
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/autoconf',
+        },
         'ipv6_forwarding': {
             'validate': lambda fwd: assert_range(fwd,0,2),
             'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
@@ -381,6 +385,13 @@ class Interface(DHCP):
             configured on the incoming interface
         """
         return self.set_interface('arp_ignore', arp_ignore)
+
+    def set_ipv6_autoconf(self, autoconf):
+        """
+        Autoconfigure addresses using Prefix Information in Router
+        Advertisements.
+        """
+        return self.set_interface('ipv6_autoconf', autoconf)
 
     def set_ipv6_forwarding(self, forwarding):
         """

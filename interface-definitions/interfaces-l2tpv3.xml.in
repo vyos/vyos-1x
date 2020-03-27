@@ -53,6 +53,7 @@
           </leafNode>
           <node name="ipv6">
             <children>
+              #include <include/ipv6-address.xml.i>
               #include <include/ipv6-disable-forwarding.xml.i>
               #include <include/ipv6-dup-addr-detect-transmits.xml.i>
             </children>

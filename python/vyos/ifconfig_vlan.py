@@ -64,7 +64,9 @@ def apply_vlan_config(vlan, config):
     vlan.set_arp_announce(config['ip_enable_arp_announce'])
     # configure ARP ignore
     vlan.set_arp_ignore(config['ip_enable_arp_ignore'])
-    # Disable IPv6 forwarding on this interface
+    # IPv6 address autoconfiguration
+    vlan.set_ipv6_autoconf(config['ipv6_autoconf'])
+    # IPv6 forwarding
     vlan.set_ipv6_forwarding(config['ipv6_forwarding'])
     # IPv6 Duplicate Address Detection (DAD) tries
     vlan.set_ipv6_dad_messages(config['ipv6_dup_addr_detect'])

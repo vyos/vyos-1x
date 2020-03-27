@@ -37,6 +37,7 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
+    'ipv6_autoconf': 0,
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'link': '',
@@ -104,6 +105,10 @@ def get_config():
     # Enable proxy-arp on this interface
     if conf.exists('ip enable-proxy-arp'):
         vxlan['ip_proxy_arp'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        vxlan['ipv6_autoconf'] = 1
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -211,7 +216,9 @@ def apply(vxlan):
         v.set_arp_ignore(vxlan['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
-        # Disable IPv6 forwarding on this interface
+        # IPv6 address autoconfiguration
+        v.set_ipv6_autoconf(vxlan['ipv6_autoconf'])
+        # IPv6 forwarding
         v.set_ipv6_forwarding(vxlan['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
         v.set_ipv6_dad_messages(vxlan['ipv6_dup_addr_detect'])

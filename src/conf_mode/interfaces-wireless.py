@@ -827,6 +827,7 @@ default_config_data = {
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
+    'ipv6_autoconf': 0,
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'mac' : '',
@@ -1137,6 +1138,10 @@ def get_config():
     # ARP enable announce
     if conf.exists('ip enable-arp-announce'):
         wifi['ip_enable_arp_announce'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        wifi['ipv6_autoconf'] = 1
 
     # ARP enable ignore
     if conf.exists('ip enable-arp-ignore'):
@@ -1497,7 +1502,9 @@ def apply(wifi):
         w.set_arp_announce(wifi['ip_enable_arp_announce'])
         # configure ARP ignore
         w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
-        # Disable IPv6 forwarding on this interface
+        # IPv6 address autoconfiguration
+        w.set_ipv6_autoconf(wifi['ipv6_autoconf'])
+        # IPv6 forwarding
         w.set_ipv6_forwarding(wifi['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
         w.set_ipv6_dad_messages(wifi['ipv6_dup_addr_detect'])

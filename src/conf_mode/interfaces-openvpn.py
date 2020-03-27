@@ -294,6 +294,7 @@ default_config_data = {
     'encryption': '',
     'hash': '',
     'intf': '',
+    'ipv6_autoconf': 0,
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'ping_restart': '60',
@@ -491,6 +492,10 @@ def get_config():
     # Local port number to accept connections
     if conf.exists('local-port'):
         openvpn['local_port'] = conf.return_value('local-port')
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        openvpn['ipv6_autoconf'] = 1
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -1049,7 +1054,9 @@ def apply(openvpn):
         o = VTunIf(openvpn['intf'])
         # update interface description used e.g. within SNMP
         o.set_alias(openvpn['description'])
-        # Disable IPv6 forwarding on this interface
+        # IPv6 address autoconfiguration
+        o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
+        # IPv6 forwarding
         o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
         o.set_ipv6_dad_messages(openvpn['ipv6_dup_addr_detect'])

@@ -46,6 +46,7 @@ default_config_data = {
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
+    'ipv6_autoconf': 0,
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'igmp_querier': 0,
@@ -153,6 +154,10 @@ def get_config():
     # ARP enable ignore
     if conf.exists('ip enable-arp-ignore'):
         bridge['ip_enable_arp_ignore'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        bridge['ipv6_autoconf'] = 1
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -268,7 +273,9 @@ def apply(bridge):
         br.set_arp_announce(bridge['ip_enable_arp_announce'])
         # configure ARP ignore
         br.set_arp_ignore(bridge['ip_enable_arp_ignore'])
-        # Disable IPv6 forwarding on this interface
+        # IPv6 address autoconfiguration
+        br.set_ipv6_autoconf(bridge['ipv6_autoconf'])
+        # IPv6 forwarding
         br.set_ipv6_forwarding(bridge['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
         br.set_ipv6_dad_messages(bridge['ipv6_dup_addr_detect'])
