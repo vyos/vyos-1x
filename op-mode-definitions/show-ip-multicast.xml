@@ -21,6 +21,18 @@
                 </properties>
                 <command>if ps -C igmpproxy &amp;&gt;/dev/null; then ${vyos_op_scripts_dir}/show_igmpproxy.py --mfc; else echo IGMP proxy not configured; fi</command>
               </leafNode>
+              <leafNode name="summary">
+                <properties>
+                  <help>IP multicast information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip multicast"</command>
+              </leafNode>
+              <leafNode name="route">
+                <properties>
+                  <help>IP multicast routing table</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip mroute"</command>
+              </leafNode>
             </children>
           </node>
         </children>
