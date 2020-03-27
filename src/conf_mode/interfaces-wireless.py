@@ -1520,41 +1520,40 @@ def apply(wifi):
         if not wifi['disable']:
             w.set_state('up')
 
+            # Physical interface is now configured. Proceed by starting hostapd or
+            # wpa_supplicant daemon. When type is monitor we can just skip this.
+            if wifi['op_mode'] == 'ap':
+                cmd  = 'start-stop-daemon'
+                cmd += ' --start '
+                cmd += ' --quiet'
+                cmd += ' --oknodo'
+                cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
+                cmd += ' --exec /usr/sbin/hostapd'
+                # now pass arguments to hostapd binary
+                cmd += ' -- '
+                cmd += ' -B'
+                cmd += ' -P ' + get_pid('hostapd', wifi['intf'])
+                cmd += ' ' + get_conf_file('hostapd', wifi['intf'])
 
-    # Physical interface is now configured. Proceed by starting hostapd or
-    # wpa_supplicant daemon. When type is monitor we can just skip this.
-    if wifi['op_mode'] == 'ap':
-        cmd  = 'start-stop-daemon'
-        cmd += ' --start '
-        cmd += ' --quiet'
-        cmd += ' --oknodo'
-        cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
-        cmd += ' --exec /usr/sbin/hostapd'
-        # now pass arguments to hostapd binary
-        cmd += ' -- '
-        cmd += ' -B'
-        cmd += ' -P ' + get_pid('hostapd', wifi['intf'])
-        cmd += ' ' + get_conf_file('hostapd', wifi['intf'])
+                # execute assembled command
+                subprocess_cmd(cmd)
 
-        # execute assembled command
-        subprocess_cmd(cmd)
+            elif wifi['op_mode'] == 'station':
+                cmd  = 'start-stop-daemon'
+                cmd += ' --start '
+                cmd += ' --quiet'
+                cmd += ' --oknodo'
+                cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
+                cmd += ' --exec /sbin/wpa_supplicant'
+                # now pass arguments to hostapd binary
+                cmd += ' -- '
+                cmd += ' -s -B -D nl80211'
+                cmd += ' -P ' + get_pid('wpa_supplicant', wifi['intf'])
+                cmd += ' -i ' + wifi['intf']
+                cmd += ' -c ' + get_conf_file('wpa_supplicant', wifi['intf'])
 
-    elif wifi['op_mode'] == 'station':
-        cmd  = 'start-stop-daemon'
-        cmd += ' --start '
-        cmd += ' --quiet'
-        cmd += ' --oknodo'
-        cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
-        cmd += ' --exec /sbin/wpa_supplicant'
-        # now pass arguments to hostapd binary
-        cmd += ' -- '
-        cmd += ' -s -B -D nl80211'
-        cmd += ' -P ' + get_pid('wpa_supplicant', wifi['intf'])
-        cmd += ' -i ' + wifi['intf']
-        cmd += ' -c ' + get_conf_file('wpa_supplicant', wifi['intf'])
-
-        # execute assembled command
-        subprocess_cmd(cmd)
+                # execute assembled command
+                subprocess_cmd(cmd)
 
     return None
 
