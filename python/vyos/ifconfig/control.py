@@ -28,15 +28,20 @@ class Control(Register):
         if os.path.isfile('/tmp/vyos.ifconfig.debug'):
             print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
 
-    def _cmd(self, command):
+    def _popen(self, command):
         p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
         tmp = p.communicate()[0].strip()
         self._debug_msg(f"cmd '{command}'")
         decoded = tmp.decode()
         if decoded:
             self._debug_msg(f"returned:\n{decoded}")
-        if p.returncode != 0:
-            raise RuntimeError(f'{command}\nreturned: {decoded}')
+        return decoded, p.returncode
+
+    def _cmd(self, command):
+        decoded, code = self._popen(command)
+        if code != 0:
+            # error code can be recovered with .errno
+            raise OSError(code, f'{command}\nreturned: {decoded}')
         return decoded
 
     def _get_command(self, config, name):
