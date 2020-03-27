@@ -50,9 +50,6 @@ class Control(Register):
         """
         Using the defined names, set data write to sysfs.
         """
-        if not value and not self._command_set[name].get('force', False):
-            return None
-
         # the code can pass int as int
         value = str(value)
 
@@ -110,9 +107,6 @@ class Control(Register):
         """
         Using the defined names, set data write to sysfs.
         """
-        if not value and not self._sysfs_set[name].get('force', False):
-            return None
-
         # the code can pass int as int
         value = str(value)
 

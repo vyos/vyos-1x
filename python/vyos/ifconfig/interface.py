@@ -59,7 +59,6 @@ class Interface(DHCP):
             'shellcmd': 'ip link set dev {ifname} address {value}',
         },
         'vrf': {
-            'force': True,
             'convert': lambda v: f'master {v}' if v else 'nomaster',
             'shellcmd': 'ip link set dev {ifname} {value}',
         },
