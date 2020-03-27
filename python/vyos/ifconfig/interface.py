@@ -66,6 +66,9 @@ class Interface(DHCP):
     }
 
     _sysfs_get = {
+        'alias': {
+            'location': '/sys/class/net/{ifname}/ifalias',
+        },
         'mac': {
             'location': '/sys/class/net/{ifname}/address',
         },
@@ -383,6 +386,16 @@ class Interface(DHCP):
         >>> Interface('eth0').set_link_detect(1)
         """
         return self.set_interface('link_detect', link_filter)
+
+    def get_alias(self):
+        """
+        Get interface alias name used by e.g. SNMP
+
+        Example:
+        >>> Interface('eth0').get_alias()
+        'interface description as set by user'
+        """
+        return self.get_interface('alias')
 
     def set_alias(self, ifalias=''):
         """
