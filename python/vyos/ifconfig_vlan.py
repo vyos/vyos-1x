@@ -76,9 +76,9 @@ def apply_vlan_config(vlan, config):
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.set_state('down')
+        vlan.set_admin_state('down')
     else:
-        vlan.set_state('up')
+        vlan.set_admin_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first

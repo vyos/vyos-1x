@@ -101,7 +101,7 @@ class BondIf(Interface):
         for s in self.get_slaves():
             slave = {
                 'ifname': s,
-                'state': Interface(s).get_state()
+                'state': Interface(s).get_admin_state()
             }
             slave_list.append(slave)
 
@@ -112,7 +112,7 @@ class BondIf(Interface):
         # physical interface
         for slave in slave_list:
              i = Interface(slave['ifname'])
-             i.set_state(slave['state'])
+             i.set_admin_state(slave['state'])
 
     def set_hash_policy(self, mode):
         """
@@ -211,7 +211,7 @@ class BondIf(Interface):
         # An interface can only be added to a bond if it is in 'down' state. If
         # interface is in 'up' state, the following Kernel error will  be thrown:
         # bond0: eth1 is up - this may be due to an out of date ifenslave.
-        Interface(interface).set_state('down')
+        Interface(interface).set_admin_state('down')
         return self.set_interface('bond_add_port', f'+{interface}')
 
     def del_port(self, interface):

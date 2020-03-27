@@ -1043,7 +1043,7 @@ def apply(openvpn):
     # TAP interface needs to be brought up explicitly
     if openvpn['type'] == 'tap':
         if not openvpn['disable']:
-            VTunIf(openvpn['intf']).set_state('up')
+            VTunIf(openvpn['intf']).set_admin_state('up')
 
     return None
 

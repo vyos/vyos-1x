@@ -1518,7 +1518,7 @@ def apply(wifi):
         # Enable/Disable interface - interface is always placed in
         # administrative down state in WiFiIf class
         if not wifi['disable']:
-            w.set_state('up')
+            w.set_admin_state('up')
 
 
     # Physical interface is now configured. Proceed by starting hostapd or

@@ -98,10 +98,10 @@ class _Tunnel(Interface):
         options = " ".join(["{} {}".format(k, self.config[k])
                             for k in self.options if k in self.config and self.config[k]])
         self._cmd('{} {}'.format(self.create.format(**self.config), options))
-        self.set_interface('state', 'down')
+        self.set_admin_state('down')
 
     def _delete(self):
-        self.set_interface('state', 'down')
+        self.set_admin_state('down')
         cmd = self.delete.format(**self.config)
         return self._cmd(cmd)
 

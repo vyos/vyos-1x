@@ -431,7 +431,7 @@ def apply(bond):
         # Some parameters can not be changed when the bond is up.
         if bond['shutdown_required']:
             # Disable bond prior changing of certain properties
-            b.set_state('down')
+            b.set_admin_state('down')
 
             # The bonding mode can not be changed when there are interfaces enslaved
             # to this bond, thus we will free all interfaces from the bond first!
@@ -449,9 +449,9 @@ def apply(bond):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not bond['disable']:
-            b.set_state('up')
+            b.set_admin_state('up')
         else:
-            b.set_state('down')
+            b.set_admin_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

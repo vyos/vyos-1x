@@ -357,9 +357,9 @@ def apply(eth):
 
         # Enable/Disable interface
         if eth['disable']:
-            e.set_state('down')
+            e.set_admin_state('down')
         else:
-            e.set_state('up')
+            e.set_admin_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first
