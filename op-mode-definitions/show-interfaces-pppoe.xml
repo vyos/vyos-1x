@@ -27,6 +27,15 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="statistics">
+                <properties>
+                  <help>Show specified wirelessmodem interface statistics</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/sbin/pppstats $4</command>
+              </leafNode>
             </children>
           </tagNode>
         </children>
