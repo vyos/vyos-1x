@@ -251,7 +251,7 @@ class Interface(DHCP):
         >>> Interface('eth0').get_mac()
         '00:50:ab:cd:ef:00'
         """
-        self.get_interface('mac')
+        return self.get_interface('mac')
 
     def set_mac(self, mac):
         """
