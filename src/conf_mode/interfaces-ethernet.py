@@ -49,6 +49,7 @@ default_config_data = {
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
     'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'intf': '',
@@ -173,6 +174,10 @@ def get_config():
     # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
     if conf.exists('ipv6 address autoconf'):
         eth['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        eth['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -341,9 +346,10 @@ def apply(eth):
         e.set_proxy_arp(eth['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
         e.set_proxy_arp_pvlan(eth['ip_proxy_arp_pvlan'])
-        # Disable IPv6 forwarding on this interface
         # IPv6 address autoconfiguration
         e.set_ipv6_autoconf(eth['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        e.set_ipv6_eui64_address(eth['ipv6_eui64_prefix'])
         # IPv6 forwarding
         e.set_ipv6_forwarding(eth['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries

@@ -47,6 +47,7 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'igmp_querier': 0,
@@ -158,6 +159,10 @@ def get_config():
     # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
     if conf.exists('ipv6 address autoconf'):
         bridge['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        bridge['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -275,6 +280,8 @@ def apply(bridge):
         br.set_arp_ignore(bridge['ip_enable_arp_ignore'])
         # IPv6 address autoconfiguration
         br.set_ipv6_autoconf(bridge['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        br.set_ipv6_eui64_address(bridge['ipv6_eui64_prefix'])
         # IPv6 forwarding
         br.set_ipv6_forwarding(bridge['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries

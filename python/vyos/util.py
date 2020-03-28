@@ -207,3 +207,25 @@ def is_admin() -> bool:
     current_user = getuser()
     (_, _, _, admin_group_members) = getgrnam('sudo')
     return current_user in admin_group_members
+
+
+def mac2eui64(mac, prefix=None):
+    '''
+    Convert a MAC address to a EUI64 address or, with prefix provided, a full
+    IPv6 address.
+    Thankfully copied from https://gist.github.com/wido/f5e32576bb57b5cc6f934e177a37a0d3
+    '''
+    # http://tools.ietf.org/html/rfc4291#section-2.5.1
+    eui64 = re.sub(r'[.:-]', '', mac).lower()
+    eui64 = eui64[0:6] + 'fffe' + eui64[6:]
+    eui64 = hex(int(eui64[0:2], 16) ^ 2)[2:].zfill(2) + eui64[2:]
+
+    if prefix is None:
+        return ':'.join(re.findall(r'.{4}', eui64))
+    else:
+        try:
+            net = ip_network(prefix, strict=False)
+            euil = int('0x{0}'.format(eui64), 16)
+            return str(net[euil])
+        except:  # pylint: disable=bare-except
+            return

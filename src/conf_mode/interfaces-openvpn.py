@@ -295,6 +295,7 @@ default_config_data = {
     'hash': '',
     'intf': '',
     'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'ping_restart': '60',
@@ -496,6 +497,10 @@ def get_config():
     # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
     if conf.exists('ipv6 address autoconf'):
         openvpn['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        openvpn['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -1056,6 +1061,8 @@ def apply(openvpn):
         o.set_alias(openvpn['description'])
         # IPv6 address autoconfiguration
         o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        o.set_ipv6_eui64_address(openvpn['ipv6_eui64_prefix'])
         # IPv6 forwarding
         o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries

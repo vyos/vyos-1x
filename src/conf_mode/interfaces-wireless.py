@@ -828,6 +828,7 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'mac' : '',
@@ -1142,6 +1143,10 @@ def get_config():
     # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
     if conf.exists('ipv6 address autoconf'):
         wifi['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        wifi['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
 
     # ARP enable ignore
     if conf.exists('ip enable-arp-ignore'):
@@ -1504,6 +1509,8 @@ def apply(wifi):
         w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
         # IPv6 address autoconfiguration
         w.set_ipv6_autoconf(wifi['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        w.set_ipv6_eui64_address(wifi['ipv6_eui64_prefix'])
         # IPv6 forwarding
         w.set_ipv6_forwarding(wifi['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries

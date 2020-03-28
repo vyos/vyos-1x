@@ -34,6 +34,7 @@ default_config_data = {
     'local_port': 5000,
     'intf': '',
     'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'mtu': 1488,
@@ -107,6 +108,10 @@ def get_config():
     # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
     if conf.exists('ipv6 address autoconf'):
         l2tpv3['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        l2tpv3['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -210,6 +215,8 @@ def apply(l2tpv3):
         l.set_mtu(l2tpv3['mtu'])
         # IPv6 address autoconfiguration
         l.set_ipv6_autoconf(l2tpv3['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        l.set_ipv6_eui64_address(l2tpv3['ipv6_eui64_prefix'])
         # IPv6 forwarding
         l.set_ipv6_forwarding(l2tpv3['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries

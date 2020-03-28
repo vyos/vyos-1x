@@ -21,10 +21,10 @@ import time
 from copy import deepcopy
 
 from vyos.validate import *     # should not * include
-from vyos.config import Config  # not used anymore
+from vyos.util import mac2eui64
 from vyos import ConfigError
 
-from ipaddress import IPv4Network, IPv6Address
+from ipaddress import IPv4Network, IPv6Address, IPv6Network
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from time import sleep
 from os.path import isfile
@@ -392,6 +392,40 @@ class Interface(DHCP):
         Advertisements.
         """
         return self.set_interface('ipv6_autoconf', autoconf)
+
+    def set_ipv6_eui64_address(self, prefix):
+        """
+        Extended Unique Identifier (EUI), as per RFC2373, allows a host to
+        assign iteslf a unique IPv6 address based on a given IPv6 prefix.
+
+        If prefix is passed address is assigned, if prefix is '' address is
+        removed from interface.
+        """
+        # if prefix is an empty string convert it to None so mac2eui64 works
+        # as expected
+        if not prefix:
+            prefix = None
+
+        eui64 = mac2eui64(self.get_mac(), prefix)
+
+        if not prefix:
+            # if prefix is empty - thus removed - we need to walk through all
+            # interface IPv6 addresses and find the one with the calculated
+            # EUI-64 identifier. The address is then removed
+            for addr in self.get_addr():
+                addr_wo_prefix = addr.split('/')[0]
+                if is_ipv6(addr_wo_prefix):
+                    if eui64 in IPv6Address(addr_wo_prefix).exploded:
+                        self.del_addr(addr)
+
+            return None
+
+        # calculate and add EUI-64 IPv6 address
+        if IPv6Network(prefix):
+            # we also need to take the subnet length into account
+            prefix = prefix.split('/')[1]
+            eui64 = f'{eui64}/{prefix}'
+            self.add_addr(eui64 )
 
     def set_ipv6_forwarding(self, forwarding):
         """
