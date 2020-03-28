@@ -49,8 +49,15 @@ class Interface(DHCP):
         'bridgeable':  False,
     }
 
+    _command_get = {
+        'admin_state': {
+            'shellcmd': 'ip -json link show dev {ifname}',
+            'format': lambda j: 'up' if 'UP' in json.loads(j)[0]['flags'] else 'down',
+        }
+    }
+
     _command_set = {
-        'state': {
+        'admin_state': {
             'validate': lambda v: assert_list(v, ['up', 'down']),
             'shellcmd': 'ip link set dev {ifname} {value}',
         },
@@ -73,6 +80,9 @@ class Interface(DHCP):
         },
         'mtu': {
             'location': '/sys/class/net/{ifname}/mtu',
+        },
+        'oper_state':{
+            'location': '/sys/class/net/{ifname}/operstate',
         },
     }
 
@@ -267,9 +277,9 @@ class Interface(DHCP):
             return None
 
         # MAC address can only be changed if interface is in 'down' state
-        prev_state = self.get_state()
+        prev_state = self.get_admin_state()
         if prev_state == 'up':
-            self.set_state('down')
+            self.set_admin_state('down')
 
         self.set_interface('mac', mac)
 
@@ -410,36 +420,41 @@ class Interface(DHCP):
         """
         self.set_interface('alias', ifalias)
 
-    def get_state(self):
+    def get_admin_state(self):
         """
         Get interface administrative state. Function will return 'up' or 'down'
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').get_state()
+        >>> Interface('eth0').get_admin_state()
         'up'
         """
-        cmd = 'ip -json link show dev {}'.format(self.config['ifname'])
-        tmp = self._cmd(cmd)
-        out = json.loads(tmp)
+        return self.get_interface('admin_state')
 
-        state = 'down'
-        if 'UP' in out[0]['flags']:
-            state = 'up'
-
-        return state
-
-    def set_state(self, state):
+    def set_admin_state(self, state):
         """
         Set interface administrative state to be 'up' or 'down'
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').set_state('down')
-        >>> Interface('eth0').get_state()
+        >>> Interface('eth0').set_admin_state('down')
+        >>> Interface('eth0').get_admin_state()
         'down'
         """
-        return self.set_interface('state', state)
+        return self.set_interface('admin_state', state)
+
+    def get_oper_state(self):
+        """
+        Get interface operational state
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_oper_sate()
+        'up'
+        """
+        # https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
+        # "unknown", "notpresent", "down", "lowerlayerdown", "testing", "dormant", "up"
+        return self.get_interface('oper_state')
 
     def set_proxy_arp(self, enable):
         """

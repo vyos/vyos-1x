@@ -243,7 +243,7 @@ def apply(bridge):
         br.remove()
     else:
         # enable interface
-        br.set_state('up')
+        br.set_admin_state('up')
         # set ageing time
         br.set_ageing_time(bridge['aging'])
         # set bridge forward delay
@@ -313,7 +313,7 @@ def apply(bridge):
 
         # up/down interface
         if bridge['disable']:
-            br.set_state('down')
+            br.set_admin_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

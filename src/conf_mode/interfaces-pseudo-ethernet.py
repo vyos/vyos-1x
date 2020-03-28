@@ -309,9 +309,9 @@ def apply(peth):
 
     # Enable/Disable interface
     if peth['disable']:
-        p.set_state('down')
+        p.set_admin_state('down')
     else:
-        p.set_state('up')
+        p.set_admin_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first

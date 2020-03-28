@@ -204,7 +204,7 @@ def apply(l2tpv3):
         # we will only re-enable the interface if it is not  administratively
         # disabled
         if not l2tpv3['disable']:
-            l.set_state('up')
+            l.set_admin_state('up')
 
     return None
 

@@ -148,7 +148,7 @@ def apply(geneve):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not geneve['disable']:
-            g.set_state('up')
+            g.set_admin_state('up')
 
     return None
 
