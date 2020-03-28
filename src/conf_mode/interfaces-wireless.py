@@ -1496,7 +1496,7 @@ def apply(wifi):
         # if custom mac is removed
         if wifi['mac']:
             w.set_mac(wifi['mac'])
-        else:
+        elif wifi['hw_id']:
             w.set_mac(wifi['hw_id'])
 
         # configure ARP filter configuration
