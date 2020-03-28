@@ -4,14 +4,14 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="pppoe">
+          <tagNode name="wirelessmodem">
             <properties>
-              <help>Show PPPoE interface information</help>
+              <help>Show Wireless Modem (WWAN) interface information</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+                <script>${vyos_completion_dir}/list_wlm_peers.sh</script>
               </completionHelp>
             </properties>
-            <command>${vyatta_bindir}/vyatta-show-interfaces.pl pppoe --intf="$4"</command>
+            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4"</command>
             <children>
               <node name="log">
                 <properties>
@@ -31,7 +31,7 @@
                 <properties>
                   <help>Show specified wirelessmodem interface statistics</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+                    <script>${vyos_completion_dir}/list_wlm_peers.sh</script>
                   </completionHelp>
                 </properties>
                 <command>/usr/sbin/pppstats $4</command>

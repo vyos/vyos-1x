@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="wirelessmodem" owner="${vyos_conf_scripts_dir}/interfaces-wirelessmodem.py">
+        <properties>
+          <help>Wireless Modem (WWAN) Interface</help>
+          <priority>350</priority>
+          <constraint>
+            <regex>wlm[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Wireless Modem interface must be named wlmN</constraintErrorMessage>
+          <valueHelp>
+            <format>wlmN</format>
+            <description>Wireless modem interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="apn">
+            <properties>
+              <help>Access Point Name (APN)</help>
+            </properties>
+          </leafNode>
+          <node name="backup">
+            <properties>
+              <help>Insert backup default route</help>
+            </properties>
+            <children>
+              <leafNode name="distance">
+                <properties>
+                  <help>Distance backup default route</help>
+                  <valueHelp>
+                    <format>1-255</format>
+                    <description>Distance of the backup route (default: 10) </description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                  <constraintErrorMessage>Must be between (1-255)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/interface-description.xml.i>
+          #include <include/interface-disable.xml.i>
+          <leafNode name="device">
+            <properties>
+              <help>System device name (default: ttyUSB0)</help>
+              <valueHelp>
+                <format>ttyXXX</format>
+                <description>System TTY device name</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-mtu-68-9000.xml.i>
+          <node name="ipv6">
+            <children>
+              #include <include/ipv6-address.xml.i>
+              #include <include/ipv6-disable-forwarding.xml.i>
+              #include <include/ipv6-dup-addr-detect-transmits.xml.i>
+            </children>
+          </node>
+          <leafNode name="no-peer-dns">
+            <properties>
+              <help>Do not use peer supplied DNS server information</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="ondemand">
+            <properties>
+              <help>Only dial when traffic is available</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

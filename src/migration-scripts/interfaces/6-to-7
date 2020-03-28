@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Remove network provider name from CLI and rather use provider APN from CLI
+
+import sys
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(sys.argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = sys.argv[1]
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    base = ['interfaces', 'wirelessmodem']
+
+    if not config.exists(base):
+        # Nothing to do
+        sys.exit(0)
+
+    # list all individual interface types like dummy, ethernet and so on
+    for i in config.list_nodes(base):
+        iface = base + [i]
+
+        # only three carries have been supported in the past, thus
+        # this will be fairly simple \o/ - and only one (AT&T) did
+        # configure an APN
+        if config.exists(iface + ['network']):
+            network = config.return_value(iface + ['network'])
+            if network == "att":
+                apn = 'isp.cingular'
+                config.set(iface + ['apn'], value=apn)
+
+            config.delete(iface + ['network'])
+
+        # synchronize DNS configuration with PPPoE interfaces to have a
+        # uniform CLI experience
+        if config.exists(iface + ['no-dns']):
+            config.rename(iface + ['no-dns'], 'no-peer-dns')
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

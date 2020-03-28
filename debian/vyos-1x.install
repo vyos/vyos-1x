@@ -3,6 +3,7 @@ etc/init.d
 etc/ppp
 etc/rsyslog.d
 etc/systemd
+etc/udev
 etc/vyos
 lib/
 opt/
