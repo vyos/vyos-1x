@@ -359,7 +359,7 @@ def apply(eth):
         # if custom mac is removed
         if eth['mac']:
             e.set_mac(eth['mac'])
-        else:
+        elif eth['hw_id']:
             e.set_mac(eth['hw_id'])
 
         # Maximum Transmission Unit (MTU)
