@@ -44,11 +44,10 @@ demand
 {% if name_server -%}
 usepeerdns
 {%- endif %}
-logfile {{ logfile }}
-
 lcp-echo-failure 0
 115200
 debug
+logfile {{ logfile }}
 nodefaultroute
 ipcp-max-failure 4
 ipcp-accept-local
@@ -58,7 +57,7 @@ crtscts
 lock
 persist
 
-connect '/usr/sbin/chat -v -t6 -f /etc/ppp/peers/{{ intf }}.chat'
+connect '/usr/sbin/chat -v -t6 -f {{ chat_script }}'
 
 """
 
@@ -76,6 +75,7 @@ CONNECT ''
 default_config_data = {
     'address': [],
     'apn': '',
+    'chat_script': '',
     'deleted': False,
     'description': '',
     'device': 'ttyUSB0',
@@ -110,6 +110,7 @@ def get_config():
 
     wwan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     wwan['logfile'] = f"/var/log/vyatta/ppp_{wwan['intf']}.log"
+    wwan['chat_script'] = f"/etc/ppp/peers/chat.{wwan['intf']}"
 
     # Check if interface has been removed
     if not conf.exists('interfaces wirelessmodem ' + wwan['intf']):
@@ -173,7 +174,6 @@ def verify(wwan):
 
 def generate(wwan):
     config_file_wwan = f"/etc/ppp/peers/{wwan['intf']}"
-    chat_file_wwan = f"/etc/ppp/peers/{wwan['intf']}.chat"
 
     # Always hang-up WWAN connection prior generating new configuration file
     cmd = f"systemctl stop ppp@{wwan['intf']}.service"
@@ -183,8 +183,8 @@ def generate(wwan):
         # Delete PPP configuration files
         if os.path.exists(config_file_wwan):
             os.unlink(config_file_wwan)
-        if os.path.exists(chat_file_wwan):
-            os.unlink(chat_file_wwan)
+        if os.path.exists(wwan['chat_script']):
+            os.unlink(wwan['chat_script'])
 
     else:
         # Create PPP configuration files
@@ -197,7 +197,7 @@ def generate(wwan):
         # Create PPP chat script
         tmpl = Template(chat_wwan_tmpl)
         config_text = tmpl.render(wwan)
-        with open(chat_file_wwan, 'w') as f:
+        with open(wwan['chat_script'], 'w') as f:
             f.write(config_text)
 
     return None
