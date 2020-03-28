@@ -18,6 +18,7 @@ import os
 
 import vyos
 from vyos.ifconfig.interface import Interface
+from vyos.interfaces import wireguard_dump
 from datetime import timedelta
 import time
 from hurry.filesize import size,alternative
@@ -107,7 +108,7 @@ class WireGuardIf(Interface):
         return self._cmd(cmd)
 
     def op_show_interface(self):
-        wgdump = vyos.interfaces.wireguard_dump().get(
+        wgdump = wireguard_dump().get(
             self.config['ifname'], None)
 
         c = vyos.config.Config()
