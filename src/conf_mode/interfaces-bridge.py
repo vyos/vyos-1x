@@ -46,6 +46,10 @@ default_config_data = {
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'igmp_querier': 0,
     'intf': '',
     'mac' : '',
@@ -152,6 +156,22 @@ def get_config():
     if conf.exists('ip enable-arp-ignore'):
         bridge['ip_enable_arp_ignore'] = 1
 
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        bridge['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        bridge['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        bridge['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        bridge['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
+
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         bridge['mac'] = conf.return_value('mac')
@@ -243,7 +263,7 @@ def apply(bridge):
         br.remove()
     else:
         # enable interface
-        br.set_state('up')
+        br.set_admin_state('up')
         # set ageing time
         br.set_ageing_time(bridge['aging'])
         # set bridge forward delay
@@ -258,6 +278,14 @@ def apply(bridge):
         br.set_arp_announce(bridge['ip_enable_arp_announce'])
         # configure ARP ignore
         br.set_arp_ignore(bridge['ip_enable_arp_ignore'])
+        # IPv6 address autoconfiguration
+        br.set_ipv6_autoconf(bridge['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        br.set_ipv6_eui64_address(bridge['ipv6_eui64_prefix'])
+        # IPv6 forwarding
+        br.set_ipv6_forwarding(bridge['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        br.set_ipv6_dad_messages(bridge['ipv6_dup_addr_detect'])
         # set max message age
         br.set_max_age(bridge['max_age'])
         # set bridge priority
@@ -313,7 +341,7 @@ def apply(bridge):
 
         # up/down interface
         if bridge['disable']:
-            br.set_state('down')
+            br.set_admin_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

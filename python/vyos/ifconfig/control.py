@@ -49,15 +49,12 @@ class Control(Register):
         Using the defined names, set data write to sysfs.
         """
         cmd = self._command_get[name]['shellcmd'].format(**config)
-        return self._cmd(cmd)
+        return self._command_get[name].get('format', lambda _: _)(self._cmd(cmd))
 
     def _set_command(self, config, name, value):
         """
         Using the defined names, set data write to sysfs.
         """
-        if not value and not self._command_set[name].get('force', False):
-            return None
-
         # the code can pass int as int
         value = str(value)
 
@@ -75,7 +72,7 @@ class Control(Register):
         config = {**config, **{'value': value}}
 
         cmd = self._command_set[name]['shellcmd'].format(**config)
-        return self._cmd(cmd)
+        return self._command_set[name].get('format', lambda _: _)(self._cmd(cmd))
 
     _sysfs_get = {}
     _sysfs_set = {}
@@ -115,9 +112,6 @@ class Control(Register):
         """
         Using the defined names, set data write to sysfs.
         """
-        if not value and not self._sysfs_set[name].get('force', False):
-            return None
-
         # the code can pass int as int
         value = str(value)
 

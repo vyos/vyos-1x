@@ -62,7 +62,7 @@ class L2TPv3If(Interface):
         self._cmd(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
-        self.set_state('down')
+        self.set_admin_state('down')
 
     def remove(self):
         """
@@ -76,7 +76,7 @@ class L2TPv3If(Interface):
 
         if os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
             # interface is always A/D down. It needs to be enabled explicitly
-            self.set_state('down')
+            self.set_admin_state('down')
 
             if self._config['tunnel_id'] and self._config['session_id']:
                 cmd = 'ip l2tp del session tunnel_id {} '.format(

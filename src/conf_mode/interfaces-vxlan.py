@@ -37,6 +37,10 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'link': '',
     'mtu': 1450,
     'remote': '',
@@ -102,6 +106,22 @@ def get_config():
     # Enable proxy-arp on this interface
     if conf.exists('ip enable-proxy-arp'):
         vxlan['ip_proxy_arp'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        vxlan['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        vxlan['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        vxlan['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        vxlan['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # VXLAN underlay interface
     if conf.exists('link'):
@@ -201,6 +221,14 @@ def apply(vxlan):
         v.set_arp_ignore(vxlan['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
+        # IPv6 address autoconfiguration
+        v.set_ipv6_autoconf(vxlan['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        v.set_ipv6_eui64_address(vxlan['ipv6_eui64_prefix'])
+        # IPv6 forwarding
+        v.set_ipv6_forwarding(vxlan['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        v.set_ipv6_dad_messages(vxlan['ipv6_dup_addr_detect'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the
@@ -212,7 +240,7 @@ def apply(vxlan):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not vxlan['disable']:
-            v.set_state('up')
+            v.set_admin_state('up')
 
     return None
 

@@ -33,6 +33,10 @@ default_config_data = {
     'local_address': '',
     'local_port': 5000,
     'intf': '',
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'mtu': 1488,
     'peer_session_id': '',
     'peer_tunnel_id': '',
@@ -100,6 +104,22 @@ def get_config():
     # get tunnel local ip address
     if conf.exists('local-ip'):
         l2tpv3['local_address'] = conf.return_value('local-ip')
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        l2tpv3['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        l2tpv3['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        l2tpv3['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        l2tpv3['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -193,6 +213,14 @@ def apply(l2tpv3):
         l.set_alias(l2tpv3['description'])
         # Maximum Transfer Unit (MTU)
         l.set_mtu(l2tpv3['mtu'])
+        # IPv6 address autoconfiguration
+        l.set_ipv6_autoconf(l2tpv3['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        l.set_ipv6_eui64_address(l2tpv3['ipv6_eui64_prefix'])
+        # IPv6 forwarding
+        l.set_ipv6_forwarding(l2tpv3['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        l.set_ipv6_dad_messages(l2tpv3['ipv6_dup_addr_detect'])
 
         # Configure interface address(es) - no need to implicitly delete the
         # old addresses as they have already been removed by deleting the
@@ -204,7 +232,7 @@ def apply(l2tpv3):
         # we will only re-enable the interface if it is not  administratively
         # disabled
         if not l2tpv3['disable']:
-            l.set_state('up')
+            l.set_admin_state('up')
 
     return None
 

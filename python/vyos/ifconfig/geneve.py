@@ -49,7 +49,7 @@ class GeneveIf(Interface):
         self._cmd(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
-        self.set_state('down')
+        self.set_admin_state('down')
 
     @classmethod
     def get_config(cls):

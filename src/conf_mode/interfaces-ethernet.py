@@ -48,6 +48,10 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'intf': '',
     'mac': '',
     'mtu': 1500,
@@ -166,6 +170,22 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists('ip proxy-arp-pvlan'):
         eth['ip_proxy_arp_pvlan'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        eth['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        eth['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        eth['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        eth['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):
@@ -326,6 +346,14 @@ def apply(eth):
         e.set_proxy_arp(eth['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
         e.set_proxy_arp_pvlan(eth['ip_proxy_arp_pvlan'])
+        # IPv6 address autoconfiguration
+        e.set_ipv6_autoconf(eth['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        e.set_ipv6_eui64_address(eth['ipv6_eui64_prefix'])
+        # IPv6 forwarding
+        e.set_ipv6_forwarding(eth['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        e.set_ipv6_dad_messages(eth['ipv6_dup_addr_detect'])
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed
@@ -357,9 +385,9 @@ def apply(eth):
 
         # Enable/Disable interface
         if eth['disable']:
-            e.set_state('down')
+            e.set_admin_state('down')
         else:
-            e.set_state('up')
+            e.set_admin_state('up')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

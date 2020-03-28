@@ -86,6 +86,13 @@
               #include <include/interface-disable-arp-filter.xml.i>
             </children>
           </node>
+          <node name="ipv6">
+            <children>
+              #include <include/ipv6-address.xml.i>
+              #include <include/ipv6-disable-forwarding.xml.i>
+              #include <include/ipv6-dup-addr-detect-transmits.xml.i>
+            </children>
+          </node>
           #include <include/interface-mac.xml.i>
           <leafNode name="max-age">
             <properties>

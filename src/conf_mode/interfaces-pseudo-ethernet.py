@@ -45,6 +45,10 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'intf': '',
     'link': '',
     'link_changed': False,
@@ -144,6 +148,22 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists(['ip', 'proxy-arp-pvlan']):
         peth['ip_proxy_arp_pvlan'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        peth['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        peth['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        peth['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        peth['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # Lower link device
     if conf.exists(['link']):
@@ -296,6 +316,14 @@ def apply(peth):
     p.set_proxy_arp(peth['ip_proxy_arp'])
     # Enable private VLAN proxy ARP on this interface
     p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
+    # IPv6 address autoconfiguration
+    p.set_ipv6_autoconf(peth['ipv6_autoconf'])
+    # IPv6 EUI-based address
+    p.set_ipv6_eui64_address(peth['ipv6_eui64_prefix'])
+    # IPv6 forwarding
+    p.set_ipv6_forwarding(peth['ipv6_forwarding'])
+    # IPv6 Duplicate Address Detection (DAD) tries
+    p.set_ipv6_dad_messages(peth['ipv6_dup_addr_detect'])
 
     # assign/remove VRF
     p.set_vrf(peth['vrf'])
@@ -309,9 +337,9 @@ def apply(peth):
 
     # Enable/Disable interface
     if peth['disable']:
-        p.set_state('down')
+        p.set_admin_state('down')
     else:
-        p.set_state('up')
+        p.set_admin_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first

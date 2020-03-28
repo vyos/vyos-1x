@@ -269,7 +269,7 @@ def apply(c):
         intfc.update()
 
     # interface state
-    intfc.set_state(c['state'])
+    intfc.set_admin_state(c['state'])
 
     return None
 

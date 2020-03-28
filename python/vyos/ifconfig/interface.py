@@ -21,10 +21,10 @@ import time
 from copy import deepcopy
 
 from vyos.validate import *     # should not * include
-from vyos.config import Config  # not used anymore
+from vyos.util import mac2eui64
 from vyos import ConfigError
 
-from ipaddress import IPv4Network, IPv6Address
+from ipaddress import IPv4Network, IPv6Address, IPv6Network
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from time import sleep
 from os.path import isfile
@@ -49,8 +49,15 @@ class Interface(DHCP):
         'bridgeable':  False,
     }
 
+    _command_get = {
+        'admin_state': {
+            'shellcmd': 'ip -json link show dev {ifname}',
+            'format': lambda j: 'up' if 'UP' in json.loads(j)[0]['flags'] else 'down',
+        }
+    }
+
     _command_set = {
-        'state': {
+        'admin_state': {
             'validate': lambda v: assert_list(v, ['up', 'down']),
             'shellcmd': 'ip link set dev {ifname} {value}',
         },
@@ -59,18 +66,23 @@ class Interface(DHCP):
             'shellcmd': 'ip link set dev {ifname} address {value}',
         },
         'vrf': {
-            'force': True,
             'convert': lambda v: f'master {v}' if v else 'nomaster',
             'shellcmd': 'ip link set dev {ifname} {value}',
         },
     }
 
     _sysfs_get = {
+        'alias': {
+            'location': '/sys/class/net/{ifname}/ifalias',
+        },
         'mac': {
             'location': '/sys/class/net/{ifname}/address',
         },
         'mtu': {
             'location': '/sys/class/net/{ifname}/mtu',
+        },
+        'oper_state':{
+            'location': '/sys/class/net/{ifname}/operstate',
         },
     }
 
@@ -102,6 +114,18 @@ class Interface(DHCP):
         'arp_ignore': {
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
+        },
+        'ipv6_autoconf': {
+            'validate': lambda fwd: assert_range(fwd,0,2),
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/autoconf',
+        },
+        'ipv6_forwarding': {
+            'validate': lambda fwd: assert_range(fwd,0,2),
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
+        },
+        'ipv6_dad_transmits': {
+            'validate': assert_positive,
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
         },
         'proxy_arp': {
             'validate': assert_boolean,
@@ -249,7 +273,7 @@ class Interface(DHCP):
         >>> Interface('eth0').get_mac()
         '00:50:ab:cd:ef:00'
         """
-        self.get_interface('mac')
+        return self.get_interface('mac')
 
     def set_mac(self, mac):
         """
@@ -265,9 +289,9 @@ class Interface(DHCP):
             return None
 
         # MAC address can only be changed if interface is in 'down' state
-        prev_state = self.get_state()
+        prev_state = self.get_admin_state()
         if prev_state == 'up':
-            self.set_state('down')
+            self.set_admin_state('down')
 
         self.set_interface('mac', mac)
 
@@ -362,6 +386,81 @@ class Interface(DHCP):
         """
         return self.set_interface('arp_ignore', arp_ignore)
 
+    def set_ipv6_autoconf(self, autoconf):
+        """
+        Autoconfigure addresses using Prefix Information in Router
+        Advertisements.
+        """
+        return self.set_interface('ipv6_autoconf', autoconf)
+
+    def set_ipv6_eui64_address(self, prefix):
+        """
+        Extended Unique Identifier (EUI), as per RFC2373, allows a host to
+        assign iteslf a unique IPv6 address based on a given IPv6 prefix.
+
+        If prefix is passed address is assigned, if prefix is '' address is
+        removed from interface.
+        """
+        # if prefix is an empty string convert it to None so mac2eui64 works
+        # as expected
+        if not prefix:
+            prefix = None
+
+        eui64 = mac2eui64(self.get_mac(), prefix)
+
+        if not prefix:
+            # if prefix is empty - thus removed - we need to walk through all
+            # interface IPv6 addresses and find the one with the calculated
+            # EUI-64 identifier. The address is then removed
+            for addr in self.get_addr():
+                addr_wo_prefix = addr.split('/')[0]
+                if is_ipv6(addr_wo_prefix):
+                    if eui64 in IPv6Address(addr_wo_prefix).exploded:
+                        self.del_addr(addr)
+
+            return None
+
+        # calculate and add EUI-64 IPv6 address
+        if IPv6Network(prefix):
+            # we also need to take the subnet length into account
+            prefix = prefix.split('/')[1]
+            eui64 = f'{eui64}/{prefix}'
+            self.add_addr(eui64 )
+
+    def set_ipv6_forwarding(self, forwarding):
+        """
+        Configure IPv6 interface-specific Host/Router behaviour.
+
+        False:
+
+        By default, Host behaviour is assumed.  This means:
+
+        1. IsRouter flag is not set in Neighbour Advertisements.
+        2. If accept_ra is TRUE (default), transmit Router
+           Solicitations.
+        3. If accept_ra is TRUE (default), accept Router
+           Advertisements (and do autoconfiguration).
+        4. If accept_redirects is TRUE (default), accept Redirects.
+
+        True:
+
+        If local forwarding is enabled, Router behaviour is assumed.
+        This means exactly the reverse from the above:
+
+        1. IsRouter flag is set in Neighbour Advertisements.
+        2. Router Solicitations are not sent unless accept_ra is 2.
+        3. Router Advertisements are ignored unless accept_ra is 2.
+        4. Redirects are ignored.
+        """
+        return self.set_interface('ipv6_forwarding', forwarding)
+
+    def set_ipv6_dad_messages(self, dad):
+        """
+        The amount of Duplicate Address Detection probes to send.
+        Default: 1
+        """
+        return self.set_interface('ipv6_dad_transmits', dad)
+
     def set_link_detect(self, link_filter):
         """
         Configure kernel response in packets received on interfaces that are 'down'
@@ -384,6 +483,16 @@ class Interface(DHCP):
         """
         return self.set_interface('link_detect', link_filter)
 
+    def get_alias(self):
+        """
+        Get interface alias name used by e.g. SNMP
+
+        Example:
+        >>> Interface('eth0').get_alias()
+        'interface description as set by user'
+        """
+        return self.get_interface('alias')
+
     def set_alias(self, ifalias=''):
         """
         Set interface alias name used by e.g. SNMP
@@ -398,36 +507,41 @@ class Interface(DHCP):
         """
         self.set_interface('alias', ifalias)
 
-    def get_state(self):
+    def get_admin_state(self):
         """
         Get interface administrative state. Function will return 'up' or 'down'
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').get_state()
+        >>> Interface('eth0').get_admin_state()
         'up'
         """
-        cmd = 'ip -json link show dev {}'.format(self.config['ifname'])
-        tmp = self._cmd(cmd)
-        out = json.loads(tmp)
+        return self.get_interface('admin_state')
 
-        state = 'down'
-        if 'UP' in out[0]['flags']:
-            state = 'up'
-
-        return state
-
-    def set_state(self, state):
+    def set_admin_state(self, state):
         """
         Set interface administrative state to be 'up' or 'down'
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').set_state('down')
-        >>> Interface('eth0').get_state()
+        >>> Interface('eth0').set_admin_state('down')
+        >>> Interface('eth0').get_admin_state()
         'down'
         """
-        return self.set_interface('state', state)
+        return self.set_interface('admin_state', state)
+
+    def get_oper_state(self):
+        """
+        Get interface operational state
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_oper_sate()
+        'up'
+        """
+        # https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
+        # "unknown", "notpresent", "down", "lowerlayerdown", "testing", "dormant", "up"
+        return self.get_interface('oper_state')
 
     def set_proxy_arp(self, enable):
         """

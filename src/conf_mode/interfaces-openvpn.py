@@ -294,6 +294,10 @@ default_config_data = {
     'encryption': '',
     'hash': '',
     'intf': '',
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'ping_restart': '60',
     'ping_interval': '10',
     'local_address': '',
@@ -489,6 +493,22 @@ def get_config():
     # Local port number to accept connections
     if conf.exists('local-port'):
         openvpn['local_port'] = conf.return_value('local-port')
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        openvpn['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        openvpn['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        openvpn['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        openvpn['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # OpenVPN operation mode
     if conf.exists('mode'):
@@ -1036,14 +1056,25 @@ def apply(openvpn):
     try:
         # we need to catch the exception if the interface is not up due to
         # reason stated above
-        VTunIf(openvpn['intf']).set_alias(openvpn['description'])
+        o = VTunIf(openvpn['intf'])
+        # update interface description used e.g. within SNMP
+        o.set_alias(openvpn['description'])
+        # IPv6 address autoconfiguration
+        o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        o.set_ipv6_eui64_address(openvpn['ipv6_eui64_prefix'])
+        # IPv6 forwarding
+        o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        o.set_ipv6_dad_messages(openvpn['ipv6_dup_addr_detect'])
+
     except:
         pass
 
     # TAP interface needs to be brought up explicitly
     if openvpn['type'] == 'tap':
         if not openvpn['disable']:
-            VTunIf(openvpn['intf']).set_state('up')
+            VTunIf(openvpn['intf']).set_admin_state('up')
 
     return None
 

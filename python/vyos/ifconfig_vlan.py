@@ -64,6 +64,12 @@ def apply_vlan_config(vlan, config):
     vlan.set_arp_announce(config['ip_enable_arp_announce'])
     # configure ARP ignore
     vlan.set_arp_ignore(config['ip_enable_arp_ignore'])
+    # IPv6 address autoconfiguration
+    vlan.set_ipv6_autoconf(config['ipv6_autoconf'])
+    # IPv6 forwarding
+    vlan.set_ipv6_forwarding(config['ipv6_forwarding'])
+    # IPv6 Duplicate Address Detection (DAD) tries
+    vlan.set_ipv6_dad_messages(config['ipv6_dup_addr_detect'])
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
 
@@ -76,9 +82,9 @@ def apply_vlan_config(vlan, config):
 
     # enable/disable VLAN interface
     if config['disable']:
-        vlan.set_state('down')
+        vlan.set_admin_state('down')
     else:
-        vlan.set_state('up')
+        vlan.set_admin_state('up')
 
     # Configure interface address(es)
     # - not longer required addresses get removed first

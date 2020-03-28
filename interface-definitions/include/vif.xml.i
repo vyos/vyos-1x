@@ -51,6 +51,13 @@
         #include <include/interface-enable-proxy-arp.xml.i>
       </children>
     </node>
+    <node name="ipv6">
+      <children>
+        #include <include/ipv6-address.xml.i>
+        #include <include/ipv6-disable-forwarding.xml.i>
+        #include <include/ipv6-dup-addr-detect-transmits.xml.i>
+      </children>
+    </node>
     #include <include/interface-mac.xml.i>
     #include <include/interface-mtu-68-9000.xml.i>
   </children>

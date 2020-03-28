@@ -48,6 +48,10 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
+    'ipv6_autoconf': 0,
+    'ipv6_eui64_prefix': '',
+    'ipv6_forwarding': 1,
+    'ipv6_dup_addr_detect': 1,
     'intf': '',
     'mac': '',
     'mode': '802.3ad',
@@ -188,6 +192,22 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists('ip proxy-arp-pvlan'):
         bond['ip_proxy_arp_pvlan'] = 1
+
+    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
+    if conf.exists('ipv6 address autoconf'):
+        bond['ipv6_autoconf'] = 1
+
+    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        bond['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+
+    # Disable IPv6 forwarding on this interface
+    if conf.exists('ipv6 disable-forwarding'):
+        bond['ipv6_forwarding'] = 0
+
+    # IPv6 Duplicate Address Detection (DAD) tries
+    if conf.exists('ipv6 dup-addr-detect-transmits'):
+        bond['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # Media Access Control (MAC) address
     if conf.exists('mac'):
@@ -416,6 +436,14 @@ def apply(bond):
         b.set_proxy_arp(bond['ip_proxy_arp'])
         # Enable private VLAN proxy ARP on this interface
         b.set_proxy_arp_pvlan(bond['ip_proxy_arp_pvlan'])
+        # IPv6 address autoconfiguration
+        b.set_ipv6_autoconf(bond['ipv6_autoconf'])
+        # IPv6 EUI-based address
+        b.set_ipv6_eui64_address(bond['ipv6_eui64_prefix'])
+        # IPv6 forwarding
+        b.set_ipv6_forwarding(bond['ipv6_forwarding'])
+        # IPv6 Duplicate Address Detection (DAD) tries
+        b.set_ipv6_dad_messages(bond['ipv6_dup_addr_detect'])
 
         # Change interface MAC address
         if bond['mac']:
@@ -431,7 +459,7 @@ def apply(bond):
         # Some parameters can not be changed when the bond is up.
         if bond['shutdown_required']:
             # Disable bond prior changing of certain properties
-            b.set_state('down')
+            b.set_admin_state('down')
 
             # The bonding mode can not be changed when there are interfaces enslaved
             # to this bond, thus we will free all interfaces from the bond first!
@@ -449,9 +477,9 @@ def apply(bond):
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not bond['disable']:
-            b.set_state('up')
+            b.set_admin_state('up')
         else:
-            b.set_state('down')
+            b.set_admin_state('down')
 
         # Configure interface address(es)
         # - not longer required addresses get removed first

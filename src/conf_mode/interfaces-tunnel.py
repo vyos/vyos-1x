@@ -478,7 +478,7 @@ def apply(conf):
         tunnel.add_addr(addr)
 
     # now bring it up (or not)
-    tunnel.set_state(options['state'])
+    tunnel.set_admin_state(options['state'])
 
 
 if __name__ == '__main__':
