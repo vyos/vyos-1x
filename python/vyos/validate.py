@@ -204,11 +204,19 @@ def assert_mtu(mtu, min=68, max=9000):
 
 
 def assert_mac(m):
-    octets = [int(i, 16) for i in m.split(':')]
+    split = m.split(':')
+    size = len(split)
 
     # a mac address consits out of 6 octets
-    if len(octets) != 6:
-        raise ValueError(f'wrong number of MAC octets: {octets}')
+    if size != 6:
+        raise ValueError(f'wrong number of MAC octets ({size}): {m}')
+
+    octets = []
+    try:
+        for octet in split:
+            octets.append(int(octet, 16))
+    except ValueError:
+        raise ValueError(f'invalid hex number "{octet}" in : {m}')
 
     # validate against the first mac address byte if it's a multicast
     # address
