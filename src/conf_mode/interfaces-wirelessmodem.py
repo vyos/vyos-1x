@@ -184,6 +184,11 @@ def generate(wwan):
             os.unlink(wwan['chat_script'])
 
     else:
+        # PPP peers directory
+        dirname = os.path.dirname(config_file_wwan)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+
         # Create PPP configuration files
         tmpl = Template(config_wwan_tmpl)
         config_text = tmpl.render(wwan)
