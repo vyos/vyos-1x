@@ -24,7 +24,6 @@ from stat import S_IRUSR,S_IRWXU,S_IRGRP,S_IXGRP,S_IROTH,S_IXOTH
 from grp import getgrnam
 from ipaddress import ip_address,ip_network,IPv4Interface
 from netifaces import interfaces
-from psutil import pid_exists
 from pwd import getpwnam
 from subprocess import Popen, PIPE
 from time import sleep
@@ -33,6 +32,7 @@ from shutil import rmtree
 from vyos import ConfigError
 from vyos.config import Config
 from vyos.ifconfig import VTunIf
+from vyos.util import process_running
 from vyos.validate import is_addr_assigned
 
 user = 'openvpn'
@@ -977,17 +977,12 @@ def generate(openvpn):
     return None
 
 def apply(openvpn):
-    pid = 0
     pidfile = '/var/run/openvpn/{}.pid'.format(openvpn['intf'])
-    if os.path.isfile(pidfile):
-        pid = 0
-        with open(pidfile, 'r') as f:
-            pid = int(f.read())
 
     # Always stop OpenVPN service. We can not send a SIGUSR1 for restart of the
     # service as the configuration is not re-read. Stop daemon only if it's
     # running - it could have died or killed by someone evil
-    if pid_exists(pid):
+    if process_running(pidfile):
         cmd = 'start-stop-daemon'
         cmd += ' --stop '
         cmd += ' --quiet'

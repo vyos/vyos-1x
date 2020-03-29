@@ -17,10 +17,10 @@
 import sys
 import os
 
-from psutil import pid_exists
 from subprocess import Popen, PIPE
 from time import sleep
 from netifaces import interfaces
+from vyos.util import process_running
 
 def get_config_name(intf):
     cfg_file = r'/opt/vyatta/etc/openvpn/openvpn-{}.conf'.format(intf)
@@ -42,18 +42,13 @@ if __name__ == '__main__':
     interface = sys.argv[1]
     if os.path.isfile(get_config_name(interface)):
         pidfile = '/var/run/openvpn/{}.pid'.format(interface)
-        if os.path.isfile(pidfile):
-            pid = 0
-            with open(pidfile, 'r') as f:
-                pid = int(f.read())
-
-            if pid_exists(pid):
-                cmd = 'start-stop-daemon'
-                cmd += ' --stop'
-                cmd += ' --oknodo'
-                cmd += ' --quiet'
-                cmd += ' --pidfile ' + pidfile
-                subprocess_cmd(cmd)
+        if process_running(pidfile):
+            cmd = 'start-stop-daemon'
+            cmd += ' --stop'
+            cmd += ' --oknodo'
+            cmd += ' --quiet'
+            cmd += ' --pidfile ' + pidfile
+            subprocess_cmd(cmd)
 
         # When stopping OpenVPN we need to wait for the 'old' interface to
         # vanish from the Kernel, if it is not gone, OpenVPN will report:

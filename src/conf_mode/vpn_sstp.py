@@ -23,9 +23,9 @@ from subprocess import Popen, PIPE, check_output
 from socket import socket, AF_INET, SOCK_STREAM
 from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
-from psutil import pid_exists
 
 from vyos.config import Config
+from vyos.util import process_running
 from vyos import ConfigError
 
 pidfile = r'/var/run/accel_sstp.pid'
@@ -489,14 +489,8 @@ def generate(sstp):
     return sstp
 
 def apply(sstp):
-    pid = 0
-    if os.path.isfile(pidfile):
-        pid = 0
-        with open(pidfile, 'r') as f:
-            pid = int(f.read())
-
     if sstp is None:
-        if pid_exists(pid):
+        if process_running(pidfile):
             cmd = 'start-stop-daemon'
             cmd += ' --stop '
             cmd += ' --quiet'
@@ -509,7 +503,7 @@ def apply(sstp):
 
         return None
 
-    if not pid_exists(pid):
+    if not process_running(pidfile):
         if os.path.exists(pidfile):
             os.remove(pidfile)
 

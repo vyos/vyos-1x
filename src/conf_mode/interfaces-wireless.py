@@ -25,15 +25,15 @@ from grp import getgrnam
 from re import findall
 
 from subprocess import Popen, PIPE
-from psutil import pid_exists
 from netifaces import interfaces
 from netaddr import *
 
-from vyos.ifconfig import WiFiIf
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos import ConfigError
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
-from vyos import ConfigError
+from vyos.ifconfig import WiFiIf
+from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos.util import process_running
 
 user = 'root'
 group = 'vyattacfg'
@@ -1364,15 +1364,9 @@ def verify(wifi):
     return None
 
 def generate(wifi):
-    pid = 0
     # always stop hostapd service first before reconfiguring it
     pidfile = get_pid('hostapd', wifi['intf'])
-    if os.path.isfile(pidfile):
-        pid = 0
-        with open(pidfile, 'r') as f:
-            pid = int(f.read())
-
-    if pid_exists(pid):
+    if process_running(pidfile):
         cmd = 'start-stop-daemon'
         cmd += ' --stop '
         cmd += ' --quiet'
@@ -1382,12 +1376,7 @@ def generate(wifi):
 
     # always stop wpa_supplicant service first before reconfiguring it
     pidfile = get_pid('wpa_supplicant', wifi['intf'])
-    if os.path.isfile(pidfile):
-        pid = 0
-        with open(pidfile, 'r') as f:
-            pid = int(f.read())
-
-    if pid_exists(pid):
+    if process_running(pidfile):
         cmd = 'start-stop-daemon'
         cmd += ' --stop '
         cmd += ' --quiet'

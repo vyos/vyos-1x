@@ -84,6 +84,8 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
 
 def process_running(pid_file):
     """ Checks if a process with PID in pid_file is running """
+    if not os.path.isfile(pid_file):
+        return False
     with open(pid_file, 'r') as f:
         pid = f.read().strip()
     return psutil.pid_exists(int(pid))
