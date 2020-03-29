@@ -24,8 +24,10 @@ class Control(Register):
     _command_get = {}
     _command_set = {}
 
-    def _debug_msg(self, msg):
-        if os.path.isfile('/tmp/vyos.ifconfig.debug'):
+    debug = True
+
+    def _debug_msg(self, msg, debug=True):
+        if os.path.isfile('/tmp/vyos.ifconfig.debug') and self.debug:
             print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
 
     def _popen(self, command):
