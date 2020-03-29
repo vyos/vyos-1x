@@ -29,14 +29,14 @@
           <leafNode name="table">
             <properties>
               <help>Routing table associated with this instance</help>
-              <constraint>
-                <validator name="numeric" argument="--range 1-2147483647"/>
-              </constraint>
-              <constraintErrorMessage>Invalid kernel table number</constraintErrorMessage>
               <valueHelp>
-                <format>1-2147483647</format>
+                <format>100-2147483647</format>
                 <description>Routing table ID</description>
               </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 100-2147483647"/>
+              </constraint>
+              <constraintErrorMessage>VRF routing table must be in range from 100 to 2147483647</constraintErrorMessage>
             </properties>
           </leafNode>
           #include <include/interface-description.xml.i>
