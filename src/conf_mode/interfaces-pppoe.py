@@ -331,10 +331,20 @@ def generate(pppoe):
         with open(config_file_pppoe, 'w') as f:
             f.write(config_text)
 
+        # PPP ip-pre-up.d scripting directory
+        dirname = os.path.dirname(ip_pre_up_script_file)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+
         tmpl = Template(config_pppoe_ip_pre_up_tmpl)
         config_text = tmpl.render(pppoe)
         with open(ip_pre_up_script_file, 'w') as f:
             f.write(config_text)
+
+        # PPP ipv6-up.d scripting directory
+        dirname = os.path.dirname(ipv6_if_up_script_file)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
 
         tmpl = Template(config_pppoe_ipv6_up_tmpl)
         config_text = tmpl.render(pppoe)
