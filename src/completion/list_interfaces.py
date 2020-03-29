@@ -2,7 +2,6 @@
 
 import sys
 import argparse
-import vyos.interfaces
 from vyos.ifconfig import Interface
 
 parser = argparse.ArgumentParser()
