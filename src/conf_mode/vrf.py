@@ -213,9 +213,10 @@ def apply(vrf_config):
     _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
     _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
 
-    for vrf_name in vrf_config['vrf_remove']:
-        if os.path.isdir(f'/sys/class/net/{vrf_name}'):
-            _cmd(f'ip link delete dev {vrf_name}')
+    for vrf in vrf_config['vrf_remove']:
+        name = vrf['name']
+        if os.path.isdir(f'/sys/class/net/{name}'):
+            _cmd(f'ip link delete dev {name}')
 
     for vrf in vrf_config['vrf_add']:
         name = vrf['name']
