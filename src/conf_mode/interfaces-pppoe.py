@@ -325,6 +325,11 @@ def generate(pppoe):
             os.unlink(ip_pre_up_script_file)
 
     else:
+        # PPP peers directory
+        dirname = os.path.dirname(config_file_pppoe)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
