@@ -238,6 +238,19 @@ class Config(object):
             str: working configuration
         """
 
+        # show_config should be independent of CLI edit level.
+        # Set the CLI edit environment to the top level, and
+        # restore original on exit.
+        save_env = self.__session_env
+
+        env_str = self._run(self._make_command('getEditResetEnv', ''))
+        env_list = re.findall(r'([A-Z_]+)=\'([^;\s]+)\'', env_str)
+        root_env = os.environ
+        for k, v in env_list:
+            root_env[k] = v
+
+        self.__session_env = root_env
+
         # FIXUP: by default, showConfig will give you a diff
         # if there are uncommitted changes.
         # The config parser obviously cannot work with diffs,
@@ -253,8 +266,10 @@ class Config(object):
             path = " ".join(path)
         try:
             out = self._run(self._make_command('showConfig', path))
+            self.__session_env = save_env
             return out
         except VyOSError:
+            self.__session_env = save_env
             return(default)
 
     def get_config_dict(self, path=[], effective=False):
