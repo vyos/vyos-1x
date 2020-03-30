@@ -96,6 +96,7 @@ server {
 """
 
 default_server_block = {
+    'id'        : '',
     'address'   : '*',
     'port'      : '443',
     'name'      : ['_'],
@@ -117,6 +118,7 @@ def get_config():
     else:
         for vhost in conf.list_nodes('virtual-host'):
             server_block = deepcopy(default_server_block)
+            server_block['id'] = vhost
             if conf.exists(f'virtual-host {vhost} listen-address'):
                 addr = conf.return_value(f'virtual-host {vhost} listen-address')
                 server_block['address'] = addr
@@ -156,9 +158,21 @@ def get_config():
         if conf.exists('api port'):
             port = conf.return_value('api port')
             api_data['port'] = port
+        if conf.exists('api virtual-host'):
+            vhosts = conf.return_values('api virtual-host')
+            api_data['vhost'] = vhosts[:]
+
     if api_data:
-        for block in server_block_list:
-            block['api'] = api_data
+        # we do not want to include 'vhost' key as part of
+        # vyos.defaults.api_data, so check for key existence
+        vhost_list = api_data.get('vhost')
+        if vhost_list is None:
+            for block in server_block_list:
+                block['api'] = api_data
+        else:
+            for block in server_block_list:
+                if block['id'] in vhost_list:
+                    block['api'] = api_data
 
     https = {'server_block_list' : server_block_list, 'certbot': certbot}
     return https

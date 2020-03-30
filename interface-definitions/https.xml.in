@@ -111,6 +111,12 @@
                   <hidden/>
                 </properties>
               </leafNode>
+              <leafNode name="virtual-host">
+                <properties>
+                  <help>Restrict proxy to virtual host(s)</help>
+                  <multi/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <node name="certificates">
