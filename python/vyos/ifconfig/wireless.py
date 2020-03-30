@@ -47,7 +47,7 @@ class WiFiIf(Interface):
         self._cmd(cmd)
 
         # wireless interface is administratively down by default
-        self.set_state('down')
+        self.set_admin_state('down')
 
     def _delete(self):
         cmd = 'iw dev {ifname} del' \
