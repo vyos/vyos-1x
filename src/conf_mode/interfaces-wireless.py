@@ -1398,7 +1398,10 @@ def generate(wifi):
         # http://wiki.stocksy.co.uk/wiki/Multiple_SSIDs_with_hostapd
         # generate locally administered MAC address from used phy interface
         with open('/sys/class/ieee80211/{}/addresses'.format(wifi['phy']), 'r') as f:
-            tmp = EUI(f.read().rstrip()).value
+            # some PHYs tend to have multiple interfaces and thus supply multiple MAC
+            # addresses - we only need the first one for our calculation
+            tmp = f.readline().rstrip()
+            tmp = EUI(tmp).value
             # mask last nibble from the MAC address
             tmp &= 0xfffffffffff0
             # set locally administered bit in MAC address
