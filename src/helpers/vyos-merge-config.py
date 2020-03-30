@@ -21,9 +21,9 @@ import subprocess
 import tempfile
 import vyos.defaults
 import vyos.remote
-import vyos.migrator
 from vyos.config import Config
 from vyos.configtree import ConfigTree
+from vyos.migrator import Migrator, VirtualMigrator
 
 
 if (len(sys.argv) < 2):
@@ -61,9 +61,13 @@ with tempfile.NamedTemporaryFile() as file_to_migrate:
     with open(file_to_migrate.name, 'w') as fd:
         fd.write(config_file)
 
-    migration = vyos.migrator.Migrator(file_to_migrate.name)
+    virtual_migration = VirtualMigrator(file_to_migrate.name)
+    virtual_migration.run()
+
+    migration = Migrator(file_to_migrate.name)
     migration.run()
-    if migration.config_changed():
+
+    if virtual_migration.config_changed() or migration.config_changed():
         with open(file_to_migrate.name, 'r') as fd:
             config_file = fd.read()
 
