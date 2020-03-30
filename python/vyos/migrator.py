@@ -25,7 +25,7 @@ class MigratorError(Exception):
     pass
 
 class Migrator(object):
-    def __init__(self, config_file, force=False, set_vintage=None):
+    def __init__(self, config_file, force=False, set_vintage='vyos'):
         self._config_file = config_file
         self._force = force
         self._set_vintage = set_vintage
@@ -60,9 +60,6 @@ class Migrator(object):
 
         if self._set_vintage:
             self._config_file_vintage = self._set_vintage
-
-        if not self._config_file_vintage:
-            self._config_file_vintage = vyos.defaults.cfg_vintage
 
         if self._config_file_vintage not in ['vyatta', 'vyos']:
             raise MigratorError("Unknown vintage.")
@@ -204,16 +201,12 @@ class Migrator(object):
         return self._changed
 
 class VirtualMigrator(Migrator):
-    def __init__(self, config_file, vintage='vyos'):
-        super().__init__(config_file, set_vintage = vintage)
-
     def run(self):
         cfg_file = self._config_file
 
         cfg_versions = self.read_config_file_versions()
         if not cfg_versions:
-            raise MigratorError("Config file has no version information;"
-                                " virtual migration not possible.")
+            return
 
         if self.update_vintage():
             self._changed = True

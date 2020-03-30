@@ -28,7 +28,7 @@ import tempfile
 import vyos.defaults
 import vyos.remote
 from vyos.config import Config, VyOSError
-from vyos.migrator import Migrator, MigratorError
+from vyos.migrator import Migrator, VirtualMigrator, MigratorError
 
 system_config_file = 'config.boot'
 
@@ -72,6 +72,12 @@ print("Loading configuration from '{}'".format(file_name))
 with tempfile.NamedTemporaryFile() as fp:
     with open(fp.name, 'w') as fd:
         fd.write(config_file)
+
+    virtual_migration = VirtualMigrator(fp.name)
+    try:
+        virtual_migration.run()
+    except MigratorError as err:
+        sys.exit('{}'.format(err))
 
     migration = Migrator(fp.name)
     try:
