@@ -24,58 +24,10 @@ def escape_backslash(string: str) -> str:
     result = p.sub(r'\\\\', string)
     return result
 
-def strip_comments(s):
-    """ Split a config string into the config section and the trailing comments """
-    INITIAL = 0
-    IN_COMMENT = 1
-
-    i = len(s) - 1
-
-    state = INITIAL
-
-    config_end = 0
-
-    # Find the first character of the comments section at the end,
-    # if it exists
-    while (i >= 0):
-        c = s[i]
-
-        if (state == INITIAL) and re.match(r'\s', c):
-            # Ignore whitespace
-            if (i != 0):
-                i -= 1
-            else:
-                config_end = 0
-                break
-        elif (state == INITIAL) and not re.match(r'(\s|\/)', c):
-            # Assume there are no (more) trailing comments,
-            # this is an end of a node: either a brace of the last character
-            # of a leaf node value
-            config_end = i + 1
-            break
-        elif (state == INITIAL) and (c == '/'):
-            # A comment begins, or it's a stray slash
-            if (s[i-1] == '*'):
-                state = IN_COMMENT
-                i -= 2
-            else:
-                raise ValueError("Invalid syntax: stray slash at character {0}".format(i + 1))
-        elif (state == IN_COMMENT) and (c == '*'):
-            # A comment ends here
-            try:
-                if (s[i-1] == '/'):
-                    state = INITIAL
-                    i -= 2
-            except:
-                raise ValueError("Invalid syntax: malformed commend end at character {0}".format(i + 1))
-        elif (state == IN_COMMENT) and (c != '*'):
-            # Ignore everything inside comments, including braces
-            i -= 1
-        else:
-            # Shouldn't happen
-            raise ValueError("Invalid syntax at character {0}: invalid character {1}".format(i + 1, c))
-
-    return (s[0:config_end], s[config_end+1:])
+def strip_version(s):
+    """ Split a config string into the config section and the version string """
+    t = re.split('(^//)', s, maxsplit=1, flags=re.MULTILINE)
+    return (t[0], ''.join(t[1:]))
 
 def check_path(path):
     # Necessary type checking
@@ -174,7 +126,7 @@ class ConfigTree(object):
         self.__destroy = self.__lib.destroy
         self.__destroy.argtypes = [c_void_p]
 
-        config_section, comments_section = strip_comments(config_string)
+        config_section, version_section = strip_version(config_string)
         config_section = escape_backslash(config_section)
         config = self.__from_string(config_section.encode())
         if config is None:
@@ -182,7 +134,7 @@ class ConfigTree(object):
             raise ValueError("Failed to parse config: {0}".format(msg))
         else:
             self.__config = config
-            self.__comments = comments_section
+            self.__version = version_section
 
     def __del__(self):
         if self.__config is not None:
@@ -193,7 +145,7 @@ class ConfigTree(object):
 
     def to_string(self):
         config_string = self.__to_string(self.__config).decode()
-        config_string = "{0}\n{1}".format(config_string, self.__comments)
+        config_string = "{0}\n{1}".format(config_string, self.__version)
         return config_string
 
     def to_commands(self):
