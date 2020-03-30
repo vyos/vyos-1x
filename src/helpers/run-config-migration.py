@@ -69,15 +69,22 @@ def main():
         sys.exit(1)
 
     if not virtual:
-        migration = Migrator(config_file_name, force=force_on,
-                             set_vintage=vintage)
+        virtual_migration = VirtualMigrator(config_file_name)
+        virtual_migration.run()
+
+        migration = Migrator(config_file_name, force=force_on)
+        migration.run()
+
+        if not migration.config_changed():
+            os.remove(backup_file_name)
     else:
-        migration = VirtualMigrator(config_file_name, set_vintage=vintage)
+        virtual_migration = VirtualMigrator(config_file_name,
+                                            set_vintage=vintage)
 
-    migration.run()
+        virtual_migration.run()
 
-    if not migration._changed:
-        os.remove(backup_file_name)
+        if not virtual_migration.config_changed():
+            os.remove(backup_file_name)
 
 if __name__ == '__main__':
     main()
