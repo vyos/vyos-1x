@@ -6,7 +6,7 @@
         <properties>
           <help>Show peer status of NTP daemon</help>
         </properties>
-        <command>if ps -C ntpd &amp;&gt;/dev/null; then ntpdc -n -c peers; else echo NTP daemon disabled; fi</command>
+        <command>if ps -C ntpd &amp;&gt;/dev/null; then ntpq -n -c peers; else echo NTP daemon disabled; fi</command>
         <children>
           <tagNode name="server">
             <properties>
@@ -21,7 +21,7 @@
             <properties>
               <help>Show NTP operational summary</help>
             </properties>
-            <command>if ps -C ntpd &amp;&gt;/dev/null; then ntpdc -n -c sysinfo; ntpdc -n -c kerninfo; else echo NTP daemon disabled; fi</command>
+            <command>if ps -C ntpd &amp;&gt;/dev/null; then ntpq -n -c sysinfo; ntpq -n -c kerninfo; else echo NTP daemon disabled; fi</command>
         </node>
 
         </children>
