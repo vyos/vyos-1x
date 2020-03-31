@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import socket
 import netifaces
 import ipaddress
 
@@ -84,8 +83,6 @@ def is_intf_addr_assigned(intf, addr):
         print(e)
         return False
 
-    addr_host, addr_mask = addr.split('/')
-
     if addr_type in netifaces.ifaddresses(intf).keys():
         # Check every IP address on this interface for a match
         for ip in netifaces.ifaddresses(intf)[addr_type]:
@@ -95,24 +92,23 @@ def is_intf_addr_assigned(intf, addr):
             if r'/' in addr:
                 prefixlen = ''
                 if is_ipv6(addr):
-                    # Note that currently expanded netmasks are not supported. That means
-                    # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
-                    # see https://docs.python.org/3/library/ipaddress.html
-                    bits =  bin( int(ip['netmask'].replace(':',''), 16) ).count('1')
-                    prefixlen = str(bits)
+                     # Note that currently expanded netmasks are not supported. That means
+                     # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
+                     # see https://docs.python.org/3/library/ipaddress.html
+                     bits =  bin( int(ip['netmask'].replace(':',''), 16) ).count('1')
+                     prefixlen = '/' + str(bits)
+
                 else:
-                     prefixlen = str(ipaddress.IPv4Network('0.0.0.0/' + ip['netmask']).prefixlen)
+                     prefixlen = '/' + str(ipaddress.IPv4Network('0.0.0.0/' + ip['netmask']).prefixlen)
 
-                # the netmask are different
-                if prefixlen != addr_mask:
-                    continue
+                # construct temporary variable holding IPv6 address and netmask
+                # in CIDR notation
+                tmp = ip['addr'] + prefixlen
+                if addr == tmp:
+                    return True
 
-            addr_af = socket.AF_INET if is_ipv4(addr_host) else socket.AF_INET6
-            ip_af = socket.AF_INET if is_ipv4(ip['addr']) else socket.AF_INET6
-
-            # compare the binary representation of the IP
-            if socket.inet_pton(addr_af, addr_host) == socket.inet_pton(ip_af, ip['addr']):
-                return True
+            elif ip['addr'] == addr:
+                    return True
 
     return False
 
