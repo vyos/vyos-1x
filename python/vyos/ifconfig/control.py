@@ -24,8 +24,18 @@ class Control(Register):
     _command_get = {}
     _command_set = {}
 
+    def __init__(self, **kargs):
+        # some commands (such as operation comands - show interfaces, etc.) 
+        # need to query the interface statistics. If the interface
+        # code is used and the debugging is enabled, the screen output 
+        # will include both the command but also the debugging for that command
+        # to prevent this, debugging can be explicitely disabled
+
+        # if debug is not explicitely disabled the the config, enable it
+        self.debug = kargs.get('debug', True)
+
     def _debug_msg(self, msg):
-        if os.path.isfile('/tmp/vyos.ifconfig.debug'):
+        if os.path.isfile('/tmp/vyos.ifconfig.debug') and self.debug:
             print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
 
     def _popen(self, command):

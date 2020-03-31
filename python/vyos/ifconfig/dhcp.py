@@ -50,7 +50,9 @@ interface "{{ intf }}" {
 class DHCP (Control):
     client_base = r'/var/lib/dhcp/dhclient_'
 
-    def __init__ (self, ifname):
+    def __init__ (self, ifname, **kargs):
+        super().__init__(**kargs)
+
         # per interface DHCP config files
         self._dhcp = {
             4: {
