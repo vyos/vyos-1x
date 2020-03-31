@@ -162,14 +162,16 @@ class Interface(DHCP):
         >>> i = Interface('eth0')
         """
 
-        DHCP.__init__(self, ifname)
-
         self.config = deepcopy(self.default)
-        self.config['ifname'] = ifname
-
         for k in self.options:
             if k in kargs:
                 self.config[k] = kargs[k]
+
+        # make sure the ifname is the first argument and not from the dict
+        self.config['ifname'] = ifname
+
+        # we must have updated config before initialising the Interface
+        super().__init__(ifname, **kargs)
 
         if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
             if not self.config['type']:
