@@ -26,6 +26,7 @@ import vyos.config
 import vyos.keepalived
 
 from vyos import ConfigError
+from vyos.config_hooks import Hook as ConfigHook
 
 daemon_file = "/etc/default/keepalived"
 config_file = "/etc/keepalived/keepalived.conf"
@@ -356,6 +357,7 @@ if __name__ == '__main__':
         c = get_config()
         verify(c)
         generate(c)
+        ConfigHook.vrrp_firewall_sync()
         apply(c)
     except ConfigError as e:
         print("VRRP error: {0}".format(str(e)))
