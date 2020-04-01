@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import socket
 import netifaces
 import ipaddress
 
@@ -64,51 +65,61 @@ def is_ipv6_link_local(addr):
 
     return False
 
+def _are_same_ip(one, two):
+    # compare the binary representation of the IP
+    f_one = socket.AF_INET if is_ipv4(one) else socket.AF_INET6
+    s_two = socket.AF_INET if is_ipv4(two) else socket.AF_INET6
+    return socket.inet_pton(f_one, one) == socket.inet_pton(f_one, two)
+
 def is_intf_addr_assigned(intf, addr):
+    if '/' in addr:
+        ip,mask = addr.split('/')
+        return _is_intf_addr_assigned(intf, ip, mask)
+    return _is_intf_addr_assigned(intf, addr)
+
+def _is_intf_addr_assigned(intf, address, netmask=''):
     """
     Verify if the given IPv4/IPv6 address is assigned to specific interface.
     It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
     address 192.0.2.1/24.
     """
 
-    # determine IP version (AF_INET or AF_INET6) depending on passed address
-    addr_type = netifaces.AF_INET
-    if is_ipv6(addr):
-        addr_type = netifaces.AF_INET6
-
     # check if the requested address type is configured at all
+    # {
+    # 17: [{'addr': '08:00:27:d9:5b:04', 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 
+    # 2:  [{'addr': '10.0.2.15', 'netmask': '255.255.255.0', 'broadcast': '10.0.2.255'}], 
+    # 10: [{'addr': 'fe80::a00:27ff:fed9:5b04%eth0', 'netmask': 'ffff:ffff:ffff:ffff::'}]
+    # }
     try:
-        netifaces.ifaddresses(intf)
+        ifaces = netifaces.ifaddresses(intf)
     except ValueError as e:
         print(e)
         return False
 
-    if addr_type in netifaces.ifaddresses(intf).keys():
-        # Check every IP address on this interface for a match
-        for ip in netifaces.ifaddresses(intf)[addr_type]:
-            # Check if it matches to the address requested
-            # If passed address contains a '/' indicating a normalized IP
-            # address we have to take this into account, too
-            if r'/' in addr:
-                prefixlen = ''
-                if is_ipv6(addr):
-                     # Note that currently expanded netmasks are not supported. That means
-                     # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
-                     # see https://docs.python.org/3/library/ipaddress.html
-                     bits =  bin( int(ip['netmask'].replace(':',''), 16) ).count('1')
-                     prefixlen = '/' + str(bits)
+    # determine IP version (AF_INET or AF_INET6) depending on passed address
+    addr_type = netifaces.AF_INET if is_ipv4(address) else netifaces.AF_INET6
 
-                else:
-                     prefixlen = '/' + str(ipaddress.IPv4Network('0.0.0.0/' + ip['netmask']).prefixlen)
+    # Check every IP address on this interface for a match
+    for ip in ifaces.get(addr_type,[]):
+        # ip can have the interface name in the 'addr' field, we need to remove it
+        # {'addr': 'fe80::a00:27ff:fec5:f821%eth2', 'netmask': 'ffff:ffff:ffff:ffff::'}
+        ip_addr = ip['addr'].split('%')[0]
 
-                # construct temporary variable holding IPv6 address and netmask
-                # in CIDR notation
-                tmp = ip['addr'] + prefixlen
-                if addr == tmp:
-                    return True
+        if not _are_same_ip(address, ip_addr):
+            continue
 
-            elif ip['addr'] == addr:
-                    return True
+        # we do not have a netmask to compare against, they are the same
+        if netmask == '':
+            return True
+
+        prefixlen = ''
+        if is_ipv4(ip_addr):
+            prefixlen = sum([bin(int(_)).count('1') for _ in ip['netmask'].split('.')])
+        else:
+            prefixlen = sum([bin(int(_,16)).count('1') for _ in ip['netmask'].split(':') if _])
+
+        if str(prefixlen) == netmask:
+            return True
 
     return False
 
