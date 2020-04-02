@@ -41,7 +41,9 @@ class L2TPv3If(Interface):
         }
     }
     options = Interface.options + \
-        ['tunnel_id', 'peer_tunnel_id', 'local_port', 'remote_port', 'encapsulation', 'local_address', 'remote_address']
+        ['tunnel_id', 'peer_tunnel_id', 'local_port', 'remote_port',
+         'encapsulation', 'local_address', 'remote_address', 'session_id',
+         'peer_session_id']
 
     def _create(self):
         # create tunnel interface
