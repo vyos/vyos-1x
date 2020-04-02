@@ -18,11 +18,27 @@
 import sys
 import time
 import argparse
-
+import json
 import tabulate
 
 import vyos.keepalived
 import vyos.util
+
+config_dict_path = '/run/keepalived_config.dict'
+
+
+# get disabled instances from a config
+def vrrp_get_disabled():
+    # read the dictionary file with configuration
+    with open(config_dict_path, 'r') as dict_file:
+        vrrp_config_dict = json.load(dict_file)
+    vrrp_disabled = []
+    # add disabled groups to the list
+    for vrrp_group in vrrp_config_dict['vrrp_groups']:
+        if vrrp_group['disable']:
+            vrrp_disabled.append([vrrp_group['name'], vrrp_group['interface'], vrrp_group['vrid'], 'DISABLED', ''])
+    # return list with disabled instances
+    return vrrp_disabled
 
 
 def print_summary():
@@ -54,9 +70,12 @@ def print_summary():
         row = [name, interface, vrid, state, ltrans_time]
         groups.append(row)
 
+    # add to the active list disabled instances
+    groups.extend(vrrp_get_disabled())
     headers = ["Name", "Interface", "VRID", "State", "Last Transition"]
     output = tabulate.tabulate(groups, headers)
     print(output)
+
 
 def print_statistics():
     try:
@@ -69,6 +88,7 @@ def print_statistics():
         print("VRRP statistics are not available")
         sys.exit(1)
 
+
 def print_state_data():
     try:
         vyos.keepalived.force_state_data_dump()
@@ -79,6 +99,7 @@ def print_state_data():
     except:
         print("VRRP information is not available")
         sys.exit(1)
+
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
