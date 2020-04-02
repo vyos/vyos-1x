@@ -33,6 +33,27 @@ def read_file(path):
     return data
 
 
+def chown_file(path, user, group):
+    """ change file owner """
+    from pwd import getpwnam
+    from grp import getgrnam
+
+    if os.path.isfile(path):
+        uid = getpwnam(user).pw_uid
+        gid = getgrnam(group).gr_gid
+        os.chown(path, uid, gid)
+
+
+def chmod_x_file(path):
+    """ make file executable """
+    from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
+
+    if os.path.isfile(path):
+        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
+                  S_IROTH | S_IXOTH
+        os.chmod(path, bitmask)
+
+
 def colon_separated_to_dict(data_string, uniquekeys=False):
     """ Converts a string containing newline-separated entries
         of colon-separated key-value pairs into a dict.
