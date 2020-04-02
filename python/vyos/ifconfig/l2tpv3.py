@@ -47,21 +47,21 @@ class L2TPv3If(Interface):
 
     def _create(self):
         # create tunnel interface
-        cmd = 'ip l2tp add tunnel tunnel_id {} '.format(config['tunnel_id'])
-        cmd += 'peer_tunnel_id {} '.format(config['peer_tunnel_id'])
-        cmd += 'udp_sport {} '.format(config['local_port'])
-        cmd += 'udp_dport {} '.format(config['remote_port'])
-        cmd += 'encap {} '.format(config['encapsulation'])
-        cmd += 'local {} '.format(config['local_address'])
-        cmd += 'remote {} '.format(config['remote_address'])
-        self._cmd(cmd)
+        cmd = 'ip l2tp add tunnel tunnel_id {tunnel_id}'
+        cmd += ' peer_tunnel_id {peer_tunnel_id}'
+        cmd += ' udp_sport {local_port}'
+        cmd += ' udp_dport {remote_port}'
+        cmd += ' encap {encapsulation}'
+        cmd += ' local {local_address}'
+        cmd += ' remote {remote_address}'
+        self._cmd(cmd.format(**self.config))
 
         # setup session
-        cmd = 'ip l2tp add session name {} '.format(self.config['ifname'])
-        cmd += 'tunnel_id {} '.format(config['tunnel_id'])
-        cmd += 'session_id {} '.format(config['session_id'])
-        cmd += 'peer_session_id  {} '.format(config['peer_session_id'])
-        self._cmd(cmd)
+        cmd = 'ip l2tp add session name {ifname}'
+        cmd += ' tunnel_id {tunnel_id}'
+        cmd += ' session_id {session_id}'
+        cmd += ' peer_session_id {peer_session_id}'
+        self._cmd(cmd.format(**self.config))
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
