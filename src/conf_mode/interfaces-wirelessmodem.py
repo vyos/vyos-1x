@@ -84,7 +84,8 @@ default_config_data = {
     'metric': '10',
     'mtu': '1500',
     'name_server': True,
-    'intf': ''
+    'intf': '',
+    'vrf': ''
 }
 
 def subprocess_cmd(command):
@@ -154,6 +155,10 @@ def get_config():
     if conf.exists(['ondemand']):
         wwan['on_demand'] = True
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        wwan['vrf'] = conf.return_value(['vrf'])
+
     return wwan
 
 def verify(wwan):
@@ -167,6 +172,10 @@ def verify(wwan):
     # thus the check will return False
     if not os.path.exists(f"/dev/{wwan['device']}"):
         raise ConfigError(f"Device {wwan['device']} does not exist")
+
+    vrf_name = wwan['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF {vrf_name} does not exist')
 
     return None
 

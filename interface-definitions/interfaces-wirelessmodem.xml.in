@@ -43,6 +43,7 @@
           </node>
           #include <include/interface-description.xml.i>
           #include <include/interface-disable.xml.i>
+          #include <include/interface-vrf.xml.i>
           <leafNode name="device">
             <properties>
               <help>System device name (default: ttyUSB0)</help>
