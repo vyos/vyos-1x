@@ -20,10 +20,9 @@ from sys import exit
 from copy import deepcopy
 from jinja2 import Template
 from subprocess import Popen, PIPE
-from pwd import getpwnam
-from grp import getgrnam
 
 from vyos.config import Config
+from vyos.util import chown_file, chmod_x_file
 from vyos import ConfigError
 
 # Please be careful if you edit the template.
@@ -225,10 +224,7 @@ def apply(wwan):
         subprocess_cmd(cmd)
 
         # make logfile owned by root / vyattacfg
-        if os.path.isfile(wwan['logfile']):
-            uid = getpwnam('root').pw_uid
-            gid = getgrnam('vyattacfg').gr_gid
-            os.chown(wwan['logfile'], uid, gid)
+        chown_file(wwan['logfile'], 'root', 'vyattacfg')
 
     return None
 
