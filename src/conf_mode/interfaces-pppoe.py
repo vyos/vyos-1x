@@ -155,7 +155,7 @@ config_pppoe_ip_pre_up_tmpl = """#!/bin/sh
 # As PPPoE is an "on demand" interface we need to re-configure it when it
 # becomes up
 
-if [ "$6" != "pppoe0" ]; then
+if [ "$6" != "{{ intf }}" ]; then
     exit
 fi
 
