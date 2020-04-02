@@ -20,6 +20,7 @@ from sys import exit
 from copy import deepcopy
 from jinja2 import Template
 from subprocess import Popen, PIPE
+from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.util import chown_file, chmod_x_file
@@ -66,6 +67,30 @@ OK ATZ
 OK 'AT+CGDCONT=1,"IP","{{ apn }}"'
 OK ATD*99#
 CONNECT ''
+
+"""
+
+config_wwan_ip_pre_up_tmpl = """#!/bin/sh
+# As PPPoE is an "on demand" interface we need to re-configure it when it
+# becomes 'up'
+
+ipparam=$6
+
+# device name and metric are received using ipparam
+device=`echo "$ipparam"|awk '{ print $1 }'`
+
+if [ "$device" != "{{ intf }}" ]; then
+    exit
+fi
+
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+
+{% if vrf -%}
+logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} for VRF {{ vrf }}"
+ip link set dev {{ intf }} master {{ vrf }}
+{% endif %}
 
 """
 
@@ -180,6 +205,16 @@ def verify(wwan):
 
 def generate(wwan):
     config_file_wwan = f"/etc/ppp/peers/{wwan['intf']}"
+    config_file_wwan_chat = wwan['chat_script']
+    ip_up_script_file = f"/etc/ppp/ip-up.d/9991-vyos-vrf-{wwan['intf']}"
+
+    config_files = [config_file_wwan, config_file_wwan_chat, ip_up_script_file]
+
+    # Ensure directories for config files exist - otherwise create them on demand
+    for file in config_files:
+        dirname = os.path.dirname(file)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
 
     # Always hang-up WWAN connection prior generating new configuration file
     cmd = f"systemctl stop ppp@{wwan['intf']}.service"
@@ -187,29 +222,31 @@ def generate(wwan):
 
     if wwan['deleted']:
         # Delete PPP configuration files
-        if os.path.exists(config_file_wwan):
-            os.unlink(config_file_wwan)
-        if os.path.exists(wwan['chat_script']):
-            os.unlink(wwan['chat_script'])
+        for file in config_files:
+            if os.path.exists(file):
+                os.unlink(file)
 
     else:
-        # PPP peers directory
-        dirname = os.path.dirname(config_file_wwan)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-
         # Create PPP configuration files
         tmpl = Template(config_wwan_tmpl)
         config_text = tmpl.render(wwan)
         with open(config_file_wwan, 'w') as f:
             f.write(config_text)
 
-
         # Create PPP chat script
         tmpl = Template(chat_wwan_tmpl)
         config_text = tmpl.render(wwan)
         with open(wwan['chat_script'], 'w') as f:
             f.write(config_text)
+
+        # Create ip-pre-up script
+        tmpl = Template(config_wwan_ip_pre_up_tmpl)
+        config_text = tmpl.render(wwan)
+        with open(ip_up_script_file, 'w') as f:
+            f.write(config_text)
+
+        # make generated script file executable
+        chmod_x_file(ip_up_script_file)
 
     return None
 
