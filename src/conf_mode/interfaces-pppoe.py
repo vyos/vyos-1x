@@ -304,8 +304,16 @@ def verify(pppoe):
 
 def generate(pppoe):
     config_file_pppoe = f"/etc/ppp/peers/{pppoe['intf']}"
-    ip_pre_up_script_file = f"/etc/ppp/ip-pre-up.d/9999-vyos-vrf-{pppoe['intf']}"
+    ip_up_script_file = f"/etc/ppp/ip-up.d/9990-vyos-vrf-{pppoe['intf']}"
     ipv6_if_up_script_file = f"/etc/ppp/ipv6-up.d/50-vyos-{pppoe['intf']}-autoconf"
+
+    config_files = [config_file_pppoe, ip_up_script_file, ipv6_if_up_script_file]
+
+    # Ensure directories for config files exist - otherwise create them on demand
+    for file in config_files:
+        dirname = os.path.dirname(file)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd = f"systemctl stop ppp@{pppoe['intf']}.service"
@@ -313,41 +321,21 @@ def generate(pppoe):
 
     if pppoe['deleted']:
         # Delete PPP configuration files
-        if os.path.exists(config_file_pppoe):
-            os.unlink(config_file_pppoe)
-
-        if os.path.exists(ipv6_if_up_script_file):
-            os.unlink(ipv6_if_up_script_file)
-
-        if os.path.exists(ip_pre_up_script_file):
-            os.unlink(ip_pre_up_script_file)
+        for file in config_files:
+            if os.path.exists(file):
+                os.unlink(file)
 
     else:
-        # PPP peers directory
-        dirname = os.path.dirname(config_file_pppoe)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-
         # Create PPP configuration files
         tmpl = Template(config_pppoe_tmpl)
         config_text = tmpl.render(pppoe)
         with open(config_file_pppoe, 'w') as f:
             f.write(config_text)
 
-        # PPP ip-pre-up.d scripting directory
-        dirname = os.path.dirname(ip_pre_up_script_file)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-
-        tmpl = Template(config_pppoe_ip_pre_up_tmpl)
+        tmpl = Template(config_pppoe_ip_up_tmpl)
         config_text = tmpl.render(pppoe)
-        with open(ip_pre_up_script_file, 'w') as f:
+        with open(ip_up_script_file, 'w') as f:
             f.write(config_text)
-
-        # PPP ipv6-up.d scripting directory
-        dirname = os.path.dirname(ipv6_if_up_script_file)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
 
         tmpl = Template(config_pppoe_ipv6_up_tmpl)
         config_text = tmpl.render(pppoe)
