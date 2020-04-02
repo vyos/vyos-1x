@@ -16,15 +16,6 @@
 import os
 import re
 import sys
-import psutil
-
-import vyos.defaults
-
-from getpass import getuser
-from grp import getgrnam
-from time import sleep
-from subprocess import check_output
-from ipaddress import ip_network
 
 def read_file(path):
     """ Read a file to string """
@@ -105,11 +96,12 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
 
 def process_running(pid_file):
     """ Checks if a process with PID in pid_file is running """
+    from psutil import pid_exists
     if not os.path.isfile(pid_file):
         return False
     with open(pid_file, 'r') as f:
         pid = f.read().strip()
-    return psutil.pid_exists(int(pid))
+    return pid_exists(int(pid))
 
 
 def seconds_to_human(s, separator=""):
@@ -153,7 +145,10 @@ def seconds_to_human(s, separator=""):
 
 
 def get_cfg_group_id():
-    group_data = getgrnam(vyos.defaults.cfg_group)
+    from grp import getgrnam
+    from vyos.defaults import cfg_group
+
+    group_data = getgrnam(cfg_group)
     return group_data.gr_gid
 
 
@@ -183,18 +178,22 @@ def commit_in_progress():
     # Since this will be used in scripts that modify the config outside of the CLI
     # framework, those knowingly have root permissions.
     # For everything else, we add a safeguard.
+    from subprocess import check_output
+    from psutil import process_iter, NoSuchProcess
+    from vyos.defaults import commit_lock
+
     id = check_output(['/usr/bin/id', '-u']).decode().strip()
     if id != '0':
         raise OSError("This functions needs root permissions to return correct results")
 
-    for proc in psutil.process_iter():
+    for proc in process_iter():
         try:
             files = proc.open_files()
             if files:
                 for f in files:
-                    if f.path == vyos.defaults.commit_lock:
+                    if f.path == commit_lock:
                         return True
-        except psutil.NoSuchProcess as err:
+        except NoSuchProcess as err:
             # Process died before we could examine it
             pass
     # Default case
@@ -203,7 +202,7 @@ def commit_in_progress():
 
 def wait_for_commit_lock():
     """ Not to be used in normal op mode scripts! """
-
+    from time import sleep
     # Very synchronous approach to multiprocessing
     while commit_in_progress():
         sleep(1)
@@ -227,17 +226,20 @@ def ask_yes_no(question, default=False) -> bool:
 
 def is_admin() -> bool:
     """Look if current user is in sudo group"""
+    from getpass import getuser
+    from grp import getgrnam
     current_user = getuser()
     (_, _, _, admin_group_members) = getgrnam('sudo')
     return current_user in admin_group_members
 
 
 def mac2eui64(mac, prefix=None):
-    '''
+    """
     Convert a MAC address to a EUI64 address or, with prefix provided, a full
     IPv6 address.
     Thankfully copied from https://gist.github.com/wido/f5e32576bb57b5cc6f934e177a37a0d3
-    '''
+    """
+    from ipaddress import ip_network
     # http://tools.ietf.org/html/rfc4291#section-2.5.1
     eui64 = re.sub(r'[.:-]', '', mac).lower()
     eui64 = eui64[0:6] + 'fffe' + eui64[6:]
