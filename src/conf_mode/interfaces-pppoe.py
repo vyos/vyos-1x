@@ -20,12 +20,10 @@ from sys import exit
 from copy import deepcopy
 from jinja2 import Template
 from subprocess import Popen, PIPE
-from pwd import getpwnam
-from grp import getgrnam
-from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 
 from vyos.config import Config
 from vyos.ifconfig import Interface
+from vyos.util import chown_file, chmod_x_file
 from vyos import ConfigError
 from netifaces import interfaces
 
@@ -356,10 +354,9 @@ def generate(pppoe):
         with open(ipv6_if_up_script_file, 'w') as f:
             f.write(config_text)
 
-        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
-                  S_IROTH | S_IXOTH
-        os.chmod(ip_pre_up_script_file, bitmask)
-        os.chmod(ipv6_if_up_script_file, bitmask)
+        # make generated script file executable
+        chmod_x_file(ip_up_script_file)
+        chmod_x_file(ipv6_if_up_script_file)
 
     return None
 
@@ -374,10 +371,7 @@ def apply(pppoe):
         subprocess_cmd(cmd)
 
         # make logfile owned by root / vyattacfg
-        if os.path.isfile(pppoe['logfile']):
-            uid = getpwnam('root').pw_uid
-            gid = getgrnam('vyattacfg').gr_gid
-            os.chown(pppoe['logfile'], uid, gid)
+        chown_file(pppoe['logfile'], 'root', 'vyattacfg')
 
     return None
 
