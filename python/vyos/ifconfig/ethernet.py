@@ -227,6 +227,11 @@ class EthernetIf(Interface):
         >>> i = EthernetIf('eth0')
         >>> i.set_sg('on')
         """
+        if self.get_driver_name() in ['hv_netvsc']:
+            self._debug_msg('{} driver does not support changing offload scatter-gather settings!'
+                            .format(self.get_driver_name()))
+            return None
+
         return self.set_interface('sg', state)
 
     def set_tso(self, state):
