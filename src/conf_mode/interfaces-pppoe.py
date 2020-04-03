@@ -148,7 +148,7 @@ echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconfigure
 {% endif %}
 """
 
-config_pppoe_ip_pre_up_tmpl = """#!/bin/sh
+config_pppoe_ip_up_tmpl = """#!/bin/sh
 
 # As PPPoE is an "on demand" interface we need to re-configure it when it
 # becomes up
