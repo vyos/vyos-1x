@@ -138,6 +138,9 @@ default_config_data = {
     'ip': False,
     'ipv6': False,
     'nhrp': [],
+    'ipv6_autoconf': 0,
+    'ipv6_forwarding': 1,
+    'ipv6_dad_transmits': 1,
     # internal
     'tunnel': {},
     # the following names are exactly matching the name
@@ -183,6 +186,9 @@ mapping = {
     'link_detect':         ('disable-link-detect', False, 2),
     'vrf':                 ('vrf', False, None),
     'addresses-add':       ('address', True, None),
+    'ipv6_autoconf':       ('ipv6 address autoconf', False, 1),
+    'ipv6_forwarding':     ('ipv6 disable-forwarding', False, 0),
+    'ipv6_dad_transmits:': ('ipv6 dup-addr-detect-transmits', False, None)
 }
 
 def get_class (options):
@@ -468,7 +474,8 @@ def apply(conf):
         tunnel.set_interface(option, options[option])
 
     # set other interface properties
-    for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast', 'vrf'):
+    for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast',
+                   'vrf', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
         tunnel.set_interface(option, options[option])
 
     # Configure interface address(es)
