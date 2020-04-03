@@ -110,15 +110,11 @@ if [ "$6" != "{{ intf }}" ]; then
     exit
 fi
 
+{% if ipv6_autoconf -%}
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
-logger -t pppd[$DIALER_PID] "configuring dialer interface $6 via $2"
-
-echo "{{ description }}" > /sys/class/net/{{ intf }}/ifalias
-
-{% if ipv6_autoconf -%}
-
+logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} via $2"
 
 # Configure interface-specific Host/Router behaviour.
 # Note: It is recommended to have the same setting on all interfaces; mixed
@@ -160,6 +156,8 @@ fi
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
+
+echo "{{ description }}" > /sys/class/net/{{ intf }}/ifalias
 
 {% if vrf -%}
 logger -t pppd[$DIALER_PID] "configuring dialer interface $6 for VRF {{ vrf }}"
@@ -303,9 +301,10 @@ def verify(pppoe):
     return None
 
 def generate(pppoe):
-    config_file_pppoe = f"/etc/ppp/peers/{pppoe['intf']}"
-    ip_up_script_file = f"/etc/ppp/ip-up.d/9990-vyos-vrf-{pppoe['intf']}"
-    ipv6_if_up_script_file = f"/etc/ppp/ipv6-up.d/50-vyos-{pppoe['intf']}-autoconf"
+    intf = pppoe['intf']
+    config_file_pppoe = f'/etc/ppp/peers/{intf}'
+    ip_up_script_file = f'/etc/ppp/ip-up.d/9990-vyos-vrf-{intf}'
+    ipv6_if_up_script_file = f'/etc/ppp/ipv6-up.d/9990-vyos-autoconf-{intf}'
 
     config_files = [config_file_pppoe, ip_up_script_file, ipv6_if_up_script_file]
 
@@ -316,7 +315,7 @@ def generate(pppoe):
             os.mkdir(dirname)
 
     # Always hang-up PPPoE connection prior generating new configuration file
-    cmd = f"systemctl stop ppp@{pppoe['intf']}.service"
+    cmd = f'systemctl stop ppp@{intf}.service'
     subprocess_cmd(cmd)
 
     if pppoe['deleted']:
@@ -354,8 +353,9 @@ def apply(pppoe):
         return None
 
     if not pppoe['disable']:
-        # dial PPPoE connection
-        cmd = f"systemctl start ppp@{pppoe['intf']}.service"
+        # "dial" PPPoE connection
+        intf = pppoe['intf']
+        cmd = f'systemctl start ppp@{intf}.service'
         subprocess_cmd(cmd)
 
         # make logfile owned by root / vyattacfg
