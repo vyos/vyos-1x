@@ -70,8 +70,8 @@ CONNECT ''
 
 """
 
-config_wwan_ip_pre_up_tmpl = """#!/bin/sh
-# As PPPoE is an "on demand" interface we need to re-configure it when it
+config_wwan_ip_up_tmpl = """#!/bin/sh
+# As WWAN is an "on demand" interface we need to re-configure it when it
 # becomes 'up'
 
 ipparam=$6
@@ -86,6 +86,8 @@ fi
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
+
+echo "{{ description }}" > /sys/class/net/{{ intf }}/ifalias
 
 {% if vrf -%}
 logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} for VRF {{ vrf }}"
@@ -204,9 +206,10 @@ def verify(wwan):
     return None
 
 def generate(wwan):
-    config_file_wwan = f"/etc/ppp/peers/{wwan['intf']}"
+    intf = wwan['intf']
+    config_file_wwan = f'/etc/ppp/peers/{intf}'
     config_file_wwan_chat = wwan['chat_script']
-    ip_up_script_file = f"/etc/ppp/ip-up.d/9991-vyos-vrf-{wwan['intf']}"
+    ip_up_script_file = f'/etc/ppp/ip-up.d/9991-vyos-vrf-{intf}'
 
     config_files = [config_file_wwan, config_file_wwan_chat, ip_up_script_file]
 
@@ -217,7 +220,7 @@ def generate(wwan):
             os.mkdir(dirname)
 
     # Always hang-up WWAN connection prior generating new configuration file
-    cmd = f"systemctl stop ppp@{wwan['intf']}.service"
+    cmd = f'systemctl stop ppp@{intf}.service'
     subprocess_cmd(cmd)
 
     if wwan['deleted']:
@@ -240,7 +243,7 @@ def generate(wwan):
             f.write(config_text)
 
         # Create ip-pre-up script
-        tmpl = Template(config_wwan_ip_pre_up_tmpl)
+        tmpl = Template(config_wwan_ip_up_tmpl)
         config_text = tmpl.render(wwan)
         with open(ip_up_script_file, 'w') as f:
             f.write(config_text)
@@ -256,8 +259,9 @@ def apply(wwan):
         return None
 
     if not wwan['disable']:
-        # dial WWAN connection
-        cmd = f"systemctl start ppp@{wwan['intf']}.service"
+        # "dial" WWAN connection
+        intf = wwan['intf']
+        cmd = f'systemctl start ppp@{intf}.service'
         subprocess_cmd(cmd)
 
         # make logfile owned by root / vyattacfg
