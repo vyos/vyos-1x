@@ -33,7 +33,7 @@ if len(argv) == 2:
     # VRF instances should not be named after regular interface names like bond0,
     # br10 and so on - this can cause a lot of confusion/trouble
     pattern = "^(?!(bond|br|dum|eth|lan|eno|ens|enp|enx|gnv|ipoe|l2tp|l2tpeth|" \
-              "vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wlm)[0-9]+).*$"
+              "vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wlm)\d+(\.\d+(v.+)?)?$).*$"
     if re.match(pattern, argv[1]):
         exit(0)
 
