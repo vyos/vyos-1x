@@ -7,7 +7,7 @@
           <help>Virtual Extensible LAN (VXLAN) Interface</help>
           <priority>460</priority>
           <constraint>
-            <regex>vxlan[0-9]+$</regex>
+            <regex>^vxlan[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>VXLAN interface must be named vxlanN</constraintErrorMessage>
           <valueHelp>

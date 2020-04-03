@@ -7,7 +7,7 @@
           <help>WireGuard Interface</help>
           <priority>459</priority>
           <constraint>
-            <regex>wg[0-9]+$</regex>
+            <regex>^wg[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>WireGuard interface must be named wgN</constraintErrorMessage>
           <valueHelp>

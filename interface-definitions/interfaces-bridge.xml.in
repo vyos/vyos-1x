@@ -7,7 +7,7 @@
           <help>Bridge Interface</help>
           <priority>489</priority>
           <constraint>
-            <regex>br[0-9]+$</regex>
+            <regex>^br[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Bridge interface must be named brN</constraintErrorMessage>
           <valueHelp>

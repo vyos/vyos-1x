@@ -7,7 +7,7 @@
           <help>Generic Network Virtualization Encapsulation (GENEVE) Interface</help>
           <priority>460</priority>
           <constraint>
-            <regex>gnv[0-9]+$</regex>
+            <regex>^gnv[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>GENEVE interface must be named gnvN</constraintErrorMessage>
           <valueHelp>

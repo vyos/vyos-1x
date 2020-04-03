@@ -7,7 +7,7 @@
           <help>Loopback Interface</help>
           <priority>300</priority>
           <constraint>
-            <regex>lo$</regex>
+            <regex>^lo$</regex>
           </constraint>
           <constraintErrorMessage>Loopback interface must be named lo</constraintErrorMessage>
           <valueHelp>

@@ -7,7 +7,7 @@
           <help>Wireless Modem (WWAN) Interface</help>
           <priority>350</priority>
           <constraint>
-            <regex>wlm[0-9]+$</regex>
+            <regex>^wlm[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Wireless Modem interface must be named wlmN</constraintErrorMessage>
           <valueHelp>

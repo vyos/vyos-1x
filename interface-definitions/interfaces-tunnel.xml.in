@@ -7,7 +7,7 @@
           <help>Tunnel interface</help>
           <priority>380</priority>
           <constraint>
-            <regex>tun[0-9]+$</regex>
+            <regex>^tun[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>tunnel interface must be named tunN</constraintErrorMessage>
           <valueHelp>

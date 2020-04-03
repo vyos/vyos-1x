@@ -7,7 +7,7 @@
           <help>Pseudo Ethernet</help>
           <priority>319</priority>
           <constraint>
-            <regex>peth[0-9]+$</regex>
+            <regex>^peth[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Pseudo Ethernet interface must be named pethN</constraintErrorMessage>
           <valueHelp>

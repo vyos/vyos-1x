@@ -7,7 +7,7 @@
           <help>Dummy Interface</help>
           <priority>300</priority>
           <constraint>
-            <regex>dum[0-9]+$</regex>
+            <regex>^dum[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Dummy interface must be named dumN</constraintErrorMessage>
           <valueHelp>

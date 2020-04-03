@@ -7,7 +7,7 @@
           <help>Layer 2 Tunnel Protocol Version 3 (L2TPv3) Interface</help>
           <priority>485</priority>
           <constraint>
-            <regex>l2tpeth[0-9]+$</regex>
+            <regex>^l2tpeth[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>L2TPv3 interface must be named l2tpethN</constraintErrorMessage>
           <valueHelp>

@@ -7,7 +7,7 @@
           <help>Bonding Interface/Link Aggregation</help>
           <priority>320</priority>
           <constraint>
-            <regex>bond[0-9]+$</regex>
+            <regex>^bond[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Bonding interface must be named bondN</constraintErrorMessage>
           <valueHelp>

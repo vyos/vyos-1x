@@ -7,7 +7,7 @@
           <help>Wireless (WiFi/WLAN) Network Interface</help>
           <priority>400</priority>
           <constraint>
-            <regex>wlan[0-9]+$</regex>
+            <regex>^wlan[0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Wireless interface must be named wlanN</constraintErrorMessage>
           <valueHelp>
