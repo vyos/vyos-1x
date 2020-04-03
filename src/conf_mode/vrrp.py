@@ -227,6 +227,12 @@ def get_config():
             if conntrack_sync_group == sync_group_name:
                 sync_group["conntrack_sync"] = True
 
+        # add transition script configuration
+        sync_group["master_script"] = config.return_value("transition-script master")
+        sync_group["backup_script"] = config.return_value("transition-script backup")
+        sync_group["fault_script"] = config.return_value("transition-script fault")
+        sync_group["stop_script"] = config.return_value("transition-script stop")
+
         sync_groups.append(sync_group)
 
     # create a file with dict with proposed configuration
