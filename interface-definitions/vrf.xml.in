@@ -17,9 +17,9 @@
         <properties>
           <help>VRF instance name</help>
           <constraint>
-            <regex>[^/\s]{1,16}$</regex>
+            <validator name="vrf-name"/>
           </constraint>
-          <constraintErrorMessage>VRF instance name must be 16 characters or less</constraintErrorMessage>
+          <constraintErrorMessage>VRF instance name must be 16 characters or less and can not\nbe named as regular network interfaces</constraintErrorMessage>
           <valueHelp>
             <format>name</format>
             <description>Instance name</description>

@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+from sys import exit, argv
+
+if len(argv) == 2:
+    len = len(argv[1])
+    # VRF instance name must be 16 characters or less, python range needs to be
+    # extended by one
+    if not len in range(1, 17):
+        exit(1)
+
+    # Treat loopback interface "lo" explicitly. Adding "lo" explicitly to the
+    # following regex pattern would deny any VRF name starting with lo - thuse
+    # local-vrf would be illegal - and that we do not want.
+    if argv[1] == "lo":
+        exit(1)
+
+    # VRF instances should not be named after regular interface names like bond0,
+    # br10 and so on - this can cause a lot of confusion/trouble
+    pattern = "^(?!(bond|br|dum|eth|lan|eno|ens|enp|enx|gnv|ipoe|l2tp|l2tpeth|" \
+              "vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wlm)[0-9]+).*$"
+    if re.match(pattern, argv[1]):
+        exit(0)
+
+exit(1)
