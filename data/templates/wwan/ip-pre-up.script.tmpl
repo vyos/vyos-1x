@@ -1,0 +1,23 @@
+#!/bin/sh
+# As WWAN is an "on demand" interface we need to re-configure it when it
+# becomes 'up'
+
+ipparam=$6
+
+# device name and metric are received using ipparam
+device=`echo "$ipparam"|awk '{ print $1 }'`
+
+if [ "$device" != "{{ intf }}" ]; then
+    exit
+fi
+
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+
+echo "{{ description }}" > /sys/class/net/{{ intf }}/ifalias
+
+{% if vrf -%}
+logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} for VRF {{ vrf }}"
+ip link set dev {{ intf }} master {{ vrf }}
+{% endif %}
