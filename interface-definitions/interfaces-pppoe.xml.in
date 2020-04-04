@@ -8,12 +8,11 @@
           <priority>321</priority>
           <constraint>
             <regex>^pppoe[0-9]+$</regex>
-            <validator name="numeric" argument="--range 1-99"/>
           </constraint>
           <constraintErrorMessage>PPPoE interface must be named pppoeN</constraintErrorMessage>
           <valueHelp>
             <format>pppoeN</format>
-            <description>PPPoE interface name (1-15)</description>
+            <description>PPPoE dialer interface name</description>
           </valueHelp>
         </properties>
         <children>
