@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# As PPPoE is an "on demand" interface we need to re-configure it when it
+# becomes up
+
+if [ "$6" != "{{ intf }}" ]; then
+    exit
+fi
+
+{% if ipv6_autoconf -%}
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} via $2"
+
+# Configure interface-specific Host/Router behaviour.
+# Note: It is recommended to have the same setting on all interfaces; mixed
+# router/host scenarios are rather uncommon. Possible values are:
+#
+# 0  Forwarding disabled
+# 1  Forwarding enabled
+#
+echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/forwarding
+
+# Accept Router Advertisements; autoconfigure using them.
+#
+# It also determines whether or not to transmit Router
+# Solicitations. If and only if the functional setting is to
+# accept Router Advertisements, Router Solicitations will be
+# transmitted. Possible values are:
+#
+# 0  Do not accept Router Advertisements.
+# 1  Accept Router Advertisements if forwarding is disabled.
+# 2  Overrule forwarding behaviour. Accept Router Advertisements
+#    even if forwarding is enabled.
+#
+echo 2 > /proc/sys/net/ipv6/conf/{{ intf }}/accept_ra
+
+# Autoconfigure addresses using Prefix Information in Router Advertisements.
+echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconfigure
+{% endif %}

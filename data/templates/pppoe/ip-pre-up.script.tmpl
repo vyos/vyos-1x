@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# As PPPoE is an "on demand" interface we need to re-configure it when it
+# becomes up
+
+if [ "$6" != "{{ intf }}" ]; then
+    exit
+fi
+
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+
+echo "{{ description }}" > /sys/class/net/{{ intf }}/ifalias
+
+{% if vrf -%}
+logger -t pppd[$DIALER_PID] "configuring dialer interface $6 for VRF {{ vrf }}"
+ip link set dev {{ intf }} master {{ vrf }}
+{% endif %}
