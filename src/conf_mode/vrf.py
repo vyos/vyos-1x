@@ -25,6 +25,7 @@ from subprocess import check_output, CalledProcessError
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import Interface
+from vyos.util import read_file
 from vyos import ConfigError
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
@@ -43,7 +44,7 @@ config_tmpl = """
 """
 
 default_config_data = {
-    'bind_to_all': 0,
+    'bind_to_all': '0',
     'deleted': False,
     'vrf_add': [],
     'vrf_existing': [],
@@ -103,7 +104,7 @@ def get_config():
 
         # Should services be allowed to bind to all VRFs?
         if conf.exists(['bind-to-all']):
-            vrf_config['bind_to_all'] = 1
+            vrf_config['bind_to_all'] = '1'
 
         # Determine vrf interfaces (currently effective) - to determine which
         # vrf interface is no longer present and needs to be removed
@@ -210,8 +211,9 @@ def apply(vrf_config):
 
     # set the default VRF global behaviour
     bind_all = vrf_config['bind_to_all']
-    _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
-    _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
+    if read_file('/proc/sys/net/ipv4/tcp_l3mdev_accept') != bind_all:
+        _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
+        _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
 
     for vrf in vrf_config['vrf_remove']:
         name = vrf['name']
