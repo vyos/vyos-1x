@@ -799,7 +799,7 @@ default_config_data = {
     'cap_vht_center_freq_2' : '',
     'cap_vht_chan_set_width' : '',
     'cap_vht_ldpc' : False,
-    'cap_vht_link_adaptation' : False,
+    'cap_vht_link_adaptation' : '',
     'cap_vht_max_mpdu_exp' : '',
     'cap_vht_max_mpdu' : '',
     'cap_vht_short_gi' : [],
@@ -1043,7 +1043,7 @@ def get_config():
     # VHT link adaptation capabilities
     if conf.exists('capabilities vht link-adaptation'):
         wifi['cap_vht'] = True
-        wifi['cap_vht_link_adaptation'] = True
+        wifi['cap_vht_link_adaptation'] = conf.return_value('capabilities vht link-adaptation')
 
     # Set the maximum length of A-MPDU pre-EOF padding that the station can receive
     if conf.exists('capabilities vht max-mpdu-exp'):
