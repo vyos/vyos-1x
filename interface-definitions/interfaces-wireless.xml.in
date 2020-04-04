@@ -320,7 +320,7 @@
                     <properties>
                       <help>VHT link adaptation capabilities</help>
                       <completionHelp>
-                        <list>single-user-beamformer single-user-beamformee multi-user-beamformer multi-user-beamformee</list>
+			<list>unsolicited both</list>
                       </completionHelp>
                       <valueHelp>
                         <format>unsolicited</format>
