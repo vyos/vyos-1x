@@ -12,7 +12,7 @@ fi
 VRF_NAME=""
 if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
     # Determine upper (VRF) interface
-    VRF=$(basename $(ls -d /sys/class/net/wlm0/upper_*))
+    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
     # Remove upper_ prefix from result string
     VRF=${VRF#"upper_"}
     # Populate variable to run in VR context
