@@ -6,28 +6,42 @@ if [ "$6" != "{{ intf }}" ]; then
     exit
 fi
 
+set -x
+
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
+SED_OPT="ip route"
+VRF_NAME=""
+if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
+    # Determine upper (VRF) interface
+    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
+    # Remove upper_ prefix from result string
+    VRF=${VRF#"upper_"}
+    # generate new SED command
+    SED_OPT="vrf ${VRF}"
+    # generate vtysh option
+    VRF_NAME="vrf ${VRF}"
+fi
+
 # Debian PPP version has no support for replacing an existing default route
 # thus we emulate this ba an ip-up script https://phabricator.vyos.net/T2220.
-
 {% if 'auto' in default_route -%}
-
 # only insert a new default route if there is no default route configured
-routes=$(vtysh -c "show running-config" | sed -n "/ip route/,/!/p" | grep 0.0.0.0/0 | wc -l)
-if [ "$routes" -eq 0 ]; then
-    # No VRF, use default routing table
-    vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }}"
+routes=$(vtysh -c "show running-config" | sed -n "/${SED_OPT}/,/!/p" | grep 0.0.0.0/0 | wc -l)
+if [ "$routes" -ne 0 ]; then
+    exit 1
 fi
 
 {% elif 'force' in default_route -%}
-
 # Retrieve current static default routes and remove it from the routing table
-vtysh -c "show running-config" | sed -n "/ip route/,/!/p" | grep 0.0.0.0/0 | while read route ; do
-    vtysh -c "conf t" -c "no ${route}"
+vtysh -c "show running-config" | sed -n "/${SED_OPT}/,/!/p" | grep 0.0.0.0/0 | while read route ; do
+    vtysh -c "conf t" ${VTY_OPT} -c "no ${route} ${VRF_NAME}"
 done
-# No VRF, use default routing table
-vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }}"
 {% endif %}
+
+# Add default route to default or VRF routing table
+vtysh -c "conf t" ${VTY_OPT} -c "ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME}"
+logger -t pppd[$DIALER_PID] "added default route via {{ intf }} ${VRF_NAME}"
+
