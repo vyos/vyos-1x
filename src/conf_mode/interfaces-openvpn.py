@@ -66,6 +66,10 @@ proto {% if 'tcp-active' in protocol -%}tcp-client{% elif 'tcp-passive' in proto
 local {{ local_host }}
 {% endif %}
 
+{%- if mode == 'server' and protocol == 'udp' and not local_host %}
+multihome
+{% endif %}
+
 {%- if local_port %}
 lport {{ local_port }}
 {% endif %}
@@ -308,7 +312,7 @@ default_config_data = {
     'ncp_ciphers': '',
     'options': [],
     'persistent_tunnel': False,
-    'protocol': '',
+    'protocol': 'udp',
     'redirect_gateway': '',
     'remote_address': '',
     'remote_host': [],
@@ -512,8 +516,7 @@ def get_config():
 
     # OpenVPN operation mode
     if conf.exists('mode'):
-        mode = conf.return_value('mode')
-        openvpn['mode'] = mode
+        openvpn['mode'] = conf.return_value('mode')
 
     # Additional OpenVPN options
     if conf.exists('openvpn-option'):
