@@ -239,6 +239,10 @@ uapsd_advertisement_enabled=1
 require_ht=1
 {% endif %}
 
+{%- if cap_vht_chan_set_width -%}
+vht_oper_chwidth={{ cap_vht_chan_set_width }}
+{%- endif -%}
+
 # vht_capab: VHT capabilities (list of flags)
 #
 # vht_max_mpdu_len: [MAX-MPDU-7991] [MAX-MPDU-11454]
@@ -365,10 +369,6 @@ vht_capab=
 {%- endif -%}
 
 {%- if cap_vht_max_mpdu_exp -%}
-[MAX-A-MPDU-LEN-EXP{{ cap_vht_max_mpdu_exp }}]
-{%- endif -%}
-
-{%- if cap_vht_chan_set_width -%}
 [MAX-A-MPDU-LEN-EXP{{ cap_vht_max_mpdu_exp }}]
 {%- endif -%}
 
