@@ -17,6 +17,14 @@ import os
 import re
 import sys
 
+
+def subprocess_cmd(command):
+    """ execute arbitrary command via Popen """
+    from subprocess import Popen, PIPE
+    p = Popen(command, stdout=PIPE, shell=True)
+    p.communicate()
+
+
 def read_file(path):
     """ Read a file to string """
     with open(path, 'r') as f:

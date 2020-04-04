@@ -19,12 +19,11 @@ import os
 from sys import exit
 from copy import deepcopy
 from jinja2 import FileSystemLoader, Environment
-from subprocess import Popen, PIPE
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.util import chown_file, chmod_x_file
 from vyos.defaults import directories as vyos_data_dir
+from vyos.util import chown_file, chmod_x_file, subprocess_cmd
 from vyos import ConfigError
 
 default_config_data = {
@@ -44,10 +43,6 @@ default_config_data = {
     'intf': '',
     'vrf': ''
 }
-
-def subprocess_cmd(command):
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
 
 def check_kmod():
     modules = ['option', 'usb_wwan', 'usbserial']

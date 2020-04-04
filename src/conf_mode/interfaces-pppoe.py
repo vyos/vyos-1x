@@ -19,11 +19,10 @@ import os
 from sys import exit
 from copy import deepcopy
 from jinja2 import Template
-from subprocess import Popen, PIPE
 
 from vyos.config import Config
 from vyos.ifconfig import Interface
-from vyos.util import chown_file, chmod_x_file
+from vyos.util import chown_file, chmod_x_file, subprocess_cmd
 from vyos import ConfigError
 from netifaces import interfaces
 
@@ -188,10 +187,6 @@ default_config_data = {
     'source_interface': '',
     'vrf': ''
 }
-
-def subprocess_cmd(command):
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
 
 def get_config():
     pppoe = deepcopy(default_config_data)
