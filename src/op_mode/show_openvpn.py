@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 import jinja2
 import argparse
 
@@ -62,6 +63,9 @@ def get_status(mode, interface):
         'date': '',
         'clients': [],
     }
+
+    if not os.path.exists(status_file):
+        return data
 
     with open(status_file, 'r') as f:
         lines = f.readlines()
