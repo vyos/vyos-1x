@@ -218,6 +218,8 @@ def apply(vrf_config):
     for vrf in vrf_config['vrf_remove']:
         name = vrf['name']
         if os.path.isdir(f'/sys/class/net/{name}'):
+            _cmd(f'sudo ip -4 route del vrf {name} unreachable default metric 4278198272')
+            _cmd(f'sudo ip -6 route del vrf {name} unreachable default metric 4278198272')
             _cmd(f'ip link delete dev {name}')
 
     for vrf in vrf_config['vrf_add']:
