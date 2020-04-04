@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="igmp">
+            <properties>
+              <help>IGMP clear commands</help>
+            </properties>
+            <children>
+              <leafNode name="interfaces">
+                <properties>
+                  <help>Reset IGMP interfaces</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "clear ip igmp interfaces"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
