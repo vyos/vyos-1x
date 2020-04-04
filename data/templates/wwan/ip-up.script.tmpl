@@ -12,7 +12,19 @@ fi
 device=`echo "$ipparam"|awk '{ print $1 }'`
 metric=`echo "$ipparam"|awk '{ print $2 }'`
 
-vtysh -c "conf t" -c "ip route 0.0.0.0/0 ${device} ${metric}"
+# Determine if we are enslaved to a VRF, this is needed to properly insert
+# the backup default route
+if [ -d /sys/class/net/${device}/upper_* ]; then
+    # Determine upper (VRF) interface
+    VRF=$(basename $(ls -d /sys/class/net/wlm0/upper_*))
+    # Remove upper_ prefix from result string
+    VRF=${VRF#"upper_"}
+    # Configure VRF default route
+    vtysh -c "conf t" -c "vrf $VRF" -c "ip route 0.0.0.0/0 ${device} ${metric}"
+else
+    # No VRF, use default routing table
+    vtysh -c "conf t" -c "ip route 0.0.0.0/0 ${device} ${metric}"
+fi
 
 DIALER_PID=$(cat /var/run/${device}.pid)
 logger -t pppd[$DIALER_PID] "added default route via $device metric $metric"
