@@ -1,30 +1,26 @@
 #!/bin/sh
 
 tty=$2
-ipparam=$6
 
 # Only applicable for Wireless Modems (WWAN)
 if [ -z "$(echo $tty |  egrep "tty(USB|ACM)")" ]; then
     exit 0
 fi
 
-# device name and metric are received using ipparam
-device=`echo "$ipparam"|awk '{ print $1 }'`
-metric=`echo "$ipparam"|awk '{ print $2 }'`
-
 # Determine if we are enslaved to a VRF, this is needed to properly insert
-# the backup default route
-if [ -d /sys/class/net/${device}/upper_* ]; then
+# the default route
+VRF_NAME=""
+if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
     # Determine upper (VRF) interface
     VRF=$(basename $(ls -d /sys/class/net/wlm0/upper_*))
     # Remove upper_ prefix from result string
     VRF=${VRF#"upper_"}
-    # Configure VRF default route
-    vtysh -c "conf t" -c "vrf $VRF" -c "ip route 0.0.0.0/0 ${device} ${metric}"
-else
-    # No VRF, use default routing table
-    vtysh -c "conf t" -c "ip route 0.0.0.0/0 ${device} ${metric}"
+    # Populate variable to run in VR context
+    VRF_NAME=" -c vrf ${VRF_NAME} "
 fi
 
-DIALER_PID=$(cat /var/run/${device}.pid)
-logger -t pppd[$DIALER_PID] "added default route via $device metric $metric"
+# Apply default route to either default or VRF routing table
+vtysh -c "conf t" ${VRF_NAME} -c "ip route 0.0.0.0/0 {{ intf }} {{ metric }}"
+
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "added default route via {{ intf }} metric {{ metric }}"
