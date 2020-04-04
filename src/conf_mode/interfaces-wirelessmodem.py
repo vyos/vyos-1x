@@ -70,7 +70,7 @@ CONNECT ''
 
 """
 
-config_wwan_ip_up_tmpl = """#!/bin/sh
+script_wwan_ippreup_tmpl = """#!/bin/sh
 # As WWAN is an "on demand" interface we need to re-configure it when it
 # becomes 'up'
 
@@ -207,11 +207,11 @@ def verify(wwan):
 
 def generate(wwan):
     intf = wwan['intf']
-    config_file_wwan = f'/etc/ppp/peers/{intf}'
-    config_file_wwan_chat = wwan['chat_script']
-    ip_up_script_file = f'/etc/ppp/ip-up.d/9991-vyos-vrf-{intf}'
+    config_wwan = f'/etc/ppp/peers/{intf}'
+    config_wwan_chat = wwan['chat_script']
+    script_wwan_pre_up = f'/etc/ppp/ip-pre-up.d/1010-vyos-vrf-{intf}'
 
-    config_files = [config_file_wwan, config_file_wwan_chat, ip_up_script_file]
+    config_files = [config_wwan, config_wwan_chat, script_wwan_pre_up]
 
     # Ensure directories for config files exist - otherwise create them on demand
     for file in config_files:
@@ -233,23 +233,23 @@ def generate(wwan):
         # Create PPP configuration files
         tmpl = Template(config_wwan_tmpl)
         config_text = tmpl.render(wwan)
-        with open(config_file_wwan, 'w') as f:
+        with open(config_wwan, 'w') as f:
             f.write(config_text)
 
         # Create PPP chat script
         tmpl = Template(chat_wwan_tmpl)
         config_text = tmpl.render(wwan)
-        with open(wwan['chat_script'], 'w') as f:
+        with open(config_wwan_chat, 'w') as f:
             f.write(config_text)
 
         # Create ip-pre-up script
-        tmpl = Template(config_wwan_ip_up_tmpl)
+        tmpl = Template(script_wwan_ippreup_tmpl)
         config_text = tmpl.render(wwan)
-        with open(ip_up_script_file, 'w') as f:
+        with open(script_wwan_pre_up, 'w') as f:
             f.write(config_text)
 
         # make generated script file executable
-        chmod_x_file(ip_up_script_file)
+        chmod_x_file(script_wwan_pre_up)
 
     return None
 
