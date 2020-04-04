@@ -150,7 +150,7 @@ if __name__ == '__main__':
         if args.listkdir:
             list_key_dirs()
         if args.showinterface:
-            intf = WireGuardIf(args.showinterface, debug=False)
+            intf = WireGuardIf(args.showinterface, create=False, debug=False)
             intf.op_show_interface()
         if args.delkdir:
             if args.location:

@@ -39,6 +39,8 @@ class Interface(DHCP):
     required = []
     default = {
         'type': '',
+        'debug': True,
+        'create': True,
     }
     definition = {
         'section': '',
@@ -174,15 +176,26 @@ class Interface(DHCP):
         super().__init__(ifname, **kargs)
 
         if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
+            # Any instance of Interface, such as Interface('eth0')
+            # can be used safely to access the generic function in this class
+            # as 'type' is unset, the class can not be created
             if not self.config['type']:
                 raise Exception('interface "{}" not found'.format(self.config['ifname']))
 
-            for k in self.required:
-                if k not in kargs:
-                    name = self.default['type']
-                    raise ConfigError(f'missing required option {k} for {name} {ifname} creation')
+            # Should an Instance of a child class (EthernetIf, DummyIf, ..)
+            # be required, then create should be set to False to not accidentally create it.
+            # In case a subclass does not define it, we use get to set the default to True
+            if self.config.get('create',True):
+                for k in self.required:
+                    if k not in kargs:
+                        name = self.default['type']
+                        raise ConfigError(f'missing required option {k} for {name} {ifname} creation')
 
-            self._create()
+                self._create()
+            # If we can not connect to the interface then let the caller know
+            # as the class could not be correctly initialised
+            else:
+                raise Exception('interface "{}" not found'.format(self.config['ifname']))
 
         # list of assigned IP addresses
         self._addr = []
