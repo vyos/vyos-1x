@@ -797,7 +797,7 @@ default_config_data = {
     'cap_vht_beamform' : '',
     'cap_vht_center_freq_1' : '',
     'cap_vht_center_freq_2' : '',
-    'cap_vht_chan_set_width' : '0',
+    'cap_vht_chan_set_width' : '',
     'cap_vht_ldpc' : False,
     'cap_vht_link_adaptation' : False,
     'cap_vht_max_mpdu_exp' : '',
