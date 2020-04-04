@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# As PPPoE is an "on demand" interface we need to re-configure it when it
+# becomes up
+
+if [ "$6" != "{{ intf }}" ]; then
+    exit
+fi
+
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+
+# Debian PPP version has no support for replacing an existing default route
+# thus we emulate this ba an ip-up script https://phabricator.vyos.net/T2220.
+vtysh -c "conf t" -c "no ip route 0.0.0.0/0 {{ intf }}"

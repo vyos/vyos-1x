@@ -11,7 +11,7 @@ fi
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
-logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} via $2"
+logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} via {{ source_interface }}"
 
 # Configure interface-specific Host/Router behaviour.
 # Note: It is recommended to have the same setting on all interfaces; mixed

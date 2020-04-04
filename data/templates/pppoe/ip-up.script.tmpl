@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# As PPPoE is an "on demand" interface we need to re-configure it when it
+# becomes up
+if [ "$6" != "{{ intf }}" ]; then
+    exit
+fi
+
+# add some info to syslog
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+logger -t pppd[$DIALER_PID] "executing $0"
+
+# Debian PPP version has no support for replacing an existing default route
+# thus we emulate this ba an ip-up script https://phabricator.vyos.net/T2220.
+
+{% if 'auto' in default_route -%}
+
+# only insert a new default route if there is no default route configured
+routes=$(vtysh -c "show running-config" | sed -n "/ip route/,/!/p" | grep 0.0.0.0/0 | wc -l)
+if [ "$routes" -eq 0 ]; then
+    # No VRF, use default routing table
+    vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }}"
+fi
+
+{% elif 'force' in default_route -%}
+
+# Retrieve current static default routes and remove it from the routing table
+vtysh -c "show running-config" | sed -n "/ip route/,/!/p" | grep 0.0.0.0/0 | while read route ; do
+    vtysh -c "conf t" -c "no ${route}"
+done
+# No VRF, use default routing table
+vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }}"
+{% endif %}

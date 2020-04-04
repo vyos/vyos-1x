@@ -168,9 +168,12 @@ def generate(pppoe):
     intf = pppoe['intf']
     config_pppoe = f'/etc/ppp/peers/{intf}'
     script_pppoe_pre_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{intf}'
-    script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-autoconf-{intf}'
+    script_pppoe_ip_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{intf}'
+    script_pppoe_ip_down = f'/etc/ppp/ip-down.d/1000-vyos-pppoe-{intf}'
+    script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{intf}'
 
-    config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ipv6_up]
+    config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
+                    script_pppoe_ip_down, script_pppoe_ipv6_up]
 
     # Ensure directories for config files exist - otherwise create them on demand
     for file in config_files:
@@ -201,6 +204,18 @@ def generate(pppoe):
         with open(script_pppoe_pre_up, 'w') as f:
             f.write(config_text)
 
+        # Create script for ip-up.d
+        tmpl = env.get_template('ip-up.script.tmpl')
+        config_text = tmpl.render(pppoe)
+        with open(script_pppoe_ip_up, 'w') as f:
+            f.write(config_text)
+
+        # Create script for ip-down.d
+        tmpl = env.get_template('ip-down.script.tmpl')
+        config_text = tmpl.render(pppoe)
+        with open(script_pppoe_ip_down, 'w') as f:
+            f.write(config_text)
+
         # Create script for ipv6-up.d
         tmpl = env.get_template('ipv6-up.script.tmpl')
         config_text = tmpl.render(pppoe)
@@ -209,6 +224,8 @@ def generate(pppoe):
 
         # make generated script file executable
         chmod_x_file(script_pppoe_pre_up)
+        chmod_x_file(script_pppoe_ip_up)
+        chmod_x_file(script_pppoe_ip_down)
         chmod_x_file(script_pppoe_ipv6_up)
 
     return None
