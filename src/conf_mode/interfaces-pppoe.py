@@ -167,7 +167,7 @@ def generate(pppoe):
     # rendered into
     intf = pppoe['intf']
     config_pppoe = f'/etc/ppp/peers/{intf}'
-    script_pppoe_pre_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{intf}'
+    script_pppoe_pre_up = f'/etc/ppp/ip-pre-up.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ip_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ip_down = f'/etc/ppp/ip-down.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{intf}'
