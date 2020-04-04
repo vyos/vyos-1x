@@ -74,13 +74,11 @@ class PPPoEInterfaceTest(unittest.TestCase):
             cur_mtu = get_config_value(interface, 'mtu')[1]
             cur_user = get_config_value(interface, 'user')[1].replace('"', '')
             cur_password = get_config_value(interface, 'password')[1].replace('"', '')
-            cur_default_route = get_config_value(interface, 'defaultroute')[0]
             cur_ifname = get_config_value(interface, 'ifname')[1]
 
             self.assertTrue(cur_mtu == '1400')
             self.assertTrue(cur_user == user)
             self.assertTrue(cur_password == password)
-            self.assertTrue(cur_default_route == 'defaultroute')
             self.assertTrue(cur_ifname == interface)
 
             # Check if ppp process is running in the interface in question
