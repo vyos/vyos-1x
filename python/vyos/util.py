@@ -16,6 +16,44 @@
 import os
 import re
 import sys
+from subprocess import Popen, PIPE, STDOUT
+
+
+# debugging
+
+
+def debug(flag):
+    return flag if os.path.isfile(f'/tmp/vyos.{flag}.debug') else ''
+
+
+def debug_msg(message, section=''):
+    if section:
+        print(f'DEBUG/{section:<6} {message}')
+
+
+#  commands
+
+
+def popen(command, section=''):
+    p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
+    tmp = p.communicate()[0].strip()
+    debug_msg(f"cmd '{command}'", section)
+    decoded = tmp.decode()
+    if decoded:
+        debug_msg(f"returned:\n{decoded}", section)
+    return decoded, p.returncode
+
+
+def cmd(command, section=''):
+    decoded, code = popen(command, section)
+    if code != 0:
+        # error code can be recovered with .errno
+        raise OSError(code, f'{command}\nreturned: {decoded}')
+    return decoded
+
+
+# file manipulation
+
 
 
 def subprocess_cmd(command):

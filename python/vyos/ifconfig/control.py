@@ -15,8 +15,9 @@
 
 
 import os
-from subprocess import Popen, PIPE, STDOUT
 
+from vyos.util import debug, debug_msg
+from vyos.util import popen, cmd
 from vyos.ifconfig.register import Register
 
 
@@ -32,27 +33,18 @@ class Control(Register):
         # to prevent this, debugging can be explicitely disabled
 
         # if debug is not explicitely disabled the the config, enable it
-        self.debug = kargs.get('debug', True)
+        self.debug = ''
+        if kargs.get('debug', True):
+            self.debug = debug('ifconfig')
 
-    def _debug_msg(self, msg):
-        if os.path.isfile('/tmp/vyos.ifconfig.debug') and self.debug:
-            print('DEBUG/{:<6} {}'.format(self.config['ifname'], msg))
+    def _debug_msg (self, message):
+        return debug_msg(message, self.debug)
 
     def _popen(self, command):
-        p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-        tmp = p.communicate()[0].strip()
-        self._debug_msg(f"cmd '{command}'")
-        decoded = tmp.decode()
-        if decoded:
-            self._debug_msg(f"returned:\n{decoded}")
-        return decoded, p.returncode
+        return popen(command, self.debug)
 
     def _cmd(self, command):
-        decoded, code = self._popen(command)
-        if code != 0:
-            # error code can be recovered with .errno
-            raise OSError(code, f'{command}\nreturned: {decoded}')
-        return decoded
+        return cmd(command, self.debug)
 
     def _get_command(self, config, name):
         """
@@ -78,6 +70,10 @@ class Control(Register):
         convert = self._command_set[name].get('convert', None)
         if convert:
             value = convert(value)
+
+        possible = self._command_set[name].get('possible', None)
+        if possible and not possible(config['ifname'], value):
+            return False
 
         config = {**config, **{'value': value}}
 

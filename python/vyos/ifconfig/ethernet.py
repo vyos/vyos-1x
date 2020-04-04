@@ -18,7 +18,7 @@ import re
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
-
+from vyos.util import popen
 from vyos.validate import *
 
 
@@ -43,27 +43,36 @@ class EthernetIf(Interface):
         }
     }
 
+    @staticmethod
+    def feature(ifname, option, value):
+        out, code = popen(f'/sbin/ethtool -K {ifname} {option} {value}','ifconfig')
+        return False
 
     _command_set = {**Interface._command_set, **{
         'gro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
-            'shellcmd': '/sbin/ethtool -K {ifname} gro {value}',
+            'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
+            # 'shellcmd': '/sbin/ethtool -K {ifname} gro {value}',
         },
         'gso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
-            'shellcmd': '/sbin/ethtool -K {ifname} gso {value}',
+            'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
+            # 'shellcmd': '/sbin/ethtool -K {ifname} gso {value}',
         },
         'sg': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
-            'shellcmd': '/sbin/ethtool -K {ifname} sg {value}',
+            'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
+            # 'shellcmd': '/sbin/ethtool -K {ifname} sg {value}',
         },
         'tso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
-            'shellcmd': '/sbin/ethtool -K {ifname} tso {value}',
+            'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
+            # 'shellcmd': '/sbin/ethtool -K {ifname} tso {value}',
         },
         'ufo': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
-            'shellcmd': '/sbin/ethtool -K {ifname} ufo {value}',
+            'possible': lambda i, v: EthernetIf.feature(i, 'ufo', v),
+            # 'shellcmd': '/sbin/ethtool -K {ifname} ufo {value}',
         },
     }}
 
@@ -245,8 +254,4 @@ class EthernetIf(Interface):
         >>> i = EthernetIf('eth0')
         >>> i.set_udp_offload('on')
         """
-        if state not in ['on', 'off']:
-            raise ValueError('state must be "on" or "off"')
-
-        cmd = '/sbin/ethtool -K {} ufo {}'.format(self.config['ifname'], state)
-        return self._cmd(cmd)
+        return self.set_interface('ufo', state)
