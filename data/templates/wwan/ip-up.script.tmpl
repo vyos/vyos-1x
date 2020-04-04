@@ -7,6 +7,8 @@ if [ -z "$(echo $tty |  egrep "tty(USB|ACM)")" ]; then
     exit 0
 fi
 
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+
 # Determine if we are enslaved to a VRF, this is needed to properly insert
 # the default route
 VRF_NAME=""
@@ -15,12 +17,9 @@ if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
     VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
     # Remove upper_ prefix from result string
     VRF=${VRF#"upper_"}
-    # Populate variable to run in VR context
-    VRF_NAME=" -c vrf ${VRF_NAME} "
+    VRF_NAME="vrf ${VRF}"
 fi
 
 # Apply default route to either default or VRF routing table
-vtysh -c "conf t" ${VRF_NAME} -c "ip route 0.0.0.0/0 {{ intf }} {{ metric }}"
-
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
-logger -t pppd[$DIALER_PID] "added default route via {{ intf }} metric {{ metric }}"
+vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME} {{ metric }}"
+logger -t pppd[$DIALER_PID] "added default route via {{ intf }} metric {{ metric }} ${VRF_NAME}"
