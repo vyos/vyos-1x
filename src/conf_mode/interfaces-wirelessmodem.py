@@ -143,8 +143,11 @@ def generate(wwan):
     config_wwan = f'/etc/ppp/peers/{intf}'
     config_wwan_chat = wwan['chat_script']
     script_wwan_pre_up = f'/etc/ppp/ip-pre-up.d/1010-vyos-wwan-{intf}'
+    script_wwan_ip_up = f'/etc/ppp/ip-up.d/1010-vyos-wwan-{intf}'
+    script_wwan_ip_down = f'/etc/ppp/ip-down.d/1010-vyos-wwan-{intf}'
 
-    config_files = [config_wwan, config_wwan_chat, script_wwan_pre_up]
+    config_files = [config_wwan, config_wwan_chat, script_wwan_pre_up,
+                    script_wwan_ip_up, script_wwan_ip_down]
 
     # Ensure directories for config files exist - otherwise create them on demand
     for file in config_files:
@@ -181,8 +184,22 @@ def generate(wwan):
         with open(script_wwan_pre_up, 'w') as f:
             f.write(config_text)
 
+        # Create script for ip-up.d
+        tmpl = env.get_template('ip-up.script.tmpl')
+        config_text = tmpl.render(wwan)
+        with open(script_wwan_ip_up, 'w') as f:
+            f.write(config_text)
+
+        # Create script for ip-down.d
+        tmpl = env.get_template('ip-down.script.tmpl')
+        config_text = tmpl.render(wwan)
+        with open(script_wwan_ip_down, 'w') as f:
+            f.write(config_text)
+
         # make generated script file executable
         chmod_x_file(script_wwan_pre_up)
+        chmod_x_file(script_wwan_ip_up)
+        chmod_x_file(script_wwan_ip_down)
 
     return None
 

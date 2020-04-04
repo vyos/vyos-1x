@@ -1,0 +1,18 @@
+#!/bin/sh
+
+tty=$2
+ipparam=$6
+
+# Only applicable for Wireless Modems (WWAN)
+if [ -z "$(echo $tty |  egrep "tty(USB|ACM)")" ]; then
+    exit 0
+fi
+
+# device name and metric are received using ipparam
+device=`echo "$ipparam"|awk '{ print $1 }'`
+metric=`echo "$ipparam"|awk '{ print $2 }'`
+
+vtysh -c "conf t" -c "ip route 0.0.0.0/0 ${device} ${metric}"
+
+DIALER_PID=$(cat /var/run/${device}.pid)
+logger -t pppd[$DIALER_PID] "added default route via $device metric $metric"
