@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import Interface
-from vyos.util import chown_file, chmod_x_file, subprocess_cmd
+from vyos.util import chown_file, chmod_x, subprocess_cmd
 from vyos import ConfigError
 
 default_config_data = {
@@ -223,10 +223,10 @@ def generate(pppoe):
             f.write(config_text)
 
         # make generated script file executable
-        chmod_x_file(script_pppoe_pre_up)
-        chmod_x_file(script_pppoe_ip_up)
-        chmod_x_file(script_pppoe_ip_down)
-        chmod_x_file(script_pppoe_ipv6_up)
+        chmod_x(script_pppoe_pre_up)
+        chmod_x(script_pppoe_ip_up)
+        chmod_x(script_pppoe_ip_down)
+        chmod_x(script_pppoe_ipv6_up)
 
     return None
 

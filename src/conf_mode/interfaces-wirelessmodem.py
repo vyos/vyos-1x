@@ -23,7 +23,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import chown_file, chmod_x_file, subprocess_cmd
+from vyos.util import chown_file, chmod_x, subprocess_cmd
 from vyos import ConfigError
 
 default_config_data = {
@@ -197,9 +197,9 @@ def generate(wwan):
             f.write(config_text)
 
         # make generated script file executable
-        chmod_x_file(script_wwan_pre_up)
-        chmod_x_file(script_wwan_ip_up)
-        chmod_x_file(script_wwan_ip_down)
+        chmod_x(script_wwan_pre_up)
+        chmod_x(script_wwan_ip_up)
+        chmod_x(script_wwan_ip_down)
 
     return None
 

@@ -81,11 +81,11 @@ def chown_file(path, user, group):
         os.chown(path, uid, gid)
 
 
-def chmod_x_file(path):
+def chmod_x(path):
     """ make file executable """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 
-    if os.path.isfile(path):
+    if os.path.exists(path):
         bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
                   S_IROTH | S_IXOTH
         os.chmod(path, bitmask)
