@@ -16,6 +16,33 @@
               </completionHelp>
             </properties>
             <children>
+              <tagNode name="join">
+                <properties>
+                  <help>IGMP join multicast group</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Multicast group address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="source">
+                    <properties>
+                      <help>Source address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Source address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
               <leafNode name="version">
                 <properties>
                   <help>IGMP version</help>
