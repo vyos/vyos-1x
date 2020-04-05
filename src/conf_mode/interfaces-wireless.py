@@ -23,6 +23,7 @@ from jinja2 import FileSystemLoader, Environment
 
 from subprocess import Popen, PIPE
 from netifaces import interfaces
+from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
