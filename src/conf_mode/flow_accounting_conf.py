@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,17 +13,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-import sys
+import os
 import re
-import ipaddress
 import subprocess
 
-from vyos.config import Config
-from vyos import ConfigError
+from ipaddress import ip_address
+from jinja2 import FileSystemLoader, Environment
+from sys import exit
+
 from vyos.ifconfig import Interface
-from jinja2 import Template
+from vyos.config import Config
+from vyos.defaults import directories as vyos_data_dir
+from vyos import ConfigError
 
 # default values
 default_sflow_server_port = 6343
@@ -35,78 +37,6 @@ default_sflow_agentip = 'auto'
 uacctd_conf_path = '/etc/pmacct/uacctd.conf'
 iptables_nflog_table = 'raw'
 iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
-
-# pmacct config template
-uacct_conf_jinja = '''# Genereated from VyOS configuration
-daemonize: true
-promisc: false
-pidfile: /var/run/uacctd.pid
-uacctd_group: 2
-uacctd_nl_size: 2097152
-snaplen: {{ snaplen }}
-aggregate: in_iface,src_mac,dst_mac,vlan,src_host,dst_host,src_port,dst_port,proto,tos,flows
-plugin_pipe_size: {{ templatecfg['plugin_pipe_size'] }}
-plugin_buffer_size: {{ templatecfg['plugin_buffer_size'] }}
-{%- if templatecfg['syslog-facility'] != none %}
-syslog: {{ templatecfg['syslog-facility'] }}
-{%- endif %}
-{%- if templatecfg['disable-imt'] == none %}
-imt_path: /tmp/uacctd.pipe
-imt_mem_pools_number: 169
-{%- endif %}
-plugins:
-{%- if templatecfg['netflow']['servers'] != none -%}
-    {% for server in templatecfg['netflow']['servers'] %}
-        {%- if loop.last -%}nfprobe[nf_{{ server['address'] }}]{%- else %}nfprobe[nf_{{ server['address'] }}],{%- endif %}
-    {%- endfor -%}
-    {% set plugins_presented = true %}
-{%- endif %}
-{%- if templatecfg['sflow']['servers'] != none -%}
-    {% if plugins_presented -%}
-        {%- for server in templatecfg['sflow']['servers'] -%}
-            ,sfprobe[sf_{{ server['address'] }}]
-        {%- endfor %}
-    {%- else %}
-        {%- for server in templatecfg['sflow']['servers'] %}
-            {%- if loop.last -%}sfprobe[sf_{{ server['address'] }}]{%- else %}sfprobe[sf_{{ server['address'] }}],{%- endif %}
-        {%- endfor %}
-    {%- endif -%}
-    {% set plugins_presented = true %}
-{%- endif %}
-{%- if templatecfg['disable-imt'] == none %}
-    {%- if plugins_presented -%},memory{%- else %}memory{%- endif %}
-{%- endif %}
-{%- if templatecfg['netflow']['servers'] != none %}
-{%- for server in templatecfg['netflow']['servers'] %}
-nfprobe_receiver[nf_{{ server['address'] }}]: {{ server['address'] }}:{{ server['port'] }}
-nfprobe_version[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['version'] }}
-{%- if templatecfg['netflow']['engine-id'] != none %}
-nfprobe_engine[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['engine-id'] }}
-{%- endif %}
-{%- if templatecfg['netflow']['max-flows'] != none %}
-nfprobe_maxflows[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['max-flows'] }}
-{%- endif %}
-{%- if templatecfg['netflow']['sampling-rate'] != none %}
-sampling_rate[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['sampling-rate'] }}
-{%- endif %}
-{%- if templatecfg['netflow']['source-ip'] != none %}
-nfprobe_source_ip[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['source-ip'] }}
-{%- endif %}
-{%- if templatecfg['netflow']['timeout_string'] != '' %}
-nfprobe_timeouts[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['timeout_string'] }}
-{%- endif %}
-{%- endfor %}
-{%- endif %}
-{%- if templatecfg['sflow']['servers'] != none %}
-{%- for server in templatecfg['sflow']['servers'] %}
-sfprobe_receiver[sf_{{ server['address'] }}]: {{ server['address'] }}:{{ server['port'] }}
-sfprobe_agentip[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['agent-address'] }}
-{%- if templatecfg['sflow']['sampling-rate'] != none %}
-sampling_rate[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['sampling-rate'] }}
-{%- endif %}
-{%- endfor %}
-{% endif %}
-'''
 
 # helper functions
 # check if node exists and return True if this is true
@@ -154,7 +84,7 @@ def _iptables_get_nflog():
         stdout, stderr = process.communicate()
         if not process.returncode == 0:
             print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode, stderr))
-            sys.exit(1)
+            exit(1)
         iptables_out = stdout.splitlines()
 
         # parse each line and add information to list
@@ -179,7 +109,7 @@ def _iptables_config(configured_ifaces):
 
     # get currently configured interfaces with iptables rules
     active_nflog_rules = _iptables_get_nflog()
-    
+
     # compare current active list with configured one and delete excessive interfaces, add missed
     active_nflog_ifaces = []
     for rule in active_nflog_rules:
@@ -314,15 +244,15 @@ def verify(config):
         sflow_collector_ipver = None
         for sflow_collector in config['sflow']['servers']:
             if sflow_collector_ipver:
-                if sflow_collector_ipver != ipaddress.ip_address(sflow_collector['address']).version:
+                if sflow_collector_ipver != ip_address(sflow_collector['address']).version:
                     raise ConfigError("All sFlow servers must use the same IP protocol")
             else:
-                sflow_collector_ipver = ipaddress.ip_address(sflow_collector['address']).version
+                sflow_collector_ipver = ip_address(sflow_collector['address']).version
 
 
         # check agent-id for sFlow: we should avoid mixing IPv4 agent-id with IPv6 collectors and vice-versa
         for sflow_collector in config['sflow']['servers']:
-            if ipaddress.ip_address(sflow_collector['address']).version != ipaddress.ip_address(config['sflow']['agent-address']).version:
+            if ip_address(sflow_collector['address']).version != ip_address(config['sflow']['agent-address']).version:
                 raise ConfigError("Different IP address versions cannot be mixed in \"sflow agent-address\" and \"sflow server\". You need to set manually the same IP version for \"agent-address\" as for all sFlow servers")
 
         # check if configured sFlow agent-id exist in the system
@@ -378,7 +308,7 @@ def generate(config):
     # skip all checks if flow-accounting was removed
     if not config['flow-accounting-configured']:
         return True
-    
+
     # Calculate all necessary values
     if config['buffer-size']:
         # circular queue size
@@ -399,13 +329,16 @@ def generate(config):
                 timeout_string = "{}:{}={}".format(timeout_string, timeout_type, timeout_value)
     config['netflow']['timeout_string'] = timeout_string
 
-    # Generate daemon configs
-    uacct_conf_template = Template(uacct_conf_jinja)
-    uacct_conf_file_data = uacct_conf_template.render(templatecfg = config, snaplen = default_captured_packet_size)
+    # Prepare Jinja2 template loader from files
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'netflow')
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader)
 
-    # save generated config to uacctd.conf
+    # Generate daemon configs
+    tmpl = env.get_template('uacctd.conf.tmpl')
+    config_text = tmpl.render(templatecfg = config, snaplen = default_captured_packet_size)
     with open(uacctd_conf_path, 'w') as file:
-        file.write(uacct_conf_file_data)
+        file.write(config_text)
 
 
 def apply(config):
@@ -436,4 +369,4 @@ if __name__ == '__main__':
         apply(config)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
