@@ -603,7 +603,7 @@ def generate(dhcp):
         return None
 
     # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'dhcp')
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'dhcp-server')
     fs_loader = FileSystemLoader(tmpl_path)
     env = Environment(loader=fs_loader)
 
