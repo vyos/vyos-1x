@@ -17,10 +17,9 @@
 import sys
 import os
 
-from subprocess import Popen, PIPE
 from time import sleep
 from netifaces import interfaces
-from vyos.util import process_running
+from vyos.util import process_running, cmd
 
 def get_config_name(intf):
     cfg_file = r'/opt/vyatta/etc/openvpn/openvpn-{}.conf'.format(intf)
@@ -30,9 +29,6 @@ def get_pid_file(intf):
     pid_file = r'/var/run/openvpn/{}.pid'.format(intf)
     return pid_file
 
-def subprocess_cmd(command):
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
 
 if __name__ == '__main__':
     if (len(sys.argv) < 1):
@@ -43,12 +39,12 @@ if __name__ == '__main__':
     if os.path.isfile(get_config_name(interface)):
         pidfile = '/var/run/openvpn/{}.pid'.format(interface)
         if process_running(pidfile):
-            cmd = 'start-stop-daemon'
-            cmd += ' --stop'
-            cmd += ' --oknodo'
-            cmd += ' --quiet'
-            cmd += ' --pidfile ' + pidfile
-            subprocess_cmd(cmd)
+            command = 'start-stop-daemon'
+            command += ' --stop'
+            command += ' --oknodo'
+            command += ' --quiet'
+            command += ' --pidfile ' + pidfile
+            cmd(command)
 
         # When stopping OpenVPN we need to wait for the 'old' interface to
         # vanish from the Kernel, if it is not gone, OpenVPN will report:
@@ -57,18 +53,18 @@ if __name__ == '__main__':
             sleep(0.250) # 250ms
 
         # re-start OpenVPN process
-        cmd = 'start-stop-daemon'
-        cmd += ' --start'
-        cmd += ' --oknodo'
-        cmd += ' --quiet'
-        cmd += ' --pidfile ' + get_pid_file(interface)
-        cmd += ' --exec /usr/sbin/openvpn'
+        command = 'start-stop-daemon'
+        command += ' --start'
+        command += ' --oknodo'
+        command += ' --quiet'
+        command += ' --pidfile ' + get_pid_file(interface)
+        command += ' --exec /usr/sbin/openvpn'
         # now pass arguments to openvpn binary
-        cmd += ' --'
-        cmd += ' --daemon openvpn-' + interface
-        cmd += ' --config ' + get_config_name(interface)
+        command += ' --'
+        command += ' --daemon openvpn-' + interface
+        command += ' --config ' + get_config_name(interface)
 
-        subprocess_cmd(cmd)
+        cmd(command)
     else:
         print("OpenVPN interface {} does not exist!".format(interface))
         sys.exit(1)
