@@ -156,8 +156,7 @@ def generate(wwan):
             os.mkdir(dirname)
 
     # Always hang-up WWAN connection prior generating new configuration file
-    cmd = f'systemctl stop ppp@{intf}.service'
-    subprocess_cmd(cmd)
+    cmd(f'systemctl stop ppp@{intf}.service')
 
     if wwan['deleted']:
         # Delete PPP configuration files
@@ -211,9 +210,7 @@ def apply(wwan):
     if not wwan['disable']:
         # "dial" WWAN connection
         intf = wwan['intf']
-        cmd = f'systemctl start ppp@{intf}.service'
-        subprocess_cmd(cmd)
-
+        cmd(f'systemctl start ppp@{intf}.service')
         # make logfile owned by root / vyattacfg
         chown_file(wwan['logfile'], 'root', 'vyattacfg')
 
