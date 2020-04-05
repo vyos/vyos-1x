@@ -24,7 +24,13 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'wireless']
-        self._interfaces = ['wlan0']
+        self._interfaces = ['wlan0', 'wlan1', 'wlan10', 'wlan11']
+        self._options = {
+            'wlan0': ['physical-device phy0'],
+            'wlan1': ['physical-device phy0'],
+            'wlan10': ['physical-device phy1'],
+            'wlan11': ['physical-device phy1'],
+        }
 
         def test_add_description(self):
             """
