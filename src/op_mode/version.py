@@ -22,7 +22,6 @@
 
 import os
 import sys
-import subprocess
 import argparse
 import json
 
@@ -30,6 +29,8 @@ import pystache
 
 import vyos.version
 import vyos.limericks
+
+from vyos.util import cmd, run
 
 
 parser = argparse.ArgumentParser()
@@ -73,15 +74,15 @@ if __name__ == '__main__':
     version_data = vyos.version.get_version_data()
 
     # Get system architecture (well, kernel architecture rather)
-    version_data['system_arch'] = subprocess.check_output('uname -m', shell=True).decode().strip()
+    version_data['system_arch'] = cmd('uname -m')
 
 
     # Get hypervisor name, if any
     system_type = "bare metal"
     try:
-        hypervisor = subprocess.check_output('hvinfo 2>/dev/null', shell=True).decode().strip()
+        hypervisor = cmd('hvinfo 2>/dev/null')
         system_type = "{0} guest".format(hypervisor)
-    except subprocess.CalledProcessError:
+    except OSError:
         # hvinfo returns 1 if it cannot detect any hypervisor
         pass
     version_data['system_type'] = system_type
@@ -93,9 +94,9 @@ if __name__ == '__main__':
     # while on livecd it's just "filesystem.squashfs", that's how we tell a livecd boot
     # from an installed image
     boot_via = "installed image"
-    if subprocess.call(""" grep -e '^overlay.*/filesystem.squashfs' /proc/mounts >/dev/null""", shell=True) == 0:
+    if run(""" grep -e '^overlay.*/filesystem.squashfs' /proc/mounts >/dev/null""") == 0:
         boot_via = "livecd"
-    elif subprocess.call(""" grep '^overlay /' /proc/mounts >/dev/null """, shell=True) != 0:
+    elif run(""" grep '^overlay /' /proc/mounts >/dev/null """) != 0:
         boot_via = "legacy non-image installation"
     version_data['boot_via'] = boot_via
     
@@ -118,7 +119,7 @@ if __name__ == '__main__':
 
         if args.all:
            print("Package versions:")
-           os.system("dpkg -l")
+           run("dpkg -l")
 
         if args.funny:
             print(vyos.limericks.get_random())
