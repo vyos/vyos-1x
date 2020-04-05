@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import subprocess
 import sys
 
 from vyos.util import ask_yes_no
+from vyos.util import cmd, DEVNULL
 
 if not ask_yes_no("This will clear all currently tracked and expected connections. Continue?"):
     sys.exit(1)
 else:
-    subprocess.check_call(['/usr/sbin/conntrack -F'], shell=True, stderr=subprocess.DEVNULL)
-    subprocess.check_call(['/usr/sbin/conntrack -F expect'], shell=True, stderr=subprocess.DEVNULL)
+    cmd('/usr/sbin/conntrack -F', stderr=DEVNULL)
+    cmd('/usr/sbin/conntrack -F expect', stderr=DEVNULL)
