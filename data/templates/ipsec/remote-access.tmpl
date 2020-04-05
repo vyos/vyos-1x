@@ -1,0 +1,28 @@
+{{delim_ipsec_l2tp_begin}}
+conn {{ra_conn_name}}
+  type=transport
+  left={{outside_addr}}
+  leftsubnet=%dynamic[/1701]
+  rightsubnet=%dynamic
+  mark_in=%unique
+  auto=add
+  ike=aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024!
+  dpddelay=15
+  dpdtimeout=45
+  dpdaction=clear
+  esp=aes256-sha1,3des-sha1!
+  rekey=no
+{% if ipsec_l2tp_auth_mode == 'pre-shared-secret' %}
+  authby=secret
+  leftauth=psk
+  rightauth=psk
+{% elif ipsec_l2tp_auth_mode == 'x509' %}
+  authby=rsasig
+  leftrsasigkey=%cert
+  rightrsasigkey=%cert
+  rightca=%same
+  leftcert={{server_cert_file_copied}}
+{% endif %}
+  ikelifetime={{ipsec_l2tp_ike_lifetime}}
+  keylife={{ipsec_l2tp_lifetime}}
+{{delim_ipsec_l2tp_end}}

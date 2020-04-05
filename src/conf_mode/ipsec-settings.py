@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,21 +13,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-import sys
 import re
 import os
-import jinja2
-import syslog as sl
-import time
 
-import vyos.config
-import vyos.defaults
+from time import sleep
+from jinja2 import FileSystemLoader, Environment
+from sys import exit
 
+from vyos.config import Config
+from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-
 
 ra_conn_name = "remote-access"
 charon_conf_file = "/etc/strongswan.d/charon.conf"
@@ -42,55 +38,8 @@ delim_ipsec_l2tp_begin = "### VyOS L2TP VPN Begin ###"
 delim_ipsec_l2tp_end = "### VyOS L2TP VPN End ###"
 charon_pidfile = "/var/run/charon.pid"
 
-l2pt_ipsec_conf = '''
-{{delim_ipsec_l2tp_begin}}
-include {{ipsec_ra_conn_file}}
-{{delim_ipsec_l2tp_end}}
-'''
-
-l2pt_ipsec_secrets_conf = '''
-{{delim_ipsec_l2tp_begin}}
-{% if ipsec_l2tp_auth_mode == 'pre-shared-secret' %}
-{{outside_addr}} %any : PSK "{{ipsec_l2tp_secret}}"
-{% elif ipsec_l2tp_auth_mode == 'x509' %}
-: RSA {{server_key_file_copied}}
-{% endif%}
-{{delim_ipsec_l2tp_end}}
-'''
-
-l2tp_ipsec_ra_conn_conf = '''
-{{delim_ipsec_l2tp_begin}}
-conn {{ra_conn_name}}
-  type=transport
-  left={{outside_addr}}
-  leftsubnet=%dynamic[/1701]
-  rightsubnet=%dynamic
-  mark_in=%unique
-  auto=add
-  ike=aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024!
-  dpddelay=15
-  dpdtimeout=45
-  dpdaction=clear
-  esp=aes256-sha1,3des-sha1!
-  rekey=no
-{% if ipsec_l2tp_auth_mode == 'pre-shared-secret' %}
-  authby=secret
-  leftauth=psk
-  rightauth=psk
-{% elif ipsec_l2tp_auth_mode == 'x509' %}
-  authby=rsasig
-  leftrsasigkey=%cert
-  rightrsasigkey=%cert
-  rightca=%same
-  leftcert={{server_cert_file_copied}}
-{% endif %}
-  ikelifetime={{ipsec_l2tp_ike_lifetime}}
-  keylife={{ipsec_l2tp_lifetime}}
-{{delim_ipsec_l2tp_end}}
-'''
-
 def get_config():
-    config = vyos.config.Config()
+    config = Config()
     data = {"install_routes": "yes"}
 
     if config.exists("vpn ipsec options disable-route-autoinstall"):
@@ -146,43 +95,11 @@ def get_config():
 
     return data
 
-### ipsec secret l2tp
-def write_ipsec_secrets(c):
-    tmpl = jinja2.Template(l2pt_ipsec_secrets_conf, trim_blocks=True)
-    l2pt_ipsec_secrets_txt = tmpl.render(c)
-    old_umask = os.umask(0o077)
-    open(ipsec_secrets_flie,'w').write(l2pt_ipsec_secrets_txt)
-    os.umask(old_umask)
-    sl.syslog(sl.LOG_NOTICE, ipsec_secrets_flie + ' written')
-
-### ipsec remote access connection config
-def write_ipsec_ra_conn(c):
-    tmpl = jinja2.Template(l2tp_ipsec_ra_conn_conf, trim_blocks=True)
-    ipsec_ra_conn_txt = tmpl.render(c)
-    old_umask = os.umask(0o077)
-
-    # Create tunnels directory if does not exist
-    if not os.path.exists(ipsec_ra_conn_dir):
-        os.makedirs(ipsec_ra_conn_dir)
-        sl.syslog(sl.LOG_NOTICE, ipsec_ra_conn_dir  + " created")
-
-    open(ipsec_ra_conn_file,'w').write(ipsec_ra_conn_txt)
-    os.umask(old_umask)
-    sl.syslog(sl.LOG_NOTICE, ipsec_ra_conn_file + ' written')
 
 ### Remove config from file by delimiter
 def remove_confs(delim_begin, delim_end, conf_file):
     os.system("sed -i '/"+delim_begin+"/,/"+delim_end+"/d' "+conf_file)
 
-
-### Append "include /path/to/ra_conn" to ipsec conf file
-def append_ipsec_conf(c):
-    tmpl = jinja2.Template(l2pt_ipsec_conf, trim_blocks=True)
-    l2pt_ipsec_conf_txt = tmpl.render(c)
-    old_umask = os.umask(0o077)
-    open(ipsec_conf_flie,'a').write(l2pt_ipsec_conf_txt)
-    os.umask(old_umask)
-    sl.syslog(sl.LOG_NOTICE, ipsec_conf_flie + ' written')
 
 ### Checking certificate storage and notice if certificate not in /config directory
 def check_cert_file_store(cert_name, file_path, dts_path):
@@ -197,8 +114,6 @@ def check_cert_file_store(cert_name, file_path, dts_path):
       ret = os.system('cp -f '+file_path+' '+dts_path)
       if ret:
          raise ConfigError("L2TP VPN configuration error: Cannot copy "+file_path)
-      else:
-        sl.syslog(sl.LOG_NOTICE, file_path + ' copied to '+dts_path)
 
 def verify(data):
     # l2tp ipsec check
@@ -231,21 +146,45 @@ def verify(data):
            raise ConfigError("L2TP VPN configuration error: \"vpn ipsec ipsec-interfaces\" must be specified.")
 
 def generate(data):
-    tmpl_path = os.path.join(vyos.defaults.directories["data"], "templates", "ipsec")
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'ipsec')
     fs_loader = jinja2.FileSystemLoader(tmpl_path)
-    env = jinja2.Environment(loader=fs_loader)
+    env = jinja2.Environment(loader=fs_loader, trim_blocks=True)
 
-
-    charon_conf_tmpl = env.get_template("charon.tmpl")
-    charon_conf = charon_conf_tmpl.render(data)
-
+    tmpl = env.get_template('charon.tmpl')
+    config_text = tmpl.render(data)
     with open(charon_conf_file, 'w') as f:
-        f.write(charon_conf)
+        f.write(config_text)
 
     if data["ipsec_l2tp"]:
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
-        write_ipsec_secrets(data)
-        write_ipsec_ra_conn(data)
+
+        tmpl = env.get_template('ipsec.secrets.tmpl')
+        l2pt_ipsec_secrets_txt = tmpl.render(c)
+        old_umask = os.umask(0o077)
+        with open(ipsec_secrets_flie,'w') as f:
+            f.write(l2pt_ipsec_secrets_txt)
+        os.umask(old_umask)
+
+        tmpl = env.get_template('remote-access.tmpl')
+        ipsec_ra_conn_txt = tmpl.render(c)
+        old_umask = os.umask(0o077)
+
+        # Create tunnels directory if does not exist
+        if not os.path.exists(ipsec_ra_conn_dir):
+            os.makedirs(ipsec_ra_conn_dir)
+
+        with open(ipsec_ra_conn_file,'w') as f:
+            f.write(ipsec_ra_conn_txt)
+        os.umask(old_umask)
+
+
+        tmpl = env.get_template('ipsec.conf.tmpl')
+        l2pt_ipsec_conf_txt = tmpl.render(c)
+        old_umask = os.umask(0o077)
+        with open(ipsec_conf_flie,'a') as f:
+            .write(l2pt_ipsec_conf_txt)
+        os.umask(old_umask)
+
         append_ipsec_conf(data)
     else:
         if os.path.exists(ipsec_ra_conn_file):
@@ -254,15 +193,15 @@ def generate(data):
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
 
 def restart_ipsec():
-    os.system("ipsec restart >&/dev/null")
+    os.system('ipsec restart >&/dev/null')
     # counter for apply swanctl config
     counter = 10
     while counter <= 10:
         if os.path.exists(charon_pidfile):
-            os.system("swanctl -q >&/dev/null")
+            os.system('swanctl -q >&/dev/null')
             break
         counter -=1
-        time.sleep(1)
+        sleep(1)
         if counter == 0:
             raise ConfigError('VPN configuration error: IPSec is not running.')
 
@@ -278,4 +217,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
