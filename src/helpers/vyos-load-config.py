@@ -30,24 +30,18 @@ import vyos.remote
 from vyos.config import Config, VyOSError
 from vyos.migrator import Migrator, VirtualMigrator, MigratorError
 
-system_config_file = 'config.boot'
-
 class LoadConfig(Config):
     """A subclass for calling 'loadFile'.
     This does not belong in config.py, and only has a single caller.
     """
-    def load_config(self, file_path):
-        cmd = [self._cli_shell_api, 'loadFile', file_path]
-        self._run(cmd)
+    def load_config(self, path):
+        return self._run(['/bin/cli-shell-api','loadFile',path])
 
-if len(sys.argv) > 1:
-    file_name = sys.argv[1]
-else:
-    file_name = system_config_file
 
+file_name = sys.argv[1] if len(sys.argv) > 1 else 'config.boot'
 configdir = vyos.defaults.directories['config']
-
 protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
+
 
 if any(x in file_name for x in protocols):
     config_file = vyos.remote.get_remote_config(file_name)
