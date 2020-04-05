@@ -21,9 +21,13 @@
           #include <include/interface-disable.xml.i>
           <leafNode name="port">
             <properties>
-              <help>Local port number to accept connections</help>
+              <help>Local port to listen for incoming connections</help>
+              <valueHelp>
+                <format>1-65535</format>
+                <description>Numeric IP port</description>
+              </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1024-65535"/>
+                <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
             </properties>
           </leafNode>
@@ -97,10 +101,28 @@
                   <multi/>
                 </properties>
               </leafNode>
-              <!--  eventually check format IP:port -->
-              <leafNode name="endpoint">
+              <leafNode name="address">
                 <properties>
-                  <help>Remote endpoint (IP:port)</help>
+                  <help>IP address of tunnel remote end</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address to listen for incoming connections</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="port">
+                <properties>
+                  <help>Port number on tunnel remote end</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Numeric IP port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="persistent-keepalive">
