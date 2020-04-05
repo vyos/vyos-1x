@@ -24,13 +24,29 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'wireless']
-        self._interfaces = ['wlan0', 'wlan1', 'wlan10', 'wlan11']
         self._options = {
-            'wlan0': ['physical-device phy0'],
-            'wlan1': ['physical-device phy0'],
-            'wlan10': ['physical-device phy1'],
-            'wlan11': ['physical-device phy1'],
+            'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
+                       'type station', 'address 192.0.2.1/30'],
+            'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1',
+                       'type access-point', 'address 192.0.2.5/30', 'channel 0'],
+            'wlan10': ['physical-device phy1', 'ssid VyOS-WIFI-2',
+                       'type station', 'address 192.0.2.9/30'],
+            'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3',
+                       'type access-point', 'address 192.0.2.13/30', 'channel 0'],
         }
+        self._interfaces = list(self._options)
+        self.session.set(['system', 'wifi-regulatory-domain', 'SE'])
+
+    def test_wifi_client(self):
+        """ test creation of a wireless station """
+        for intf in self._interfaces:
+            # prepare interfaces
+            for option in self._options.get(intf, []):
+                self.session.set(self._base_path + [intf] + option.split())
+
+            # commit changes
+            self.session.commit()
+
 
 
 if __name__ == '__main__':
