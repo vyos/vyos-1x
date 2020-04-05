@@ -18,16 +18,16 @@ import os
 
 from time import sleep
 from sys import exit
-from subprocess import check_output
 from socket import socket, AF_INET, SOCK_STREAM
 from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
+from vyos import ConfigError
 from vyos.defaults import directories as vyos_data_dir
 from vyos.util import process_running, subprocess_cmd
-from vyos import ConfigError
+from vyos.util import process_running, cmd, run
 
 pidfile = r'/var/run/accel_sstp.pid'
 sstp_cnf_dir = r'/etc/accel-ppp/sstp'
@@ -53,16 +53,9 @@ def chk_con():
                 raise("failed to start sstp server")
                 break
 
-def accel_cmd(cmd):
-    if not cmd:
-        return None
 
-    try:
-        ret = check_output(['/usr/bin/accel-cmd', '-p', '2005', cmd])
-        return ret.decode().strip()
-
-    except:
-        return 1
+def _accel_cmd(command):
+    return run(f'/usr/bin/accel-cmd -p 2005 {command}')
 
 default_config_data = {
     'local_users' : [],
@@ -363,12 +356,12 @@ def generate(sstp):
 def apply(sstp):
     if sstp is None:
         if process_running(pidfile):
-            cmd = 'start-stop-daemon'
-            cmd += ' --stop '
-            cmd += ' --quiet'
-            cmd += ' --oknodo'
-            cmd += ' --pidfile ' + pidfile
-            subprocess_cmd(cmd)
+            command = 'start-stop-daemon'
+            command += ' --stop '
+            command += ' --quiet'
+            command += ' --oknodo'
+            command += ' --pidfile ' + pidfile
+            cmd(command)
 
         if os.path.exists(pidfile):
             os.remove(pidfile)
@@ -379,23 +372,23 @@ def apply(sstp):
         if os.path.exists(pidfile):
             os.remove(pidfile)
 
-        cmd = 'start-stop-daemon'
-        cmd += ' --start '
-        cmd += ' --quiet'
-        cmd += ' --oknodo'
-        cmd += ' --pidfile ' + pidfile
-        cmd += ' --exec /usr/sbin/accel-pppd'
+        command = 'start-stop-daemon'
+        command += ' --start '
+        command += ' --quiet'
+        command += ' --oknodo'
+        command += ' --pidfile ' + pidfile
+        command += ' --exec /usr/sbin/accel-pppd'
         # now pass arguments to accel-pppd binary
-        cmd += ' --'
-        cmd += ' -c ' + sstp_conf
-        cmd += ' -p ' + pidfile
-        cmd += ' -d'
-        subprocess_cmd(cmd)
+        command += ' --'
+        command += ' -c ' + sstp_conf
+        command += ' -p ' + pidfile
+        command += ' -d'
+        cmd(command)
 
         chk_con()
 
     else:
-        accel_cmd('restart')
+        _accel_cmd('restart')
 
 
 if __name__ == '__main__':
