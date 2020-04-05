@@ -18,10 +18,11 @@
 
 import sys
 import os
-import subprocess
 import re
 import itertools
 from datetime import datetime, timedelta
+
+from vyos.util import cmd
 
 verf = r'/usr/libexec/vyos/op_mode/version.py'
 
@@ -29,7 +30,7 @@ def get_sys_build_version():
   if not os.path.exists(verf):
     return None
 
-  a = subprocess.check_output(['/usr/libexec/vyos/op_mode/version.py']).decode()
+  a = cmd('/usr/libexec/vyos/op_mode/version.py')
   if re.search('^Built on:.+',a, re.M) == None:
     return None
 
