@@ -26,7 +26,7 @@ from jinja2 import FileSystemLoader, Environment
 from vyos.config import Config
 from vyos import ConfigError
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import process_running, subprocess_cmd
+from vyos.util import process_running
 from vyos.util import process_running, cmd, run
 
 pidfile = r'/var/run/accel_sstp.pid'

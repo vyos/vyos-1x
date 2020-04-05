@@ -89,14 +89,6 @@ def cmd(command, section='', shell=None, input=None, timeout=None, env=None, uni
     return decoded
 
 
-# This is now deprecated
-def subprocess_cmd(command):
-    """ execute arbitrary command via Popen """
-    from subprocess import Popen, PIPE
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
-
-
 # file manipulation
 
 

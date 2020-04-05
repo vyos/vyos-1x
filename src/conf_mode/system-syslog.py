@@ -22,7 +22,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import subprocess_cmd
 from vyos import ConfigError
 from vyos.util import run
 
