@@ -50,7 +50,8 @@ class WireGuardInterfaceTest(unittest.TestCase):
             for addr in self._test_addr:
                 self.session.set(base_path + [intf, 'address', addr])
 
-            self.session.set(base_path + [intf, 'peer', peer, 'endpoint', '127.0.0.1:1337'])
+            self.session.set(base_path + [intf, 'peer', peer, 'address', '127.0.0.1'])
+            self.session.set(base_path + [intf, 'peer', peer, 'port', '1337'])
 
             # Allow different prefixes to traverse the tunnel
             allowed_ips = ['0.0.0.0/0']
