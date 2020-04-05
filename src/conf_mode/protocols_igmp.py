@@ -23,6 +23,7 @@ import vyos.validate
 
 from vyos import ConfigError
 from vyos.config import Config
+from ipaddress import IPv4Address
 
 config_file = r'/tmp/igmp.frr'
 
@@ -31,6 +32,15 @@ config_tmpl = """
 !
 {% for iface in old_ifaces -%}
 interface {{ iface }}
+{% for group in old_ifaces[iface].gr_join -%}
+{% if old_ifaces[iface].gr_join[group] -%}
+{% for source in old_ifaces[iface].gr_join[group] -%}
+no ip igmp join {{ group }} {{ source }}
+{% endfor -%}
+{% else -%}
+no ip igmp join {{ group }}
+{% endif -%}
+{% endfor -%}
 no ip igmp
 !
 {% endfor -%}
@@ -48,6 +58,15 @@ ip igmp query-interval {{ ifaces[iface].query_interval }}
 {% if ifaces[iface].query_max_resp_time -%}
 ip igmp query-max-response-time {{ ifaces[iface].query_max_resp_time }}
 {% endif -%}
+{% for group in ifaces[iface].gr_join -%}
+{% if ifaces[iface].gr_join[group] -%}
+{% for source in ifaces[iface].gr_join[group] -%}
+ip igmp join {{ group }} {{ source }}
+{% endfor -%}
+{% else -%}
+ip igmp join {{ group }}
+{% endif -%}
+{% endfor -%}
 !
 {% endfor -%}
 !
@@ -74,18 +93,24 @@ def get_config():
             iface : {
                 'version' : conf.return_effective_value('interface {0} version'.format(iface)),
                 'query_interval' : conf.return_effective_value('interface {0} query-interval'.format(iface)),
-                'query_max_resp_time' : conf.return_effective_value('interface {0} query-max-response-time'.format(iface))
+                'query_max_resp_time' : conf.return_effective_value('interface {0} query-max-response-time'.format(iface)),
+                'gr_join' : {}
             }
         })
+        for gr_join in conf.list_effective_nodes('interface {0} join'.format(iface)):
+            igmp_conf['old_ifaces'][iface]['gr_join'][gr_join] = conf.return_effective_values('interface {0} join {1} source'.format(iface, gr_join))
 
     for iface in conf.list_nodes('interface'):
         igmp_conf['ifaces'].update({
             iface : {
                 'version' : conf.return_value('interface {0} version'.format(iface)),
                 'query_interval' : conf.return_value('interface {0} query-interval'.format(iface)),
-                'query_max_resp_time' : conf.return_value('interface {0} query-max-response-time'.format(iface))
+                'query_max_resp_time' : conf.return_value('interface {0} query-max-response-time'.format(iface)),
+                'gr_join' : {}
             }
         })
+        for gr_join in conf.list_nodes('interface {0} join'.format(iface)):
+            igmp_conf['ifaces'][iface]['gr_join'][gr_join] = conf.return_values('interface {0} join {1} source'.format(iface, gr_join))
 
     return igmp_conf
 
@@ -97,6 +122,11 @@ def verify(igmp):
         # Check interfaces
         if not igmp['ifaces']:
             raise ConfigError(f"IGMP require defined interfaces!")
+        # Check, is this multicast group
+        for intfc in igmp['ifaces']:
+            for gr_addr in igmp['ifaces'][intfc]['gr_join']:
+                if IPv4Address(gr_addr) < IPv4Address('224.0.0.0'):
+                    raise ConfigError(gr_addr + " not a multicast group")
 
 def generate(igmp):
     if igmp is None:

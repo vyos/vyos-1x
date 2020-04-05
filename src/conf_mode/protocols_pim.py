@@ -45,10 +45,13 @@ no ip pim
 {% endfor -%}
 {% for iface in pim.ifaces -%}
 interface {{ iface }}
+ip pim
+{% if pim.ifaces[iface].dr_prio -%}
+ip pim drpriority {{ pim.ifaces[iface].dr_prio }}
+{% endif -%}
 {% if pim.ifaces[iface].hello -%}
 ip pim hello {{ pim.ifaces[iface].hello }}
 {% endif -%}
-ip pim
 !
 {% endfor -%}
 {% for rp_addr in pim.rp -%}
@@ -87,14 +90,16 @@ def get_config():
     for iface in conf.list_effective_nodes('interface'):
         pim_conf['old_pim']['ifaces'].update({
             iface : {
-                'hello' : conf.return_effective_value('interface {0} hello'.format(iface))
+                'hello' : conf.return_effective_value('interface {0} hello'.format(iface)),
+                'dr_prio' : conf.return_effective_value('interface {0} dr-priority'.format(iface))
             }
         })
 
     for iface in conf.list_nodes('interface'):
         pim_conf['pim']['ifaces'].update({
             iface : {
-                'hello' : conf.return_value('interface {0} hello'.format(iface))
+                'hello' : conf.return_value('interface {0} hello'.format(iface)),
+                'dr_prio' : conf.return_value('interface {0} dr-priority'.format(iface)),
             }
         })
 
