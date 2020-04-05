@@ -80,16 +80,14 @@ class L2TPv3If(Interface):
             # interface is always A/D down. It needs to be enabled explicitly
             self.set_admin_state('down')
 
-            if self._config['tunnel_id'] and self._config['session_id']:
-                cmd = 'ip l2tp del session tunnel_id {} '.format(
-                    self._config['tunnel_id'])
-                cmd += 'session_id {} '.format(self._config['session_id'])
-                self._cmd(cmd)
+            if self.config['tunnel_id'] and self.config['session_id']:
+                cmd = 'ip l2tp del session tunnel_id {tunnel_id}'
+                cmd += ' session_id {session_id}'
+                self._cmd(cmd.format(**self.config))
 
-            if self._config['tunnel_id']:
-                cmd = 'ip l2tp del tunnel tunnel_id {} '.format(
-                    self._config['tunnel_id'])
-                self._cmd(cmd)
+            if self.config['tunnel_id']:
+                cmd = 'ip l2tp del tunnel tunnel_id {tunnel_id}'
+                self._cmd(cmd.format(**self.config))
 
     @staticmethod
     def get_config():
