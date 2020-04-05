@@ -44,7 +44,7 @@ def get_config():
     if conf.exists('allow-clients address'):
         networks = conf.return_values('allow-clients address')
         for n in networks:
-            addr = ipaddress.ip_network(n)
+            addr = ip_network(n)
             net = {
                 "network" : n,
                 "address" : addr.network_address,
@@ -86,7 +86,7 @@ def verify(ntp):
 
     for n in ntp['allowed_networks']:
         try:
-            addr = ipaddress.ip_network( n['network'] )
+            addr = ip_network( n['network'] )
             break
         except ValueError:
             raise ConfigError("{0} does not appear to be a valid IPv4 or IPv6 network, check host bits!".format(n['network']))
