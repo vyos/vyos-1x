@@ -19,16 +19,15 @@ import sys
 import os
 import re
 import argparse
-import subprocess
+
 from vyos.config import Config
 from vyos.util import popen, run
 
 
 def detect_qat_dev():
-    ret = subprocess.Popen(['sudo', 'lspci',  '-nn'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
+    output, err = popen('sudo lspci -nn', decode='utf-8')
     if not err:
-        data = re.findall('(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output.decode("utf-8"))
+        data = re.findall('(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output)
         #If QAT devices found
         if data:
             return
@@ -44,15 +43,12 @@ def show_qat_status():
         sys.exit(1)
 
     # Show QAT service
-    os.system('sudo /etc/init.d/vyos-qat-utilities status')
+    run('sudo /etc/init.d/vyos-qat-utilities status')
 
 # Return QAT devices
 def get_qat_devices():
-    ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities',  'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
+    data_st, err = popen('sudo /etc/init.d/vyos-qat-utilities status', decode='utf-8')
     if not err:
-        #print(output)
-        data_st = output.decode("utf-8")
         elm_lst = re.findall('qat_dev\d', data_st)
         print('\n'.join(elm_lst))
 
@@ -60,11 +56,10 @@ def get_qat_devices():
 def get_qat_proc_path(qat_dev):
     q_type = ""
     q_bsf  = ""
-    ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities',  'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
+    output, err = popen('sudo /etc/init.d/vyos-qat-utilities status', decode='utf-8')
     if not err:
         # Parse QAT service output
-        data_st = output.decode("utf-8").split("\n")
+        data_st = output.split("\n")
         for elm_str in range(len(data_st)):
             if re.search(qat_dev, data_st[elm_str]):
                 elm_list = data_st[elm_str].split(", ")
