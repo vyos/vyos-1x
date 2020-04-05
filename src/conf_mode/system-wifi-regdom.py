@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,52 +15,34 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import jinja2
 
 from copy import deepcopy
 from sys import exit
+from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
+from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 
 config_80211_file='/etc/modprobe.d/cfg80211.conf'
 config_crda_file='/etc/default/crda'
-
-# Please be careful if you edit the template.
-config_80211_tmpl = """
-{%- if regdom -%}
-options cfg80211 ieee80211_regdom={{ regdom }}
-{% endif %}
-"""
-
-# Please be careful if you edit the template.
-config_crda_tmpl = """
-{%- if regdom -%}
-REGDOMAIN={{ regdom }}
-{% endif %}
-"""
 
 default_config_data = {
     'regdom' : '',
     'deleted' : False
 }
 
-
 def get_config():
     regdom = deepcopy(default_config_data)
     conf = Config()
-
-    # set new configuration level
-    conf.set_level('system')
+    base = ['system', 'wifi-regulatory-domain']
 
     # Check if interface has been removed
-    if not conf.exists('wifi-regulatory-domain'):
+    if not conf.exists(base):
         regdom['deleted'] = True
         return regdom
-
-    # retrieve configured regulatory domain
-    if conf.exists('wifi-regulatory-domain'):
-        regdom['regdom'] = conf.return_value('wifi-regulatory-domain')
+    else:
+        regdom['regdom'] = conf.return_value(base)
 
     return regdom
 
@@ -85,12 +67,17 @@ def generate(regdom):
 
         return None
 
-    tmpl = jinja2.Template(config_80211_tmpl)
+    # Prepare Jinja2 template loader from files
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'wifi')
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader)
+
+    tmpl = env.get_template('cfg80211.conf.tmpl')
     config_text = tmpl.render(regdom)
     with open(config_80211_file, 'w') as f:
         f.write(config_text)
 
-    tmpl = jinja2.Template(config_crda_tmpl)
+    tmpl = env.get_template('crda.tmpl')
     config_text = tmpl.render(regdom)
     with open(config_crda_file, 'w') as f:
         f.write(config_text)
