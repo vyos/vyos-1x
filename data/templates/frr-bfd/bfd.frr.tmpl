@@ -1,0 +1,16 @@
+!
+bfd
+{% for peer in old_peers -%}
+ no peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
+{% endfor -%}
+!
+{% for peer in new_peers -%}
+ peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
+ detect-multiplier {{ peer.multiplier }}
+ receive-interval {{ peer.rx_interval }}
+ transmit-interval {{ peer.tx_interval }}
+ {% if peer.echo_mode %}echo-mode{% endif %}
+ {% if peer.echo_interval != '' %}echo-interval {{ peer.echo_interval }}{% endif %}
+ {% if not peer.shutdown %}no {% endif %}shutdown
+{% endfor -%}
+!

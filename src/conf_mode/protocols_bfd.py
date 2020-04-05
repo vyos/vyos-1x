@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,38 +13,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-import sys
-import jinja2
-import copy
 import os
-import vyos.validate
 
-from vyos import ConfigError
+from sys import exit
+from copy import deepcopy
+from jinja2 import FileSystemLoader, Environment
+
 from vyos.config import Config
+from vyos.defaults import directories as vyos_data_dir
+from vyos.validate import is_ipv6_link_local, is_ipv6
+from vyos import ConfigError
 
 config_file = r'/tmp/bfd.frr'
-
-# Please be careful if you edit the template.
-config_tmpl = """
-!
-bfd
-{% for peer in old_peers -%}
- no peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
-{% endfor -%}
-!
-{% for peer in new_peers -%}
- peer {{ peer.remote }}{% if peer.multihop %} multihop{% endif %}{% if peer.src_addr %} local-address {{ peer.src_addr }}{% endif %}{% if peer.src_if %} interface {{ peer.src_if }}{% endif %}
- detect-multiplier {{ peer.multiplier }}
- receive-interval {{ peer.rx_interval }}
- transmit-interval {{ peer.tx_interval }}
- {% if peer.echo_mode %}echo-mode{% endif %}
- {% if peer.echo_interval != '' %}echo-interval {{ peer.echo_interval }}{% endif %}
- {% if not peer.shutdown %}no {% endif %}shutdown
-{% endfor -%}
-!
-"""
 
 default_config_data = {
     'new_peers': [],
@@ -132,7 +113,7 @@ def get_bfd_peer_config(peer, conf_mode="proposed"):
     return bfd_peer
 
 def get_config():
-    bfd = copy.deepcopy(default_config_data)
+    bfd = deepcopy(default_config_data)
     conf = Config()
     if not (conf.exists('protocols bfd') or conf.exists_effective('protocols bfd')):
         return None
@@ -164,12 +145,12 @@ def verify(bfd):
 
     for peer in bfd['new_peers']:
         # IPv6 link local peers require an explicit local address/interface
-        if vyos.validate.is_ipv6_link_local(peer['remote']):
+        if is_ipv6_link_local(peer['remote']):
             if not (peer['src_if'] and peer['src_addr']):
                 raise ConfigError('BFD IPv6 link-local peers require explicit local address and interface setting')
 
         # IPv6 peers require an explicit local address
-        if vyos.validate.is_ipv6(peer['remote']):
+        if is_ipv6(peer['remote']):
             if not peer['src_addr']:
                 raise ConfigError('BFD IPv6 peers require explicit local address setting')
 
@@ -208,18 +189,23 @@ def generate(bfd):
     if bfd is None:
         return None
 
+    # Prepare Jinja2 template loader from files
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'frr-bfd')
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader)
+
+    tmpl = env.get_template('bfd.frr.tmpl')
+    config_text = tmpl.render(bfd)
+    with open(config_file, 'w') as f:
+        f.write(config_text)
+
     return None
 
 def apply(bfd):
     if bfd is None:
         return None
 
-    tmpl = jinja2.Template(config_tmpl)
-    config_text = tmpl.render(bfd)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
-    os.system("sudo vtysh -d bfdd -f " + config_file)
+    os.system(f'vtysh -d bfdd -f {config_file}')
     if os.path.exists(config_file):
         os.remove(config_file)
 
@@ -233,4 +219,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
