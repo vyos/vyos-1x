@@ -344,7 +344,7 @@ def generate(c):
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'l2tp')
     fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
+    env = Environment(loader=fs_loader, trim_blocks=True)
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
     try:
