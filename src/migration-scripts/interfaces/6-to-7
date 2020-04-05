@@ -35,7 +35,7 @@ if __name__ == '__main__':
         # Nothing to do
         sys.exit(0)
 
-    # list all individual interface types like dummy, ethernet and so on
+    # list all individual wwan/wireless modem interfaces
     for i in config.list_nodes(base):
         iface = base + [i]
 
