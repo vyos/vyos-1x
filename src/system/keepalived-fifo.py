@@ -20,13 +20,14 @@ import time
 import signal
 import argparse
 import threading
-import subprocess
 import re
 import json
 from pathlib import Path
 from queue import Queue
 import logging
 from logging.handlers import SysLogHandler
+
+from vyos.util import cmd
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -84,14 +85,11 @@ class KeepalivedFifo:
 
     # run command
     def _run_command(self, command):
+        logger.debug("Running the command: {}".format(command))
         try:
-            logger.debug("Running the command: {}".format(command))
-            process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, stdin=subprocess.PIPE, universal_newlines=True)
-            stdout, stderr = process.communicate()
-            if process.returncode != 0:
-                raise Exception("The command \"{}\" returned status {}. Error: {}".format(command, process.returncode, stderr))
-        except Exception as err:
-            logger.error("Unable to execute command \"{}\": {}".format(command, err))
+            cmd(command, universal_newlines=True)
+        except OSError as err:
+            logger.error(f'Unable to execute command "{command}": {err}')
 
     # create FIFO pipe
     def pipe_create(self):
