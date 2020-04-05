@@ -1,0 +1,12 @@
+{% for file in files %}
+{{files[file]['log-file']}} {
+  missingok
+  notifempty
+  create
+  rotate {{files[file]['max-files']}}
+  size={{files[file]['max-size']//1024}}k
+  postrotate
+    invoke-rc.d rsyslog rotate > /dev/null
+  endscript
+}
+{% endfor %}
