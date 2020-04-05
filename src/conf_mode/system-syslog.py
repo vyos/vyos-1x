@@ -24,6 +24,7 @@ from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.util import subprocess_cmd
 from vyos import ConfigError
+from vyos.util import run
 
 def get_config():
     c = Config()
@@ -253,10 +254,8 @@ def verify(c):
 
 def apply(c):
     if not c:
-        subprocess_cmd('systemctl stop syslog')
-        return None
-
-    subprocess_cmd('systemctl restart syslog')
+        return run('systemctl stop syslog')
+    return run('systemctl restart syslog')
 
 if __name__ == '__main__':
     try:
