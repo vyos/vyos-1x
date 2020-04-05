@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import subprocess
 
 from sys import exit
 from ipaddress import ip_address, ip_interface, IPv4Interface, IPv6Interface, IPv4Address, IPv6Address
@@ -28,6 +27,7 @@ import vyos.keepalived
 
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
 
 daemon_file = "/etc/default/keepalived"
 config_file = "/etc/keepalived/keepalived.conf"
@@ -242,17 +242,17 @@ def apply(data):
 
         if not vyos.keepalived.vrrp_running():
             print("Starting the VRRP process")
-            ret = subprocess.call("sudo systemctl restart keepalived.service", shell=True)
+            ret = run("sudo systemctl restart keepalived.service")
         else:
             print("Reloading the VRRP process")
-            ret = subprocess.call("sudo systemctl reload keepalived.service", shell=True)
+            ret = run("sudo systemctl reload keepalived.service")
 
         if ret != 0:
             raise ConfigError("keepalived failed to start")
     else:
         # VRRP is removed in the commit
         print("Stopping the VRRP process")
-        subprocess.call("sudo systemctl stop keepalived.service", shell=True)
+        run("sudo systemctl stop keepalived.service")
         os.unlink(config_file)
 
     return None
