@@ -121,7 +121,7 @@ def generate(ssh):
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'ssh')
     fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
+    env = Environment(loader=fs_loader, trim_blocks=True)
 
     tmpl = env.get_template('sshd_config.tmpl')
     config_text = tmpl.render(ssh)
