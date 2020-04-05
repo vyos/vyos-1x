@@ -29,7 +29,7 @@ from vyos.configdict import list_diff, vlan_to_dict
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import process_running, chmod_x
+from vyos.util import process_running, chmod_x, chown_file
 from vyos import ConfigError
 
 user = 'root'
