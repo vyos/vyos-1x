@@ -22,36 +22,24 @@
 import sys
 import argparse
 import netifaces
-import subprocess
 
 from vyos.config import Config
+from vyos.util import popen
 
 parser = argparse.ArgumentParser(description='Retrieve SNMP interfaces information')
 parser.add_argument('--ifindex', action='store', nargs='?', const='all', help='Show interface index')
 parser.add_argument('--ifalias', action='store', nargs='?', const='all', help='Show interface aliase')
 parser.add_argument('--ifdescr', action='store', nargs='?', const='all', help='Show interface description')
 
-def show_ifindex(i):
-    proc = subprocess.Popen(['/bin/ip', 'link', 'show', i], stdout=subprocess.PIPE)
-    (out, err) = proc.communicate()
-    # convert output to string
-    string = out.decode("utf-8")
-
-    index = 'ifIndex = ' + string.split(':')[0]
+def show_ifindex(intf):
+    out, err = popen(f'/bin/ip link show {intf}', decode='utf-8')
+    index = 'ifIndex = ' + out.split(':')[0]
     return index.replace('\n', '')
 
-def show_ifalias(i):
-    proc = subprocess.Popen(['/bin/ip', 'link', 'show', i], stdout=subprocess.PIPE)
-    (out, err) = proc.communicate()
-    # convert output to string
-    string = out.decode("utf-8")
-
-    if 'alias' in string:
-        alias = 'ifAlias = ' + string.split('alias')[1].lstrip()
-    else:
-        alias = 'ifAlias = ' + i
-
-    return alias.replace('\n', '')
+def show_ifalias(intf):
+    out, err = popen(f'/bin/ip link show {intf}', decode='utf-8')
+    alias = out.split('alias')[1].lstrip() if 'alias' in out else intf
+    return 'ifAlias = ' + alias.replace('\n', '')
 
 def show_ifdescr(i):
     ven_id = ''
@@ -74,14 +62,13 @@ def show_ifdescr(i):
         return ret
 
     device = str(ven_id) + ':' + str(dev_id)
-    proc = subprocess.Popen(['/usr/bin/lspci', '-mm', '-d', device], stdout=subprocess.PIPE)
-    (out, err) = proc.communicate()
+    out, err = popen(f'/usr/bin/lspci -mm -d {device}', decode='utf-8')
 
     vendor = ""
     device = ""
 
     # convert output to string
-    string = out.decode("utf-8").split('"')
+    string = out.split('"')
     if len(string) > 3:
       vendor = string[3]
 
