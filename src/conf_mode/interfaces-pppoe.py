@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import Interface
-from vyos.util import chown_file, chmod_x, subprocess_cmd
+from vyos.util import chown_file, chmod_x, cmd
 from vyos import ConfigError
 
 default_config_data = {
@@ -182,8 +182,7 @@ def generate(pppoe):
             os.mkdir(dirname)
 
     # Always hang-up PPPoE connection prior generating new configuration file
-    cmd = f'systemctl stop ppp@{intf}.service'
-    subprocess_cmd(cmd)
+    cmd(f'systemctl stop ppp@{intf}.service')
 
     if pppoe['deleted']:
         # Delete PPP configuration files
@@ -238,8 +237,7 @@ def apply(pppoe):
     if not pppoe['disable']:
         # "dial" PPPoE connection
         intf = pppoe['intf']
-        cmd = f'systemctl start ppp@{intf}.service'
-        subprocess_cmd(cmd)
+        cmd(f'systemctl start ppp@{intf}.service')
 
         # make logfile owned by root / vyattacfg
         chown_file(pppoe['logfile'], 'root', 'vyattacfg')
