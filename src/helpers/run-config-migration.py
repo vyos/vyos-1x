@@ -19,7 +19,8 @@ import os
 import sys
 import argparse
 import datetime
-import subprocess
+
+from vyos.util import cmd
 from vyos.migrator import Migrator, VirtualMigrator
 
 def main():
@@ -61,12 +62,7 @@ def main():
             '{0:%Y-%m-%d-%H%M%S}'.format(datetime.datetime.now()),
             'pre-migration'])
 
-    try:
-        subprocess.check_call(['cp', '-p', config_file_name,
-                backup_file_name])
-    except subprocess.CalledProcessError as err:
-        print("Called process error: {}.".format(err))
-        sys.exit(1)
+    cmd(f'cp -p {config_file_name} {backup_file_name}')
 
     if not virtual:
         virtual_migration = VirtualMigrator(config_file_name)
