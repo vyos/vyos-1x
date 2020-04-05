@@ -261,12 +261,11 @@ def commit_in_progress():
     # Since this will be used in scripts that modify the config outside of the CLI
     # framework, those knowingly have root permissions.
     # For everything else, we add a safeguard.
-    from subprocess import check_output
     from psutil import process_iter, NoSuchProcess
     from vyos.defaults import commit_lock
 
-    id = check_output(['/usr/bin/id', '-u']).decode().strip()
-    if id != '0':
+    idu = cmd('/usr/bin/id -u')
+    if idu != '0':
         raise OSError("This functions needs root permissions to return correct results")
 
     for proc in process_iter():
