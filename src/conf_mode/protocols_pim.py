@@ -13,57 +13,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-import sys
-import jinja2
-import copy
 import os
-import vyos.validate
-from ipaddress import IPv4Address
 
-from vyos import ConfigError
+from ipaddress import IPv4Address
+from jinja2 import FileSystemLoader, Environment
+from sys import exit
+
 from vyos.config import Config
+from vyos.defaults import directories as vyos_data_dir
+from vyos import ConfigError
 
 config_file = r'/tmp/pimd.frr'
-
-# Please be careful if you edit the template.
-config_tmpl = """
-!
-{% for rp_addr in old_pim.rp -%}
-{% for group in old_pim.rp[rp_addr] -%}
-no ip pim rp {{ rp_addr }} {{ group }}
-{% endfor -%}
-{% endfor -%}
-{% if old_pim.rp_keep_alive -%}
-no ip pim rp keep-alive-timer {{ old_pim.rp_keep_alive }}
-{% endif -%}
-{% for iface in old_pim.ifaces -%}
-interface {{ iface }}
-no ip pim
-!
-{% endfor -%}
-{% for iface in pim.ifaces -%}
-interface {{ iface }}
-ip pim
-{% if pim.ifaces[iface].dr_prio -%}
-ip pim drpriority {{ pim.ifaces[iface].dr_prio }}
-{% endif -%}
-{% if pim.ifaces[iface].hello -%}
-ip pim hello {{ pim.ifaces[iface].hello }}
-{% endif -%}
-!
-{% endfor -%}
-{% for rp_addr in pim.rp -%}
-{% for group in pim.rp[rp_addr] -%}
-ip pim rp {{ rp_addr }} {{ group }}
-{% endfor -%}
-{% endfor -%}
-{% if pim.rp_keep_alive -%}
-ip pim rp keep-alive-timer {{ pim.rp_keep_alive }}
-{% endif -%}
-!
-"""
 
 def get_config():
     conf = Config()
@@ -152,7 +113,12 @@ def generate(pim):
     if pim is None:
         return None
 
-    tmpl = jinja2.Template(config_tmpl)
+    # Prepare Jinja2 template loader from files
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'pim')
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader)
+
+    tmpl = env.get_template('pimd.frr.tmpl')
     config_text = tmpl.render(pim)
     with open(config_file, 'w') as f:
         f.write(config_text)
@@ -164,7 +130,7 @@ def apply(pim):
         return None
 
     if os.path.exists(config_file):
-        os.system("sudo vtysh -d pimd -f " + config_file)
+        os.system("vtysh -d pimd -f " + config_file)
         os.remove(config_file)
 
     return None
@@ -177,4 +143,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
