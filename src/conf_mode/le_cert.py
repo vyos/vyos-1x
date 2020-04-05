@@ -18,7 +18,6 @@
 
 import sys
 import os
-import subprocess
 
 import vyos.defaults
 from vyos.config import Config
@@ -47,9 +46,9 @@ def request_certbot(cert):
 
     certbot_cmd = 'certbot certonly -n --nginx --agree-tos --no-eff-email --expand {0} {1}'.format(email_flag, domain_flag)
 
-    completed = subprocess.run(certbot_cmd, shell=True)
-
-    return completed.returncode
+    cmd(certbot_cmd,
+        raising=ConfigError,
+        message="The certbot request failed for the specified domains.")
 
 def get_config():
     conf = Config()
@@ -90,24 +89,17 @@ def generate(cert):
     if ret:
         run('sudo systemctl start nginx.service')
 
-    ret = request_certbot(cert)
-    if ret:
-        raise ConfigError("The certbot request failed for the"
-                          " specified domains.")
+    request_certbot(cert)
 
 def apply(cert):
     if cert is not None:
-        os.system('sudo systemctl restart certbot.timer')
+        run('sudo systemctl restart certbot.timer')
     else:
-        os.system('sudo systemctl stop certbot.timer')
+        run('sudo systemctl stop certbot.timer')
         return None
 
     for dep in dependencies:
-        cmd = '{0}/{1}'.format(vyos_conf_scripts_dir, dep)
-        try:
-            subprocess.check_call(cmd, shell=True)
-        except subprocess.CalledProcessError as err:
-            raise ConfigError(str(err))
+        cmd(f'{vyos_conf_scripts_dir}/{dep}', raising=ConfigError)
 
 if __name__ == '__main__':
     try:
