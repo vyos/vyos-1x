@@ -217,7 +217,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>10</format>
-                    <description>IPFIX</description>
+                    <description>Internet Protocol Flow Information Export (IPFIX)</description>
                   </valueHelp>
                 </properties>
               </leafNode>
