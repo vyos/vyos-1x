@@ -208,11 +208,11 @@
                     <properties>
                       <help>Number of antennas on this card</help>
                       <valueHelp>
-                        <format>1-9</format>
+                        <format>1-8</format>
                         <description>Number of antennas for this card</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="numeric" argument="--range 1-9"/>
+                        <validator name="numeric" argument="--range 1-8"/>
                       </constraint>
                     </properties>
                   </leafNode>
