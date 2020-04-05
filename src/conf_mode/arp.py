@@ -20,9 +20,9 @@ import sys
 import os
 import re
 import syslog as sl
-import subprocess
 
 from vyos.config import Config
+from vyos.util import run
 from vyos import ConfigError
 
 arp_cmd = '/usr/sbin/arp'
@@ -82,11 +82,12 @@ def generate(c):
 def apply(c):
   for ip_addr in c['remove']:
     sl.syslog(sl.LOG_NOTICE, "arp -d " + ip_addr)
-    subprocess.call([arp_cmd + ' -d ' + ip_addr + ' >/dev/null 2>&1'], shell=True)
+    run(f'{arp_cmd} -d {ip_addr} >/dev/null 2>&1')
 
   for ip_addr in c['update']:
     sl.syslog(sl.LOG_NOTICE, "arp -s " + ip_addr + " " + c['update'][ip_addr])
-    subprocess.call([arp_cmd + ' -s ' + ip_addr + ' ' + c['update'][ip_addr] ], shell=True)
+    updated = c['update'][ip_addr]
+    run(f'{arp_cmd} -s {ip_addr} {updated}')
 
 
 if __name__ == '__main__':
