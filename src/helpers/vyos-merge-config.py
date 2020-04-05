@@ -17,13 +17,13 @@
 
 import sys
 import os
-import subprocess
 import tempfile
 import vyos.defaults
 import vyos.remote
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.migrator import Migrator, VirtualMigrator
+from vyos.util import cmd
 
 
 if (len(sys.argv) < 2):
@@ -100,12 +100,10 @@ if path:
     add_cmds = [ cmd for cmd in add_cmds if path in cmd ]
 
 for cmd in add_cmds:
-    cmd = "/opt/vyatta/sbin/my_" + cmd
-
     try:
-        subprocess.check_call(cmd, shell=True)
-    except subprocess.CalledProcessError as err:
-        print("Called process error: {}.".format(err))
+        cmd(f'/opt/vyatta/sbin/my_{cmd}', message='Called process error')
+    except OSError as err:
+        print(err)
 
 if effective_config.session_changed():
     print("Merge complete. Use 'commit' to make changes effective.")
