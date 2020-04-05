@@ -21,16 +21,12 @@
 # to the bridge automatically once it's available
 
 import argparse
-import subprocess
-
 from sys import exit
 from time import sleep
-from vyos.config import Config
 
-def subprocess_cmd(command):
-    process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
-    proc_stdout = process.communicate()[0].strip()
-    pass
+from vyos.config import Config
+from vyos.util import cmd, run
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -45,9 +41,11 @@ if __name__ == '__main__':
         for bridge in conf.list_nodes('interfaces bridge'):
             for member_if in conf.list_nodes('interfaces bridge {} member interface'.format(bridge)):
                 if args.interface == member_if:
-                    cmd = 'brctl addif "{}" "{}"'.format(bridge, args.interface)
+                    command = 'brctl addif "{}" "{}"'.format(bridge, args.interface)
                     # let interfaces etc. settle - especially required for OpenVPN bridged interfaces
                     sleep(4)
-                    subprocess_cmd(cmd)
+                    # XXX: This is ignoring any issue, should be cmd but kept as it
+                    # XXX: during the migration to not cause any regression
+                    run(command)
 
     exit(0)
