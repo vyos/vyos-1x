@@ -16,48 +16,43 @@
 
 # Remove network provider name from CLI and rather use provider APN from CLI
 
-import sys
+from sys import exit, argv
 from vyos.configtree import ConfigTree
 
 if __name__ == '__main__':
-    if (len(sys.argv) < 1):
+    if (len(argv) < 1):
         print("Must specify file name!")
         exit(1)
 
-    file_name = sys.argv[1]
+    file_name = argv[1]
     with open(file_name, 'r') as f:
         config_file = f.read()
 
     config = ConfigTree(config_file)
-    base = ['interfaces', 'wirelessmodem']
+    base = ['interfaces', 'wireguard']
 
     if not config.exists(base):
         # Nothing to do
-        sys.exit(0)
+        exit(0)
 
-    # list all individual wwan/wireless modem interfaces
+    # list all individual wireguard interface isntance
     for i in config.list_nodes(base):
         iface = base + [i]
-
-        # only three carries have been supported in the past, thus
-        # this will be fairly simple \o/ - and only one (AT&T) did
-        # configure an APN
-        if config.exists(iface + ['network']):
-            network = config.return_value(iface + ['network'])
-            if network == "att":
-                apn = 'isp.cingular'
-                config.set(iface + ['apn'], value=apn)
-
-            config.delete(iface + ['network'])
-
-        # synchronize DNS configuration with PPPoE interfaces to have a
-        # uniform CLI experience
-        if config.exists(iface + ['no-dns']):
-            config.rename(iface + ['no-dns'], 'no-peer-dns')
+        for peer in config.list_nodes(iface + ['peer']):
+            base_peer = iface + ['peer', peer]
+            if config.exists(base_peer + ['endpoint']):
+                endpoint = config.return_value(base_peer + ['endpoint'])
+                address = endpoint.split(':')[0]
+                port = endpoint.split(':')[1]
+                # delete old node
+                config.delete(base_peer + ['endpoint'])
+                # setup new nodes
+                config.set(base_peer + ['address'], value=address)
+                config.set(base_peer + ['port'], value=port)
 
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)
+        exit(1)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,13 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import os
 import re
 import subprocess
+
 from copy import deepcopy
 from netifaces import interfaces
 
@@ -30,10 +29,9 @@ from vyos.ifconfig import WireGuardIf
 
 kdir = r'/config/auth/wireguard'
 
-
 def _check_kmod():
     if not os.path.exists('/sys/module/wireguard'):
-        if os.system('sudo modprobe wireguard') != 0:
+        if os.system('modprobe wireguard') != 0:
             raise ConfigError("modprobe wireguard failed")
 
 
@@ -135,7 +133,8 @@ def get_config():
                         {
                             p: {
                                 'allowed-ips': [],
-                              'endpoint': '',
+                              'address': '',
+                              'port': '',
                               'pubkey': ''
                             }
                         }
@@ -144,10 +143,14 @@ def get_config():
                     if c.exists(['peer', p, 'allowed-ips']):
                         wg['peer'][p]['allowed-ips'] = c.return_values(
                             ['peer', p, 'allowed-ips'])
-                    # peer endpoint
-                    if c.exists(['peer', p, 'endpoint']):
-                        wg['peer'][p]['endpoint'] = c.return_value(
-                            ['peer', p, 'endpoint'])
+                    # peer address
+                    if c.exists(['peer', p, 'address']):
+                        wg['peer'][p]['address'] = c.return_value(
+                            ['peer', p, 'address'])
+                    # peer port
+                    if c.exists(['peer', p, 'port']):
+                        wg['peer'][p]['port'] = c.return_value(
+                            ['peer', p, 'port'])
                     # persistent-keepalive
                     if c.exists(['peer', p, 'persistent-keepalive']):
                         wg['peer'][p]['persistent-keepalive'] = c.return_value(
@@ -251,8 +254,8 @@ def apply(c):
         if c['fwmark']:
             intfc.config['fwmark'] = c['fwmark']
         # endpoint
-        if c['peer'][p]['endpoint']:
-            intfc.config['endpoint'] = c['peer'][p]['endpoint']
+        if c['peer'][p]['address'] and c['peer'][p]['port']:
+            intfc.config['endpoint'] = "{}:{}".format(c['peer'][p]['address'], c['peer'][p]['port'])
 
         # persistent-keepalive
         if 'persistent-keepalive' in c['peer'][p]:

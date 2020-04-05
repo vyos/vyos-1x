@@ -23,13 +23,14 @@ from jinja2 import FileSystemLoader, Environment
 
 from subprocess import Popen, PIPE
 from netifaces import interfaces
+from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import process_running, chmod_x
+from vyos.util import process_running, chmod_x, chown_file
 from vyos import ConfigError
 
 user = 'root'

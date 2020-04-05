@@ -133,7 +133,7 @@ def verify(wwan):
 
 def generate(wwan):
     # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir["data"], "templates", "wwan")
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'wwan')
     fs_loader = FileSystemLoader(tmpl_path)
     env = Environment(loader=fs_loader)
 
