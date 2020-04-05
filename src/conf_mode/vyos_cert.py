@@ -18,7 +18,6 @@
 
 import sys
 import os
-import subprocess
 import tempfile
 import pathlib
 import ssl
@@ -26,6 +25,7 @@ import ssl
 import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import cmd
 
 vyos_conf_scripts_dir = vyos.defaults.directories['conf_mode']
 
@@ -49,16 +49,16 @@ def status_self_signed(cert_data):
     # check if certificate is 1/2 past lifetime, with openssl -checkend
     end_days = int(cert_data['lifetime'])
     end_seconds = int(0.5*60*60*24*end_days)
-    checkend_cmd = ('openssl x509 -checkend {end} -noout -in {crt}'
-                    ''.format(end=end_seconds, **cert_data))
+    checkend_cmd = 'openssl x509 -checkend {end} -noout -in {crt}'.format(end=end_seconds, **cert_data)
     try:
-        subprocess.check_call(checkend_cmd, shell=True)
+        cmd(checkend_cmd, message='Called process error')
         return True
-    except subprocess.CalledProcessError as err:
-        if err.returncode == 1:
+    except OSError as err:
+        if err.errno == 1:
             return False
-        else:
-            print("Called process error: {}.".format(err))
+        print(err)
+        # XXX: This seems wrong to continue on failure
+        # implicitely returning None
 
 def generate_self_signed(cert_data):
     san_config = None
@@ -86,9 +86,10 @@ def generate_self_signed(cert_data):
                            ''.format(**cert_data))
 
     try:
-        subprocess.check_call(openssl_req_cmd, shell=True)
-    except subprocess.CalledProcessError as err:
-        print("Called process error: {}.".format(err))
+        cmd(openssl_req_cmd, message='Called process error')
+    except OSError as err:
+        print(err)
+        # XXX: seems wrong to ignore the failure
 
     os.chmod('{key}'.format(**cert_data), 0o400)
 
@@ -126,11 +127,8 @@ def generate(vyos_cert):
 
 def apply(vyos_cert):
     for dep in dependencies:
-        cmd = '{0}/{1}'.format(vyos_conf_scripts_dir, dep)
-        try:
-            subprocess.check_call(cmd, shell=True)
-        except subprocess.CalledProcessError as err:
-            raise ConfigError("{}.".format(err))
+        command = '{0}/{1}'.format(vyos_conf_scripts_dir, dep)
+        cmd(command, raising=ConfigError)
 
 if __name__ == '__main__':
     try:
