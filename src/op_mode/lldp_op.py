@@ -20,8 +20,9 @@ import jinja2
 
 from xml.dom import minidom
 from sys import exit
-from subprocess import Popen, PIPE, STDOUT
 from tabulate import tabulate
+
+from vyos.util import popen
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Show LLDP neighbors on all interfaces")
@@ -40,9 +41,8 @@ Device ID                 Local     Proto  Cap   Platform             Port ID
 
 def _get_neighbors():
     command = '/usr/sbin/lldpcli -f xml show neighbors'
-    p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-    tmp = p.communicate()[0].strip()
-    return tmp.decode()
+    out,_ = popen(command)
+    return out
 
 def extract_neighbor(neighbor):
     """
