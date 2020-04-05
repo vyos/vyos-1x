@@ -22,6 +22,7 @@ from copy import deepcopy
 from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
+from vyos.util import run
 from netifaces import interfaces
 
 default_config_data = {
@@ -50,7 +51,7 @@ def check_kmod():
     modules = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
     for module in modules:
         if not os.path.exists(f'/sys/module/{module}'):
-            if os.system(f'modprobe {module}') != 0:
+            if run(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
 
 def get_config():

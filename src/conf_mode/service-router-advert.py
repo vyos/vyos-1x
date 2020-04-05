@@ -23,6 +23,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/radvd.conf'
 
@@ -156,13 +158,13 @@ def generate(rtradv):
 def apply(rtradv):
     if not rtradv['interfaces']:
         # bail out early - looks like removal from running config
-        os.system('systemctl stop radvd.service')
+        run('systemctl stop radvd.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
 
         return None
 
-    os.system('systemctl restart radvd.service')
+    run('systemctl restart radvd.service')
     return None
 
 if __name__ == '__main__':

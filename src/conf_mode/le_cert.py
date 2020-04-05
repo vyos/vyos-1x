@@ -23,6 +23,8 @@ import subprocess
 import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import cmd, run
+
 
 vyos_conf_scripts_dir = vyos.defaults.directories['conf_mode']
 
@@ -84,9 +86,9 @@ def generate(cert):
 
     # certbot will attempt to reload nginx, even with 'certonly';
     # start nginx if not active
-    ret = os.system('systemctl is-active --quiet nginx.ervice')
+    ret = run('systemctl is-active --quiet nginx.ervice')
     if ret:
-        os.system('sudo systemctl start nginx.service')
+        run('sudo systemctl start nginx.service')
 
     ret = request_certbot(cert)
     if ret:

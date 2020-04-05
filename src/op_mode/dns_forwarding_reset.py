@@ -25,6 +25,8 @@ import sys
 import argparse
 
 import vyos.config
+from vyos.util import run
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Reset all cache")
@@ -40,10 +42,10 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if args.all:
-        os.system("rec_control wipe-cache \'.$\'")
+        run("rec_control wipe-cache \'.$\'")
         sys.exit(1)
     elif args.domain:
-        os.system("rec_control wipe-cache \'{0}$\'".format(args.domain))
+        run("rec_control wipe-cache \'{0}$\'".format(args.domain))
     else:
         parser.print_help()
         sys.exit(1)

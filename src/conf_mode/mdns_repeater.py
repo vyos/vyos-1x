@@ -24,6 +24,8 @@ from netifaces import ifaddresses, AF_INET
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/default/mdns-repeater'
 
@@ -94,11 +96,11 @@ def generate(mdns):
 
 def apply(mdns):
     if (mdns is None) or mdns['disabled']:
-        os.system('sudo systemctl stop mdns-repeater')
+        run('sudo systemctl stop mdns-repeater')
         if os.path.exists(config_file):
             os.unlink(config_file)
     else:
-        os.system('sudo systemctl restart mdns-repeater')
+        run('sudo systemctl restart mdns-repeater')
 
     return None
 

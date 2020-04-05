@@ -5,6 +5,8 @@ import os
 import sys
 import argparse
 
+from vyos.util import run
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--regex', action='append')
 parser.add_argument('--exec', action='append')
@@ -31,7 +33,7 @@ try:
         cmd = "{0} {1}".format(cmd, args.value)
         if debug:
             print(cmd)
-        res = os.system(cmd)
+        res = run(cmd)
         if res == 0:
             sys.exit(0)
 except Exception as exn:

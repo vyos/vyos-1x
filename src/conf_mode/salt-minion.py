@@ -26,6 +26,8 @@ from urllib3 import PoolManager
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/salt/minion'
 
@@ -124,10 +126,10 @@ def generate(salt):
 
 def apply(salt):
     if salt is not None:
-        os.system("sudo systemctl restart salt-minion")
+        run("sudo systemctl restart salt-minion")
     else:
         # Salt access is removed in the commit
-        os.system("sudo systemctl stop salt-minion")
+        run("sudo systemctl stop salt-minion")
         os.unlink(config_file)
 
     return None

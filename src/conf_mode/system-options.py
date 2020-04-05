@@ -20,6 +20,7 @@ from sys import exit
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import run
 
 systemd_ctrl_alt_del = '/lib/systemd/system/ctrl-alt-del.target'
 
@@ -51,9 +52,9 @@ def generate(opt):
 def apply(opt):
     # Beep action
     if opt['beep_if_fully_booted']:
-        os.system('systemctl enable vyos-beep.service >/dev/null 2>&1')
+        run('systemctl enable vyos-beep.service >/dev/null 2>&1')
     else:
-        os.system('systemctl disable vyos-beep.service >/dev/null 2>&1')
+        run('systemctl disable vyos-beep.service >/dev/null 2>&1')
 
     # Ctrl-Alt-Delete action
     if opt['ctrl_alt_del'] == 'ignore':

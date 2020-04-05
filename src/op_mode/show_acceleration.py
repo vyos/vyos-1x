@@ -21,6 +21,8 @@ import re
 import argparse
 import subprocess
 from vyos.config import Config
+from vyos.util import popen, run
+
 
 def detect_qat_dev():
     ret = subprocess.Popen(['sudo', 'lspci',  '-nn'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -97,20 +99,20 @@ args = parser.parse_args()
 if args.hw:
     detect_qat_dev()
     # Show availible Intel QAT devices
-    os.system('sudo lspci -nn | egrep -e \'8086:37c8|8086:19e2|8086:0435|8086:6f54\'')
+    run('sudo lspci -nn | egrep -e \'8086:37c8|8086:19e2|8086:0435|8086:6f54\'')
 elif args.flow and args.dev:
     check_qat_if_conf()
-    os.system('sudo cat '+get_qat_proc_path(args.dev)+"fw_counters")
+    run('sudo cat '+get_qat_proc_path(args.dev)+"fw_counters")
 elif args.interrupts:
     check_qat_if_conf()
     # Delete _dev from args.dev
-    os.system('sudo cat /proc/interrupts | grep qat')
+    run('sudo cat /proc/interrupts | grep qat')
 elif args.status:
     check_qat_if_conf()
     show_qat_status()
 elif args.conf and args.dev:
     check_qat_if_conf()
-    os.system('sudo cat '+get_qat_proc_path(args.dev)+"dev_cfg")
+    run('sudo cat '+get_qat_proc_path(args.dev)+"dev_cfg")
 elif args.dev_list:
     get_qat_devices()
 else:

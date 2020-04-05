@@ -21,6 +21,8 @@ from sys import exit
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import run
+
 
 ipv6_disable_file = '/etc/modprobe.d/vyos_disable_ipv6.conf'
 
@@ -35,7 +37,7 @@ default_config_data = {
 }
 
 def sysctl(name, value):
-    os.system('sysctl -wq {}={}'.format(name, value))
+    run('sysctl -wq {}={}'.format(name, value))
 
 def get_config():
     ip_opt = deepcopy(default_config_data)
