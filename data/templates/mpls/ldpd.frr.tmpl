@@ -1,0 +1,58 @@
+!
+{% if mpls_ldp -%}
+mpls ldp
+{% if old_router_id -%}
+no router-id {{ old_router_id }}
+{% endif -%}
+{% if router_id -%}
+router-id {{ router_id }}
+{% endif -%}
+{% for neighbor_id in old_ldp.neighbors -%}
+no neighbor {{neighbor_id}} password {{old_ldp.neighbors[neighbor_id].password}}
+{% endfor -%}
+{% for neighbor_id in ldp.neighbors -%}
+neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
+{% endfor -%}
+address-family ipv4
+label local allocate host-routes
+{% if old_ldp.d_transp_ipv4 -%}
+no discovery transport-address {{ old_ldp.d_transp_ipv4 }}
+{% endif -%}
+{% if ldp.d_transp_ipv4 -%}
+discovery transport-address {{ ldp.d_transp_ipv4 }}
+{% endif -%}
+{% for interface in old_ldp.interfaces -%}
+no interface {{interface}}
+{% endfor -%}
+{% for interface in ldp.interfaces -%}
+interface {{interface}}
+{% endfor -%}
+!
+!
+exit-address-family
+!
+{% if ldp.d_transp_ipv6 -%}
+address-family ipv6
+label local allocate host-routes
+{% if old_ldp.d_transp_ipv6 -%}
+no discovery transport-address {{ old_ldp.d_transp_ipv6 }}
+{% endif -%}
+{% if ldp.d_transp_ipv6 -%}
+discovery transport-address {{ ldp.d_transp_ipv6 }}
+{% endif -%}
+{% for interface in old_ldp.interfaces -%}
+no interface {{interface}}
+{% endfor -%}
+{% for interface in ldp.interfaces -%}
+interface {{interface}}
+{% endfor -%}
+!
+exit-address-family
+{% else -%}
+no address-family ipv6
+{% endif -%}
+!
+{% else -%}
+no mpls ldp
+{% endif -%}
+!

@@ -13,80 +13,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-import sys
-import jinja2
-import copy
 import os
-import vyos.validate
 
-from vyos import ConfigError
+from jinja2 import FileSystemLoader, Environment
+
 from vyos.config import Config
+from vyos.defaults import directories as vyos_data_dir
+from vyos import ConfigError
 
 config_file = r'/tmp/ldpd.frr'
-
-# Please be careful if you edit the template.
-config_tmpl = """
-!
-{% if mpls_ldp -%}
-mpls ldp
-{% if old_router_id -%}
-no router-id {{ old_router_id }}
-{% endif -%}
-{% if router_id -%}
-router-id {{ router_id }}
-{% endif -%}
-{% for neighbor_id in old_ldp.neighbors -%}
-no neighbor {{neighbor_id}} password {{old_ldp.neighbors[neighbor_id].password}}
-{% endfor -%}
-{% for neighbor_id in ldp.neighbors -%}
-neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
-{% endfor -%}
-address-family ipv4
-label local allocate host-routes
-{% if old_ldp.d_transp_ipv4 -%}
-no discovery transport-address {{ old_ldp.d_transp_ipv4 }}
-{% endif -%}
-{% if ldp.d_transp_ipv4 -%}
-discovery transport-address {{ ldp.d_transp_ipv4 }}
-{% endif -%}
-{% for interface in old_ldp.interfaces -%}
-no interface {{interface}}
-{% endfor -%}
-{% for interface in ldp.interfaces -%}
-interface {{interface}}
-{% endfor -%}
-!
-!
-exit-address-family
-!
-{% if ldp.d_transp_ipv6 -%}
-address-family ipv6
-label local allocate host-routes
-{% if old_ldp.d_transp_ipv6 -%}
-no discovery transport-address {{ old_ldp.d_transp_ipv6 }}
-{% endif -%}
-{% if ldp.d_transp_ipv6 -%}
-discovery transport-address {{ ldp.d_transp_ipv6 }}
-{% endif -%}
-{% for interface in old_ldp.interfaces -%}
-no interface {{interface}}
-{% endfor -%}
-{% for interface in ldp.interfaces -%}
-interface {{interface}}
-{% endfor -%}
-!
-exit-address-family
-{% else -%}
-no address-family ipv6
-{% endif -%}
-!
-{% else -%}
-no mpls ldp
-{% endif -%}
-!
-"""
 
 def sysctl(name, value):
     os.system('sysctl -wq {}={}'.format(name, value))
@@ -159,12 +95,10 @@ def get_config():
             }
         })
 
-    # print(mpls_conf)
-    # sys.exit(1)
     return mpls_conf
 
 def operate_mpls_on_intfc(interfaces, action):
-    rp_filter = 0 
+    rp_filter = 0
     if action == 1:
         rp_filter = 2
     for iface in interfaces:
@@ -193,7 +127,12 @@ def generate(mpls):
     if mpls is None:
         return None
 
-    tmpl = jinja2.Template(config_tmpl)
+    # Prepare Jinja2 template loader from files
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'mpls')
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader)
+
+    tmpl = env.get_template('ldpd.frr.tmpl')
     config_text = tmpl.render(mpls)
     with open(config_file, 'w') as f:
         f.write(config_text)
@@ -234,4 +173,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
