@@ -1,0 +1,41 @@
+!
+{% for iface in old_ifaces -%}
+interface {{ iface }}
+{% for group in old_ifaces[iface].gr_join -%}
+{% if old_ifaces[iface].gr_join[group] -%}
+{% for source in old_ifaces[iface].gr_join[group] -%}
+no ip igmp join {{ group }} {{ source }}
+{% endfor -%}
+{% else -%}
+no ip igmp join {{ group }}
+{% endif -%}
+{% endfor -%}
+no ip igmp
+!
+{% endfor -%}
+{% for iface in ifaces -%}
+interface {{ iface }}
+{% if ifaces[iface].version -%}
+ip igmp version {{ ifaces[iface].version }}
+{% else -%}
+{# IGMP default version 3 #}
+ip igmp
+{% endif -%}
+{% if ifaces[iface].query_interval -%}
+ip igmp query-interval {{ ifaces[iface].query_interval }}
+{% endif -%}
+{% if ifaces[iface].query_max_resp_time -%}
+ip igmp query-max-response-time {{ ifaces[iface].query_max_resp_time }}
+{% endif -%}
+{% for group in ifaces[iface].gr_join -%}
+{% if ifaces[iface].gr_join[group] -%}
+{% for source in ifaces[iface].gr_join[group] -%}
+ip igmp join {{ group }} {{ source }}
+{% endfor -%}
+{% else -%}
+ip igmp join {{ group }}
+{% endif -%}
+{% endfor -%}
+!
+{% endfor -%}
+!

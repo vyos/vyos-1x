@@ -13,64 +13,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-import sys
-import jinja2
-import copy
 import os
-import vyos.validate
+
+from ipaddress import IPv4Address
+from jinja2 import FileSystemLoader, Environment
+from sys import exit
 
 from vyos import ConfigError
 from vyos.config import Config
-from ipaddress import IPv4Address
+from vyos.defaults import directories as vyos_data_dir
 
 config_file = r'/tmp/igmp.frr'
-
-# Please be careful if you edit the template.
-config_tmpl = """
-!
-{% for iface in old_ifaces -%}
-interface {{ iface }}
-{% for group in old_ifaces[iface].gr_join -%}
-{% if old_ifaces[iface].gr_join[group] -%}
-{% for source in old_ifaces[iface].gr_join[group] -%}
-no ip igmp join {{ group }} {{ source }}
-{% endfor -%}
-{% else -%}
-no ip igmp join {{ group }}
-{% endif -%}
-{% endfor -%}
-no ip igmp
-!
-{% endfor -%}
-{% for iface in ifaces -%}
-interface {{ iface }}
-{% if ifaces[iface].version -%}
-ip igmp version {{ ifaces[iface].version }}
-{% else -%}
-{# IGMP default version 3 #}
-ip igmp
-{% endif -%}
-{% if ifaces[iface].query_interval -%}
-ip igmp query-interval {{ ifaces[iface].query_interval }}
-{% endif -%}
-{% if ifaces[iface].query_max_resp_time -%}
-ip igmp query-max-response-time {{ ifaces[iface].query_max_resp_time }}
-{% endif -%}
-{% for group in ifaces[iface].gr_join -%}
-{% if ifaces[iface].gr_join[group] -%}
-{% for source in ifaces[iface].gr_join[group] -%}
-ip igmp join {{ group }} {{ source }}
-{% endfor -%}
-{% else -%}
-ip igmp join {{ group }}
-{% endif -%}
-{% endfor -%}
-!
-{% endfor -%}
-!
-"""
 
 def get_config():
     conf = Config()
@@ -132,7 +86,12 @@ def generate(igmp):
     if igmp is None:
         return None
 
-    tmpl = jinja2.Template(config_tmpl)
+    # Prepare Jinja2 template loader from files
+    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'igmp')
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader)
+
+    tmpl = env.get_template('igmp.frr.tmpl')
     config_text = tmpl.render(igmp)
     with open(config_file, 'w') as f:
         f.write(config_text)
@@ -157,4 +116,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
