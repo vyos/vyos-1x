@@ -20,13 +20,13 @@ from jinja2 import FileSystemLoader, Environment
 from psutil import users
 from pwd import getpwall, getpwnam
 from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
-from subprocess import Popen, PIPE, STDOUT
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import cmd, run
 
 radius_config_file = "/etc/pam_radius_auth.conf"
 
@@ -52,10 +52,7 @@ def get_local_users():
 
 
 def get_crypt_pw(password):
-    command = '/usr/bin/mkpasswd --method=sha-512 {}'.format(password)
-    p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-    tmp = p.communicate()[0].strip()
-    return tmp.decode()
+    return cmd(f'/usr/bin/mkpasswd --method=sha-512 {password}')
 
 
 def get_config():
@@ -210,8 +207,8 @@ def generate(login):
 
             # remove old plaintext password
             # and set new encrypted password
-            os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password '' >/dev/null".format(user['name']))
-            os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}' >/dev/null".format(user['name'], user['password_encrypted']))
+            run("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password '' >/dev/null".format(user['name']))
+            run("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}' >/dev/null".format(user['name'], user['password_encrypted']))
 
     if len(login['radius_server']) > 0:
         # Prepare Jinja2 template loader from files
@@ -238,27 +235,27 @@ def apply(login):
     for user in login['add_users']:
         # make new user using vyatta shell and make home directory (-m),
         # default group of 100 (users)
-        cmd = "useradd -m -N"
+        command = "useradd -m -N"
         # check if user already exists:
         if user['name'] in get_local_users():
             # update existing account
-            cmd = "usermod"
+            command = "usermod"
 
         # we need to use '' quotes when passing formatted data to the shell
         # else it will not work as some data parts are lost in translation
-        cmd += " -p '{}'".format(user['password_encrypted'])
-        cmd += " -s /bin/vbash"
+        command += " -p '{}'".format(user['password_encrypted'])
+        command += " -s /bin/vbash"
         if user['full_name']:
-            cmd += " -c '{}'".format(user['full_name'])
+            command += " -c '{}'".format(user['full_name'])
 
         if user['home_dir']:
-            cmd += " -d '{}'".format(user['home_dir'])
+            command += " -d '{}'".format(user['home_dir'])
 
-        cmd += " -G frrvty,vyattacfg,sudo,adm,dip,disk"
-        cmd += " {}".format(user['name'])
+        command += " -G frrvty,vyattacfg,sudo,adm,dip,disk"
+        command += " {}".format(user['name'])
 
         try:
-            os.system(cmd)
+            run(command)
 
             uid = getpwnam(user['name']).pw_uid
             gid = getpwnam(user['name']).pw_gid
@@ -298,10 +295,10 @@ def apply(login):
             # Logout user if he is logged in
             if user in list(set([tmp[0] for tmp in users()])):
                 print('{} is logged in, forcing logout'.format(user))
-                os.system('pkill -HUP -u {}'.format(user))
+                run('pkill -HUP -u {}'.format(user))
 
             # Remove user account but leave home directory to be safe
-            os.system('userdel -r {} 2>/dev/null'.format(user))
+            run('userdel -r {} 2>/dev/null'.format(user))
 
         except Exception as e:
             raise ConfigError('Deleting user "{}" raised an exception: {}'.format(user, e))
@@ -312,10 +309,10 @@ def apply(login):
     if len(login['radius_server']) > 0:
         try:
             # Enable RADIUS in PAM
-            os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --enable radius")
+            run("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --enable radius")
 
             # Make NSS system aware of RADIUS, too
-            cmd = "sed -i -e \'/\smapname/b\' \
+            command = "sed -i -e \'/\smapname/b\' \
                           -e \'/^passwd:/s/\s\s*/&mapuid /\' \
                           -e \'/^passwd:.*#/s/#.*/mapname &/\' \
                           -e \'/^passwd:[^#]*$/s/$/ mapname &/\' \
@@ -323,7 +320,7 @@ def apply(login):
                           -e \'/^group:[^#]*$/s/: */&mapname /\' \
                           /etc/nsswitch.conf"
 
-            os.system(cmd)
+            run(command)
 
         except Exception as e:
             raise ConfigError('RADIUS configuration failed: {}'.format(e))
@@ -331,15 +328,15 @@ def apply(login):
     else:
         try:
             # Disable RADIUS in PAM
-            os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --remove radius")
+            run("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --remove radius")
 
-            cmd = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
+            command = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
                    -e \'/^passwd:.*[ \t]mapname/s/[ \t]mapname//\' \
                    -e \'/^group:.*[ \t]mapname/s/[ \t]mapname//\' \
                    -e \'s/[ \t]*$//\' \
                    /etc/nsswitch.conf"
 
-            os.system(cmd)
+            run(command)
 
         except Exception as e:
             raise ConfigError('Removing RADIUS configuration failed'.format(e))
