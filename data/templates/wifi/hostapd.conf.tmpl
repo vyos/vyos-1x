@@ -391,14 +391,26 @@ vht_capab=
 {%- endif -%}
 
 {%- if cap_vht_antenna_cnt -%}
+{%- if cap_vht_antenna_cnt|int > 1 -%}
+{%- if cap_vht_beamform -%}
 {%- for beamform in cap_vht_beamform -%}
 {%- if 'single-user-beamformer' in beamform -%}
+{%- if cap_vht_antenna_cnt|int < 6 -%}
 [BF-ANTENNA-{{ cap_vht_antenna_cnt|int -1 }}][SOUNDING-DIMENSION-{{ cap_vht_antenna_cnt|int -1}}]
+{%- endif -%}
 {%- else -%}
+{%- if cap_vht_antenna_cnt|int < 5 -%}
 [BF-ANTENNA-{{ cap_vht_antenna_cnt }}][SOUNDING-DIMENSION-{{ cap_vht_antenna_cnt }}]
 {%- endif -%}
+{%- endif -%}
 {%- endfor -%}
-{%- endif %}
+{%- else -%}
+{%- if cap_vht_antenna_cnt|int < 5 -%}
+[BF-ANTENNA-{{ cap_vht_antenna_cnt }}][SOUNDING-DIMENSION-{{ cap_vht_antenna_cnt }}]
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
 
 # ieee80211n: Whether IEEE 802.11n (HT) is enabled
 # 0 = disabled (default)

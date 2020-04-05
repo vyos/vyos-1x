@@ -583,6 +583,10 @@ def verify(wifi):
     if wifi['cap_vht_beamform'] and wifi['cap_vht_antenna_cnt'] == 1:
         raise ConfigError('Cannot use beam forming with just one antenna!')
 
+    if wifi['cap_vht_beamform'] == 'single-user-beamformer' and wifi['cap_vht_antenna_cnt'] < 3:
+        # Nasty Gotcha: see https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf lines 692-705
+        raise ConfigError('Single-user beam former requires at least 3 antennas!')
+
     if wifi['sec_wep'] and (len(wifi['sec_wep_key']) == 0):
         raise ConfigError('Missing WEP keys')
 
