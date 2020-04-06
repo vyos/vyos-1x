@@ -24,6 +24,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.validate import is_addr_assigned,is_loopback_addr
 from vyos.defaults import directories as vyos_data_dir
+from vyos.version import get_version_data
 from vyos import ConfigError
 
 config_file = "/etc/default/lldpd"
@@ -67,7 +68,8 @@ def get_options(config):
     options['sonmp'] = config.exists('sonmp')
 
     # start with an unknown version information
-    options['description'] = 'unknown'
+    version_data = get_version_data()
+    options['description'] = version_data['version']
     options['listen_on'] = []
 
     return options
@@ -210,10 +212,6 @@ def generate(lldp):
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'lldp')
     fs_loader = FileSystemLoader(tmpl_path)
     env = Environment(loader=fs_loader)
-
-    with open('/opt/vyatta/etc/version', 'r') as f:
-        tmp = f.read()
-        lldp['options']['description'] = tmp.split()[1]
 
     # generate listen on interfaces
     for intf in lldp['interface_list']:
