@@ -185,7 +185,6 @@ def generate(data):
             f.write(l2pt_ipsec_conf_txt)
         os.umask(old_umask)
 
-        append_ipsec_conf(data)
     else:
         if os.path.exists(ipsec_ra_conn_file):
             remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_ra_conn_file)
