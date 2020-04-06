@@ -44,7 +44,7 @@ def get_version_data(file=version_file):
         file (str): path to the version file
 
     Returns:
-        dict: version data
+        dict: version data, if it can not be found and empty dict
 
     The optional ``file`` argument comes in handy in upgrade scripts
     that need to retrieve information from images other than the running image.
@@ -52,17 +52,20 @@ def get_version_data(file=version_file):
     is an implementation detail and may change in the future, while the interface
     of this module will stay the same.
     """
-    with open(file, 'r') as f:
-        version_data = json.load(f)
-    return version_data
+    try:
+        with open(file, 'r') as f:
+            version_data = json.load(f)
+        return version_data
+    except FileNotFoundError:
+        return {}
 
 def get_version(file=None):
     """
-    Get the version number
+    Get the version number, or an empty string if it could not be determined
     """
     version_data = None
     if file:
         version_data = get_version_data(file=file)
     else:
         version_data = get_version_data()
-    return version_data["version"]
+    return version_data.get('version','')
