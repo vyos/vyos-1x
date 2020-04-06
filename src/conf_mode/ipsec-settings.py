@@ -147,8 +147,8 @@ def verify(data):
 
 def generate(data):
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'ipsec')
-    fs_loader = jinja2.FileSystemLoader(tmpl_path)
-    env = jinja2.Environment(loader=fs_loader, trim_blocks=True)
+    fs_loader = FileSystemLoader(tmpl_path)
+    env = Environment(loader=fs_loader, trim_blocks=True)
 
     tmpl = env.get_template('charon.tmpl')
     config_text = tmpl.render(data)
@@ -182,7 +182,7 @@ def generate(data):
         l2pt_ipsec_conf_txt = tmpl.render(c)
         old_umask = os.umask(0o077)
         with open(ipsec_conf_flie,'a') as f:
-            .write(l2pt_ipsec_conf_txt)
+            f.write(l2pt_ipsec_conf_txt)
         os.umask(old_umask)
 
         append_ipsec_conf(data)
