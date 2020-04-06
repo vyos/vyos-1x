@@ -19,6 +19,12 @@ import sys
 from subprocess import Popen, PIPE, STDOUT, DEVNULL
 
 def debug(flag):
+    # this is to force all new flags to be registered here so that
+    # they can be documented:
+    # - developer: the code will drop into PBD on un-handled exception
+    # - ifconfig: prints command and sysfs access on stdout for interface
+    if flag not in ['developer', 'ifconfig']:
+        return False
     return flag if os.path.isfile(f'/tmp/vyos.{flag}.debug') else ''
 
 
