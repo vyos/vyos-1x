@@ -243,6 +243,9 @@ def verify(bridge):
         if intf['name'] not in interfaces():
             raise ConfigError('Can not add non existing interface "{}" to bridge "{}"'.format(intf['name'], bridge['intf']))
 
+        if intf['name'] == 'lo':
+            raise ConfigError('Loopback interface "lo" can not be added to a bridge')
+
     # bridge members are not allowed to be bond members, too
     for intf in bridge['member']:
         for bond in conf.list_nodes('interfaces bonding'):

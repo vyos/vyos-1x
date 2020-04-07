@@ -22,7 +22,7 @@ from copy import deepcopy
 from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import run, is_bridge_member
 from netifaces import interfaces
 
 default_config_data = {
@@ -154,8 +154,15 @@ def get_config():
 
 
 def verify(l2tpv3):
+    interface = l2tpv3['intf']
+
     if l2tpv3['deleted']:
-        # bail out early
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
     if not l2tpv3['local_address']:

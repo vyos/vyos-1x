@@ -29,7 +29,7 @@ from vyos.configdict import list_diff, vlan_to_dict
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import process_running, chmod_x, chown_file, run
+from vyos.util import process_running, chmod_x, chown_file, run, is_bridge_member
 from vyos import ConfigError
 
 user = 'root'
@@ -554,7 +554,15 @@ def get_config():
 
 def verify(wifi):
     if wifi['deleted']:
+        interface = wifi['intfc']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
+
 
     if wifi['op_mode'] != 'monitor' and not wifi['ssid']:
         raise ConfigError('SSID must be set for {}'.format(wifi['intf']))

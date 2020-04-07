@@ -24,9 +24,8 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
+from vyos.util import run, is_bridge_member
 from vyos import ConfigError
-from vyos.util import run
-
 
 default_config_data = {
     'address': [],
@@ -278,17 +277,23 @@ def get_config():
 
 
 def verify(bond):
+    if bond['deleted']:
+        interface = bond['intf']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        return None
+
     if len (bond['arp_mon_tgt']) > 16:
         raise ConfigError('The maximum number of targets that can be specified is 16')
 
     if bond['primary']:
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
             raise ConfigError('Mode dependency failed, primary not supported ' \
-                              'in this mode.'.format())
-
-        if bond['primary'] not in bond['member']:
-            raise ConfigError('Interface "{}" is not part of the bond' \
-                              .format(bond['primary']))
+                              'in mode "{}"!'.format(bond['mode']))
 
     vrf_name = bond['vrf']
     if vrf_name and vrf_name not in interfaces():

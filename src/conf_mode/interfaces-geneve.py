@@ -18,11 +18,12 @@ import os
 
 from sys import exit
 from copy import deepcopy
+from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.ifconfig import GeneveIf, Interface
+from vyos.ifconfig import GeneveIf
+from vyos.util import is_bridge_member
 from vyos import ConfigError
-from netifaces import interfaces
 
 default_config_data = {
     'address': [],
@@ -92,7 +93,13 @@ def get_config():
 
 def verify(geneve):
     if geneve['deleted']:
-        # bail out early
+        interface = geneve['intf']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
     if not geneve['remote']:

@@ -31,7 +31,7 @@ from shutil import rmtree
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
-from vyos.util import process_running, cmd
+from vyos.util import process_running, cmd, is_bridge_member
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
@@ -444,7 +444,15 @@ def get_config():
 
 def verify(openvpn):
     if openvpn['deleted']:
+        interface = openvpn['intf']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
+
 
     if not openvpn['mode']:
         raise ConfigError('Must specify OpenVPN operation mode')

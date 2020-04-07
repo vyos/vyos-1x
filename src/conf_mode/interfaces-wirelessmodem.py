@@ -23,7 +23,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import chown_file, chmod_x, cmd, run
+from vyos.util import chown_file, chmod_x, cmd, run, is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -115,6 +115,13 @@ def get_config():
 
 def verify(wwan):
     if wwan['deleted']:
+        interface = wwan['intfc']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
     if not wwan['apn']:

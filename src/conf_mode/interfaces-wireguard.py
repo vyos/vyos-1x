@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos import ConfigError
 from vyos.config import Config
 from vyos.configdict import list_diff
-from vyos.util import run
+from vyos.util import run, is_bridge_member
 from vyos.ifconfig import WireGuardIf
 
 kdir = r'/config/auth/wireguard'
@@ -177,6 +177,16 @@ def get_config():
 
 def verify(c):
     if not c:
+        return None
+
+    if c['delete']:
+        interface = c['intfc']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
     if not os.path.exists(c['pk']):

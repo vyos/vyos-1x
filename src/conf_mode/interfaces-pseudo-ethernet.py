@@ -24,6 +24,7 @@ from vyos.ifconfig import MACVLANIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
+from vyos.util import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -217,6 +218,13 @@ def get_config():
 
 def verify(peth):
     if peth['deleted']:
+        interface = peth['intf']
+        is_member, bridge = is_bridge_member(interface)
+        if is_member:
+            # can not use a f'' formatted-string here as bridge would not get
+            # expanded in the print statement
+            raise ConfigError('Can not delete interface "{0}" as it ' \
+                              'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
     if not peth['link']:
