@@ -94,8 +94,8 @@ def get_config():
         if conf.exists('api port'):
             port = conf.return_value('api port')
             api_data['port'] = port
-        if conf.exists('api virtual-host'):
-            vhosts = conf.return_values('api virtual-host')
+        if conf.exists('api-restrict virtual-host'):
+            vhosts = conf.return_values('api-restrict virtual-host')
             api_data['vhost'] = vhosts[:]
 
     if api_data:

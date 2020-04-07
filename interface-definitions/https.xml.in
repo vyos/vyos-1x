@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- HTTPS configuration -->
 <interfaceDefinition>
-  <syntaxVersion component='https' version='1'></syntaxVersion>
+  <syntaxVersion component='https' version='2'></syntaxVersion>
   <node name="service">
     <children>
       <node name="https" owner="${vyos_conf_scripts_dir}/https.py">
@@ -111,6 +111,13 @@
                   <hidden/>
                 </properties>
               </leafNode>
+            </children>
+          </node>
+          <node name="api-restrict">
+            <properties>
+              <help>Restrict api proxy to subset of virtual hosts</help>
+            </properties>
+            <children>
               <leafNode name="virtual-host">
                 <properties>
                   <help>Restrict proxy to virtual host(s)</help>
