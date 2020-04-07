@@ -207,16 +207,7 @@ def apply(bfd):
     if bfd is None:
         return None
 
-<<<<<<< HEAD
-    os.system(f'vtysh -d bfdd -f {config_file}')
-=======
-    tmpl = jinja2.Template(config_tmpl)
-    config_text = tmpl.render(bfd)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
-    run("sudo vtysh -d bfdd -f " + config_file)
->>>>>>> util: T2226: covert most calls from os.system to util
+    run("vtysh -d bfdd -f " + config_file)
     if os.path.exists(config_file):
         os.remove(config_file)
 
