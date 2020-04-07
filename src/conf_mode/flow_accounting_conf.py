@@ -16,7 +16,7 @@
 
 import os
 import re
-import subprocess
+import ipaddress
 
 from ipaddress import ip_address
 from jinja2 import FileSystemLoader, Environment
@@ -26,6 +26,8 @@ from vyos.ifconfig import Interface
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import cmd
+
 
 # default values
 default_sflow_server_port = 6343
@@ -80,11 +82,7 @@ def _iptables_get_nflog():
     for iptables_variant in ['iptables', 'ip6tables']:
         # run iptables, save output and split it by lines
         iptables_command = "sudo {0} -t {1} -S {2}".format(iptables_variant, iptables_nflog_table, iptables_nflog_chain)
-        process = subprocess.Popen(iptables_command, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
-        stdout, stderr = process.communicate()
-        if not process.returncode == 0:
-            print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode, stderr))
-            exit(1)
+        cmd(iptables_command, universal_newlines=True, message='Failed to get flows list')
         iptables_out = stdout.splitlines()
 
         # parse each line and add information to list
@@ -113,10 +111,17 @@ def _iptables_config(configured_ifaces):
     # compare current active list with configured one and delete excessive interfaces, add missed
     active_nflog_ifaces = []
     for rule in active_nflog_rules:
-        if rule['interface'] not in configured_ifaces:
-            iptable_commands.append("sudo {0} -t {1} -D {2}".format(rule['iptables_variant'], rule['table'], rule['rule_definition']))
+        iptables = rule['iptables_variant']
+        interface = rule['interface']
+        if interface not in configured_ifaces:
+            table = rule['table']
+            rule = rule['rule_definition']
+            iptable_commands.append(f'sudo {iptables} -t {table} -D {rule}')
         else:
-            active_nflog_ifaces.append({ 'iface': rule['interface'], 'iptables_variant': rule['iptables_variant'] })
+            active_nflog_ifaces.append({
+                'iface': interface,
+                'iptables_variant': iptables,
+            })
 
     # do not create new rules for already configured interfaces
     for iface in active_nflog_ifaces:
@@ -125,14 +130,14 @@ def _iptables_config(configured_ifaces):
 
     # create missed rules
     for iface_extended in configured_ifaces_extended:
-        rule_definition = "{0} -i {1} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {2} --nflog-threshold 100".format(iptables_nflog_chain, iface_extended['iface'], default_captured_packet_size)
-        iptable_commands.append("sudo {0} -t {1} -I {2}".format(iface_extended['iptables_variant'], iptables_nflog_table, rule_definition))
+        iface = iface_extended['iface']
+        iptables = iface_extended['iptables_variant']
+        rule_definition = f'{iptables_nflog_chain} -i {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {default_captured_packet_size} --nflog-threshold 100'
+        iptable_commands.append(f'sudo {iptables} -t {iptables_nflog_table} -I {rule_definition}')
 
     # change iptables
     for command in iptable_commands:
-        return_code = subprocess.call(command.split(' '))
-        if not return_code == 0:
-            raise ConfigError("Failed to run command: {}\nExit code {}".format(command, return_code))
+        cmd(command, raising=ConfigError)
 
 
 def get_config():
@@ -351,9 +356,7 @@ def apply(config):
         command = '/usr/bin/sudo /bin/systemctl restart uacctd'
 
     # run command to start or stop flow-accounting
-    return_code = subprocess.call(command.split(' '))
-    if not return_code == 0:
-        raise ConfigError("Failed to start/stop flow-accounting: command {} returned exit code {}".format(command, return_code))
+    cmd(command, raising=ConfigError, message='Failed to start/stop flow-accounting')
 
     # configure iptables rules for defined interfaces
     if config['interfaces']:

@@ -22,6 +22,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
 
 config_file = r'/etc/default/isc-dhcp-relay'
 
@@ -112,10 +113,10 @@ def generate(relay):
 
 def apply(relay):
     if relay is not None:
-        os.system('sudo systemctl restart isc-dhcp-relay.service')
+        run('sudo systemctl restart isc-dhcp-relay.service')
     else:
         # DHCP relay support is removed in the commit
-        os.system('sudo systemctl stop isc-dhcp-relay.service')
+        run('sudo systemctl stop isc-dhcp-relay.service')
         os.unlink(config_file)
 
     return None

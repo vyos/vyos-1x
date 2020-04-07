@@ -19,10 +19,10 @@
 import sys
 import os
 import re
-import subprocess
 
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import popen, run
 
 # Define for recovering
 gl_ipsec_conf = None
@@ -49,13 +49,10 @@ def get_config():
 
 # Control configured VPN service which can use QAT
 def vpn_control(action):
+  # XXX: Should these commands report failure
   if action == 'restore' and gl_ipsec_conf:
-    ret = subprocess.Popen(['sudo', 'ipsec', 'start'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
-    return
-
-  ret = subprocess.Popen(['sudo', 'ipsec', action], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  (output, err) = ret.communicate()
+    return run('sudo ipsec start')
+  return run(f'sudo ipsec {action}')
 
 def verify(c):
   # Check if QAT service installed
@@ -66,10 +63,9 @@ def verify(c):
     return
 
   # Check if QAT device exist
-  ret = subprocess.Popen(['sudo', 'lspci',  '-nn'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  (output, err) = ret.communicate()
+  output, err = popen('sudo lspci -nn', decode='utf-8')
   if not err:
-    data = re.findall('(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output.decode("utf-8"))
+    data = re.findall('(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output)
     #If QAT devices found
     if not data:
       print("\t No QAT acceleration device found")
@@ -82,17 +78,13 @@ def apply(c):
 
   # Disable QAT service
   if c['qat_conf'] == None:
-    ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
+    run('sudo /etc/init.d/vyos-qat-utilities stop')
     if c['ipsec_conf']:
       vpn_control('start')
-
     return
 
   # Run qat init.d script
-  ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities', 'start'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  (output, err) = ret.communicate()
-
+  run('sudo /etc/init.d/vyos-qat-utilities start')
   if c['ipsec_conf']:
     # Recovery VPN service
     vpn_control('start')

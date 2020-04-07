@@ -16,7 +16,7 @@
 import os
 import re
 import sys
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT, DEVNULL
 
 
 # debugging
@@ -33,34 +33,63 @@ def debug_msg(message, section=''):
 
 #  commands
 
-
-def popen(command, section=''):
-    p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-    tmp = p.communicate()[0].strip()
+# popen does not raise
+# it returns the output of the command and the error code
+def popen(command, section='', shell=None, input=None, timeout=None, env=None, universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+    use_shell = shell
+    if shell is None:
+        use_shell = True if ' ' in command else False
+    p = Popen(
+        command,
+        stdout=stdout, stderr=stderr,
+        env=env, shell=use_shell,
+        universal_newlines=universal_newlines,
+    )
+    tmp = p.communicate(input, timeout)[0].strip()
     debug_msg(f"cmd '{command}'", section)
-    decoded = tmp.decode()
+    decoded = tmp.decode(decode) if decode else tmp.decode()
     if decoded:
         debug_msg(f"returned:\n{decoded}", section)
     return decoded, p.returncode
 
+# run does not raise
+# it returns the error code
+def run(command, section='', shell=None, input=None, timeout=None, env=None, universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+    _, code = popen(
+        command, section,
+        stdout=stdout, stderr=stderr,
+        input=input, timeout=timeout,
+        env=env, shell=shell,
+        universal_newlines=universal_newlines,
+        decode=decode,
+    )
+    return code
 
-def cmd(command, section=''):
-    decoded, code = popen(command, section)
+# cmd does raise
+# it returns the output
+def cmd(command, section='', shell=None, input=None, timeout=None, env=None, universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None, raising=None, message=''):
+    decoded, code = popen(
+        command, section,
+        stdout=stdout, stderr=stderr,
+        input=input, timeout=timeout,
+        env=env, shell=shell,
+        universal_newlines=universal_newlines,
+        decode=decode,
+    )
     if code != 0:
-        # error code can be recovered with .errno
-        raise OSError(code, f'{command}\nreturned: {decoded}')
+        feedback = message + '\n' if message else ''
+        feedback += f'failed to run command: {command}\n'
+        feedback += f'returned: {decoded}\n'
+        feedback += f'exit code: {code}'
+        if raising is None:
+            # error code can be recovered with .errno
+            raise OSError(code, feedback)
+        else:
+            raise raising(feedback)
     return decoded
 
 
 # file manipulation
-
-
-
-def subprocess_cmd(command):
-    """ execute arbitrary command via Popen """
-    from subprocess import Popen, PIPE
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
 
 
 def read_file(path):
@@ -224,12 +253,11 @@ def commit_in_progress():
     # Since this will be used in scripts that modify the config outside of the CLI
     # framework, those knowingly have root permissions.
     # For everything else, we add a safeguard.
-    from subprocess import check_output
     from psutil import process_iter, NoSuchProcess
     from vyos.defaults import commit_lock
 
-    id = check_output(['/usr/bin/id', '-u']).decode().strip()
-    if id != '0':
+    idu = cmd('/usr/bin/id -u')
+    if idu != '0':
         raise OSError("This functions needs root permissions to return correct results")
 
     for proc in process_iter():

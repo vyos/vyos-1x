@@ -16,7 +16,6 @@
 
 import os
 import time
-import subprocess
 from datetime import timedelta
 
 from vyos.config import Config

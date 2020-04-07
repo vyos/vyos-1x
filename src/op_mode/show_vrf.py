@@ -16,9 +16,9 @@
 
 import argparse
 import jinja2
-
-from subprocess import check_output
 from json import loads
+
+from vyos.util import cmd
 
 vrf_out_tmpl = """
 VRF name          state     mac address        flags                     interfaces
@@ -31,12 +31,12 @@ VRF name          state     mac address        flags                     interfa
 
 def list_vrfs():
     command = 'ip -j -br link show type vrf'
-    answer = loads(check_output(command.split()).decode())
+    answer = loads(cmd(command))
     return [_ for _ in answer if _]
 
 def list_vrf_members(vrf):
     command = f'ip -j -br link show master {vrf}'
-    answer = loads(check_output(command.split()).decode())
+    answer = loads(cmd(command))
     return [_ for _ in answer if _]
 
 parser = argparse.ArgumentParser()

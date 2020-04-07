@@ -19,9 +19,10 @@ import sys
 import argparse
 import re
 import ipaddress
-import subprocess
 import os.path
 from tabulate import tabulate
+
+from vyos.util import cmd, run
 
 # some default values
 uacctd_pidfile = '/var/run/uacctd.pid'
@@ -69,26 +70,16 @@ def _is_host(host):
 
 # check if flow-accounting running
 def _uacctd_running():
-    command = "/usr/bin/sudo /bin/systemctl status uacctd > /dev/null"
-    return_code = subprocess.call(command, shell=True)
-    if not return_code == 0:
-        return False
-
-    # return True if all checks were passed
-    return True
+    command = '/usr/bin/sudo /bin/systemctl status uacctd > /dev/null'
+    return run(command) == 0
 
 # get list of interfaces
 def _get_ifaces_dict():
     # run command to get ifaces list
-    command = "/bin/ip link show"
-    process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, universal_newlines=True)
-    stdout, stderr = process.communicate()
-    if not process.returncode == 0:
-        print("Failed to get interfaces list: command \"{}\" returned exit code: {}".format(command, process.returncode))
-        sys.exit(1)
+    out = cmd('/bin/ip link show', universal_newlines=True)
 
     # read output
-    ifaces_out = stdout.splitlines()
+    ifaces_out = out.splitlines()
 
     # make a dictionary with interfaces and indexes
     ifaces_dict = {}
@@ -103,15 +94,12 @@ def _get_ifaces_dict():
 # get list of flows
 def _get_flows_list():
     # run command to get flows list
-    command = "/usr/bin/pmacct -s -O json -T flows -p {}".format(uacctd_pipefile)
-    process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, universal_newlines=True)
-    stdout, stderr = process.communicate()
-    if not process.returncode == 0:
-        print("Failed to get flows list: command \"{}\" returned exit code: {}\nError: {}".format(command, process.returncode, stderr))
-        sys.exit(1)
+    out = cmd(f'/usr/bin/pmacct -s -O json -T flows -p {uacctd_pipefile}',
+                universal_newlines=True,
+                message='Failed to get flows list')
 
     # read output
-    flows_out = stdout.splitlines()
+    flows_out = out.splitlines()
 
     # make a list with flows
     flows_list = []
@@ -208,21 +196,15 @@ if not _uacctd_running():
 # restart pmacct daemon
 if cmd_args.action == 'restart':
     # run command to restart flow-accounting
-    command = '/usr/bin/sudo /bin/systemctl restart uacctd'
-    return_code = subprocess.call(command.split(' '))
-    if not return_code == 0:
-        print("Failed to restart flow-accounting: command \"{}\" returned exit code: {}".format(command, return_code))
-        sys.exit(1)
+    cmd('/usr/bin/sudo /bin/systemctl restart uacctd',
+        message='Failed to restart flow-accounting')
 
 # clear in-memory collected flows
 if cmd_args.action == 'clear':
     _check_imt()
     # run command to clear flows
-    command = "/usr/bin/pmacct -e -p {}".format(uacctd_pipefile)
-    return_code = subprocess.call(command.split(' '))
-    if not return_code == 0:
-        print("Failed to clear flows: command \"{}\" returned exit code: {}".format(command, return_code))
-        sys.exit(1)
+    cmd(f'/usr/bin/pmacct -e -p {uacctd_pipefile}',
+        message='Failed to clear flows')
 
 # show table with flows
 if cmd_args.action == 'show':

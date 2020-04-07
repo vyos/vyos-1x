@@ -23,7 +23,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import chown_file, chmod_x, subprocess_cmd
+from vyos.util import chown_file, chmod_x, cmd, run
 from vyos import ConfigError
 
 default_config_data = {
@@ -48,7 +48,7 @@ def check_kmod():
     modules = ['option', 'usb_wwan', 'usbserial']
     for module in modules:
         if not os.path.exists(f'/sys/module/{module}'):
-            if os.system(f'modprobe {module}') != 0:
+            if run(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
 
 def get_config():
@@ -156,8 +156,7 @@ def generate(wwan):
             os.mkdir(dirname)
 
     # Always hang-up WWAN connection prior generating new configuration file
-    cmd = f'systemctl stop ppp@{intf}.service'
-    subprocess_cmd(cmd)
+    cmd(f'systemctl stop ppp@{intf}.service')
 
     if wwan['deleted']:
         # Delete PPP configuration files
@@ -211,9 +210,7 @@ def apply(wwan):
     if not wwan['disable']:
         # "dial" WWAN connection
         intf = wwan['intf']
-        cmd = f'systemctl start ppp@{intf}.service'
-        subprocess_cmd(cmd)
-
+        cmd(f'systemctl start ppp@{intf}.service')
         # make logfile owned by root / vyattacfg
         chown_file(wwan['logfile'], 'root', 'vyattacfg')
 

@@ -12,12 +12,8 @@ import re
 import sys
 
 from vyos.configtree import ConfigTree
-from subprocess import Popen, PIPE, STDOUT
+from vyos.util import cmd
 
-def _cmd(cmd):
-    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
-    tmp = p.communicate()[0].strip()
-    return tmp.decode()
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")
@@ -37,8 +33,11 @@ else:
     tz = config.return_value(tz_base)
 
     # retrieve all valid timezones
-    tz_data = _cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
-    tz_data = tz_data.split('\n')
+    try:
+        tz_datas = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+    except OSError:
+        tz_datas = ''
+    tz_data = tz_datas.split('\n')
 
     if re.match(r'[Ll][Oo][Ss].+', tz):
         tz = 'America/Los_Angeles'

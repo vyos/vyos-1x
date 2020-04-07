@@ -26,6 +26,8 @@ from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/dhcp/dhcpd.conf'
 lease_file = r'/config/dhcpd.leases'
@@ -626,7 +628,7 @@ def generate(dhcp):
 def apply(dhcp):
     if (dhcp is None) or dhcp['disabled']:
         # DHCP server is removed in the commit
-        os.system('sudo systemctl stop isc-dhcpv4-server.service')
+        run('sudo systemctl stop isc-dhcpv4-server.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
         if os.path.exists(daemon_config_file):
@@ -636,7 +638,7 @@ def apply(dhcp):
         if not os.path.exists(lease_file):
             os.mknod(lease_file)
 
-        os.system('sudo systemctl restart isc-dhcpv4-server.service')
+        run('sudo systemctl restart isc-dhcpv4-server.service')
 
     return None
 

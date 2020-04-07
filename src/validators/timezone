@@ -17,12 +17,8 @@
 import argparse
 
 from sys import exit
-from subprocess import Popen, PIPE, STDOUT
 
-def _cmd(cmd):
-    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
-    tmp = p.communicate()[0].strip()
-    return tmp.decode()
+from vyos.util import cmd
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--validate", action="store", help="Check if timezone is valid")
@@ -31,7 +27,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.validate:
-        tz_data = _cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+        tz_data = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
         tz_data = tz_data.split('\n')
         # if timezone can't be found in list it's invalid
         if args.validate not in tz_data:

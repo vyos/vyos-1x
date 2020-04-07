@@ -21,7 +21,6 @@ from re import findall
 from copy import deepcopy
 from jinja2 import FileSystemLoader, Environment
 
-from subprocess import Popen, PIPE
 from netifaces import interfaces
 from netaddr import EUI, mac_unix_expanded
 
@@ -30,7 +29,7 @@ from vyos.configdict import list_diff, vlan_to_dict
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import process_running, chmod_x, chown_file
+from vyos.util import process_running, chmod_x, chown_file, run
 from vyos import ConfigError
 
 user = 'root'
@@ -152,9 +151,6 @@ def get_wpa_suppl_config_name(intf):
     cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
     return cfg_file
 
-def subprocess_cmd(command):
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
 
 def get_config():
     wifi = deepcopy(default_config_data)
@@ -631,22 +627,22 @@ def generate(wifi):
     # always stop hostapd service first before reconfiguring it
     pidfile = get_pid('hostapd', wifi['intf'])
     if process_running(pidfile):
-        cmd = 'start-stop-daemon'
-        cmd += ' --stop '
-        cmd += ' --quiet'
-        cmd += ' --oknodo'
-        cmd += ' --pidfile ' + pidfile
-        subprocess_cmd(cmd)
+        command = 'start-stop-daemon'
+        command += ' --stop '
+        command += ' --quiet'
+        command += ' --oknodo'
+        command += ' --pidfile ' + pidfile
+        run(command)
 
     # always stop wpa_supplicant service first before reconfiguring it
     pidfile = get_pid('wpa_supplicant', wifi['intf'])
     if process_running(pidfile):
-        cmd = 'start-stop-daemon'
-        cmd += ' --stop '
-        cmd += ' --quiet'
-        cmd += ' --oknodo'
-        cmd += ' --pidfile ' + pidfile
-        subprocess_cmd(cmd)
+        command = 'start-stop-daemon'
+        command += ' --stop '
+        command += ' --quiet'
+        command += ' --oknodo'
+        command += ' --pidfile ' + pidfile
+        run(command)
 
     # Delete config files if interface is removed
     if wifi['deleted']:
@@ -807,37 +803,38 @@ def apply(wifi):
             # Physical interface is now configured. Proceed by starting hostapd or
             # wpa_supplicant daemon. When type is monitor we can just skip this.
             if wifi['op_mode'] == 'ap':
-                cmd  = 'start-stop-daemon'
-                cmd += ' --start '
-                cmd += ' --quiet'
-                cmd += ' --oknodo'
-                cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
-                cmd += ' --exec /usr/sbin/hostapd'
+                command = 'start-stop-daemon'
+                command += ' --start '
+                command += ' --quiet'
+                command += ' --oknodo'
+                command += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
+                command += ' --exec /usr/sbin/hostapd'
                 # now pass arguments to hostapd binary
-                cmd += ' -- '
-                cmd += ' -B'
-                cmd += ' -P ' + get_pid('hostapd', wifi['intf'])
-                cmd += ' ' + get_conf_file('hostapd', wifi['intf'])
+                command += ' -- '
+                command += ' -B'
+                command += ' -P ' + get_pid('hostapd', wifi['intf'])
+                command += ' ' + get_conf_file('hostapd', wifi['intf'])
 
                 # execute assembled command
-                subprocess_cmd(cmd)
+                run(command)
 
             elif wifi['op_mode'] == 'station':
-                cmd  = 'start-stop-daemon'
-                cmd += ' --start '
-                cmd += ' --quiet'
-                cmd += ' --oknodo'
-                cmd += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
-                cmd += ' --exec /sbin/wpa_supplicant'
+                command = 'start-stop-daemon'
+                command += ' --start '
+                command += ' --quiet'
+                command += ' --oknodo'
+                command += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
+                command += ' --exec /sbin/wpa_supplicant'
                 # now pass arguments to hostapd binary
-                cmd += ' -- '
-                cmd += ' -s -B -D nl80211'
-                cmd += ' -P ' + get_pid('wpa_supplicant', wifi['intf'])
-                cmd += ' -i ' + wifi['intf']
-                cmd += ' -c ' + get_conf_file('wpa_supplicant', wifi['intf'])
+                command += ' -- '
+                command += ' -s -B -D nl80211'
+                command += ' -P ' + get_pid('wpa_supplicant', wifi['intf'])
+                command += ' -i ' + wifi['intf']
+                command += ' -c ' + \
+                    get_conf_file('wpa_supplicant', wifi['intf'])
 
                 # execute assembled command
-                subprocess_cmd(cmd)
+                run(command)
 
     return None
 

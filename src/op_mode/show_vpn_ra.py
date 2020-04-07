@@ -17,8 +17,8 @@
 import os
 import sys
 import re
-import subprocess
-# from subprocess import Popen, PIPE
+
+from vyos.util import popen
 
 # chech connection to pptp and l2tp daemon
 def get_sessions():
@@ -31,18 +31,16 @@ def get_sessions():
     len_def_header = 170
     
     # Check pptp
-    ret = subprocess.Popen(pptp_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
-    if not err and len(output.decode("utf-8")) > len_def_header and not re.search(err_pattern, output.decode("utf-8")):
-        print(output.decode("utf-8"))
+    output, err = popen(pptp_cmd, decode='utf-8')
+    if not err and len(output) > len_def_header and not re.search(err_pattern, output):
+        print(output)
     else:
         absent_pptp = True
 
     # Check l2tp
-    ret = subprocess.Popen(l2tp_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    (output, err) = ret.communicate()
-    if not err and len(output.decode("utf-8")) > len_def_header and not re.search(err_pattern, output.decode("utf-8")):
-        print(output.decode("utf-8"))
+    output, err = popen(l2tp_cmd, decode='utf-8')
+    if not err and len(output) > len_def_header and not re.search(err_pattern, output):
+        print(output)
     else:
         absent_l2tp = True
 

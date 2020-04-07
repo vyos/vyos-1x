@@ -20,13 +20,12 @@ from sys import exit
 from copy import deepcopy
 from jinja2 import FileSystemLoader, Environment
 from json import loads
-from subprocess import check_output, CalledProcessError
 
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import Interface
-from vyos.util import read_file
+from vyos.util import read_file, cmd
 from vyos import ConfigError
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
@@ -40,14 +39,11 @@ default_config_data = {
 }
 
 def _cmd(command):
-    try:
-        check_output(command.split())
-    except CalledProcessError as e:
-        raise ConfigError(f'Error changing VRF: {e}')
+    cmd(command, raising=ConfigError, message='Error changing VRF')
 
 def list_rules():
     command = 'ip -j -4 rule show'
-    answer = loads(check_output(command.split()).decode())
+    answer = loads(cmd(command))
     return [_ for _ in answer if _]
 
 def vrf_interfaces(c, match):

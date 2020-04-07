@@ -21,6 +21,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/ssh/sshd_config'
 
@@ -131,10 +133,10 @@ def generate(ssh):
 
 def apply(ssh):
     if ssh is not None and 'port' in ssh.keys():
-        os.system("sudo systemctl restart ssh.service")
+        run("sudo systemctl restart ssh.service")
     else:
         # SSH access is removed in the commit
-        os.system("sudo systemctl stop ssh.service")
+        run("sudo systemctl stop ssh.service")
         if os.path.isfile(config_file):
             os.unlink(config_file)
 

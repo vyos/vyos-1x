@@ -17,12 +17,11 @@
 import os
 import sys
 import argparse
-import subprocess
 import re
 
 from datetime import datetime, timedelta, time as type_time, date as type_date
-from subprocess import check_output, CalledProcessError, STDOUT
 from vyos.util import ask_yes_no
+from vyos.util import cmd, run
 
 systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
@@ -45,23 +44,20 @@ def parse_date(s):
   return None
 
 def get_shutdown_status():
-  try:
-    if os.path.exists(systemd_sched_file):
-      # Get scheduled from systemd file
-      with open(systemd_sched_file, 'r') as f:
-        data = f.read().rstrip('\n')
-        r_data = {}
-        for line in data.splitlines():
-          tmp_split = line.split("=")
-          if tmp_split[0] == "USEC":
-            # Convert USEC to  human readable format
-            r_data['DATETIME'] = datetime.utcfromtimestamp(int(tmp_split[1])/1000000).strftime('%Y-%m-%d %H:%M:%S')
-          else:
-            r_data[tmp_split[0]] = tmp_split[1]
-        return r_data
-    return None
-  except CalledProcessError:
-    return None
+  if os.path.exists(systemd_sched_file):
+    # Get scheduled from systemd file
+    with open(systemd_sched_file, 'r') as f:
+      data = f.read().rstrip('\n')
+      r_data = {}
+      for line in data.splitlines():
+        tmp_split = line.split("=")
+        if tmp_split[0] == "USEC":
+          # Convert USEC to  human readable format
+          r_data['DATETIME'] = datetime.utcfromtimestamp(int(tmp_split[1])/1000000).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+          r_data[tmp_split[0]] = tmp_split[1]
+      return r_data
+  return None
 
 def check_shutdown():
   output = get_shutdown_status()
@@ -76,13 +72,13 @@ def check_shutdown():
 def cancel_shutdown():
   output = get_shutdown_status()
   if output and 'MODE' in output:
+    timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     try:
-      timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-      cmd = check_output(["/sbin/shutdown","-c","--no-wall"])
-      message = "Scheduled %s has been cancelled %s" % (output['MODE'], timenow)
-      os.system("wall %s" % message)
-    except CalledProcessError as e:
+      cmd('/sbin/shutdown -c --no-wall')
+    except OSError as e:
       sys.exit("Could not cancel a reboot or poweroff: %s" % e)
+    message = "Scheduled %s has been cancelled %s" % (output['MODE'], timenow)
+    run(f'wall {message}')
   else:
     print("Reboot or poweroff is not scheduled")
 
@@ -99,14 +95,14 @@ def execute_shutdown(time, reboot = True, ask=True):
     chk_vyatta_based_reboots()
     ###
 
-    cmd = check_output(["/sbin/shutdown",action,"now"],stderr=STDOUT)
-    print(cmd.decode().split(",",1)[0])
+    out = cmd(f'/sbin/shutdown {action} now')
+    print(out.split(",",1)[0])
     return
   elif len(time) == 1:
     # Assume the argument is just time
     ts = parse_time(time[0])
     if ts:
-      cmd = check_output(["/sbin/shutdown", action, time[0]], stderr=STDOUT)
+      cmd(f'/sbin/shutdown {action} {time[0]}')
     else:
       sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
   elif len(time) == 2:
@@ -117,7 +113,7 @@ def execute_shutdown(time, reboot = True, ask=True):
       t = datetime.combine(ds, ts)
       td = t - datetime.now()
       t2 = 1 + int(td.total_seconds())//60 # Get total minutes
-      cmd = check_output(["/sbin/shutdown", action, str(t2)], stderr=STDOUT)
+      cmd('/sbin/shutdown {action} {t2}')
     else:
       if not ts:
         sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
@@ -136,7 +132,7 @@ def chk_vyatta_based_reboots():
   if os.path.exists(f):
     jid = open(f).read().strip()
     if jid != 0:
-      subprocess.call(['sudo', 'atrm', jid])
+      run(f'sudo atrm {jid}')
     os.remove(f)
 
 def main():

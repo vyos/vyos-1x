@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import subprocess
 import sys
 
 from vyos.util import ask_yes_no
+from vyos.util import cmd
 
 if not ask_yes_no('Do you really want to remove the existing SSH host keys?'):
     sys.exit(0)
-else:
-    subprocess.check_call(['sudo rm -v /etc/ssh/ssh_host_*'], shell=True)
-    subprocess.check_call(['sudo dpkg-reconfigure openssh-server'], shell=True)
-    subprocess.check_call(['sudo systemctl restart ssh'], shell=True)
+
+cmd('sudo rm -v /etc/ssh/ssh_host_*')
+cmd('sudo dpkg-reconfigure openssh-server')
+cmd('sudo systemctl restart ssh')

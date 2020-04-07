@@ -19,19 +19,15 @@ import re
 
 from sys import exit
 from copy import deepcopy
-from subprocess import Popen, PIPE, STDOUT
 
 from vyos.config import Config
+from vyos.util import popen
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--scan", help="Scan for Wireless APs on given interface, e.g. 'wlan0'")
 parser.add_argument("-b", "--brief", action="store_true", help="Show wireless configuration")
 parser.add_argument("-c", "--stations", help="Show wireless clients connected on interface, e.g. 'wlan0'")
 
-def _cmd(command):
-    p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
-    tmp = p.communicate()[0].strip()
-    return tmp.decode()
 
 def show_brief():
     config = Config()
@@ -57,7 +53,8 @@ def show_brief():
     return interfaces
 
 def ssid_scan(intf):
-    tmp = _cmd('/sbin/iw dev {} scan ap-force'.format(intf))
+    # XXX: This ignores errors
+    tmp, _ = popen(f'/sbin/iw dev {intf} scan ap-force')
     networks = []
     data = {
         'ssid': '',
@@ -89,7 +86,8 @@ def ssid_scan(intf):
     return networks
 
 def show_clients(intf):
-    tmp = _cmd('/sbin/iw dev {} station dump'.format(intf))
+    # XXX: This ignores errors
+    tmp, _ = popen(f'/sbin/iw dev {intf} station dump')
     clients = []
     data = {
         'mac': '',

@@ -16,7 +16,6 @@
 
 import os
 import re
-import subprocess
 
 from jinja2 import FileSystemLoader, Environment
 from socket import socket, AF_INET, SOCK_STREAM
@@ -26,6 +25,7 @@ from time import sleep
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
 
 pidfile = r'/var/run/accel_pptp.pid'
 pptp_cnf_dir = r'/etc/accel-ppp/pptp'
@@ -50,17 +50,9 @@ def _chk_con():
                 raise("failed to start pptp server")
                 break
 
-# chap_secrets file if auth mode local
 
-def _accel_cmd(cmd=''):
-    if not cmd:
-        return None
-    try:
-        ret = subprocess.check_output(
-            ['/usr/bin/accel-cmd', '-p', '2003', cmd]).decode().strip()
-        return ret
-    except:
-        return 1
+def _accel_cmd(command):
+    return run('/usr/bin/accel-cmd -p 2003 {command}')
 
 ###
 # inline helper functions end
@@ -256,8 +248,7 @@ def apply(c):
         return None
 
     if not os.path.exists(pidfile):
-        ret = subprocess.call(
-            ['/usr/sbin/accel-pppd', '-c', pptp_conf, '-p', pidfile, '-d'])
+        ret = run(f'/usr/sbin/accel-pppd -c {pptp_conf} -p {pidfile} -d')
         _chk_con()
         if ret != 0 and os.path.exists(pidfile):
             os.remove(pidfile)

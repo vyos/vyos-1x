@@ -15,11 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import subprocess
 import syslog as sl
 
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import run
 
 
 def get_config():
@@ -45,7 +45,7 @@ def apply(config):
         # bring the interface up
         cmd = ["ip", "link", "set", "dev", intf, "up"]
         sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
-        subprocess.call(cmd)
+        run(cmd)
 
         # add configured addresses to interface
         for addr in addresses:
@@ -54,7 +54,7 @@ def apply(config):
             else:
                 cmd = ["ip", "address", "add", addr, "dev", intf]
             sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
-            subprocess.call(cmd)
+            run(cmd)
 
 
 if __name__ == '__main__':

@@ -17,13 +17,12 @@
 import argparse
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime
 from time import sleep
 
 from vyos.util import is_admin, ask_yes_no
-
+from vyos.util import run, cmd, DEVNULL
 
 def list_disks():
     disks = set()
@@ -37,10 +36,7 @@ def list_disks():
 
 def is_busy(disk: str):
     """Check if given disk device is busy by re-reading it's partition table"""
-
-    cmd = 'sudo blockdev --rereadpt /dev/{}'.format(disk)
-    status = subprocess.call([cmd], shell=True, stderr=subprocess.DEVNULL)
-    return status != 0
+    return run(f'sudo blockdev --rereadpt /dev/{disk}', stderr=DEVNULL) != 0
 
 
 def backup_partitions(disk: str):
@@ -49,8 +45,7 @@ def backup_partitions(disk: str):
     device_path = '/dev/' + disk
     backup_ts = datetime.now().strftime('%Y-%m-%d-%H:%M')
     backup_file = '/var/tmp/backup_{}.{}'.format(disk, backup_ts)
-    cmd = 'sudo /sbin/sfdisk -d {} > {}'.format(device_path, backup_file)
-    subprocess.check_call([cmd], shell=True)
+    cmd(f'sudo /sbin/sfdisk -d {device_path} > {backup_file}')
 
 
 def list_partitions(disk: str):
@@ -68,13 +63,11 @@ def list_partitions(disk: str):
 
 
 def delete_partition(disk: str, partition_idx: int):
-    cmd = 'sudo /sbin/parted /dev/{} rm {}'.format(disk, partition_idx)
-    subprocess.check_call([cmd], shell=True)
+    cmd(f'sudo /sbin/parted /dev/{disk} rm {partition_idx}')
 
 
 def format_disk_like(target: str, proto: str):
-    cmd = 'sudo /sbin/sfdisk -d /dev/{} | sudo /sbin/sfdisk --force /dev/{}'.format(proto, target)
-    subprocess.check_call([cmd], shell=True)
+    cmd(f'sudo /sbin/sfdisk -d /dev/{proto} | sudo /sbin/sfdisk --force /dev/{target}')
 
 
 if __name__ == '__main__':

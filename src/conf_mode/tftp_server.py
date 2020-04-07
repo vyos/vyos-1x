@@ -27,6 +27,8 @@ from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/default/tftpd'
 
@@ -113,7 +115,7 @@ def generate(tftpd):
 
 def apply(tftpd):
     # stop all services first - then we will decide
-    os.system('systemctl stop tftpd@{0..20}')
+    run('systemctl stop tftpd@{0..20}')
 
     # bail out early - e.g. service deletion
     if tftpd is None:
@@ -138,7 +140,7 @@ def apply(tftpd):
 
     idx = 0
     for listen in tftpd['listen']:
-        os.system('systemctl restart tftpd@{0}.service'.format(idx))
+        run('systemctl restart tftpd@{0}.service'.format(idx))
         idx = idx + 1
 
     return None

@@ -17,7 +17,6 @@
 import sys
 import os
 import re
-import subprocess
 
 from copy import deepcopy
 from netifaces import interfaces
@@ -25,27 +24,26 @@ from netifaces import interfaces
 from vyos import ConfigError
 from vyos.config import Config
 from vyos.configdict import list_diff
+from vyos.util import run
 from vyos.ifconfig import WireGuardIf
 
 kdir = r'/config/auth/wireguard'
 
 def _check_kmod():
     if not os.path.exists('/sys/module/wireguard'):
-        if os.system('modprobe wireguard') != 0:
+        if run('modprobe wireguard') != 0:
             raise ConfigError("modprobe wireguard failed")
 
 
 def _migrate_default_keys():
-    if os.path.exists('{}/private.key'.format(kdir)) and not os.path.exists('{}/default/private.key'.format(kdir)):
+    if os.path.exists(f'{kdir}/private.key') and not os.path.exists(f'{kdir}/default/private.key'):
         old_umask = os.umask(0o027)
-        location = '{}/default'.format(kdir)
-        subprocess.call(['sudo mkdir -p ' + location], shell=True)
-        subprocess.call(['sudo chgrp vyattacfg ' + location], shell=True)
-        subprocess.call(['sudo chmod 750 ' + location], shell=True)
-        os.rename('{}/private.key'.format(kdir),
-                  '{}/private.key'.format(location))
-        os.rename('{}/public.key'.format(kdir),
-                  '{}/public.key'.format(location))
+        location = f'{kdir}/default'
+        run(f'sudo mkdir -p {location}')
+        run(f'sudo chgrp vyattacfg {location}')
+        run(f'sudo chmod 750 {location}')
+        os.rename(f'{kdir}/private.key', f'{location}/private.key')
+        os.rename(f'{kdir}/public.key', f'{location}/public.key')
         os.umask(old_umask)
 
 
@@ -208,8 +206,8 @@ def apply(c):
                 if re.search("DEVTYPE=wireguard", buf, re.I | re.M):
                     wg_intf = re.sub("INTERFACE=", "", re.search(
                         "INTERFACE=.*", buf, re.I | re.M).group(0))
-                    subprocess.call(
-                        ['ip l d dev ' + wg_intf + ' >/dev/null'], shell=True)
+                    # XXX: we are ignoring any errors here
+                    run(f'ip l d dev {wg_intf} >/dev/null')
         return None
 
     # init wg class

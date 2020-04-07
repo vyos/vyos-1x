@@ -18,13 +18,13 @@
 
 import sys
 import os
-import subprocess
 import json
 from copy import deepcopy
 
 import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.util import cmd, run
 
 config_file = '/etc/vyos/http-api.conf'
 
@@ -91,16 +91,12 @@ def generate(http_api):
 
 def apply(http_api):
     if http_api is not None:
-        os.system('sudo systemctl restart vyos-http-api.service')
+        run('sudo systemctl restart vyos-http-api.service')
     else:
-        os.system('sudo systemctl stop vyos-http-api.service')
+        run('sudo systemctl stop vyos-http-api.service')
 
     for dep in dependencies:
-        cmd = '{0}/{1}'.format(vyos_conf_scripts_dir, dep)
-        try:
-            subprocess.check_call(cmd, shell=True)
-        except subprocess.CalledProcessError as err:
-            raise ConfigError("{}.".format(err))
+        cmd(f'{vyos_conf_scripts_dir}/{dep}', raising=ConfigError)
 
 if __name__ == '__main__':
     try:

@@ -23,6 +23,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/tmp/pimd.frr'
 
@@ -130,7 +132,11 @@ def apply(pim):
         return None
 
     if os.path.exists(config_file):
+<<<<<<< HEAD
         os.system("vtysh -d pimd -f " + config_file)
+=======
+        run("sudo vtysh -d pimd -f " + config_file)
+>>>>>>> util: T2226: covert most calls from os.system to util
         os.remove(config_file)
 
     return None

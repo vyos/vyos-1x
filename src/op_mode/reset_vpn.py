@@ -16,52 +16,53 @@
 
 # import os
 import sys
-import subprocess
 import argparse
 #import re
 
-pptp_cmd = ["/usr/bin/accel-cmd", "-p 2003"]
-l2tp_cmd = ["/usr/bin/accel-cmd", "-p 2004"]
+from vyos.util import run, DEVNULL
+
+pptp_base = '/usr/bin/accel-cmd -p 2003 terminate {} {}'
+l2tp_base = '/usr/bin/accel-cmd -p 2004 terminate {} {}'
 
 def terminate_sessions(username='', interface='', protocol=''):
     if username:
         if username == "all_users":
             if protocol == "pptp":
-                pptp_cmd.append("terminate all")
-                subprocess.call(pptp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                pptp_cmd = pptp_base.format('all','')
+                run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
                 return
             elif protocol == "l2tp":
-                l2tp_cmd.append("terminate all")
-                subprocess.call(l2tp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                l2tp_cmd = l2tp_base.format('all', '')
+                run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
                 return
             else:
-                pptp_cmd.append("terminate all")
-                subprocess.call(pptp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                l2tp_cmd.append("terminate all")
-                subprocess.call(l2tp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                pptp_cmd = pptp_base.format('all', '')
+                run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+                l2tp_cmd = l2tp_base.format('all', '')
+                run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
                 return
 
         if protocol == "pptp":
-            pptp_cmd.append("terminate username {0}".format(username))
-            subprocess.call(pptp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            pptp_cmd = pptp_base.format('username', username)
+            run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
             return
         elif protocol == "l2tp":
-            l2tp_cmd.append("terminate username {0}".format(username))
-            subprocess.call(l2tp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            l2tp_cmd = l2tp_base.format('username', username)
+            run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
             return
         else:
-            pptp_cmd.append("terminate username {0}".format(username))
-            subprocess.call(pptp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            pptp_cmd = pptp_base.format('username', username)
+            run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
             l2tp_cmd.append("terminate username {0}".format(username))
-            subprocess.call(l2tp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
             return
 
     # rewrite `terminate by interface` if pptp will have pptp%d interface naming
     if interface:
-        pptp_cmd.append("terminate if {0}".format(interface))
-        subprocess.call(pptp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        l2tp_cmd.append("terminate if {0}".format(interface))
-        subprocess.call(l2tp_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        pptp_cmd = pptp_base.format('if', interface)
+        run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+        l2tp_cmd = l2tp_base.format('if', interface)
+        run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
        
 
 def main():

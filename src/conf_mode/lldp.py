@@ -26,6 +26,8 @@ from vyos.validate import is_addr_assigned,is_loopback_addr
 from vyos.defaults import directories as vyos_data_dir
 from vyos.version import get_version_data
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = "/etc/default/lldpd"
 vyos_config_file = "/etc/lldpd.d/01-vyos.conf"
@@ -239,10 +241,10 @@ def generate(lldp):
 def apply(lldp):
     if lldp:
         # start/restart lldp service
-        os.system('sudo systemctl restart lldpd.service')
+        run('sudo systemctl restart lldpd.service')
     else:
         # LLDP service has been terminated
-        os.system('sudo systemctl stop lldpd.service')
+        run('sudo systemctl stop lldpd.service')
         os.unlink(config_file)
         os.unlink(vyos_config_file)
 

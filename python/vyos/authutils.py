@@ -15,16 +15,14 @@
 
 import re
 
-from subprocess import Popen, PIPE, STDOUT
+from vyos.util import cmd
 
 
 def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
 
-    mkpasswd = Popen(['mkpasswd', '--method=sha-512', '--stdin'], stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    hash = mkpasswd.communicate(input=password.encode(), timeout=5)[0].decode().strip()
-
-    return hash
+    mkpassword = 'mkpasswd --method=sha-512 --stdin'
+    return cmd(mkpassword, input=password.encode(), timeout=5)
 
 def split_ssh_public_key(key_string, defaultname=""):
     """ Splits an SSH public key into its components """

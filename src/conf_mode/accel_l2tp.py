@@ -17,7 +17,7 @@
 import sys
 import os
 import re
-import subprocess
+import jinja2
 import socket
 import time
 
@@ -26,6 +26,8 @@ from jinja2 import FileSystemLoader, Environment
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 pidfile = r'/var/run/accel_l2tp.pid'
 l2tp_cnf_dir = r'/etc/accel-ppp/l2tp'
@@ -61,17 +63,10 @@ def chk_con():
                 break
 
 
-def accel_cmd(cmd=''):
-    if not cmd:
-        return None
-    try:
-        ret = subprocess.check_output(
-            ['/usr/bin/accel-cmd', '-p', '2004', cmd]).decode().strip()
-        return ret
-    except:
-        return 1
+def _accel_cmd(command):
+  return run(f'/usr/bin/accel-cmd -p 2004 {command}')
 
-###
+### 
 # inline helper functions end
 ###
 
@@ -375,21 +370,20 @@ def generate(c):
 def apply(c):
     if c == None:
         if os.path.exists(pidfile):
-            accel_cmd('shutdown hard')
+            _accel_cmd('shutdown hard')
             if os.path.exists(pidfile):
                 os.remove(pidfile)
         return None
 
     if not os.path.exists(pidfile):
-        ret = subprocess.call(
-            ['/usr/sbin/accel-pppd', '-c', l2tp_conf, '-p', pidfile, '-d'])
+        ret = run(f'/usr/sbin/accel-pppd -c {l2tp_conf} -p {pidfile} -d')
         chk_con()
         if ret != 0 and os.path.exists(pidfile):
             os.remove(pidfile)
             raise ConfigError('accel-pppd failed to start')
     else:
         # if gw ip changes, only restart doesn't work
-        accel_cmd('restart')
+        _accel_cmd('restart')
 
 
 if __name__ == '__main__':

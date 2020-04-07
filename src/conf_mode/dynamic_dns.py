@@ -24,6 +24,8 @@ from stat import S_IRUSR, S_IWUSR
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/ddclient/ddclient.conf'
 cache_file = r'/var/cache/ddclient/ddclient.cache'
@@ -255,11 +257,11 @@ def apply(dyndns):
         os.unlink('/etc/ddclient.conf')
 
     if dyndns['deleted']:
-        os.system('/etc/init.d/ddclient stop')
+        run('/etc/init.d/ddclient stop')
         if os.path.exists(dyndns['pid_file']):
             os.unlink(dyndns['pid_file'])
     else:
-        os.system('/etc/init.d/ddclient restart')
+        run('/etc/init.d/ddclient restart')
 
     return None
 

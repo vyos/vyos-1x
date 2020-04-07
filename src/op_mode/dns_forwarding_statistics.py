@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import subprocess
 import jinja2
 import sys
 
 from vyos.config import Config
+from vyos.config import cmd
 
 PDNS_CMD='/usr/bin/rec_control'
 
@@ -26,8 +26,8 @@ if __name__ == '__main__':
 
     data = {}
 
-    data['cache_entries'] = subprocess.check_output([PDNS_CMD, 'get cache-entries']).decode()
-    data['cache_size'] = "{0:.2f}".format( int(subprocess.check_output([PDNS_CMD, 'get cache-bytes']).decode()) / 1024 )
+    data['cache_entries'] = cmd(f'{PDNS_CMD} get cache-entries')
+    data['cache_size'] = "{0:.2f}".format( int(cmd(f'{PDNS_CMD} get cache-bytes')) / 1024 )
 
     tmpl = jinja2.Template(OUT_TMPL_SRC)
     print(tmpl.render(data))

@@ -24,6 +24,8 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file = r'/etc/igmpproxy.conf'
 
@@ -129,11 +131,11 @@ def generate(igmp_proxy):
 def apply(igmp_proxy):
     if igmp_proxy is None or igmp_proxy['disable']:
          # IGMP Proxy support is removed in the commit
-         os.system('sudo systemctl stop igmpproxy.service')
+         run('sudo systemctl stop igmpproxy.service')
          if os.path.exists(config_file):
              os.unlink(config_file)
     else:
-        os.system('systemctl restart igmpproxy.service')
+        run('systemctl restart igmpproxy.service')
 
     return None
 

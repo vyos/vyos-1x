@@ -18,7 +18,7 @@ import re
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
-from vyos.util import popen
+from vyos.util import run
 from vyos.validate import *
 
 
@@ -45,7 +45,7 @@ class EthernetIf(Interface):
 
     @staticmethod
     def feature(ifname, option, value):
-        out, code = popen(f'/sbin/ethtool -K {ifname} {option} {value}','ifconfig')
+        run(f'/sbin/ethtool -K {ifname} {option} {value}','ifconfig')
         return False
 
     _command_set = {**Interface._command_set, **{

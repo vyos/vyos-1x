@@ -20,13 +20,13 @@ import os
 import sys
 import pwd
 import grp
-import subprocess
 import traceback
 from datetime import datetime
 
 from vyos.defaults import directories
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.configtree import ConfigTree
+from vyos.util import cmd
 
 STATUS_FILE = '/tmp/vyos-config-status'
 TRACE_FILE = '/tmp/boot-config-trace'
@@ -102,12 +102,7 @@ def failsafe(config_file_name):
                                       'authentication',
                                       'encrypted-password'])
 
-    cmd = ("useradd -s /bin/bash -G 'users,sudo' -m -N -p '{0}' "
-           "vyos".format(passwd))
-    try:
-        subprocess.check_call(cmd, shell=True)
-    except subprocess.CalledProcessError as e:
-        sys.exit("{0}".format(e))
+    cmd(f"useradd -s /bin/bash -G 'users,sudo' -m -N -p '{passwd}' vyos")
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

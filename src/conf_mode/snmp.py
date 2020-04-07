@@ -27,6 +27,8 @@ from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos.version import get_version_data
 from vyos import ConfigError
+from vyos.util import run
+
 
 config_file_client  = r'/etc/snmp/snmp.conf'
 config_file_daemon  = r'/etc/snmp/snmpd.conf'
@@ -507,7 +509,7 @@ def generate(snmp):
     #
     # As we are manipulating the snmpd user database we have to stop it first!
     # This is even save if service is going to be removed
-    os.system("systemctl stop snmpd.service")
+    run('systemctl stop snmpd.service')
     config_files = [config_file_client, config_file_daemon, config_file_access,
                     config_file_user]
     for file in config_files:
@@ -552,7 +554,7 @@ def apply(snmp):
         return None
 
     # start SNMP daemon
-    os.system("systemctl restart snmpd.service")
+    run("systemctl restart snmpd.service")
 
     # Passwords are not available immediately in the configuration file,
     # after daemon startup - we wait until they have been processed by
@@ -593,15 +595,15 @@ def apply(snmp):
 
                 # Now update the running configuration
                 #
-                # Currently when executing os.system() the environment does not
+                # Currently when executing run() the environment does not
                 # have the vyos_libexec_dir variable set, see Phabricator T685.
-                os.system('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['auth_pw']))
-                os.system('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['priv_pw']))
-                os.system('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
-                os.system('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
+                run('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['auth_pw']))
+                run('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['priv_pw']))
+                run('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
+                run('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
 
     # Enable AgentX in FRR
-    os.system('vtysh -c "configure terminal" -c "agentx" >/dev/null')
+    run('vtysh -c "configure terminal" -c "agentx" >/dev/null')
 
     return None
 

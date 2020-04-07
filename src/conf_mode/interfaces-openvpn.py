@@ -25,14 +25,13 @@ from grp import getgrnam
 from ipaddress import ip_address,ip_network,IPv4Interface
 from netifaces import interfaces
 from pwd import getpwnam
-from subprocess import Popen, PIPE
 from time import sleep
 from shutil import rmtree
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
-from vyos.util import process_running
+from vyos.util import process_running, cmd
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
@@ -96,9 +95,6 @@ default_config_data = {
     'gid': group,
 }
 
-def subprocess_cmd(command):
-    p = Popen(command, stdout=PIPE, shell=True)
-    p.communicate()
 
 def get_config_name(intf):
     cfg_file = r'/opt/vyatta/etc/openvpn/openvpn-{}.conf'.format(intf)
@@ -744,12 +740,12 @@ def apply(openvpn):
     # service as the configuration is not re-read. Stop daemon only if it's
     # running - it could have died or killed by someone evil
     if process_running(pidfile):
-        cmd = 'start-stop-daemon'
-        cmd += ' --stop '
-        cmd += ' --quiet'
-        cmd += ' --oknodo'
-        cmd += ' --pidfile ' + pidfile
-        subprocess_cmd(cmd)
+        command = 'start-stop-daemon'
+        command += ' --stop '
+        command += ' --quiet'
+        command += ' --oknodo'
+        command += ' --pidfile ' + pidfile
+        cmd(command)
 
     # cleanup old PID file
     if os.path.isfile(pidfile):
@@ -780,19 +776,19 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    cmd = 'start-stop-daemon'
-    cmd += ' --start '
-    cmd += ' --quiet'
-    cmd += ' --oknodo'
-    cmd += ' --pidfile ' + pidfile
-    cmd += ' --exec /usr/sbin/openvpn'
+    command = 'start-stop-daemon'
+    command += ' --start '
+    command += ' --quiet'
+    command += ' --oknodo'
+    command += ' --pidfile ' + pidfile
+    command += ' --exec /usr/sbin/openvpn'
     # now pass arguments to openvpn binary
-    cmd += ' --'
-    cmd += ' --daemon openvpn-' + openvpn['intf']
-    cmd += ' --config ' + get_config_name(openvpn['intf'])
+    command += ' --'
+    command += ' --daemon openvpn-' + openvpn['intf']
+    command += ' --config ' + get_config_name(openvpn['intf'])
 
     # execute assembled command
-    subprocess_cmd(cmd)
+    cmd(command)
 
     # better late then sorry ... but we can only set interface alias after
     # OpenVPN has been launched and created the interface

@@ -20,7 +20,6 @@ import argparse
 import os
 import sys
 import shutil
-import subprocess
 import syslog as sl
 import re
 
@@ -28,6 +27,7 @@ from vyos.ifconfig import WireGuardIf
 
 from vyos import ConfigError
 from vyos.config import Config
+from vyos.util import run
 
 dir = r'/config/auth/wireguard'
 psk = dir + '/preshared.key'
@@ -36,16 +36,14 @@ def check_kmod():
     """ check if kmod is loaded, if not load it """
     if not os.path.exists('/sys/module/wireguard'):
         sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod")
-        if os.system('sudo modprobe wireguard') != 0:
+        if run('sudo modprobe wireguard') != 0:
             sl.syslog(sl.LOG_ERR, "modprobe wireguard failed")
             raise ConfigError("modprobe wireguard failed")
 
 def generate_keypair(pk, pub):
     """ generates a keypair which is stored in /config/auth/wireguard """
     old_umask = os.umask(0o027)
-    ret = subprocess.call(
-        ['wg genkey | tee ' + pk + '|wg pubkey > ' + pub], shell=True)
-    if ret != 0:
+    if run(f'wg genkey | tee {pk} | wg pubkey > {pub}') != 0:
         raise ConfigError("wireguard key-pair generation failed")
     else:
         sl.syslog(
@@ -69,9 +67,9 @@ def genkey(location):
     else:
         """ if keypair is bing executed from a running iso """
         if not os.path.exists(location):
-            subprocess.call(['sudo mkdir -p ' + location], shell=True)
-            subprocess.call(['sudo chgrp vyattacfg ' + location], shell=True)
-            subprocess.call(['sudo chmod 750 ' + location], shell=True)
+            run(f'sudo mkdir -p {location}')
+            run(f'sudo chgrp vyattacfg {location}')
+            run(f'sudo chmod 750 {location}')
         generate_keypair(pk, pub)
     os.umask(old_umask)
 
@@ -90,7 +88,7 @@ def genpsk():
         it's stored only in the cli config
     """
 
-    subprocess.call(['wg genpsk'], shell=True)
+    run('wg genpsk')
 
 def list_key_dirs():
     """ lists all dirs under /config/auth/wireguard """ 
