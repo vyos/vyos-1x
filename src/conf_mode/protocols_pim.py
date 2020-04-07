@@ -132,11 +132,7 @@ def apply(pim):
         return None
 
     if os.path.exists(config_file):
-<<<<<<< HEAD
-        os.system("vtysh -d pimd -f " + config_file)
-=======
-        run("sudo vtysh -d pimd -f " + config_file)
->>>>>>> util: T2226: covert most calls from os.system to util
+        run("vtysh -d pimd -f " + config_file)
         os.remove(config_file)
 
     return None
