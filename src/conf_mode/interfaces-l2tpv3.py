@@ -159,22 +159,22 @@ def verify(l2tpv3):
         return None
 
     if not l2tpv3['local_address']:
-        raise ConfigError('Must configure the l2tpv3 local-ip for {}'.format(l2tpv3['intf']))
+        raise ConfigError(f'Must configure the l2tpv3 local-ip for {interface}')
 
     if not l2tpv3['remote_address']:
-        raise ConfigError('Must configure the l2tpv3 remote-ip for {}'.format(l2tpv3['intf']))
+        raise ConfigError(f'Must configure the l2tpv3 remote-ip for {interface}')
 
     if not l2tpv3['tunnel_id']:
-        raise ConfigError('Must configure the l2tpv3 tunnel-id for {}'.format(l2tpv3['intf']))
+        raise ConfigError(f'Must configure the l2tpv3 tunnel-id for {interface}')
 
     if not l2tpv3['peer_tunnel_id']:
-        raise ConfigError('Must configure the l2tpv3 peer-tunnel-id for {}'.format(l2tpv3['intf']))
+        raise ConfigError(f'Must configure the l2tpv3 peer-tunnel-id for {interface}')
 
     if not l2tpv3['session_id']:
-        raise ConfigError('Must configure the l2tpv3 session-id for {}'.format(l2tpv3['intf']))
+        raise ConfigError(f'Must configure the l2tpv3 session-id for {interface}')
 
     if not l2tpv3['peer_session_id']:
-        raise ConfigError('Must configure the l2tpv3 peer-session-id for {}'.format(l2tpv3['intf']))
+        raise ConfigError(f'Must configure the l2tpv3 peer-session-id for {interface}')
 
     return None
 
