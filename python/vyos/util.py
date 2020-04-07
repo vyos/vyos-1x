@@ -18,10 +18,6 @@ import re
 import sys
 from subprocess import Popen, PIPE, STDOUT, DEVNULL
 
-
-# debugging
-
-
 def debug(flag):
     return flag if os.path.isfile(f'/tmp/vyos.{flag}.debug') else ''
 
@@ -31,11 +27,9 @@ def debug_msg(message, section=''):
         print(f'DEBUG/{section:<6} {message}')
 
 
-#  commands
-
-# popen does not raise
-# it returns the output of the command and the error code
-def popen(command, section='', shell=None, input=None, timeout=None, env=None, universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+def popen(command, section='', shell=None, input=None, timeout=None, env=None,
+          universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+    """ popen does not raise, returns the output and error code of command """
     use_shell = shell
     if shell is None:
         use_shell = True if ' ' in command else False
@@ -52,9 +46,10 @@ def popen(command, section='', shell=None, input=None, timeout=None, env=None, u
         debug_msg(f"returned:\n{decoded}", section)
     return decoded, p.returncode
 
-# run does not raise
-# it returns the error code
-def run(command, section='', shell=None, input=None, timeout=None, env=None, universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+
+def run(command, section='', shell=None, input=None, timeout=None, env=None,
+        universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+    """ does not raise exception on error, returns error code """
     _, code = popen(
         command, section,
         stdout=stdout, stderr=stderr,
@@ -65,9 +60,11 @@ def run(command, section='', shell=None, input=None, timeout=None, env=None, uni
     )
     return code
 
-# cmd does raise
-# it returns the output
-def cmd(command, section='', shell=None, input=None, timeout=None, env=None, universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None, raising=None, message=''):
+
+def cmd(command, section='', shell=None, input=None, timeout=None, env=None,
+        universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None,
+        raising=None, message=''):
+    """ does raise exception, returns output of command """
     decoded, code = popen(
         command, section,
         stdout=stdout, stderr=stderr,
@@ -89,9 +86,6 @@ def cmd(command, section='', shell=None, input=None, timeout=None, env=None, uni
     return decoded
 
 
-# file manipulation
-
-
 def read_file(path):
     """ Read a file to string """
     with open(path, 'r') as f:
@@ -108,7 +102,6 @@ def chown_file(path, user, group):
         uid = getpwnam(user).pw_uid
         gid = getgrnam(group).gr_gid
         os.chown(path, uid, gid)
-
 
 def chmod_x(path):
     """ make file executable """
