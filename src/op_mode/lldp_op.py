@@ -23,6 +23,7 @@ from sys import exit
 from tabulate import tabulate
 
 from vyos.util import popen
+from vyos.config import Config
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Show LLDP neighbors on all interfaces")
@@ -140,6 +141,11 @@ def extract_neighbor(neighbor):
 if __name__ == '__main__':
     args = parser.parse_args()
     tmp = { 'neighbors' : [] }
+
+    c = Config()
+    if not c.exists_effective(['service', 'lldp']):
+        print('Service LLDP is not configured')
+        exit(0)
 
     if args.all:
        neighbors = minidom.parseString(_get_neighbors())
