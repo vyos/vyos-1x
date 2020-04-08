@@ -12,6 +12,7 @@
     #include <include/dhcp-dhcpv6-options.xml.i>
     #include <include/interface-disable-link-detect.xml.i>
     #include <include/interface-disable.xml.i>
+    #include <include/interface-vrf.xml.i>
     <leafNode name="ethertype">
       <properties>
         <help>Set Ethertype</help>
