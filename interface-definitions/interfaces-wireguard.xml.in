@@ -31,14 +31,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="mtu">
-            <properties>
-              <help>interface mtu size(default: 1420)</help>
-              <constraint>
-                <validator name="numeric" argument="--range 68-9000"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/interface-mtu-68-9000.xml.i>
           <leafNode name="fwmark">
             <properties>
               <help>A 32-bit fwmark value set on all outgoing packets</help>
