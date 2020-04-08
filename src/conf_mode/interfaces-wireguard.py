@@ -222,20 +222,6 @@ def verify(wg):
 
 
 def apply(wg):
-    # no wg configs left, remove all interface from system
-    # maybe move it into ifconfig.py
-    if wg['deleted']:
-        net_devs = os.listdir('/sys/class/net/')
-        for dev in net_devs:
-            if os.path.isdir('/sys/class/net/' + dev):
-                buf = open('/sys/class/net/' + dev + '/uevent', 'r').read()
-                if re.search("DEVTYPE=wireguard", buf, re.I | re.M):
-                    wg_intf = re.sub("INTERFACE=", "", re.search(
-                        "INTERFACE=.*", buf, re.I | re.M).group(0))
-                    # XXX: we are ignoring any errors here
-                    run(f'ip link del dev {wg_intf} >/dev/null')
-        return None
-
     # init wg class
     w = WireGuardIf(wg['intf'])
 
