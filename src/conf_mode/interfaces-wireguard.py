@@ -41,7 +41,8 @@ default_config_data = {
     'mtu': 1420,
     'peer': [],
     'peer_remove': [], # stores public keys of peers to remove
-    'pk': f'{kdir}/default/private.key'
+    'pk': f'{kdir}/default/private.key',
+    'vrf': ''
 }
 
 def _check_kmod():
@@ -110,6 +111,10 @@ def get_config():
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
         wg['mtu'] = int(conf.return_value(['mtu']))
+
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        wg['vrf'] = conf.return_value('vrf')
 
     # private key
     if conf.exists(['private-key']):
@@ -191,6 +196,10 @@ def verify(wg):
                               'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
+    vrf_name = wg['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+
     if not os.path.exists(wg['pk']):
         raise ConfigError('No keys found, generate them by executing:\n' \
                           '"run generate wireguard [keypair|named-keypairs]"')
@@ -247,6 +256,9 @@ def apply(wg):
 
     # update interface description used e.g. within SNMP
     w.set_alias(wg['description'])
+
+    # assign/remove VRF
+    w.set_vrf(wg['vrf'])
 
     # remove peers
     for pub_key in wg['peer_remove']:
