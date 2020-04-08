@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import argparse
 import os
@@ -27,7 +25,7 @@ from vyos.ifconfig import WireGuardIf
 
 from vyos import ConfigError
 from vyos.config import Config
-from vyos.util import run
+from vyos.util import cmd, run
 
 dir = r'/config/auth/wireguard'
 psk = dir + '/preshared.key'
@@ -88,10 +86,11 @@ def genpsk():
         it's stored only in the cli config
     """
 
-    run('wg genpsk')
+    psk = cmd('wg genpsk')
+    print(psk)
 
 def list_key_dirs():
-    """ lists all dirs under /config/auth/wireguard """ 
+    """ lists all dirs under /config/auth/wireguard """
     if os.path.exists(dir):
         nks = next(os.walk(dir))[1]
         for nk in nks:
