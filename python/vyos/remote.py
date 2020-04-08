@@ -17,8 +17,7 @@ import sys
 import os
 import re
 import fileinput
-
-from vyos.util import cmd, DEVNULL
+import subprocess
 
 
 def check_and_add_host_key(host_name):
@@ -34,8 +33,10 @@ def check_and_add_host_key(host_name):
     keyscan_cmd = 'ssh-keyscan -t rsa {} 2>/dev/null'.format(host_name)
 
     try:
-        host_key = cmd(keyscan_cmd, stderr=DEVNULL, universal_newlines=True)
-    except OSError:
+        host_key = subprocess.check_output(keyscan_cmd, shell=True,
+                                         stderr=subprocess.DEVNULL,
+                                         universal_newlines=True)
+    except subprocess.CalledProcessError as err:
         sys.exit("Can not get RSA host key")
 
     # libssh2 (jessie; stretch) does not recognize ec host keys, and curl
@@ -63,8 +64,10 @@ def check_and_add_host_key(host_name):
 
     fingerprint_cmd = 'ssh-keygen -lf /dev/stdin <<< "{}"'.format(host_key)
     try:
-        fingerprint = cmd(fingerprint_cmd, stderr=DEVNULL, universal_newlines=True)
-    except OSError:
+        fingerprint = subprocess.check_output(fingerprint_cmd, shell=True,
+                                         stderr=subprocess.DEVNULL,
+                                         universal_newlines=True)
+    except subprocess.CalledProcessError as err:
         sys.exit("Can not get RSA host key fingerprint.")
 
     print("RSA host key fingerprint is {}".format(fingerprint.split()[1]))
@@ -125,8 +128,9 @@ def get_remote_config(remote_file):
         # Try header first, and look for 'OK' or 'Moved' codes:
         curl_cmd = 'curl {0} -q -I {1}'.format(redirect_opt, remote_file)
         try:
-            curl_output = cmd(curl_cmd, shell=True, universal_newlines=True)
-        except OSError:
+            curl_output = subprocess.check_output(curl_cmd, shell=True,
+                                                  universal_newlines=True)
+        except subprocess.CalledProcessError:
             sys.exit(1)
 
         return_vals = re.findall(r'^HTTP\/\d+\.?\d\s+(\d+)\s+(.*)$',
@@ -142,6 +146,9 @@ def get_remote_config(remote_file):
         curl_cmd = 'curl {0} -# {1}'.format(redirect_opt, remote_file)
 
     try:
-        return cmd(curl_cmd, universal_newlines=True)
-    except OSError:
-        return None
+        config_file = subprocess.check_output(curl_cmd, shell=True,
+                                        universal_newlines=True)
+    except subprocess.CalledProcessError:
+        config_file = None
+
+    return config_file
