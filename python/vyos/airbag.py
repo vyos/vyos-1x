@@ -25,9 +25,7 @@ from vyos.util import run
 from vyos.util import debug
 
 
-# during the session, system-versions-foot is called to generate
-# the config footer, the code currently use stdout, so to do not
-# get a copy of that, we allow to disable the extra logging
+# we allow to disable the extra logging
 DISABLE = False
 
 
@@ -79,7 +77,8 @@ def bug_report(dtype, value, trace):
 # reach the end of __main__ and was not intercepted
 def intercepter(dtype, value, trace):
     bug_report(dtype, value, trace)
-    if debug('developer') not in [None, '0', '']:
+    # debug returns either '' or 'developer' if debuging is enabled
+    if debug('developer'):
         import pdb
         pdb.pm()
 
