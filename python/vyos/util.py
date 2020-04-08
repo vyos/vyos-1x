@@ -93,15 +93,16 @@ def read_file(path):
     return data
 
 
-def chown_file(path, user, group):
-    """ change file owner """
+def chown(path, user, group):
+    """ change file/directory owner """
     from pwd import getpwnam
     from grp import getgrnam
 
-    if os.path.isfile(path):
+    if os.path.exists(path):
         uid = getpwnam(user).pw_uid
         gid = getgrnam(group).gr_gid
         os.chown(path, uid, gid)
+
 
 def chmod_x(path):
     """ make file executable """

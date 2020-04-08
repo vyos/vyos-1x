@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
-from vyos.util import run, is_bridge_member
+from vyos.util import chown, run, is_bridge_member
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -55,14 +55,15 @@ def _check_kmod():
 
 def _migrate_default_keys():
     if os.path.exists(f'{kdir}/private.key') and not os.path.exists(f'{kdir}/default/private.key'):
-        old_umask = os.umask(0o027)
         location = f'{kdir}/default'
-        run(f'sudo mkdir -p {location}')
-        run(f'sudo chgrp vyattacfg {location}')
+        if not os.path.exists(location):
+            os.makedirs(location)
+
+        chown(location, 'root', 'vyattacfg')
         run(f'sudo chmod 750 {location}')
+
         os.rename(f'{kdir}/private.key', f'{location}/private.key')
         os.rename(f'{kdir}/public.key', f'{location}/public.key')
-        os.umask(old_umask)
 
 
 def get_config():
@@ -293,10 +294,10 @@ def apply(wg):
         # preshared-key - needs to be read from a file
         if peer['psk']:
             psk_file = '/config/auth/wireguard/psk'
-            old_umask = os.umask(0o077)
-            open(psk_file, 'w').write(str(c['peer'][p]['psk']))
-            os.umask(old_umask)
+            with open(psk_file, 'w') as f:
+                f.write(peer['psk']))
             w.config['psk'] = psk_file
+
         w.update()
 
     # Enable/Disable interface

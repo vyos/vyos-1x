@@ -23,7 +23,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import chown_file, chmod_x, cmd, run, is_bridge_member
+from vyos.util import chown, chmod_x, cmd, run, is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -219,7 +219,7 @@ def apply(wwan):
         intf = wwan['intf']
         cmd(f'systemctl start ppp@{intf}.service')
         # make logfile owned by root / vyattacfg
-        chown_file(wwan['logfile'], 'root', 'vyattacfg')
+        chown(wwan['logfile'], 'root', 'vyattacfg')
 
     return None
 

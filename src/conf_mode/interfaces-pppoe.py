@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import Interface
-from vyos.util import chown_file, chmod_x, cmd
+from vyos.util import chown, chmod_x, cmd
 from vyos import ConfigError
 
 default_config_data = {
@@ -240,7 +240,7 @@ def apply(pppoe):
         cmd(f'systemctl start ppp@{intf}.service')
 
         # make logfile owned by root / vyattacfg
-        chown_file(pppoe['logfile'], 'root', 'vyattacfg')
+        chown(pppoe['logfile'], 'root', 'vyattacfg')
 
     return None
 
