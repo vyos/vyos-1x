@@ -14,25 +14,43 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
 import re
 
+from sys import exit
 from copy import deepcopy
 from netifaces import interfaces
 
-from vyos import ConfigError
 from vyos.config import Config
 from vyos.configdict import list_diff
-from vyos.util import run, is_bridge_member
 from vyos.ifconfig import WireGuardIf
+from vyos.util import run, is_bridge_member
+from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
 
+default_config_data = {
+    'intfc': '',
+    'address': [],
+    'address_remove': [],
+    'description': '',
+    'lport': None,
+    'deleted': False,
+    'disable': False,
+    'fwmark': 0x00,
+    'mtu': 1420,
+    'peer': [],
+    'peer_remove': [], # stores public keys of peers to remove
+    'pk': f'{kdir}/default/private.key',
+    'vrf': ''
+}
+
 def _check_kmod():
-    if not os.path.exists('/sys/module/wireguard'):
-        if run('modprobe wireguard') != 0:
-            raise ConfigError("modprobe wireguard failed")
+    modules = ['wireguard']
+    for module in modules:
+        if not os.path.exists(f'/sys/module/{module}'):
+            if run(f'modprobe {module}') != 0:
+                raise ConfigError(f'Loading Kernel module {module} failed')
 
 
 def _migrate_default_keys():
@@ -48,139 +66,128 @@ def _migrate_default_keys():
 
 
 def get_config():
-    c = Config()
-    if not c.exists(['interfaces', 'wireguard']):
-        return None
+    conf = Config()
+    base = ['interfaces', 'wireguard']
 
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    dflt_cnf = {
-        'intfc': '',
-        'addr': [],
-        'addr_remove': [],
-        'descr': '',
-        'lport': None,
-        'delete': False,
-        'state': 'up',
-        'fwmark': 0x00,
-        'mtu': 1420,
-        'peer': {},
-        'peer_remove': [],
-        'pk': '{}/default/private.key'.format(kdir)
-    }
+    wg = deepcopy(default_config_data)
+    wg['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
-    ifname = str(os.environ['VYOS_TAGNODE_VALUE'])
-    wg = deepcopy(dflt_cnf)
-    wg['intfc'] = ifname
-    wg['descr'] = ifname
+    # Check if interface has been removed
+    if not conf.exists(base + [wg['intf']]):
+        wg['deleted'] = True
+        return wg
 
-    c.set_level(['interfaces', 'wireguard'])
+    conf.set_level(base + [wg['intf']])
 
-    # interface removal state
-    if not c.exists(ifname) and c.exists_effective(ifname):
-        wg['delete'] = True
+    # retrieve configured interface addresses
+    if conf.exists(['address']):
+        wg['address'] = conf.return_values(['address'])
 
-    if not wg['delete']:
-        c.set_level(['interfaces', 'wireguard', ifname])
-        if c.exists(['address']):
-            wg['addr'] = c.return_values(['address'])
+    # get interface addresses (currently effective) - to determine which
+    # address is no longer valid and needs to be removed
+    eff_addr = conf.return_effective_values(['address'])
+    wg['address_remove'] = list_diff(eff_addr, wg['address'])
 
-        # determine addresses which need to be removed
-        eff_addr = c.return_effective_values(['address'])
-        wg['addr_remove'] = list_diff(eff_addr, wg['addr'])
+    # retrieve interface description
+    if conf.exists(['description']):
+        wg['description'] = conf.return_value(['description'])
 
-        # ifalias description
-        if c.exists(['description']):
-            wg['descr'] = c.return_value(['description'])
+    # disable interface
+    if conf.exists(['disable']):
+        wg['disable'] = True
 
-        # link state
-        if c.exists(['disable']):
-            wg['state'] = 'down'
+    # local port to listen on
+    if conf.exists(['port']):
+        wg['lport'] = conf.return_value(['port'])
 
-        # local port to listen on
-        if c.exists(['port']):
-            wg['lport'] = c.return_value(['port'])
+    # fwmark value
+    if conf.exists(['fwmark']):
+        wg['fwmark'] = int(conf.return_value(['fwmark']))
 
-        # fwmark value
-        if c.exists(['fwmark']):
-            wg['fwmark'] = c.return_value(['fwmark'])
+    # Maximum Transmission Unit (MTU)
+    if conf.exists('mtu'):
+        wg['mtu'] = int(conf.return_value(['mtu']))
 
-        # mtu
-        if c.exists('mtu'):
-            wg['mtu'] = c.return_value('mtu')
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        wg['vrf'] = conf.return_value('vrf')
 
-        # private key
-        if c.exists(['private-key']):
-            wg['pk'] = "{0}/{1}/private.key".format(
-                kdir, c.return_value(['private-key']))
+    # private key
+    if conf.exists(['private-key']):
+        wg['pk'] = "{0}/{1}/private.key".format(
+            kdir, conf.return_value(['private-key']))
 
-        # peer removal, wg identifies peers by its pubkey
-        peer_eff = c.list_effective_nodes(['peer'])
-        peer_rem = list_diff(peer_eff, c.list_nodes(['peer']))
-        for p in peer_rem:
-            wg['peer_remove'].append(
-                c.return_effective_value(['peer', p, 'pubkey']))
+    # peer removal, wg identifies peers by its pubkey
+    peer_eff = conf.list_effective_nodes(['peer'])
+    peer_rem = list_diff(peer_eff, conf.list_nodes(['peer']))
+    for peer in peer_rem:
+        wg['peer_remove'].append(
+            conf.return_effective_value(['peer', peer, 'pubkey']))
 
-        # peer settings
-        if c.exists(['peer']):
-            for p in c.list_nodes(['peer']):
-                if not c.exists(['peer', p, 'disable']):
-                    wg['peer'].update(
-                        {
-                            p: {
-                                'allowed-ips': [],
-                              'address': '',
-                              'port': '',
-                              'pubkey': ''
-                            }
-                        }
-                    )
-                    # peer allowed-ips
-                    if c.exists(['peer', p, 'allowed-ips']):
-                        wg['peer'][p]['allowed-ips'] = c.return_values(
-                            ['peer', p, 'allowed-ips'])
-                    # peer address
-                    if c.exists(['peer', p, 'address']):
-                        wg['peer'][p]['address'] = c.return_value(
-                            ['peer', p, 'address'])
-                    # peer port
-                    if c.exists(['peer', p, 'port']):
-                        wg['peer'][p]['port'] = c.return_value(
-                            ['peer', p, 'port'])
-                    # persistent-keepalive
-                    if c.exists(['peer', p, 'persistent-keepalive']):
-                        wg['peer'][p]['persistent-keepalive'] = c.return_value(
-                            ['peer', p, 'persistent-keepalive'])
-                    # preshared-key
-                    if c.exists(['peer', p, 'preshared-key']):
-                        wg['peer'][p]['psk'] = c.return_value(
-                            ['peer', p, 'preshared-key'])
-                    # peer pubkeys
-                    key_eff = c.return_effective_value(['peer', p, 'pubkey'])
-                    key_cfg = c.return_value(['peer', p, 'pubkey'])
-                    wg['peer'][p]['pubkey'] = key_cfg
+    # peer settings
+    if conf.exists(['peer']):
+        for p in conf.list_nodes(['peer']):
+            # set new config level for this peer
+            conf.set_level(base + [wg['intf'], 'peer', p])
+            peer = {
+                'allowed-ips': [],
+                'address': '',
+                'name': p,
+                'persistent_keepalive': '',
+                'port': '',
+                'psk': '',
+                'pubkey': ''
+            }
 
-                    # on a pubkey change we need to remove the pubkey first
-                    # peers are identified by pubkey, so key update means
-                    # peer removal and re-add
-                    if key_eff != key_cfg and key_eff != None:
-                        wg['peer_remove'].append(key_cfg)
+            # peer allowed-ips
+            if conf.exists(['allowed-ips']):
+                peer['allowed-ips'] = conf.return_values(['allowed-ips'])
 
-                # if a peer is disabled, we have to exec a remove for it's pubkey
-                else:
-                  peer_key = c.return_value(['peer', p, 'pubkey'])
-                  wg['peer_remove'].append(peer_key)
+            # peer address
+            if conf.exists(['address']):
+                peer['address'] = conf.return_value(['address'])
+
+            # peer port
+            if conf.exists(['port']):
+                peer['port'] = conf.return_value(['port'])
+
+            # persistent-keepalive
+            if conf.exists(['persistent-keepalive']):
+                peer['persistent_keepalive'] = conf.return_value(['persistent-keepalive'])
+
+            # preshared-key
+            if conf.exists(['preshared-key']):
+                peer['psk'] = conf.return_value(['preshared-key'])
+
+            # peer pubkeys
+            if conf.exists(['pubkey']):
+                key_eff = conf.return_effective_value(['pubkey'])
+                key_cfg = conf.return_value(['pubkey'])
+                peer['pubkey'] = key_cfg
+
+                # on a pubkey change we need to remove the pubkey first
+                # peers are identified by pubkey, so key update means
+                # peer removal and re-add
+                if key_eff != key_cfg and key_eff != None:
+                    wg['peer_remove'].append(key_cfg)
+
+            # if a peer is disabled, we have to exec a remove for it's pubkey
+            if conf.exists(['disable']):
+                wg['peer_remove'].append(peer['pubkey'])
+            else:
+                wg['peer'].append(peer)
+
     return wg
 
 
-def verify(c):
-    if not c:
-        return None
+def verify(wg):
+    interface = wg['intf']
 
-    if c['delete']:
-        interface = c['intfc']
+    if wg['deleted']:
         is_member, bridge = is_bridge_member(interface)
         if is_member:
             # can not use a f'' formatted-string here as bridge would not get
@@ -189,26 +196,34 @@ def verify(c):
                               'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
-    if not os.path.exists(c['pk']):
-        raise ConfigError(
-            "No keys found, generate them by executing: \'run generate wireguard [keypair|named-keypairs]\'")
+    vrf_name = wg['vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
-    if not c['delete']:
-        if not c['addr']:
-            raise ConfigError("ERROR: IP address required")
-        if not c['peer']:
-            raise ConfigError("ERROR: peer required")
-        for p in c['peer']:
-            if not c['peer'][p]['allowed-ips']:
-                raise ConfigError("ERROR: allowed-ips required for peer " + p)
-            if not c['peer'][p]['pubkey']:
-                raise ConfigError("peer pubkey required for peer " + p)
+    if not os.path.exists(wg['pk']):
+        raise ConfigError('No keys found, generate them by executing:\n' \
+                          '"run generate wireguard [keypair|named-keypairs]"')
+
+    if not wg['address']:
+        raise ConfigError(f'IP address required for interface "{interface}"!')
+
+    if not wg['peer']:
+        raise ConfigError(f'Peer required for interface "{interface}"!')
+
+    # run checks on individual configured WireGuard peer
+    for peer in wg['peer']:
+        peer_name = peer['name']
+        if not peer['allowed-ips']:
+            raise ConfigError(f'Peer allowed-ips required for peer "{peer_name}"!')
+
+        if not peer['pubkey']:
+            raise ConfigError(f'Peer public-key required for peer "{peer_name}"!')
 
 
-def apply(c):
+def apply(wg):
     # no wg configs left, remove all interface from system
     # maybe move it into ifconfig.py
-    if not c:
+    if wg['deleted']:
         net_devs = os.listdir('/sys/class/net/')
         for dev in net_devs:
             if os.path.isdir('/sys/class/net/' + dev):
@@ -217,70 +232,78 @@ def apply(c):
                     wg_intf = re.sub("INTERFACE=", "", re.search(
                         "INTERFACE=.*", buf, re.I | re.M).group(0))
                     # XXX: we are ignoring any errors here
-                    run(f'ip l d dev {wg_intf} >/dev/null')
+                    run(f'ip link del dev {wg_intf} >/dev/null')
         return None
 
     # init wg class
-    intfc = WireGuardIf(c['intfc'])
+    w = WireGuardIf(wg['intf'])
 
     # single interface removal
-    if c['delete']:
-        intfc.remove()
+    if wg['deleted']:
+        w.remove()
         return None
 
-    # remove IP addresses
-    for ip in c['addr_remove']:
-        intfc.del_addr(ip)
+    # Configure interface address(es)
+    # - not longer required addresses get removed first
+    # - newly addresses will be added second
+    for addr in wg['address_remove']:
+        w.del_addr(addr)
+    for addr in wg['address']:
+        w.add_addr(addr)
 
-    # add IP addresses
-    for ip in c['addr']:
-        intfc.add_addr(ip)
+    # Maximum Transmission Unit (MTU)
+    w.set_mtu(wg['mtu'])
 
-    # interface mtu
-    intfc.set_mtu(int(c['mtu']))
+    # update interface description used e.g. within SNMP
+    w.set_alias(wg['description'])
 
-    # ifalias for snmp from description
-    intfc.set_alias(str(c['descr']))
+    # assign/remove VRF
+    w.set_vrf(wg['vrf'])
 
     # remove peers
-    if c['peer_remove']:
-        for pkey in c['peer_remove']:
-            intfc.remove_peer(pkey)
+    for pub_key in wg['peer_remove']:
+        w.remove_peer(pub_key)
 
     # peer pubkey
     # setting up the wg interface
-    intfc.config['private-key'] = c['pk']
-    for p in c['peer']:
+    w.config['private-key'] = c['pk']
+
+    for peer in wg['peer']:
         # peer pubkey
-        intfc.config['pubkey'] = str(c['peer'][p]['pubkey'])
+        w.config['pubkey'] = peer['pubkey']
         # peer allowed-ips
-        intfc.config['allowed-ips'] = c['peer'][p]['allowed-ips']
+        w.config['allowed-ips'] = peer['allowed-ips']
         # local listen port
-        if c['lport']:
-            intfc.config['port'] = c['lport']
+        if wg['lport']:
+            w.config['port'] = wg['lport']
         # fwmark
         if c['fwmark']:
-            intfc.config['fwmark'] = c['fwmark']
+            w.config['fwmark'] = wg['fwmark']
+
         # endpoint
-        if c['peer'][p]['address'] and c['peer'][p]['port']:
-            intfc.config['endpoint'] = "{}:{}".format(c['peer'][p]['address'], c['peer'][p]['port'])
+        if peer['address'] and peer['port']:
+            w.config['endpoint'] = '{}:{}'.format(
+                peer['address'], peer['port'])
 
         # persistent-keepalive
-        if 'persistent-keepalive' in c['peer'][p]:
-            intfc.config['keepalive'] = c['peer'][p]['persistent-keepalive']
+        if peer['persistent_keepalive']:
+            w.config['keepalive'] = peer['persistent_keepalive']
 
         # maybe move it into ifconfig.py
         # preshared-key - needs to be read from a file
-        if 'psk' in c['peer'][p]:
+        if peer['psk']:
             psk_file = '/config/auth/wireguard/psk'
             old_umask = os.umask(0o077)
             open(psk_file, 'w').write(str(c['peer'][p]['psk']))
             os.umask(old_umask)
-            intfc.config['psk'] = psk_file
-        intfc.update()
+            w.config['psk'] = psk_file
+        w.update()
 
-    # interface state
-    intfc.set_admin_state(c['state'])
+    # Enable/Disable interface
+    if wg['disable']:
+        w.set_admin_state('down')
+    else:
+        w.set_admin_state('up')
 
     return None
 
@@ -293,4 +316,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
