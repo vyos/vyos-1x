@@ -203,7 +203,8 @@ def get_class (options):
     }
 
     kls = dispatch[options['type']]
-    if options['type'] == 'gre' and not options['remote']:
+    if options['type'] == 'gre' and not options['remote'] \
+        and not options['key'] and not options['multicast']:
         # will use GreTapIf on GreIf deletion but it does not matter
         return GRETapIf
     elif options['type'] == 'sit' and options['6rd-prefix']:
