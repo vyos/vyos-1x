@@ -20,18 +20,7 @@
           #include <include/interface-description.xml.i>
           #include <include/interface-disable.xml.i>
           #include <include/interface-vrf.xml.i>
-          <leafNode name="port">
-            <properties>
-              <help>Local port to listen for incoming connections</help>
-              <valueHelp>
-                <format>1-65535</format>
-                <description>Numeric IP port</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-65535"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/port-number.xml.i>
           #include <include/interface-mtu-68-9000.xml.i>
           <leafNode name="fwmark">
             <properties>
@@ -107,18 +96,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="port">
-                <properties>
-                  <help>Port number on tunnel remote end</help>
-                  <valueHelp>
-                    <format>1-65535</format>
-                    <description>Numeric IP port</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/port-number.xml.i>
               <leafNode name="persistent-keepalive">
                 <properties>
                   <help>how often send keep alives in seconds</help>
