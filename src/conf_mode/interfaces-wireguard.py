@@ -295,7 +295,7 @@ def apply(wg):
         if peer['psk']:
             psk_file = '/config/auth/wireguard/psk'
             with open(psk_file, 'w') as f:
-                f.write(peer['psk']))
+                f.write(peer['psk'])
             w.config['psk'] = psk_file
 
         w.update()
