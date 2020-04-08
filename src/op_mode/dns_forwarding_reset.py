@@ -21,12 +21,11 @@
 
 
 import os
-import sys
 import argparse
 
-import vyos.config
+from sys import exit
+from vyos.config import Config
 from vyos.util import run
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Reset all cache")
@@ -36,16 +35,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Do nothing if service is not configured
-    c = vyos.config.Config()
-    if not c.exists_effective('service dns forwarding'):
+    c = Config()
+    if not c.exists_effective(['service', 'dns', 'forwarding']):
         print("DNS forwarding is not configured")
-        sys.exit(0)
+        exit(0)
 
     if args.all:
         run("rec_control wipe-cache \'.$\'")
-        sys.exit(1)
+        exit(0)
+
     elif args.domain:
         run("rec_control wipe-cache \'{0}$\'".format(args.domain))
+
     else:
         parser.print_help()
-        sys.exit(1)
+        exit(1)
