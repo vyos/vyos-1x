@@ -554,7 +554,7 @@ def get_config():
 
 def verify(wifi):
     if wifi['deleted']:
-        interface = wifi['intfc']
+        interface = wifi['intf']
         is_member, bridge = is_bridge_member(interface)
         if is_member:
             # can not use a f'' formatted-string here as bridge would not get

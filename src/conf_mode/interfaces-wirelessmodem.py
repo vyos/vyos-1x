@@ -115,7 +115,7 @@ def get_config():
 
 def verify(wwan):
     if wwan['deleted']:
-        interface = wwan['intfc']
+        interface = wwan['intf']
         is_member, bridge = is_bridge_member(interface)
         if is_member:
             # can not use a f'' formatted-string here as bridge would not get
