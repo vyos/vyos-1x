@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
-from vyos.util import chown, run, is_bridge_member
+from vyos.util import chown, run, is_bridge_member, chmod_750
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -60,8 +60,7 @@ def _migrate_default_keys():
             os.makedirs(location)
 
         chown(location, 'root', 'vyattacfg')
-        run(f'sudo chmod 750 {location}')
-
+        chmod_750(location)
         os.rename(f'{kdir}/private.key', f'{location}/private.key')
         os.rename(f'{kdir}/public.key', f'{location}/public.key')
 

@@ -103,6 +103,14 @@ def chown(path, user, group):
         gid = getgrnam(group).gr_gid
         os.chown(path, uid, gid)
 
+def chmod_750(path):
+    """ make file/directory only executable to user and group """
+    from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP
+
+    if os.path.exists(path):
+        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
+        os.chmod(path, bitmask)
+
 
 def chmod_x(path):
     """ make file executable """
