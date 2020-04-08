@@ -18,21 +18,29 @@ import re
 import json
 import glob
 import time
-from copy import deepcopy
-
-from vyos.validate import *     # should not * include
-from vyos.util import mac2eui64
-from vyos import ConfigError
-
-from ipaddress import IPv4Network, IPv6Address, IPv6Network
-from netifaces import ifaddresses, AF_INET, AF_INET6
 from time import sleep
 from os.path import isfile
-from tabulate import tabulate
-from hurry.filesize import size,alternative
+from copy import deepcopy
 from datetime import timedelta
 
+from hurry.filesize import size, alternative
+from ipaddress import IPv4Network, IPv6Address, IPv6Network
+from netifaces import ifaddresses, AF_INET, AF_INET6
+from tabulate import tabulate
+
+from vyos.util import mac2eui64
+from vyos import ConfigError
 from vyos.ifconfig.dhcp import DHCP
+from vyos.validate import is_ipv4
+from vyos.validate import is_ipv6
+from vyos.validate import is_intf_addr_assigned
+from vyos.validate import assert_boolean
+from vyos.validate import assert_list
+from vyos.validate import assert_mac
+from vyos.validate import assert_mtu
+from vyos.validate import assert_positive
+from vyos.validate import assert_range
+
 
 class Interface(DHCP):
     options = []

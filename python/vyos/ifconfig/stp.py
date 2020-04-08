@@ -16,7 +16,7 @@
 
 from vyos.ifconfig.interface import Interface
 
-from vyos.validate import *
+from vyos.validate import assert_positive
 
 
 class STP:

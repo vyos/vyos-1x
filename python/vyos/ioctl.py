@@ -13,9 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import os
-import fcntl, struct, sys
-from socket import *
+import socket
+import fcntl
+import struct
 
 SIOCGIFFLAGS = 0x8913
 
@@ -28,7 +30,7 @@ def get_terminal_size():
 def get_interface_flags(intf):
     """ Pull the SIOCGIFFLAGS """
     nullif = '\0'*256 
-    sock = socket(AF_INET, SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     raw = fcntl.ioctl(sock.fileno(), SIOCGIFFLAGS, intf + nullif)
     flags, = struct.unpack('H', raw[16:18])
     return flags
