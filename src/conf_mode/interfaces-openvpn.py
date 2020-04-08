@@ -428,6 +428,7 @@ def get_config():
     # Minimum required TLS version
     if conf.exists('tls tls-version-min'):
          openvpn['tls_version_min'] = conf.return_value('tls tls-version-min')
+         openvpn['tls'] = True
 
     if conf.exists('shared-secret-key-file'):
         openvpn['shared_secret_file'] = conf.return_value('shared-secret-key-file')
