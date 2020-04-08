@@ -107,7 +107,7 @@
           </leafNode>
           <leafNode name="encapsulation">
             <properties>
-              <help>Ignore link state changes</help>
+              <help>Encapsulation of this tunnel interface</help>
               <completionHelp>
                 <list>gre gre-bridge ipip sit ipip6 ip6ip6 ip6gre</list>
               </completionHelp>
