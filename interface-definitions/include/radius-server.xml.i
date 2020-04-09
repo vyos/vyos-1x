@@ -8,7 +8,7 @@
         <help>RADIUS client source address</help>
         <valueHelp>
           <format>ipv4</format>
-          <description>TFTP IPv4 listen address</description>
+          <description>IPv4 source-address of RADIUS queries</description>
         </valueHelp>
         <constraint>
           <validator name="ipv4-address"/>
