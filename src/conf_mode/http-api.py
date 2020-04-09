@@ -24,7 +24,8 @@ from copy import deepcopy
 import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd, run
+from vyos.util import cmd
+from vyos.util import call
 
 config_file = '/etc/vyos/http-api.conf'
 
@@ -91,9 +92,9 @@ def generate(http_api):
 
 def apply(http_api):
     if http_api is not None:
-        run('sudo systemctl restart vyos-http-api.service')
+        call('sudo systemctl restart vyos-http-api.service')
     else:
-        run('sudo systemctl stop vyos-http-api.service')
+        call('sudo systemctl stop vyos-http-api.service')
 
     for dep in dependencies:
         cmd(f'{vyos_conf_scripts_dir}/{dep}', raising=ConfigError)
