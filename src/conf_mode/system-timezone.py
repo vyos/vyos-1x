@@ -20,7 +20,7 @@ import os
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 default_config_data = {
@@ -42,7 +42,7 @@ def generate(tz):
     pass
 
 def apply(tz):
-    run('/usr/bin/timedatectl set-timezone {}'.format(tz['name']))
+    call('/usr/bin/timedatectl set-timezone {}'.format(tz['name']))
 
 if __name__ == '__main__':
     try:
