@@ -26,7 +26,7 @@ from vyos.defaults import directories as vyos_data_dir
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.util import wait_for_commit_lock
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dhclient", action="store_true",
@@ -167,11 +167,11 @@ def generate(dns):
 def apply(dns):
     if dns is None:
         # DNS forwarding is removed in the commit
-        run("systemctl stop pdns-recursor")
+        call("systemctl stop pdns-recursor")
         if os.path.isfile(config_file):
             os.unlink(config_file)
     else:
-        run("systemctl restart pdns-recursor")
+        call("systemctl restart pdns-recursor")
 
 if __name__ == '__main__':
     args = parser.parse_args()
