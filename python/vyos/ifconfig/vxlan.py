@@ -43,12 +43,13 @@ class VXLANIf(Interface):
 
     default = {
         'type': 'vxlan',
-        'vni': 0,
-        'dev': '',
         'group': '',
-        'remote': '',
         'port': 8472,   # The Linux implementation of VXLAN pre-dates
                         # the IANA's selection of a standard destination port
+        'remote': '',
+        'src_address': '',
+        'src_interface': '',
+        'vni': 0
     }
     definition = {
         **Interface.definition,
@@ -58,24 +59,30 @@ class VXLANIf(Interface):
             'bridgeable': True,
         }
     }
-    options = ['group', 'remote', 'dev', 'port', 'vni']
+    options = ['group', 'remote', 'src_interface', 'port', 'vni', 'src_address']
 
     mapping = {
         'ifname': 'add',
         'vni':    'id',
         'port':   'dstport',
+        'src_address': 'nolearning local',
     }
 
     def _create(self):
         cmdline = set()
         if self.config['remote']:
-            cmdline = ('ifname', 'type', 'remote', 'dev', 'vni', 'port')
-        elif self.config['group'] and self.config['dev']:
-            cmdline = ('ifname', 'type', 'group', 'dev', 'vni', 'port')
+            cmdline = ('ifname', 'type', 'remote', 'src_interface', 'vni', 'port')
+
+        elif self.config['src_address']:
+            cmdline = ('ifname', 'type', 'src_address', 'vni', 'port')
+
+        elif self.config['group'] and self.config['src_interface']:
+            cmdline = ('ifname', 'type', 'group', 'src_interface', 'vni', 'port')
+
         else:
-            intf = self.config['intf']
+            ifname = self.config['ifname']
             raise ConfigError(
-                f'VXLAN "{intf}" is missing mandatory underlay interface for a multicast network.')
+                f'VXLAN "{ifname}" is missing mandatory underlay interface for a multicast network.')
 
         cmd = 'ip link'
         for key in cmdline:

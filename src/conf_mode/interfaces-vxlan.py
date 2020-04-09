@@ -42,6 +42,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'source_address': '',
     'source_interface': '',
     'mtu': 1450,
     'remote': '',
@@ -124,6 +125,10 @@ def get_config():
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         vxlan['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
+    # VXLAN source address
+    if conf.exists('source-address'):
+        vxlan['source_address'] = conf.return_value('source-address')
+
     # VXLAN underlay interface
     if conf.exists('source-interface'):
         vxlan['source_interface'] = conf.return_value('source-interface')
@@ -168,8 +173,8 @@ def verify(vxlan):
         if not vxlan['source_interface'] in interfaces():
             raise ConfigError('VXLAN source interface does not exist')
 
-    if not (vxlan['group'] or vxlan['remote']):
-        raise ConfigError('Group or remote must be configured')
+    if not (vxlan['group'] or vxlan['remote'] or vxlan['source_address']):
+        raise ConfigError('Group, remote or source-address must be configured')
 
     if not vxlan['vni']:
         raise ConfigError('Must configure VNI for VXLAN')
@@ -206,7 +211,8 @@ def apply(vxlan):
         # Assign VXLAN instance configuration parameters to config dict
         conf['vni'] = vxlan['vni']
         conf['group'] = vxlan['group']
-        conf['dev'] = vxlan['source_interface']
+        conf['src_address'] = vxlan['source_address']
+        conf['src_interface'] = vxlan['source_interface']
         conf['remote'] = vxlan['remote']
         conf['port'] = vxlan['remote_port']
 

@@ -52,6 +52,18 @@
               #include <include/ipv6-dup-addr-detect-transmits.xml.i>
             </children>
           </node>
+          <leafNode name="source-address">
+            <properties>
+              <help>VXLAN source address</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 source-address of VXLAN tunnel</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
           <leafNode name="source-interface">
             <properties>
               <help>Physical Interface used for this connection</help>
