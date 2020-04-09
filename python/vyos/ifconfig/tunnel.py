@@ -31,7 +31,7 @@ def enable_to_on(value):
     raise ValueError(f'expect enable or disable but got "{value}"')
 
 
-
+@Interface.register
 class _Tunnel(Interface):
     """
     _Tunnel: private base class for tunnels
