@@ -4,7 +4,7 @@
     <children>
       <tagNode name="raid">
         <properties>
-          <help>Show statis of RAID set</help>
+          <help>Show status of RAID set</help>
           <completionHelp>
             <script>${vyos_completion_dir}/list_raidset.sh</script>
           </completionHelp>
