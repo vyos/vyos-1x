@@ -23,7 +23,9 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import chown, chmod_x, cmd, run, is_bridge_member
+from vyos.util import chown, chmod_x, is_bridge_member
+from vyos.util import cmd
+from vyos.util import call
 from vyos import ConfigError
 
 default_config_data = {
@@ -48,7 +50,7 @@ def check_kmod():
     modules = ['option', 'usb_wwan', 'usbserial']
     for module in modules:
         if not os.path.exists(f'/sys/module/{module}'):
-            if run(f'modprobe {module}') != 0:
+            if call(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
 
 def get_config():
