@@ -24,12 +24,12 @@ def debug(flag):
     # - developer: the code will drop into PBD on un-handled exception
     # - ifconfig: prints command and sysfs access on stdout for interface
     if flag not in ['developer', 'ifconfig']:
-        return False
+        return ''
     return flag if os.path.isfile(f'/tmp/vyos.{flag}.debug') else ''
 
 
 def debug_msg(message, section=''):
-    if section:
+    if debug(section):
         print(f'DEBUG/{section:<6} {message}')
 
 
