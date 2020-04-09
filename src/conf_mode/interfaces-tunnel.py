@@ -567,9 +567,9 @@ def verify(conf):
 
     incompatible = []
     if afi_local == IP6:
-        incompatible.extend(['remote','ttl', 'tos', 'key',])
+        incompatible.extend(['ttl', 'tos', 'key',])
     if afi_local == IP4:
-        incompatible.extend(['remote','encaplimit', 'flowlabel', 'hoplimit', 'tclass'])
+        incompatible.extend(['encaplimit', 'flowlabel', 'hoplimit', 'tclass'])
 
     for option in incompatible:
         if option in options:
