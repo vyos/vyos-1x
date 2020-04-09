@@ -27,7 +27,7 @@ import vyos.keepalived
 
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 daemon_file = "/etc/default/keepalived"
 config_file = "/etc/keepalived/keepalived.conf"
@@ -242,17 +242,17 @@ def apply(data):
 
         if not vyos.keepalived.vrrp_running():
             print("Starting the VRRP process")
-            ret = run("sudo systemctl restart keepalived.service")
+            ret = call("sudo systemctl restart keepalived.service")
         else:
             print("Reloading the VRRP process")
-            ret = run("sudo systemctl reload keepalived.service")
+            ret = call("sudo systemctl reload keepalived.service")
 
         if ret != 0:
             raise ConfigError("keepalived failed to start")
     else:
         # VRRP is removed in the commit
         print("Stopping the VRRP process")
-        run("sudo systemctl stop keepalived.service")
+        call("sudo systemctl stop keepalived.service")
         os.unlink(config_file)
 
     return None

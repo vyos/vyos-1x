@@ -24,7 +24,7 @@ import sys
 import argparse
 
 from vyos.config import Config
-from vyos.util import run
+from vyos.util import call
 
 config_file_daemon = r'/etc/snmp/snmpd.conf'
 
@@ -54,7 +54,7 @@ def show_all():
 
 def show_community(c, h):
     print('Status of SNMP community {0} on {1}'.format(c, h), flush=True)
-    run('/usr/bin/snmpstatus -t1 -v1 -c {0} {1}'.format(c, h))
+    call('/usr/bin/snmpstatus -t1 -v1 -c {0} {1}'.format(c, h))
 
 if __name__ == '__main__':
     args = parser.parse_args()

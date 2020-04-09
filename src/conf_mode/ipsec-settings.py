@@ -24,7 +24,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 ra_conn_name = "remote-access"
 charon_conf_file = "/etc/strongswan.d/charon.conf"
@@ -99,7 +99,7 @@ def get_config():
 
 ### Remove config from file by delimiter
 def remove_confs(delim_begin, delim_end, conf_file):
-    run("sed -i '/"+delim_begin+"/,/"+delim_end+"/d' "+conf_file)
+    call("sed -i '/"+delim_begin+"/,/"+delim_end+"/d' "+conf_file)
 
 
 ### Checking certificate storage and notice if certificate not in /config directory
@@ -112,7 +112,7 @@ def check_cert_file_store(cert_name, file_path, dts_path):
     else:
       ### Cpy file to /etc/ipsec.d/certs/ /etc/ipsec.d/cacerts/
       # todo make check
-      ret = run('cp -f '+file_path+' '+dts_path)
+      ret = call('cp -f '+file_path+' '+dts_path)
       if ret:
          raise ConfigError("L2TP VPN configuration error: Cannot copy "+file_path)
 
@@ -193,12 +193,12 @@ def generate(data):
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
 
 def restart_ipsec():
-    run('ipsec restart >&/dev/null')
+    call('ipsec restart >&/dev/null')
     # counter for apply swanctl config
     counter = 10
     while counter <= 10:
         if os.path.exists(charon_pidfile):
-            run('swanctl -q >&/dev/null')
+            call('swanctl -q >&/dev/null')
             break
         counter -=1
         sleep(1)

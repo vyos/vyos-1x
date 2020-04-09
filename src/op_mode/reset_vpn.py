@@ -19,7 +19,8 @@ import sys
 import argparse
 #import re
 
-from vyos.util import run, DEVNULL
+from vyos.util import run
+from vyos.util import DEVNULL
 
 pptp_base = '/usr/bin/accel-cmd -p 2003 terminate {} {}'
 l2tp_base = '/usr/bin/accel-cmd -p 2004 terminate {} {}'

@@ -21,7 +21,7 @@ from sys import exit
 from psutil import process_iter
 from time import strftime, localtime, time
 
-from vyos.util import run
+from vyos.util import call
 
 
 PPP_LOGFILE = '/var/log/vyatta/ppp_{}.log'
@@ -59,7 +59,7 @@ def connect(interface):
         tm = strftime("%a %d %b %Y %I:%M:%S %p %Z", localtime(time()))
         with open(PPP_LOGFILE.format(interface), 'a') as f:
             f.write('{}: user {} started PPP daemon for {} by connect command\n'.format(tm, user, interface))
-            run('umask 0; setsid sh -c "nohup /usr/sbin/pppd call {0} > /tmp/{0}.log 2>&1 &"'.format(interface))
+            call('umask 0; setsid sh -c "nohup /usr/sbin/pppd call {0} > /tmp/{0}.log 2>&1 &"'.format(interface))
 
 
 def disconnect(interface):
@@ -77,7 +77,7 @@ def disconnect(interface):
         tm = strftime("%a %d %b %Y %I:%M:%S %p %Z", localtime(time()))
         with open(PPP_LOGFILE.format(interface), 'a') as f:
             f.write('{}: user {} stopped PPP daemon for {} by disconnect command\n'.format(tm, user, interface))
-            run('/usr/bin/poff "{}"'.format(interface))
+            call('/usr/bin/poff "{}"'.format(interface))
 
 def main():
     parser = argparse.ArgumentParser()

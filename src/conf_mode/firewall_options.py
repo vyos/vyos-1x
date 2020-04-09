@@ -21,7 +21,7 @@ import copy
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 default_config_data = {
@@ -87,19 +87,19 @@ def apply(tcp):
     target = 'VYOS_FW_OPTIONS'
 
     # always cleanup iptables
-    run('iptables --table mangle --delete FORWARD --jump {} >&/dev/null'.format(target))
-    run('iptables --table mangle --flush {} >&/dev/null'.format(target))
-    run('iptables --table mangle --delete-chain {} >&/dev/null'.format(target))
+    call('iptables --table mangle --delete FORWARD --jump {} >&/dev/null'.format(target))
+    call('iptables --table mangle --flush {} >&/dev/null'.format(target))
+    call('iptables --table mangle --delete-chain {} >&/dev/null'.format(target))
 
     # always cleanup ip6tables
-    run('ip6tables --table mangle --delete FORWARD --jump {} >&/dev/null'.format(target))
-    run('ip6tables --table mangle --flush {} >&/dev/null'.format(target))
-    run('ip6tables --table mangle --delete-chain {} >&/dev/null'.format(target))
+    call('ip6tables --table mangle --delete FORWARD --jump {} >&/dev/null'.format(target))
+    call('ip6tables --table mangle --flush {} >&/dev/null'.format(target))
+    call('ip6tables --table mangle --delete-chain {} >&/dev/null'.format(target))
 
     # Setup new iptables rules
     if tcp['new_chain4']:
-        run('iptables --table mangle --new-chain {} >&/dev/null'.format(target))
-        run('iptables --table mangle --append FORWARD --jump {} >&/dev/null'.format(target))
+        call('iptables --table mangle --new-chain {} >&/dev/null'.format(target))
+        call('iptables --table mangle --append FORWARD --jump {} >&/dev/null'.format(target))
 
         for opts in tcp['intf_opts']:
             intf = opts['intf']
@@ -111,13 +111,13 @@ def apply(tcp):
 
             # adjust TCP MSS per interface
             if mss:
-                run('iptables --table mangle --append {} --out-interface {} --protocol tcp ' \
+                call('iptables --table mangle --append {} --out-interface {} --protocol tcp '
                           '--tcp-flags SYN,RST SYN --jump TCPMSS --set-mss {} >&/dev/null'.format(target, intf, mss))
 
     # Setup new ip6tables rules
     if tcp['new_chain6']:
-        run('ip6tables --table mangle --new-chain {} >&/dev/null'.format(target))
-        run('ip6tables --table mangle --append FORWARD --jump {} >&/dev/null'.format(target))
+        call('ip6tables --table mangle --new-chain {} >&/dev/null'.format(target))
+        call('ip6tables --table mangle --append FORWARD --jump {} >&/dev/null'.format(target))
 
         for opts in tcp['intf_opts']:
             intf = opts['intf']
@@ -129,7 +129,7 @@ def apply(tcp):
 
             # adjust TCP MSS per interface
             if mss:
-                run('ip6tables --table mangle --append {} --out-interface {} --protocol tcp '
+                call('ip6tables --table mangle --append {} --out-interface {} --protocol tcp '
                     '--tcp-flags SYN,RST SYN --jump TCPMSS --set-mss {} >&/dev/null'.format(target, intf, mss))
 
     return None

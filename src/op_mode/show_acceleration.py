@@ -21,7 +21,8 @@ import re
 import argparse
 
 from vyos.config import Config
-from vyos.util import popen, run
+from vyos.util import popen
+from vyos.util import call
 
 
 def detect_qat_dev():
@@ -43,7 +44,7 @@ def show_qat_status():
         sys.exit(1)
 
     # Show QAT service
-    run('sudo /etc/init.d/vyos-qat-utilities status')
+    call('sudo /etc/init.d/vyos-qat-utilities status')
 
 # Return QAT devices
 def get_qat_devices():
@@ -94,20 +95,20 @@ args = parser.parse_args()
 if args.hw:
     detect_qat_dev()
     # Show availible Intel QAT devices
-    run('sudo lspci -nn | egrep -e \'8086:37c8|8086:19e2|8086:0435|8086:6f54\'')
+    call('sudo lspci -nn | egrep -e \'8086:37c8|8086:19e2|8086:0435|8086:6f54\'')
 elif args.flow and args.dev:
     check_qat_if_conf()
-    run('sudo cat '+get_qat_proc_path(args.dev)+"fw_counters")
+    call('sudo cat '+get_qat_proc_path(args.dev)+"fw_counters")
 elif args.interrupts:
     check_qat_if_conf()
     # Delete _dev from args.dev
-    run('sudo cat /proc/interrupts | grep qat')
+    call('sudo cat /proc/interrupts | grep qat')
 elif args.status:
     check_qat_if_conf()
     show_qat_status()
 elif args.conf and args.dev:
     check_qat_if_conf()
-    run('sudo cat '+get_qat_proc_path(args.dev)+"dev_cfg")
+    call('sudo cat '+get_qat_proc_path(args.dev)+"dev_cfg")
 elif args.dev_list:
     get_qat_devices()
 else:

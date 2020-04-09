@@ -21,13 +21,13 @@ from jinja2 import FileSystemLoader, Environment
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = r'/tmp/ldpd.frr'
 
 def sysctl(name, value):
-    run('sysctl -wq {}={}'.format(name, value))
+    call('sysctl -wq {}={}'.format(name, value))
 
 def get_config():
     conf = Config()
@@ -162,7 +162,7 @@ def apply(mpls):
     operate_mpls_on_intfc(diactive_ifaces, 0)
 
     if os.path.exists(config_file):
-        run("sudo vtysh -d ldpd -f " + config_file)
+        call("sudo vtysh -d ldpd -f " + config_file)
         os.remove(config_file)
 
     return None

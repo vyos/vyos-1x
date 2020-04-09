@@ -52,9 +52,9 @@ def generate(opt):
 def apply(opt):
     # Beep action
     if opt['beep_if_fully_booted']:
-        run('systemctl enable vyos-beep.service >/dev/null 2>&1')
+        run('systemctl enable vyos-beep.service')
     else:
-        run('systemctl disable vyos-beep.service >/dev/null 2>&1')
+        run('systemctl disable vyos-beep.service')
 
     # Ctrl-Alt-Delete action
     if opt['ctrl_alt_del'] == 'ignore':

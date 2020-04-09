@@ -23,7 +23,7 @@ from jinja2 import FileSystemLoader, Environment
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = r'/etc/default/isc-dhcpv6-relay'
@@ -100,10 +100,10 @@ def generate(relay):
 
 def apply(relay):
     if relay is not None:
-        run('sudo systemctl restart isc-dhcpv6-relay.service')
+        call('sudo systemctl restart isc-dhcpv6-relay.service')
     else:
         # DHCPv6 relay support is removed in the commit
-        run('sudo systemctl stop isc-dhcpv6-relay.service')
+        call('sudo systemctl stop isc-dhcpv6-relay.service')
         os.unlink(config_file)
 
     return None

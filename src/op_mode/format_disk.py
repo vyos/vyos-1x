@@ -22,7 +22,9 @@ from datetime import datetime
 from time import sleep
 
 from vyos.util import is_admin, ask_yes_no
-from vyos.util import run, cmd, DEVNULL
+from vyos.util import call
+from vyos.util import cmd
+from vyos.util import DEVNULL
 
 def list_disks():
     disks = set()
@@ -36,7 +38,7 @@ def list_disks():
 
 def is_busy(disk: str):
     """Check if given disk device is busy by re-reading it's partition table"""
-    return run(f'sudo blockdev --rereadpt /dev/{disk}', stderr=DEVNULL) != 0
+    return call(f'sudo blockdev --rereadpt /dev/{disk}', stderr=DEVNULL) != 0
 
 
 def backup_partitions(disk: str):

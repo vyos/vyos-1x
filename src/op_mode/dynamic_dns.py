@@ -21,7 +21,7 @@ import sys
 import time
 
 from vyos.config import Config
-from vyos.util import run
+from vyos.util import call
 
 
 cache_file = r'/var/cache/ddclient/ddclient.cache'
@@ -86,9 +86,9 @@ def show_status():
 
 
 def update_ddns():
-    run('systemctl stop ddclient')
+    call('systemctl stop ddclient')
     os.remove(cache_file)
-    run('systemctl start ddclient')
+    call('systemctl start ddclient')
 
 
 def main():

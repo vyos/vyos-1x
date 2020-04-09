@@ -21,7 +21,9 @@ import re
 
 from datetime import datetime, timedelta, time as type_time, date as type_date
 from vyos.util import ask_yes_no
-from vyos.util import cmd, run
+from vyos.util import cmd
+from vyos.util import call
+from vyos.util import run
 
 systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
@@ -132,7 +134,7 @@ def chk_vyatta_based_reboots():
   if os.path.exists(f):
     jid = open(f).read().strip()
     if jid != 0:
-      run(f'sudo atrm {jid}')
+      call(f'sudo atrm {jid}')
     os.remove(f)
 
 def main():

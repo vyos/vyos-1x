@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = r'/etc/dhcp/dhcpdv6.conf'
@@ -364,7 +364,7 @@ def generate(dhcpv6):
 def apply(dhcpv6):
     if (dhcpv6 is None) or dhcpv6['disabled']:
         # DHCP server is removed in the commit
-        run('sudo systemctl stop isc-dhcpv6-server.service')
+        call('sudo systemctl stop isc-dhcpv6-server.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
         if os.path.exists(daemon_config_file):
@@ -374,7 +374,7 @@ def apply(dhcpv6):
         if not os.path.exists(lease_file):
             os.mknod(lease_file)
 
-        run('sudo systemctl restart isc-dhcpv6-server.service')
+        call('sudo systemctl restart isc-dhcpv6-server.service')
 
     return None
 
