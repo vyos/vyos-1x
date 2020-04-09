@@ -24,7 +24,7 @@ from jinja2 import FileSystemLoader, Environment
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 config_file = r'/etc/default/udp-broadcast-relay'
 
@@ -155,7 +155,7 @@ def generate(relay):
 
 def apply(relay):
     # first stop all running services
-    run('sudo systemctl stop udp-broadcast-relay@{1..99}')
+    call('sudo systemctl stop udp-broadcast-relay@{1..99}')
 
     if (relay is None) or relay['disabled']:
         return None
@@ -165,7 +165,7 @@ def apply(relay):
         # Don't start individual instance when it's disabled
         if r['disabled']:
             continue
-        run('sudo systemctl start udp-broadcast-relay@{0}'.format(r['id']))
+        call('sudo systemctl start udp-broadcast-relay@{0}'.format(r['id']))
 
     return None
 
