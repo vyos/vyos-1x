@@ -70,6 +70,7 @@ server {
         location ~ /(retrieve|configure|config-file|image) {
 {% if server.api %}
                 proxy_pass http://localhost:{{ server.api.port }};
+                proxy_read_timeout 600;
                 proxy_buffering off;
 {% else %}
                 return 503;
