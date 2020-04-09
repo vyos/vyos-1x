@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Remove network provider name from CLI and rather use provider APN from CLI
+# Split WireGuard endpoint into address / port nodes to make use of common
+# validators
 
 from sys import exit, argv
 from vyos.configtree import ConfigTree
