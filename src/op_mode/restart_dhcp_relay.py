@@ -23,7 +23,7 @@ import argparse
 import os
 
 import vyos.config
-from vyos.util import run
+from vyos.util import call
 
 
 parser = argparse.ArgumentParser()
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         if not c.exists_effective('service dhcp-relay'):
             print("DHCP relay service not configured")
         else:
-            run('sudo systemctl restart isc-dhcp-relay.service')
+            call('sudo systemctl restart isc-dhcp-relay.service')
 
         sys.exit(0)
     elif args.ipv6:
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         if not c.exists_effective('service dhcpv6-relay'):
             print("DHCPv6 relay service not configured")
         else:
-            run('sudo systemctl restart isc-dhcpv6-relay.service')
+            call('sudo systemctl restart isc-dhcpv6-relay.service')
 
         sys.exit(0)
     else:
