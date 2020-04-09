@@ -26,7 +26,7 @@ import vyos.certbot_util
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = '/etc/nginx/sites-available/default'
@@ -150,9 +150,9 @@ def generate(https):
 
 def apply(https):
     if https is not None:
-        run('sudo systemctl restart nginx.service')
+        call('sudo systemctl restart nginx.service')
     else:
-        run('sudo systemctl stop nginx.service')
+        call('sudo systemctl stop nginx.service')
 
 if __name__ == '__main__':
     try:
