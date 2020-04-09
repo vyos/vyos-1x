@@ -23,7 +23,7 @@ from sys import exit
 from vyos import ConfigError
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = r'/tmp/igmp.frr'
@@ -105,7 +105,7 @@ def apply(igmp):
         return None
 
     if os.path.exists(config_file):
-        run("sudo vtysh -d pimd -f " + config_file)
+        call("sudo vtysh -d pimd -f " + config_file)
         os.remove(config_file)
 
     return None
