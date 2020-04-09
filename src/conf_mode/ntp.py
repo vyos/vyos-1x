@@ -24,7 +24,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = r'/etc/ntp.conf'
@@ -114,10 +114,10 @@ def generate(ntp):
 
 def apply(ntp):
     if ntp is not None:
-        run('sudo systemctl restart ntp.service')
+        call('sudo systemctl restart ntp.service')
     else:
         # NTP support is removed in the commit
-        run('sudo systemctl stop ntp.service')
+        call('sudo systemctl stop ntp.service')
         os.unlink(config_file)
 
     return None
