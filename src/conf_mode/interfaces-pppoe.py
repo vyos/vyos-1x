@@ -161,7 +161,7 @@ def generate(pppoe):
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir["data"], "templates", "pppoe")
     fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
+    env = Environment(loader=fs_loader, trim_blocks=True)
 
     # set up configuration file path variables where our templates will be
     # rendered into
