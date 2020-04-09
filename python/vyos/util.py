@@ -92,6 +92,21 @@ def cmd(command, section='', shell=None, input=None, timeout=None, env=None,
     return decoded
 
 
+def call(command, section='', shell=None, input=None, timeout=None, env=None,
+        universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
+    """ does not raise exception on error, returns error code, print output """
+    out, code = popen(
+        command, section,
+        stdout=stdout, stderr=stderr,
+        input=input, timeout=timeout,
+        env=env, shell=shell,
+        universal_newlines=universal_newlines,
+        decode=decode,
+    )
+    print(out)
+    return code
+
+
 def read_file(path):
     """ Read a file to string """
     with open(path, 'r') as f:
