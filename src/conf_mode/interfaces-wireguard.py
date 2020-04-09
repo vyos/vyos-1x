@@ -24,7 +24,8 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
-from vyos.util import chown, run, is_bridge_member, chmod_750
+from vyos.util import chown, is_bridge_member, chmod_750
+from vyos.util import call
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -49,7 +50,7 @@ def _check_kmod():
     modules = ['wireguard']
     for module in modules:
         if not os.path.exists(f'/sys/module/{module}'):
-            if run(f'modprobe {module}') != 0:
+            if call(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
 
 
