@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_ipv6_link_local, is_ipv6
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 config_file = r'/tmp/bfd.frr'
@@ -207,7 +207,7 @@ def apply(bfd):
     if bfd is None:
         return None
 
-    run("vtysh -d bfdd -f " + config_file)
+    call("vtysh -d bfdd -f " + config_file)
     if os.path.exists(config_file):
         os.remove(config_file)
 
