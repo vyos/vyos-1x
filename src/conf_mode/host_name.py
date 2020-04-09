@@ -33,7 +33,9 @@ import vyos.hostsd_client
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd, run
+from vyos.util import cmd
+from vyos.util import call
+from vyos.util import run
 
 
 default_config_data = {
@@ -157,21 +159,21 @@ def apply(config):
     # rsyslog runs into a race condition at boot time with systemd
     # restart rsyslog only if the hostname changed.
     hostname_old = cmd('hostnamectl --static')
-    cmd(f'hostnamectl set-hostname --static {hostname_new}')
+    call(f'hostnamectl set-hostname --static {hostname_new}')
 
     # Restart services that use the hostname
     if hostname_new != hostname_old:
-        run("systemctl restart rsyslog.service")
+        call("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
-    ret = run("pgrep snmpd > /dev/null")
+    ret = run("pgrep snmpd")
     if ret == 0:
-        run("systemctl restart snmpd.service")
+        call("systemctl restart snmpd.service")
 
     # restart pdns if it is used
-    ret = run('/usr/bin/rec_control ping >/dev/null 2>&1')
+    ret = run('/usr/bin/rec_control ping')
     if ret == 0:
-        run('/etc/init.d/pdns-recursor restart >/dev/null')
+        call('/etc/init.d/pdns-recursor restart >/dev/null')
 
     return None
 
