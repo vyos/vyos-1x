@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Split WireGuard endpoint into address / port nodes to make use of common
-# validators
+# Rename link nodes to source-interface for the following interface types:
+# - vxlan
+# - pseudo ethernet
 
 from sys import exit, argv
 from vyos.configtree import ConfigTree
@@ -30,26 +31,18 @@ if __name__ == '__main__':
         config_file = f.read()
 
     config = ConfigTree(config_file)
-    base = ['interfaces', 'wireguard']
 
-    if not config.exists(base):
-        # Nothing to do
-        exit(0)
+    for if_type in ['vxlan', 'pseudo-ethernet']:
+        base = ['interfaces', if_type]
+        if not config.exists(base):
+            # Nothing to do
+            exit(0)
 
-    # list all individual wireguard interface isntance
-    for i in config.list_nodes(base):
-        iface = base + [i]
-        for peer in config.list_nodes(iface + ['peer']):
-            base_peer = iface + ['peer', peer]
-            if config.exists(base_peer + ['endpoint']):
-                endpoint = config.return_value(base_peer + ['endpoint'])
-                address = endpoint.split(':')[0]
-                port = endpoint.split(':')[1]
-                # delete old node
-                config.delete(base_peer + ['endpoint'])
-                # setup new nodes
-                config.set(base_peer + ['address'], value=address)
-                config.set(base_peer + ['port'], value=port)
+        # list all individual interface isntance
+        for i in config.list_nodes(base):
+            iface = base + [i]
+            if config.exists(iface + ['link']):
+                config.rename(iface + ['link'], 'source-interface')
 
     try:
         with open(file_name, 'w') as f:

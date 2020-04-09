@@ -52,9 +52,9 @@
               #include <include/ipv6-dup-addr-detect-transmits.xml.i>
             </children>
           </node>
-          <leafNode name="link">
+          <leafNode name="source-interface">
             <properties>
-              <help>Underlay device of VXLAN interface</help>
+              <help>Physical Interface used for this connection</help>
               <valueHelp>
                 <format>interface</format>
                 <description>Interface used for VXLAN underlay</description>
