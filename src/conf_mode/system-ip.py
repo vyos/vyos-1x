@@ -20,7 +20,7 @@ from sys import exit
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 
 
 default_config_data = {
@@ -31,7 +31,7 @@ default_config_data = {
 }
 
 def sysctl(name, value):
-    run('sysctl -wq {}={}'.format(name, value))
+    call('sysctl -wq {}={}'.format(name, value))
 
 def get_config():
     ip_opt = deepcopy(default_config_data)
