@@ -168,6 +168,9 @@ def verify(vxlan):
         if not vxlan['source_interface'] in interfaces():
             raise ConfigError('VXLAN source interface does not exist')
 
+    if not (vxlan['group'] or vxlan['remote']):
+        raise ConfigError('Group or remote must be configured')
+
     if not vxlan['vni']:
         raise ConfigError('Must configure VNI for VXLAN')
 
