@@ -51,8 +51,8 @@ default_config_data = {
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'intf': '',
-    'link': '',
-    'link_changed': False,
+    'source_interface': '',
+    'source_interface_changed': False,
     'mac': '',
     'mode': 'private',
     'vif_s': [],
@@ -166,12 +166,12 @@ def get_config():
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         peth['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
-    # Lower link device
-    if conf.exists(['link']):
-        peth['link'] = conf.return_value(['link'])
-        tmp = conf.return_effective_value(['link'])
-        if tmp != peth['link']:
-            peth['link_changed'] = True
+    # Physical interface
+    if conf.exists(['source-interface']):
+        peth['source_interface'] = conf.return_value(['source-interface'])
+        tmp = conf.return_effective_value(['source-interface'])
+        if tmp != peth['source_interface']:
+            peth['source_interface_changed'] = True
 
     # Media Access Control (MAC) address
     if conf.exists(['mac']):
@@ -227,10 +227,10 @@ def verify(peth):
                               'is a member of bridge "{1}"!'.format(interface, bridge))
         return None
 
-    if not peth['link']:
+    if not peth['source_interface']:
         raise ConfigError('Link device must be set for virtual ethernet {}'.format(peth['intf']))
 
-    if not peth['link'] in interfaces():
+    if not peth['source_interface'] in interfaces():
         raise ConfigError('Pseudo-ethernet source interface does not exist')
 
     vrf_name = peth['vrf']
@@ -253,12 +253,12 @@ def apply(peth):
         p.remove()
         return None
 
-    elif peth['link_changed']:
+    elif peth['source_interface_changed']:
         # Check if MACVLAN interface already exists. Parameters like the
-        # underlaying link device can not be changed  on the fly and the
-        # interface needs to be recreated from the bottom.
+        # underlaying source-interface device can not be changed  on the fly
+        # and the interface needs to be recreated from the bottom.
         #
-        # link_changed also means - the interface was not present in the
+        # source_interface_changed also means - the interface was not present in the
         # beginning and is newly created
         if peth['intf'] in interfaces():
             p = MACVLANIf(peth['intf'])
@@ -269,7 +269,7 @@ def apply(peth):
         conf = deepcopy(MACVLANIf.get_config())
 
         # Assign MACVLAN instance configuration parameters to config dict
-        conf['link'] = peth['link']
+        conf['source_interface'] = peth['source_interface']
         conf['mode'] = peth['mode']
 
         # It is safe to "re-create" the interface always, there is a sanity check

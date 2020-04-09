@@ -42,7 +42,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
-    'link': '',
+    'source_interface': '',
     'mtu': 1450,
     'remote': '',
     'remote_port': 8472, # The Linux implementation of VXLAN pre-dates
@@ -125,8 +125,8 @@ def get_config():
         vxlan['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # VXLAN underlay interface
-    if conf.exists('link'):
-        vxlan['link'] = conf.return_value('link')
+    if conf.exists('source-interface'):
+        vxlan['source_interface'] = conf.return_value('source-interface')
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -162,18 +162,19 @@ def verify(vxlan):
         print('WARNING: RFC7348 recommends VXLAN tunnels preserve a 1500 byte MTU')
 
     if vxlan['group']:
-        if not vxlan['link']:
+        if not vxlan['source_interface']:
             raise ConfigError('Multicast VXLAN requires an underlaying interface ')
-        if not vxlan['link'] in interfaces():
+
+        if not vxlan['source_interface'] in interfaces():
             raise ConfigError('VXLAN source interface does not exist')
 
     if not vxlan['vni']:
         raise ConfigError('Must configure VNI for VXLAN')
 
-    if vxlan['link']:
+    if vxlan['source_interface']:
         # VXLAN adds a 50 byte overhead - we need to check the underlaying MTU
         # if our configured MTU is at least 50 bytes less
-        underlay_mtu = int(Interface(vxlan['link']).get_mtu())
+        underlay_mtu = int(Interface(vxlan['source_interface']).get_mtu())
         if underlay_mtu < (vxlan['mtu'] + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               'MTU is to small ({})'.format(underlay_mtu))
@@ -202,7 +203,7 @@ def apply(vxlan):
         # Assign VXLAN instance configuration parameters to config dict
         conf['vni'] = vxlan['vni']
         conf['group'] = vxlan['group']
-        conf['dev'] = vxlan['link']
+        conf['dev'] = vxlan['source_interface']
         conf['remote'] = vxlan['remote']
         conf['port'] = vxlan['remote_port']
 
