@@ -24,7 +24,8 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
-from vyos.util import run, is_bridge_member
+from vyos.util import is_bridge_member
+from vyos.util import call
 from vyos import ConfigError
 
 default_config_data = {
@@ -91,7 +92,7 @@ def get_config():
     if not os.path.isfile('/sys/class/net/bonding_masters'):
         import syslog
         syslog.syslog(syslog.LOG_NOTICE, "loading bonding kernel module")
-        if run('modprobe bonding max_bonds=0 miimon=250') != 0:
+        if call('modprobe bonding max_bonds=0 miimon=250') != 0:
             syslog.syslog(syslog.LOG_NOTICE, "failed loading bonding kernel module")
             raise ConfigError("failed loading bonding kernel module")
 
