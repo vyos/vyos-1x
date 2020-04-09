@@ -30,7 +30,9 @@ import pystache
 import vyos.version
 import vyos.limericks
 
-from vyos.util import cmd, run
+from vyos.util import cmd
+from vyos.util import call
+from vyos.util import run
 
 
 parser = argparse.ArgumentParser()
@@ -119,7 +121,7 @@ if __name__ == '__main__':
 
         if args.all:
            print("Package versions:")
-           run("dpkg -l")
+           call("dpkg -l")
 
         if args.funny:
             print(vyos.limericks.get_random())
