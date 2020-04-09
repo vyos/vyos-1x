@@ -22,7 +22,7 @@ from logging.handlers import SysLogHandler
 from pathlib import Path
 import psutil
 
-from vyos.util import run
+from vyos.util import call
 
 # some default values
 watchfrr = '/usr/lib/frr/watchfrr.sh'
@@ -87,7 +87,7 @@ def _write_config():
     Path(frrconfig_tmp).mkdir(parents=False, exist_ok=True)
     # save frr.conf to it
     command = "{} -n -w --config_dir {} 2> /dev/null".format(vtysh, frrconfig_tmp)
-    return_code = run(command)
+    return_code = call(command)
     if not return_code == 0:
         logger.error("Failed to save active config: \"{}\" returned exit code: {}".format(command, return_code))
         return False
@@ -109,7 +109,7 @@ def _cleanup():
 # check if daemon is running
 def _daemon_check(daemon):
     command = "{} print_status {}".format(watchfrr, daemon)
-    return_code = run(command)
+    return_code = call(command)
     if not return_code == 0:
         logger.error("Daemon \"{}\" is not running".format(daemon))
         return False
@@ -120,7 +120,7 @@ def _daemon_check(daemon):
 # restart daemon
 def _daemon_restart(daemon):
     command = "{} restart {}".format(watchfrr, daemon)
-    return_code = run(command)
+    return_code = call(command)
     if not return_code == 0:
         logger.error("Failed to restart daemon \"{}\"".format(daemon))
         return False
@@ -136,7 +136,7 @@ def _reload_config(daemon):
     else:
         command = "{} -n -b --config_dir {} 2> /dev/null".format(vtysh, frrconfig_tmp)
 
-    return_code = run(command)
+    return_code = call(command)
     if not return_code == 0:
         logger.error("Failed to reinstall configuration")
         return False
