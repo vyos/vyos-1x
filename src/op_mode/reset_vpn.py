@@ -14,63 +14,49 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# import os
 import sys
 import argparse
-#import re
 
 from vyos.util import run
-from vyos.util import DEVNULL
 
-pptp_base = '/usr/bin/accel-cmd -p 2003 terminate {} {}'
-l2tp_base = '/usr/bin/accel-cmd -p 2004 terminate {} {}'
+cmd_dict = {
+    'cmd_base'  : '/usr/bin/accel-cmd -p {} terminate {} {}',
+    'vpn_types' : {
+        'pptp' : 2003,
+        'l2tp' : 2004,
+        'sstp' : 2005
+    }
+}
 
 def terminate_sessions(username='', interface='', protocol=''):
-    if username:
+
+    # Reset vpn connections by username
+    if protocol in cmd_dict['vpn_types']:
         if username == "all_users":
-            if protocol == "pptp":
-                pptp_cmd = pptp_base.format('all','')
-                run(pptp_cmd)
-                return
-            elif protocol == "l2tp":
-                l2tp_cmd = l2tp_base.format('all', '')
-                run(l2tp_cmd)
-                return
-            else:
-                pptp_cmd = pptp_base.format('all', '')
-                run(pptp_cmd)
-                l2tp_cmd = l2tp_base.format('all', '')
-                run(l2tp_cmd)
-                return
-
-        if protocol == "pptp":
-            pptp_cmd = pptp_base.format('username', username)
-            run(pptp_cmd)
-            return
-        elif protocol == "l2tp":
-            l2tp_cmd = l2tp_base.format('username', username)
-            run(l2tp_cmd)
-            return
+            run(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][protocol], 'all', ''))
         else:
-            pptp_cmd = pptp_base.format('username', username)
-            run(pptp_cmd)
-            l2tp_cmd = l2tp_base.format('username', username)
-            run(l2tp_cmd)
-            return
+            run(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][protocol], 'username', username))
 
-    # rewrite `terminate by interface` if pptp will have pptp%d interface naming
-    if interface:
-        pptp_cmd = pptp_base.format('if', interface)
-        run(pptp_cmd)
-        l2tp_cmd = l2tp_base.format('if', interface)
-        run(l2tp_cmd)
+    # Reset vpn connections by ifname
+    elif interface:
+        for proto in cmd_dict['vpn_types']:
+            run(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][proto], 'if', interface))
+
+    elif username:
+        # Reset all vpn connections
+        if username == "all_users":
+            for proto in cmd_dict['vpn_types']:
+                run(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][proto], 'all', ''))
+        else:
+            for proto in cmd_dict['vpn_types']:
+                run(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][proto], 'username', username))
 
 def main():
     #parese args
     parser = argparse.ArgumentParser()
     parser.add_argument('--username', help='Terminate by username (all_users used for disconnect all users)', required=False)
     parser.add_argument('--interface', help='Terminate by interface', required=False)
-    parser.add_argument('--protocol', help='Set protocol (pptp|l2tp)', required=False)
+    parser.add_argument('--protocol', help='Set protocol (pptp|l2tp|sstp)', required=False)
     args = parser.parse_args()
 
     if args.username or args.interface:
