@@ -60,7 +60,7 @@ def _accel_cmd(command):
 default_config_data = {
     'local_users' : [],
     'auth_mode' : 'local',
-    'auth_proto' : [],
+    'auth_proto' : ['auth_mschap_v2'],
     'radius_server' : [],
     'radius_acct_tmo' : '3',
     'radius_max_try' : '3',
@@ -77,7 +77,7 @@ default_config_data = {
     'client_ip_pool' : [],
     'dnsv4' : [],
     'mtu' : '',
-    'ppp_mppe' : '',
+    'ppp_mppe' : 'prefer',
     'ppp_echo_failure' : '',
     'ppp_echo_interval' : '',
     'ppp_echo_timeout' : '',
@@ -223,9 +223,6 @@ def get_config():
         for proto in conf.return_values(['protocols']):
             sstp['auth_proto'].append(auth_mods[proto])
 
-    else:
-        sstp['auth_proto'] = ['auth_mschap_v2']
-
     #
     # read in SSL certs
     conf.set_level(base_path + ['ssl'])
@@ -261,7 +258,7 @@ def get_config():
     # read in PPP stuff
     conf.set_level(base_path + ['ppp-settings'])
     if conf.exists('mppe'):
-        sstp['ppp_mppe'] = conf.return_value('ppp-settings mppe')
+        sstp['ppp_mppe'] = conf.return_value(['ppp-settings', 'mppe'])
 
     if conf.exists(['lcp-echo-failure']):
         sstp['ppp_echo_failure'] = conf.return_value(['lcp-echo-failure'])
