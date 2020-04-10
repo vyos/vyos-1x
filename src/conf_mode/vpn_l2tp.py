@@ -302,13 +302,11 @@ def get_config():
     if conf.exists(['ppp-options', 'lcp-echo-interval']):
         l2tp['ppp_echo_interval'] = conf.return_value(['ppp-options', 'lcp-echo-interval'])
 
-    import pprint
-    pprint.pprint(l2tp)
     return l2tp
 
 
 def verify(l2tp):
-    if l2tp == None:
+    if not l2tp:
         return None
 
     if l2tp['auth_mode'] == 'local':
