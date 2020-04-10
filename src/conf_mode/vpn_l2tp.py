@@ -36,11 +36,6 @@ chap_secrets = l2tp_cnf_dir + '/chap-secrets'
 l2tp_conf = l2tp_cnf_dir + '/l2tp.config'
 
 
-# config path creation
-if not os.path.exists(l2tp_cnf_dir):
-    os.makedirs(l2tp_cnf_dir)
-
-
 default_config_data = {
     'authentication': {
         'radiussrv': {},
@@ -358,6 +353,9 @@ def generate(l2tp):
     if l2tp == None:
         return None
 
+    if not os.path.exists(l2tp_cnf_dir):
+        os.makedirs(l2tp_cnf_dir)
+
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'l2tp')
     fs_loader = FileSystemLoader(tmpl_path)
@@ -365,15 +363,14 @@ def generate(l2tp):
 
     tmpl = env.get_template('l2tp.config.tmpl')
     config_text = tmpl.render(c)
-    open(l2tp_conf, 'w').write(config_text)
+    with open(l2tp_conf, 'w') as f:
+        f.write(config_text)
 
     if l2tp['auth_mode'] == 'local':
         tmpl = env.get_template('chap-secrets.tmpl')
-        chap_secrets_txt = tmpl.render(l2tp)
-        old_umask = os.umask(0o077)
+        config_text = tmpl.render(l2tp)
         with open(chap_secrets, 'w') as f:
-            f.write(chap_secrets_txt)
-        os.umask(old_umask)
+            f.write(config_text)
 
     return None
 
