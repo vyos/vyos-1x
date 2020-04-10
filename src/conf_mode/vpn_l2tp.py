@@ -17,6 +17,7 @@
 import os
 import re
 
+from copy import deepcopy
 from socket import AF_INET, SOCK_STREAM, socket
 from sys import exit
 from time import sleep
@@ -38,6 +39,31 @@ l2tp_conf = l2tp_cnf_dir + '/l2tp.config'
 # config path creation
 if not os.path.exists(l2tp_cnf_dir):
     os.makedirs(l2tp_cnf_dir)
+
+
+default_config_data = {
+    'authentication': {
+        'mode': 'local',
+        'local-users': {
+        },
+        'radiussrv': {},
+        'radiusopt': {},
+        'auth_proto': [],
+        'mppe': 'prefer'
+    },
+    'outside_addr': '',
+    'gateway_address': '10.255.255.0',
+    'dns': [],
+    'dnsv6': [],
+    'wins': [],
+    'client_ip_pool': None,
+    'client_ip_subnets': [],
+    'client_ipv6_pool': {},
+    'mtu': '1436',
+    'ip6_column': '',
+    'ip6_dp_column': '',
+    'ppp_options': {},
+}
 
 ###
 # inline helper functions
@@ -78,33 +104,9 @@ def get_config():
         return None
 
     c.set_level(base)
-
-    config_data = {
-        'authentication': {
-            'mode': 'local',
-            'local-users': {
-            },
-            'radiussrv': {},
-            'radiusopt': {},
-            'auth_proto': [],
-            'mppe': 'prefer'
-        },
-        'outside_addr': '',
-        'gateway_address': '10.255.255.0',
-        'dns': [],
-        'dnsv6': [],
-        'wins': [],
-        'client_ip_pool': None,
-        'client_ip_subnets': [],
-        'client_ipv6_pool': {},
-        'mtu': '1436',
-        'ip6_column': '',
-        'ip6_dp_column': '',
-        'ppp_options': {},
-    }
+    config_data = deepcopy(default_config_data)
 
     ### general options ###
-
     if c.exists('dns-servers server-1'):
         config_data['dns'].append(c.return_value('dns-servers server-1'))
     if c.exists('dns-servers server-2'):
