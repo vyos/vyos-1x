@@ -18,7 +18,6 @@ import os
 import re
 
 from copy import deepcopy
-from socket import AF_INET, SOCK_STREAM, socket
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 from time import sleep
@@ -27,19 +26,18 @@ from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import run
+from vyos.util import call
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 
-pidfile = '/var/run/accel_l2tp.pid'
-l2tp_conf = '/etc/accel-ppp/l2tp/l2tp.config'
-l2tp_chap_secrets = '/etc/accel-ppp/l2tp/chap-secrets'
+l2tp_conf = '/etc/accel-ppp/l2tp.conf'
+l2tp_chap_secrets = '/etc/accel-ppp/l2tp.chap-secrets'
 
 default_config_data = {
     'auth_mode': 'local',
     'auth_ppp_mppe': 'prefer',
     'auth_proto': ['auth_mschap_v2'],
-    'chap_secrets_file': l2tp_chap_secrets,
+    'chap_secrets_file': l2tp_chap_secrets, # used in Jinja2 template
     'client_ip_pool': None,
     'client_ip_subnets': [],
     'client_ipv6_pool': {},
@@ -69,30 +67,6 @@ default_config_data = {
     'ppp_options': {},
     'thread_cnt': 1
 }
-
-def chk_con():
-    """
-    Depending on hardware and threads, daemon needs a little to start if it
-    takes longer than 100 * 0.5 secs, exception is being raised not sure if
-    that's the best way to check it, but it worked so far quite well
-    """
-    cnt = 0
-    s = socket(AF_INET, SOCK_STREAM)
-    while True:
-        try:
-            s.connect(("127.0.0.1", 2004))
-            break
-        except ConnectionRefusedError:
-            sleep(0.5)
-            cnt += 1
-            if cnt == 100:
-                raise("failed to start l2tp server")
-                break
-
-
-def _accel_cmd(command):
-  return run(f'/usr/bin/accel-cmd -p 2004 {command}')
-
 
 def get_config():
     conf = Config()
@@ -351,11 +325,6 @@ def generate(l2tp):
     if not l2tp:
         return None
 
-    # Create configuration directory if it's non existent
-    dirname = os.path.dirname(l2tp_conf)
-    if not os.path.isdir(dirname):
-        os.mkdir(dirname)
-
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'l2tp')
     fs_loader = FileSystemLoader(tmpl_path)
@@ -369,36 +338,31 @@ def generate(l2tp):
     if l2tp['auth_mode'] == 'local':
         tmpl = env.get_template('chap-secrets.tmpl')
         config_text = tmpl.render(l2tp)
-        with open(l2tp['chap_secrets_file'], 'w') as f:
+        with open(l2tp_chap_secrets, 'w') as f:
             f.write(config_text)
 
-        os.chmod(l2tp['chap_secrets_file'], S_IRUSR | S_IWUSR | S_IRGRP)
+        os.chmod(l2tp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
     else:
-        if os.path.exists(l2tp['chap_secrets_file']):
-             os.unlink(l2tp['chap_secrets_file'])
+        if os.path.exists(l2tp_chap_secrets):
+             os.unlink(l2tp_chap_secrets)
 
     return None
 
 
 def apply(l2tp):
     if not l2tp:
-        if os.path.exists(pidfile):
-            _accel_cmd('shutdown hard')
-            if os.path.exists(pidfile):
-                os.remove(pidfile)
+        call('systemctl stop accel-ppp-l2tp.service')
+
+        if os.path.exists(l2tp_conf):
+             os.unlink(l2tp_conf)
+
+        if os.path.exists(l2tp_chap_secrets):
+             os.unlink(l2tp_chap_secrets)
+
         return None
 
-    if not os.path.exists(pidfile):
-        ret = run(f'/usr/sbin/accel-pppd -c {l2tp_conf} -p {pidfile} -d')
-        chk_con()
-        if ret != 0 and os.path.exists(pidfile):
-            os.remove(pidfile)
-            raise ConfigError('accel-pppd failed to start')
-    else:
-        # if gw ip changes, only restart doesn't work
-        _accel_cmd('restart')
-
+    call('systemctl restart accel-ppp-l2tp.service')
 
 if __name__ == '__main__':
     try:
