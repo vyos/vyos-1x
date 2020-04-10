@@ -23,7 +23,7 @@ import vyos.remote
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.migrator import Migrator, VirtualMigrator
-from vyos.util import cmd
+from vyos.util import cmd, DEVNULL
 
 
 if (len(sys.argv) < 2):
@@ -99,9 +99,9 @@ if (len(sys.argv) > 2):
 if path:
     add_cmds = [ cmd for cmd in add_cmds if path in cmd ]
 
-for cmd in add_cmds:
+for add in add_cmds:
     try:
-        cmd(f'/opt/vyatta/sbin/my_{cmd}', message='Called process error')
+        cmd(f'/opt/vyatta/sbin/my_{add}', shell=True, stderr=DEVNULL)
     except OSError as err:
         print(err)
 
