@@ -155,6 +155,9 @@ def verify(pppoe):
     if vrf_name and vrf_name not in interfaces():
         raise ConfigError(f'VRF {vrf_name} does not exist')
 
+    if pppoe['on_demand'] and pppoe['vrf']:
+        raise ConfigError('On-demand dialing and VRF can not be used at the same time')
+
     return None
 
 def generate(pppoe):

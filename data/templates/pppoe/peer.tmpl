@@ -60,4 +60,13 @@ rp_pppoe_service "{{ service_name }}"
 {% endif %}
 {% if on_demand %}
 demand
+# See T2249. PPP default route options should only be set when in on-demand
+# mode. As soon as we are not in on-demand mode the default-route handling is
+# passed to the ip-up.d/ip-down.s scripts which is required for VRF support.
+{% if 'auto' in default_route -%}
+defaultroute
+{% elif 'force' in default_route -%}
+defaultroute
+replacedefaultroute
+{% endif %}
 {% endif %}

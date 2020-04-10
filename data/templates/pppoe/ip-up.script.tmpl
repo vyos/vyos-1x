@@ -6,13 +6,15 @@ if [ "$6" != "{{ intf }}" ]; then
     exit
 fi
 
-set -x
+{% if not on_demand %}
+# See https://phabricator.vyos.net/T2248 & T2220. Determine if we are enslaved
+# to a VRF, this is needed to properly insert the default route.
 
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
-SED_OPT="ip route"
+SED_OPT="^ip route"
 VRF_NAME=""
 if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
     # Determine upper (VRF) interface
@@ -25,10 +27,8 @@ if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
     VRF_NAME="vrf ${VRF}"
 fi
 
-# Debian PPP version has no support for replacing an existing default route
-# thus we emulate this ba an ip-up script https://phabricator.vyos.net/T2220.
 {% if 'auto' in default_route -%}
-# only insert a new default route if there is no default route configured
+# Only insert a new default route if there is no default route configured
 routes=$(vtysh -c "show running-config" | sed -n "/${SED_OPT}/,/!/p" | grep 0.0.0.0/0 | wc -l)
 if [ "$routes" -ne 0 ]; then
     exit 1
@@ -44,4 +44,4 @@ done
 # Add default route to default or VRF routing table
 vtysh -c "conf t" ${VTY_OPT} -c "ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME}"
 logger -t pppd[$DIALER_PID] "added default route via {{ intf }} ${VRF_NAME}"
-
+{% endif %}
