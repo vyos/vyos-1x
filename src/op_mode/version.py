@@ -33,6 +33,7 @@ import vyos.limericks
 from vyos.util import cmd
 from vyos.util import call
 from vyos.util import run
+from vyos.util import DEVNULL
 
 
 parser = argparse.ArgumentParser()
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     # Get hypervisor name, if any
     system_type = "bare metal"
     try:
-        hypervisor = cmd('hvinfo 2>/dev/null')
+        hypervisor = cmd('hvinfo',stderr=DEVNULL)
         system_type = "{0} guest".format(hypervisor)
     except OSError:
         # hvinfo returns 1 if it cannot detect any hypervisor
