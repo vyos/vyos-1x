@@ -58,6 +58,7 @@
         #include <include/interface-disable.xml.i>
         #include <include/interface-mac.xml.i>
         #include <include/interface-mtu-68-9000.xml.i>
+        #include <include/interface-vrf.xml.i>
       </children>
     </tagNode>
   </children>
