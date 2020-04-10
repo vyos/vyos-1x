@@ -105,19 +105,9 @@ bind={{ radius_source_address }}
 verbose=1
 check-ip=1
 single-session=replace
-{% if idle_timeout %}
-lcp-echo-timeout={{idle_timeout}}
-{% endif %}
-{% if ppp_options['lcp-echo-interval'] %}
-lcp-echo-interval={{ppp_options['lcp-echo-interval']}}
-{% else %}
-lcp-echo-interval=30
-{% endif %}
-{% if ppp_options['lcp-echo-failure'] %}
-lcp-echo-failure={{ppp_options['lcp-echo-failure']}}
-{% else %}
-lcp-echo-failure=3
-{% endif %}
+lcp-echo-timeout={{ ppp_echo_timeout }}
+lcp-echo-interval={{ ppp_echo_interval }}
+lcp-echo-failure={{ ppp_echo_failure }}
 {% if ccp_disable %}
 ccp=0
 {% endif %}

@@ -50,6 +50,9 @@ default_config_data = {
     'mtu': '1436',
     'outside_addr': '',
     'ppp_mppe': 'prefer',
+    'ppp_echo_failure' : '3',
+    'ppp_echo_interval' : '30',
+    'ppp_echo_timeout': '0',
     'radius_server': [],
     'radius_acct_tmo': '3',
     'radius_max_try': '3',
@@ -282,29 +285,22 @@ def get_config():
                 'client-ip-pool subnet')[0])
             l2tp['gateway_address'] = lst_ip[0]
 
-
-    if conf.exists('idle'):
-        l2tp['idle_timeout'] = conf.return_value('idle')
-
     # LNS secret
-    if conf.exists('lns shared-secret'):
-        l2tp['lns_shared_secret'] = conf.return_value('lns shared-secret')
+    if conf.exists(['lns', 'shared-secret']):
+        l2tp['lns_shared_secret'] = conf.return_value(['lns', 'shared-secret'])
 
-    if conf.exists('ccp-disable'):
-        l2tp['ccp_disable'] = True
+    if conf.exists(['ccp-disable']):
+        l2tp[['ccp_disable']] = True
 
-    # ppp_options
-    ppp_options = {}
-    if conf.exists('ppp-options'):
-        if conf.exists('ppp-options lcp-echo-failure'):
-            ppp_options['lcp-echo-failure'] = conf.return_value(
-                'ppp-options lcp-echo-failure')
-        if conf.exists('ppp-options lcp-echo-interval'):
-            ppp_options['lcp-echo-interval'] = conf.return_value(
-                'ppp-options lcp-echo-interval')
+    # PPP options
+    if conf.exists(['idle']):
+        l2tp['ppp_echo_timeout'] = conf.return_value(['idle'])
 
-    if len(ppp_options) != 0:
-        l2tp['ppp_options'] = ppp_options
+    if conf.exists(['ppp-options', 'lcp-echo-failure']):
+        l2tp['ppp_echo_failure'] = conf.return_value(['ppp-options', 'lcp-echo-failure'])
+
+    if conf.exists(['ppp-options', 'lcp-echo-interval']):
+        l2tp['ppp_echo_interval'] = conf.return_value(['ppp-options', 'lcp-echo-interval'])
 
     import pprint
     pprint.pprint(l2tp)
