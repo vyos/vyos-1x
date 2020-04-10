@@ -22,8 +22,13 @@
 # To enable this script set the following variable to "yes"
 RUN="yes"
 
+proto=""
+if [[ $reason =~ (REBOOT6|INIT6|EXPIRE6|RELEASE6|STOP6|INFORM6|BOUND6|REBIND6|DELEGATED6) ]]; then
+        proto="v6"
+fi
+
 if [ "$RUN" = "yes" ]; then
-        LOG=/var/lib/dhcp/dhclient_"$interface"_lease
+        LOG=/var/lib/dhcp/dhclient_"$interface"."$proto"lease
         echo `date` > $LOG
 
         for i in reason interface new_expiry new_dhcp_lease_time medium \
