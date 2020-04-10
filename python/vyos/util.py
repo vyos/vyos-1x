@@ -16,67 +16,137 @@
 import os
 import re
 import sys
-from subprocess import Popen, PIPE, STDOUT, DEVNULL
+from subprocess import Popen
+from subprocess import PIPE
+from subprocess import STDOUT
+from subprocess import DEVNULL
+
 
 def debug(flag):
-    # this is to force all new flags to be registered here so that
-    # they can be documented:
-    # - developer: the code will drop into PBD on un-handled exception
-    # - ifconfig: prints command and sysfs access on stdout for interface
+    """
+    Check is a debug flag was set by the user. 
+    a flag can be set by touching the file /tmp/vyos.flag.debug
+    with flag being the flag name, the current flags are:
+     - developer: the code will drop into PBD on un-handled exception
+     - ifconfig: prints command and sysfs access on stdout for interface
+    The function returns an empty string if the flag was not set,
+    """
+
+    # this is to force all new flags to be registered here to be documented:
     if flag not in ['developer', 'ifconfig']:
         return ''
     return flag if os.path.isfile(f'/tmp/vyos.{flag}.debug') else ''
 
 
-def debug_msg(message, section=''):
-    if debug(section):
-        print(f'DEBUG/{section:<6} {message}')
+def debug_msg(message, flag=''):
+    """
+    print a debug message line on stdout if debugging is enabled for the flag
+    """
+
+    if debug(flag):
+        print(f'DEBUG/{flag:<6} {message}')
 
 
-def popen(command, section='', shell=None, input=None, timeout=None, env=None,
-          universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
-    """ popen does not raise, returns the output and error code of command """
+# There is many (too many) ways to run command with python
+# os.system, subprocess.Popen, subproces.{run,call,check_output}
+# which all have slighty different behaviour
+
+
+def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
+          stdout=PIPE, stderr=None, decode=None):
+    """
+    popen is a wrapper helper aound subprocess.Popen
+    with it default setting it will return a tuple (out, err)
+    out: the output of the program run
+    err: the error code returned by the program
+
+    it can be affected by the following flags:
+    shell:   do not try to auto-detect if a shell is required
+             for example if a pipe (|) or redirection (>, >>) is used
+    input:   data to sent to the child process via STDIN
+             the data should be bytes but string will be converted
+    timeout: time after which the command will be considered to have failed
+    env:     mapping that defines the environment variables for the new process
+    stdout:  define how the output of the program should be handled
+              - PIPE (default), sends stdout to the output
+              - DEVNULL, discard the output
+    stderr:  define how the output of the program should be handled
+              - None (default), send/merge the data to/with stderr
+              - PIPE, popen will append it to output
+              - STDOUT, send the data to be merged with stdout
+              - DEVNULL, discard the output
+    decode:  specify the expected text encoding (utf-8, ascii, ...)
+
+    usage:
+    to get both stdout, and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
+    to discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
+    """
+    debug_msg(f"cmd '{command}'", flag)
     use_shell = shell
+    stdin = None
     if shell is None:
-        use_shell = True if ' ' in command else False
+        use_shell = False
+        if ' ' in command:
+            use_shell = True
+        if env:
+            use_shell = True
+    if input:
+        stdin = PIPE
+        input = input.encode() if type(input) is str else input
     p = Popen(
         command,
-        stdout=stdout, stderr=stderr,
+        stdin=stdin, stdout=stdout, stderr=stderr,
         env=env, shell=use_shell,
-        universal_newlines=universal_newlines,
     )
-    tmp = p.communicate(input, timeout)[0].strip()
-    debug_msg(f"cmd '{command}'", section)
-    decoded = tmp.decode(decode) if decode else tmp.decode()
+    tmp = p.communicate(input, timeout)
+    out1 = b''
+    out2 = b''
+    if stdout == PIPE:
+        out1 = tmp[0]
+    if stderr == PIPE:
+        out2 += tmp[1]
+    decoded1 = out1.decode(decode) if decode else out1.decode()
+    decoded2 = out2.decode(decode) if decode else out2.decode()
+    decoded1 = decoded1.replace('\r\n', '\n').strip()
+    decoded2 = decoded2.replace('\r\n', '\n').strip()
+    nl = '\n' if decoded1 and decoded2 else ''
+    decoded = decoded1 + nl + decoded2
     if decoded:
-        debug_msg(f"returned:\n{decoded}", section)
+        debug_msg(f"returned:\n{decoded}", flag)
     return decoded, p.returncode
 
 
-def run(command, section='', shell=None, input=None, timeout=None, env=None,
-        universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
-    """ does not raise exception on error, returns error code """
+def run(command, flag='', shell=None, input=None, timeout=None, env=None,
+        stdout=DEVNULL, stderr=None, decode=None):
+    """
+    A wrapper around vyos.util.popen, which discard the stdout and
+    will return the error code of a command
+    """
     _, code = popen(
-        command, section,
+        command, flag,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,
-        universal_newlines=universal_newlines,
         decode=decode,
     )
     return code
 
 
-def cmd(command, section='', shell=None, input=None, timeout=None, env=None,
-        universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None,
+def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
+        stdout=PIPE, stderr=None, decode=None,
         raising=None, message=''):
-    """ does raise exception, returns output of command """
+    """
+    A wrapper around vyos.util.popen, which returns the stdout and
+    will raise the error code of a command
+
+    raising: specify which call should be used when raising (default is OSError)
+             the class should only require a string as parameter
+    """
     decoded, code = popen(
-        command, section,
+        command, flag,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,
-        universal_newlines=universal_newlines,
         decode=decode,
     )
     if code != 0:
@@ -92,15 +162,17 @@ def cmd(command, section='', shell=None, input=None, timeout=None, env=None,
     return decoded
 
 
-def call(command, section='', shell=None, input=None, timeout=None, env=None,
-        universal_newlines=None, stdout=PIPE, stderr=STDOUT, decode=None):
-    """ does not raise exception on error, returns error code, print output """
+def call(command, flag='', shell=None, input=None, timeout=None, env=None,
+         stdout=PIPE, stderr=None, decode=None):
+    """
+    A wrapper around vyos.util.popen, which print the stdout and
+    will return the error code of a command
+    """
     out, code = popen(
-        command, section,
+        command, flag,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,
-        universal_newlines=universal_newlines,
         decode=decode,
     )
     print(out)
