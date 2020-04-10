@@ -490,7 +490,11 @@ def verify(openvpn):
     # OpenVPN site-to-site - VERIFY
     #
     if openvpn['mode'] == 'site-to-site':
-        if not (openvpn['local_address'] or openvpn['bridge_member']):
+        if openvpn['ncp_ciphers']:
+            raise ConfigError('encryption ncp-ciphers cannot be specified in site-to-site mode, only server or client')
+
+    if openvpn['mode'] == 'site-to-site' and not openvpn['bridge_member']:
+        if not openvpn['local_address']:
             raise ConfigError('Must specify "local-address" or "bridge member interface"')
 
         for host in openvpn['remote_host']:
@@ -507,15 +511,10 @@ def verify(openvpn):
             if openvpn['local_address'] == openvpn['local_host']:
                 raise ConfigError('"local-address" cannot be the same as "local-host"')
 
-        if openvpn['ncp_ciphers']:
-            raise ConfigError('encryption ncp-ciphers cannot be specified in site-to-site mode, only server or client')
-
     else:
+        # checks for client-server or site-to-site bridged
         if openvpn['local_address'] or openvpn['remote_address']:
-            raise ConfigError('Cannot specify "local-address" or "remote-address" in client-server mode')
-
-        elif openvpn['bridge_member']:
-            raise ConfigError('Cannot specify "local-address" or "remote-address" in bridge mode')
+            raise ConfigError('Cannot specify "local-address" or "remote-address" in client-server or bridge mode')
 
     #
     # OpenVPN server mode - VERIFY
@@ -538,7 +537,7 @@ def verify(openvpn):
 
         if not openvpn['server_subnet']:
             if not openvpn['bridge_member']:
-                raise ConfigError('Must specify "server subnet" option in server mode')
+                raise ConfigError('Must specify "server subnet" or "bridge member interface" in server mode')
 
     else:
         # checks for both client and site-to-site go here
