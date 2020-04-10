@@ -30,41 +30,40 @@ def terminate_sessions(username='', interface='', protocol=''):
         if username == "all_users":
             if protocol == "pptp":
                 pptp_cmd = pptp_base.format('all','')
-                run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+                run(pptp_cmd)
                 return
             elif protocol == "l2tp":
                 l2tp_cmd = l2tp_base.format('all', '')
-                run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+                run(l2tp_cmd)
                 return
             else:
                 pptp_cmd = pptp_base.format('all', '')
-                run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+                run(pptp_cmd)
                 l2tp_cmd = l2tp_base.format('all', '')
-                run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+                run(l2tp_cmd)
                 return
 
         if protocol == "pptp":
             pptp_cmd = pptp_base.format('username', username)
-            run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+            run(pptp_cmd)
             return
         elif protocol == "l2tp":
             l2tp_cmd = l2tp_base.format('username', username)
-            run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+            run(l2tp_cmd)
             return
         else:
             pptp_cmd = pptp_base.format('username', username)
-            run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
-            l2tp_cmd.append("terminate username {0}".format(username))
-            run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+            run(pptp_cmd)
+            l2tp_cmd = l2tp_base.format('username', username)
+            run(l2tp_cmd)
             return
 
     # rewrite `terminate by interface` if pptp will have pptp%d interface naming
     if interface:
         pptp_cmd = pptp_base.format('if', interface)
-        run(pptp_cmd, stdout=DEVNULL, stderr=DEVNULL)
+        run(pptp_cmd)
         l2tp_cmd = l2tp_base.format('if', interface)
-        run(l2tp_cmd, stdout=DEVNULL, stderr=DEVNULL)
-       
+        run(l2tp_cmd)
 
 def main():
     #parese args
