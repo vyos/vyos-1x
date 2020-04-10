@@ -19,6 +19,7 @@ import re
 
 from copy import deepcopy
 from socket import AF_INET, SOCK_STREAM, socket
+from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 from time import sleep
 
@@ -30,31 +31,36 @@ from vyos.util import run
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 
-pidfile = r'/var/run/accel_l2tp.pid'
-l2tp_cnf_dir = r'/etc/accel-ppp/l2tp'
-chap_secrets = l2tp_cnf_dir + '/chap-secrets'
-l2tp_conf = l2tp_cnf_dir + '/l2tp.config'
-
+pidfile = '/var/run/accel_l2tp.pid'
+l2tp_conf = '/etc/accel-ppp/l2tp/l2tp.config'
+l2tp_chap_secrets = '/etc/accel-ppp/l2tp/chap-secrets'
 
 default_config_data = {
-    'authentication': {
-        'radiussrv': {},
-        'radiusopt': {},
-        'mppe': 'prefer'
-    },
-    'auth_proto' : [],
-    'local_users' : [],
-    'auth_mode' : 'local',
-    'radius_server' : [],
-    'outside_addr': '',
-    'gateway_address': '10.255.255.0',
-    'dnsv4': [],
-    'dnsv6': [],
-    'wins': [],
+    'auth_mode': 'local',
+    'auth_ppp_mppe': 'prefer',
+    'auth_proto': ['auth_mschap_v2'],
+    'chap_secrets_file': l2tp_chap_secrets,
     'client_ip_pool': None,
     'client_ip_subnets': [],
     'client_ipv6_pool': {},
+    'dnsv4': [],
+    'dnsv6': [],
+    'gateway_address': '10.255.255.0',
+    'local_users' : [],
     'mtu': '1436',
+    'outside_addr': '',
+    'ppp_mppe': 'prefer',
+    'radius_server': [],
+    'radius_acct_tmo': '3',
+    'radius_max_try': '3',
+    'radius_timeout': '3',
+    'radius_nas_id': '',
+    'radius_nas_ip': '',
+    'radius_source_address': '',
+    'radius_shaper_attr': '',
+    'radius_shaper_vendor': '',
+    'radius_dynamic_author': '',
+    'wins': [],
     'ip6_column': '',
     'ip6_dp_column': '',
     'ppp_options': {},
@@ -115,6 +121,20 @@ def get_config():
     if conf.exists(['authentication', 'mode']):
         l2tp['auth_mode'] = conf.return_value(['authentication', 'mode'])
 
+    if conf.exists(['authentication', 'protocols']):
+        auth_mods = {
+            'pap': 'auth_pap',
+            'chap': 'auth_chap_md5',
+            'mschap': 'auth_mschap_v1',
+            'mschap-v2': 'auth_mschap_v2'
+        }
+
+        for proto in conf.return_values(['authentication', 'protocols']):
+            l2tp['auth_proto'].append(auth_mods[proto])
+
+    if conf.exists(['authentication', 'mppe']):
+        l2tp['auth_ppp_mppe'] = conf.return_value(['authentication', 'mppe'])
+
     #
     # local auth
     if conf.exists(['authentication', 'local-users']):
@@ -147,93 +167,98 @@ def get_config():
 
             l2tp['local_users'].append(user)
 
-    conf.set_level(base_path)
-    # authentication mode radius servers and settings
-    if conf.exists('authentication mode radius'):
-        rsrvs = conf.list_nodes('authentication radius server')
-        for rsrv in rsrvs:
-            if conf.return_value('authentication radius server ' + rsrv + ' fail-time') == None:
-                ftime = '0'
-            else:
-                ftime = str(conf.return_value(
-                    'authentication radius server ' + rsrv + ' fail-time'))
-            if conf.return_value('authentication radius-server ' + rsrv + ' req-limit') == None:
-                reql = '0'
-            else:
-                reql = str(conf.return_value(
-                    'authentication radius server ' + rsrv + ' req-limit'))
+    #
+    # RADIUS auth and settings
+    conf.set_level(base_path + ['authentication', 'radius'])
+    if conf.exists(['server']):
+        for server in conf.list_nodes(['server']):
+            radius = {
+                'server' : server,
+                'key' : '',
+                'fail_time' : 0,
+                'port' : '1812'
+            }
 
-            l2tp['authentication']['radiussrv'].update(
-                {
-                    rsrv: {
-                        'secret': conf.return_value('authentication radius server ' + rsrv + ' key'),
-                        'fail-time': ftime,
-                        'req-limit': reql
-                    }
-                }
-            )
-        # Source ip address feature
-        if conf.exists('authentication radius source-address'):
-            l2tp['authentication']['radius_source_address'] = conf.return_value(
-                'authentication radius source-address')
+            conf.set_level(base_path + ['authentication', 'radius', 'server', server])
 
+            if conf.exists(['fail-time']):
+                radius['fail-time'] = conf.return_value(['fail-time'])
+
+            if conf.exists(['port']):
+                radius['port'] = conf.return_value(['port'])
+
+            if conf.exists(['key']):
+                radius['key'] = conf.return_value(['key'])
+
+            if not conf.exists(['disable']):
+                l2tp['radius_server'].append(radius)
+
+        #
         # advanced radius-setting
-        if conf.exists('authentication radius acct-timeout'):
-            l2tp['authentication']['radiusopt']['acct-timeout'] = conf.return_value(
-                'authentication radius acct-timeout')
-        if conf.exists('authentication radius max-try'):
-            l2tp['authentication']['radiusopt']['max-try'] = conf.return_value(
-                'authentication radius max-try')
-        if conf.exists('authentication radius timeout'):
-            l2tp['authentication']['radiusopt']['timeout'] = conf.return_value(
-                'authentication radius timeout')
-        if conf.exists('authentication radius nas-identifier'):
-            l2tp['authentication']['radiusopt']['nas-id'] = conf.return_value(
-                'authentication radius nas-identifier')
-        if conf.exists('authentication radius dae-server'):
-            # Set default dae-server port if not defined
-            if conf.exists('authentication radius dae-server port'):
-                dae_server_port = conf.return_value(
-                    'authentication radius dae-server port')
-            else:
-                dae_server_port = "3799"
-            l2tp['authentication']['radiusopt'].update(
-                {
-                    'dae-srv': {
-                        'ip-addr': conf.return_value('authentication radius dae-server ip-address'),
-                        'port': dae_server_port,
-                        'secret': str(conf.return_value('authentication radius dae-server secret'))
-                    }
-                }
-            )
-        # filter-id is the internal accel default if attribute is empty
-        # set here as default for visibility which may change in the future
-        if conf.exists('authentication radius rate-limit enable'):
-            if not conf.exists('authentication radius rate-limit attribute'):
-                l2tp['authentication']['radiusopt']['shaper'] = {
-                    'attr': 'Filter-Id'
-                }
-            else:
-                l2tp['authentication']['radiusopt']['shaper'] = {
-                    'attr': conf.return_value('authentication radius rate-limit attribute')
-                }
-            if conf.exists('authentication radius rate-limit vendor'):
-                l2tp['authentication']['radiusopt']['shaper']['vendor'] = conf.return_value(
-                    'authentication radius rate-limit vendor')
+        conf.set_level(base_path + ['authentication', 'radius'])
 
-    if conf.exists('client-ip-pool'):
-        if conf.exists('client-ip-pool start') and conf.exists('client-ip-pool stop'):
-            l2tp['client_ip_pool'] = conf.return_value(
-                'client-ip-pool start') + '-' + re.search('[0-9]+$', conf.return_value('client-ip-pool stop')).group(0)
+        if conf.exists(['acct-timeout']):
+            l2tp['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
 
-    if conf.exists('client-ip-pool subnet'):
-        l2tp['client_ip_subnets'] = conf.return_values(
-            'client-ip-pool subnet')
+        if conf.exists(['max-try']):
+            l2tp['radius_max_try'] = conf.return_value(['max-try'])
 
-    if conf.exists('client-ipv6-pool prefix'):
+        if conf.exists(['timeout']):
+            l2tp['radius_timeout'] = conf.return_value(['timeout'])
+
+        if conf.exists(['nas-identifier']):
+            l2tp['radius_nas_id'] = conf.return_value(['nas-identifier'])
+
+        if conf.exists(['nas-ip-address']):
+            l2tp['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+
+        if conf.exists(['source-address']):
+            l2tp['radius_source_address'] = conf.return_value(['source-address'])
+
+        # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
+        if conf.exists(['dynamic-author']):
+            dae = {
+                'port' : '',
+                'server' : '',
+                'key' : ''
+            }
+
+            if conf.exists(['dynamic-author', 'server']):
+                dae['server'] = conf.return_value(['dynamic-author', 'server'])
+
+            if conf.exists(['dynamic-author', 'port']):
+                dae['port'] = conf.return_value(['dynamic-author', 'port'])
+
+            if conf.exists(['dynamic-author', 'key']):
+                dae['key'] = conf.return_value(['dynamic-author', 'key'])
+
+            l2tp['radius_dynamic_author'] = dae
+
+        if conf.exists(['rate-limit', 'enable']):
+            l2tp['radius_shaper_attr'] = 'Filter-Id'
+            c_attr = ['rate-limit', 'enable', 'attribute']
+            if conf.exists(c_attr):
+                l2tp['radius_shaper_attr'] = conf.return_value(c_attr)
+
+            c_vendor = ['rate-limit', 'enable', 'vendor']
+            if conf.exists(c_vendor):
+                l2tp['radius_shaper_vendor'] = conf.return_value(c_vendor)
+
+    conf.set_level(base_path)
+    if conf.exists(['client-ip-pool']):
+        if conf.exists(['client-ip-pool', 'start']) and conf.exists(['client-ip-pool', 'stop']):
+            start = conf.return_value(['client-ip-pool', 'start'])
+            stop  = conf.return_value(['client-ip-pool', 'stop'])
+            l2tp['client_ip_pool'] = start + '-' + re.search('[0-9]+$', stop).group(0)
+
+    if conf.exists(['client-ip-pool', 'subnet']):
+        l2tp['client_ip_subnets'] = conf.return_values(['client-ip-pool', 'subnet'])
+
+    if conf.exists(['client-ipv6-pool', 'prefix']):
         l2tp['client_ipv6_pool']['prefix'] = conf.return_values(
             'client-ipv6-pool prefix')
         l2tp['ip6_column'] = 'ip6,'
+
     if conf.exists('client-ipv6-pool delegate-prefix'):
         l2tp['client_ipv6_pool']['delegate_prefix'] = conf.return_values(
             'client-ipv6-pool delegate-prefix')
@@ -257,26 +282,6 @@ def get_config():
                 'client-ip-pool subnet')[0])
             l2tp['gateway_address'] = lst_ip[0]
 
-    #
-    # authentication protocols
-    conf.set_level(base_path + ['authentication'])
-    if conf.exists(['protocols']):
-        auth_mods = {
-            'pap': 'auth_pap',
-            'chap': 'auth_chap_md5',
-            'mschap': 'auth_mschap_v1',
-            'mschap-v2': 'auth_mschap_v2'
-        }
-
-        for proto in conf.return_values(['protocols']):
-            l2tp['auth_proto'].append(auth_mods[proto])
-
-    else:
-        l2tp['auth_proto'] = ['auth_mschap_v2']
-
-    if conf.exists('authentication mppe'):
-        l2tp['authentication']['mppe'] = conf.return_value(
-            'authentication mppe')
 
     if conf.exists('idle'):
         l2tp['idle_timeout'] = conf.return_value('idle')
@@ -319,13 +324,12 @@ def verify(l2tp):
                 raise ConfigError(f"Password required for user {user['name']}")
 
     elif l2tp['auth_mode'] == 'radius':
-        if len(l2tp['authentication']['radiussrv']) == 0:
-            raise ConfigError('radius server required')
+        if len(l2tp['radius_server']) == 0:
+            raise ConfigError("RADIUS authentication requires at least one server")
 
-        for rsrv in l2tp['authentication']['radiussrv']:
-            if l2tp['authentication']['radiussrv'][rsrv]['secret'] == None:
-                raise ConfigError('radius server ' + rsrv +
-                                  ' needs a secret configured')
+        for radius in l2tp['radius_server']:
+            if not radius['key']:
+                raise ConfigError(f"Missing RADIUS secret for server {{ radius['key'] }}")
 
     # check for the existence of a client ip pool
     if not (l2tp['client_ip_pool'] or l2tp['client_ip_subnets']):
@@ -350,11 +354,13 @@ def verify(l2tp):
 
 
 def generate(l2tp):
-    if l2tp == None:
+    if not l2tp:
         return None
 
-    if not os.path.exists(l2tp_cnf_dir):
-        os.makedirs(l2tp_cnf_dir)
+    # Create configuration directory if it's non existent
+    dirname = os.path.dirname(l2tp_conf)
+    if not os.path.isdir(dirname):
+        os.mkdir(dirname)
 
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'l2tp')
@@ -369,14 +375,20 @@ def generate(l2tp):
     if l2tp['auth_mode'] == 'local':
         tmpl = env.get_template('chap-secrets.tmpl')
         config_text = tmpl.render(l2tp)
-        with open(chap_secrets, 'w') as f:
+        with open(l2tp['chap_secrets_file'], 'w') as f:
             f.write(config_text)
+
+        os.chmod(l2tp['chap_secrets_file'], S_IRUSR | S_IWUSR | S_IRGRP)
+
+    else:
+        if os.path.exists(l2tp['chap_secrets_file']):
+             os.unlink(l2tp['chap_secrets_file'])
 
     return None
 
 
 def apply(l2tp):
-    if l2tp == None:
+    if not l2tp:
         if os.path.exists(pidfile):
             _accel_cmd('shutdown hard')
             if os.path.exists(pidfile):
