@@ -56,6 +56,17 @@ else:
 
         config.delete(dns_base)
 
+
+    # Migrate IPv4 WINS servers
+    wins_base = base + ['wins-servers']
+    if config.exists(wins_base):
+        for server in ['server-1', 'server-2']:
+          if config.exists(wins_base + [server]):
+            wins = config.return_value(wins_base + [server])
+            config.set(base + ['wins-server'], value=wins, replace=False)
+
+        config.delete(wins_base)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

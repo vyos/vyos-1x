@@ -182,29 +182,19 @@
                   </leafNode>
                 </children>
               </node>
-              <node name="wins-servers">
+              <leafNode name="wins-server">
                 <properties>
-                  <help>Windows Internet Name Service (WINS) server settings</help>
+                  <help>Windows Internet Name Service (WINS) servers propagated to client</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Domain Name Server (DNS) IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                  <multi/>
                 </properties>
-                <children>
-                  <leafNode name="server-1">
-                    <properties>
-                      <help>Primary WINS server</help>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="server-2">
-                    <properties>
-                      <help>Secondary WINS server</help>
-                    <constraint>
-                      <validator name="ipv4-address"/>
-                    </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              </leafNode>
               <node name="client-ip-pool">
                 <properties>
                   <help>Pool of client IP addresses (must be within a /24)</help>

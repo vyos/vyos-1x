@@ -106,11 +106,8 @@ def get_config():
             else:
                 config_data['dnsv6'].append(name_server)
 
-    if c.exists('wins-servers server-1'):
-        config_data['wins'].append(c.return_value('wins-servers server-1'))
-
-    if c.exists('wins-servers server-2'):
-        config_data['wins'].append(c.return_value('wins-servers server-2'))
+    if c.exists(['wins-server']):
+        config_data['wins'] = c.return_values(['wins-server'])
 
     if c.exists('outside-address'):
         config_data['outside_addr'] = c.return_value('outside-address')
@@ -325,6 +322,9 @@ def verify(c):
     if 'delegate_prefix' in c['client_ipv6_pool'] and not 'prefix' in c['client_ipv6_pool']:
         raise ConfigError(
             "\"set vpn l2tp remote-access client-ipv6-pool prefix\" required for delegate-prefix ")
+
+    if len(c['wins']) > 2:
+        raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')
 
     if len(c['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')

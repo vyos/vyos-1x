@@ -39,13 +39,10 @@ dns{{ loop.index }}={{ dns }}
 
 {% if wins %}
 [wins]
-{% if wins[0] %}
-wins1={{wins[0]}}
+{% for server in wins -%}
+wins{{ loop.index }}={{ server }}
+{% endfor -%}
 {% endif %}
-{% if wins[1] %}
-wins2={{wins[1]}}
-{% endif %}
-{% endif -%}
 
 [l2tp]
 verbose=1
