@@ -34,7 +34,7 @@ def check_and_add_host_key(host_name):
     keyscan_cmd = 'ssh-keyscan -t rsa {} 2>/dev/null'.format(host_name)
 
     try:
-        host_key = cmd(keyscan_cmd, stderr=DEVNULL, universal_newlines=True)
+        host_key = cmd(keyscan_cmd, shell=True, stderr=DEVNULL)
     except OSError:
         sys.exit("Can not get RSA host key")
 
@@ -63,7 +63,7 @@ def check_and_add_host_key(host_name):
 
     fingerprint_cmd = 'ssh-keygen -lf /dev/stdin <<< "{}"'.format(host_key)
     try:
-        fingerprint = cmd(fingerprint_cmd, stderr=DEVNULL, universal_newlines=True)
+        fingerprint = cmd(fingerprint_cmd, shell=True, stderr=DEVNULL)
     except OSError:
         sys.exit("Can not get RSA host key fingerprint.")
 
@@ -125,7 +125,7 @@ def get_remote_config(remote_file):
         # Try header first, and look for 'OK' or 'Moved' codes:
         curl_cmd = 'curl {0} -q -I {1}'.format(redirect_opt, remote_file)
         try:
-            curl_output = cmd(curl_cmd, shell=True, universal_newlines=True)
+            curl_output = cmd(curl_cmd, shell=True)
         except OSError:
             sys.exit(1)
 
@@ -142,6 +142,6 @@ def get_remote_config(remote_file):
         curl_cmd = 'curl {0} -# {1}'.format(redirect_opt, remote_file)
 
     try:
-        return cmd(curl_cmd, universal_newlines=True)
+        return cmd(curl_cmd, shell=True, stderr=None)
     except OSError:
         return None
