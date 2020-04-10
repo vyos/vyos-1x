@@ -81,7 +81,7 @@ default_config_data = {
     'ppp_echo_failure' : '',
     'ppp_echo_interval' : '',
     'ppp_echo_timeout' : '',
-    'thread_cnt' : ''
+    'thread_cnt' : 1
 }
 
 def get_config():
@@ -93,10 +93,9 @@ def get_config():
 
     conf.set_level(base_path)
 
-    cpu = int(os.cpu_count()/2)
-    if cpu < 1:
-        cpu = 1
-    sstp['thread_cnt'] = cpu
+    cpu = os.cpu_count()
+    if cpu > 1:
+        sstp['thread_cnt'] = int(cpu/2)
 
     if conf.exists(['authentication', 'mode']):
         sstp['auth_mode'] = conf.return_value(['authentication', 'mode'])
