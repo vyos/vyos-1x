@@ -73,10 +73,12 @@ def _accel_cmd(command):
 
 def get_config():
     c = Config()
-    if not c.exists('vpn l2tp remote-access '):
+    base = ['vpn', 'l2tp' 'remote-access']
+    if not c.exists(base):
         return None
 
-    c.set_level('vpn l2tp remote-access')
+    c.set_level(base)
+
     config_data = {
         'authentication': {
             'mode': 'local',
