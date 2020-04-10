@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
 import re
-import jinja2
-import socket
-import time
+
+from socket import AF_INET, SOCK_STREAM, socket
+from sys import exit
+from time import sleep
 
 from jinja2 import FileSystemLoader, Environment
 
@@ -50,13 +50,13 @@ if not os.path.exists(l2tp_cnf_dir):
 
 def chk_con():
     cnt = 0
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s = socket(AF_INET, SOCK_STREAM)
     while True:
         try:
             s.connect(("127.0.0.1", 2004))
             break
         except ConnectionRefusedError:
-            time.sleep(0.5)
+            sleep(0.5)
             cnt += 1
             if cnt == 100:
                 raise("failed to start l2tp server")
@@ -66,7 +66,7 @@ def chk_con():
 def _accel_cmd(command):
   return run(f'/usr/bin/accel-cmd -p 2004 {command}')
 
-### 
+###
 # inline helper functions end
 ###
 
@@ -394,4 +394,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
