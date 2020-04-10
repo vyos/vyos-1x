@@ -62,13 +62,13 @@
                         <properties>
                           <help>Terminate all user's current remote access VPN session(s) with L2TP protocol</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="l2tp"</command> 
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="$5" --protocol="l2tp"</command>
                       </leafNode>
                       <leafNode name="pptp">
                         <properties>
                           <help>Terminate all user's current remote access VPN session(s) with PPTP protocol</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="pptp"</command> 
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="$5" --protocol="pptp"</command>
                       </leafNode>
                     </children>
                   </node>
