@@ -303,7 +303,7 @@ def verify(sstp):
             raise ConfigError("Client gateway IP address required")
 
     if len(sstp['dnsv4']) > 2:
-        raise ConfigError("Only 2 DNS name-servers can be configured")
+        raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
 
     if not sstp['ssl_ca'] or not sstp['ssl_cert'] or not sstp['ssl_key']:
         raise ConfigError('One or more SSL certificates missing')
