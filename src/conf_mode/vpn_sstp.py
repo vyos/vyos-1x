@@ -282,7 +282,7 @@ def verify(sstp):
     # vertify auth settings
     if sstp['auth_mode'] == 'local':
         if not sstp['local_users']:
-            raise ConfigError('sstp-server authentication local-users required')
+            raise ConfigError('SSTP local auth mode requires local users to be configured!')
 
         for user in sstp['local_users']:
             if not user['password']:
