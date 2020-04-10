@@ -3,12 +3,14 @@
 log_syslog
 l2tp
 chap-secrets
-{% for proto in authentication['auth_proto']: %}
+{% for proto in auth_proto: %}
 {{proto}}
 {% endfor%}
-{% if authentication['mode'] == 'radius' %}
+
+{% if auth_mode == 'radius' %}
 radius
 {% endif -%}
+
 ippool
 shaper
 ipv6pool
@@ -74,7 +76,7 @@ secret={{lns_shared_secret}}
 gw-ip-address={{gateway_address}}
 {% endif %}
 
-{% if authentication['mode'] == 'local' %}
+{% if auth_mode == 'local' %}
 [chap-secrets]
 chap-secrets=/etc/accel-ppp/l2tp/chap-secrets
 {% if gateway_address %}
@@ -106,7 +108,7 @@ ccp=0
 ipv6=allow
 {% endif %}
 
-{% if authentication['mode'] == 'radius' %}
+{% if auth_mode == 'radius' %}
 [radius]
 {% for rsrv in authentication['radiussrv']: %}
 server={{rsrv}},{{authentication['radiussrv'][rsrv]['secret']}},\
