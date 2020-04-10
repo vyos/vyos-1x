@@ -26,9 +26,9 @@ from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
-from vyos import ConfigError
 from vyos.util import run
-
+from vyos.validate import is_ipv4
+from vyos import ConfigError
 
 pidfile = r'/var/run/accel_l2tp.pid'
 l2tp_cnf_dir = r'/etc/accel-ppp/l2tp'
@@ -53,7 +53,7 @@ default_config_data = {
     },
     'outside_addr': '',
     'gateway_address': '10.255.255.0',
-    'dns': [],
+    'dnsv4': [],
     'dnsv6': [],
     'wins': [],
     'client_ip_pool': None,
@@ -91,7 +91,7 @@ def _accel_cmd(command):
 
 def get_config():
     c = Config()
-    base = ['vpn', 'l2tp' 'remote-access']
+    base = ['vpn', 'l2tp', 'remote-access']
     if not c.exists(base):
         return None
 
@@ -99,17 +99,19 @@ def get_config():
     config_data = deepcopy(default_config_data)
 
     ### general options ###
-    if c.exists('dns-servers server-1'):
-        config_data['dns'].append(c.return_value('dns-servers server-1'))
-    if c.exists('dns-servers server-2'):
-        config_data['dns'].append(c.return_value('dns-servers server-2'))
-    if c.exists('dnsv6-servers'):
-        for dns6_server in c.return_values('dnsv6-servers'):
-            config_data['dnsv6'].append(dns6_server)
+    if c.exists(['name-server']):
+        for name_server in c.return_values(['name-server']):
+            if is_ipv4(name_server):
+                config_data['dnsv4'].append(name_server)
+            else:
+                config_data['dnsv6'].append(name_server)
+
     if c.exists('wins-servers server-1'):
         config_data['wins'].append(c.return_value('wins-servers server-1'))
+
     if c.exists('wins-servers server-2'):
         config_data['wins'].append(c.return_value('wins-servers server-2'))
+
     if c.exists('outside-address'):
         config_data['outside_addr'] = c.return_value('outside-address')
 
@@ -324,8 +326,11 @@ def verify(c):
         raise ConfigError(
             "\"set vpn l2tp remote-access client-ipv6-pool prefix\" required for delegate-prefix ")
 
+    if len(c['dnsv4']) > 2:
+        raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
+
     if len(c['dnsv6']) > 3:
-        raise ConfigError("Maximum allowed dnsv6-servers addresses is 3")
+        raise ConfigError('Not more then three IPv6 DNS name-servers can be configured')
 
 
 def generate(c):
