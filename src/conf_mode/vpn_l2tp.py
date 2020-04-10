@@ -34,7 +34,7 @@ pidfile = r'/var/run/accel_l2tp.pid'
 l2tp_cnf_dir = r'/etc/accel-ppp/l2tp'
 chap_secrets = l2tp_cnf_dir + '/chap-secrets'
 l2tp_conf = l2tp_cnf_dir + '/l2tp.config'
-# accel-pppd -d -c /etc/accel-ppp/l2tp/l2tp.config -p /var/run/accel_l2tp.pid
+
 
 # config path creation
 if not os.path.exists(l2tp_cnf_dir):
@@ -65,16 +65,12 @@ default_config_data = {
     'ppp_options': {},
 }
 
-###
-# inline helper functions
-###
-# depending on hw and threads, daemon needs a little to start
-# if it takes longer than 100 * 0.5 secs, exception is being raised
-# not sure if that's the best way to check it, but it worked so far quite well
-###
-
-
 def chk_con():
+    """
+    Depending on hardware and threads, daemon needs a little to start if it
+    takes longer than 100 * 0.5 secs, exception is being raised not sure if
+    that's the best way to check it, but it worked so far quite well
+    """
     cnt = 0
     s = socket(AF_INET, SOCK_STREAM)
     while True:
@@ -91,10 +87,6 @@ def chk_con():
 
 def _accel_cmd(command):
   return run(f'/usr/bin/accel-cmd -p 2004 {command}')
-
-###
-# inline helper functions end
-###
 
 
 def get_config():
