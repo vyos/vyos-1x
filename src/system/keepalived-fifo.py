@@ -87,7 +87,7 @@ class KeepalivedFifo:
     def _run_command(self, command):
         logger.debug("Running the command: {}".format(command))
         try:
-            cmd(command, universal_newlines=True)
+            cmd(command)
         except OSError as err:
             logger.error(f'Unable to execute command "{command}": {err}')
 

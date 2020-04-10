@@ -76,7 +76,7 @@ def _uacctd_running():
 # get list of interfaces
 def _get_ifaces_dict():
     # run command to get ifaces list
-    out = cmd('/bin/ip link show', universal_newlines=True)
+    out = cmd('/bin/ip link show')
 
     # read output
     ifaces_out = out.splitlines()
@@ -95,7 +95,6 @@ def _get_ifaces_dict():
 def _get_flows_list():
     # run command to get flows list
     out = cmd(f'/usr/bin/pmacct -s -O json -T flows -p {uacctd_pipefile}',
-                universal_newlines=True,
                 message='Failed to get flows list')
 
     # read output

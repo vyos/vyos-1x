@@ -82,7 +82,7 @@ def _iptables_get_nflog():
     for iptables_variant in ['iptables', 'ip6tables']:
         # run iptables, save output and split it by lines
         iptables_command = "sudo {0} -t {1} -S {2}".format(iptables_variant, iptables_nflog_table, iptables_nflog_chain)
-        cmd(iptables_command, universal_newlines=True, message='Failed to get flows list')
+        cmd(iptables_command, message='Failed to get flows list')
         iptables_out = stdout.splitlines()
 
         # parse each line and add information to list
