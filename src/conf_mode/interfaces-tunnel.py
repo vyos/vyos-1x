@@ -26,41 +26,7 @@ from vyos.ifconfig.afi import IP4, IP6
 from vyos.configdict import list_diff
 from vyos.validate import is_ipv4, is_ipv6
 from vyos import ConfigError
-
-
-class FixedDict(dict):
-    """
-    FixedDict: A dictionnary not allowing new keys to be created after initialisation.
-
-    >>> f = FixedDict(**{'count':1})
-    >>> f['count'] = 2
-    >>> f['king'] = 3
-      File "...", line ..., in __setitem__
-    raise ConfigError(f'Option "{k}" has no defined default')
-    """
-    def __init__ (self, **options):
-        self._allowed = options.keys()
-        super().__init__(**options)
-
-    def __setitem__ (self, k, v):
-        """
-        __setitem__ is a builtin which is called by python when setting dict values:
-        >>> d = dict()
-        >>> d['key'] = 'value'
-        >>> d
-        {'key': 'value'}
-
-        is syntaxic sugar for
-
-        >>> d = dict()
-        >>> d.__setitem__('key','value')
-        >>> d
-        {'key': 'value'}
-        """
-        if k not in self._allowed:
-            raise ConfigError(f'Option "{k}" has no defined default')
-        super().__setitem__(k, v)
-
+from vyos.dicts import FixedDict
 
 class ConfigurationState(Config):
     """

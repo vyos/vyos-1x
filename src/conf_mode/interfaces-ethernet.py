@@ -301,32 +301,20 @@ def apply(eth):
         # update interface description used e.g. within SNMP
         e.set_alias(eth['description'])
 
-        # get DHCP config dictionary and update values
-        opt = e.get_dhcp_options()
-
         if eth['dhcp_client_id']:
-            opt['client_id'] = eth['dhcp_client_id']
+            e.dhcp.v4.options['client_id'] = eth['dhcp_client_id']
 
         if eth['dhcp_hostname']:
-            opt['hostname'] = eth['dhcp_hostname']
+            e.dhcp.v4.options['hostname'] = eth['dhcp_hostname']
 
         if eth['dhcp_vendor_class_id']:
-            opt['vendor_class_id'] = eth['dhcp_vendor_class_id']
-
-        # store DHCP config dictionary - used later on when addresses are aquired
-        e.set_dhcp_options(opt)
-
-        # get DHCPv6 config dictionary and update values
-        opt = e.get_dhcpv6_options()
+            e.dhcp.v4.options['vendor_class_id'] = eth['dhcp_vendor_class_id']
 
         if eth['dhcpv6_prm_only']:
-            opt['dhcpv6_prm_only'] = True
+            e.dhcp.v6.options['dhcpv6_prm_only'] = True
 
         if eth['dhcpv6_temporary']:
-            opt['dhcpv6_temporary'] = True
-
-        # store DHCPv6 config dictionary - used later on when addresses are aquired
-        e.set_dhcpv6_options(opt)
+            e.dhcp.v6.options['dhcpv6_temporary'] = True
 
         # ignore link state changes
         e.set_link_detect(eth['disable_link_detect'])

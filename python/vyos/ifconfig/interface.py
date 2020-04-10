@@ -41,8 +41,10 @@ from vyos.validate import assert_mtu
 from vyos.validate import assert_positive
 from vyos.validate import assert_range
 
+from vyos.ifconfig.control import Control
 
-class Interface(DHCP):
+
+class Interface(Control):
     options = []
     required = []
     default = {
@@ -181,7 +183,8 @@ class Interface(DHCP):
         self.config['ifname'] = ifname
 
         # we must have updated config before initialising the Interface
-        super().__init__(ifname, **kargs)
+        super().__init__(**kargs)
+        self.dhcp = DHCP(ifname)
 
         if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
             # Any instance of Interface, such as Interface('eth0')
@@ -224,8 +227,8 @@ class Interface(DHCP):
         >>> i.remove()
         """
         # stop DHCP(v6) if running
-        self._del_dhcp()
-        self._del_dhcpv6()
+        self.dhcp.v4.delete()
+        self.dhcp.v6.delete()
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
@@ -668,12 +671,13 @@ class Interface(DHCP):
                 # do not change below 'if' ordering esle you will get an exception as:
                 #   ValueError: 'dhcp' does not appear to be an IPv4 or IPv6 address
                 if addr != 'dhcp' and is_ipv4(addr):
-                    raise ConfigError("Can't configure both static IPv4 and DHCP address on the same interface")
+                    raise ConfigError(
+                        "Can't configure both static IPv4 and DHCP address on the same interface")
 
         if addr == 'dhcp':
-            self._set_dhcp()
+            self.dhcp.v4.set()
         elif addr == 'dhcpv6':
-            self._set_dhcpv6()
+            self.dhcp.v6.set()
         else:
             if not is_intf_addr_assigned(self.config['ifname'], addr):
                 cmd = 'ip addr add "{}" dev "{}"'.format(addr, self.config['ifname'])
@@ -702,9 +706,9 @@ class Interface(DHCP):
         ['2001:db8::ffff/64']
         """
         if addr == 'dhcp':
-            self._del_dhcp()
+            self.dhcp.v4.delete()
         elif addr == 'dhcpv6':
-            self._del_dhcpv6()
+            self.dhcp.v6.delete()
         else:
             if is_intf_addr_assigned(self.config['ifname'], addr):
                 cmd = 'ip addr del "{}" dev "{}"'.format(addr, self.config['ifname'])
