@@ -37,6 +37,12 @@
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="pptp"</command> 
                       </leafNode>
+                      <leafNode name="sstp">
+                        <properties>
+                          <help>Terminate all user's current remote access VPN session(s) with SSTP protocol</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="all_users" --protocol="sstp"</command> 
+                      </leafNode>
                     </children>
                   </node>
                 </children>
@@ -69,6 +75,12 @@
                           <help>Terminate all user's current remote access VPN session(s) with PPTP protocol</help>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="$5" --protocol="pptp"</command>
+                      </leafNode>
+                      <leafNode name="sstp">
+                        <properties>
+                          <help>Terminate all user's current remote access VPN session(s) with SSTP protocol</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py --username="$5" --protocol="sstp"</command>
                       </leafNode>
                     </children>
                   </node>
