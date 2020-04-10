@@ -428,11 +428,6 @@
                               <help>Key for accessing the specified server</help>
                             </properties>
                           </leafNode>
-                          <leafNode name="req-limit">
-                            <properties>
-                              <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                            </properties>
-                          </leafNode>
                           <leafNode name="fail-time">
                             <properties>
                               <help>If server doesn not responds mark it unavailable for this time (seconds)</help>
