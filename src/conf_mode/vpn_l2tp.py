@@ -232,12 +232,30 @@ def get_config():
         l2tp['client_ip_subnets'] = conf.return_values(['client-ip-pool', 'subnet'])
 
     if conf.exists(['client-ipv6-pool', 'prefix']):
-        l2tp['client_ipv6_pool'] = conf.return_values(['client-ipv6-pool', 'prefix'])
         l2tp['ip6_column'].append('ip6')
+        for prefix in conf.list_nodes(['client-ipv6-pool', 'prefix']):
+            tmp = {
+                'prefix': prefix,
+                'mask': '64'
+            }
 
-    if conf.exists(['client-ipv6-pool', 'delegate-prefix']):
-        l2tp['client_ipv6_delegate_prefix'] = conf.return_values(['client-ipv6-pool', 'delegate-prefix'])
-        l2tp['ip6_column'].append('ip6-dp')
+            if conf.exists(['client-ipv6-pool', 'prefix', prefix, 'mask']):
+                tmp['mask'] = conf.return_value(['client-ipv6-pool', 'prefix', prefix, 'mask'])
+
+            l2tp['client_ipv6_pool'].append(tmp)
+
+    if conf.exists(['client-ipv6-pool', 'delegate']):
+        l2tp['ip6_column'].append('ip6-db')
+        for prefix in conf.list_nodes(['client-ipv6-pool', 'delegate']):
+            tmp = {
+                'prefix': prefix,
+                'mask': ''
+            }
+
+            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'mask']):
+                tmp['mask'] = conf.return_value(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix'])
+
+            l2tp['client_ipv6_delegate_prefix'].append(tmp)
 
     if conf.exists(['mtu']):
         l2tp['mtu'] = conf.return_value(['mtu'])
@@ -305,6 +323,10 @@ def verify(l2tp):
     # check ipv6
     if l2tp['client_ipv6_delegate_prefix'] and not l2tp['client_ipv6_pool']:
         raise ConfigError('IPv6 prefix delegation requires client-ipv6-pool prefix')
+
+    for prefix in l2tp['client_ipv6_delegate_prefix']:
+        if not prefix['mask']:
+            raise ConfigError('Delegation-prefix required for individual delegated networks')
 
     if len(l2tp['wins']) > 2:
         raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')
