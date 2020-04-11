@@ -22,6 +22,7 @@ from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 from time import sleep
 
+from ipaddress import ip_network
 from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
@@ -40,7 +41,8 @@ default_config_data = {
     'chap_secrets_file': l2tp_chap_secrets, # used in Jinja2 template
     'client_ip_pool': None,
     'client_ip_subnets': [],
-    'client_ipv6_pool': {},
+    'client_ipv6_pool': [],
+    'client_ipv6_delegate_prefix': [],
     'dnsv4': [],
     'dnsv6': [],
     'gateway_address': '10.255.255.0',
@@ -62,9 +64,7 @@ default_config_data = {
     'radius_shaper_vendor': '',
     'radius_dynamic_author': '',
     'wins': [],
-    'ip6_column': '',
-    'ip6_dp_column': '',
-    'ppp_options': {},
+    'ip6_column': [],
     'thread_cnt': 1
 }
 
@@ -232,32 +232,30 @@ def get_config():
         l2tp['client_ip_subnets'] = conf.return_values(['client-ip-pool', 'subnet'])
 
     if conf.exists(['client-ipv6-pool', 'prefix']):
-        l2tp['client_ipv6_pool']['prefix'] = conf.return_values(
-            'client-ipv6-pool prefix')
-        l2tp['ip6_column'] = 'ip6,'
+        l2tp['client_ipv6_pool'] = conf.return_values(['client-ipv6-pool', 'prefix'])
+        l2tp['ip6_column'].append('ip6')
 
-    if conf.exists('client-ipv6-pool delegate-prefix'):
-        l2tp['client_ipv6_pool']['delegate_prefix'] = conf.return_values(
-            'client-ipv6-pool delegate-prefix')
-        l2tp['ip6_dp_column'] = 'ip6-dp,'
+    if conf.exists(['client-ipv6-pool', 'delegate-prefix']):
+        l2tp['client_ipv6_delegate_prefix'] = conf.return_values(['client-ipv6-pool', 'delegate-prefix'])
+        l2tp['ip6_column'].append('ip6-dp')
 
-    if conf.exists('mtu'):
-        l2tp['mtu'] = conf.return_value('mtu')
+    if conf.exists(['mtu']):
+        l2tp['mtu'] = conf.return_value(['mtu'])
 
     # gateway address
-    if conf.exists('gateway-address'):
-        l2tp['gateway_address'] = conf.return_value('gateway-address')
+    if conf.exists(['gateway-address']):
+        l2tp['gateway_address'] = conf.return_value(['gateway-address'])
     else:
         # calculate gw-ip-address
-        if conf.exists('client-ip-pool start'):
+        if conf.exists(['client-ip-pool', 'start']):
             # use start ip as gw-ip-address
-            l2tp['gateway_address'] = conf.return_value(
-                'client-ip-pool start')
-        elif conf.exists('client-ip-pool subnet'):
+            l2tp['gateway_address'] = conf.return_value(['client-ip-pool', 'start'])
+
+        elif conf.exists(['client-ip-pool', 'subnet']):
             # use first ip address from first defined pool
-            lst_ip = re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", conf.return_values(
-                'client-ip-pool subnet')[0])
-            l2tp['gateway_address'] = lst_ip[0]
+            subnet = conf.return_values(['client-ip-pool', 'subnet'])[0]
+            subnet = ip_network(subnet)
+            l2tp['gateway_address'] = str(list(subnet.hosts())[0])
 
     # LNS secret
     if conf.exists(['lns', 'shared-secret']):
@@ -305,9 +303,8 @@ def verify(l2tp):
             "set vpn l2tp remote-access client-ip-pool requires subnet or start/stop IP pool")
 
     # check ipv6
-    if 'delegate_prefix' in l2tp['client_ipv6_pool'] and not 'prefix' in l2tp['client_ipv6_pool']:
-        raise ConfigError(
-            "\"set vpn l2tp remote-access client-ipv6-pool prefix\" required for delegate-prefix ")
+    if l2tp['client_ipv6_delegate_prefix'] and not l2tp['client_ipv6_pool']:
+        raise ConfigError('IPv6 prefix delegation requires client-ipv6-pool prefix')
 
     if len(l2tp['wins']) > 2:
         raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')

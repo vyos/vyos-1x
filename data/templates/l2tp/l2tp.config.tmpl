@@ -116,18 +116,18 @@ ipv6=allow
 {% endif %}
 
 
-
 {% if client_ipv6_pool %}
 [ipv6-pool]
-{% for prfx in client_ipv6_pool.prefix: %}
-{{prfx}}
+{% for prefix in client_ipv6_pool %}
+{{ prefix }}
 {% endfor %}
-{% for prfx in client_ipv6_pool.delegate_prefix: %}
-delegate={{prfx}}
+{% for prefix in client_ipv6_delegate_prefix %}
+delegate={{ prefix }}
 {% endfor %}
+
 {% endif %}
 
-{% if client_ipv6_pool['delegate_prefix'] %}
+{% if client_ipv6_delegate_prefix %}
 [ipv6-dhcp]
 verbose=1
 {% endif %}
@@ -143,5 +143,5 @@ vendor={{ radius_shaper_vendor }}
 
 [cli]
 tcp=127.0.0.1:2004
-sessions-columns=ifname,username,calling-sid,ip,{{ip6_column}}{{ip6_dp_column}}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
+sessions-columns=ifname,username,calling-sid,ip,{{ ip6_column | join(',') }}{{ ',' if ip6_column }}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
 
