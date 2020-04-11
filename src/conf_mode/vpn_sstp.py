@@ -61,6 +61,7 @@ default_config_data = {
     'local_users' : [],
     'auth_mode' : 'local',
     'auth_proto' : ['auth_mschap_v2'],
+    'client_gateway': '',
     'radius_server' : [],
     'radius_acct_tmo' : '3',
     'radius_max_try' : '3',
