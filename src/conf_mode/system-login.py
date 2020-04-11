@@ -28,6 +28,8 @@ from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import cmd
 from vyos.util import call
+from vyos.util import DEVNULL
+
 
 radius_config_file = "/etc/pam_radius_auth.conf"
 
@@ -211,6 +213,14 @@ def generate(login):
             os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password '' >/dev/null".format(user['name']))
             os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}' >/dev/null".format(user['name'], user['password_encrypted']))
 
+            # env = os.environ.copy()
+            # env['vyos_libexec_dir'] = '/usr/libexec/vyos'
+
+            # call("/opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password ''".format(user['name']),
+            #     env=env)
+            # call("/opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}'".format(user['name'], user['password_encrypted']),
+            #     env=env)
+
     if len(login['radius_server']) > 0:
         # Prepare Jinja2 template loader from files
         tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'system-login')
@@ -256,7 +266,7 @@ def apply(login):
         command += " {}".format(user['name'])
 
         try:
-            call(command)
+            cmd(command)
 
             uid = getpwnam(user['name']).pw_uid
             gid = getpwnam(user['name']).pw_gid
@@ -299,7 +309,7 @@ def apply(login):
                 call('pkill -HUP -u {}'.format(user))
 
             # Remove user account but leave home directory to be safe
-            call('userdel -r {} 2>/dev/null'.format(user))
+            call(f'userdel -r {user}', stderr=DEVNULL)
 
         except Exception as e:
             raise ConfigError('Deleting user "{}" raised an exception: {}'.format(user, e))
@@ -309,8 +319,10 @@ def apply(login):
     #
     if len(login['radius_server']) > 0:
         try:
+            env = os.environ.copy()
+            env['DEBIAN_FRONTEND'] = 'noninteractive'
             # Enable RADIUS in PAM
-            os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --enable radius")
+            cmd("pam-auth-update --package --enable radius", env=env)
 
             # Make NSS system aware of RADIUS, too
             command = "sed -i -e \'/\smapname/b\' \
@@ -321,15 +333,18 @@ def apply(login):
                           -e \'/^group:[^#]*$/s/: */&mapname /\' \
                           /etc/nsswitch.conf"
 
-            call(command)
+            cmd(command)
 
         except Exception as e:
             raise ConfigError('RADIUS configuration failed: {}'.format(e))
 
     else:
         try:
+            env = os.environ.copy()
+            env['DEBIAN_FRONTEND'] = 'noninteractive'
+
             # Disable RADIUS in PAM
-            os.system("DEBIAN_FRONTEND=noninteractive pam-auth-update --package --remove radius")
+            cmd("pam-auth-update --package --remove radius", env=env)
 
             command = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
                    -e \'/^passwd:.*[ \t]mapname/s/[ \t]mapname//\' \
@@ -337,10 +352,10 @@ def apply(login):
                    -e \'s/[ \t]*$//\' \
                    /etc/nsswitch.conf"
 
-            call(command)
+            cmd(command)
 
         except Exception as e:
-            raise ConfigError('Removing RADIUS configuration failed'.format(e))
+            raise ConfigError('Removing RADIUS configuration failed.\n{}'.format(e))
 
     return None
 
