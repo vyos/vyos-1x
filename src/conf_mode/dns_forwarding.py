@@ -19,14 +19,13 @@ import argparse
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.util import wait_for_commit_lock
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dhclient", action="store_true",
@@ -153,15 +152,7 @@ def generate(dns):
     if dns is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'dns-forwarding')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
-    tmpl = env.get_template('recursor.conf.tmpl')
-    config_text = tmpl.render(dns)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
+    render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True)
     return None
 
 def apply(dns):

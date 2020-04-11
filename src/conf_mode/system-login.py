@@ -16,7 +16,6 @@
 
 import os
 
-from jinja2 import FileSystemLoader, Environment
 from psutil import users
 from pwd import getpwall, getpwnam
 from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
@@ -24,11 +23,11 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import list_diff
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import cmd
 from vyos.util import call
 from vyos.util import DEVNULL
+from vyos.template import render
 
 
 radius_config_file = "/etc/pam_radius_auth.conf"
@@ -222,15 +221,7 @@ def generate(login):
             #     env=env)
 
     if len(login['radius_server']) > 0:
-        # Prepare Jinja2 template loader from files
-        tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'system-login')
-        fs_loader = FileSystemLoader(tmpl_path)
-        env = Environment(loader=fs_loader)
-
-        tmpl = env.get_template('pam_radius_auth.conf.tmpl')
-        config_text = tmpl.render(login)
-        with open(radius_config_file, 'w') as f:
-            f.write(config_text)
+        render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl', login)
 
         uid = getpwnam('root').pw_uid
         gid = getpwnam('root').pw_gid

@@ -16,12 +16,10 @@
 
 import os
 
-from jinja2 import FileSystemLoader, Environment
-
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = r'/tmp/ldpd.frr'
@@ -129,16 +127,7 @@ def generate(mpls):
     if mpls is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'mpls')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('ldpd.frr.tmpl')
-    config_text = tmpl.render(mpls)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'mpls/ldpd.frr.tmpl', mpls)
     return None
 
 def apply(mpls):

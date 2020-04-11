@@ -20,12 +20,12 @@ from time import sleep
 from sys import exit
 from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
-from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.defaults import directories as vyos_data_dir
 from vyos.util import call, run
+from vyos.template import render
+
 
 sstp_conf = '/run/accel-pppd/sstp.conf'
 sstp_chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
@@ -302,30 +302,15 @@ def generate(sstp):
     if not sstp:
         return None
 
-    import pprint
-    pprint.pprint(sstp)
-
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'sstp')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
     dirname = os.path.dirname(sstp_conf)
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    tmpl = env.get_template('sstp.config.tmpl')
-    config_text = tmpl.render(sstp)
-    with open(sstp_conf, 'w') as f:
-        f.write(config_text)
+    render(sstp_conf, 'sstp/sstp.config.tmpl', sstp, trim_blocks=True)
 
     if sstp['local_users']:
-        tmpl = env.get_template('chap-secrets.tmpl')
-        config_text = tmpl.render(sstp)
-        with open(sstp_chap_secrets, 'w') as f:
-            f.write(config_text)
-
+        render(sstp_chap_secrets, 'sstp/chap-secrets.tmpl', sstp, trim_blocks=True)
         os.chmod(sstp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
         if os.path.exists(sstp_chap_secrets):

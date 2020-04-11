@@ -18,16 +18,16 @@ import os
 
 from sys import exit
 from ipaddress import ip_address, ip_interface, IPv4Interface, IPv6Interface, IPv4Address, IPv6Address
-from jinja2 import FileSystemLoader, Environment
 from json import dumps
 from pathlib import Path
 
 import vyos.config
 import vyos.keepalived
 
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
+
 
 daemon_file = "/etc/default/keepalived"
 config_file = "/etc/keepalived/keepalived.conf"
@@ -201,11 +201,6 @@ def verify(data):
 
 
 def generate(data):
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'vrrp')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     vrrp_groups, sync_groups = data
 
     # Remove disabled groups from the sync group member lists
@@ -217,16 +212,9 @@ def generate(data):
     # Filter out disabled groups
     vrrp_groups = list(filter(lambda x: x["disable"] is not True, vrrp_groups))
 
-    tmpl = env.get_template('keepalived.conf.tmpl')
-    config_text = tmpl.render({"groups": vrrp_groups, "sync_groups": sync_groups})
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
-    tmpl = env.get_template('daemon.tmpl')
-    config_text = tmpl.render()
-    with open(daemon_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'vrrp/keepalived.conf.tmpl',
+           {"groups": vrrp_groups, "sync_groups": sync_groups})
+    render(daemon_file, 'vrrp/daemon.tmpl', {})
     return None
 
 

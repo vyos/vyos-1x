@@ -23,13 +23,13 @@ from sys import exit
 from time import sleep
 
 from ipaddress import ip_network
-from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.util import call
 from vyos.validate import is_ipv4
 from vyos import ConfigError
+from vyos.template import render
+
 
 l2tp_conf = '/run/accel-pppd/l2tp.conf'
 l2tp_chap_secrets = '/run/accel-pppd/l2tp.chap-secrets'
@@ -344,26 +344,14 @@ def generate(l2tp):
     if not l2tp:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'l2tp')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
     dirname = os.path.dirname(l2tp_conf)
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    tmpl = env.get_template('l2tp.config.tmpl')
-    config_text = tmpl.render(c)
-    with open(l2tp_conf, 'w') as f:
-        f.write(config_text)
+    render(l2tp_conf, 'l2tp/l2tp.config.tmpl', c, trim_blocks=True)
 
     if l2tp['auth_mode'] == 'local':
-        tmpl = env.get_template('chap-secrets.tmpl')
-        config_text = tmpl.render(l2tp)
-        with open(l2tp_chap_secrets, 'w') as f:
-            f.write(config_text)
-
+        render(l2tp_chap_secrets, 'l2tp/chap-secrets.tmpl', l2tp)
         os.chmod(l2tp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
     else:

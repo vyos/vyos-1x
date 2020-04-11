@@ -17,15 +17,15 @@
 import os
 import re
 
-from jinja2 import FileSystemLoader, Environment
 from socket import socket, AF_INET, SOCK_STREAM
 from sys import exit
 from time import sleep
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import run
+from vyos.template import render
+
 
 ipoe_cnf_dir = r'/etc/accel-ppp/ipoe'
 ipoe_cnf = ipoe_cnf_dir + r'/ipoe.config'
@@ -219,25 +219,15 @@ def generate(c):
     if c == None or not c:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'ipoe-server')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
     c['thread_cnt'] = _get_cpu()
 
     if c['auth']['mech'] == 'local':
-        tmpl = env.get_template('chap-secrets.tmpl')
-        chap_secrets_txt = tmpl.render(c)
         old_umask = os.umask(0o077)
-        with open(chap_secrets, 'w') as f:
-            f.write(chap_secrets_txt)
+        render(chap_secrets, 'ipoe-server/chap-secrets.tmpl', c, trim_blocks=True)
         os.umask(old_umask)
 
-    tmpl = env.get_template('ipoe.config.tmpl')
-    config_text = tmpl.render(c)
-    with open(ipoe_cnf, 'w') as f:
-        f.write(config_text)
+    render(ipoe_cnf, 'ipoe-server/ipoe.config.tmpl', c, trim_blocks=True)
+    # return c ??
     return c
 
 

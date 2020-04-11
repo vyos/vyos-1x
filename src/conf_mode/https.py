@@ -18,15 +18,14 @@ import os
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 
 import vyos.defaults
 import vyos.certbot_util
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = '/etc/nginx/sites-available/default'
@@ -133,18 +132,10 @@ def generate(https):
     if https is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'https')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
     if 'server_block_list' not in https or not https['server_block_list']:
         https['server_block_list'] = [default_server_block]
 
-    tmpl = env.get_template('nginx.default.tmpl')
-    config_text = tmpl.render(https)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
+    render(config_file, 'https/nginx.default.tmpl', https, trim_blocks=True)
 
     return None
 

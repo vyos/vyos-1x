@@ -19,13 +19,12 @@ import ipaddress
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = r'/etc/dhcp/dhcpdv6.conf'
@@ -344,21 +343,8 @@ def generate(dhcpv6):
         print('Warning: DHCPv6 server will be deactivated because it is disabled')
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'dhcpv6-server')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('dhcpdv6.conf.tmpl')
-    config_text = tmpl.render(dhcpv6)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
-    tmpl = env.get_template('daemon.tmpl')
-    config_text = tmpl.render(dhcpv6)
-    with open(daemon_config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'dhcpv6-server/dhcpdv6.conf.tmpl', dhcpv6)
+    render(daemon_config_file, 'dhcpv6-server/daemon.tmpl', dhcpv6)
     return None
 
 def apply(dhcpv6):

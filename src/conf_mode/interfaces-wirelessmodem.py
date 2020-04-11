@@ -18,15 +18,17 @@ import os
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
-from vyos.util import chown, chmod_755, is_bridge_member
+from vyos.util import chown
+from vyos.util import chmod_755
+from vyos.util import is_bridge_member
 from vyos.util import cmd
 from vyos.util import call
 from vyos import ConfigError
+from vyos.template import render
+
 
 default_config_data = {
     'address': [],
@@ -141,11 +143,6 @@ def verify(wwan):
     return None
 
 def generate(wwan):
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'wwan')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     # set up configuration file path variables where our templates will be
     # rendered into
     intf = wwan['intf']
@@ -175,34 +172,15 @@ def generate(wwan):
 
     else:
         # Create PPP configuration files
-        tmpl = env.get_template('peer.tmpl')
-        config_text = tmpl.render(wwan)
-        with open(config_wwan, 'w') as f:
-            f.write(config_text)
-
+        render(config_wwan, 'wwan/peer.tmpl', wwan)
         # Create PPP chat script
-        tmpl = env.get_template('chat.tmpl')
-        config_text = tmpl.render(wwan)
-        with open(config_wwan_chat, 'w') as f:
-            f.write(config_text)
-
+        render(config_wwan_chat, 'wwan/chat.tmpl', wwan)
         # Create script for ip-pre-up.d
-        tmpl = env.get_template('ip-pre-up.script.tmpl')
-        config_text = tmpl.render(wwan)
-        with open(script_wwan_pre_up, 'w') as f:
-            f.write(config_text)
-
+        render(script_wwan_pre_up, 'wwan/ip-pre-up.script.tmpl', wwan)
         # Create script for ip-up.d
-        tmpl = env.get_template('ip-up.script.tmpl')
-        config_text = tmpl.render(wwan)
-        with open(script_wwan_ip_up, 'w') as f:
-            f.write(config_text)
-
+        render(script_wwan_ip_up, 'wwan/ip-up.script.tmpl', wwan)
         # Create script for ip-down.d
-        tmpl = env.get_template('ip-down.script.tmpl')
-        config_text = tmpl.render(wwan)
-        with open(script_wwan_ip_down, 'w') as f:
-            f.write(config_text)
+        render(script_wwan_ip_down, 'wwan/ip-down.script.tmpl', wwan)
 
         # make generated script file executable
         chmod_755(script_wwan_pre_up)
