@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from vyos.ifconfig.section import Section
 from vyos.ifconfig.interface import Interface
 
 from vyos.ifconfig.bond import BondIf

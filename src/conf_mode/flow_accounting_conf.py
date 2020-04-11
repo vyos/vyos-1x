@@ -22,6 +22,7 @@ from ipaddress import ip_address
 from jinja2 import FileSystemLoader, Environment
 from sys import exit
 
+from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
@@ -60,7 +61,7 @@ def _sflow_default_agentip(config):
         return config.return_value('protocols ospfv3 parameters router-id')
 
     # if router-id was not found, use first available ip of any interface
-    for iface in Interface.listing():
+    for iface in Section.interfaces():
         for address in Interface(iface).get_addr():
             # return an IP, if this is not loopback
             regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')
@@ -234,7 +235,7 @@ def verify(config):
 
     # check that all configured interfaces exists in the system
     for iface in config['interfaces']:
-        if not iface in Interface.listing():
+        if not iface in Section.interfaces():
             # chnged from error to warning to allow adding dynamic interfaces and interface templates
             # raise ConfigError("The {} interface is not presented in the system".format(iface))
             print("Warning: the {} interface is not presented in the system".format(iface))
@@ -262,7 +263,7 @@ def verify(config):
 
         # check if configured sFlow agent-id exist in the system
         agent_id_presented = None
-        for iface in Interface.listing():
+        for iface in Section.interfaces():
             for address in Interface(iface).get_addr():
                 # check an IP, if this is not loopback
                 regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')

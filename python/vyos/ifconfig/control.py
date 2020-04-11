@@ -18,10 +18,10 @@ import os
 
 from vyos.util import debug, debug_msg
 from vyos.util import popen, cmd
-from vyos.ifconfig.register import Register
+from vyos.ifconfig.section import Section
 
 
-class Control(Register):
+class Control(Section):
     _command_get = {}
     _command_set = {}
 
