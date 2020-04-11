@@ -16,7 +16,7 @@
 import netifaces
 
 
-class Register:
+class Section:
     # the known interface prefixes
     _prefixes = {}
 

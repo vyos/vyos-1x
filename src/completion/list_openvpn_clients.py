@@ -18,7 +18,7 @@ import os
 import sys
 import argparse
 
-from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 
 def get_client_from_interface(interface):
     clients = []
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     if args.interface:
         clients = get_client_from_interface(args.interface)
     elif args.all:
-        for interface in Interface.listing("openvpn"):
+        for interface in Section.interfaces("openvpn"):
             clients += get_client_from_interface(interface)
 
     print(" ".join(clients))
