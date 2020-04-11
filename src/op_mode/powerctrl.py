@@ -24,6 +24,7 @@ from vyos.util import ask_yes_no
 from vyos.util import cmd
 from vyos.util import call
 from vyos.util import run
+from vyos.util import STDOUT
 
 systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
@@ -97,14 +98,14 @@ def execute_shutdown(time, reboot = True, ask=True):
     chk_vyatta_based_reboots()
     ###
 
-    out = cmd(f'/sbin/shutdown {action} now')
+    out = cmd(f'/sbin/shutdown {action} now', stderr=STDOUT)
     print(out.split(",",1)[0])
     return
   elif len(time) == 1:
     # Assume the argument is just time
     ts = parse_time(time[0])
     if ts:
-      cmd(f'/sbin/shutdown {action} {time[0]}')
+      cmd(f'/sbin/shutdown {action} {time[0]}', stderr=STDOUT)
     else:
       sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
   elif len(time) == 2:
@@ -115,7 +116,7 @@ def execute_shutdown(time, reboot = True, ask=True):
       t = datetime.combine(ds, ts)
       td = t - datetime.now()
       t2 = 1 + int(td.total_seconds())//60 # Get total minutes
-      cmd('/sbin/shutdown {action} {t2}')
+      cmd('/sbin/shutdown {action} {t2}', stderr=STDOUT)
     else:
       if not ts:
         sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))

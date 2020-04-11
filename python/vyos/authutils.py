@@ -22,7 +22,7 @@ def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
 
     mkpassword = 'mkpasswd --method=sha-512 --stdin'
-    return cmd(mkpassword, input=password.encode(), timeout=5)
+    return cmd(mkpassword, input=password, timeout=5)
 
 def split_ssh_public_key(key_string, defaultname=""):
     """ Splits an SSH public key into its components """
