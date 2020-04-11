@@ -19,7 +19,7 @@ import re
 
 from copy import deepcopy
 from sys import exit
-from ipaddress import ip_address,ip_network,IPv4Interface
+from ipaddress import ip_address,ip_network,IPv4Network
 from netifaces import interfaces
 from time import sleep
 from shutil import rmtree
@@ -282,10 +282,10 @@ def get_config():
 
     # Server-mode subnet (from which client IPs are allocated)
     if conf.exists('server subnet'):
-        network = conf.return_value('server subnet')
-        tmp = IPv4Interface(network).with_netmask
+        # server_network is used later in this function
+        server_network = IPv4Network(conf.return_value('server subnet'))
         # convert the network in format: "192.0.2.0 255.255.255.0" for later use in template
-        openvpn['server_subnet'] = tmp.replace(r'/', ' ')
+        openvpn['server_subnet'] = server_network.with_netmask.replace(r'/', ' ')
 
     # Client-specific settings
     for client in conf.list_nodes('server client'):
@@ -308,10 +308,8 @@ def get_config():
         else:
             # we need the server subnet in format 192.0.2.0/255.255.255.0
             subnet = openvpn['server_subnet'].replace(' ', r'/')
-            # get iterator over the usable hosts in the network
-            tmp = ip_network(subnet).hosts()
             # OpenVPN always uses the subnets first available IP address
-            data['remote_netmask'] = list(tmp)[0]
+            data['remote_netmask'] = list(ip_network(subnet).hosts())[0]
 
         # Option to disable client connection
         if conf.exists('disable'):
@@ -323,13 +321,11 @@ def get_config():
 
         # Route to be pushed to the client
         for network in conf.return_values('push-route'):
-            tmp = IPv4Interface(network).with_netmask
-            data['push_route'].append(tmp.replace(r'/', ' '))
+            data['push_route'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
 
         # Subnet belonging to the client
         for network in conf.return_values('subnet'):
-            tmp = IPv4Interface(network).with_netmask
-            data['subnet'].append(tmp.replace(r'/', ' '))
+            data['subnet'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
 
         # Append to global client list
         openvpn['client'].append(data)
@@ -352,8 +348,7 @@ def get_config():
     # Route to be pushed to all clients
     if conf.exists('server push-route'):
         for network in conf.return_values('server push-route'):
-            tmp = IPv4Interface(network).with_netmask
-            openvpn['server_push_route'].append(tmp.replace(r'/', ' '))
+            openvpn['server_push_route'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
 
     # Reject connections from clients that are not explicitly configured
     if conf.exists('server reject-unconfigured-clients'):
