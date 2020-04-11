@@ -31,7 +31,7 @@ from shutil import rmtree
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
-from vyos.util import process_running, cmd, is_bridge_member
+from vyos.util import call, is_bridge_member
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
@@ -97,7 +97,7 @@ default_config_data = {
 
 
 def get_config_name(intf):
-    cfg_file = r'/opt/vyatta/etc/openvpn/openvpn-{}.conf'.format(intf)
+    cfg_file = f'/run/openvpn/{intf}.conf'
     return cfg_file
 
 def openvpn_mkdir(directory):
@@ -742,66 +742,42 @@ def generate(openvpn):
     return None
 
 def apply(openvpn):
-    pidfile = '/var/run/openvpn/{}.pid'.format(openvpn['intf'])
-
-    # Always stop OpenVPN service. We can not send a SIGUSR1 for restart of the
-    # service as the configuration is not re-read. Stop daemon only if it's
-    # running - it could have died or killed by someone evil
-    if process_running(pidfile):
-        command = 'start-stop-daemon'
-        command += ' --stop '
-        command += ' --quiet'
-        command += ' --oknodo'
-        command += ' --pidfile ' + pidfile
-        cmd(command)
-
-    # cleanup old PID file
-    if os.path.isfile(pidfile):
-        os.remove(pidfile)
+    interface = openvpn['intf']
+    call(f'systemctl stop openvpn@{interface}.service')
 
     # Do some cleanup when OpenVPN is disabled/deleted
     if openvpn['deleted'] or openvpn['disable']:
         # cleanup old configuration file
-        if os.path.isfile(get_config_name(openvpn['intf'])):
-            os.remove(get_config_name(openvpn['intf']))
+        if os.path.isfile(get_config_name(interface)):
+            os.remove(get_config_name(interface))
 
         # cleanup client config dir
-        directory = os.path.dirname(get_config_name(openvpn['intf']))
-        if os.path.isdir(os.path.join(directory, 'ccd', openvpn['intf'])):
-            rmtree(os.path.join(directory, 'ccd', openvpn['intf']), ignore_errors=True)
+        directory = os.path.dirname(get_config_name(interface))
+        ccd_dir = os.path.join(directory, 'ccd', interface)
+        if os.path.isdir(ccd_dir):
+            rmtree(ccd_dir, ignore_errors=True)
 
         # cleanup auth file
-        if os.path.isfile('/tmp/openvpn-{}-pw'.format(openvpn['intf'])):
-            os.remove('/tmp/openvpn-{}-pw'.format(openvpn['intf']))
+        user_auth_file = f'/tmp/openvpn-{interface}-pw'
+        if os.path.isfile(user_auth_file):
+            os.remove(user_auth_file)
 
         return None
 
     # On configuration change we need to wait for the 'old' interface to
     # vanish from the Kernel, if it is not gone, OpenVPN will report:
     # ERROR: Cannot ioctl TUNSETIFF vtun10: Device or resource busy (errno=16)
-    while openvpn['intf'] in interfaces():
+    while interface in interfaces():
         sleep(0.250) # 250ms
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    command = 'start-stop-daemon'
-    command += ' --start '
-    command += ' --quiet'
-    command += ' --oknodo'
-    command += ' --pidfile ' + pidfile
-    command += ' --exec /usr/sbin/openvpn'
-    # now pass arguments to openvpn binary
-    command += ' --'
-    command += ' --daemon openvpn-' + openvpn['intf']
-    command += ' --config ' + get_config_name(openvpn['intf'])
-
-    # execute assembled command
-    cmd(command)
+    call(f'systemctl start openvpn@{interface}.service')
 
     # better late then sorry ... but we can only set interface alias after
     # OpenVPN has been launched and created the interface
     cnt = 0
-    while openvpn['intf'] not in interfaces():
+    while interface not in interfaces():
         # If VPN tunnel can't be established because the peer/server isn't
         # (temporarily) available, the vtun interface never becomes registered
         # with the kernel, and the commit would hang if there is no bail out
@@ -816,7 +792,7 @@ def apply(openvpn):
     try:
         # we need to catch the exception if the interface is not up due to
         # reason stated above
-        o = VTunIf(openvpn['intf'])
+        o = VTunIf(interface)
         # update interface description used e.g. within SNMP
         o.set_alias(openvpn['description'])
         # IPv6 address autoconfiguration
@@ -834,7 +810,7 @@ def apply(openvpn):
     # TAP interface needs to be brought up explicitly
     if openvpn['type'] == 'tap':
         if not openvpn['disable']:
-            VTunIf(openvpn['intf']).set_admin_state('up')
+            VTunIf(interface).set_admin_state('up')
 
     return None
 
