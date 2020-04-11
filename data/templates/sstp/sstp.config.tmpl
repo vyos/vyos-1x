@@ -52,7 +52,7 @@ dns{{ loop.index }}={{ dns }}
 
 {% if auth_mode == 'local' %}
 [chap-secrets]
-chap-secrets=/etc/accel-ppp/sstp/chap-secrets
+chap-secrets={{ sstp_chap_secrets }}
 {% elif auth_mode == 'radius' %}
 [radius]
 verbose=1

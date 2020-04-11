@@ -18,7 +18,6 @@ import os
 
 from time import sleep
 from sys import exit
-from socket import socket, AF_INET, SOCK_STREAM
 from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from jinja2 import FileSystemLoader, Environment
@@ -26,41 +25,16 @@ from jinja2 import FileSystemLoader, Environment
 from vyos.config import Config
 from vyos import ConfigError
 from vyos.defaults import directories as vyos_data_dir
-from vyos.util import process_running
-from vyos.util import process_running, cmd, run
+from vyos.util import call, run
 
-pidfile = r'/var/run/accel_sstp.pid'
-sstp_cnf_dir = r'/etc/accel-ppp/sstp'
-chap_secrets = sstp_cnf_dir + '/chap-secrets'
-sstp_conf = sstp_cnf_dir + '/sstp.config'
-
-# config path creation
-if not os.path.exists(sstp_cnf_dir):
-    os.makedirs(sstp_cnf_dir)
-
-def chk_con():
-    cnt = 0
-    s = socket(AF_INET, SOCK_STREAM)
-    while True:
-        try:
-            s.connect(("127.0.0.1", 2005))
-            s.close()
-            break
-        except ConnectionRefusedError:
-            sleep(0.5)
-            cnt += 1
-            if cnt == 100:
-                raise("failed to start sstp server")
-                break
-
-
-def _accel_cmd(command):
-    return run(f'/usr/bin/accel-cmd -p 2005 {command}')
+sstp_conf = '/etc/accel-ppp/sstp.conf'
+sstp_chap_secrets = '/etc/accel-ppp/sstp.chap-secrets'
 
 default_config_data = {
     'local_users' : [],
     'auth_mode' : 'local',
     'auth_proto' : ['auth_mschap_v2'],
+    'chap_secrets_file': sstp_chap_secrets, # used in Jinja2 template
     'client_gateway': '',
     'radius_server' : [],
     'radius_acct_tmo' : '3',
@@ -340,52 +314,29 @@ def generate(sstp):
     if sstp['local_users']:
         tmpl = env.get_template('chap-secrets.tmpl')
         config_text = tmpl.render(sstp)
-        with open(chap_secrets, 'w') as f:
-            f.write(config_text)
+        with open(sstp_chap_secrets, 'w') as f:
+            f.write(sstp_chap_secrets)
 
-        os.chmod(chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
+        os.chmod(sstp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
-        if os.path.exists(chap_secrets):
-             os.unlink(chap_secrets)
+        if os.path.exists(sstp_chap_secrets):
+             os.unlink(sstp_chap_secrets)
 
     return sstp
 
 def apply(sstp):
-    if sstp is None:
-        if process_running(pidfile):
-            command = 'start-stop-daemon'
-            command += ' --stop '
-            command += ' --quiet'
-            command += ' --oknodo'
-            command += ' --pidfile ' + pidfile
-            cmd(command)
+    if not sstp:
+        call('systemctl stop accel-ppp-sstp.service')
 
-        if os.path.exists(pidfile):
-            os.remove(pidfile)
+        if os.path.exists(sstp_conf):
+             os.unlink(sstp_conf)
+
+        if os.path.exists(sstp_chap_secrets):
+             os.unlink(sstp_chap_secrets)
 
         return None
 
-    if not process_running(pidfile):
-        if os.path.exists(pidfile):
-            os.remove(pidfile)
-
-        command = 'start-stop-daemon'
-        command += ' --start '
-        command += ' --quiet'
-        command += ' --oknodo'
-        command += ' --pidfile ' + pidfile
-        command += ' --exec /usr/sbin/accel-pppd'
-        # now pass arguments to accel-pppd binary
-        command += ' --'
-        command += ' -c ' + sstp_conf
-        command += ' -p ' + pidfile
-        command += ' -d'
-        cmd(command)
-
-        chk_con()
-
-    else:
-        _accel_cmd('restart')
+    call('systemctl restart accel-ppp-sstp.service')
 
 
 if __name__ == '__main__':
