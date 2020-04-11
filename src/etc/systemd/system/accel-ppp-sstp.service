@@ -1,0 +1,14 @@
+[Unit]
+Description=Accel-PPP/SSTP
+After=vyos-router.service
+
+[Service]
+ExecStart=/usr/sbin/accel-pppd -d -p /run/accel-pppd-sstp.pid -c /etc/accel-ppp/sstp.conf
+ExecReload=/bin/kill -SIGUSR1 $MAINPID
+PIDFile=/run/accel-pppd-sstp.pid
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+Alias=accel-ppp-sstp.service

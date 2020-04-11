@@ -3,12 +3,14 @@
 log_syslog
 l2tp
 chap-secrets
-{% for proto in authentication['auth_proto']: %}
+{% for proto in auth_proto: %}
 {{proto}}
 {% endfor%}
-{% if authentication['mode'] == 'radius' %}
+
+{% if auth_mode == 'radius' %}
 radius
 {% endif -%}
+
 ippool
 shaper
 ipv6pool
@@ -23,52 +25,46 @@ syslog=accel-l2tp,daemon
 copy=1
 level=5
 
-{% if dns %}
+{% if dnsv4 %}
 [dns]
-{% if dns[0] %}
-dns1={{dns[0]}}
+{% for dns in dnsv4 -%}
+dns{{ loop.index }}={{ dns }}
+{% endfor -%}
 {% endif %}
-{% if dns[1] %}
-dns2={{dns[1]}}
-{% endif %}
-{% endif -%}
 
 {% if dnsv6 %}
 [ipv6-dns]
-{% for srv in dnsv6: %}
-{{srv}}
-{% endfor %}
+{% for dns in dnsv6 -%}
+{{ dns }}
+{% endfor -%}
 {% endif %}
 
 {% if wins %}
 [wins]
-{% if wins[0] %}
-wins1={{wins[0]}}
+{% for server in wins -%}
+wins{{ loop.index }}={{ server }}
+{% endfor -%}
 {% endif %}
-{% if wins[1] %}
-wins2={{wins[1]}}
-{% endif %}
-{% endif -%}
 
 [l2tp]
 verbose=1
 ifname=l2tp%d
-ppp-max-mtu={{mtu}}
-mppe={{authentication['mppe']}}
+ppp-max-mtu={{ mtu }}
+mppe={{ ppp_mppe }}
 {% if outside_addr %}
-bind={{outside_addr}}
+bind={{ outside_addr }}
 {% endif %}
 {% if lns_shared_secret %}
-secret={{lns_shared_secret}}
+secret={{ lns_shared_secret }}
 {% endif %}
 
 [client-ip-range]
 0.0.0.0/0
 
-{% if (client_ip_pool) or (client_ip_subnets) %}
+{% if client_ip_pool or client_ip_subnets %}
 [ip-pool]
 {% if client_ip_pool %}
-{{client_ip_pool}}
+{{ client_ip_pool }}
 {% endif -%}
 {% if client_ip_subnets %}
 {% for sn in client_ip_subnets %}
@@ -77,34 +73,41 @@ secret={{lns_shared_secret}}
 {% endif %}
 {% endif %}
 {% if gateway_address %}
-gw-ip-address={{gateway_address}}
+gw-ip-address={{ gateway_address }}
 {% endif %}
 
-{% if authentication['mode'] == 'local' %}
+{% if auth_mode == 'local' %}
 [chap-secrets]
-chap-secrets=/etc/accel-ppp/l2tp/chap-secrets
-{% if gateway_address %}
-gw-ip-address={{gateway_address}}
+chap-secrets={{ chap_secrets_file }}
+{% elif auth_mode == 'radius' %}
+[radius]
+verbose=1
+{% for r in radius_server %}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
+{% endfor -%}
 {% endif %}
-{% endif %}
+
+acct-timeout={{ radius_acct_tmo }}
+timeout={{ radius_timeout }}
+max-try={{ radius_max_try }}
+
+{% if radius_nas_id %}
+nas-identifier={{ radius_nas_id }}
+{% endif -%}
+{% if radius_nas_ip %}
+nas-ip-address={{ radius_nas_ip }}
+{% endif -%}
+{% if radius_source_address %}
+bind={{ radius_source_address }}
+{% endif -%}
 
 [ppp]
 verbose=1
 check-ip=1
 single-session=replace
-{% if idle_timeout %}
-lcp-echo-timeout={{idle_timeout}}
-{% endif %}
-{% if ppp_options['lcp-echo-interval'] %}
-lcp-echo-interval={{ppp_options['lcp-echo-interval']}}
-{% else %}
-lcp-echo-interval=30
-{% endif %}
-{% if ppp_options['lcp-echo-failure'] %}
-lcp-echo-failure={{ppp_options['lcp-echo-failure']}}
-{% else %}
-lcp-echo-failure=3
-{% endif %}
+lcp-echo-timeout={{ ppp_echo_timeout }}
+lcp-echo-interval={{ ppp_echo_interval }}
+lcp-echo-failure={{ ppp_echo_failure }}
 {% if ccp_disable %}
 ccp=0
 {% endif %}
@@ -112,62 +115,33 @@ ccp=0
 ipv6=allow
 {% endif %}
 
-{% if authentication['mode'] == 'radius' %}
-[radius]
-{% for rsrv in authentication['radiussrv']: %}
-server={{rsrv}},{{authentication['radiussrv'][rsrv]['secret']}},\
-req-limit={{authentication['radiussrv'][rsrv]['req-limit']}},\
-fail-time={{authentication['radiussrv'][rsrv]['fail-time']}}
-{% endfor %}
-{% if authentication['radiusopt']['timeout'] %}
-timeout={{authentication['radiusopt']['timeout']}}
-{% endif %}
-{% if authentication['radiusopt']['acct-timeout'] %}
-acct-timeout={{authentication['radiusopt']['acct-timeout']}}
-{% endif %}
-{% if authentication['radiusopt']['max-try'] %}
-max-try={{authentication['radiusopt']['max-try']}}
-{% endif %}
-{% if authentication['radiusopt']['nas-id'] %}
-nas-identifier={{authentication['radiusopt']['nas-id']}}
-{% endif %}
-{% if authentication['radius_source_address'] %}
-nas-ip-address={{authentication['radius_source_address']}}
-{% endif -%}
-{% if authentication['radiusopt']['dae-srv'] %}
-dae-server={{authentication['radiusopt']['dae-srv']['ip-addr']}}:\
-{{authentication['radiusopt']['dae-srv']['port']}},\
-{{authentication['radiusopt']['dae-srv']['secret']}}
-{% endif -%}
-gw-ip-address={{gateway_address}}
-verbose=1
-{% endif -%}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
-{% for prfx in client_ipv6_pool.prefix: %}
-{{prfx}}
+{% for p in client_ipv6_pool %}
+{{ p.prefix }},{{ p.mask }}
 {% endfor %}
-{% for prfx in client_ipv6_pool.delegate_prefix: %}
-delegate={{prfx}}
+{% for p in client_ipv6_delegate_prefix %}
+delegate={{ p.prefix }},{{ p.mask }}
 {% endfor %}
+
 {% endif %}
 
-{% if client_ipv6_pool['delegate_prefix'] %}
+{% if client_ipv6_delegate_prefix %}
 [ipv6-dhcp]
 verbose=1
 {% endif %}
 
-{% if authentication['radiusopt']['shaper'] %}
+{% if radius_shaper_attr %}
 [shaper]
 verbose=1
-attr={{authentication['radiusopt']['shaper']['attr']}}
-{% if authentication['radiusopt']['shaper']['vendor'] %}
-vendor={{authentication['radiusopt']['shaper']['vendor']}}
+attr={{ radius_shaper_attr }}
+{% if radius_shaper_vendor %}
+vendor={{ radius_shaper_vendor }}
 {% endif -%}
 {% endif %}
 
 [cli]
 tcp=127.0.0.1:2004
-sessions-columns=ifname,username,calling-sid,ip,{{ip6_column}}{{ip6_dp_column}}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
+sessions-columns=ifname,username,calling-sid,ip,{{ ip6_column | join(',') }}{{ ',' if ip6_column }}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
 
