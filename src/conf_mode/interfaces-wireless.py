@@ -570,6 +570,9 @@ def verify(wifi):
     if not wifi['phy']:
         raise ConfigError('You must specify physical-device')
 
+    if not wifi['mode']:
+        raise ConfigError('You must specify a WiFi mode')
+
     if wifi['op_mode'] == 'ap':
         c = Config()
         if not c.exists('system wifi-regulatory-domain'):
