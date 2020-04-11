@@ -21,6 +21,7 @@ directories = {
   "current": "/opt/vyatta/etc/config-migrate/current",
   "migrate": "/opt/vyatta/etc/config-migrate/migrate",
   "log": "/var/log/vyatta",
+  "templates": "/usr/share/vyos/templates/"
 }
 
 cfg_group = 'vyattacfg'
