@@ -18,7 +18,7 @@ import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 
-from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 from vyos.configsession import ConfigSessionError
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -33,7 +33,7 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         members = []
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
-        for tmp in Interface.listing("ethernet"):
+        for tmp in Section.interfaces("ethernet"):
             if not '.' in tmp:
                 members.append(tmp)
 
