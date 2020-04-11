@@ -19,6 +19,7 @@ import netifaces
 class Section:
     # the known interface prefixes
     _prefixes = {}
+    _classes = []
 
     # class need to define: definition['prefixes']
     # the interface prefixes declared by a class used to name interface with
@@ -33,6 +34,8 @@ class Section:
         """
         if not klass.definition.get('prefixes',[]):
             raise RuntimeError(f'valid interface prefixes not defined for {klass.__name__}')
+
+        cls._classes.append(klass)
 
         for ifprefix in klass.definition['prefixes']:
             if ifprefix in cls._prefixes:
@@ -110,6 +113,22 @@ class Section:
         """
         return list(cls._intf_under_section(section))
 
+    @classmethod
+    def _intf_with_feature(cls, feature=''):
+        """
+        return a generator with the name of the interface which have 
+        a particular feature set in their definition such as:
+        bondable, broadcast, bridgeable, ...
+        """
+        for klass in cls._classes:
+            if klass.definition[feature]:
+                yield klass.definition['section']
 
-# XXX: TODO - limit name for VRF interfaces
-
+    @classmethod
+    def feature(cls, feature=''):
+        """
+        return list with the name of the interface which have 
+        a particular feature set in their definition such as:
+        bondable, broadcast, bridgeable, ...
+        """
+        return list(cls._intf_with_feature(feature))
