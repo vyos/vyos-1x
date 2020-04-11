@@ -26,6 +26,11 @@ class Section:
 
     @classmethod
     def register(cls, klass):
+        """
+        A function to use as decorator the interfaces classes
+        It register the prefix for the interface (eth, dum, vxlan, ...)
+        with the class which can handle it (EthernetIf, DummyIf,VXLANIf, ...)
+        """
         if not klass.definition.get('prefixes',[]):
             raise RuntimeError(f'valid interface prefixes not defined for {klass.__name__}')
 
@@ -38,7 +43,11 @@ class Section:
 
     @classmethod
     def _basename (cls, name, vlan):
-        # remove number from interface name
+        """
+        remove the number at the end of interface name
+        name: name of the interface
+        vlan: if vlan is True, do not stop at the vlan number
+        """
         name = name.rstrip('0123456789')
         name = name.rstrip('.')
         if vlan:
@@ -47,7 +56,11 @@ class Section:
 
     @classmethod
     def section(cls, name, vlan=True):
-        # return the name of a section an interface should be under
+        """
+        return the name of a section an interface should be under
+        name: name of the interface (eth0, dum1, ...)
+        vlan: should we try try to remove the VLAN from the number
+        """
         name = cls._basename(name, vlan)
 
         # XXX: To leave as long as vti and input are not moved to vyos
@@ -68,7 +81,10 @@ class Section:
         raise ValueError(f'No type found for interface name: {name}')
 
     @classmethod
-    def _listing (cls,section=''):
+    def _intf_under_section (cls,section=''):
+        """
+        return a generator with the name of the interface which are under a section
+        """
         interfaces = netifaces.interfaces()
 
         for ifname in interfaces:
@@ -87,8 +103,12 @@ class Section:
             yield ifname
 
     @classmethod
-    def listing(cls, section=''):
-        return list(cls._listing(section))
+    def interfaces(cls, section=''):
+        """
+        return a list of the name of the interface which are under a section
+        if no section is provided, then it returns all configured interfaces
+        """
+        return list(cls._intf_under_section(section))
 
 
 # XXX: TODO - limit name for VRF interfaces

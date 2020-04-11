@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
@@ -19,33 +19,33 @@ args = parser.parse_args()
 
 if args.type:
     try:
-        interfaces = Interface.listing(args.type)
+        interfaces = Section.interfaces(args.type)
 
     except ValueError as e:
         print(e, file=sys.stderr)
         print("")
 
 elif args.broadcast:
-    eth = Interface.listing("ethernet")
-    bridge = Interface.listing("bridge")
-    bond = Interface.listing("bonding")
+    eth = Section.interfaces("ethernet")
+    bridge = Section.interfaces("bridge")
+    bond = Section.interfaces("bonding")
     interfaces = eth + bridge + bond
 
 elif args.bridgeable:
-    eth = Interface.listing("ethernet")
-    bond = Interface.listing("bonding")
-    l2tpv3 = Interface.listing("l2tpv3")
-    openvpn = Interface.listing("openvpn")
-    wireless = Interface.listing("wireless")
-    tunnel = Interface.listing("tunnel")
-    vxlan = Interface.listing("vxlan")
-    geneve = Interface.listing("geneve")
+    eth = Section.interfaces("ethernet")
+    bond = Section.interfaces("bonding")
+    l2tpv3 = Section.interfaces("l2tpv3")
+    openvpn = Section.interfaces("openvpn")
+    wireless = Section.interfaces("wireless")
+    tunnel = Section.interfaces("tunnel")
+    vxlan = Section.interfaces("vxlan")
+    geneve = Section.interfaces("geneve")
 
     interfaces = eth + bond + l2tpv3 + openvpn + vxlan + tunnel + wireless + geneve
 
 elif args.bondable:
     interfaces = []
-    eth = Interface.listing("ethernet")
+    eth = Section.interfaces("ethernet")
 
     # we need to filter out VLAN interfaces identified by a dot (.) in their name
     for intf in eth:
@@ -53,6 +53,6 @@ elif args.bondable:
             interfaces.append(intf)
 
 else:
-    interfaces = Interface.listing()
+    interfaces = Section.interfaces()
 
 print(" ".join(interfaces))
