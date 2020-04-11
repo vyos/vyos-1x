@@ -777,7 +777,7 @@ def apply(wifi):
 
         # remove no longer required VLAN interfaces (vif)
         for vif in wifi['vif_remove']:
-            e.del_vlan(vif)
+            w.del_vlan(vif)
 
         # create VLAN interfaces (vif)
         for vif in wifi['vif']:
@@ -787,11 +787,11 @@ def apply(wifi):
                 try:
                     # on system bootup the above condition is true but the interface
                     # does not exists, which throws an exception, but that's legal
-                    e.del_vlan(vif['id'])
+                    w.del_vlan(vif['id'])
                 except:
                     pass
 
-            vlan = e.add_vlan(vif['id'])
+            vlan = w.add_vlan(vif['id'])
             apply_vlan_config(vlan, vif)
 
         # Enable/Disable interface - interface is always placed in
