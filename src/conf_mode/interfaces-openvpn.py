@@ -20,18 +20,16 @@ import re
 from jinja2 import FileSystemLoader, Environment
 from copy import deepcopy
 from sys import exit
-from stat import S_IRUSR,S_IRWXU,S_IRGRP,S_IXGRP,S_IROTH,S_IXOTH
-from grp import getgrnam
+from stat import S_IRUSR
 from ipaddress import ip_address,ip_network,IPv4Interface
 from netifaces import interfaces
-from pwd import getpwnam
 from time import sleep
 from shutil import rmtree
 
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
-from vyos.util import call, is_bridge_member
+from vyos.util import call, is_bridge_member, chown, chmod_x
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
@@ -106,10 +104,8 @@ def openvpn_mkdir(directory):
         os.mkdir(directory)
 
     # fix permissions - corresponds to mode 755
-    os.chmod(directory, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
-    uid = getpwnam(user).pw_uid
-    gid = getgrnam(group).gr_gid
-    os.chown(directory, uid, gid)
+    chmod_x(directory)
+    chown(directory, user, group)
 
 def fixup_permission(filename, permission=S_IRUSR):
     """
@@ -118,11 +114,7 @@ def fixup_permission(filename, permission=S_IRUSR):
     """
     if os.path.isfile(filename):
         os.chmod(filename, permission)
-
-        # make file owned by root / vyattacfg
-        uid = getpwnam('root').pw_uid
-        gid = getgrnam('vyattacfg').gr_gid
-        os.chown(filename, uid, gid)
+        chown(filename, 'root', 'vyattacfg')
 
 def checkCertHeader(header, filename):
     """
@@ -717,10 +709,6 @@ def generate(openvpn):
         if os.path.isfile('/tmp/openvpn-{}-pw'.format(interface)):
             os.remove('/tmp/openvpn-{}-pw'.format(interface))
 
-    # get numeric uid/gid
-    uid = getpwnam(user).pw_uid
-    gid = getgrnam(group).gr_gid
-
     # Generate client specific configuration
     for client in openvpn['client']:
         client_file = directory + '/ccd/' + interface + '/' + client['name']
@@ -728,7 +716,7 @@ def generate(openvpn):
         client_text = tmpl.render(client)
         with open(client_file, 'w') as f:
             f.write(client_text)
-        os.chown(client_file, uid, gid)
+        chown(client_file, user, group)
 
     tmpl = env.get_template('server.conf.tmpl')
     config_text = tmpl.render(openvpn)
@@ -737,7 +725,7 @@ def generate(openvpn):
     config_text = config_text.replace("&quot;",'"')
     with open(get_config_name(interface), 'w') as f:
         f.write(config_text)
-    os.chown(get_config_name(interface), uid, gid)
+    chown(get_config_name(interface), user, group)
 
     return None
 
