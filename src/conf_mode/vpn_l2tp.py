@@ -349,6 +349,10 @@ def generate(l2tp):
     fs_loader = FileSystemLoader(tmpl_path)
     env = Environment(loader=fs_loader, trim_blocks=True)
 
+    dirname = os.path.dirname(l2tp_conf)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
+
     tmpl = env.get_template('l2tp.config.tmpl')
     config_text = tmpl.render(c)
     with open(l2tp_conf, 'w') as f:

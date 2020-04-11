@@ -305,6 +305,10 @@ def generate(sstp):
     fs_loader = FileSystemLoader(tmpl_path)
     env = Environment(loader=fs_loader, trim_blocks=True)
 
+    dirname = os.path.dirname(sstp_conf)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
+
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
     tmpl = env.get_template('sstp.config.tmpl')
     config_text = tmpl.render(sstp)
