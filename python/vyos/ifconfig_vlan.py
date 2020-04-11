@@ -25,32 +25,20 @@ def apply_vlan_config(vlan, config):
     if not vlan.definition['vlan']:
         raise TypeError()
 
-    # get DHCP config dictionary and update values
-    opt = vlan.get_dhcp_options()
-
     if config['dhcp_client_id']:
-        opt['client_id'] = config['dhcp_client_id']
+        vlan.dhcp.v4.options['client_id'] = config['dhcp_client_id']
 
     if config['dhcp_hostname']:
-        opt['hostname'] = config['dhcp_hostname']
+        vlan.dhcp.v4.options['hostname'] = config['dhcp_hostname']
 
     if config['dhcp_vendor_class_id']:
-        opt['vendor_class_id'] = config['dhcp_vendor_class_id']
-
-    # store DHCP config dictionary - used later on when addresses are aquired
-    vlan.set_dhcp_options(opt)
-
-    # get DHCPv6 config dictionary and update values
-    opt = vlan.get_dhcpv6_options()
+        vlan.dhcp.v4.options['vendor_class_id'] = config['dhcp_vendor_class_id']
 
     if config['dhcpv6_prm_only']:
-        opt['dhcpv6_prm_only'] = True
+        vlan.dhcp.v6.options['dhcpv6_prm_only'] = True
 
     if config['dhcpv6_temporary']:
-        opt['dhcpv6_temporary'] = True
-
-    # store DHCPv6 config dictionary - used later on when addresses are aquired
-    vlan.set_dhcpv6_options(opt)
+        vlan.dhcp.v6.options['dhcpv6_temporary'] = True
 
     # update interface description used e.g. within SNMP
     vlan.set_alias(config['description'])

@@ -300,32 +300,20 @@ def apply(bridge):
         # update interface description used e.g. within SNMP
         br.set_alias(bridge['description'])
 
-        # get DHCP config dictionary and update values
-        opt = br.get_dhcp_options()
-
         if bridge['dhcp_client_id']:
-            opt['client_id'] = bridge['dhcp_client_id']
+            br.dhcp.v4.options['client_id'] = bridge['dhcp_client_id']
 
         if bridge['dhcp_hostname']:
-            opt['hostname'] = bridge['dhcp_hostname']
+            br.dhcp.v4.options['hostname'] = bridge['dhcp_hostname']
 
         if bridge['dhcp_vendor_class_id']:
-            opt['vendor_class_id'] = bridge['dhcp_vendor_class_id']
-
-        # store DHCPv6 config dictionary - used later on when addresses are aquired
-        br.set_dhcp_options(opt)
-
-        # get DHCPv6 config dictionary and update values
-        opt = br.get_dhcpv6_options()
+            br.dhcp.v4.options['vendor_class_id'] = bridge['dhcp_vendor_class_id']
 
         if bridge['dhcpv6_prm_only']:
-            opt['dhcpv6_prm_only'] = True
+            br.dhcp.v6.options['dhcpv6_prm_only'] = True
 
         if bridge['dhcpv6_temporary']:
-            opt['dhcpv6_temporary'] = True
-
-        # store DHCPv6 config dictionary - used later on when addresses are aquired
-        br.set_dhcpv6_options(opt)
+            br.dhcp.v6.options['dhcpv6_temporary'] = True
 
         # assign/remove VRF
         br.set_vrf(bridge['vrf'])

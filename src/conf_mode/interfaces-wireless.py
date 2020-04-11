@@ -722,32 +722,20 @@ def apply(wifi):
         # update interface description used e.g. within SNMP
         w.set_alias(wifi['description'])
 
-        # get DHCP config dictionary and update values
-        opt = w.get_dhcp_options()
-
         if wifi['dhcp_client_id']:
-            opt['client_id'] = wifi['dhcp_client_id']
+            w.dhcp.v4.options['client_id'] = wifi['dhcp_client_id']
 
         if wifi['dhcp_hostname']:
-            opt['hostname'] = wifi['dhcp_hostname']
+            w.dhcp.v4.options['hostname'] = wifi['dhcp_hostname']
 
         if wifi['dhcp_vendor_class_id']:
-            opt['vendor_class_id'] = wifi['dhcp_vendor_class_id']
-
-        # store DHCP config dictionary - used later on when addresses are aquired
-        w.set_dhcp_options(opt)
-
-        # get DHCPv6 config dictionary and update values
-        opt = w.get_dhcpv6_options()
+            w.dhcp.v4.options['vendor_class_id'] = wifi['dhcp_vendor_class_id']
 
         if wifi['dhcpv6_prm_only']:
-            opt['dhcpv6_prm_only'] = True
+            w.dhcp.v6.options['dhcpv6_prm_only'] = True
 
         if wifi['dhcpv6_temporary']:
-            opt['dhcpv6_temporary'] = True
-
-        # store DHCPv6 config dictionary - used later on when addresses are aquired
-        w.set_dhcpv6_options(opt)
+            w.dhcp.v6.options['dhcpv6_temporary'] = True
 
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])

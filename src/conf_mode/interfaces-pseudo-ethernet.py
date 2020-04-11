@@ -281,32 +281,20 @@ def apply(peth):
     # update interface description used e.g. within SNMP
     p.set_alias(peth['description'])
 
-    # get DHCP config dictionary and update values
-    opt = p.get_dhcp_options()
-
     if peth['dhcp_client_id']:
-        opt['client_id'] = peth['dhcp_client_id']
+        p.dhcp.v4.options['client_id'] = peth['dhcp_client_id']
 
     if peth['dhcp_hostname']:
-        opt['hostname'] = peth['dhcp_hostname']
+        p.dhcp.v4.options['hostname'] = peth['dhcp_hostname']
 
     if peth['dhcp_vendor_class_id']:
-        opt['vendor_class_id'] = peth['dhcp_vendor_class_id']
-
-    # store DHCP config dictionary - used later on when addresses are aquired
-    p.set_dhcp_options(opt)
-
-    # get DHCPv6 config dictionary and update values
-    opt = p.get_dhcpv6_options()
+        p.dhcp.v4.options['vendor_class_id'] = peth['dhcp_vendor_class_id']
 
     if peth['dhcpv6_prm_only']:
-        opt['dhcpv6_prm_only'] = True
+        p.dhcp.v6.options['dhcpv6_prm_only'] = True
 
     if peth['dhcpv6_temporary']:
-        opt['dhcpv6_temporary'] = True
-
-    # store DHCPv6 config dictionary - used later on when addresses are aquired
-    p.set_dhcpv6_options(opt)
+        p.dhcp.v6.options['dhcpv6_temporary'] = True
 
     # ignore link state changes
     p.set_link_detect(peth['disable_link_detect'])

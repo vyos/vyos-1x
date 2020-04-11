@@ -399,32 +399,20 @@ def apply(bond):
         # update interface description used e.g. within SNMP
         b.set_alias(bond['description'])
 
-        # get DHCP config dictionary and update values
-        opt = b.get_dhcp_options()
-
         if bond['dhcp_client_id']:
-            opt['client_id'] = bond['dhcp_client_id']
+            b.dhcp.v4.options['client_id'] = bond['dhcp_client_id']
 
         if bond['dhcp_hostname']:
-            opt['hostname'] = bond['dhcp_hostname']
+            b.dhcp.v4.options['hostname'] = bond['dhcp_hostname']
 
         if bond['dhcp_vendor_class_id']:
-            opt['vendor_class_id'] = bond['dhcp_vendor_class_id']
-
-        # store DHCP config dictionary - used later on when addresses are aquired
-        b.set_dhcp_options(opt)
-
-        # get DHCPv6 config dictionary and update values
-        opt = b.get_dhcpv6_options()
+            b.dhcp.v4.options['vendor_class_id'] = bond['dhcp_vendor_class_id']
 
         if bond['dhcpv6_prm_only']:
-            opt['dhcpv6_prm_only'] = True
+            b.dhcp.v6.options['dhcpv6_prm_only'] = True
 
         if bond['dhcpv6_temporary']:
-            opt['dhcpv6_temporary'] = True
-
-        # store DHCPv6 config dictionary - used later on when addresses are required
-        b.set_dhcpv6_options(opt)
+            b.dhcp.v6.options['dhcpv6_temporary'] = True
 
         # ignore link state changes
         b.set_link_detect(bond['disable_link_detect'])
