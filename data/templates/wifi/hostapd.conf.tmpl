@@ -73,7 +73,6 @@ channel={{ channel }}
 # offloaded ACS is used.
 {% if 'n' in mode -%}
 hw_mode=g
-ieee80211n=1
 {% elif 'ac' in mode -%}
 hw_mode=a
 ieee80211h=1
@@ -421,6 +420,12 @@ vht_capab=
 ieee80211n=0
 # Require stations to support VHT PHY (reject association if they do not)
 require_vht=1
+{% else -%}
+{% if 'n' in mode or 'ac' in mode -%}
+ieee80211n=1
+{% else -%}
+ieee80211n=0
+{%- endif %}
 {% endif %}
 
 {% if cap_vht_center_freq_1 -%}
