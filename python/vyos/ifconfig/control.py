@@ -16,8 +16,9 @@
 
 import os
 
-from vyos.util import debug, debug_msg
-from vyos.util import popen, cmd
+from vyos import debug
+from vyos.util import popen
+from vyos.util import cmd
 from vyos.ifconfig.section import Section
 
 
@@ -35,10 +36,10 @@ class Control(Section):
         # if debug is not explicitely disabled the the config, enable it
         self.debug = ''
         if kargs.get('debug', True):
-            self.debug = debug('ifconfig')
+            self.debug = debug.enabled('ifconfig')
 
     def _debug_msg (self, message):
-        return debug_msg(message, self.debug)
+        return debug.message(message, self.debug)
 
     def _popen(self, command):
         return popen(command, self.debug)

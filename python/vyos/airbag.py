@@ -19,10 +19,10 @@ import logging
 import logging.handlers
 from datetime import datetime
 
+from vyos import debug
 from vyos.config import Config
 from vyos.version import get_version
 from vyos.util import run
-from vyos.util import debug
 
 
 # we allow to disable the extra logging
@@ -77,8 +77,7 @@ def bug_report(dtype, value, trace):
 # reach the end of __main__ and was not intercepted
 def intercepter(dtype, value, trace):
     bug_report(dtype, value, trace)
-    # debug returns either '' or 'developer' if debuging is enabled
-    if debug('developer'):
+    if debug.enabled('developer'):
         import pdb
         pdb.pm()
 
