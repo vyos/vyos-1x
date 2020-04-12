@@ -21,10 +21,9 @@ from ipaddress import ip_network
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
 from vyos.util import call
-from vyos.util import render
-
+from vyos.template import render
+from vyos import ConfigError
 
 config_file = r'/etc/ntp.conf'
 
