@@ -35,7 +35,10 @@ def debug(flag):
     # this is to force all new flags to be registered here to be documented:
     if flag not in ['developer', 'ifconfig']:
         return ''
-    return flag if os.path.isfile(f'/tmp/vyos.{flag}.debug') else ''
+    for folder in ('/tmp', '/config'):
+        if os.path.isfile(f'{folder}/vyos.{flag}.debug'):
+            return flag
+    return ''
 
 
 def debug_msg(message, flag=''):
@@ -45,6 +48,20 @@ def debug_msg(message, flag=''):
 
     if debug(flag):
         print(f'DEBUG/{flag:<6} {message}')
+
+    if not debug('developer'):
+        return
+
+    logfile = '/tmp/full-log'
+    existed = os.path.exists(logfile)
+
+    with open(logfile, 'a') as f:
+        f.write(f'DEBUG/{flag:<6} {message}\n')
+        if not existed:
+            # at boot the file is created as root:vyattacfg
+            # at runtime the file is created as user:vyattacfg
+            # do not use run/cmd to not have a recursive call to this code
+            os.system(f'chmod g+w {logfile}')
 
 
 # There is many (too many) ways to run command with python
