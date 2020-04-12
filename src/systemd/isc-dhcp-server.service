@@ -4,7 +4,7 @@ Documentation=man:dhcpd(8)
 After=vyos-router.service
 RequiresMountsFor=/run
 After=time-sync.target
-ConditionPathExists=/etc/dhcp/dhcpd.conf
+ConditionPathExists=/run/dhcp-server/dhcpd.conf
 
 [Service]
 

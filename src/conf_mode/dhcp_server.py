@@ -607,11 +607,11 @@ def generate(dhcp):
 def apply(dhcp):
     if not dhcp or dhcp['disabled']:
         # DHCP server is removed in the commit
-        call('sudo systemctl stop isc-dhcp-server.service')
+        call('systemctl stop isc-dhcp-server.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
 
-        call('sudo systemctl restart isc-dhcp-server.service')
+        call('systemctl restart isc-dhcp-server.service')
     return None
 
 if __name__ == '__main__':
