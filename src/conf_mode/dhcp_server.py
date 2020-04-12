@@ -594,6 +594,7 @@ def generate(dhcp):
     if not dhcp or dhcp['disabled']:
         return None
 
+    # Create configuration directory on demand
     dirname = os.path.dirname(config_file)
     if not os.path.isdir(dirname):
         os.mkdir(dirname)
