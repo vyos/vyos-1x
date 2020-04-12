@@ -143,7 +143,7 @@ class GREIf(_Tunnel):
 
     options = ['local', 'remote', 'ttl', 'tos', 'key']
     updates = ['local', 'remote', 'ttl', 'tos',
-               'multicast', 'allmulticast']
+               'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
     change = 'ip tunnel cha {ifname}'
@@ -167,7 +167,7 @@ class GRETapIf(_Tunnel):
     required = ['local', ]
 
     options = ['local', 'remote', ]
-    updates = []
+    updates = ['mtu', ]
 
     create = 'ip link add {ifname} type {type}'
     change = ''
@@ -193,7 +193,7 @@ class IP6GREIf(_Tunnel):
                'hoplimit', 'tclass', 'flowlabel']
     updates = ['local', 'remote', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel',
-               'multicast', 'allmulticast']
+               'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
     change = 'ip tunnel cha {ifname} mode {type}'
@@ -227,7 +227,7 @@ class IPIPIf(_Tunnel):
 
     options = ['local', 'remote', 'ttl', 'tos', 'key']
     updates = ['local', 'remote', 'ttl', 'tos',
-               'multicast', 'allmulticast']
+               'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
     change = 'ip tunnel cha {ifname}'
@@ -252,7 +252,7 @@ class IPIP6If(_Tunnel):
                'hoplimit', 'tclass', 'flowlabel']
     updates = ['local', 'remote', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel',
-               'multicast', 'allmulticast']
+               'mtu', 'multicast', 'allmulticast']
 
     create = 'ip -6 tunnel add {ifname} mode {type}'
     change = 'ip -6 tunnel cha {ifname}'
@@ -288,7 +288,7 @@ class SitIf(_Tunnel):
 
     options = ['local', 'remote', 'ttl', 'tos', 'key']
     updates = ['local', 'remote', 'ttl', 'tos',
-               'multicast', 'allmulticast']
+               'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
     change = 'ip tunnel cha {ifname}'
@@ -309,7 +309,7 @@ class Sit6RDIf(SitIf):
     # TODO: check if key can really be used with 6RD
     options = ['remote', 'ttl', 'tos', 'key', '6rd-prefix', '6rd-relay-prefix']
     updates = ['remote', 'ttl', 'tos',
-               'multicast', 'allmulticast']
+               'mtu', 'multicast', 'allmulticast']
 
     def _create(self):
         # do not call _Tunnel.create, building fully here
