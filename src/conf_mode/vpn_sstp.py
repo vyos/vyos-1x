@@ -319,7 +319,7 @@ def generate(sstp):
         tmpl = env.get_template('chap-secrets.tmpl')
         config_text = tmpl.render(sstp)
         with open(sstp_chap_secrets, 'w') as f:
-            f.write(sstp_chap_secrets)
+            f.write(config_text)
 
         os.chmod(sstp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
