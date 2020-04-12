@@ -27,14 +27,9 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
-
-config_file = r'/etc/dhcp/dhcpd.conf'
-lease_file = r'/config/dhcpd.leases'
-pid_file = r'/var/run/dhcpd.pid'
-daemon_config_file = r'/etc/default/isc-dhcpv4-server'
+config_file = r'/run/dhcp-server/dhcpd.conf'
 
 default_config_data = {
-    'lease_file': lease_file,
     'disabled': False,
     'ddns_enable': False,
     'global_parameters': [],
@@ -596,7 +591,7 @@ def verify(dhcp):
     return None
 
 def generate(dhcp):
-    if dhcp is None:
+    if not dhcp:
         return None
 
     if dhcp['disabled'] is True:
@@ -607,24 +602,16 @@ def generate(dhcp):
     # we can pass to ISC DHCPd
     render(config_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
            formater=lambda _: _.replace("&quot;", '"'))
-    render(daemon_config_file, 'dhcp-server/daemon.tmpl', dhcp)
     return None
 
 def apply(dhcp):
-    if (dhcp is None) or dhcp['disabled']:
+    if not dhcp or dhcp['disabled']:
         # DHCP server is removed in the commit
-        call('sudo systemctl stop isc-dhcpv4-server.service')
+        call('sudo systemctl stop isc-dhcp-server.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
-        if os.path.exists(daemon_config_file):
-            os.unlink(daemon_config_file)
-    else:
-        # If our file holding DHCP leases does yet not exist - create it
-        if not os.path.exists(lease_file):
-            os.mknod(lease_file)
 
-        call('sudo systemctl restart isc-dhcpv4-server.service')
-
+        call('sudo systemctl restart isc-dhcp-server.service')
     return None
 
 if __name__ == '__main__':
