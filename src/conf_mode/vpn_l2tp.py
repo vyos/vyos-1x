@@ -31,8 +31,8 @@ from vyos.util import call
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 
-l2tp_conf = '/etc/accel-ppp/l2tp.conf'
-l2tp_chap_secrets = '/etc/accel-ppp/l2tp.chap-secrets'
+l2tp_conf = '/run/accel-pppd/l2tp.conf'
+l2tp_chap_secrets = '/run/accel-pppd/l2tp.chap-secrets'
 
 default_config_data = {
     'auth_mode': 'local',
@@ -375,7 +375,7 @@ def generate(l2tp):
 
 def apply(l2tp):
     if not l2tp:
-        call('systemctl stop accel-ppp-l2tp.service')
+        call('systemctl stop accel-ppp@l2tp.service')
 
         if os.path.exists(l2tp_conf):
              os.unlink(l2tp_conf)
@@ -385,7 +385,7 @@ def apply(l2tp):
 
         return None
 
-    call('systemctl restart accel-ppp-l2tp.service')
+    call('systemctl restart accel-ppp@l2tp.service')
 
 if __name__ == '__main__':
     try:
