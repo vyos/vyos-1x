@@ -21,19 +21,14 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
+from vyos.template import render
+from vyos.util import call
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
-from vyos.util import call
-from vyos.template import render
 
-
-config_file = r'/etc/dhcp/dhcpdv6.conf'
-lease_file = r'/config/dhcpdv6.leases'
-pid_file = r'/var/run/dhcpdv6.pid'
-daemon_config_file = r'/etc/default/isc-dhcpv6-server'
+config_file = r'/run/dhcp-server/dhcpdv6.conf'
 
 default_config_data = {
-    'lease_file': lease_file,
     'preference': '',
     'disabled': False,
     'shared_network': []
@@ -221,10 +216,7 @@ def get_config():
     return dhcpv6
 
 def verify(dhcpv6):
-    if dhcpv6 is None:
-        return None
-
-    if dhcpv6['disabled']:
+    if not dhcpv6 or dhcpv6['disabled']:
         return None
 
     # If DHCP is enabled we need one share-network
@@ -336,31 +328,25 @@ def verify(dhcpv6):
     return None
 
 def generate(dhcpv6):
-    if dhcpv6 is None:
+    if not dhcpv6 or dhcpv6['disabled']:
         return None
 
-    if dhcpv6['disabled']:
-        print('Warning: DHCPv6 server will be deactivated because it is disabled')
-        return None
+    # Create configuration directory on demand
+    dirname = os.path.dirname(config_file)
+    if not os.path.isdir(dirname):
+        os.mkdir(dirname)
 
     render(config_file, 'dhcpv6-server/dhcpdv6.conf.tmpl', dhcpv6)
-    render(daemon_config_file, 'dhcpv6-server/daemon.tmpl', dhcpv6)
     return None
 
 def apply(dhcpv6):
-    if (dhcpv6 is None) or dhcpv6['disabled']:
+    if not dhcpv6 or dhcpv6['disabled']:
         # DHCP server is removed in the commit
-        call('sudo systemctl stop isc-dhcpv6-server.service')
+        call('systemctl stop isc-dhcp-server6.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
-        if os.path.exists(daemon_config_file):
-            os.unlink(daemon_config_file)
-    else:
-        # If our file holding DHCPv6 leases does yet not exist - create it
-        if not os.path.exists(lease_file):
-            os.mknod(lease_file)
 
-        call('sudo systemctl restart isc-dhcpv6-server.service')
+        call('systemctl restart isc-dhcp-server6.service')
 
     return None
 
