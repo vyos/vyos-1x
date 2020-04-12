@@ -7,8 +7,7 @@ After=time-sync.target
 ConditionPathExists=/run/dhcp-server/dhcpd.conf
 
 [Service]
-
-RuntimeDirectory=dhcp-server
+WorkingDirectory=/run/dhcp-server
 # The leases files need to be root:vyattacfg even when dropping privileges
 ExecStart=/bin/sh -ec '\
     CONFIG_FILE=/run/dhcp-server/dhcpd.conf; \

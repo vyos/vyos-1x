@@ -24,8 +24,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
-from vyos.util import call
 from vyos.template import render
+from vyos.util import call, chown
 
 config_file = r'/run/dhcp-server/dhcpd.conf'
 
@@ -445,7 +445,7 @@ def get_config():
     return dhcp
 
 def verify(dhcp):
-    if (dhcp is None) or (dhcp['disabled'] is True):
+    if not dhcp or dhcp['disabled']:
         return None
 
     # If DHCP is enabled we need one share-network
@@ -591,12 +591,12 @@ def verify(dhcp):
     return None
 
 def generate(dhcp):
-    if not dhcp:
+    if not dhcp or dhcp['disabled']:
         return None
 
-    if dhcp['disabled'] is True:
-        print('Warning: DHCP server will be deactivated because it is disabled')
-        return None
+    dirname = os.path.dirname(config_file)
+    if not os.path.isdir(dirname):
+        os.mkdir(dirname)
 
     # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw parameters
     # we can pass to ISC DHCPd
@@ -610,8 +610,9 @@ def apply(dhcp):
         call('systemctl stop isc-dhcp-server.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
+        return None
 
-        call('systemctl restart isc-dhcp-server.service')
+    call('systemctl restart isc-dhcp-server.service')
     return None
 
 if __name__ == '__main__':
