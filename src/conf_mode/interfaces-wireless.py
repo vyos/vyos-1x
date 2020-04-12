@@ -29,11 +29,8 @@ from vyos.configdict import list_diff, vlan_to_dict
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import process_running, chmod_755, chown, run, is_bridge_member
+from vyos.util import chown, is_bridge_member, call
 from vyos import ConfigError
-
-user = 'root'
-group = 'vyattacfg'
 
 default_config_data = {
     'address': [],
@@ -115,42 +112,15 @@ default_config_data = {
 }
 
 def get_conf_file(conf_type, intf):
-    cfg_dir = '/var/run/' + conf_type
+    cfg_dir = '/run/' + conf_type
 
     # create directory on demand
     if not os.path.exists(cfg_dir):
-        os.mkdir(cfg_dir)
-        chmod_755(cfg_dir)
-        chown(cfg_dir, user, group)
+        os.makedirs(cfg_dir, 0o755)
+        chown(cfg_dir, 'root', 'vyattacfg')
 
-    cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
+    cfg_file = cfg_dir + r'/{}.conf'.format(intf)
     return cfg_file
-
-def get_pid(conf_type, intf):
-    cfg_dir = '/var/run/' + conf_type
-
-    # create directory on demand
-    if not os.path.exists(cfg_dir):
-        os.mkdir(cfg_dir)
-        chmod_755(cfg_dir)
-        chown(cfg_dir, user, group)
-
-    cfg_file = cfg_dir + r'/{}.pid'.format(intf)
-    return cfg_file
-
-
-def get_wpa_suppl_config_name(intf):
-    cfg_dir = '/var/run/wpa_supplicant'
-
-    # create directory on demand
-    if not os.path.exists(cfg_dir):
-        os.mkdir(cfg_dir)
-        chmod_755(cfg_dir)
-        chown(cfg_dir, user, group)
-
-    cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
-    return cfg_file
-
 
 def get_config():
     wifi = deepcopy(default_config_data)
@@ -635,33 +605,20 @@ def generate(wifi):
     fs_loader = FileSystemLoader(tmpl_path)
     env = Environment(loader=fs_loader)
 
-    # always stop hostapd service first before reconfiguring it
-    pidfile = get_pid('hostapd', wifi['intf'])
-    if process_running(pidfile):
-        command = 'start-stop-daemon'
-        command += ' --stop '
-        command += ' --quiet'
-        command += ' --oknodo'
-        command += ' --pidfile ' + pidfile
-        run(command)
+    interface = wifi['intf']
 
+    # always stop hostapd service first before reconfiguring it
+    call(f'systemctl stop hostapd@{interface}.service')
     # always stop wpa_supplicant service first before reconfiguring it
-    pidfile = get_pid('wpa_supplicant', wifi['intf'])
-    if process_running(pidfile):
-        command = 'start-stop-daemon'
-        command += ' --stop '
-        command += ' --quiet'
-        command += ' --oknodo'
-        command += ' --pidfile ' + pidfile
-        run(command)
+    call(f'systemctl stop wpa_supplicant@{interface}.service')
 
     # Delete config files if interface is removed
     if wifi['deleted']:
-        if os.path.isfile(get_conf_file('hostapd', wifi['intf'])):
-            os.unlink(get_conf_file('hostapd', wifi['intf']))
+        if os.path.isfile(get_conf_file('hostapd', )):
+            os.unlink(get_conf_file('hostapd', interface))
 
-        if os.path.isfile(get_conf_file('wpa_supplicant', wifi['intf'])):
-            os.unlink(get_conf_file('wpa_supplicant', wifi['intf']))
+        if os.path.isfile(get_conf_file('wpa_supplicant', interface)):
+            os.unlink(get_conf_file('wpa_supplicant', interface))
 
         return None
 
@@ -679,7 +636,7 @@ def generate(wifi):
             tmp |= 0x020000000000
             # we now need to add an offset to our MAC address indicating this
             # subinterfaces index
-            tmp += int(findall(r'\d+', wifi['intf'])[0])
+            tmp += int(findall(r'\d+', interface)[0])
 
             # convert integer to "real" MAC address representation
             mac = EUI(hex(tmp).split('x')[-1])
@@ -691,20 +648,21 @@ def generate(wifi):
     if wifi['op_mode'] == 'ap':
         tmpl = env.get_template('hostapd.conf.tmpl')
         config_text = tmpl.render(wifi)
-        with open(get_conf_file('hostapd', wifi['intf']), 'w') as f:
+        with open(get_conf_file('hostapd', interface), 'w') as f:
             f.write(config_text)
 
     elif wifi['op_mode'] == 'station':
         tmpl = env.get_template('wpa_supplicant.conf.tmpl')
         config_text = tmpl.render(wifi)
-        with open(get_conf_file('wpa_supplicant', wifi['intf']), 'w') as f:
+        with open(get_conf_file('wpa_supplicant', interface), 'w') as f:
             f.write(config_text)
 
     return None
 
 def apply(wifi):
+    interface = wifi['intf']
     if wifi['deleted']:
-        w = WiFiIf(wifi['intf'])
+        w = WiFiIf(interface)
         # delete interface
         w.remove()
     else:
@@ -717,7 +675,7 @@ def apply(wifi):
         conf['phy'] = wifi['phy']
 
         # Finally create the new interface
-        w = WiFiIf(wifi['intf'], **conf)
+        w = WiFiIf(interface, **conf)
 
         # assign/remove VRF
         w.set_vrf(wifi['vrf'])
@@ -802,38 +760,10 @@ def apply(wifi):
             # Physical interface is now configured. Proceed by starting hostapd or
             # wpa_supplicant daemon. When type is monitor we can just skip this.
             if wifi['op_mode'] == 'ap':
-                command = 'start-stop-daemon'
-                command += ' --start '
-                command += ' --quiet'
-                command += ' --oknodo'
-                command += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
-                command += ' --exec /usr/sbin/hostapd'
-                # now pass arguments to hostapd binary
-                command += ' -- '
-                command += ' -B'
-                command += ' -P ' + get_pid('hostapd', wifi['intf'])
-                command += ' ' + get_conf_file('hostapd', wifi['intf'])
-
-                # execute assembled command
-                run(command)
+                call(f'systemctl start hostapd@{interface}.service')
 
             elif wifi['op_mode'] == 'station':
-                command = 'start-stop-daemon'
-                command += ' --start '
-                command += ' --quiet'
-                command += ' --oknodo'
-                command += ' --pidfile ' + get_pid('hostapd', wifi['intf'])
-                command += ' --exec /sbin/wpa_supplicant'
-                # now pass arguments to hostapd binary
-                command += ' -- '
-                command += ' -s -B -D nl80211'
-                command += ' -P ' + get_pid('wpa_supplicant', wifi['intf'])
-                command += ' -i ' + wifi['intf']
-                command += ' -c ' + \
-                    get_conf_file('wpa_supplicant', wifi['intf'])
-
-                # execute assembled command
-                run(command)
+                call(f'systemctl start wpa_supplicant@{interface}.service')
 
     return None
 
