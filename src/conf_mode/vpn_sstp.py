@@ -27,8 +27,8 @@ from vyos import ConfigError
 from vyos.defaults import directories as vyos_data_dir
 from vyos.util import call, run
 
-sstp_conf = '/etc/accel-ppp/sstp.conf'
-sstp_chap_secrets = '/etc/accel-ppp/sstp.chap-secrets'
+sstp_conf = '/run/accel-pppd/sstp.conf'
+sstp_chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
 
 default_config_data = {
     'local_users' : [],
@@ -188,6 +188,8 @@ def get_config():
     # authentication protocols
     conf.set_level(base_path + ['authentication'])
     if conf.exists(['protocols']):
+        # clear default list content, now populate with actual CLI values
+        sstp['auth_proto'] = []
         auth_mods = {
             'pap': 'auth_pap',
             'chap': 'auth_chap_md5',
@@ -297,8 +299,11 @@ def verify(sstp):
                 raise ConfigError(f"Missing RADIUS secret for server {{ radius['key'] }}")
 
 def generate(sstp):
-    if sstp is None:
+    if not sstp:
         return None
+
+    import pprint
+    pprint.pprint(sstp)
 
     # Prepare Jinja2 template loader from files
     tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'sstp')
@@ -330,7 +335,7 @@ def generate(sstp):
 
 def apply(sstp):
     if not sstp:
-        call('systemctl stop accel-ppp-sstp.service')
+        call('systemctl stop accel-ppp@sstp.service')
 
         if os.path.exists(sstp_conf):
              os.unlink(sstp_conf)
@@ -340,7 +345,7 @@ def apply(sstp):
 
         return None
 
-    call('systemctl restart accel-ppp-sstp.service')
+    call('systemctl restart accel-ppp@sstp.service')
 
 
 if __name__ == '__main__':

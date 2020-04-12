@@ -1,0 +1,16 @@
+[Unit]
+Description=Accel-PPP - High performance VPN server application for Linux
+RequiresMountsFor=/run
+ConditionPathExists=/run/accel-pppd/%i.conf
+After=vyos-router.service
+
+[Service]
+WorkingDirectory=/run/accel-pppd
+ExecStart=/usr/sbin/accel-pppd -d -p /run/accel-pppd/%i.pid -c /run/accel-pppd/%i.conf
+ExecReload=/bin/kill -SIGUSR1 $MAINPID
+PIDFile=/run/accel-pppd/%i.pid
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
