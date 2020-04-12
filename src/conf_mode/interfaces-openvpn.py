@@ -20,7 +20,6 @@ import re
 from jinja2 import FileSystemLoader, Environment
 from copy import deepcopy
 from sys import exit
-from stat import S_IRUSR
 from ipaddress import ip_address,ip_network,IPv4Interface
 from netifaces import interfaces
 from time import sleep
@@ -29,7 +28,7 @@ from shutil import rmtree
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
-from vyos.util import call, is_bridge_member, chown, chmod_755
+from vyos.util import call, is_bridge_member, chown, chmod_600, chmod_755
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
@@ -106,15 +105,6 @@ def openvpn_mkdir(directory):
     # fix permissions - corresponds to mode 755
     chmod_755(directory)
     chown(directory, user, group)
-
-def fixup_permission(filename, permission=S_IRUSR):
-    """
-    Check if the given file exists and change ownershit to root/vyattacfg
-    and appripriate file access permissions - default is user and group readable
-    """
-    if os.path.isfile(filename):
-        os.chmod(filename, permission)
-        chown(filename, 'root', 'vyattacfg')
 
 def checkCertHeader(header, filename):
     """
@@ -693,16 +683,17 @@ def generate(openvpn):
     openvpn_mkdir(directory + '/ccd/' + interface)
 
     # Fix file permissons for keys
-    fixup_permission(openvpn['shared_secret_file'])
-    fixup_permission(openvpn['tls_key'])
+    fix_permissions = []
+    fix_permissions.append(openvpn['shared_secret_file'])
+    fix_permissions.append(openvpn['tls_key'])
 
     # Generate User/Password authentication file
     if openvpn['auth']:
         auth_file = '/tmp/openvpn-{}-pw'.format(interface)
         with open(auth_file, 'w') as f:
             f.write('{}\n{}'.format(openvpn['auth_user'], openvpn['auth_pass']))
-
-        fixup_permission(auth_file)
+        # also change permission on auth file
+        fix_permissions.append(auth_file)
 
     else:
         # delete old auth file if present
@@ -726,6 +717,10 @@ def generate(openvpn):
     with open(get_config_name(interface), 'w') as f:
         f.write(config_text)
     chown(get_config_name(interface), user, group)
+
+    # Fixup file permissions
+    for file in fix_permissions:
+        chmod_600(file)
 
     return None
 

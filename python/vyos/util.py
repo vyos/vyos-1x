@@ -196,6 +196,16 @@ def chown(path, user, group):
         gid = getgrnam(group).gr_gid
         os.chown(path, uid, gid)
 
+
+def chmod_600(path):
+    """ make file only read/writable by owner """
+    from stat import S_IRUSR, S_IWUSR
+
+    if os.path.exists(path):
+        bitmask = S_IRUSR | S_IWUSR
+        os.chmod(path, bitmask)
+
+
 def chmod_750(path):
     """ make file/directory only executable to user and group """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP
