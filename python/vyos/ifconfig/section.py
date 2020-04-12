@@ -66,12 +66,6 @@ class Section:
         """
         name = cls._basename(name, vlan)
 
-        # XXX: To leave as long as vti and input are not moved to vyos
-        if name == 'vti':
-            return 'vti'
-        if name == 'ifb':
-            return 'input'
-
         if name in cls._prefixes:
             return cls._prefixes[name].definition['section']
         return ''
@@ -91,11 +85,6 @@ class Section:
         interfaces = netifaces.interfaces()
 
         for ifname in interfaces:
-            # XXX: Temporary hack as vti and input are not yet moved from vyatta to vyos
-            if ifname.startswith('vti') or ifname.startswith('input'):
-                yield ifname
-                continue
-
             ifsection = cls.section(ifname)
             if not ifsection:
                 continue
@@ -132,3 +121,11 @@ class Section:
         bondable, broadcast, bridgeable, ...
         """
         return list(cls._intf_with_feature(feature))
+
+    @classmethod
+    def reserved(cls):
+        """
+        return list with the interface name prefixes
+        eth, lo, vxlan, dum, ...
+        """
+        return list(cls._prefixes.keys())
