@@ -1,6 +1,6 @@
 [Unit]
 Description=TFTP server
-After=network.target
+After=vyos-router.service
 RequiresMountsFor=/run
 
 [Service]
