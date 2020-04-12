@@ -18,13 +18,12 @@ import os
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 
 from netifaces import interfaces
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = r'/etc/igmpproxy.conf'
@@ -116,16 +115,7 @@ def generate(igmp_proxy):
         print('Warning: IGMP Proxy will be deactivated because it is disabled')
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'igmp-proxy')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('igmpproxy.conf.tmpl')
-    config_text = tmpl.render(igmp_proxy)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'igmp-proxy/igmpproxy.conf.tmpl', igmp_proxy)
     return None
 
 def apply(igmp_proxy):

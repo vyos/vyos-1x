@@ -18,13 +18,13 @@ import re
 import os
 
 from time import sleep
-from jinja2 import FileSystemLoader, Environment
 from sys import exit
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
+
 
 ra_conn_name = "remote-access"
 charon_conf_file = "/etc/strongswan.d/charon.conf"
@@ -147,43 +147,26 @@ def verify(data):
            raise ConfigError("L2TP VPN configuration error: \"vpn ipsec ipsec-interfaces\" must be specified.")
 
 def generate(data):
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'ipsec')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
-    tmpl = env.get_template('charon.tmpl')
-    config_text = tmpl.render(data)
-    with open(charon_conf_file, 'w') as f:
-        f.write(config_text)
+    render(charon_conf_file, 'ipsec/charon.tmpl', data, trim_blocks=True)
 
     if data["ipsec_l2tp"]:
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
 
-        tmpl = env.get_template('ipsec.secrets.tmpl')
-        l2pt_ipsec_secrets_txt = tmpl.render(c)
         old_umask = os.umask(0o077)
-        with open(ipsec_secrets_flie,'w') as f:
-            f.write(l2pt_ipsec_secrets_txt)
+        render(ipsec_secrets_flie, 'ipsec/ipsec.secrets.tmpl', c, trim_blocks=True)
         os.umask(old_umask)
 
-        tmpl = env.get_template('remote-access.tmpl')
-        ipsec_ra_conn_txt = tmpl.render(c)
         old_umask = os.umask(0o077)
 
         # Create tunnels directory if does not exist
         if not os.path.exists(ipsec_ra_conn_dir):
             os.makedirs(ipsec_ra_conn_dir)
 
-        with open(ipsec_ra_conn_file,'w') as f:
-            f.write(ipsec_ra_conn_txt)
+        render(ipsec_ra_conn_file, 'ipsec/remote-access.tmpl', c, trim_blocks=True)
         os.umask(old_umask)
 
-
-        tmpl = env.get_template('ipsec.conf.tmpl')
-        l2pt_ipsec_conf_txt = tmpl.render(c)
         old_umask = os.umask(0o077)
-        with open(ipsec_conf_flie,'a') as f:
-            f.write(l2pt_ipsec_conf_txt)
+        render(ipsec_conf_flie, 'ipsec/ipsec.conf.tmpl', c, trim_blocks=True)
         os.umask(old_umask)
 
     else:

@@ -17,15 +17,15 @@
 import os
 import re
 
-from jinja2 import FileSystemLoader, Environment
 from socket import socket, AF_INET, SOCK_STREAM
 from sys import exit
 from time import sleep
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import run
+from vyos.template import render
+
 
 pidfile = r'/var/run/accel_pppoe.pid'
 pppoe_cnf_dir = r'/etc/accel-ppp/pppoe'
@@ -376,11 +376,6 @@ def generate(c):
     if c == None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'pppoe-server')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
     # accel-cmd reload doesn't work so any change results in a restart of the
     # daemon
     try:
@@ -394,17 +389,11 @@ def generate(c):
         else:
             c['thread_cnt'] = int(os.cpu_count() / 2)
 
-    tmpl = env.get_template('pppoe.config.tmpl')
-    config_text = tmpl.render(c)
-    with open(pppoe_conf, 'w') as f:
-        f.write(config_text)
+    render(pppoe_conf, 'pppoe-server/pppoe.config.tmpl', c, trim_blocks=True)
 
     if c['authentication']['local-users']:
-        tmpl = env.get_template('chap-secrets.tmpl')
-        chap_secrets_txt = tmpl.render(c)
         old_umask = os.umask(0o077)
-        with open(chap_secrets, 'w') as f:
-            f.write(chap_secrets_txt)
+        render(chap_secrets, 'pppoe-server/chap-secrets.tmpl', c, trim_blocks=True)
         os.umask(old_umask)
 
     return c

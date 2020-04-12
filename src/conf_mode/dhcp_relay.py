@@ -16,13 +16,12 @@
 
 import os
 
-from jinja2 import FileSystemLoader, Environment
 from sys import exit
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 config_file = r'/etc/default/isc-dhcp-relay'
 
@@ -99,16 +98,7 @@ def generate(relay):
     if relay is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'dhcp-relay')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('config.tmpl')
-    config_text = tmpl.render(relay)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'dhcp-relay/config.tmpl', relay)
     return None
 
 def apply(relay):

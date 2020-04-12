@@ -18,14 +18,14 @@ import os
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import Interface
 from vyos.util import chown, chmod_755, cmd
 from vyos import ConfigError
+from vyos.template import render
+
 
 default_config_data = {
     'access_concentrator': '',
@@ -161,11 +161,6 @@ def verify(pppoe):
     return None
 
 def generate(pppoe):
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir["data"], "templates", "pppoe")
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
     # set up configuration file path variables where our templates will be
     # rendered into
     intf = pppoe['intf']
@@ -195,34 +190,20 @@ def generate(pppoe):
 
     else:
         # Create PPP configuration files
-        tmpl = env.get_template('peer.tmpl')
-        config_text = tmpl.render(pppoe)
-        with open(config_pppoe, 'w') as f:
-            f.write(config_text)
-
+        render(config_pppoe, 'pppoe/peer.tmpl',
+               pppoe, trim_blocks=True)
         # Create script for ip-pre-up.d
-        tmpl = env.get_template('ip-pre-up.script.tmpl')
-        config_text = tmpl.render(pppoe)
-        with open(script_pppoe_pre_up, 'w') as f:
-            f.write(config_text)
-
+        render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl',
+               pppoe, trim_blocks=True)
         # Create script for ip-up.d
-        tmpl = env.get_template('ip-up.script.tmpl')
-        config_text = tmpl.render(pppoe)
-        with open(script_pppoe_ip_up, 'w') as f:
-            f.write(config_text)
-
+        render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl',
+               pppoe, trim_blocks=True)
         # Create script for ip-down.d
-        tmpl = env.get_template('ip-down.script.tmpl')
-        config_text = tmpl.render(pppoe)
-        with open(script_pppoe_ip_down, 'w') as f:
-            f.write(config_text)
-
+        render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl',
+               pppoe, trim_blocks=True)
         # Create script for ipv6-up.d
-        tmpl = env.get_template('ipv6-up.script.tmpl')
-        config_text = tmpl.render(pppoe)
-        with open(script_pppoe_ipv6_up, 'w') as f:
-            f.write(config_text)
+        render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
+               pppoe, trim_blocks=True)
 
         # make generated script file executable
         chmod_755(script_pppoe_pre_up)

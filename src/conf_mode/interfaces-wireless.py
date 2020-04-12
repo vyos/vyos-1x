@@ -19,18 +19,18 @@ from sys import exit
 from re import findall
 
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 
 from netifaces import interfaces
 from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
-from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.util import chown, is_bridge_member, call
 from vyos import ConfigError
+from vyos.template import render
+
 
 default_config_data = {
     'address': [],
@@ -600,11 +600,6 @@ def verify(wifi):
     return None
 
 def generate(wifi):
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir["data"], "templates", "wifi")
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     interface = wifi['intf']
 
     # always stop hostapd service first before reconfiguring it
@@ -646,16 +641,12 @@ def generate(wifi):
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['op_mode'] == 'ap':
-        tmpl = env.get_template('hostapd.conf.tmpl')
-        config_text = tmpl.render(wifi)
-        with open(get_conf_file('hostapd', interface), 'w') as f:
-            f.write(config_text)
+        conf = get_conf_file('hostapd', interface)
+        render(conf, 'wifi/hostapd.conf.tmpl', wifi)
 
     elif wifi['op_mode'] == 'station':
-        tmpl = env.get_template('wpa_supplicant.conf.tmpl')
-        config_text = tmpl.render(wifi)
-        with open(get_conf_file('wpa_supplicant', interface), 'w') as f:
-            f.write(config_text)
+        conf = get_conf_file('wpa_supplicant', interface)
+        render(conf, 'wifi/wpa_supplicant.conf.tmpl', wifi)
 
     return None
 

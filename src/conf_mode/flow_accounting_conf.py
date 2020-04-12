@@ -16,18 +16,18 @@
 
 import os
 import re
+from sys import exit
 import ipaddress
 
 from ipaddress import ip_address
 from jinja2 import FileSystemLoader, Environment
-from sys import exit
 
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import cmd
+from vyos.render import render
 
 
 # default values
@@ -335,16 +335,10 @@ def generate(config):
                 timeout_string = "{}:{}={}".format(timeout_string, timeout_type, timeout_value)
     config['netflow']['timeout_string'] = timeout_string
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'netflow')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    # Generate daemon configs
-    tmpl = env.get_template('uacctd.conf.tmpl')
-    config_text = tmpl.render(templatecfg = config, snaplen = default_captured_packet_size)
-    with open(uacctd_conf_path, 'w') as file:
-        file.write(config_text)
+    render(uacctd_conf_path, 'netflow/uacctd.conf.tmpl', {
+        'templatecfg': config,
+        'snaplen': default_captured_packet_size,
+    })
 
 
 def apply(config):

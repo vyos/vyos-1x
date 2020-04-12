@@ -20,14 +20,13 @@ from binascii import hexlify
 from time import sleep
 from stat import S_IRWXU, S_IXGRP, S_IXOTH, S_IROTH, S_IRGRP
 from sys import exit
-from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos.version import get_version_data
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file_client  = r'/etc/snmp/snmp.conf'
@@ -518,34 +517,14 @@ def generate(snmp):
     if snmp is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'snmp')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     # Write client config file
-    tmpl = env.get_template('etc.snmp.conf.tmpl')
-    config_text = tmpl.render(snmp)
-    with open(config_file_client, 'w') as f:
-        f.write(config_text)
-
+    render(config_file_client, 'snmp/etc.snmp.conf.tmpl', snmp)
     # Write server config file
-    tmpl = env.get_template('etc.snmpd.conf.tmpl')
-    config_text = tmpl.render(snmp)
-    with open(config_file_daemon, 'w') as f:
-        f.write(config_text)
-
+    render(config_file_daemon, 'snmp/etc.snmpd.conf.tmpl', snmp)
     # Write access rights config file
-    tmpl = env.get_template('usr.snmpd.conf.tmpl')
-    config_text = tmpl.render(snmp)
-    with open(config_file_access, 'w') as f:
-        f.write(config_text)
-
+    render(config_file_access, 'snmp/usr.snmpd.conf.tmpl', snmp)
     # Write access rights config file
-    tmpl = env.get_template('var.snmpd.conf.tmpl')
-    config_text = tmpl.render(snmp)
-    with open(config_file_user, 'w') as f:
-        f.write(config_text)
+    render(config_file_user, 'snmp/var.snmpd.conf.tmpl', snmp)
 
     return None
 

@@ -17,16 +17,15 @@
 import os
 
 from ipaddress import ip_address, ip_network
-from jinja2 import FileSystemLoader, Environment
 from socket import inet_ntoa
 from struct import pack
 from sys import exit
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = r'/etc/dhcp/dhcpd.conf'
@@ -604,25 +603,11 @@ def generate(dhcp):
         print('Warning: DHCP server will be deactivated because it is disabled')
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'dhcp-server')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('dhcpd.conf.tmpl')
-    config_text = tmpl.render(dhcp)
     # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw parameters
     # we can pass to ISC DHCPd
-    config_text = config_text.replace("&quot;",'"')
-
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
-    tmpl = env.get_template('daemon.tmpl')
-    config_text = tmpl.render(dhcp)
-    with open(daemon_config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
+           formater=lambda _: _.replace("&quot;", '"'))
+    render(daemon_config_file, 'dhcp-server/daemon.tmpl', dhcp)
     return None
 
 def apply(dhcp):

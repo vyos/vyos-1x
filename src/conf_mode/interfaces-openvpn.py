@@ -17,7 +17,6 @@
 import os
 import re
 
-from jinja2 import FileSystemLoader, Environment
 from copy import deepcopy
 from sys import exit
 from ipaddress import ip_address,ip_network,IPv4Interface
@@ -26,11 +25,12 @@ from time import sleep
 from shutil import rmtree
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
 from vyos.util import call, is_bridge_member, chown, chmod_600, chmod_755
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
+from vyos.template import render
+
 
 user = 'openvpn'
 group = 'openvpn'
@@ -653,11 +653,6 @@ def generate(openvpn):
     if openvpn['deleted'] or openvpn['disable']:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'openvpn')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     interface = openvpn['intf']
     directory = os.path.dirname(get_config_name(interface))
 
@@ -697,19 +692,13 @@ def generate(openvpn):
     # Generate client specific configuration
     for client in openvpn['client']:
         client_file = os.path.join(ccd_dir, client['name'])
-        tmpl = env.get_template('client.conf.tmpl')
-        client_text = tmpl.render(client)
-        with open(client_file, 'w') as f:
-            f.write(client_text)
+        render(client_file, 'openvpn/client.conf.tmpl', client)
         chown(client_file, user, group)
 
-    tmpl = env.get_template('server.conf.tmpl')
-    config_text = tmpl.render(openvpn)
     # we need to support quoting of raw parameters from OpenVPN CLI
     # see https://phabricator.vyos.net/T1632
-    config_text = config_text.replace("&quot;",'"')
-    with open(get_config_name(interface), 'w') as f:
-        f.write(config_text)
+    render(get_config_name(interface), 'openvpn/server.conf.tmpl', openvpn,
+           formater=lambda _: _.replace("&quot;", '"'))
     chown(get_config_name(interface), user, group)
 
     # Fixup file permissions

@@ -22,10 +22,17 @@ from vyos.defaults import directories
 
 
 # reuse the same Environment to improve performance
-_templates_env = Environment(loader=FileSystemLoader(directories['templates']))
-_templates_mem = {}
+_templates_env = {
+    False: Environment(loader=FileSystemLoader(directories['templates'])),
+    True:  Environment(loader=FileSystemLoader(directories['templates']), trim_blocks=True),
+}
+_templates_mem = {
+    False: {},
+    True: {},
+}
 
-def render(destination, template, content):
+
+def render(destination, template, content, trim_blocks=False, formater=None):
     """
     render a template from the template directory, it will raise on any errors
     destination: the file where the rendered template must be saved
@@ -41,14 +48,17 @@ def render(destination, template, content):
 
     # Setup a renderer for the given template
     # This is cached and re-used for performance
-    if template not in _templates_mem:
-        _templates_mem[template] = _templates_env.get_template(template)
-    template = _templates_mem[template]
+    if template not in _templates_mem[trim_blocks]:
+        _templates_mem[trim_blocks][template] = _templates_env[trim_blocks].get_template(template)
+    template = _templates_mem[trim_blocks][template]
 
     # As we are opening the file with 'w', we are performing the rendering
     # before calling open() to not accidentally erase the file if the 
     # templating fails
     content = template.render(content)
+
+    if formater:
+        content = formater(content)
 
     # Write client config file
     with open(destination, 'w') as f:

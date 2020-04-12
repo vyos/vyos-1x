@@ -17,13 +17,13 @@
 import os
 import re
 
-from jinja2 import FileSystemLoader, Environment
 from sys import exit
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos import ConfigError
 from vyos.util import run
+from vyos.template import render
+
 
 def get_config():
     c = Config()
@@ -192,22 +192,13 @@ def generate(c):
     if c == None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'syslog')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader, trim_blocks=True)
-
-    tmpl = env.get_template('rsyslog.conf.tmpl')
-    config_text = tmpl.render(c)
-    with open('/etc/rsyslog.d/vyos-rsyslog.conf', 'w') as f:
-        f.write(config_text)
+    conf = '/etc/rsyslog.d/vyos-rsyslog.conf'
+    render(conf, 'syslog/rsyslog.conf.tmpl', c, trim_blocks=True)
 
     # eventually write for each file its own logrotate file, since size is
     # defined it shouldn't matter
-    tmpl = env.get_template('logrotate.tmpl')
-    config_text = tmpl.render(c)
-    with open('/etc/logrotate.d/vyos-rsyslog', 'w') as f:
-        f.write(config_text)
+    conf = '/etc/logrotate.d/vyos-rsyslog'
+    render(conf, 'syslog/logrotate.tmpl', c, trim_blocks=True)
 
 
 def verify(c):

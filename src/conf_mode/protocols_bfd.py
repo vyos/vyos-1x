@@ -18,13 +18,12 @@ import os
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_ipv6_link_local, is_ipv6
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = r'/tmp/bfd.frr'
@@ -191,16 +190,7 @@ def generate(bfd):
     if bfd is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'frr-bfd')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('bfd.frr.tmpl')
-    config_text = tmpl.render(bfd)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'frr-bfd/bfd.frr.tmpl', bfd)
     return None
 
 def apply(bfd):

@@ -20,14 +20,13 @@ import pwd
 
 from copy import deepcopy
 from glob import glob
-from jinja2 import FileSystemLoader, Environment
 from sys import exit
 
 from vyos.config import Config
-from vyos.defaults import directories as vyos_data_dir
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = r'/etc/default/tftpd'
@@ -90,11 +89,6 @@ def generate(tftpd):
     if tftpd is None:
         return None
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'tftp-server')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     idx = 0
     for listen in tftpd['listen']:
         config = deepcopy(tftpd)
@@ -103,11 +97,8 @@ def generate(tftpd):
         else:
             config['listen'] = ["[" + listen + "]" + tftpd['port'] + " -6"]
 
-        tmpl = env.get_template('default.tmpl')
-        config_text = tmpl.render(config)
         file = config_file + str(idx)
-        with open(file, 'w') as f:
-            f.write(config_text)
+        render(file, 'tftp-server/default.tmpl', config)
 
         idx = idx + 1
 

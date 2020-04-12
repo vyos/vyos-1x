@@ -18,15 +18,14 @@ import os
 import re
 
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 from sys import exit
 
 from vyos.config import Config
 from vyos.validate import is_addr_assigned,is_loopback_addr
-from vyos.defaults import directories as vyos_data_dir
 from vyos.version import get_version_data
 from vyos import ConfigError
 from vyos.util import call
+from vyos.template import render
 
 
 config_file = "/etc/default/lldpd"
@@ -210,11 +209,6 @@ def generate(lldp):
     if lldp is None:
         return
 
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'lldp')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
     # generate listen on interfaces
     for intf in lldp['interface_list']:
         tmp = ''
@@ -226,16 +220,9 @@ def generate(lldp):
         lldp['options']['listen_on'].append(tmp)
 
     # generate /etc/default/lldpd
-    tmpl = env.get_template('lldpd.tmpl')
-    config_text = tmpl.render(lldp)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'lldp/lldpd.tmpl', lldp)
     # generate /etc/lldpd.d/01-vyos.conf
-    tmpl = env.get_template('vyos.conf.tmpl')
-    config_text = tmpl.render(lldp)
-    with open(vyos_config_file, 'w') as f:
-        f.write(config_text)
+    render(vyos_config_file, 'lldp/vyos.conf.tmpl', lldp)
 
 
 def apply(lldp):

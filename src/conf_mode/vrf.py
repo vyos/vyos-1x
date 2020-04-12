@@ -18,15 +18,15 @@ import os
 
 from sys import exit
 from copy import deepcopy
-from jinja2 import FileSystemLoader, Environment
 from json import loads
 
 from vyos.config import Config
 from vyos.configdict import list_diff
-from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import Interface
 from vyos.util import read_file, cmd
 from vyos import ConfigError
+from vyos.template import render
+
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 
@@ -178,16 +178,7 @@ def verify(vrf_config):
     return None
 
 def generate(vrf_config):
-    # Prepare Jinja2 template loader from files
-    tmpl_path = os.path.join(vyos_data_dir['data'], 'templates', 'vrf')
-    fs_loader = FileSystemLoader(tmpl_path)
-    env = Environment(loader=fs_loader)
-
-    tmpl = env.get_template('vrf.conf.tmpl')
-    config_text = tmpl.render(vrf_config)
-    with open(config_file, 'w') as f:
-        f.write(config_text)
-
+    render(config_file, 'vrf/vrf.conf.tmpl', vrf_config)
     return None
 
 def apply(vrf_config):
