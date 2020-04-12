@@ -584,11 +584,17 @@ def apply(conf):
         if changes['section'] in 'create' and option in tunnel.options:
             # it was setup at creation
             continue
+        if not options[option]:
+            # remote can be set to '' and it would generate an invalide command
+            continue
         tunnel.set_interface(option, options[option])
 
     # set other interface properties
     for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast',
                    'vrf', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
+        if not options[option]:
+            # should never happen but better safe
+            continue
         tunnel.set_interface(option, options[option])
 
     # Configure interface address(es)
