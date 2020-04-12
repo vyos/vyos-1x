@@ -58,10 +58,10 @@
           </leafNode>
           <leafNode name="hw-id">
             <properties>
-              <help>Media Access Control (MAC) address</help>
+              <help>Map to Media Access Control (MAC) address</help>
               <valueHelp>
                 <format>h:h:h:h:h:h</format>
-                <description>Hardware (MAC) address</description>
+                <description>Map this Interface to device with this Hardware (MAC) address (Requires Reboot)</description>
               </valueHelp>
               <constraint>
                 <validator name="mac-address"/>
