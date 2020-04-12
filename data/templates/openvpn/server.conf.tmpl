@@ -9,8 +9,6 @@
 {% endif -%}
 
 verb 3
-status /opt/vyatta/etc/openvpn/status/{{ intf }}.status 30
-writepid /run/openvpn/{{ intf }}.pid
 
 user {{ uid }}
 group {{ gid }}
