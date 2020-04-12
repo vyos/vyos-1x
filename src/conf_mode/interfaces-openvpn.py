@@ -661,9 +661,11 @@ def generate(openvpn):
     interface = openvpn['intf']
     directory = os.path.dirname(get_config_name(interface))
 
-    # we can't know which clients were deleted, remove all client configs
-    if os.path.isdir(os.path.join(directory, 'ccd', interface)):
-        rmtree(os.path.join(directory, 'ccd', interface), ignore_errors=True)
+    # we can't know in advance which clients have been,
+    # remove all client configs
+    ccd_dir = os.path.join(directory, 'ccd', interface)
+    if os.path.isdir(ccd_dir):
+        rmtree(ccd_dir, ignore_errors=True)
 
     # create config directory on demand
     directories = []
@@ -680,21 +682,21 @@ def generate(openvpn):
     fix_permissions.append(openvpn['tls_key'])
 
     # Generate User/Password authentication file
+    user_auth_file = f'/tmp/openvpn-{interface}-pw'
     if openvpn['auth']:
-        auth_file = '/tmp/openvpn-{}-pw'.format(interface)
-        with open(auth_file, 'w') as f:
+        with open(user_auth_file, 'w') as f:
             f.write('{}\n{}'.format(openvpn['auth_user'], openvpn['auth_pass']))
         # also change permission on auth file
-        fix_permissions.append(auth_file)
+        fix_permissions.append(user_auth_file)
 
     else:
         # delete old auth file if present
-        if os.path.isfile('/tmp/openvpn-{}-pw'.format(interface)):
-            os.remove('/tmp/openvpn-{}-pw'.format(interface))
+        if os.path.isfile(user_auth_file):
+            os.remove(user_auth_file)
 
     # Generate client specific configuration
     for client in openvpn['client']:
-        client_file = directory + '/ccd/' + interface + '/' + client['name']
+        client_file = os.path.join(ccd_dir, client['name'])
         tmpl = env.get_template('client.conf.tmpl')
         client_text = tmpl.render(client)
         with open(client_file, 'w') as f:
@@ -731,11 +733,6 @@ def apply(openvpn):
         ccd_dir = os.path.join(directory, 'ccd', interface)
         if os.path.isdir(ccd_dir):
             rmtree(ccd_dir, ignore_errors=True)
-
-        # cleanup auth file
-        user_auth_file = f'/tmp/openvpn-{interface}-pw'
-        if os.path.isfile(user_auth_file):
-            os.remove(user_auth_file)
 
         return None
 
