@@ -24,7 +24,7 @@ from subprocess import DEVNULL
 
 def debug(flag):
     """
-    Check is a debug flag was set by the user. 
+    Check is a debug flag was set by the user.
     a flag can be set by touching the file /tmp/vyos.flag.debug
     with flag being the flag name, the current flags are:
      - developer: the code will drop into PBD on un-handled exception
@@ -205,8 +205,8 @@ def chmod_750(path):
         os.chmod(path, bitmask)
 
 
-def chmod_x(path):
-    """ make file executable """
+def chmod_755(path):
+    """ make file executable by all """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 
     if os.path.exists(path):

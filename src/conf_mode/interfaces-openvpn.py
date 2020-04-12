@@ -29,7 +29,7 @@ from shutil import rmtree
 from vyos.config import Config
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import VTunIf
-from vyos.util import call, is_bridge_member, chown, chmod_x
+from vyos.util import call, is_bridge_member, chown, chmod_755
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
@@ -104,7 +104,7 @@ def openvpn_mkdir(directory):
         os.mkdir(directory)
 
     # fix permissions - corresponds to mode 755
-    chmod_x(directory)
+    chmod_755(directory)
     chown(directory, user, group)
 
 def fixup_permission(filename, permission=S_IRUSR):

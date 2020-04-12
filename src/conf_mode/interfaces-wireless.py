@@ -29,7 +29,7 @@ from vyos.configdict import list_diff, vlan_to_dict
 from vyos.defaults import directories as vyos_data_dir
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import process_running, chmod_x, chown, run, is_bridge_member
+from vyos.util import process_running, chmod_755, chown, run, is_bridge_member
 from vyos import ConfigError
 
 user = 'root'
@@ -120,7 +120,7 @@ def get_conf_file(conf_type, intf):
     # create directory on demand
     if not os.path.exists(cfg_dir):
         os.mkdir(cfg_dir)
-        chmod_x(cfg_dir)
+        chmod_755(cfg_dir)
         chown(cfg_dir, user, group)
 
     cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
@@ -132,7 +132,7 @@ def get_pid(conf_type, intf):
     # create directory on demand
     if not os.path.exists(cfg_dir):
         os.mkdir(cfg_dir)
-        chmod_x(cfg_dir)
+        chmod_755(cfg_dir)
         chown(cfg_dir, user, group)
 
     cfg_file = cfg_dir + r'/{}.pid'.format(intf)
@@ -145,7 +145,7 @@ def get_wpa_suppl_config_name(intf):
     # create directory on demand
     if not os.path.exists(cfg_dir):
         os.mkdir(cfg_dir)
-        chmod_x(cfg_dir)
+        chmod_755(cfg_dir)
         chown(cfg_dir, user, group)
 
     cfg_file = cfg_dir + r'/{}.cfg'.format(intf)
