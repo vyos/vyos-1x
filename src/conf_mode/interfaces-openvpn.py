@@ -97,14 +97,6 @@ def get_config_name(intf):
     cfg_file = f'/run/openvpn/{intf}.conf'
     return cfg_file
 
-def openvpn_mkdir(directory):
-    # create directory on demand
-    if not os.path.exists(directory):
-        os.mkdir(directory)
-
-    # fix permissions - corresponds to mode 755
-    chmod_755(directory)
-    chown(directory, user, group)
 
 def checkCertHeader(header, filename):
     """
@@ -674,13 +666,13 @@ def generate(openvpn):
         rmtree(os.path.join(directory, 'ccd', interface), ignore_errors=True)
 
     # create config directory on demand
-    openvpn_mkdir(directory)
-    # create status directory on demand
-    openvpn_mkdir(directory + '/status')
-    # create client config dir on demand
-    openvpn_mkdir(directory + '/ccd')
-    # crete client config dir per interface on demand
-    openvpn_mkdir(directory + '/ccd/' + interface)
+    directories = []
+    directories.append(f'{directory}/status')
+    directories.append(f'{directory}/ccd/{interface}')
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory, 0o755)
+        chown(directory, user, group)
 
     # Fix file permissons for keys
     fix_permissions = []
