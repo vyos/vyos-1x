@@ -1,0 +1,14 @@
+[Unit]
+Description=ISC DHCP IPv4 relay
+Documentation=man:dhcrelay(8)
+Wants=network-online.target
+ConditionPathExists=/run/dhcp-relay/dhcp.conf
+After=vyos-router.service
+
+[Service]
+WorkingDirectory=/run/dhcp-relay
+EnvironmentFile=/run/dhcp-relay/dhcp.conf
+ExecStart=/usr/sbin/dhcrelay -d -4 $OPTIONS
+
+[Install]
+WantedBy=multi-user.target

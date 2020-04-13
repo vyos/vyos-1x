@@ -19,11 +19,11 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
 from vyos.template import render
+from vyos.util import call
+from vyos import ConfigError
 
-config_file = r'/etc/default/isc-dhcp-relay'
+config_file = r'/run/dhcp-relay/dhcp.conf'
 
 default_config_data = {
     'interface': [],
@@ -95,19 +95,25 @@ def verify(relay):
 
 def generate(relay):
     # bail out early - looks like removal from running config
-    if relay is None:
+    if not relay:
         return None
+
+    # Create configuration directory on demand
+    dirname = os.path.dirname(config_file)
+    if not os.path.isdir(dirname):
+        os.mkdir(dirname)
 
     render(config_file, 'dhcp-relay/config.tmpl', relay)
     return None
 
 def apply(relay):
-    if relay is not None:
-        call('sudo systemctl restart isc-dhcp-relay.service')
+    if relay:
+        call('systemctl restart isc-dhcp-relay.service')
     else:
         # DHCP relay support is removed in the commit
-        call('sudo systemctl stop isc-dhcp-relay.service')
-        os.unlink(config_file)
+        call('systemctl stop isc-dhcp-relay.service')
+        if os.path.exists(config_file):
+            os.unlink(config_file)
 
     return None
 
