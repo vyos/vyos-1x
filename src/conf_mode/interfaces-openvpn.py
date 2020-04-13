@@ -666,10 +666,10 @@ def generate(openvpn):
     directories = []
     directories.append(f'{directory}/status')
     directories.append(f'{directory}/ccd/{interface}')
-    for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory, 0o755)
-        chown(directory, user, group)
+    for onedir in directories:
+        if not os.path.exists(onedir):
+            os.makedirs(onedir, 0o755)
+        chown(onedir, user, group)
 
     # Fix file permissons for keys
     fix_permissions = []
