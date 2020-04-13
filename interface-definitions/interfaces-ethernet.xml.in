@@ -56,18 +56,7 @@
               <constraintErrorMessage>duplex must be auto, half or full</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="hw-id">
-            <properties>
-              <help>Media Access Control (MAC) address</help>
-              <valueHelp>
-                <format>h:h:h:h:h:h</format>
-                <description>Hardware (MAC) address</description>
-              </valueHelp>
-              <constraint>
-                <validator name="mac-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/interface-hw-id.xml.i>
           <node name="ip">
             <children>
               #include <include/interface-arp-cache-timeout.xml.i>

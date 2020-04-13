@@ -476,18 +476,7 @@
               #include <include/ipv6-dup-addr-detect-transmits.xml.i>
             </children>
           </node>
-          <leafNode name="hw-id">
-            <properties>
-              <help>Media Access Control (MAC) address</help>
-              <valueHelp>
-                <format>h:h:h:h:h:h</format>
-                <description>Hardware (MAC) address</description>
-              </valueHelp>
-              <constraint>
-                <validator name="mac-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/interface-hw-id.xml.i>
           <leafNode name="isolate-stations">
             <properties>
               <help>Isolate stations on the AP so they cannot see each other</help>
