@@ -244,8 +244,8 @@ def verify(c):
 
 def apply(c):
     if not c:
-        return run('systemctl stop syslog')
-    return run('systemctl restart syslog')
+        return run('systemctl stop syslog.service')
+    return run('systemctl restart syslog.service')
 
 if __name__ == '__main__':
     try:
