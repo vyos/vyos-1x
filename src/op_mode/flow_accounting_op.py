@@ -70,7 +70,7 @@ def _is_host(host):
 
 # check if flow-accounting running
 def _uacctd_running():
-    command = '/usr/bin/sudo /bin/systemctl status uacctd > /dev/null'
+    command = 'systemctl status uacctd.service > /dev/null'
     return run(command) == 0
 
 # get list of interfaces
@@ -195,7 +195,7 @@ if not _uacctd_running():
 # restart pmacct daemon
 if cmd_args.action == 'restart':
     # run command to restart flow-accounting
-    cmd('/usr/bin/sudo /bin/systemctl restart uacctd',
+    cmd('systemctl restart uacctd.service',
         message='Failed to restart flow-accounting')
 
 # clear in-memory collected flows
