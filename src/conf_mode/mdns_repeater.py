@@ -25,7 +25,6 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
-
 config_file = r'/etc/default/mdns-repeater'
 
 default_config_data = {
@@ -86,11 +85,11 @@ def generate(mdns):
 
 def apply(mdns):
     if (mdns is None) or mdns['disabled']:
-        call('sudo systemctl stop mdns-repeater')
+        call('systemctl stop mdns-repeater.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
     else:
-        call('sudo systemctl restart mdns-repeater')
+        call('systemctl restart mdns-repeater.service')
 
     return None
 
