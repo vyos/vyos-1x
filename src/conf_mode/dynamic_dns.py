@@ -25,10 +25,7 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
-
-config_file = r'/etc/ddclient/ddclient.conf'
-cache_file = r'/var/cache/ddclient/ddclient.cache'
-pid_file = r'/var/run/ddclient/ddclient.pid'
+config_file = r'/run/ddclient/ddclient.conf'
 
 # Mapping of service name to service protocol
 default_service_protocol = {
@@ -47,9 +44,7 @@ default_service_protocol = {
 
 default_config_data = {
     'interfaces': [],
-    'cache_file': cache_file,
-    'deleted': False,
-    'pid_file': pid_file
+    'deleted': False
 }
 
 def get_config():
@@ -220,39 +215,27 @@ def verify(dyndns):
 def generate(dyndns):
     # bail out early - looks like removal from running config
     if dyndns['deleted']:
-        if os.path.exists(config_file):
-            os.unlink(config_file)
-
         return None
-
-    dirname = os.path.dirname(dyndns['pid_file'])
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
 
     dirname = os.path.dirname(config_file)
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
     render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns)
-    
+
     # Config file must be accessible only by its owner
     os.chmod(config_file, S_IRUSR | S_IWUSR)
 
     return None
 
 def apply(dyndns):
-    if os.path.exists(dyndns['cache_file']):
-        os.unlink(dyndns['cache_file'])
-
-    if os.path.exists('/etc/ddclient.conf'):
-        os.unlink('/etc/ddclient.conf')
-
     if dyndns['deleted']:
-        call('/etc/init.d/ddclient stop')
-        if os.path.exists(dyndns['pid_file']):
-            os.unlink(dyndns['pid_file'])
+        call('systemctl stop ddclient.service')
+        if os.path.exists(config_file):
+            os.unlink(config_file)
+
     else:
-        call('/etc/init.d/ddclient restart')
+        call('systemctl restart ddclient.service')
 
     return None
 
