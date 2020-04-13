@@ -146,7 +146,7 @@ def generate(relay):
 
 def apply(relay):
     # first stop all running services
-    call('sudo systemctl stop udp-broadcast-relay@{1..99}')
+    call('systemctl stop udp-broadcast-relay@{1..99}.service')
 
     if (relay is None) or relay['disabled']:
         return None
@@ -156,7 +156,7 @@ def apply(relay):
         # Don't start individual instance when it's disabled
         if r['disabled']:
             continue
-        call('sudo systemctl start udp-broadcast-relay@{0}'.format(r['id']))
+        call('systemctl start udp-broadcast-relay@{0}.service'.format(r['id']))
 
     return None
 
