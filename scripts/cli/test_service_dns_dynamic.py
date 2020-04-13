@@ -23,7 +23,7 @@ from psutil import process_iter
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
 
-DDCLIENT_CONF = '/etc/ddclient/ddclient.conf'
+DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
 base_path = ['service', 'dns', 'dynamic']
 
 def get_config_value(key):
