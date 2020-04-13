@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import os
@@ -24,7 +22,6 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import cmd
 from vyos.util import call
-
 
 vyos_conf_scripts_dir = vyos.defaults.directories['conf_mode']
 
@@ -86,7 +83,7 @@ def generate(cert):
 
     # certbot will attempt to reload nginx, even with 'certonly';
     # start nginx if not active
-    ret = call('systemctl is-active --quiet nginx.ervice')
+    ret = call('systemctl is-active --quiet nginx.service')
     if ret:
         call('sudo systemctl start nginx.service')
 
