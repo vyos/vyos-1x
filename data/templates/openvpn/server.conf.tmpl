@@ -85,7 +85,7 @@ max-clients {{ server_max_conn }}
 {%- endif %}
 
 {%- if client %}
-client-config-dir /opt/vyatta/etc/openvpn/ccd/{{ intf }}
+client-config-dir /run/openvpn/ccd/{{ intf }}
 {%- endif %}
 
 {%- if server_reject_unconfigured %}
