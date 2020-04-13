@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dhclient", action="store_true",
                     help="Started from dhclient-script")
 
-config_file = r'/etc/powerdns/recursor.conf'
+config_file = r'/run/powerdns/recursor.conf'
 
 default_config_data = {
     'allow_from': [],
@@ -151,6 +151,10 @@ def generate(dns):
     # bail out early - looks like removal from running config
     if dns is None:
         return None
+
+    dirname = os.path.dirname(config_file)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
 
     render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True)
     return None
