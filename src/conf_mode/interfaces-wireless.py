@@ -609,7 +609,7 @@ def generate(wifi):
 
     # Delete config files if interface is removed
     if wifi['deleted']:
-        if os.path.isfile(get_conf_file('hostapd', )):
+        if os.path.isfile(get_conf_file('hostapd', interface)):
             os.unlink(get_conf_file('hostapd', interface))
 
         if os.path.isfile(get_conf_file('wpa_supplicant', interface)):
