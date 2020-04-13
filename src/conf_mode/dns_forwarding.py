@@ -158,11 +158,11 @@ def generate(dns):
 def apply(dns):
     if dns is None:
         # DNS forwarding is removed in the commit
-        call("systemctl stop pdns-recursor")
+        call("systemctl stop pdns-recursor.service")
         if os.path.isfile(config_file):
             os.unlink(config_file)
     else:
-        call("systemctl restart pdns-recursor")
+        call("systemctl restart pdns-recursor.service")
 
 if __name__ == '__main__':
     args = parser.parse_args()
