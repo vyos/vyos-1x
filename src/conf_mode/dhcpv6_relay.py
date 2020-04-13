@@ -98,7 +98,7 @@ def apply(relay):
     else:
         # DHCPv6 relay support is removed in the commit
         call('systemctl stop isc-dhcp-relay6.service')
-        if os.file.exists(config_file):
+        if os.path.exists(config_file):
             os.unlink(config_file)
 
     return None
