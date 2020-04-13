@@ -85,15 +85,15 @@ def generate(cert):
     # start nginx if not active
     ret = call('systemctl is-active --quiet nginx.service')
     if ret:
-        call('sudo systemctl start nginx.service')
+        call('systemctl start nginx.service')
 
     request_certbot(cert)
 
 def apply(cert):
     if cert is not None:
-        call('sudo systemctl restart certbot.timer')
+        call('systemctl restart certbot.timer')
     else:
-        call('sudo systemctl stop certbot.timer')
+        call('systemctl stop certbot.timer')
         return None
 
     for dep in dependencies:
