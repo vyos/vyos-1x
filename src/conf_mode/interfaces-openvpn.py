@@ -18,8 +18,8 @@ import os
 import re
 
 from copy import deepcopy
-from sys import exit
-from ipaddress import ip_address,ip_network,IPv4Interface
+from sys import exit,stderr
+from ipaddress import IPv4Address,IPv4Network,summarize_address_range
 from netifaces import interfaces
 from time import sleep
 from shutil import rmtree
@@ -72,10 +72,14 @@ default_config_data = {
     'server_domain': '',
     'server_max_conn': '',
     'server_dns_nameserver': [],
+    'server_pool': False,
+    'server_pool_start': '',
+    'server_pool_stop': '',
+    'server_pool_netmask': '',
     'server_push_route': [],
     'server_reject_unconfigured': False,
     'server_subnet': '',
-    'server_topology': '',
+    'server_topology': 'net30',
     'shared_secret_file': '',
     'tls': False,
     'tls_auth': '',
@@ -112,6 +116,66 @@ def checkCertHeader(header, filename):
                 return True
 
     return False
+
+def getDefaultServer(network, topology, devtype):
+    """
+    Gets the default server parameters for a "server" directive.
+    Currently only IPv4 routed but may be extended to support bridged and/or IPv6 in the future.
+    Logic from openvpn's src/openvpn/helper.c.
+    Returns a dict with addresses or False if the input parameters were incorrect.
+    """
+    if not (topology and devtype):
+        return False
+
+    if not (devtype == 'tun' or devtype == 'tap'):
+        return False
+
+    if not network.prefixlen:
+        return False
+    elif (devtype == 'tun' and network.prefixlen > 29) or (devtype == 'tap' and network.prefixlen > 30):
+        return False
+
+    server = {
+        'local': '',
+        'remote_netmask': '',
+        'client_remote_netmask': '',
+        'pool_start': '',
+        'pool_stop': '',
+        'pool_netmask': ''
+    }
+
+    if devtype == 'tun':
+        if topology == 'net30' or topology == 'point-to-point':
+            server['local'] = network[1]
+            server['remote_netmask'] = network[2]
+            server['client_remote_netmask'] = server['local']
+
+            # pool start is 4th host IP in subnet (.4 in a /24)
+            server['pool_start'] = network[4]
+
+            if network.prefixlen == 29:
+                server['pool_stop'] = network.broadcast_address
+            else:
+                # pool end is -4 from the broadcast address (.251 in a /24)
+                server['pool_stop'] = network[-5]
+
+        elif topology == 'subnet':
+            server['local'] = network[1]
+            server['remote_netmask'] = str(network.netmask)
+            server['client_remote_netmask'] = server['remote_netmask']
+            server['pool_start'] = network[2]
+            server['pool_stop'] = network[-3]
+            server['pool_netmask'] = server['remote_netmask']
+
+    elif devtype == 'tap':
+        server['local'] = network[1]
+        server['remote_netmask'] = str(network.netmask)
+        server['client_remote_netmask'] = server['remote_netmask']
+        server['pool_start'] = network[2]
+        server['pool_stop'] = network[-2]
+        server['pool_netmask'] = server['remote_netmask']
+
+    return server
 
 def get_config():
     openvpn = deepcopy(default_config_data)
@@ -282,10 +346,10 @@ def get_config():
 
     # Server-mode subnet (from which client IPs are allocated)
     if conf.exists('server subnet'):
-        network = conf.return_value('server subnet')
-        tmp = IPv4Interface(network).with_netmask
+        # server_network is used later in this function
+        server_network = IPv4Network(conf.return_value('server subnet'))
         # convert the network in format: "192.0.2.0 255.255.255.0" for later use in template
-        openvpn['server_subnet'] = tmp.replace(r'/', ' ')
+        openvpn['server_subnet'] = server_network.with_netmask.replace(r'/', ' ')
 
     # Client-specific settings
     for client in conf.list_nodes('server client'):
@@ -300,19 +364,6 @@ def get_config():
             'remote_netmask': ''
         }
 
-        # note: with "topology subnet", this is "<ip> <netmask>".
-        #       with "topology p2p", this is "<ip> <our_ip>".
-        if openvpn['server_topology'] == 'subnet':
-            # we are only interested in the netmask portion of server_subnet
-            data['remote_netmask'] = openvpn['server_subnet'].split(' ')[1]
-        else:
-            # we need the server subnet in format 192.0.2.0/255.255.255.0
-            subnet = openvpn['server_subnet'].replace(' ', r'/')
-            # get iterator over the usable hosts in the network
-            tmp = ip_network(subnet).hosts()
-            # OpenVPN always uses the subnets first available IP address
-            data['remote_netmask'] = list(tmp)[0]
-
         # Option to disable client connection
         if conf.exists('disable'):
             data['disable'] = True
@@ -323,19 +374,30 @@ def get_config():
 
         # Route to be pushed to the client
         for network in conf.return_values('push-route'):
-            tmp = IPv4Interface(network).with_netmask
-            data['push_route'].append(tmp.replace(r'/', ' '))
+            data['push_route'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
 
         # Subnet belonging to the client
         for network in conf.return_values('subnet'):
-            tmp = IPv4Interface(network).with_netmask
-            data['subnet'].append(tmp.replace(r'/', ' '))
+            data['subnet'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
 
         # Append to global client list
         openvpn['client'].append(data)
 
     # re-set configuration level
     conf.set_level('interfaces openvpn ' + openvpn['intf'])
+
+    # Server client IP pool
+    if conf.exists('server client-ip-pool'):
+        openvpn['server_pool'] = True
+
+        if conf.exists('server client-ip-pool start'):
+            openvpn['server_pool_start'] = conf.return_value('server client-ip-pool start')
+
+        if conf.exists('server client-ip-pool stop'):
+            openvpn['server_pool_stop'] = conf.return_value('server client-ip-pool stop')
+
+        if conf.exists('server client-ip-pool netmask'):
+            openvpn['server_pool_netmask'] = conf.return_value('server client-ip-pool netmask')
 
     # DNS suffix to be pushed to all clients
     if conf.exists('server domain-name'):
@@ -352,8 +414,7 @@ def get_config():
     # Route to be pushed to all clients
     if conf.exists('server push-route'):
         for network in conf.return_values('server push-route'):
-            tmp = IPv4Interface(network).with_netmask
-            openvpn['server_push_route'].append(tmp.replace(r'/', ' '))
+            openvpn['server_push_route'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
 
     # Reject connections from clients that are not explicitly configured
     if conf.exists('server reject-unconfigured-clients'):
@@ -414,6 +475,26 @@ def get_config():
     # if key-file is EC and dh-file is unset, set tls_dh to 'none'
     if not openvpn['tls_dh'] and openvpn['tls_key'] and checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
         openvpn['tls_dh'] = 'none'
+
+    # Set defaults where necessary.
+    # If any of the input parameters are missing or wrong,
+    # this will return False and no defaults will be set.
+    default_server = getDefaultServer(server_network, openvpn['server_topology'], openvpn['type'])
+    if default_server:
+        # server-bridge doesn't require a pool so don't set defaults for it
+        if not openvpn['bridge_member']:
+            openvpn['server_pool'] = True
+            if not openvpn['server_pool_start']:
+                openvpn['server_pool_start'] = default_server['pool_start']
+
+            if not openvpn['server_pool_stop']:
+                openvpn['server_pool_stop'] = default_server['pool_stop']
+
+            if not openvpn['server_pool_netmask']:
+                openvpn['server_pool_netmask'] = default_server['pool_netmask']
+
+        for client in openvpn['client']:
+            client['remote_netmask'] = default_server['client_remote_netmask']
 
     return openvpn
 
@@ -509,9 +590,41 @@ def verify(openvpn):
         if not openvpn['tls_dh'] and not checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
             raise ConfigError('Must specify "tls dh-file" when not using EC keys in server mode')
 
-        if not openvpn['server_subnet']:
+        if openvpn['server_subnet']:
+            subnet = IPv4Network(openvpn['server_subnet'].replace(' ', '/'))
+
+            if openvpn['type'] == 'tun' and subnet.prefixlen > 29:
+                raise ConfigError('Server subnets smaller than /29 with device type "tun" are not supported')
+            elif openvpn['type'] == 'tap' and subnet.prefixlen > 30:
+                raise ConfigError('Server subnets smaller than /30 with device type "tap" are not supported')
+
+            for client in openvpn['client']:
+                if client['ip'] and not IPv4Address(client['ip']) in subnet:
+                    raise ConfigError(f'Client IP "{client["ip"]}" not in server subnet "{subnet}"')
+
+        else:
             if not openvpn['bridge_member']:
                 raise ConfigError('Must specify "server subnet" or "bridge member interface" in server mode')
+
+
+        if openvpn['server_pool']:
+            if not (openvpn['server_pool_start'] and openvpn['server_pool_stop']):
+                raise ConfigError('Server client-ip-pool requires both start and stop addresses in bridged mode')
+            else:
+                v4PoolStart = IPv4Address(openvpn['server_pool_start'])
+                v4PoolStop = IPv4Address(openvpn['server_pool_stop'])
+                if v4PoolStart > v4PoolStop:
+                    raise ConfigError(f'Server client-ip-pool start address {v4PoolStart} is larger than stop address {v4PoolStop}')
+                if (int(v4PoolStop) - int(v4PoolStart) >= 65536):
+                    raise ConfigError(f'Server client-ip-pool is too large [{v4PoolStart} -> {v4PoolStop}], maximum is 65536 addresses.')
+
+                v4PoolNets = list(summarize_address_range(v4PoolStart, v4PoolStop))
+                for client in openvpn['client']:
+                    if client['ip']:
+                        for v4PoolNet in v4PoolNets:
+                            if IPv4Address(client['ip']) in v4PoolNet:
+                                print(f'Warning: Client "{client["name"]}" IP {client["ip"]} is in server IP pool, it is not reserved for this client.',
+                                        file=stderr)
 
     else:
         # checks for both client and site-to-site go here
@@ -638,14 +751,6 @@ def verify(openvpn):
 
         if not openvpn['auth_pass']:
             raise ConfigError('Password for authentication is missing')
-
-    #
-    # Client
-    #
-    subnet = openvpn['server_subnet'].replace(' ', '/')
-    for client in openvpn['client']:
-        if client['ip'] and not ip_address(client['ip']) in ip_network(subnet):
-            raise ConfigError('Client IP "{}" not in server subnet "{}'.format(client['ip'], subnet))
 
     return None
 

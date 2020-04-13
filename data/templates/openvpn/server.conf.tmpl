@@ -71,13 +71,18 @@ nobind
 #
 
 {%- if server_topology %}
-topology {% if 'point-to-point' in server_topology %}p2p{% else %}subnet{% endif %}
+topology {% if server_topology == 'point-to-point' %}p2p{% else %}{{ server_topology }}{% endif %}
 {%- endif %}
 
 {%- if bridge_member %}
-server-bridge nogw
+mode server
+tls-server
 {%- else %}
-server {{ server_subnet }}
+server {{ server_subnet }}{% if server_pool_start %} nopool{% endif %}
+{%- endif %}
+
+{%- if server_pool_start %}
+ifconfig-pool {{ server_pool_start }} {{ server_pool_stop }}{% if server_pool_netmask %} {{ server_pool_netmask }}{% endif %}
 {%- endif %}
 
 {%- if server_max_conn %}
