@@ -24,8 +24,7 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
-
-config_file = r'/etc/default/isc-dhcpv6-relay'
+config_file = r'/run/dhcp-relay/dhcpv6.conf'
 
 default_config_data = {
     'listen_addr': [],
@@ -85,16 +84,22 @@ def generate(relay):
     if relay is None:
         return None
 
+    # Create configuration directory on demand
+    dirname = os.path.dirname(config_file)
+    if not os.path.isdir(dirname):
+        os.mkdir(dirname)
+
     render(config_file, 'dhcpv6-relay/config.tmpl', relay)
     return None
 
 def apply(relay):
     if relay is not None:
-        call('sudo systemctl restart isc-dhcpv6-relay.service')
+        call('systemctl restart isc-dhcp-relay6.service')
     else:
         # DHCPv6 relay support is removed in the commit
-        call('sudo systemctl stop isc-dhcpv6-relay.service')
-        os.unlink(config_file)
+        call('systemctl stop isc-dhcp-relay6.service')
+        if os.file.exists(config_file):
+            os.unlink(config_file)
 
     return None
 
