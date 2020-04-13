@@ -86,9 +86,9 @@ def show_status():
 
 
 def update_ddns():
-    call('systemctl stop ddclient')
+    call('systemctl stop ddclient.service')
     os.remove(cache_file)
-    call('systemctl start ddclient')
+    call('systemctl start ddclient.service')
 
 
 def main():
