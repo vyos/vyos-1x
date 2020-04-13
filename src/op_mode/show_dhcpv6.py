@@ -179,7 +179,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
-    if call('systemctl -q is-active isc-dhcpv6-server.service') != 0:
+    if call('systemctl -q is-active isc-dhcp-server6.service') != 0:
         print("WARNING: DHCPv6 server is configured but not started. Data may be stale.")
 
     if args.leases:
