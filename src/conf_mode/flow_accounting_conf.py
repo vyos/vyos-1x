@@ -346,9 +346,9 @@ def apply(config):
     command = None
     # Check if flow-accounting was removed and define command
     if not config['flow-accounting-configured']:
-        command = '/usr/bin/sudo /bin/systemctl stop uacctd'
+        command = 'systemctl stop uacctd.service'
     else:
-        command = '/usr/bin/sudo /bin/systemctl restart uacctd'
+        command = 'systemctl restart uacctd.service'
 
     # run command to start or stop flow-accounting
     cmd(command, raising=ConfigError, message='Failed to start/stop flow-accounting')
