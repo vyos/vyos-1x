@@ -106,7 +106,7 @@ def generate(tftpd):
 
 def apply(tftpd):
     # stop all services first - then we will decide
-    call('systemctl stop tftpd@{0..20}')
+    call('systemctl stop tftpd@{0..20}.service')
 
     # bail out early - e.g. service deletion
     if tftpd is None:
