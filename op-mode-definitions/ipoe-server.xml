@@ -12,24 +12,33 @@
               <help>Clear ipoe-server session</help>
             </properties>
             <children>
-              <leafNode name="username">
+              <tagNode name="username">
                 <properties>
                   <help>Clear ipoe-server session by username</help>
                   <completionHelp>
-                    <script>/usr/bin/accel-cmd -p 2002 show sessions username | sed -e 's/ \r//g' | tail -n +3</script>
+                    <script>${vyos_completion_dir}/list_ipoe.py --selector="username"</script>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/accel-cmd -p 2002 terminate username $5</command>
-              </leafNode>
-              <leafNode name="sid">
+                <command>${vyos_op_scripts_dir}/ipoe-control.py --action="terminate" --selector="username" --target="$5"</command>
+              </tagNode>
+              <tagNode name="sid">
                 <properties>
-                  <help>Clear ipoe-server session by sid</help>
+                  <help>Clear ipoe-server session by Session ID</help>
                   <completionHelp>
-                    <script>/usr/bin/accel-cmd -p 2002 show sessions sid | sed -e 's/ \r//g' | tail -n +3</script>
+                    <script>${vyos_completion_dir}/list_ipoe.py --selector="sid"</script>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/accel-cmd -p 2002 terminate sid $5</command>
-              </leafNode>
+                <command>${vyos_op_scripts_dir}/ipoe-control.py --action="terminate" --selector="sid" --target="$5"</command>
+              </tagNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Clear ipoe-server session by interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_ipoe.py --selector="ifname"</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/ipoe-control.py --action="terminate" --selector="if"  --target="$5"</command>
+              </tagNode>
             </children>
           </node>
         </children>
@@ -47,13 +56,13 @@
             <properties>
               <help>Show active IPoE server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2002 show sessions ifname,username,called-sid,calling-sid,ip,ip6,ip6-dp,rate-limit,state,uptime,sid</command>
+            <command>${vyos_op_scripts_dir}/ipoe-control.py --action="show_sessions"</command>
           </leafNode>
           <leafNode name="statistics">
             <properties>
               <help>Show IPoE server statistics</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2002 show stat</command>
+            <command>${vyos_op_scripts_dir}/ipoe-control.py --action="show_stat"</command>
           </leafNode>
         </children>
       </node>
@@ -65,7 +74,7 @@
         <properties>
           <help>show ipoe-server status</help>
         </properties>
-        <command>if [ -e /var/run/accel_ipoe.pid ]; then /usr/bin/accel-cmd restart -p 2002; else echo "ipoe-server not running"; fi</command>
+        <command>${vyos_op_scripts_dir}/ipoe-control.py --action="restart"</command>
       </leafNode>
     </children>
   </node>
