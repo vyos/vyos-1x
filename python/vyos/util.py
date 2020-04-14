@@ -21,48 +21,7 @@ from subprocess import PIPE
 from subprocess import STDOUT
 from subprocess import DEVNULL
 
-
-def debug(flag):
-    """
-    Check is a debug flag was set by the user.
-    a flag can be set by touching the file /tmp/vyos.flag.debug
-    with flag being the flag name, the current flags are:
-     - developer: the code will drop into PBD on un-handled exception
-     - ifconfig: prints command and sysfs access on stdout for interface
-    The function returns an empty string if the flag was not set,
-    """
-
-    # this is to force all new flags to be registered here to be documented:
-    if flag not in ['developer', 'ifconfig']:
-        return ''
-    for folder in ('/tmp', '/config'):
-        if os.path.isfile(f'{folder}/vyos.{flag}.debug'):
-            return flag
-    return ''
-
-
-def debug_msg(message, flag=''):
-    """
-    print a debug message line on stdout if debugging is enabled for the flag
-    """
-
-    if debug(flag):
-        print(f'DEBUG/{flag:<6} {message}')
-
-    if not debug('developer'):
-        return
-
-    logfile = '/tmp/full-log'
-    existed = os.path.exists(logfile)
-
-    with open(logfile, 'a') as f:
-        f.write(f'DEBUG/{flag:<6} {message}\n')
-        if not existed:
-            # at boot the file is created as root:vyattacfg
-            # at runtime the file is created as user:vyattacfg
-            # do not use run/cmd to not have a recursive call to this code
-            os.system(f'chmod g+w {logfile}')
-
+from vyos import debug
 
 # There is many (too many) ways to run command with python
 # os.system, subprocess.Popen, subproces.{run,call,check_output}
@@ -98,7 +57,14 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     to get both stdout, and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
     to discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
     """
-    debug_msg(f"cmd '{command}'", flag)
+
+    # log if the flag is set, otherwise log if command is set
+    if not debug.enabled(flag):
+        flag = 'command'
+
+    cmd_msg = f"cmd '{command}'"
+    debug.message(cmd_msg, flag)
+
     use_shell = shell
     stdin = None
     if shell is None:
@@ -129,7 +95,8 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     nl = '\n' if decoded1 and decoded2 else ''
     decoded = decoded1 + nl + decoded2
     if decoded:
-        debug_msg(f"returned:\n{decoded}", flag)
+        ret_msg = f"returned:\n{decoded}"
+        debug.message(ret_msg, flag)
     return decoded, p.returncode
 
 
