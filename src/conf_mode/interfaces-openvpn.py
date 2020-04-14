@@ -19,7 +19,7 @@ import re
 
 from copy import deepcopy
 from sys import exit,stderr
-from ipaddress import IPv4Address,IPv4Network,summarize_address_range
+from ipaddress import ip_address,ip_network,IPv4Address,IPv4Network,IPv6Address,IPv6Network,summarize_address_range
 from netifaces import interfaces
 from time import sleep
 from shutil import rmtree
@@ -53,9 +53,11 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'ipv6_local_address': [],
+    'ipv6_remote_address': [],
     'ping_restart': '60',
     'ping_interval': '10',
-    'local_address': '',
+    'local_address': [],
     'local_address_subnet': '',
     'local_host': '',
     'local_port': '',
@@ -65,7 +67,7 @@ default_config_data = {
     'persistent_tunnel': False,
     'protocol': 'udp',
     'redirect_gateway': '',
-    'remote_address': '',
+    'remote_address': [],
     'remote_host': [],
     'remote_port': '',
     'client': [],
@@ -78,8 +80,17 @@ default_config_data = {
     'server_pool_netmask': '',
     'server_push_route': [],
     'server_reject_unconfigured': False,
-    'server_subnet': '',
+    'server_subnet': [],
     'server_topology': '',
+    'server_ipv6_dns_nameserver': [],
+    'server_ipv6_local': '',
+    'server_ipv6_prefixlen': '',
+    'server_ipv6_remote': '',
+    'server_ipv6_pool': True,
+    'server_ipv6_pool_base': '',
+    'server_ipv6_pool_prefixlen': '',
+    'server_ipv6_push_route': [],
+    'server_ipv6_subnet': [],
     'shared_secret_file': '',
     'tls': False,
     'tls_auth': '',
@@ -119,8 +130,7 @@ def checkCertHeader(header, filename):
 
 def getDefaultServer(network, topology, devtype):
     """
-    Gets the default server parameters for a "server" directive.
-    Currently only IPv4 routed but may be extended to support bridged and/or IPv6 in the future.
+    Gets the default server parameters for a IPv4 "server" directive.
     Logic from openvpn's src/openvpn/helper.c.
     Returns a dict with addresses or False if the input parameters were incorrect.
     """
@@ -198,6 +208,7 @@ def get_config():
     # bridged server should not have a pool by default (but can be specified manually)
     if openvpn['bridge_member']:
         openvpn['server_pool'] = False
+        openvpn['server_ipv6_pool'] = False
 
     # set configuration level
     conf.set_level('interfaces openvpn ' + openvpn['intf'])
@@ -276,9 +287,15 @@ def get_config():
     # Local IP address of tunnel - even as it is a tag node - we can only work
     # on the first address
     if conf.exists('local-address'):
-        openvpn['local_address'] = conf.list_nodes('local-address')[0]
-        if conf.exists('local-address {} subnet-mask'.format(openvpn['local_address'])):
-            openvpn['local_address_subnet'] = conf.return_value('local-address {} subnet-mask'.format(openvpn['local_address']))
+        for tmp in conf.list_nodes('local-address'):
+            tmp_ip = ip_address(tmp)
+            if tmp_ip.version == 4:
+                openvpn['local_address'].append(tmp)
+                if conf.exists('local-address {} subnet-mask'.format(tmp)):
+                    openvpn['local_address_subnet'] = conf.return_value('local-address {} subnet-mask'.format(tmp))
+            elif tmp_ip.version == 6:
+                # input IPv6 address could be expanded so get the compressed version
+                openvpn['ipv6_local_address'].append(str(tmp_ip))
 
     # Local IP address to accept connections
     if conf.exists('local-host'):
@@ -322,7 +339,12 @@ def get_config():
 
     # IP address of remote end of tunnel
     if conf.exists('remote-address'):
-        openvpn['remote_address'] = conf.return_value('remote-address')
+        for tmp in conf.return_values('remote-address'):
+            tmp_ip = ip_address(tmp)
+            if tmp_ip.version == 4:
+                openvpn['remote_address'].append(tmp)
+            elif tmp_ip.version == 6:
+                openvpn['ipv6_remote_address'].append(str(tmp_ip))
 
     # Remote host to connect to (dynamic if not set)
     if conf.exists('remote-host'):
@@ -346,12 +368,18 @@ def get_config():
         openvpn['server_topology'] = conf.return_value('server topology')
 
     # Server-mode subnet (from which client IPs are allocated)
-    server_network = None
+    server_network_v4 = None
+    server_network_v6 = None
     if conf.exists('server subnet'):
-        # server_network is used later in this function
-        server_network = IPv4Network(conf.return_value('server subnet'))
-        # convert the network in format: "192.0.2.0 255.255.255.0" for later use in template
-        openvpn['server_subnet'] = server_network.with_netmask.replace(r'/', ' ')
+        for tmp in conf.return_values('server subnet'):
+            tmp_ip = ip_network(tmp)
+            if tmp_ip.version == 4:
+                server_network_v4 = tmp_ip
+                # convert the network to format: "192.0.2.0 255.255.255.0" for later use in template
+                openvpn['server_subnet'].append(tmp_ip.with_netmask.replace(r'/', ' '))
+            elif tmp_ip.version == 6:
+                server_network_v6 = tmp_ip
+                openvpn['server_ipv6_subnet'].append(str(tmp_ip))
 
     # Client-specific settings
     for client in conf.list_nodes('server client'):
@@ -360,7 +388,11 @@ def get_config():
         data = {
             'name': client,
             'disable': False,
-            'ip': '',
+            'ip': [],
+            'ipv6_ip': [],
+            'ipv6_remote': '',
+            'ipv6_push_route': [],
+            'ipv6_subnet': [],
             'push_route': [],
             'subnet': [],
             'remote_netmask': ''
@@ -371,16 +403,28 @@ def get_config():
             data['disable'] = True
 
         # IP address of the client
-        if conf.exists('ip'):
-            data['ip'] = conf.return_value('ip')
+        for tmp in conf.return_values('ip'):
+            tmp_ip = ip_address(tmp)
+            if tmp_ip.version == 4:
+                data['ip'].append(tmp)
+            elif tmp_ip.version == 6:
+                data['ipv6_ip'].append(str(tmp_ip))
 
         # Route to be pushed to the client
-        for network in conf.return_values('push-route'):
-            data['push_route'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
+        for tmp in conf.return_values('push-route'):
+            tmp_ip = ip_network(tmp)
+            if tmp_ip.version == 4:
+                data['push_route'].append(tmp_ip.with_netmask.replace(r'/', ' '))
+            elif tmp_ip.version == 6:
+                data['ipv6_push_route'].append(str(tmp_ip))
 
         # Subnet belonging to the client
-        for network in conf.return_values('subnet'):
-            data['subnet'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
+        for tmp in conf.return_values('subnet'):
+            tmp_ip = ip_network(tmp)
+            if tmp_ip.version == 4:
+                data['subnet'].append(tmp_ip.with_netmask.replace(r'/', ' '))
+            elif tmp_ip.version == 6:
+                data['ipv6_subnet'].append(str(tmp_ip))
 
         # Append to global client list
         openvpn['client'].append(data)
@@ -407,6 +451,18 @@ def get_config():
 
         conf.set_level('interfaces openvpn ' + openvpn['intf'])
 
+    # Server client IPv6 pool
+    if conf.exists('server client-ipv6-pool'):
+        conf.set_level('interfaces openvpn ' + openvpn['intf'] + ' server client-ipv6-pool')
+        openvpn['server_ipv6_pool'] = not conf.exists('disable')
+        if conf.exists('base'):
+            tmp = conf.return_value('base').split('/')
+            openvpn['server_ipv6_pool_base'] = str(IPv6Address(tmp[0]))
+            if 1 < len(tmp):
+                openvpn['server_ipv6_pool_prefixlen'] = tmp[1]
+
+        conf.set_level('interfaces openvpn ' + openvpn['intf'])
+
     # DNS suffix to be pushed to all clients
     if conf.exists('server domain-name'):
         openvpn['server_domain'] = conf.return_value('server domain-name')
@@ -417,12 +473,21 @@ def get_config():
 
     # Domain Name Server (DNS)
     if conf.exists('server name-server'):
-        openvpn['server_dns_nameserver'] = conf.return_values('server name-server')
+        for tmp in conf.return_values('server name-server'):
+            tmp_ip = ip_address(tmp)
+            if tmp_ip.version == 4:
+                openvpn['server_dns_nameserver'].append(tmp)
+            elif tmp_ip.version == 6:
+                openvpn['server_ipv6_dns_nameserver'].append(str(tmp_ip))
 
     # Route to be pushed to all clients
     if conf.exists('server push-route'):
-        for network in conf.return_values('server push-route'):
-            openvpn['server_push_route'].append(IPv4Network(network).with_netmask.replace(r'/', ' '))
+        for tmp in conf.return_values('server push-route'):
+            tmp_ip = ip_network(tmp)
+            if tmp_ip.version == 4:
+                openvpn['server_push_route'].append(tmp_ip.with_netmask.replace(r'/', ' '))
+            elif tmp_ip.version == 6:
+                openvpn['server_ipv6_push_route'].append(str(tmp_ip))
 
     # Reject connections from clients that are not explicitly configured
     if conf.exists('server reject-unconfigured-clients'):
@@ -491,9 +556,9 @@ def get_config():
     # Set defaults where necessary.
     # If any of the input parameters are wrong,
     # this will return False and no defaults will be set.
-    if server_network and openvpn['server_topology'] and openvpn['type']:
+    if server_network_v4 and openvpn['server_topology'] and openvpn['type']:
         default_server = None
-        default_server = getDefaultServer(server_network, openvpn['server_topology'], openvpn['type'])
+        default_server = getDefaultServer(server_network_v4, openvpn['server_topology'], openvpn['type'])
         if default_server:
             # server-bridge doesn't require a pool so don't set defaults for it
             if openvpn['server_pool'] and not openvpn['bridge_member']:
@@ -508,6 +573,26 @@ def get_config():
 
             for client in openvpn['client']:
                 client['remote_netmask'] = default_server['client_remote_netmask']
+
+    if server_network_v6:
+        if not openvpn['server_ipv6_local']:
+            openvpn['server_ipv6_local'] = server_network_v6[1]
+        if not openvpn['server_ipv6_prefixlen']:
+            openvpn['server_ipv6_prefixlen'] = server_network_v6.prefixlen
+        if not openvpn['server_ipv6_remote']:
+            openvpn['server_ipv6_remote'] = server_network_v6[2]
+
+        if openvpn['server_ipv6_pool'] and server_network_v6.prefixlen < 112:
+            if not openvpn['server_ipv6_pool_base']:
+                openvpn['server_ipv6_pool_base'] = server_network_v6[0x1000]
+            if not openvpn['server_ipv6_pool_prefixlen']:
+                openvpn['server_ipv6_pool_prefixlen'] = openvpn['server_ipv6_prefixlen']
+
+        for client in openvpn['client']:
+            client['ipv6_remote'] = openvpn['server_ipv6_local']
+
+        if openvpn['redirect_gateway']:
+            openvpn['redirect_gateway'] += ' ipv6'
 
     return openvpn
 
@@ -562,26 +647,45 @@ def verify(openvpn):
             raise ConfigError('encryption ncp-ciphers cannot be specified in site-to-site mode, only server or client')
 
     if openvpn['mode'] == 'site-to-site' and not openvpn['bridge_member']:
-        if not openvpn['local_address']:
+        if not (openvpn['local_address'] or openvpn['ipv6_local_address']):
             raise ConfigError('Must specify "local-address" or "bridge member interface"')
 
+        if len(openvpn['local_address']) > 1 or len(openvpn['ipv6_local_address']) > 1:
+            raise ConfigError('Cannot specify more than 1 IPv4 and 1 IPv6 "local-address"')
+
+        if len(openvpn['remote_address']) > 1 or len(openvpn['ipv6_remote_address']) > 1:
+            raise ConfigError('Cannot specify more than 1 IPv4 and 1 IPv6 "remote-address"')
+
         for host in openvpn['remote_host']:
-            if host == openvpn['remote_address']:
+            if host in openvpn['remote_address'] or host in openvpn['ipv6_remote_address']:
                 raise ConfigError('"remote-address" cannot be the same as "remote-host"')
 
+        if openvpn['local_address'] and not (openvpn['remote_address'] or openvpn['local_address_subnet']):
+            raise ConfigError('IPv4 "local-address" requires IPv4 "remote-address" or IPv4 "local-address subnet"')
+
+        if openvpn['remote_address'] and not openvpn['local_address']:
+            raise ConfigError('IPv4 "remote-address" requires IPv4 "local-address"')
+
+        if openvpn['ipv6_local_address'] and not openvpn['ipv6_remote_address']:
+            raise ConfigError('IPv6 "local-address" requires IPv6 "remote-address"')
+
+        if openvpn['ipv6_remote_address'] and not openvpn['ipv6_local_address']:
+            raise ConfigError('IPv6 "remote-address" requires IPv6 "local-address"')
+
         if openvpn['type'] == 'tun':
-            if not openvpn['remote_address']:
+            if not (openvpn['remote_address'] or openvpn['ipv6_remote_address']):
                 raise ConfigError('Must specify "remote-address"')
 
-            if openvpn['local_address'] == openvpn['remote_address']:
+            if ( (openvpn['local_address'] and openvpn['local_address'] == openvpn['remote_address']) or
+                    (openvpn['ipv6_local_address'] and openvpn['ipv6_local_address'] == openvpn['ipv6_remote_address']) ):
                 raise ConfigError('"local-address" and "remote-address" cannot be the same')
 
-            if openvpn['local_address'] == openvpn['local_host']:
+            if openvpn['local_host'] in openvpn['local_address'] or openvpn['local_host'] in openvpn['ipv6_local_address']:
                 raise ConfigError('"local-address" cannot be the same as "local-host"')
 
     else:
         # checks for client-server or site-to-site bridged
-        if openvpn['local_address'] or openvpn['remote_address']:
+        if openvpn['local_address'] or openvpn['ipv6_local_address'] or openvpn['remote_address'] or openvpn['ipv6_remote_address']:
             raise ConfigError('Cannot specify "local-address" or "remote-address" in client-server or bridge mode')
 
     #
@@ -603,8 +707,15 @@ def verify(openvpn):
         if not openvpn['tls_dh'] and not checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
             raise ConfigError('Must specify "tls dh-file" when not using EC keys in server mode')
 
+        if len(openvpn['server_subnet']) > 1 or len(openvpn['server_ipv6_subnet']) > 1:
+            raise ConfigError('Cannot specify more than 1 IPv4 and 1 IPv6 server subnet')
+
+        for client in openvpn['client']:
+            if len(client['ip']) > 1 or len(client['ipv6_ip']) > 1:
+                raise ConfigError(f'Server client "{client["name"]}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
+
         if openvpn['server_subnet']:
-            subnet = IPv4Network(openvpn['server_subnet'].replace(' ', '/'))
+            subnet = IPv4Network(openvpn['server_subnet'][0].replace(' ', '/'))
 
             if openvpn['type'] == 'tun' and subnet.prefixlen > 29:
                 raise ConfigError('Server subnets smaller than /29 with device type "tun" are not supported')
@@ -612,8 +723,8 @@ def verify(openvpn):
                 raise ConfigError('Server subnets smaller than /30 with device type "tap" are not supported')
 
             for client in openvpn['client']:
-                if client['ip'] and not IPv4Address(client['ip']) in subnet:
-                    raise ConfigError(f'Client IP "{client["ip"]}" not in server subnet "{subnet}"')
+                if client['ip'] and not IPv4Address(client['ip'][0]) in subnet:
+                    raise ConfigError(f'Client "{client["name"]}" IP {client["ip"][0]} not in server subnet {subnet}')
 
         else:
             if not openvpn['bridge_member']:
@@ -627,16 +738,55 @@ def verify(openvpn):
                 v4PoolStop = IPv4Address(openvpn['server_pool_stop'])
                 if v4PoolStart > v4PoolStop:
                     raise ConfigError(f'Server client-ip-pool start address {v4PoolStart} is larger than stop address {v4PoolStop}')
-                if (int(v4PoolStop) - int(v4PoolStart) >= 65536):
-                    raise ConfigError(f'Server client-ip-pool is too large [{v4PoolStart} -> {v4PoolStop}], maximum is 65536 addresses.')
+
+                v4PoolSize = int(v4PoolStop) - int(v4PoolStart)
+                if v4PoolSize >= 65536:
+                    raise ConfigError(f'Server client-ip-pool is too large [{v4PoolStart} -> {v4PoolStop} = {v4PoolSize}], maximum is 65536 addresses.')
 
                 v4PoolNets = list(summarize_address_range(v4PoolStart, v4PoolStop))
                 for client in openvpn['client']:
                     if client['ip']:
                         for v4PoolNet in v4PoolNets:
-                            if IPv4Address(client['ip']) in v4PoolNet:
-                                print(f'Warning: Client "{client["name"]}" IP {client["ip"]} is in server IP pool, it is not reserved for this client.',
+                            if IPv4Address(client['ip'][0]) in v4PoolNet:
+                                print(f'Warning: Client "{client["name"]}" IP {client["ip"][0]} is in server IP pool, it is not reserved for this client.',
                                         file=stderr)
+
+        if openvpn['server_ipv6_subnet']:
+            if not openvpn['server_subnet']:
+                raise ConfigError('IPv6 server requires an IPv4 server subnet')
+
+            if openvpn['server_ipv6_pool']:
+                if not openvpn['server_pool']:
+                    raise ConfigError('IPv6 server pool requires an IPv4 server pool')
+
+                if int(openvpn['server_ipv6_pool_prefixlen']) >= 112:
+                    raise ConfigError('IPv6 server pool must be larger than /112')
+
+                v6PoolStart = IPv6Address(openvpn['server_ipv6_pool_base'])
+                v6PoolStop = IPv6Network((v6PoolStart, openvpn['server_ipv6_pool_prefixlen']), strict=False)[-1] # don't remove the parentheses, it's a 2-tuple
+                v6PoolSize = int(v6PoolStop) - int(v6PoolStart) if int(openvpn['server_ipv6_pool_prefixlen']) > 96 else 65536
+                if v6PoolSize < v4PoolSize:
+                    raise ConfigError(f'IPv6 server pool must be at least as large as the IPv4 pool (current sizes: IPv6={v6PoolSize} IPv4={v4PoolSize})')
+
+                v6PoolNets = list(summarize_address_range(v6PoolStart, v6PoolStop))
+                for client in openvpn['client']:
+                    if client['ipv6_ip']:
+                        for v6PoolNet in v6PoolNets:
+                            if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
+                                print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.',
+                                        file=stderr)
+
+        else:
+            if openvpn['server_ipv6_push_route']:
+                raise ConfigError('IPv6 push-route requires an IPv6 server subnet')
+
+            for client in openvpn ['client']:
+                if client['ipv6_ip']:
+                    raise ConfigError(f'Server client "{client["name"]}" IPv6 IP requires an IPv6 server subnet')
+                if client['ipv6_push_route']:
+                    raise ConfigError(f'Server client "{client["name"]} IPv6 push-route requires an IPv6 server subnet"')
+                if client['ipv6_subnet']:
+                    raise ConfigError(f'Server client "{client["name"]} IPv6 subnet requires an IPv6 server subnet"')
 
     else:
         # checks for both client and site-to-site go here

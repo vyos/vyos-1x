@@ -233,15 +233,15 @@
           </node>
           <tagNode name="local-address">
             <properties>
-              <help>Local IP address of tunnel</help>
+              <help>Local IP address of tunnel (IPv4 or IPv6)</help>
               <constraint>
-                <validator name="ipv4-address"/>
+                <validator name="ip-address"/>
               </constraint>
             </properties>
             <children>
               <leafNode name="subnet-mask">
                 <properties>
-                  <help>Subnet-mask for local IP address of tunnel</help>
+                  <help>Subnet-mask for local IP address of tunnel (IPv4 only)</help>
                   <constraint>
                     <validator name="ipv4-address"/>
                   </constraint>
@@ -256,8 +256,12 @@
                 <format>ipv4</format>
                 <description>Local IPv4 address</description>
               </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Local IPv6 address</description>
+              </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
+                <validator name="ip-address"/>
               </constraint>
             </properties>
           </leafNode>
@@ -341,9 +345,14 @@
                 <format>ipv4</format>
                 <description>Remote end IPv4 address</description>
               </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote end IPv6 address</description>
+              </valueHelp>
               <constraint>
                 <validator name="ipv4-address"/>
               </constraint>
+              <multi/>
             </properties>
           </leafNode>
           <leafNode name="remote-host">
@@ -351,7 +360,11 @@
               <help>Remote host to connect to (dynamic if not set)</help>
               <valueHelp>
                 <format>ipv4</format>
-                <description>IP address of remote host</description>
+                <description>IPv4 address of remote host</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address of remote host</description>
               </valueHelp>
               <valueHelp>
                 <format>txt</format>
@@ -411,9 +424,14 @@
                         <format>ipv4</format>
                         <description>Client IPv4 address</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Client IPv6 address</description>
+                      </valueHelp>
                       <constraint>
-                        <validator name="ipv4-address"/>
+                        <validator name="ip-address"/>
                       </constraint>
+                      <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="push-route">
@@ -423,21 +441,29 @@
                         <format>ipv4net</format>
                         <description>IPv4 network and prefix length</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 network and prefix length</description>
+                      </valueHelp>
                       <constraint>
-                        <validator name="ipv4-prefix"/>
+                        <validator name="ip-prefix"/>
                       </constraint>
                       <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="subnet">
                     <properties>
-                      <help>Subnet belonging to the client</help>
+                      <help>Subnet belonging to the client (iroute)</help>
                       <valueHelp>
                         <format>ipv4net</format>
                         <description>IPv4 network and prefix length belonging to the client</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 network and prefix length belonging to the client</description>
+                      </valueHelp>
                       <constraint>
-                        <validator name="ipv4-prefix"/>
+                        <validator name="ip-prefix"/>
                       </constraint>
                       <multi/>
                     </properties>
@@ -446,7 +472,7 @@
               </tagNode>
               <node name="client-ip-pool">
                 <properties>
-                  <help>Pool of client IP addresses</help>
+                  <help>Pool of client IPv4 addresses</help>
                 </properties>
                 <children>
                   <leafNode name="disable">
@@ -496,6 +522,31 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="client-ipv6-pool">
+                <properties>
+                  <help>Pool of client IPv6 addresses</help>
+                </properties>
+                <children>
+                  <leafNode name="base">
+                    <properties>
+                      <help>Client IPv6 pool base address with optional prefix length</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>Client IPv6 pool base address with optional prefix length (defaults: base = server subnet + 0x1000, prefix length = server prefix length)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable client IPv6 pool</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="domain-name">
                 <properties>
                   <help>DNS suffix to be pushed to all clients</help>
@@ -524,8 +575,12 @@
                     <format>ipv4</format>
                     <description>DNS server IPv4 address</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>DNS server IPv6 address</description>
+                  </valueHelp>
                   <constraint>
-                    <validator name="ipv4-address"/>
+                    <validator name="ip-address"/>
                   </constraint>
                   <multi/>
                 </properties>
@@ -537,8 +592,12 @@
                     <format>ipv4net</format>
                     <description>IPv4 network and prefix length</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 network and prefix length</description>
+                  </valueHelp>
                   <constraint>
-                    <validator name="ipv4-prefix"/>
+                    <validator name="ip-prefix"/>
                   </constraint>
                   <multi/>
                 </properties>
@@ -555,9 +614,14 @@
                     <format>ipv4net</format>
                     <description>IPv4 network and prefix length</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 network and prefix length</description>
+                  </valueHelp>
                   <constraint>
-                    <validator name="ipv4-prefix"/>
+                    <validator name="ip-prefix"/>
                   </constraint>
+                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="topology">
@@ -568,7 +632,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>net30</format>
-                    <description>net30 topology</description>
+                    <description>net30 topology (default)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>point-to-point</format>
@@ -579,7 +643,7 @@
                     <description>Subnet topology</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(subnet|point-to-point)</regex>
+                    <regex>(subnet|point-to-point|net30)</regex>
                   </constraint>
                 </properties>
               </leafNode>

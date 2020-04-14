@@ -18,7 +18,7 @@ dev {{ intf }}
 persist-key
 iproute /usr/libexec/vyos/system/unpriv-ip
 
-proto {% if 'tcp-active' in protocol -%}tcp-client{% elif 'tcp-passive' in protocol -%}tcp-server{% else %}udp{% endif %}
+proto {% if 'tcp-active' in protocol -%}tcp6-client{% elif 'tcp-passive' in protocol -%}tcp6-server{% else %}udp6{% endif %}
 
 {%- if local_host %}
 local {{ local_host }}
@@ -78,7 +78,7 @@ topology {% if server_topology == 'point-to-point' %}p2p{% else %}{{ server_topo
 mode server
 tls-server
 {%- else %}
-server {{ server_subnet }} nopool
+server {{ server_subnet[0] }} nopool
 {%- endif %}
 
 {%- if server_pool %}
@@ -110,7 +110,26 @@ push "dhcp-option DNS {{ ns }}"
 
 {%- if server_domain -%}
 push "dhcp-option DOMAIN {{ server_domain }}"
-{% endif %}
+{% endif -%}
+
+{%- if server_ipv6_local %}
+# IPv6
+push "tun-ipv6"
+ifconfig-ipv6 {{ server_ipv6_local }}/{{ server_ipv6_prefixlen }} {{ server_ipv6_remote }}
+
+{%- if server_ipv6_pool %}
+ifconfig-ipv6-pool {{ server_ipv6_pool_base }}/{{ server_ipv6_pool_prefixlen }}
+{%- endif %}
+
+{%- for route6 in server_ipv6_push_route %}
+push "route-ipv6 {{ route6 }}"
+{%- endfor %}
+
+{%- for ns6 in server_ipv6_dns_nameserver %}
+push "dhcp-option DNS6 {{ ns6 }}"
+{%- endfor %}
+
+{%- endif %}
 
 {% else -%}
 #
@@ -120,9 +139,13 @@ ping {{ ping_interval }}
 ping-restart {{ ping_restart }}
 
 {% if local_address_subnet -%}
-ifconfig {{ local_address }} {{ local_address_subnet }}
+ifconfig {{ local_address[0] }} {{ local_address_subnet }}
 {%- elif remote_address -%}
-ifconfig {{ local_address }} {{ remote_address }}
+ifconfig {{ local_address[0] }} {{ remote_address[0] }}
+{%- endif %}
+
+{% if ipv6_local_address -%}
+ifconfig-ipv6 {{ ipv6_local_address[0] }} {{ ipv6_remote_address[0] }}
 {%- endif %}
 
 {% endif -%}
