@@ -15,7 +15,11 @@
 
 
 from vyos.ifconfig.section import Section
+from vyos.ifconfig.control import Control
 from vyos.ifconfig.interface import Interface
+from vyos.ifconfig.operational import Operational
+from vyos.ifconfig.dhcp import DHCP
+from vyos.ifconfig.vrrp import VRRP
 
 from vyos.ifconfig.bond import BondIf
 from vyos.ifconfig.bridge import BridgeIf
