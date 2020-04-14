@@ -1,0 +1,342 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="bgp">
+            <properties>
+              <help>Show Border Gateway Protocol (BGP) information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip bgp"</command>
+            <children>
+              <leafNode name="attribute-info">
+                <properties>
+                  <help>Show BGP attribute information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp attribute-info"</command>
+              </leafNode>
+              <leafNode name="cidr-only">
+                <properties>
+                  <help>Display only routes with non-natural netmasks</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp cidr-only"</command>
+              </leafNode>
+              <node name="community">
+                <properties>
+                  <help>Show BGP routes matching the communities</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp community"</command>
+              </node>
+              <tagNode name="community">
+                <properties>
+                  <help>Display routes matching the specified communities</help>
+                  <completionHelp>
+                    <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list> 
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp community $5"</command>
+              </tagNode>
+              <leafNode name="community-info">
+                <properties>
+                  <help>List all bgp community information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp community-info"</command>
+              </leafNode>
+              <tagNode name="community-list">
+                <properties>
+                  <help>Show BGP routes matching specified community list</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp community-list $5"</command>
+                <children>
+                  <leafNode name="exact-match">
+                    <properties>
+                      <help>Show BGP routes exactly matching specified community list</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp community-list $5 exact-match"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="dampened-paths">
+                <properties>
+                  <help>Show dampened BGP paths</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp dampening dampened-paths"</command>
+              </leafNode>
+              <tagNode name="filter-list">
+                <properties>
+                  <help>Show BGP information for specified word</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp filter-list $5"</command>
+              </tagNode>
+              <leafNode name="flap-statistics">
+                <properties>
+                  <help>Show flap statistics of routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp dampening flap-statistics"</command>
+              </leafNode>
+              <node name="ipv4">
+                <properties>
+                  <help>Show BGP IPv4 information</help>
+                </properties>
+                <children>
+                  <node name="unicast">
+                    <properties>
+                      <help>Show BGP IPv4 unicast information</help>
+                    </properties>
+                    <children>
+                      <leafNode name="cidr-only">
+                        <properties>
+                          <help>Display only routes with non-natural netmasks</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast cidr-only"</command>
+                      </leafNode>
+                      <node name="community">  <!--  START new code -->
+                        <properties>
+                          <help>Show BGP routes matching the communities</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast community"</command>
+                      </node>
+                      <tagNode name="community"> 
+                        <properties>
+                          <help>Display routes matching the specified communities</help>
+                          <completionHelp>
+                            <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list> 
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast community $7"</command>
+                      </tagNode>
+                      <tagNode name="community-list">
+                        <properties>
+                          <help>Show BGP routes matching specified community list</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast community-list $7"</command>
+                        <children>
+                          <leafNode name="exact-match">
+                            <properties>
+                              <help>Show BGP routes exactly matching specified community list</help>
+                            </properties>
+                            <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast community-list $7 exact-match"</command>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="filter-list">
+                        <properties>
+                          <help>Show BGP information for specified word</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp filter-list $5"</command>
+                      </tagNode>
+                      <tagNode name="neighbors">
+                        <properties>
+                          <help>Show detailed BGP IPv4 unicast neighbor information</help>
+                          <completionHelp>
+                            <script>vtysh -c "show ip bgp ipv4 unicast summary" | awk '{print $1}' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"</script>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast neighbors $7"</command>
+                        <children>
+                          <leafNode name="advertised-routes">
+                            <properties>
+                              <help>Show routes advertised to a BGP neighbor</help>
+                            </properties>
+                            <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast neighbor $7 advertised-routes"</command>
+                          </leafNode>
+                          <leafNode name="prefix-counts">
+                            <properties>
+                              <help>Show detailed prefix count information</help>
+                            </properties>
+                            <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast neighbor $7 prefix-counts"</command>
+                          </leafNode>
+                          <leafNode name="received-routes">
+                            <properties>
+                              <help>Show the received routes from neighbor</help>
+                            </properties>
+                            <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast neighbor $7 received-routes"</command>
+                          </leafNode>
+                          <leafNode name="routes">
+                            <properties>
+                              <help>Show routes learned from neighbor</help>
+                            </properties>
+                            <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast neighbor $7 routes"</command>
+                          </leafNode>
+                        </children>
+                      </tagNode>                 
+                      <leafNode name="paths">
+                        <properties>
+                          <help>Show BGP path information</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast paths"</command>
+                      </leafNode>
+                       <tagNode name="prefix-list">
+                        <properties>
+                          <help>Show BGP routes matching the specified prefix list</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast prefix-list $7"</command>
+                      </tagNode>
+                      <tagNode name="regexp">
+                        <properties>
+                          <help>Show BGP routes matching the specified AS path regular expression</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast regexp $5"</command>
+                      </tagNode>
+                      <tagNode name="route-map">
+                        <properties>
+                          <help>Show BGP routes matching the specified route map</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp route-map $5"</command>
+                      </tagNode>
+                      <leafNode name="summary">
+                        <properties>
+                          <help>Show summary of BGP information</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp summary"</command>
+                      </leafNode>           
+                    </children>
+                  </node>
+                  <tagNode name="unicast">
+                    <properties>
+                      <help>Show BGP information for specified IP address or prefix</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp $6"</command>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="large-community">
+                <properties>
+                  <help>Show BGP routes matching the specified large-communities</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp large-community"</command>
+              </node>
+              <leafNode name="large-community-info">
+                <properties>
+                  <help>Show BGP large-community information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp large-community-info"</command>
+              </leafNode>
+              <tagNode name="large-community-list">
+                <properties>
+                  <help>Show BGP routes matching the specified large-community list</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp large-community-list $5"</command>
+              </tagNode>
+              <leafNode name="memory">
+                <properties>
+                  <help>Show BGP memory usage</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp memory"</command>
+              </leafNode>           
+              <tagNode name="neighbors">
+                <properties>
+                  <help>Show detailed BGP IPv4 unicast neighbor information</help>
+                  <completionHelp>
+                    <script>vtysh -c "show ip bgp summary" | awk '{print $1}' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp neighbors $5"</command>
+                <children>
+                  <leafNode name="advertised-routes">
+                    <properties>
+                      <help>Show routes advertised to a BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 advertised-routes"</command>
+                  </leafNode>
+                  <leafNode name="dampened-routes">
+                    <properties>
+                      <help>Show dampened routes received from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 dampened-routes"</command>
+                  </leafNode>
+                  <leafNode name="flap-statistics">
+                    <properties>
+                      <help>Show flap statistics of the routes learned from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 flap-statistics"</command>
+                  </leafNode>
+                  <leafNode name="prefix-counts">
+                    <properties>
+                      <help>Show detailed prefix count information for BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 prefix-counts"</command>
+                  </leafNode>
+                  <node name="received">
+                    <properties>
+                      <help>Show information received from BGP neighbor</help>
+                    </properties>
+                    <children>
+                      <leafNode name="prefix-filter">
+                        <properties>
+                          <help>Show prefixlist filter</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 received prefix-filter"</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="received-routes">
+                    <properties>
+                      <help>Show received routes from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 received-routes"</command>
+                  </leafNode>
+                  <leafNode name="routes">
+                    <properties>
+                      <help>Show routes learned from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 routes"</command>
+                  </leafNode>
+                </children>
+              </tagNode>           
+              <leafNode name="paths">
+                <properties>
+                  <help>Show BGP path information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp paths"</command>
+              </leafNode>
+              <tagNode name="prefix-list">
+                <properties>
+                  <help>Show BGP routes matching the specified prefix list</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp prefix-list $5"</command>
+              </tagNode>
+              <tagNode name="regexp">
+                <properties>
+                  <help>Show BGP routes matching the specified AS path regular expression</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp regexp $5"</command>
+              </tagNode>
+              <tagNode name="route-map">
+                <properties>
+                  <help>Show BGP routes matching the specified route map</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp route-map $5"</command>
+              </tagNode>
+              <leafNode name="statistics">
+                <properties>
+                  <help>Show summary of BGP information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp statistics"</command>
+              </leafNode>
+              <leafNode name="summary">
+                <properties>
+                  <help>Show summary of BGP information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip bgp summary"</command>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="bgp">
+            <properties>
+              <help>Show BGP information for specified IP address or prefix</help>
+              <completionHelp>
+                <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip bgp $4"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
