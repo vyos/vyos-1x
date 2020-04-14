@@ -142,7 +142,7 @@ class Operational(Control):
                     stats[k] = int(v)
             return stats
         except IOError:
-            return stats
+            return no_stats
 
     def clear_counters(self, counters=None):
         clear = self._stats_all if counters is None else []

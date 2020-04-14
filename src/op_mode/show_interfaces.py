@@ -20,7 +20,6 @@ import re
 import sys
 import datetime
 import argparse
-from subprocess import Popen, PIPE, STDOUT
 import netifaces
 
 from vyos.ifconfig import Section
@@ -87,7 +86,7 @@ def split_text(text, used=0):
     text: the string to split
     used: number of characted already used in the screen
     """
-    returned = Popen('stty size', stdout=PIPE, stderr=STDOUT, shell=True).communicate()[0].strip().split()
+    returned = cmd('stty size')
     if len(returned) == 2:
         rows, columns = [int(_) for _ in returned]
     else:
@@ -240,7 +239,9 @@ def run_clear_intf(intf, iftypes, vif, vrrp):
 
 @register('reset')
 def run_reset_intf(intf, iftypes, vif, vrrp):
-    os.remove()
+    for interface in filtered_interfaces(ifnames, iftypes, vif, vrrp):
+        interface = Interface(ifname, create=False, debug=False)
+        interface.operational.reset_counters()
 
 
 if __name__ == '__main__':
