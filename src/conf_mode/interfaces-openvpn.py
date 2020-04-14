@@ -124,13 +124,10 @@ def getDefaultServer(network, topology, devtype):
     Logic from openvpn's src/openvpn/helper.c.
     Returns a dict with addresses or False if the input parameters were incorrect.
     """
-    if not (topology and devtype):
-        return False
-
     if not (devtype == 'tun' or devtype == 'tap'):
         return False
 
-    if not network.prefixlen:
+    if not network.version == 4:
         return False
     elif (devtype == 'tun' and network.prefixlen > 29) or (devtype == 'tap' and network.prefixlen > 30):
         return False
@@ -477,9 +474,10 @@ def get_config():
         openvpn['tls_dh'] = 'none'
 
     # Set defaults where necessary.
-    # If any of the input parameters are missing or wrong,
+    # If any of the input parameters are wrong,
     # this will return False and no defaults will be set.
-    default_server = getDefaultServer(server_network, openvpn['server_topology'], openvpn['type'])
+    if server_network and openvpn['server_topology'] and openvpn['type']:
+        default_server = getDefaultServer(server_network, openvpn['server_topology'], openvpn['type'])
     if default_server:
         # server-bridge doesn't require a pool so don't set defaults for it
         if not openvpn['bridge_member']:
