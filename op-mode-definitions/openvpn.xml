@@ -87,7 +87,7 @@
                 <properties>
                   <help>Show detailed OpenVPN interface information</help>
                 </properties>
-                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf-type=openvpn --action=show</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=openvpn --action=show</command>
               </leafNode>
             </children>
           </node>
@@ -98,13 +98,13 @@
                 <script>sudo ${vyos_completion_dir}/list_interfaces.py --type openvpn</script>
               </completionHelp>
             </properties>
-            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf=$4</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf=$4</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of specified OpenVPN interface information</help>
                 </properties>
-                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4" --action=show-brief</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
               </leafNode>
             </children>
           </tagNode>
