@@ -14,20 +14,16 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
-import sys
-from subprocess import Popen
-from subprocess import PIPE
-from subprocess import STDOUT
-from subprocess import DEVNULL
 
-from vyos import debug
+#
+# NOTE: Do not import full classes here, move your import to the function
+# where it is used so it is as local as possible to the execution
+#
 
 # There is many (too many) ways to run command with python
 # os.system, subprocess.Popen, subproces.{run,call,check_output}
 # which all have slighty different behaviour
-
-
+from subprocess import Popen, PIPE, STDOUT, DEVNULL
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
           stdout=PIPE, stderr=None, decode=None):
     """
@@ -57,7 +53,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     to get both stdout, and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
     to discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
     """
-
+    from vyos import debug
     # log if the flag is set, otherwise log if command is set
     if not debug.enabled(flag):
         flag = 'command'
@@ -229,6 +225,7 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
         If uniquekeys=True, then dict entries are always strings,
         otherwise they are always lists of strings.
     """
+    import re
     key_value_re = re.compile('([^:]+)\s*\:\s*(.*)')
 
     data_raw = re.split('\n', data_string)
@@ -328,6 +325,7 @@ def get_cfg_group_id():
 
 
 def file_is_persistent(path):
+    import re
     if not re.match(r'^(/config|/opt/vyatta/etc/config)', os.path.dirname(path)):
         warning = "Warning: file {0} is outside the /config directory\n".format(path)
         warning += "It will not be automatically migrated to a new image on system update"
@@ -384,9 +382,10 @@ def wait_for_commit_lock():
 
 def ask_yes_no(question, default=False) -> bool:
     """Ask a yes/no question via input() and return their answer."""
+    from sys import stdout
     default_msg = "[Y/n]" if default else "[y/N]"
     while True:
-        sys.stdout.write("%s %s " % (question, default_msg))
+        stdout.write("%s %s " % (question, default_msg))
         c = input().lower()
         if c == '':
             return default
@@ -395,7 +394,7 @@ def ask_yes_no(question, default=False) -> bool:
         elif c in ("n", "no"):
             return False
         else:
-            sys.stdout.write("Please respond with yes/y or no/n\n")
+            stdout.write("Please respond with yes/y or no/n\n")
 
 
 def is_admin() -> bool:
@@ -413,6 +412,7 @@ def mac2eui64(mac, prefix=None):
     IPv6 address.
     Thankfully copied from https://gist.github.com/wido/f5e32576bb57b5cc6f934e177a37a0d3
     """
+    import re
     from ipaddress import ip_network
     # http://tools.ietf.org/html/rfc4291#section-2.5.1
     eui64 = re.sub(r'[.:-]', '', mac).lower()
