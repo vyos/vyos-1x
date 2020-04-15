@@ -162,7 +162,7 @@ def apply(config):
 
     # If SNMP is running, restart it too
     if process_named_running('snmpd'):
-2298:         call('systemctl restart snmpd.service')
+        call('systemctl restart snmpd.service')
 
     # restart pdns if it is used
     ret = run('/usr/bin/rec_control --socket-dir=/run/powerdns ping')
