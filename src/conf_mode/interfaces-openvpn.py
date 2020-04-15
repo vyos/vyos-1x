@@ -72,7 +72,7 @@ default_config_data = {
     'server_domain': '',
     'server_max_conn': '',
     'server_dns_nameserver': [],
-    'server_pool': False,
+    'server_pool': True,
     'server_pool_start': '',
     'server_pool_stop': '',
     'server_pool_netmask': '',
@@ -194,6 +194,10 @@ def get_config():
         for intf in conf.list_nodes('interfaces bridge {} member interface'.format(bridge)):
             if intf == openvpn['intf']:
                 openvpn['bridge_member'].append(intf)
+
+    # bridged server should not have a pool by default (but can be specified manually)
+    if openvpn['bridge_member']:
+        openvpn['server_pool'] = False
 
     # set configuration level
     conf.set_level('interfaces openvpn ' + openvpn['intf'])
@@ -386,16 +390,22 @@ def get_config():
 
     # Server client IP pool
     if conf.exists('server client-ip-pool'):
-        openvpn['server_pool'] = True
+        conf.set_level('interfaces openvpn ' + openvpn['intf'] + ' server client-ip-pool')
 
-        if conf.exists('server client-ip-pool start'):
-            openvpn['server_pool_start'] = conf.return_value('server client-ip-pool start')
+        # enable or disable server_pool where necessary
+        # default is enabled, or disabled in bridge mode
+        openvpn['server_pool'] = not conf.exists('disable')
 
-        if conf.exists('server client-ip-pool stop'):
-            openvpn['server_pool_stop'] = conf.return_value('server client-ip-pool stop')
+        if conf.exists('start'):
+            openvpn['server_pool_start'] = conf.return_value('start')
 
-        if conf.exists('server client-ip-pool netmask'):
-            openvpn['server_pool_netmask'] = conf.return_value('server client-ip-pool netmask')
+        if conf.exists('stop'):
+            openvpn['server_pool_stop'] = conf.return_value('stop')
+
+        if conf.exists('netmask'):
+            openvpn['server_pool_netmask'] = conf.return_value('netmask')
+
+        conf.set_level('interfaces openvpn ' + openvpn['intf'])
 
     # DNS suffix to be pushed to all clients
     if conf.exists('server domain-name'):
@@ -486,8 +496,7 @@ def get_config():
         default_server = getDefaultServer(server_network, openvpn['server_topology'], openvpn['type'])
         if default_server:
             # server-bridge doesn't require a pool so don't set defaults for it
-            if not openvpn['bridge_member']:
-                openvpn['server_pool'] = True
+            if openvpn['server_pool'] and not openvpn['bridge_member']:
                 if not openvpn['server_pool_start']:
                     openvpn['server_pool_start'] = default_server['pool_start']
 
@@ -609,7 +618,6 @@ def verify(openvpn):
         else:
             if not openvpn['bridge_member']:
                 raise ConfigError('Must specify "server subnet" or "bridge member interface" in server mode')
-
 
         if openvpn['server_pool']:
             if not (openvpn['server_pool_start'] and openvpn['server_pool_stop']):
