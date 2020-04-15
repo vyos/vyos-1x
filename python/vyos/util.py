@@ -268,6 +268,17 @@ def process_running(pid_file):
     return pid_exists(int(pid))
 
 
+def process_named_running(name):
+    """ Checks if process with given name is running and returns its PID.
+    If Process is not running, return None
+    """
+    from psutil import process_iter
+    for p in process_iter():
+        if name in p.name():
+            return p.pid
+    return None
+
+
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable
     interval such as 1w4d18h35m59s

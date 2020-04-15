@@ -27,6 +27,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.util import call
 
+PDNS_CMD='/usr/bin/rec_control --socket-dir=/run/powerdns'
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Reset all cache")
 parser.add_argument("domain", type=str, nargs="?", help="Domain to reset cache entries for")
@@ -41,11 +43,11 @@ if __name__ == '__main__':
         exit(0)
 
     if args.all:
-        call("rec_control wipe-cache \'.$\'")
+        call(f"{PDNS_CMD} wipe-cache \'.$\'")
         exit(0)
 
     elif args.domain:
-        call("rec_control wipe-cache \'{0}$\'".format(args.domain))
+        call(f"{PDNS_CMD} wipe-cache \'{0}$\'".format(args.domain))
 
     else:
         parser.print_help()

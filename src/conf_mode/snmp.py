@@ -535,23 +535,9 @@ def apply(snmp):
     # start SNMP daemon
     call("systemctl restart snmpd.service")
 
-    # Passwords are not available immediately in the configuration file,
-    # after daemon startup - we wait until they have been processed by
-    # snmpd, which we see when a magic line appears in this file.
-    while True:
-        while not os.path.exists(config_file_user):
-            sleep(0.5)
-
-        try:
-            with open(config_file_user, 'r') as f:
-                for line in f:
-                    # Search for our magic string inside the file
-                    if 'usmUser' in line:
-                        break
-        except IOError:
-            continue
-        else:
-            break
+    while (call('systemctl -q is-active snmpd.service') != 0):
+        print("service not yet started")
+        sleep(0.5)
 
     # net-snmp is now regenerating the configuration file in the background
     # thus we need to re-open and re-read the file as the content changed.

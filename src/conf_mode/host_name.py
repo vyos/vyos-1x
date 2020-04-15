@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 """
 conf-mode script for 'system host-name' and 'system domain-name'.
@@ -33,10 +31,7 @@ import vyos.hostsd_client
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd
-from vyos.util import call
-from vyos.util import run
-
+from vyos.util import cmd, call, run, process_named_running
 
 default_config_data = {
     'hostname': 'vyos',
@@ -166,12 +161,11 @@ def apply(config):
         call("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
-    ret = run("pgrep snmpd")
-    if ret == 0:
-        call("systemctl restart snmpd.service")
+    if process_named_running('snmpd'):
+2298:         call('systemctl restart snmpd.service')
 
     # restart pdns if it is used
-    ret = run('/usr/bin/rec_control ping')
+    ret = run('/usr/bin/rec_control --socket-dir=/run/powerdns ping')
     if ret == 0:
         call('systemctl restart pdns-recursor.service')
 

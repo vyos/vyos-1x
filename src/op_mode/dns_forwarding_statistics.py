@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import jinja2
-import sys
+from sys import exit
 
 from vyos.config import Config
 from vyos.config import cmd
 
-PDNS_CMD='/usr/bin/rec_control'
+PDNS_CMD='/usr/bin/rec_control --socket-dir=/run/powerdns'
 
 OUT_TMPL_SRC = """
 DNS forwarding statistics:
@@ -16,13 +16,12 @@ Cache size: {{ cache_size }} kbytes
 
 """
 
-
 if __name__ == '__main__':
     # Do nothing if service is not configured
     c = Config()
     if not c.exists_effective('service dns forwarding'):
         print("DNS forwarding is not configured")
-        sys.exit(0)
+        exit(0)
 
     data = {}
 
