@@ -79,7 +79,7 @@ default_config_data = {
     'server_push_route': [],
     'server_reject_unconfigured': False,
     'server_subnet': '',
-    'server_topology': 'net30',
+    'server_topology': '',
     'shared_secret_file': '',
     'tls': False,
     'tls_auth': '',
@@ -342,6 +342,7 @@ def get_config():
         openvpn['server_topology'] = conf.return_value('server topology')
 
     # Server-mode subnet (from which client IPs are allocated)
+    server_network = None
     if conf.exists('server subnet'):
         # server_network is used later in this function
         server_network = IPv4Network(conf.return_value('server subnet'))
@@ -473,26 +474,31 @@ def get_config():
     if not openvpn['tls_dh'] and openvpn['tls_key'] and checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls_key']):
         openvpn['tls_dh'] = 'none'
 
+    # set default server topology to net30
+    if openvpn['mode'] == 'server' and not openvpn['server_topology']:
+        openvpn['server_topology'] = 'net30'
+
     # Set defaults where necessary.
     # If any of the input parameters are wrong,
     # this will return False and no defaults will be set.
     if server_network and openvpn['server_topology'] and openvpn['type']:
+        default_server = None
         default_server = getDefaultServer(server_network, openvpn['server_topology'], openvpn['type'])
-    if default_server:
-        # server-bridge doesn't require a pool so don't set defaults for it
-        if not openvpn['bridge_member']:
-            openvpn['server_pool'] = True
-            if not openvpn['server_pool_start']:
-                openvpn['server_pool_start'] = default_server['pool_start']
+        if default_server:
+            # server-bridge doesn't require a pool so don't set defaults for it
+            if not openvpn['bridge_member']:
+                openvpn['server_pool'] = True
+                if not openvpn['server_pool_start']:
+                    openvpn['server_pool_start'] = default_server['pool_start']
 
-            if not openvpn['server_pool_stop']:
-                openvpn['server_pool_stop'] = default_server['pool_stop']
+                if not openvpn['server_pool_stop']:
+                    openvpn['server_pool_stop'] = default_server['pool_stop']
 
-            if not openvpn['server_pool_netmask']:
-                openvpn['server_pool_netmask'] = default_server['pool_netmask']
+                if not openvpn['server_pool_netmask']:
+                    openvpn['server_pool_netmask'] = default_server['pool_netmask']
 
-        for client in openvpn['client']:
-            client['remote_netmask'] = default_server['client_remote_netmask']
+            for client in openvpn['client']:
+                client['remote_netmask'] = default_server['client_remote_netmask']
 
     return openvpn
 
