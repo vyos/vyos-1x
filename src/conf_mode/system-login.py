@@ -16,6 +16,7 @@
 
 import os
 
+from crypt import crypt, METHOD_SHA512
 from psutil import users
 from pwd import getpwall, getpwnam
 from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
@@ -51,11 +52,6 @@ def get_local_users():
                 local_users.append(username)
 
     return local_users
-
-
-def get_crypt_pw(password):
-    return cmd(f'/usr/bin/mkpasswd --method=sha-512 {password}')
-
 
 def get_config():
     login = default_config_data
@@ -204,7 +200,7 @@ def generate(login):
     # calculate users encrypted password
     for user in login['add_users']:
         if user['password_plaintext']:
-            user['password_encrypted'] = get_crypt_pw(user['password_plaintext'])
+            user['password_encrypted'] = crypt(user['password_plaintext'], METHOD_SHA512)
             user['password_plaintext'] = ''
 
             # remove old plaintext password
