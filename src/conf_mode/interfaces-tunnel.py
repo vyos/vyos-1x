@@ -19,6 +19,7 @@ import netifaces
 
 from sys import exit
 from copy import deepcopy
+from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import Interface, GREIf, GRETapIf, IPIPIf, IP6GREIf, IPIP6If, IP6IP6If, SitIf, Sit6RDIf
@@ -505,6 +506,12 @@ def verify(conf):
 
     if ipv6_count and not IP6 in kls.ip:
         print(f'Should not use IPv6 addresses on tunnel {iftype} {ifname}')
+
+    # vrf check
+
+    vrf = options['vrf']
+    if vrf and vrf not in interfaces():
+        raise ConfigError(f'VRF "{vrf}" does not exist')
 
     # tunnel encapsulation check
 
