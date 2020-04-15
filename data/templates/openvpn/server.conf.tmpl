@@ -78,10 +78,10 @@ topology {% if server_topology == 'point-to-point' %}p2p{% else %}{{ server_topo
 mode server
 tls-server
 {%- else %}
-server {{ server_subnet }}{% if server_pool_start %} nopool{% endif %}
+server {{ server_subnet }} nopool
 {%- endif %}
 
-{%- if server_pool_start %}
+{%- if server_pool %}
 ifconfig-pool {{ server_pool_start }} {{ server_pool_stop }}{% if server_pool_netmask %} {{ server_pool_netmask }}{% endif %}
 {%- endif %}
 

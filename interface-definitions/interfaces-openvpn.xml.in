@@ -449,6 +449,12 @@
                   <help>Pool of client IP addresses</help>
                 </properties>
                 <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable client IP pool</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="start">
                     <properties>
                       <help>First IP address in the pool</help>
