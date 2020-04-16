@@ -17,27 +17,18 @@
 import os
 import re
 
-from socket import socket, AF_INET, SOCK_STREAM
 from sys import exit
 from time import sleep
 
+from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 from vyos.template import render
 
 
-ipoe_cnf_dir = r'/etc/accel-ppp/ipoe'
-ipoe_cnf = ipoe_cnf_dir + r'/ipoe.config'
-
-pidfile = r'/var/run/accel_ipoe.pid'
-cmd_port = r'2002'
-
-chap_secrets = ipoe_cnf_dir + '/chap-secrets'
-## accel-pppd -d -c /etc/accel-ppp/pppoe/pppoe.config -p /var/run/accel_pppoe.pid
-
-if not os.path.exists(ipoe_cnf_dir):
-    os.makedirs(ipoe_cnf_dir)
+ipoe_conf = '/run/accel-pppd/ipoe.conf'
+ipoe_chap_secrets = '/run/accel-pppd/ipoe.chap-secrets'
 
 
 def _get_cpu():
@@ -49,33 +40,14 @@ def _get_cpu():
     return cpu_cnt
 
 
-def _chk_con():
-    cnt = 0
-    s = socket(AF_INET, SOCK_STREAM)
-    while True:
-        try:
-            s.connect(("127.0.0.1", int(cmd_port)))
-            break
-        except ConnectionRefusedError:
-            sleep(0.5)
-            cnt += 1
-            if cnt == 100:
-                raise("failed to start pppoe server")
-                break
-
-
-def _accel_cmd(command):
-    return run('/usr/bin/accel-cmd -p {cmd_port} {command}')
-
-##### Inline functions end ####
-
-
 def get_config():
     c = Config()
     if not c.exists(['service', 'ipoe-server']):
         return None
 
-    config_data = {}
+    config_data = {
+        'chap_secrets_file' : ipoe_chap_secrets
+    }
 
     c.set_level(['service', 'ipoe-server'])
     config_data['interfaces'] = {}
@@ -215,20 +187,26 @@ def get_config():
     return config_data
 
 
-def generate(c):
-    if c == None or not c:
+def generate(ipoe):
+    if not ipoe:
         return None
 
-    c['thread_cnt'] = _get_cpu()
+    dirname = os.path.dirname(ipoe_conf)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
 
-    if c['auth']['mech'] == 'local':
-        old_umask = os.umask(0o077)
-        render(chap_secrets, 'ipoe-server/chap-secrets.tmpl', c, trim_blocks=True)
-        os.umask(old_umask)
+    ipoe['thread_cnt'] = _get_cpu()
+    render(ipoe_conf, 'ipoe-server/ipoe.config.tmpl', ipoe, trim_blocks=True)
 
-    render(ipoe_cnf, 'ipoe-server/ipoe.config.tmpl', c, trim_blocks=True)
-    # return c ??
-    return c
+    if ipoe['auth']['mech'] == 'local':
+        render(ipoe_chap_secrets, 'ipoe-server/chap-secrets.tmpl', ipoe)
+        os.chmod(ipoe_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
+
+    else:
+        if os.path.exists(ipoe_chap_secrets):
+             os.unlink(ipoe_chap_secrets)
+
+    return None
 
 
 def verify(c):
@@ -280,22 +258,19 @@ def verify(c):
     return c
 
 
-def apply(c):
-    if c == None:
-        if os.path.exists(pidfile):
-            _accel_cmd('shutdown hard')
-            if os.path.exists(pidfile):
-                os.remove(pidfile)
+def apply(ipoe):
+    if ipoe == None:
+        call('systemctl stop accel-ppp@ipoe.service')
+
+        if os.path.exists(ipoe_conf):
+             os.unlink(ipoe_conf)
+
+        if os.path.exists(ipoe_chap_secrets):
+             os.unlink(ipoe_chap_secrets)
+
         return None
 
-    if not os.path.exists(pidfile):
-        ret = run(f'/usr/sbin/accel-pppd -c {ipoe_cnf} -p {pidfile} -d')
-        _chk_con()
-        if ret != 0 and os.path.exists(pidfile):
-            os.remove(pidfile)
-            raise ConfigError('accel-pppd failed to start')
-    else:
-        _accel_cmd('restart')
+    call('systemctl restart accel-ppp@ipoe.service')
 
 
 if __name__ == '__main__':
