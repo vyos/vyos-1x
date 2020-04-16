@@ -26,16 +26,7 @@ level=5
 verbose=1
 {% for intfc in interfaces %}
 {% if interfaces[intfc]['vlan_mon'] %}
-interface=re:{{intfc}}\.\d+,\
-{% else %}
-interface={{intfc}},\
-{% endif %}
-shared={{interfaces[intfc]['shared']}},\
-mode={{interfaces[intfc]['mode']}},\
-ifcfg={{interfaces[intfc]['ifcfg']}},\
-range={{interfaces[intfc]['range']}},\
-start={{interfaces[intfc]['sess_start']}},\
-ipv6=1
+interface=re:{{intfc}}\.\d+,{% else %}interface={{intfc}},{% endif %}shared={{interfaces[intfc]['shared']}},mode={{interfaces[intfc]['mode']}},ifcfg={{interfaces[intfc]['ifcfg']}},range={{interfaces[intfc]['range']}},start={{interfaces[intfc]['sess_start']}},ipv6=1
 {% endfor %}
 {% if auth['mech'] == 'noauth' %}
 noauth=1
@@ -86,20 +77,20 @@ delegate={{pd}}
 
 {% if auth['mech'] == 'local' %}
 [chap-secrets]
-chap-secrets=/etc/accel-ppp/ipoe/chap-secrets
+chap-secrets={{chap_secrets_file}}
 {% endif %}
 
 {% if auth['mech'] == 'radius' %}
 [radius]
 verbose=1
 {% for srv in auth['radius'] %}
-server={{srv}},{{auth['radius'][srv]['secret']}},\
-req-limit={{auth['radius'][srv]['req-limit']}},\
+server={{srv}},{{auth['radius'][srv]['secret']}},
+req-limit={{auth['radius'][srv]['req-limit']}},
 fail-time={{auth['radius'][srv]['fail-time']}}
 {% endfor %}
 {% if auth['radsettings']['dae-server']['ip-address'] %}
-dae-server={{auth['radsettings']['dae-server']['ip-address']}}:\
-{{auth['radsettings']['dae-server']['port']}},\
+dae-server={{auth['radsettings']['dae-server']['ip-address']}}:
+{{auth['radsettings']['dae-server']['port']}},
 {{auth['radsettings']['dae-server']['secret']}}
 {% endif -%}
 {% if auth['radsettings']['acct-timeout'] %}
