@@ -4,14 +4,20 @@
     <children>
       <node name="l2tp-server">
         <properties>
-          <help>show l2tp-server status</help>
+          <help>Show L2TP server information</help>
         </properties>
         <children>
           <leafNode name="sessions">
             <properties>
               <help>Show active L2TP server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2004 'show sessions'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="l2tp" --action="show sessions"</command>
+          </leafNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>Show L2TP server statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="l2tp" --action="show stat"</command>
           </leafNode>
         </children>
       </node>
