@@ -49,6 +49,8 @@ def read_file(name):
 
 version_output_tmpl = """
 Version:          VyOS {{version}}
+Release Train:    {{release_train}}
+
 Built by:         {{built_by}}
 Built on:         {{built_on}}
 Build UUID:       {{build_uuid}}
@@ -98,7 +100,7 @@ if __name__ == '__main__':
     elif subprocess.call(""" grep '^overlay /' /proc/mounts >/dev/null """, shell=True) != 0:
         boot_via = "legacy non-image installation"
     version_data['boot_via'] = boot_via
-    
+
 
     # Get hardware details from DMI
     version_data['hardware_vendor'] = read_file('/sys/class/dmi/id/sys_vendor')
