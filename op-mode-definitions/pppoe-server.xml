@@ -4,26 +4,26 @@
     <children>
       <node name="pppoe-server">
         <properties>
-          <help>show pppoe-server status</help>
+          <help>Show pppoe-server status</help>
         </properties>
         <children>
           <leafNode name="sessions">
             <properties>
               <help>Show active PPPoE server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd 'show sessions ifname,username,ip,ip6,ip6-dp,calling-sid,rate-limit,state,uptime,rx-bytes,tx-bytes'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="show sessions"</command>
           </leafNode>
           <leafNode name="statistics">
             <properties>
               <help>Show PPPoE server statistics</help>
             </properties>
-            <command>/usr/bin/accel-cmd 'show stat'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="show stat"</command>
           </leafNode>
           <leafNode name="interfaces">
             <properties>
               <help>Show interfaces where pppoe-server listens on</help>
             </properties>
-            <command>/usr/bin/accel-cmd 'pppoe interface show'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="pppoe interface show"</command>
           </leafNode>
         </children>
       </node>
@@ -35,7 +35,7 @@
         <properties>
           <help>Restarts pppoe-server</help>
         </properties>
-        <command>if [ -e /var/run/accel_pppoe.pid ]; then /usr/bin/accel-cmd restart -p 2001; else echo "pppoe-server not running"; fi</command> 
+        <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="restart"</command>
       </leafNode>
     </children>
   </node>
@@ -53,19 +53,19 @@
             <properties>
               <help>Terminate all pppoe-server users</help>
             </properties>
-            <command>/usr/bin/accel-cmd terminate all</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="terminate all"</command>
           </leafNode>
           <tagNode name="interface">
             <properties>
               <help>Terminate a ppp interface</help>
             </properties>
-            <command>/usr/bin/accel-cmd terminate if "$4"</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="terminate if $4"</command>
           </tagNode>
           <tagNode name="username">
             <properties>
               <help>Terminate specified users</help>
             </properties>
-            <command>/usr/bin/accel-cmd terminate match username "$4"</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="terminate username $4"</command>
           </tagNode>
         </children>
       </node>
@@ -87,13 +87,13 @@
                 <properties>
                   <help>Deny new connections and stop to serve pppoe after disconnect last session</help>
                 </properties>
-                <command>/usr/bin/accel-cmd shutdown soft</command>
+                <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="shutdown soft"</command>
               </leafNode>
               <leafNode name="cancel">
                 <properties>
                   <help>Cancel maintenance mode</help>
                 </properties>
-                <command>/usr/bin/accel-cmd shutdown cancel</command>
+                <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="shutdown cancel"</command>
               </leafNode>
             </children>
           </node>
