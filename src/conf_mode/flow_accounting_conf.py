@@ -82,11 +82,10 @@ def _iptables_get_nflog():
     for iptables_variant in ['iptables', 'ip6tables']:
         # run iptables, save output and split it by lines
         iptables_command = "sudo {0} -t {1} -S {2}".format(iptables_variant, iptables_nflog_table, iptables_nflog_chain)
-        cmd(iptables_command, message='Failed to get flows list')
-        iptables_out = stdout.splitlines()
+        tmp = cmd(iptables_command, message='Failed to get flows list')
 
         # parse each line and add information to list
-        for current_rule in iptables_out:
+        for current_rule in tmp.splitlines():
             current_rule_parsed = rule_re.search(current_rule)
             if current_rule_parsed:
                 rules.append({ 'interface': current_rule_parsed.groupdict()["interface"], 'iptables_variant': iptables_variant, 'table': iptables_nflog_table, 'rule_definition': current_rule_parsed.groupdict()["rule_definition"] })
