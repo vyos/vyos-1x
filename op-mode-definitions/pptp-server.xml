@@ -4,14 +4,20 @@
     <children>
       <node name="pptp-server">
         <properties>
-          <help>show pptp-server status</help>
+          <help>Show PPTP server information</help>
         </properties>
         <children>
           <leafNode name="sessions">
             <properties>
               <help>Show active PPTP server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2003 'show sessions'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pptp" --action="show sessions"</command>
+          </leafNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>Show PPTP server statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pptp" --action="show stat"</command>
           </leafNode>
         </children>
       </node>

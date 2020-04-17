@@ -4,20 +4,20 @@
     <children>
       <node name="sstp-server">
         <properties>
-          <help>show sstp-server status</help>
+          <help>Show SSTP server information</help>
         </properties>
         <children>
           <leafNode name="sessions">
             <properties>
               <help>Show active SSTP server sessions</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2005 'show sessions ifname,username,ip,ip6,ip6-dp,calling-sid,rate-limit,state,uptime,rx-bytes,tx-bytes'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="sstp" --action="show sessions"</command>
           </leafNode>
           <leafNode name="statistics">
             <properties>
               <help>Show SSTP server statistics</help>
             </properties>
-            <command>/usr/bin/accel-cmd -p 2005 'show stat'</command>
+            <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="sstp" --action="show stat"</command>
           </leafNode>
         </children>
       </node>
