@@ -635,6 +635,7 @@
                       <constraintErrorMessage>Invalid cipher selection</constraintErrorMessage>
                       <multi/>
                     </properties>
+                  </leafNode>
                   <leafNode name="group-cipher">
                     <properties>
                       <help>Cipher suite for WPA multicast and broadcast packets</help>
