@@ -35,8 +35,8 @@ class Control(Section):
 
         # if debug is not explicitely disabled the the config, enable it
         self.debug = ''
-        if kargs.get('debug', True):
-            self.debug = debug.enabled('ifconfig')
+        if kargs.get('debug', True) and debug.enabled('ifconfig'):
+            self.debug = 'ifconfig'
 
     def _debug_msg (self, message):
         return debug.message(message, self.debug)
