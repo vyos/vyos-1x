@@ -11,7 +11,7 @@
                 <script>${vyos_completion_dir}/list_wlm_peers.sh</script>
               </completionHelp>
             </properties>
-            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4"</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
             <children>
               <node name="log">
                 <properties>

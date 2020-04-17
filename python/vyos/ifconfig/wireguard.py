@@ -18,13 +18,134 @@ import os
 import time
 from datetime import timedelta
 
+from hurry.filesize import size
+from hurry.filesize import alternative
+
 from vyos.config import Config
-from vyos.ifconfig.interface import Interface
-from hurry.filesize import size,alternative
+from vyos.ifconfig import Interface
+from vyos.ifconfig import Operational
+
+
+class WireGuardOperational(Operational):
+    def _dump(self):
+        """Dump wireguard data in a python friendly way."""
+        last_device = None
+        output = {}
+
+        # Dump wireguard connection data
+        _f = self._cmd('wg show all dump')
+        for line in _f.split('\n'):
+            if not line:
+                # Skip empty lines and last line
+                continue
+            items = line.split('\t')
+
+            if last_device != items[0]:
+                # We are currently entering a new node
+                device, private_key, public_key, listen_port, fw_mark = items
+                last_device = device
+
+                output[device] = {
+                    'private_key': None if private_key == '(none)' else private_key,
+                    'public_key': None if public_key == '(none)' else public_key,
+                    'listen_port': int(listen_port),
+                    'fw_mark': None if fw_mark == 'off' else int(fw_mark),
+                    'peers': {},
+                }
+            else:
+                # We are entering a peer
+                device, public_key, preshared_key, endpoint, allowed_ips, latest_handshake, transfer_rx, transfer_tx, persistent_keepalive = items
+                if allowed_ips == '(none)':
+                    allowed_ips = []
+                else:
+                    allowed_ips = allowed_ips.split('\t')
+                output[device]['peers'][public_key] = {
+                    'preshared_key': None if preshared_key == '(none)' else preshared_key,
+                    'endpoint': None if endpoint == '(none)' else endpoint,
+                    'allowed_ips': allowed_ips,
+                    'latest_handshake': None if latest_handshake == '0' else int(latest_handshake),
+                    'transfer_rx': int(transfer_rx),
+                    'transfer_tx': int(transfer_tx),
+                    'persistent_keepalive': None if persistent_keepalive == 'off' else int(persistent_keepalive),
+                }
+        return output
+
+    def show_interface(self):
+        wgdump = self._dump().get(self.config['ifname'], None)
+
+        c = Config()
+
+        c.set_level(["interfaces", "wireguard", self.config['ifname']])
+        description = c.return_effective_value(["description"])
+        ips = c.return_effective_values(["address"])
+
+        answer = "interface: {}\n".format(self.config['ifname'])
+        if (description):
+            answer += "  description: {}\n".format(description)
+        if (ips):
+            answer += "  address: {}\n".format(", ".join(ips))
+
+        answer += "  public key: {}\n".format(wgdump['public_key'])
+        answer += "  private key: (hidden)\n"
+        answer += "  listening port: {}\n".format(wgdump['listen_port'])
+        answer += "\n"
+
+        for peer in c.list_effective_nodes(["peer"]):
+            if wgdump['peers']:
+                pubkey = c.return_effective_value(["peer", peer, "pubkey"])
+                if pubkey in wgdump['peers']:
+                    wgpeer = wgdump['peers'][pubkey]
+
+                    answer += "  peer: {}\n".format(peer)
+                    answer += "    public key: {}\n".format(pubkey)
+
+                    """ figure out if the tunnel is recently active or not """
+                    status = "inactive"
+                    if (wgpeer['latest_handshake'] is None):
+                        """ no handshake ever """
+                        status = "inactive"
+                    else:
+                        if int(wgpeer['latest_handshake']) > 0:
+                            delta = timedelta(seconds=int(
+                                time.time() - wgpeer['latest_handshake']))
+                            answer += "    latest handshake: {}\n".format(delta)
+                            if (time.time() - int(wgpeer['latest_handshake']) < (60*5)):
+                                """ Five minutes and the tunnel is still active """
+                                status = "active"
+                            else:
+                                """ it's been longer than 5 minutes """
+                                status = "inactive"
+                        elif int(wgpeer['latest_handshake']) == 0:
+                            """ no handshake ever """
+                            status = "inactive"
+                        answer += "    status: {}\n".format(status)
+
+                    if wgpeer['endpoint'] is not None:
+                        answer += "    endpoint: {}\n".format(wgpeer['endpoint'])
+
+                    if wgpeer['allowed_ips'] is not None:
+                        answer += "    allowed ips: {}\n".format(
+                            ",".join(wgpeer['allowed_ips']).replace(",", ", "))
+
+                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0:
+                        rx_size = size(
+                            wgpeer['transfer_rx'], system=alternative)
+                        tx_size = size(
+                            wgpeer['transfer_tx'], system=alternative)
+                        answer += "    transfer: {} received, {} sent\n".format(
+                            rx_size, tx_size)
+
+                    if wgpeer['persistent_keepalive'] is not None:
+                        answer += "    persistent keepalive: every {} seconds\n".format(
+                            wgpeer['persistent_keepalive'])
+                answer += '\n'
+        return answer + super().formated_stats()
 
 
 @Interface.register
 class WireGuardIf(Interface):
+    OperationalClass = WireGuardOperational
+
     default = {
         'type': 'wireguard',
         'port': 0,
@@ -106,117 +227,3 @@ class WireGuardIf(Interface):
         cmd = "wg set {0} peer {1} remove".format(
             self.config['ifname'], str(peerkey))
         return self._cmd(cmd)
-
-    def op_show_interface(self):
-        wgdump = self._dump().get(
-            self.config['ifname'], None)
-
-        c = Config()
-        c.set_level(["interfaces", "wireguard", self.config['ifname']])
-        description = c.return_effective_value(["description"])
-        ips = c.return_effective_values(["address"])
-
-        print ("interface: {}".format(self.config['ifname']))
-        if (description):
-            print ("  description: {}".format(description))
-
-        if (ips):
-            print ("  address: {}".format(", ".join(ips)))
-        print ("  public key: {}".format(wgdump['public_key']))
-        print ("  private key: (hidden)")
-        print ("  listening port: {}".format(wgdump['listen_port']))
-        print ()
-
-        for peer in c.list_effective_nodes(["peer"]):
-            if wgdump['peers']:
-                pubkey = c.return_effective_value(["peer", peer, "pubkey"])
-                if pubkey in wgdump['peers']:
-                    wgpeer = wgdump['peers'][pubkey]
-
-                    print ("  peer: {}".format(peer))
-                    print ("    public key: {}".format(pubkey))
-
-                    """ figure out if the tunnel is recently active or not """
-                    status = "inactive"
-                    if (wgpeer['latest_handshake'] is None):
-                        """ no handshake ever """
-                        status = "inactive"
-                    else:
-                        if int(wgpeer['latest_handshake']) > 0:
-                            delta = timedelta(seconds=int(
-                                time.time() - wgpeer['latest_handshake']))
-                            print ("    latest handshake: {}".format(delta))
-                            if (time.time() - int(wgpeer['latest_handshake']) < (60*5)):
-                                """ Five minutes and the tunnel is still active """
-                                status = "active"
-                            else:
-                                """ it's been longer than 5 minutes """
-                                status = "inactive"
-                        elif int(wgpeer['latest_handshake']) == 0:
-                            """ no handshake ever """
-                            status = "inactive"
-                        print ("    status: {}".format(status))
-
-                    if wgpeer['endpoint'] is not None:
-                        print ("    endpoint: {}".format(wgpeer['endpoint']))
-
-                    if wgpeer['allowed_ips'] is not None:
-                        print ("    allowed ips: {}".format(
-                            ",".join(wgpeer['allowed_ips']).replace(",", ", ")))
-
-                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0:
-                        rx_size = size(
-                            wgpeer['transfer_rx'], system=alternative)
-                        tx_size = size(
-                            wgpeer['transfer_tx'], system=alternative)
-                        print ("    transfer: {} received, {} sent".format(
-                            rx_size, tx_size))
-
-                    if wgpeer['persistent_keepalive'] is not None:
-                        print ("    persistent keepalive: every {} seconds".format(
-                            wgpeer['persistent_keepalive']))
-                print()
-        super().op_show_interface_stats()
-
-    def _dump(self):
-        """Dump wireguard data in a python friendly way."""
-        last_device = None
-        output = {}
-
-        # Dump wireguard connection data
-        _f = self._cmd('wg show all dump')
-        for line in _f.split('\n'):
-            if not line:
-                # Skip empty lines and last line
-                continue
-            items = line.split('\t')
-
-            if last_device != items[0]:
-                # We are currently entering a new node
-                device, private_key, public_key, listen_port, fw_mark = items
-                last_device = device
-
-                output[device] = {
-                    'private_key': None if private_key == '(none)' else private_key,
-                    'public_key': None if public_key == '(none)' else public_key,
-                    'listen_port': int(listen_port),
-                    'fw_mark': None if fw_mark == 'off' else int(fw_mark),
-                    'peers': {},
-                }
-            else:
-                # We are entering a peer
-                device, public_key, preshared_key, endpoint, allowed_ips, latest_handshake, transfer_rx, transfer_tx, persistent_keepalive = items
-                if allowed_ips == '(none)':
-                    allowed_ips = []
-                else:
-                    allowed_ips = allowed_ips.split('\t')
-                output[device]['peers'][public_key] = {
-                    'preshared_key': None if preshared_key == '(none)' else preshared_key,
-                    'endpoint': None if endpoint == '(none)' else endpoint,
-                    'allowed_ips': allowed_ips,
-                    'latest_handshake': None if latest_handshake == '0' else int(latest_handshake),
-                    'transfer_rx': int(transfer_rx),
-                    'transfer_tx': int(transfer_tx),
-                    'persistent_keepalive': None if persistent_keepalive == 'off' else int(persistent_keepalive),
-                }
-        return output

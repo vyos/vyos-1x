@@ -22,16 +22,13 @@ from json import dumps
 from pathlib import Path
 
 import vyos.config
-import vyos.keepalived
 
 from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
+from vyos.ifconfig.vrrp import VRRP
 
-daemon_file = "/etc/default/keepalived"
-config_file = "/etc/keepalived/keepalived.conf"
-config_dict_path = "/run/keepalived_config.dict"
 
 def get_config():
     vrrp_groups = []
@@ -127,7 +124,7 @@ def get_config():
         sync_groups.append(sync_group)
 
     # create a file with dict with proposed configuration
-    with open("{}.temp".format(config_dict_path), 'w') as dict_file:
+    with open("{}.temp".format(VRRP.location['vyos']), 'w') as dict_file:
         dict_file.write(dumps({'vrrp_groups': vrrp_groups, 'sync_groups': sync_groups}))
 
     return (vrrp_groups, sync_groups)
@@ -212,9 +209,9 @@ def generate(data):
     # Filter out disabled groups
     vrrp_groups = list(filter(lambda x: x["disable"] is not True, vrrp_groups))
 
-    render(config_file, 'vrrp/keepalived.conf.tmpl',
-           {"groups": vrrp_groups, "sync_groups": sync_groups})
-    render(daemon_file, 'vrrp/daemon.tmpl', {})
+    render(VRRP.location['config'], 'vrrp/keepalived.conf.tmpl',
+            {"groups": vrrp_groups, "sync_groups": sync_groups})
+    render(VRRP.location['daemon'], 'vrrp/daemon.tmpl', {})
     return None
 
 
@@ -223,12 +220,12 @@ def apply(data):
     if vrrp_groups:
         # safely rename a temporary file with configuration dict
         try:
-            dict_file = Path("{}.temp".format(config_dict_path))
-            dict_file.rename(Path(config_dict_path))
+            dict_file = Path("{}.temp".format(VRRP.location['vyos']))
+            dict_file.rename(Path(VRRP.location['vyos']))
         except Exception as err:
             print("Unable to rename the file with keepalived config for FIFO pipe: {}".format(err))
 
-        if not vyos.keepalived.vrrp_running():
+        if not VRRP.is_running():
             print("Starting the VRRP process")
             ret = call("sudo systemctl restart keepalived.service")
         else:
@@ -241,7 +238,7 @@ def apply(data):
         # VRRP is removed in the commit
         print("Stopping the VRRP process")
         call("sudo systemctl stop keepalived.service")
-        os.unlink(config_file)
+        os.unlink(VRRP.location['daemon'])
 
     return None
 

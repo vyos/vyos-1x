@@ -13,7 +13,7 @@
                 <properties>
                   <help>Clear all wireless interface counters</help>
                 </properties>
-                <command>sudo ${vyatta_bindir}/sudo-users/vyatta-show-interfaces.pl --action=clear --intf-type="$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/show_interfaces.py --action=clear --intf-type="$3"</command>
               </leafNode>
             </children>
           </node>
@@ -29,7 +29,7 @@
                 <properties>
                   <help>Clear all wireless interface counters</help>
                 </properties>
-                <command>sudo ${vyatta_bindir}/sudo-users/vyatta-show-interfaces.pl --action=clear --intf="$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/show_interfaces.py --action=clear --intf="$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -45,13 +45,13 @@
             <properties>
               <help>Show wireless interface information</help>
             </properties>
-            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf-type=wireless --action=show-brief</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireless --action=show-brief</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed wireless interface information</help>
                 </properties>
-                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf-type=wireless --action=show</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireless --action=show</command>
               </leafNode>
               <leafNode name="info">
                 <properties>
@@ -68,13 +68,13 @@
                 <script>${vyos_completion_dir}/list_interfaces.py --type wireless</script>
               </completionHelp>
             </properties>
-            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4"</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified wireless interface information</help>
                 </properties>
-                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4" --action=show-brief</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
               </leafNode>
               <node name="scan">
                 <properties>
@@ -100,13 +100,13 @@
                 <properties>
                   <help>Show specified virtual network interface (vif) information</help>
                 </properties>
-                <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4.$6"</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6"</command>
                 <children>
                   <leafNode name="brief">
                     <properties>
                       <help>Show summary of specified virtual network interface (vif) information</help>
                     </properties>
-                    <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4.$6" --action=show-brief</command>
+                    <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6" --action=show-brief</command>
                   </leafNode>
                 </children>
               </tagNode>

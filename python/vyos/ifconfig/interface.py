@@ -14,23 +14,19 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import json
-import glob
-import time
-from time import sleep
-from os.path import isfile
 from copy import deepcopy
-from datetime import timedelta
 
-from hurry.filesize import size, alternative
-from ipaddress import IPv4Network, IPv6Address, IPv6Network
-from netifaces import ifaddresses, AF_INET, AF_INET6
-from tabulate import tabulate
+from ipaddress import IPv4Network
+from ipaddress import IPv6Address
+from ipaddress import IPv6Network
+from netifaces import ifaddresses
+# this is not the same as socket.AF_INET/INET6
+from netifaces import AF_INET
+from netifaces import AF_INET6
 
-from vyos.util import mac2eui64
 from vyos import ConfigError
-from vyos.ifconfig.dhcp import DHCP
+from vyos.util import mac2eui64
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -42,9 +38,17 @@ from vyos.validate import assert_positive
 from vyos.validate import assert_range
 
 from vyos.ifconfig.control import Control
+from vyos.ifconfig.dhcp import DHCP
+from vyos.ifconfig.vrrp import VRRP
+from vyos.ifconfig.operational import Operational
 
 
 class Interface(Control):
+    # This is the class which will be used to create
+    # self.operational, it allows subclasses, such as
+    # WireGuard to modify their display behaviour
+    OperationalClass = Operational
+
     options = []
     required = []
     default = {
@@ -154,6 +158,10 @@ class Interface(Control):
         },
     }
 
+    @classmethod
+    def exists(cls, ifname):
+        return os.path.exists(f'/sys/class/net/{ifname}')
+
     def __init__(self, ifname, **kargs):
         """
         This is the base interface class which supports basic IP/MAC address
@@ -184,14 +192,15 @@ class Interface(Control):
 
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
+        self.ifname = ifname
         self.dhcp = DHCP(ifname)
 
-        if not os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
+        if not self.exists(ifname):
             # Any instance of Interface, such as Interface('eth0')
             # can be used safely to access the generic function in this class
             # as 'type' is unset, the class can not be created
             if not self.config['type']:
-                raise Exception('interface "{}" not found'.format(self.config['ifname']))
+                raise Exception(f'interface "{ifname}" not found')
 
             # Should an Instance of a child class (EthernetIf, DummyIf, ..)
             # be required, then create should be set to False to not accidentally create it.
@@ -210,6 +219,9 @@ class Interface(Control):
 
         # list of assigned IP addresses
         self._addr = []
+
+        self.operational = self.OperationalClass(ifname)
+        self.vrrp = VRRP(ifname)
 
     def _create(self):
         cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
@@ -556,19 +568,6 @@ class Interface(Control):
         """
         return self.set_interface('admin_state', state)
 
-    def get_oper_state(self):
-        """
-        Get interface operational state
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').get_oper_sate()
-        'up'
-        """
-        # https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
-        # "unknown", "notpresent", "down", "lowerlayerdown", "testing", "dormant", "up"
-        return self.get_interface('oper_state')
-
     def set_proxy_arp(self, enable):
         """
         Set per interface proxy ARP configuration
@@ -713,30 +712,3 @@ class Interface(Control):
             if is_intf_addr_assigned(self.config['ifname'], addr):
                 cmd = 'ip addr del "{}" dev "{}"'.format(addr, self.config['ifname'])
                 return self._cmd(cmd)
-
-    def op_show_interface_stats(self):
-        stats = self.get_interface_stats()
-        rx = [['bytes','packets','errors','dropped','overrun','mcast'],[stats['rx_bytes'],stats['rx_packets'],stats['rx_errors'],stats['rx_dropped'],stats['rx_over_errors'],stats['multicast']]]
-        tx = [['bytes','packets','errors','dropped','carrier','collisions'],[stats['tx_bytes'],stats['tx_packets'],stats['tx_errors'],stats['tx_dropped'],stats['tx_carrier_errors'],stats['collisions']]]
-        output = "RX: \n"
-        output += tabulate(rx,headers="firstrow",numalign="right",tablefmt="plain")
-        output += "\n\nTX: \n"
-        output += tabulate(tx,headers="firstrow",numalign="right",tablefmt="plain")
-        print('  '.join(('\n'+output.lstrip()).splitlines(True)))
-
-    def get_interface_stats(self):
-        interface_stats = dict()
-        devices = [f for f in glob.glob("/sys/class/net/**/statistics")]
-        for dev_path in devices:
-            metrics = [f for f in glob.glob(dev_path +"/**")]
-            dev = re.findall(r"/sys/class/net/(.*)/statistics",dev_path)[0]
-            dev_dict = dict()
-            for metric_path in metrics:
-                metric = metric_path.replace(dev_path+"/","")
-                if isfile(metric_path):
-                    data = open(metric_path, 'r').read()[:-1]
-                    dev_dict[metric] = int(data)
-            interface_stats[dev] = dev_dict
-
-        return interface_stats[self.config['ifname']]
-

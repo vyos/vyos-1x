@@ -69,7 +69,14 @@ class Section:
         if name in cls._prefixes:
             return cls._prefixes[name].definition['section']
         return ''
- 
+
+    @classmethod
+    def sections(cls):
+        """
+        return all the sections we found under 'set interfaces'
+        """
+        return list(set([cls._prefixes[_].definition['section'] for _ in cls._prefixes]))
+
     @classmethod
     def klass(cls, name, vlan=True):
         name = cls._basename(name, vlan)
@@ -80,7 +87,8 @@ class Section:
     @classmethod
     def _intf_under_section (cls,section=''):
         """
-        return a generator with the name of the interface which are under a section
+        return a generator with the name of the configured interface
+        which are under a section
         """
         interfaces = netifaces.interfaces()
 
@@ -97,7 +105,7 @@ class Section:
     @classmethod
     def interfaces(cls, section=''):
         """
-        return a list of the name of the interface which are under a section
+        return a list of the name of the configured interface which are under a section
         if no section is provided, then it returns all configured interfaces
         """
         return list(cls._intf_under_section(section))
@@ -105,7 +113,7 @@ class Section:
     @classmethod
     def _intf_with_feature(cls, feature=''):
         """
-        return a generator with the name of the interface which have 
+        return a generator with the name of the configured interface which have
         a particular feature set in their definition such as:
         bondable, broadcast, bridgeable, ...
         """
@@ -116,7 +124,7 @@ class Section:
     @classmethod
     def feature(cls, feature=''):
         """
-        return list with the name of the interface which have 
+        return list with the name of the configured interface which have
         a particular feature set in their definition such as:
         bondable, broadcast, bridgeable, ...
         """
