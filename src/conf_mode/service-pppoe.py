@@ -17,49 +17,15 @@
 import os
 import re
 
-from socket import socket, AF_INET, SOCK_STREAM
 from sys import exit
-from time import sleep
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import call
 from vyos.template import render
 
-
-pidfile = r'/var/run/accel_pppoe.pid'
-pppoe_cnf_dir = r'/etc/accel-ppp/pppoe'
-chap_secrets = pppoe_cnf_dir + '/chap-secrets'
-pppoe_conf = pppoe_cnf_dir + '/pppoe.config'
-# accel-pppd -d -c /etc/accel-ppp/pppoe/pppoe.config -p
-# /var/run/accel_pppoe.pid
-
-# config path creation
-if not os.path.exists(pppoe_cnf_dir):
-    os.makedirs(pppoe_cnf_dir)
-
-#
-# depending on hw and threads, daemon needs a little to start
-# if it takes longer than 100 * 0.5 secs, exception is being raised
-# not sure if that's the best way to check it, but it worked so far quite well
-#
-def _chk_con():
-    cnt = 0
-    s = socket(AF_INET, SOCK_STREAM)
-    while True:
-        try:
-            s.connect(("127.0.0.1", 2001))
-            break
-        except ConnectionRefusedError:
-            sleep(0.5)
-            cnt += 1
-            if cnt == 100:
-                raise("failed to start pppoe server")
-
-
-def _accel_cmd(command):
-    return run(f'/usr/bin/accel-cmd {command}')
-
+chap_secrets = r'/run/accel-pppd/chap-secrets'
+pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 
 def get_config():
     c = Config()
@@ -373,8 +339,12 @@ def verify(c):
 
 
 def generate(c):
-    if c == None:
+    if not c:
         return None
+
+    dirname = os.path.dirname(pppoe_conf)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
 
     # accel-cmd reload doesn't work so any change results in a restart of the
     # daemon
@@ -400,22 +370,14 @@ def generate(c):
 
 
 def apply(c):
-    if c == None:
-        if os.path.exists(pidfile):
-            _accel_cmd('shutdown hard')
-            if os.path.exists(pidfile):
-                os.remove(pidfile)
+    if not c:
+        call('systemctl stop accel-ppp@pppoe.service')
+        if os.path.exists(pppoe_conf):
+            os.unlink(pppoe_conf)
+
         return None
 
-    if not os.path.exists(pidfile):
-        ret = run(f'/usr/sbin/accel-pppd -c {pppoe_conf} -p {pidfile} -d')
-        _chk_con()
-        if ret != 0 and os.path.exists(pidfile):
-            os.remove(pidfile)
-            raise ConfigError('accel-pppd failed to start')
-    else:
-        _accel_cmd('restart')
-
+    call('systemctl restart accel-ppp@pppoe.service')
 
 if __name__ == '__main__':
     try:
