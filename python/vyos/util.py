@@ -447,3 +447,9 @@ def is_bridge_member(interface):
 
     return False, None
 
+def get_half_cpus():
+    """ return 1/2 of the numbers of available CPUs """
+    cpu = os.cpu_count()
+    if cpu > 1:
+        cpu /= 2
+    return int(cpu)

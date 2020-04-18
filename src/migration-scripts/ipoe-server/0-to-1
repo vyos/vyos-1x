@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # - remove primary/secondary identifier from nameserver
+# - Unifi RADIUS configuration by placing it all under "authentication radius" node
 
 import os
 import sys
@@ -32,7 +33,7 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
-base = ['service', 'pppoe-server']
+base = ['service', 'ipoe-server']
 if not config.exists(base):
     # Nothing to do
     exit(0)
@@ -58,16 +59,6 @@ else:
 
         config.delete(dns_base)
 
-    # Migrate IPv4 WINS servers
-    wins_base = base + ['wins-servers']
-    if config.exists(wins_base):
-        for server in ['server-1', 'server-2']:
-          if config.exists(wins_base + [server]):
-            wins = config.return_value(wins_base + [server])
-            config.set(base + ['wins-server'], value=wins, replace=False)
-
-        config.delete(wins_base)
-
     # Migrate radius-settings node to RADIUS and use this as base for the
     # later migration of the RADIUS servers - this will save a lot of code
     radius_settings = base + ['authentication', 'radius-settings']
@@ -89,34 +80,6 @@ else:
                 config.delete(new_base + [server, 'req-limit'])
 
         config.delete(radius_server)
-
-    # Migrate IPv6 prefixes
-    ipv6_base = base + ['client-ipv6-pool']
-    if config.exists(ipv6_base + ['prefix']):
-        prefix_old = config.return_values(ipv6_base + ['prefix'])
-        # delete old prefix CLI nodes
-        config.delete(ipv6_base + ['prefix'])
-        # create ned prefix tag node
-        config.set(ipv6_base + ['prefix'])
-        config.set_tag(ipv6_base + ['prefix'])
-
-        for p in prefix_old:
-            prefix = p.split(',')[0]
-            mask = p.split(',')[1]
-            config.set(ipv6_base + ['prefix', prefix, 'mask'], value=mask)
-
-    if config.exists(ipv6_base + ['delegate-prefix']):
-        prefix_old = config.return_values(ipv6_base + ['delegate-prefix'])
-        # delete old delegate prefix CLI nodes
-        config.delete(ipv6_base + ['delegate-prefix'])
-        # create ned delegation tag node
-        config.set(ipv6_base + ['delegate'])
-        config.set_tag(ipv6_base + ['delegate'])
-
-        for p in prefix_old:
-            prefix = p.split(',')[0]
-            mask = p.split(',')[1]
-            config.set(ipv6_base + ['delegate', prefix, 'delegation-prefix'], value=mask)
 
     try:
         with open(file_name, 'w') as f:

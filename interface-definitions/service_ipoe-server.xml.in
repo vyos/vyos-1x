@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="ipoe-server" owner="${vyos_conf_scripts_dir}/service-ipoe.py">
+      <node name="ipoe-server" owner="${vyos_conf_scripts_dir}/service_ipoe-server.py">
         <properties>
           <help>Internet Protocol over Ethernet (IPoE) Server</help>
           <priority>900</priority>
@@ -111,60 +111,24 @@
               </leafNode>
             </children>
           </tagNode>
-          <node name="dns-server">
+          <leafNode name="name-server">
             <properties>
-              <help>DNS servers offered via internal DHCP</help>
+              <help>Domain Name Server (DNS) propagated to client</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Domain Name Server (DNS) IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Domain Name Server (DNS) IPv6 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+              <multi/>
             </properties>
-            <children>
-              <leafNode name="server-1">
-                <properties>
-                  <help>IP address of the primary DNS server</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-2">
-                <properties>
-                  <help>IP address of the secondary DNS server</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-          <node name="dnsv6-server">
-            <properties>
-              <help>DNSv6 servers offered via internal DHCPv6</help>
-            </properties>
-            <children>
-              <leafNode name="server-1">
-                <properties>
-                  <help>IP address of the primary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-2">
-                <properties>
-                  <help>IP address of the secondary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-3">
-                <properties>
-                  <help>IP address of the tertiary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          </leafNode>
           <node name="client-ipv6-pool">
             <properties>
               <help>Pool of client IPv6 addresses</help>
@@ -268,37 +232,26 @@
                   </tagNode>
                 </children>
               </tagNode>
-              <tagNode name="radius-server">
-                <properties>
-                  <help>IP address of RADIUS server</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IP address of RADIUS server</description>
-                  </valueHelp>
-                </properties>
+              #include <include/radius-server.xml.i>
+              <node name="radius">
                 <children>
-                  <leafNode name="secret">
-                    <properties>
-                      <help>Key for accessing the specified server</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="req-limit">
-                    <properties>
-                      <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fail-time">
-                    <properties>
-                      <help>If server does not respond, mark it unavailable for this time (seconds)</help>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
-              <node name="radius-settings">
-                <properties>
-                  <help>RADIUS settings</help>
-                </properties>
-                <children>
+                  <tagNode name="server">
+                    <children>
+                      <leafNode name="fail-time">
+                        <properties>
+                          <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
+                          <valueHelp>
+                            <format>0-600</format>
+                            <description>Fail time penalty</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-600"/>
+                          </constraint>
+                          <constraintErrorMessage>Fail time must be between 0 and 600 seconds</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
                   <leafNode name="timeout">
                     <properties>
                       <help>Timeout to wait response from server (seconds)</help>
@@ -319,18 +272,6 @@
                       <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
                     </properties>
                   </leafNode>
-                  <leafNode name="nas-ip-address">
-                    <properties>
-                      <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address of the DAE Server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
                   <node name="dae-server">
                     <properties>
                       <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
@@ -339,25 +280,11 @@
                       <leafNode name="ip-address">
                         <properties>
                           <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IPv4 address of the DAE Server</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="port">
                         <properties>
                           <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
-                          <valueHelp>
-                            <format>1-65535</format>
-                            <description>port number</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="numeric" argument="--range 1-65535"/>
-                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="secret">

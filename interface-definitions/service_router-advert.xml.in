@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="router-advert" owner="${vyos_conf_scripts_dir}/service-router-advert.py">
+      <node name="router-advert" owner="${vyos_conf_scripts_dir}/service_router-advert.py">
         <properties>
           <help>IPv6 Router Advertisements (RAs) service</help>
           <priority>900</priority>

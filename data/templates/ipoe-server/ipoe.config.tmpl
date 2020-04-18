@@ -6,16 +6,15 @@ shaper
 ipv6pool
 ipv6_nd
 ipv6_dhcp
-{% if auth['mech'] == 'radius' %}
-radius
-{% endif -%}
 ippool
-{% if auth['mech'] == 'local' %}
+{% if auth_mode == 'radius' %}
+radius
+{% elif auth_mode == 'local' %}
 chap-secrets
 {% endif %}
 
 [core]
-thread-count={{thread_cnt}}
+thread-count={{ thread_cnt }}
 
 [log]
 syslog=accel-ipoe,daemon
@@ -24,39 +23,35 @@ level=5
 
 [ipoe]
 verbose=1
-{% for intfc in interfaces %}
-{% if interfaces[intfc]['vlan_mon'] %}
-interface=re:{{intfc}}\.\d+,{% else %}interface={{intfc}},{% endif %}shared={{interfaces[intfc]['shared']}},mode={{interfaces[intfc]['mode']}},ifcfg={{interfaces[intfc]['ifcfg']}},range={{interfaces[intfc]['range']}},start={{interfaces[intfc]['sess_start']}},ipv6=1
+{% for interface in interfaces %}
+{% if interface.vlan_mon %}
+interface=re:{{ interface.name }}\.\d+,{% else %}interface={{ interface }},{% endif %}shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }},range={{ interface.range }},start={{ interface.sess_start }},ipv6=1
 {% endfor %}
-{% if auth['mech'] == 'noauth' %}
+{% if auth_mode == 'noauth' %}
 noauth=1
-{% endif %}
-{% if auth['mech'] == 'local' %}
+{% elif auth_mode == 'local' %}
 username=ifname
 password=csid
 {% endif %}
 
-{%- for intfc in interfaces %}
-{% if (interfaces[intfc]['shared'] == '0') and (interfaces[intfc]['vlan_mon']) %}
-vlan-mon={{intfc}},{{interfaces[intfc]['vlan_mon']|join(',')}}
+{%- for interface in interfaces %}
+{% if (interface.shared == '0') and (interface.vlan_mon) %}
+vlan-mon={{ interface.name }},{{ interface.vlan_mon | join(',') }}
 {% endif %}
 {% endfor %}
 
-{% if (dns['server1']) or (dns['server2']) %}
+{% if dnsv4 %}
 [dns]
-{% if dns['server1'] %}
-dns1={{dns['server1']}}
-{% endif -%}
-{% if dns['server2'] %}
-dns2={{dns['server2']}}
-{% endif -%}
-{% endif -%}
+{% for dns in dnsv4 -%}
+dns{{ loop.index }}={{ dns }}
+{% endfor -%}
+{% endif %}
 
-{% if (dnsv6['server1']) or (dnsv6['server2']) or (dnsv6['server3']) %}
-[dnsv6]
-dns={{dnsv6['server1']}}
-dns={{dnsv6['server2']}}
-dns={{dnsv6['server3']}}
+{% if dnsv6 %}
+[ipv6-dns]
+{% for dns in dnsv6 -%}
+{{ dns }}
+{% endfor -%}
 {% endif %}
 
 [ipv6-nd]
@@ -65,48 +60,50 @@ verbose=1
 [ipv6-dhcp]
 verbose=1
 
-{% if ipv6['prfx'] %}
+{% if client_ipv6_pool %}
 [ipv6-pool]
-{% for prfx in ipv6['prfx'] %}
-{{prfx}}
+{% for p in client_ipv6_pool %}
+{{ p }}
 {% endfor %}
-{% for pd in ipv6['pd'] %}
-delegate={{pd}}
+{% for pd in client_ipv6_delegate_prefix %}
+delegate={{ pd }}
 {% endfor %}
 {% endif %}
 
-{% if auth['mech'] == 'local' %}
+{% if auth_mode == 'local' %}
 [chap-secrets]
-chap-secrets={{chap_secrets_file}}
-{% endif %}
-
-{% if auth['mech'] == 'radius' %}
+chap-secrets={{ chap_secrets_file }}
+{% elif auth_mode == 'radius' %}
 [radius]
 verbose=1
-{% for srv in auth['radius'] %}
-server={{srv}},{{auth['radius'][srv]['secret']}},
-req-limit={{auth['radius'][srv]['req-limit']}},
-fail-time={{auth['radius'][srv]['fail-time']}}
-{% endfor %}
-{% if auth['radsettings']['dae-server']['ip-address'] %}
-dae-server={{auth['radsettings']['dae-server']['ip-address']}}:
-{{auth['radsettings']['dae-server']['port']}},
-{{auth['radsettings']['dae-server']['secret']}}
+{% for r in radius_server %}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
+{% endfor -%}
+
+acct-timeout={{ radius_acct_tmo }}
+timeout={{ radius_timeout }}
+max-try={{ radius_max_try }}
+{% if radius_nas_id %}
+nas-identifier={{ radius_nas_id }}
 {% endif -%}
-{% if auth['radsettings']['acct-timeout'] %}
-acct-timeout={{auth['radsettings']['acct-timeout']}}
+{% if radius_nas_ip %}
+nas-ip-address={{ radius_nas_ip }}
 {% endif -%}
-{% if auth['radsettings']['max-try'] %}
-max-try={{auth['radsettings']['max-try']}}
+{% if radius_source_address %}
+bind={{ radius_source_address }}
 {% endif -%}
-{% if auth['radsettings']['timeout'] %}
-timeout={{auth['radsettings']['timeout']}}
+
+{% if radius_dynamic_author %}
+dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {% endif -%}
-{% if auth['radsettings']['nas-ip-address'] %}
-nas-ip-address={{auth['radsettings']['nas-ip-address']}}
+
+{% if radius_shaper_attr %}
+[shaper]
+verbose=1
+attr={{ radius_shaper_attr }}
+{% if radius_shaper_vendor %}
+vendor={{ radius_shaper_vendor }}
 {% endif -%}
-{% if auth['radsettings']['nas-identifier'] %}
-nas-identifier={{auth['radsettings']['nas-identifier']}}
 {% endif -%}
 {% endif %}
 

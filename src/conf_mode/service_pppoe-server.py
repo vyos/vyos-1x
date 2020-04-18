@@ -78,6 +78,7 @@ default_config_data = {
     'radius_dynamic_author': '',
     'sesscrtl': 'replace',
     'snmp': False,
+    'thread_cnt': '1'
 }
 
 def get_config():
