@@ -188,9 +188,15 @@ pado-delay={{ pado_delay }}
 
 {% if limits_burst or limits_connections or limits_connections %}
 [connlimit]
+{% if limits_connections %}
 limit={{ limits_connections }}
+{% endif %}
+{% if limits_burst %}
 burst={{ limits_burst }}
+{% endif %}
+{% if limits_timeout %}
 timeout={{ limits_timeout }}
+{% endif %}
 {% endif %}
 
 [cli]
