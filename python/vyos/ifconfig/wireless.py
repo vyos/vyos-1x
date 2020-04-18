@@ -38,7 +38,8 @@ class WiFiIf(Interface):
             'bridgeable': True,
         }
     }
-    options = ['phy', 'op_mode']
+    options = Interface.options + \
+        ['phy', 'op_mode']
 
     def _create(self):
         # all interfaces will be added in monitor mode
