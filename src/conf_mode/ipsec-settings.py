@@ -100,7 +100,7 @@ def write_ipsec_secrets(c):
     if c.get("ipsec_l2tp_auth_mode") == "pre-shared-secret":
         secret_txt = "{0}\n{1} %any : PSK \"{2}\"\n{3}\n".format(delim_ipsec_l2tp_begin, c['outside_addr'], c['ipsec_l2tp_secret'], delim_ipsec_l2tp_end)
     elif data.get("ipsec_l2tp_auth_mode") == "x509":
-        secret_txt = "{0}\n: RSA {1}\n{2}\n".format(delim_ipsec_l2tp_begin, c['server_key_file_copied'], delim_ipsec_l2tp_begin)
+        secret_txt = "{0}\n: RSA {1}\n{2}\n".format(delim_ipsec_l2tp_begin, c['server_key_file_copied'], delim_ipsec_l2tp_end)
 
     old_umask = os.umask(0o077)
     with open(ipsec_secrets_file, 'a+') as f:
@@ -108,7 +108,7 @@ def write_ipsec_secrets(c):
     os.umask(old_umask)
 
 def write_ipsec_conf(c):
-    ipsec_confg_txt = "{0}\ninclude {1}\n{2}\n".format(delim_ipsec_l2tp_begin, ipsec_ra_conn_file, delim_ipsec_l2tp_begin)
+    ipsec_confg_txt = "{0}\ninclude {1}\n{2}\n".format(delim_ipsec_l2tp_begin, ipsec_ra_conn_file, delim_ipsec_l2tp_end)
 
     old_umask = os.umask(0o077)
     with open(ipsec_conf_file, 'a+') as f:
