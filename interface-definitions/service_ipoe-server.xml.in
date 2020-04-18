@@ -129,25 +129,7 @@
               <multi/>
             </properties>
           </leafNode>
-          <node name="client-ipv6-pool">
-            <properties>
-              <help>Pool of client IPv6 addresses</help>
-            </properties>
-            <children>
-              <leafNode name="prefix">
-                <properties>
-                  <help>Format: ipv6prefix/mask,prefix_len (e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients)</help>
-                  <multi/>
-                </properties>
-              </leafNode>
-              <leafNode name="delegate-prefix">
-                <properties>
-                  <help>Format: ipv6prefix/mask,prefix_len (delegates prefix  to clients via DHCPv6 prefix delegation</help>
-                  <multi/>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          #include <include/accel-client-ipv6-pool.xml.in>
           <node name="authentication">
             <properties>
               <help>Client authentication methods</help>

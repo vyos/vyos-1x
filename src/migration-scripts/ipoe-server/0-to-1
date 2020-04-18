@@ -81,6 +81,34 @@ else:
 
         config.delete(radius_server)
 
+    # Migrate IPv6 prefixes
+    ipv6_base = base + ['client-ipv6-pool']
+    if config.exists(ipv6_base + ['prefix']):
+        prefix_old = config.return_values(ipv6_base + ['prefix'])
+        # delete old prefix CLI nodes
+        config.delete(ipv6_base + ['prefix'])
+        # create ned prefix tag node
+        config.set(ipv6_base + ['prefix'])
+        config.set_tag(ipv6_base + ['prefix'])
+
+        for p in prefix_old:
+            prefix = p.split(',')[0]
+            mask = p.split(',')[1]
+            config.set(ipv6_base + ['prefix', prefix, 'mask'], value=mask)
+
+    if config.exists(ipv6_base + ['delegate-prefix']):
+        prefix_old = config.return_values(ipv6_base + ['delegate-prefix'])
+        # delete old delegate prefix CLI nodes
+        config.delete(ipv6_base + ['delegate-prefix'])
+        # create ned delegation tag node
+        config.set(ipv6_base + ['delegate'])
+        config.set_tag(ipv6_base + ['delegate'])
+
+        for p in prefix_old:
+            prefix = p.split(',')[0]
+            mask = p.split(',')[1]
+            config.set(ipv6_base + ['delegate', prefix, 'delegation-prefix'], value=mask)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

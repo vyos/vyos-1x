@@ -202,10 +202,29 @@ def get_config():
 
     conf.set_level(base_path)
     if conf.exists(['client-ipv6-pool', 'prefix']):
-        ipoe['client_ipv6_pool'] = conf.return_values(['client-ipv6-pool', 'prefix'])
+        for prefix in conf.list_nodes(['client-ipv6-pool', 'prefix']):
+            tmp = {
+                'prefix': prefix,
+                'mask': '64'
+            }
 
-    if conf.exists(['client-ipv6-pool', 'delegate-prefix']):
-        ipoe['client_ipv6_delegate_prefix'] = conf.return_values(['client-ipv6-pool', 'delegate-prefix'])
+            if conf.exists(['client-ipv6-pool', 'prefix', prefix, 'mask']):
+                tmp['mask'] = conf.return_value(['client-ipv6-pool', 'prefix', prefix, 'mask'])
+
+            ipoe['client_ipv6_pool'].append(tmp)
+
+
+    if conf.exists(['client-ipv6-pool', 'delegate']):
+        for prefix in conf.list_nodes(['client-ipv6-pool', 'delegate']):
+            tmp = {
+                'prefix': prefix,
+                'mask': ''
+            }
+
+            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix']):
+                tmp['mask'] = conf.return_value(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix'])
+
+            ipoe['client_ipv6_delegate_prefix'].append(tmp)
 
     return ipoe
 
