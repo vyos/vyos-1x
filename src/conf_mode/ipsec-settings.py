@@ -28,10 +28,10 @@ from vyos.template import render
 
 ra_conn_name = "remote-access"
 charon_conf_file = "/etc/strongswan.d/charon.conf"
-ipsec_secrets_flie = "/etc/ipsec.secrets"
+ipsec_secrets_file = "/etc/ipsec.secrets"
 ipsec_ra_conn_dir = "/etc/ipsec.d/tunnels/"
 ipsec_ra_conn_file = ipsec_ra_conn_dir + ra_conn_name
-ipsec_conf_flie = "/etc/ipsec.conf"
+ipsec_conf_file = "/etc/ipsec.conf"
 ca_cert_path = "/etc/ipsec.d/cacerts"
 server_cert_path = "/etc/ipsec.d/certs"
 server_key_path = "/etc/ipsec.d/private"
@@ -96,6 +96,24 @@ def get_config():
 
     return data
 
+def write_ipsec_secrets(c):
+    if c.get("ipsec_l2tp_auth_mode") == "pre-shared-secret":
+        secret_txt = "{0}\n{1} %any : PSK \"{2}\"\n{3}\n".format(delim_ipsec_l2tp_begin, c['outside_addr'], c['ipsec_l2tp_secret'], delim_ipsec_l2tp_end)
+    elif data.get("ipsec_l2tp_auth_mode") == "x509":
+        secret_txt = "{0}\n: RSA {1}\n{2}\n".format(delim_ipsec_l2tp_begin, c['server_key_file_copied'], delim_ipsec_l2tp_begin)
+
+    old_umask = os.umask(0o077)
+    with open(ipsec_secrets_file, 'a+') as f:
+        f.write(secret_txt)
+    os.umask(old_umask)
+
+def write_ipsec_conf(c):
+    ipsec_confg_txt = "{0}\ninclude {1}\n{2}\n".format(delim_ipsec_l2tp_begin, ipsec_ra_conn_file, delim_ipsec_l2tp_begin)
+
+    old_umask = os.umask(0o077)
+    with open(ipsec_conf_file, 'a+') as f:
+        f.write(ipsec_confg_txt)
+    os.umask(old_umask)
 
 ### Remove config from file by delimiter
 def remove_confs(delim_begin, delim_end, conf_file):
@@ -150,11 +168,12 @@ def generate(data):
     render(charon_conf_file, 'ipsec/charon.tmpl', data, trim_blocks=True)
 
     if data["ipsec_l2tp"]:
-        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
-
-        old_umask = os.umask(0o077)
-        render(ipsec_secrets_flie, 'ipsec/ipsec.secrets.tmpl', c, trim_blocks=True)
-        os.umask(old_umask)
+        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_file)
+        # old_umask = os.umask(0o077)
+        # render(ipsec_secrets_file, 'ipsec/ipsec.secrets.tmpl', c, trim_blocks=True)
+        # os.umask(old_umask)
+        ## Use this method while IPSec CLI handler won't be overwritten to python
+        write_ipsec_secrets(data)
 
         old_umask = os.umask(0o077)
 
@@ -165,15 +184,18 @@ def generate(data):
         render(ipsec_ra_conn_file, 'ipsec/remote-access.tmpl', c, trim_blocks=True)
         os.umask(old_umask)
 
-        old_umask = os.umask(0o077)
-        render(ipsec_conf_flie, 'ipsec/ipsec.conf.tmpl', c, trim_blocks=True)
-        os.umask(old_umask)
+        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_file)
+        # old_umask = os.umask(0o077)
+        # render(ipsec_conf_file, 'ipsec/ipsec.conf.tmpl', c, trim_blocks=True)
+        # os.umask(old_umask)
+        ## Use this method while IPSec CLI handler won't be overwritten to python
+        write_ipsec_conf(data)
 
     else:
         if os.path.exists(ipsec_ra_conn_file):
             remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_ra_conn_file)
-        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_flie)
-        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_flie)
+        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_file)
+        remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_file)
 
 def restart_ipsec():
     call('ipsec restart >&/dev/null')
