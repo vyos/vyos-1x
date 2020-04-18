@@ -68,6 +68,13 @@ else:
 
         config.delete(wins_base)
 
+    # Remove RADIUS server req-limit node
+    radius_base = base + ['authentication', 'radius']
+    if config.exists(radius_base):
+        for server in config.list_nodes(radius_base + ['server']):
+            if config.exists(radius_base + ['server', server, 'req-limit']):
+                config.delete(radius_base + ['server', server, 'req-limit'])
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

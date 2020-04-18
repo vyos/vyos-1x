@@ -71,6 +71,7 @@ default_config_data = {
     'radius_timeout': '3',
     'radius_nas_id': '',
     'radius_nas_ip': '',
+    'radius_source_address': '',
     'radius_shaper_attr': '',
     'radius_shaper_vendor': '',
     'radius_dynamic_author': '',
@@ -198,7 +199,7 @@ def get_config():
     # authentication mode radius servers and settings
     if conf.exists(['authentication', 'mode', 'radius']):
 
-        for server in conf.list_nodes(['authentication', 'radius-server']):
+        for server in conf.list_nodes(['authentication', 'radius', 'server']):
             radius = {
                 'server' : server,
                 'key' : '',
@@ -214,15 +215,15 @@ def get_config():
             if conf.exists(['port']):
                 radius['port'] = conf.return_value(['port'])
 
-            if conf.exists(['secret']):
-                radius['key'] = conf.return_value(['secret'])
+            if conf.exists(['key']):
+                radius['key'] = conf.return_value(['key'])
 
             if not conf.exists(['disable']):
                 pppoe['radius_server'].append(radius)
 
         #
         # advanced radius-setting
-        conf.set_level(base_path + ['authentication', 'radius-settings'])
+        conf.set_level(base_path + ['authentication', 'radius'])
 
         if conf.exists(['acct-timeout']):
             pppoe['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
@@ -238,6 +239,9 @@ def get_config():
 
         if conf.exists(['nas-ip-address']):
             pppoe['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+
+        if conf.exists(['source-address']):
+            pppoe['radius_source_address'] = conf.return_value(['source-address'])
 
         # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
         if conf.exists(['dynamic-author']):
