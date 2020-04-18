@@ -20,17 +20,16 @@
 # listen-address nodes instead. This is required as PowerDNS can only listen
 # on interface addresses and not on interface names.
 
-import sys
-
 from ipaddress import ip_interface
+from sys import argv, exit
 from vyos.ifconfig import Interface
 from vyos.configtree import ConfigTree
 
-if (len(sys.argv) < 1):
+if (len(argv) < 1):
     print("Must specify file name!")
-    sys.exit(1)
+    exit(1)
 
-file_name = sys.argv[1]
+file_name = argv[1]
 
 with open(file_name, 'r') as f:
     config_file = f.read()
@@ -40,45 +39,45 @@ config = ConfigTree(config_file)
 base = ['service', 'dns', 'forwarding']
 if not config.exists(base):
     # Nothing to do
-    sys.exit(0)
+    exit(0)
 
-else:
-    # XXX: we can remove the else and un-indent this whole block
+if config.exists(base + ['listen-on']):
+    listen_intf = config.return_values(base + ['listen-on'])
+    # Delete node with abandoned command
+    config.delete(base + ['listen-on'])
 
-    if config.exists(base + ['listen-on']):
-        listen_intf = config.return_values(base + ['listen-on'])
-        # Delete node with abandoned command
-        config.delete(base + ['listen-on'])
+    # retrieve interface addresses for every configured listen-on interface
+    listen_addr = []
+    for intf in listen_intf:
+        # we need to evaluate the interface section before manipulating the 'intf' variable
+        section = Interface.section(intf)
+        if not section:
+            raise ValueError(f'Invalid interface name {intf}')
 
-        # retrieve interface addresses for every configured listen-on interface
-        listen_addr = []
-        for intf in listen_intf:
-            # we need to treat vif and vif-s interfaces differently,
-            # both "real interfaces" use dots for vlan identifiers - those
-            # need to be exchanged with vif and vif-s identifiers
-            if intf.count('.') == 1:
-                # this is a regular VLAN interface
-                intf = intf.split('.')[0] + ' vif ' + intf.split('.')[1]
-            elif intf.count('.') == 2:
-                # this is a QinQ VLAN interface
-                intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
+        # we need to treat vif and vif-s interfaces differently,
+        # both "real interfaces" use dots for vlan identifiers - those
+        # need to be exchanged with vif and vif-s identifiers
+        if intf.count('.') == 1:
+            # this is a regular VLAN interface
+            intf = intf.split('.')[0] + ' vif ' + intf.split('.')[1]
+        elif intf.count('.') == 2:
+            # this is a QinQ VLAN interface
+            intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
 
-            section = Interface.section(intf)
-            if not section:
-                raise ValueError(f'Invalid interface name {intf}')
-            path = ['interfaces', section, intf, 'address']
+        # retrieve corresponding interface addresses in CIDR format
+        # those need to be converted in pure IP addresses without network information
+        path = ['interfaces', section, intf, 'address']
+        for addr in config.return_values(path):
+            listen_addr.append( ip_interface(addr).ip )
 
-            # retrieve corresponding interface addresses in CIDR format
-            # those need to be converted in pure IP addresses without network information
-            for addr in config.return_values(path):
-                listen_addr.append( ip_interface(addr).ip )
-
-        for addr in listen_addr:
-            config.set(base + ['listen-address'], value=addr, replace=False)
+    for addr in listen_addr:
+        config.set(base + ['listen-address'], value=addr, replace=False)
 
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)
+        exit(1)
+
+exit(0)
