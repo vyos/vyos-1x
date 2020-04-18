@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2019 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+# TODO: merge with show_dhcp.py
 
-import json
-import argparse
-import ipaddress
-import tabulate
-import sys
-import collections
-import os
+from json import dumps
+from argparse import ArgumentParser
+from ipaddress import ip_address
+from tabulate import tabulate
+from sys import exit
+from collections import OrderedDict
 from datetime import datetime
 
 from isc_dhcp_leases import Lease, IscDhcpLeases
@@ -32,7 +32,7 @@ from vyos.util import call
 lease_file = "/config/dhcpdv6.leases"
 pool_key = "shared-networkname"
 
-lease_display_fields = collections.OrderedDict()
+lease_display_fields = OrderedDict()
 lease_display_fields['ip'] = 'IPv6 address'
 lease_display_fields['state'] = 'State'
 lease_display_fields['last_comm'] = 'Last communication'
@@ -108,7 +108,7 @@ def get_lease_data(lease):
 
     return data
 
-def get_leases(leases, state, pool=None, sort='ip'):
+def get_leases(config, leases, state, pool=None, sort='ip'):
     leases = IscDhcpLeases(lease_file).get()
 
     # filter leases by state
@@ -121,7 +121,7 @@ def get_leases(leases, state, pool=None, sort='ip'):
             leases = list(filter(lambda x: in_pool(x, pool), leases))
         else:
             print("Pool {0} does not exist.".format(pool))
-            sys.exit(0)
+            exit(0)
 
     # should maybe filter all state=active by lease.valid here?
 
@@ -139,7 +139,7 @@ def get_leases(leases, state, pool=None, sort='ip'):
 
     # apply output/display sort
     if sort == 'ip':
-        leases = sorted(leases, key = lambda k: int(ipaddress.ip_address(k['ip'])))
+        leases = sorted(leases, key = lambda k: int(ip_address(k['ip'])))
     else:
         leases = sorted(leases, key = lambda k: k[sort])
 
@@ -153,12 +153,12 @@ def show_leases(leases):
             lease_list_params.append(l[k])
         lease_list.append(lease_list_params)
 
-    output = tabulate.tabulate(lease_list, lease_display_fields.values())
+    output = tabulate(lease_list, lease_display_fields.values())
 
     print(output)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-l", "--leases", action="store_true", help="Show DHCPv6 leases")
@@ -166,36 +166,54 @@ if __name__ == '__main__':
     group.add_argument("--allowed", type=str, choices=["pool", "sort", "state"], help="Show allowed values for argument")
 
     parser.add_argument("-p", "--pool", type=str, help="Show lease for specific pool")
-    parser.add_argument("-S", "--sort", type=str, choices=lease_display_fields.keys(), default='ip', help="Sort by")
-    parser.add_argument("-t", "--state", type=str, nargs="+", choices=lease_valid_states, default="active", help="Lease state to show (can specify multiple with spaces)")
+    parser.add_argument("-S", "--sort", type=str, default='ip', help="Sort by")
+    parser.add_argument("-t", "--state", type=str, nargs="+", default=["active"], help="Lease state to show (can specify multiple with spaces)")
     parser.add_argument("-j", "--json", action="store_true", default=False, help="Produce JSON output")
 
     args = parser.parse_args()
 
+    conf = Config()
+
+    if args.allowed == 'pool':
+        if conf.exists_effective('service dhcpv6-server'):
+            print(' '.join(conf.list_effective_nodes("service dhcpv6-server shared-network-name")))
+        exit(0)
+    elif args.allowed == 'sort':
+        print(' '.join(lease_display_fields.keys()))
+        exit(0)
+    elif args.allowed == 'state':
+        print(' '.join(lease_valid_states))
+        exit(0)
+    elif args.allowed:
+        parser.print_help()
+        exit(1)
+
+    if args.sort not in lease_display_fields.keys():
+        print(f'Invalid sort key, choose from: {list(lease_display_fields.keys())}')
+        exit(0)
+
+    if not set(args.state) < set(lease_valid_states):
+            print(f'Invalid lease state, choose from: {lease_valid_states}')
+            exit(0)
+
     # Do nothing if service is not configured
-    c = Config()
-    if not c.exists_effective('service dhcpv6-server'):
+    if not conf.exists_effective('service dhcpv6-server'):
         print("DHCPv6 service is not configured")
-        sys.exit(0)
+        exit(0)
 
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
     if call('systemctl -q is-active isc-dhcp-server6.service') != 0:
         print("WARNING: DHCPv6 server is configured but not started. Data may be stale.")
 
     if args.leases:
-        leases = get_leases(lease_file, args.state, args.pool, args.sort)
+        leases = get_leases(conf, lease_file, args.state, args.pool, args.sort)
 
         if args.json:
-            print(json.dumps(leases, indent=4))
+            print(dumps(leases, indent=4))
         else:
             show_leases(leases)
     elif args.statistics:
         print("DHCPv6 statistics option is not available")
-    elif args.allowed == 'pool':
-        print(' '.join(c.list_effective_nodes("service dhcpv6-server shared-network-name")))
-    elif args.allowed == 'sort':
-        print(' '.join(lease_display_fields.keys()))
-    elif args.allowed == 'state':
-        print(' '.join(lease_valid_states))
     else:
         parser.print_help()
+        exit(1)
