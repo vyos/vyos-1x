@@ -348,10 +348,10 @@ def generate(l2tp):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    render(l2tp_conf, 'l2tp/l2tp.config.tmpl', c, trim_blocks=True)
+    render(l2tp_conf, 'accel-ppp/l2tp.config.tmpl', c, trim_blocks=True)
 
     if l2tp['auth_mode'] == 'local':
-        render(l2tp_chap_secrets, 'l2tp/chap-secrets.tmpl', l2tp)
+        render(l2tp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', l2tp)
         os.chmod(l2tp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
     else:

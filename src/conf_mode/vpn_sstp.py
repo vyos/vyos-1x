@@ -312,10 +312,10 @@ def generate(sstp):
         os.mkdir(dirname)
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    render(sstp_conf, 'sstp/sstp.config.tmpl', sstp, trim_blocks=True)
+    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp, trim_blocks=True)
 
     if sstp['local_users']:
-        render(sstp_chap_secrets, 'sstp/chap-secrets.tmpl', sstp, trim_blocks=True)
+        render(sstp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', sstp, trim_blocks=True)
         os.chmod(sstp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
         if os.path.exists(sstp_chap_secrets):

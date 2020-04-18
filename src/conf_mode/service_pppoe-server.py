@@ -422,10 +422,10 @@ def generate(pppoe):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    render(pppoe_conf, 'pppoe-server/pppoe.config.tmpl', c, trim_blocks=True)
+    render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', c, trim_blocks=True)
 
     if pppoe['local_users']:
-        render(pppoe_chap_secrets, 'pppoe-server/chap-secrets.tmpl', c, trim_blocks=True)
+        render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.tmpl', c, trim_blocks=True)
         os.chmod(pppoe_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
         if os.path.exists(pppoe_chap_secrets):
