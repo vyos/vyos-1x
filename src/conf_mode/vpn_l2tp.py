@@ -364,12 +364,9 @@ def generate(l2tp):
 def apply(l2tp):
     if not l2tp:
         call('systemctl stop accel-ppp@l2tp.service')
-
-        if os.path.exists(l2tp_conf):
-             os.unlink(l2tp_conf)
-
-        if os.path.exists(l2tp_chap_secrets):
-             os.unlink(l2tp_chap_secrets)
+        for file in [l2tp_chap_secrets, l2tp_conf]:
+            if os.path.exists(file):
+                os.unlink(file)
 
         return None
 
