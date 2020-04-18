@@ -252,7 +252,7 @@ def get_config():
                 'mask': ''
             }
 
-            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'mask']):
+            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix']):
                 tmp['mask'] = conf.return_value(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix'])
 
             l2tp['client_ipv6_delegate_prefix'].append(tmp)
@@ -348,10 +348,10 @@ def generate(l2tp):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    render(l2tp_conf, 'l2tp/l2tp.config.tmpl', c, trim_blocks=True)
+    render(l2tp_conf, 'accel-ppp/l2tp.config.tmpl', c, trim_blocks=True)
 
     if l2tp['auth_mode'] == 'local':
-        render(l2tp_chap_secrets, 'l2tp/chap-secrets.tmpl', l2tp)
+        render(l2tp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', l2tp)
         os.chmod(l2tp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
     else:
@@ -364,12 +364,9 @@ def generate(l2tp):
 def apply(l2tp):
     if not l2tp:
         call('systemctl stop accel-ppp@l2tp.service')
-
-        if os.path.exists(l2tp_conf):
-             os.unlink(l2tp_conf)
-
-        if os.path.exists(l2tp_chap_secrets):
-             os.unlink(l2tp_chap_secrets)
+        for file in [l2tp_chap_secrets, l2tp_conf]:
+            if os.path.exists(file):
+                os.unlink(file)
 
         return None
 

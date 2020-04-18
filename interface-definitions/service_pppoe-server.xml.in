@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/service-pppoe.py">
+      <node name="pppoe-server" owner="${vyos_conf_scripts_dir}/service_pppoe-server.py">
         <properties>
           <help>Point to Point over Ethernet (PPPoE) Server</help>
           <priority>900</priority>
@@ -126,37 +126,26 @@
                   </completionHelp>
                 </properties>
               </leafNode>
-              <tagNode name="radius-server">
-                <properties>
-                  <help>IP address of RADIUS server</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                      <description>IP address of RADIUS server</description>
-                  </valueHelp>
-                </properties>
+              #include <include/radius-server.xml.i>
+              <node name="radius">
                 <children>
-                  <leafNode name="secret">
-                    <properties>
-                      <help>Key for accessing the specified server</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="req-limit">
-                    <properties>
-                      <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fail-time">
-                    <properties>
-                      <help>If server does not responds mark it as unavailable for this amount of time in seconds</help>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
-              <node name="radius-settings">
-                <properties>
-                  <help>RADIUS settings</help>
-                </properties>
-                <children>
+                  <tagNode name="server">
+                    <children>
+                      <leafNode name="fail-time">
+                        <properties>
+                          <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
+                          <valueHelp>
+                            <format>0-600</format>
+                            <description>Fail time penalty</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-600"/>
+                          </constraint>
+                          <constraintErrorMessage>Fail time must be between 0 and 600 seconds</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
                   <leafNode name="timeout">
                     <properties>
                       <help>Timeout to wait response from server (seconds)</help>
@@ -175,11 +164,6 @@
                   <leafNode name="nas-identifier">
                     <properties>
                       <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nas-ip-address">
-                    <properties>
-                      <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
                     </properties>
                   </leafNode>
                   <node name="dae-server">
@@ -264,100 +248,25 @@
               </leafNode>
             </children>
           </node>
-          <node name="client-ipv6-pool">
+          #include <include/accel-client-ipv6-pool.xml.in>
+          <leafNode name="name-server">
             <properties>
-              <help>Pool of client IPv6 addresses</help>
+              <help>Domain Name Server (DNS) propagated to client</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Domain Name Server (DNS) IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Domain Name Server (DNS) IPv6 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+              <multi/>
             </properties>
-            <children>
-              <leafNode name="prefix">
-                <properties>
-                  <help>Format: ipv6prefix/mask,prefix_len (e.g.: fc00:0:1::/48,64 - divides prefix into /64 subnets for clients)</help>
-                  <multi />
-                </properties>
-              </leafNode>
-              <leafNode name="delegate-prefix">
-                <properties>
-                  <help>Format: ipv6prefix/mask,prefix_len (delegate to clients through DHCPv6 prefix delegation - rfc3633)</help>
-                  <multi />
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-          <node name="dns-servers">
-            <properties>
-              <help>IPv4 Domain Name Service (DNS) server</help>
-            </properties>
-            <children>
-            <leafNode name="server-1">
-              <properties>
-                <help>Primary DNS server</help>
-                <valueHelp>
-                  <format>ipv4</format>
-                  <description>IPv4 address</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv4-address"/>
-                </constraint>
-              </properties>
-            </leafNode>
-            <leafNode name="server-2">
-              <properties>
-                <help>Secondary DNS server</help>
-                <valueHelp>
-                  <format>ipv4</format>
-                  <description>IPv4 address</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv4-address"/>
-                </constraint>
-              </properties>
-            </leafNode>
-            </children>
-          </node>
-           <node name="dnsv6-servers">
-            <properties>
-              <help>IPv6 Domain Name Service (DNS) server</help>
-            </properties>
-            <children>
-              <leafNode name="server-1">
-                <properties>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address</description>
-                  </valueHelp>
-                  <help>Primary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-2">
-                <properties>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address</description>
-                  </valueHelp>
-                  <help>Secondary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-3">
-                <properties>
-                  <valueHelp>
-                    <format>ipv6</format>
-                  <description>IPv6 address</description>
-                  </valueHelp>
-                  <help>Tertiary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-
+          </leafNode>
           <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>
@@ -439,29 +348,19 @@
               <multi/>
             </properties>
           </leafNode>
-          <node name="wins-servers">
+          <leafNode name="wins-server">
             <properties>
-              <help>Windows Internet Name Service (WINS) server settings</help>
+              <help>Windows Internet Name Service (WINS) servers propagated to client</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Domain Name Server (DNS) IPv4 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+              <multi/>
             </properties>
-            <children>
-              <leafNode name="server-1">
-                <properties>
-                  <help>Primary WINS server</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-2">
-                <properties>
-                  <help>Secondary WINS server</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          </leafNode>
           <node name="ppp-options">
             <properties>
               <help>Advanced protocol options</help>

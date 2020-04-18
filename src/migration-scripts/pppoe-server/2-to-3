@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # - remove primary/secondary identifier from nameserver
-# - TODO: remove radius server req-limit
 
 import os
 import sys
@@ -33,7 +32,7 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
-base = ['vpn', 'l2tp', 'remote-access']
+base = ['service', 'pppoe-server']
 if not config.exists(base):
     # Nothing to do
     exit(0)
@@ -52,8 +51,10 @@ else:
     # Migrate IPv6 DNS servers
     dns_base = base + ['dnsv6-servers']
     if config.exists(dns_base):
-        for server in config.return_values(dns_base):
-            config.set(base + ['name-server'], value=server, replace=False)
+        for server in ['server-1', 'server-2', 'server-3']:
+          if config.exists(dns_base + [server]):
+            dns = config.return_value(dns_base + [server])
+            config.set(base + ['name-server'], value=dns, replace=False)
 
         config.delete(dns_base)
 
@@ -66,7 +67,6 @@ else:
             config.set(base + ['wins-server'], value=wins, replace=False)
 
         config.delete(wins_base)
-
 
     # Remove RADIUS server req-limit node
     radius_base = base + ['authentication', 'radius']
@@ -101,7 +101,10 @@ else:
         for p in prefix_old:
             prefix = p.split(',')[0]
             mask = p.split(',')[1]
-            config.set(ipv6_base + ['delegate', prefix, 'delegate-prefix'], value=mask)
+            config.set(ipv6_base + ['delegate', prefix, 'delegation-prefix'], value=mask)
+
+    print(config.to_string())
+    exit(1)
 
     try:
         with open(file_name, 'w') as f:

@@ -124,7 +124,6 @@ ipv6=allow
 {% for p in client_ipv6_delegate_prefix %}
 delegate={{ p.prefix }},{{ p.mask }}
 {% endfor %}
-
 {% endif %}
 
 {% if client_ipv6_delegate_prefix %}
@@ -144,4 +143,3 @@ vendor={{ radius_shaper_vendor }}
 [cli]
 tcp=127.0.0.1:2004
 sessions-columns=ifname,username,calling-sid,ip,{{ ip6_column | join(',') }}{{ ',' if ip6_column }}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
-

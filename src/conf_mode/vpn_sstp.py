@@ -259,21 +259,22 @@ def verify(sstp):
             raise ConfigError('SSTP local auth mode requires local users to be configured!')
 
         for user in sstp['local_users']:
+            username = user['name']
             if not user['password']:
-                raise ConfigError(f"Password required for user {user['name']}")
+                raise ConfigError(f'Password required for local user "{username}"')
 
             # if up/download is set, check that both have a value
             if user['upload'] and not user['download']:
-                raise ConfigError(f"Download speed value required for user {user['name']}")
+                raise ConfigError(f'Download speed value required for local user "{username}"')
 
             if user['download'] and not user['upload']:
-                raise ConfigError(f"Upload speed value required for user {user['name']}")
+                raise ConfigError(f'Upload speed value required for local user "{username}"')
 
         if not sstp['client_ip_pool']:
-            raise ConfigError("Client IP subnet required")
+            raise ConfigError('Client IP subnet required')
 
         if not sstp['client_gateway']:
-            raise ConfigError("Client gateway IP address required")
+            raise ConfigError('Client gateway IP address required')
 
     if len(sstp['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
@@ -282,21 +283,25 @@ def verify(sstp):
         raise ConfigError('One or more SSL certificates missing')
 
     if not os.path.exists(sstp['ssl_ca']):
-        raise ConfigError(f"CA cert file {sstp['ssl_ca']} does not exist")
+        file = sstp['ssl_ca']
+        raise ConfigError(f'SSL CA certificate file "{file}" does not exist')
 
     if not os.path.exists(sstp['ssl_cert']):
-        raise ConfigError(f"SSL cert file {sstp['ssl_cert']} does not exist")
+        file = sstp['ssl_cert']
+        raise ConfigError(f'SSL public key file "{file}" does not exist')
 
     if not os.path.exists(sstp['ssl_key']):
-        raise ConfigError(f"SSL key file {sstp['ssl_key']} does not exist")
+        file = sstp['ssl_key']
+        raise ConfigError(f'SSL private key file "{file}" does not exist')
 
     if sstp['auth_mode'] == 'radius':
         if len(sstp['radius_server']) == 0:
-            raise ConfigError("RADIUS authentication requires at least one server")
+            raise ConfigError('RADIUS authentication requires at least one server')
 
         for radius in sstp['radius_server']:
             if not radius['key']:
-                raise ConfigError(f"Missing RADIUS secret for server {{ radius['key'] }}")
+                server = radius['server']
+                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
 
 def generate(sstp):
     if not sstp:
@@ -307,10 +312,10 @@ def generate(sstp):
         os.mkdir(dirname)
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    render(sstp_conf, 'sstp/sstp.config.tmpl', sstp, trim_blocks=True)
+    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp, trim_blocks=True)
 
     if sstp['local_users']:
-        render(sstp_chap_secrets, 'sstp/chap-secrets.tmpl', sstp, trim_blocks=True)
+        render(sstp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', sstp, trim_blocks=True)
         os.chmod(sstp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
         if os.path.exists(sstp_chap_secrets):
@@ -321,12 +326,9 @@ def generate(sstp):
 def apply(sstp):
     if not sstp:
         call('systemctl stop accel-ppp@sstp.service')
-
-        if os.path.exists(sstp_conf):
-             os.unlink(sstp_conf)
-
-        if os.path.exists(sstp_chap_secrets):
-             os.unlink(sstp_chap_secrets)
+        for file in [sstp_chap_secrets, sstp_conf]:
+            if os.path.exists(file):
+                os.unlink(file)
 
         return None
 
