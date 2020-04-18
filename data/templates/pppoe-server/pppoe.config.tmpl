@@ -3,11 +3,11 @@
 [modules]
 log_syslog
 pppoe
-{% if authentication['mode'] == 'radius' %}
+{% if auth_mode == 'radius' %}
 radius
 {% endif %}
 ippool
-{% if ppp_options['ipv6'] != 'deny' %}
+{% if ppp_ipv6 != 'deny' %}
 ipv6pool
 ipv6_nd
 ipv6_dhcp
@@ -17,9 +17,8 @@ auth_pap
 auth_chap_md5
 auth_mschap_v1
 auth_mschap_v2
-#pppd_compat
 shaper
-{% if snmp == 'enable' or snmp == 'enable-ma' %}
+{% if snmp %}
 net-snmp
 {% endif %}
 {% if limits %}
@@ -27,7 +26,7 @@ connlimit
 {% endif %}
 
 [core]
-thread-count={{thread_cnt}}
+thread-count={{ thread_cnt }}
 
 [log]
 syslog=accel-pppoe,daemon
@@ -37,32 +36,31 @@ level=5
 {% if snmp == 'enable-ma' %}
 [snmp]
 master=1
-{% endif -%}
+{% endif %}
 
 [client-ip-range]
 disable
 
 {% if ppp_gw %}
 [ip-pool]
-gw-ip-address={{ppp_gw}}
+gw-ip-address={{ ppp_gw }}
 {% if client_ip_pool %}
-{{client_ip_pool}}
+{{ client_ip_pool }}
 {% endif -%}
-
 {% if client_ip_subnets %}
-{% for sn in client_ip_subnets %}
-{{sn}}
+{% for subnet in client_ip_subnets %}
+{{ subnet }}
 {% endfor %}
 {% endif %}
-{% endif -%}
+{% endif %}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
-{% for prfx in client_ipv6_pool['prefix']: %}
-{{prfx}}
+{% for prefix in client_ipv6_pool['prefix']: %}
+{{ prefix }}
 {% endfor %}
-{% for prfx in client_ipv6_pool['delegate-prefix']: %}
-delegate={{prfx}}
+{% for prefix in client_ipv6_pool['delegate-prefix']: %}
+delegate={{ prefix }}
 {% endfor %}
 {% endif %}
 
@@ -93,47 +91,39 @@ wins2={{wins[1]}}
 {% endif -%}
 {% endif -%}
 
-{% if authentication['mode'] == 'local' %}
+{% if auth_mode == 'local' %}
 [chap-secrets]
-chap-secrets=/etc/accel-ppp/pppoe/chap-secrets
-{% endif -%}
-
-{% if authentication['mode'] == 'radius' %}
+chap-secrets={{ chap_secrets_file }}
+{% elif auth_mode == 'radius' %}
 [radius]
-{% for rsrv in authentication['radiussrv']: %}
-server={{rsrv}},{{authentication['radiussrv'][rsrv]['secret']}},\
-req-limit={{authentication['radiussrv'][rsrv]['req-limit']}},\
-fail-time={{authentication['radiussrv'][rsrv]['fail-time']}}
-{% endfor %}
-{% if authentication['radiusopt']['timeout'] %}
-timeout={{authentication['radiusopt']['timeout']}}
-{% endif %}
-{% if authentication['radiusopt']['acct-timeout'] %}
-acct-timeout={{authentication['radiusopt']['acct-timeout']}}
-{% endif %}
-{% if authentication['radiusopt']['max-try'] %}
-max-try={{authentication['radiusopt']['max-try']}}
-{% endif %}
-{% if authentication['radiusopt']['nas-id'] %}
-nas-identifier={{authentication['radiusopt']['nas-id']}}
-{% endif %}
-{% if authentication['radiusopt']['nas-ip'] %}
-nas-ip-address={{authentication['radiusopt']['nas-ip']}}
-{% endif -%}
-{% if authentication['radiusopt']['dae-srv'] %}
-dae-server={{authentication['radiusopt']['dae-srv']['ip-addr']}}:\
-{{authentication['radiusopt']['dae-srv']['port']}},\
-{{authentication['radiusopt']['dae-srv']['secret']}}
-{% endif -%}
-gw-ip-address={{ppp_gw}}
 verbose=1
+{% for r in radius_server %}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
+{% endfor -%}
 
-{% if authentication['radiusopt']['shaper'] %}
+acct-timeout={{ radius_acct_tmo }}
+timeout={{ radius_timeout }}
+max-try={{ radius_max_try }}
+{% if radius_nas_id %}
+nas-identifier={{ radius_nas_id }}
+{% endif -%}
+{% if radius_nas_ip %}
+nas-ip-address={{ radius_nas_ip }}
+{% endif -%}
+{% if radius_source_address %}
+bind={{ radius_source_address }}
+{% endif -%}
+
+{% if radius_dynamic_author %}
+dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
+{% endif -%}
+
+{% if radius_shaper_attr %}
 [shaper]
 verbose=1
-attr={{authentication['radiusopt']['shaper']['attr']}}
-{% if authentication['radiusopt']['shaper']['vendor'] %}
-vendor={{authentication['radiusopt']['shaper']['vendor']}}
+attr={{ radius_shaper_attr }}
+{% if radius_shaper_vendor %}
+vendor={{ radius_shaper_vendor }}
 {% endif -%}
 {% endif -%}
 {% endif %}
@@ -144,84 +134,69 @@ check-ip=1
 {% if not sesscrtl == 'disable' %}
 single-session={{sesscrtl}}
 {% endif -%}
-{% if ppp_options['ccp'] %}
+{% if ppp_ccp %}
 ccp=1
 {% endif %}
-{% if ppp_options['min-mtu'] %}
-min-mtu={{ppp_options['min-mtu']}}
+{% if ppp_min_mtu %}
+min-mtu={{ ppp_min_mtu }}
 {% else %}
-min-mtu={{mtu}}
+min-mtu={{ mtu }}
 {% endif %}
-{% if ppp_options['mru'] %}
-mru={{ppp_options['mru']}}
+{% if ppp_mru %}
+mru={{ ppp_mru }}
 {% endif %}
-{% if ppp_options['mppe'] %}
-mppe={{ppp_options['mppe']}}
-{% else %}
-mppe=prefer
-{% endif %}
-{% if ppp_options['lcp-echo-interval'] %}
-lcp-echo-interval={{ppp_options['lcp-echo-interval']}}
-{% else %}
-lcp-echo-interval=30
-{% endif %}
-{% if ppp_options['lcp-echo-timeout'] %}
-lcp-echo-timeout={{ppp_options['lcp-echo-timeout']}}
-{% endif %}
-{% if ppp_options['lcp-echo-failure'] %}
-lcp-echo-failure={{ppp_options['lcp-echo-failure']}}
-{% else %}
-lcp-echo-failure=3
-{% endif %}
-{% if ppp_options['ipv4'] %}
-ipv4={{ppp_options['ipv4']}}
+mppe={{ ppp_mppe }}
+lcp-echo-interval={{ ppp_echo_interval }}
+lcp-echo-timeout={{ ppp_echo_timeout }}
+lcp-echo-failure={{ ppp_echo_failure }}
+{% if ppp_ipv4 %}
+ipv4={{ ppp_ipv4 }}
 {% endif %}
 {% if client_ipv6_pool %}
 ipv6=allow
 {% endif %}
 
-{% if ppp_options['ipv6'] %}
-ipv6={{ppp_options['ipv6']}}
-{% if ppp_options['ipv6-intf-id'] %}
-ipv6-intf-id={{ppp_options['ipv6-intf-id']}}
+{% if ppp_ipv6 %}
+ipv6={{ ppp_ipv6 }}
+{% if ppp_ipv6_intf_id %}
+ipv6-intf-id={{ ppp_ipv6_intf_id }}
 {% endif %}
-{% if ppp_options['ipv6-peer-intf-id'] %}
-ipv6-peer-intf-id={{ppp_options['ipv6-peer-intf-id']}}
+{% if ppp_ipv6_peer_intf_id %}
+ipv6-peer-intf-id={{ ppp_ipv6_peer_intf_id }}
 {% endif %}
-{% if ppp_options['ipv6-accept-peer-intf-id'] %}
-ipv6-accept-peer-intf-id={{ppp_options['ipv6-accept-peer-intf-id']}}
+{% if ppp_ipv6_accept_peer_intf_id %}
+ipv6-accept-peer-intf-id={{ ppp_ipv6_accept_peer_intf_id }}
 {% endif %}
 {% endif %}
-mtu={{mtu}}
+mtu={{ mtu }}
 
 [pppoe]
 verbose=1
-{% if concentrator %}
-ac-name={{concentrator}}
-{% endif %}
-{% if interface %}
-{% for int in interface %}
-interface={{int}}
-{% if interface[int]['vlans'] %}
-vlan-mon={{int}},{{interface[int]['vlans']|join(',')}}
-interface=re:{{int}}\.\d+
+ac-name={{ concentrator }}
+
+{% if interfaces %}
+{% for interface in interfaces %}
+interface={{ interface.name }}
+{% if interface.vlans %}
+vlan-mon={{ interface.name }},{{ interface.vlans | join(',') }}
+interface=re:{{ interface.name }}\.\d+
 {% endif %}
 {% endfor -%}
 {% endif -%}
 
 {% if svc_name %}
-service-name={{svc_name|join(',')}}
+service-name={{ svc_name|join(',') }}
 {% endif -%}
 
 {% if pado_delay %}
-pado-delay={{pado_delay}}
+pado-delay={{ pado_delay }}
 {% endif %}
 
-{% if limits %}
+{% if limits_burst or limits_connections or limits_connections %}
 [connlimit]
-limit={{limits['conn-limit']}}
-burst={{limits['burst']}}
-timeout={{limits['timeout']}}
+limit={{ limits_connections }}
+burst={{ limits_burst }}
+timeout={{ limits_timeout }}
 {% endif %}
 
 [cli]
