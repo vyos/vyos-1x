@@ -22,9 +22,10 @@ from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
 from vyos.template import render
+from vyos.util import call
+from vyos.validate import is_ipv4
+from vyos import ConfigError
 
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
@@ -40,7 +41,7 @@ default_config_data = {
     'local_users' : [],
 
     'svc_name': [],
-    'dns': [],
+    'dnsv4': [],
     'dnsv6': [],
     'wins': [],
     'mtu': '1492',
@@ -118,24 +119,15 @@ def get_config():
     if conf.exists(['local-ip']):
         pppoe['ppp_gw'] = conf.return_value(['local-ip'])
 
-    if conf.exists(['dns-servers']):
-        for server in ['server-1', 'server-2']:
-            if conf.return_value(['dns-servers', server]):
-                tmp = conf.return_value(['dns-servers', server])
-                pppoe['dns'].append(tmp)
+    if conf.exists(['name-server']):
+        for name_server in conf.return_values(['name-server']):
+            if is_ipv4(name_server):
+                pppoe['dnsv4'].append(name_server)
+            else:
+                pppoe['dnsv6'].append(name_server)
 
-
-    if conf.exists(['dnsv6-servers']):
-        for server in ['server-1', 'server-2', 'server-3']:
-            if conf.return_value(['dnsv6-servers', server]):
-                tmp = conf.return_value(['dnsv6-servers', server])
-                pppoe['dnsv6'].append(tmp)
-
-    if conf.exists(['wins-servers']):
-        for server in ['server-1', 'server-2']:
-            if conf.return_value(['wins-servers', server]):
-                tmp = conf.return_value(['wins-servers', server])
-                pppoe['wins'].append(tmp)
+    if conf.exists(['wins-server']):
+        pppoe['wins'] = conf.return_values(['wins-server'])
 
     if conf.exists(['client-ip-pool']):
         if conf.exists(['client-ip-pool', 'start']) and conf.exists(['client-ip-pool', 'stop']):
@@ -373,6 +365,15 @@ def verify(pppoe):
             if not radius['key']:
                 server = radius['server']
                 raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+
+    if len(pppoe['wins']) > 2:
+        raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')
+
+    if len(pppoe['dnsv4']) > 2:
+        raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
+
+    if len(pppoe['dnsv6']) > 3:
+        raise ConfigError('Not more then three IPv6 DNS name-servers can be configured')
 
     # local ippool and gateway settings config checks
     if pppoe['client_ip_subnets'] or pppoe['client_ip_pool']:

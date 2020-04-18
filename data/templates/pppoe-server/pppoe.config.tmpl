@@ -64,32 +64,26 @@ delegate={{ prefix }}
 {% endfor %}
 {% endif %}
 
-{% if dns %}
+{% if dnsv4 %}
 [dns]
-{% if dns[0] %}
-dns1={{dns[0]}}
-{% endif -%}
-{% if dns[1] %}
-dns2={{dns[1]}}
-{% endif -%}
+{% for dns in dnsv4 -%}
+dns{{ loop.index }}={{ dns }}
+{% endfor -%}
 {% endif %}
 
 {% if dnsv6 %}
 [ipv6-dns]
-{% for srv in dnsv6: %}
-{{srv}}
-{% endfor %}
+{% for dns in dnsv6 -%}
+{{ dns }}
+{% endfor -%}
 {% endif %}
 
 {% if wins %}
 [wins]
-{% if wins[0] %}
-wins1={{wins[0]}}
+{% for server in wins -%}
+wins{{ loop.index }}={{ server }}
+{% endfor -%}
 {% endif %}
-{% if wins[1] %}
-wins2={{wins[1]}}
-{% endif -%}
-{% endif -%}
 
 {% if auth_mode == 'local' %}
 [chap-secrets]
