@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2019 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+# TODO: merge with show_dhcpv6.py
 
-import json
-import argparse
-import ipaddress
-import tabulate
-import sys
-import collections
-import os
+from json import dumps
+from argparse import ArgumentParser
+from ipaddress import ip_address
+from tabulate import tabulate
+from sys import exit
+from collections import OrderedDict
 from datetime import datetime
 
 from isc_dhcp_leases import Lease, IscDhcpLeases
@@ -33,7 +33,7 @@ from vyos.util import call
 lease_file = "/config/dhcpd.leases"
 pool_key = "shared-networkname"
 
-lease_display_fields = collections.OrderedDict()
+lease_display_fields = OrderedDict()
 lease_display_fields['ip'] = 'IP address'
 lease_display_fields['hardware_address'] = 'Hardware address'
 lease_display_fields['state'] = 'State'
@@ -102,7 +102,7 @@ def get_lease_data(lease):
 
     return data
 
-def get_leases(leases, state, pool=None, sort='ip'):
+def get_leases(config, leases, state, pool=None, sort='ip'):
     # get leases from file
     leases = IscDhcpLeases(lease_file).get()
 
@@ -116,7 +116,7 @@ def get_leases(leases, state, pool=None, sort='ip'):
             leases = list(filter(lambda x: in_pool(x, pool), leases))
         else:
             print("Pool {0} does not exist.".format(pool))
-            sys.exit(0)
+            exit(0)
 
     # should maybe filter all state=active by lease.valid here?
 
@@ -134,7 +134,7 @@ def get_leases(leases, state, pool=None, sort='ip'):
 
     # apply output/display sort
     if sort == 'ip':
-        leases = sorted(leases, key = lambda lease: int(ipaddress.ip_address(lease['ip'])))
+        leases = sorted(leases, key = lambda lease: int(ip_address(lease['ip'])))
     else:
         leases = sorted(leases, key = lambda lease: lease[sort])
 
@@ -148,7 +148,7 @@ def show_leases(leases):
             lease_list_params.append(l[k])
         lease_list.append(lease_list_params)
 
-    output = tabulate.tabulate(lease_list, lease_display_fields.values())
+    output = tabulate(lease_list, lease_display_fields.values())
 
     print(output)
 
@@ -161,18 +161,18 @@ def get_pool_size(config, pool):
             start = config.return_effective_value("service dhcp-server shared-network-name {0} subnet {1} range {2} start".format(pool, s, r))
             stop = config.return_effective_value("service dhcp-server shared-network-name {0} subnet {1} range {2} stop".format(pool, s, r))
 
-            size += int(ipaddress.ip_address(stop)) - int(ipaddress.ip_address(start))
+            size += int(ip_address(stop)) - int(ip_address(start))
 
     return size
 
 def show_pool_stats(stats):
     headers = ["Pool", "Size", "Leases", "Available", "Usage"]
-    output = tabulate.tabulate(stats, headers)
+    output = tabulate(stats, headers)
 
     print(output)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-l", "--leases", action="store_true", help="Show DHCP leases")
@@ -180,27 +180,50 @@ if __name__ == '__main__':
     group.add_argument("--allowed", type=str, choices=["pool", "sort", "state"], help="Show allowed values for argument")
 
     parser.add_argument("-p", "--pool", type=str, help="Show lease for specific pool")
-    parser.add_argument("-S", "--sort", type=str, choices=lease_display_fields.keys(), default='ip', help="Sort by")
-    parser.add_argument("-t", "--state", type=str, nargs="+", choices=lease_valid_states, default="active", help="Lease state to show (can specify multiple with spaces)")
+    parser.add_argument("-S", "--sort", type=str, default='ip', help="Sort by")
+    parser.add_argument("-t", "--state", type=str, nargs="+", default=["active"], help="Lease state to show (can specify multiple with spaces)")
     parser.add_argument("-j", "--json", action="store_true", default=False, help="Produce JSON output")
 
     args = parser.parse_args()
 
+    conf = Config()
+
+    if args.allowed == 'pool':
+        if conf.exists_effective('service dhcp-server'):
+            print(' '.join(conf.list_effective_nodes("service dhcp-server shared-network-name")))
+        exit(0)
+    elif args.allowed == 'sort':
+        print(' '.join(lease_display_fields.keys()))
+        exit(0)
+    elif args.allowed == 'state':
+        print(' '.join(lease_valid_states))
+        exit(0)
+    elif args.allowed:
+        parser.print_help()
+        exit(1)
+
+    if args.sort not in lease_display_fields.keys():
+        print(f'Invalid sort key, choose from: {list(lease_display_fields.keys())}')
+        exit(0)
+
+    if not set(args.state) < set(lease_valid_states):
+            print(f'Invalid lease state, choose from: {lease_valid_states}')
+            exit(0)
+
     # Do nothing if service is not configured
-    config = Config()
-    if not config.exists_effective('service dhcp-server'):
+    if not conf.exists_effective('service dhcp-server'):
         print("DHCP service is not configured.")
-        sys.exit(0)
+        exit(0)
 
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
     if call('systemctl -q is-active isc-dhcp-server.service') != 0:
         print("WARNING: DHCP server is configured but not started. Data may be stale.")
 
     if args.leases:
-        leases = get_leases(lease_file, args.state, args.pool, args.sort)
+        leases = get_leases(conf, lease_file, args.state, args.pool, args.sort)
 
         if args.json:
-            print(json.dumps(leases, indent=4))
+            print(dumps(leases, indent=4))
         else:
             show_leases(leases)
 
@@ -211,18 +234,15 @@ if __name__ == '__main__':
         if args.pool:
             pools = [args.pool]
         else:
-            pools = config.list_effective_nodes("service dhcp-server shared-network-name")
+            pools = conf.list_effective_nodes("service dhcp-server shared-network-name")
 
         # Get pool usage stats
         stats = []
         for p in pools:
-            size = get_pool_size(config, p)
+            size = get_pool_size(conf, p)
             leases = len(get_leases(lease_file, state='active', pool=p))
 
-            if size != 0:
-                use_percentage = round(leases / size * 100)
-            else:
-                use_percentage = 0
+            use_percentage = round(leases / size * 100) if size != 0 else 0
 
             if args.json:
                 pool_stats = {"pool": p, "size": size, "leases": leases,
@@ -234,15 +254,10 @@ if __name__ == '__main__':
 
         # Print stats
         if args.json:
-            print(json.dumps(stats, indent=4))
+            print(dumps(stats, indent=4))
         else:
             show_pool_stats(stats)
 
-    elif args.allowed == 'pool':
-        print(' '.join(config.list_effective_nodes("service dhcp-server shared-network-name")))
-    elif args.allowed == 'sort':
-        print(' '.join(lease_display_fields.keys()))
-    elif args.allowed == 'state':
-        print(' '.join(lease_valid_states))
     else:
         parser.print_help()
+        exit(1)
