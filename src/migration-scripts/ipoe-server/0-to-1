@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # - remove primary/secondary identifier from nameserver
+# - Unifi RADIUS configuration by placing it all under "authentication radius" node
 
 import os
 import sys
@@ -57,6 +58,28 @@ else:
             config.set(base + ['name-server'], value=dns, replace=False)
 
         config.delete(dns_base)
+
+    # Migrate radius-settings node to RADIUS and use this as base for the
+    # later migration of the RADIUS servers - this will save a lot of code
+    radius_settings = base + ['authentication', 'radius-settings']
+    if config.exists(radius_settings):
+        config.rename(radius_settings, 'radius')
+
+    # Migrate RADIUS server
+    radius_server = base + ['authentication', 'radius-server']
+    if config.exists(radius_server):
+        new_base = base + ['authentication', 'radius', 'server']
+        config.set(new_base)
+        config.set_tag(new_base)
+        for server in config.list_nodes(radius_server):
+            old_base = radius_server + [server]
+            config.copy(old_base, new_base + [server])
+
+            # remove old req-limit node
+            if config.exists(new_base + [server, 'req-limit']):
+                config.delete(new_base + [server, 'req-limit'])
+
+        config.delete(radius_server)
 
     try:
         with open(file_name, 'w') as f:

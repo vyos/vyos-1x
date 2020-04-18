@@ -232,43 +232,26 @@
                   </tagNode>
                 </children>
               </tagNode>
-              <tagNode name="radius-server">
-                <properties>
-                  <help>IP address of RADIUS server</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IP address of RADIUS server</description>
-                  </valueHelp>
-                </properties>
+              #include <include/radius-server.xml.i>
+              <node name="radius">
                 <children>
-                  <leafNode name="secret">
-                    <properties>
-                      <help>Key for accessing the specified server</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="req-limit">
-                    <properties>
-                      <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fail-time">
-                    <properties>
-                      <help>If server does not respond, mark it unavailable for this time (seconds)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="disable">
-                    <properties>
-                      <help>Temporary disable this server</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
-              <node name="radius-settings">
-                <properties>
-                  <help>RADIUS settings</help>
-                </properties>
-                <children>
+                  <tagNode name="server">
+                    <children>
+                      <leafNode name="fail-time">
+                        <properties>
+                          <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
+                          <valueHelp>
+                            <format>0-600</format>
+                            <description>Fail time penalty</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-600"/>
+                          </constraint>
+                          <constraintErrorMessage>Fail time must be between 0 and 600 seconds</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
                   <leafNode name="timeout">
                     <properties>
                       <help>Timeout to wait response from server (seconds)</help>
@@ -289,18 +272,6 @@
                       <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
                     </properties>
                   </leafNode>
-                  <leafNode name="nas-ip-address">
-                    <properties>
-                      <help>Value to send to RADIUS server in NAS-IP-Address attribute and to be matched in DM/CoA requests. Also DM/CoA server will bind to that address.</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address of the DAE Server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
                   <node name="dae-server">
                     <properties>
                       <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
@@ -309,25 +280,11 @@
                       <leafNode name="ip-address">
                         <properties>
                           <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IPv4 address of the DAE Server</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="port">
                         <properties>
                           <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
-                          <valueHelp>
-                            <format>1-65535</format>
-                            <description>port number</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="numeric" argument="--range 1-65535"/>
-                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="secret">

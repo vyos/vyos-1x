@@ -137,7 +137,7 @@ def get_config():
     #
     # authentication mode radius servers and settings
     if conf.exists(['authentication', 'mode', 'radius']):
-        for server in conf.list_nodes(['authentication', 'radius-server']):
+        for server in conf.list_nodes(['authentication', 'radius', 'server']):
             radius = {
                 'server' : server,
                 'key' : '',
@@ -145,7 +145,7 @@ def get_config():
                 'port' : '1812'
             }
 
-            conf.set_level(base_path + ['authentication', 'radius-server', server])
+            conf.set_level(base_path + ['authentication', 'radius', 'server', server])
 
             if conf.exists(['fail-time']):
                 radius['fail-time'] = conf.return_value(['fail-time'])
@@ -161,7 +161,7 @@ def get_config():
 
     #
     # advanced radius-setting
-    conf.set_level(base_path + ['authentication', 'radius-settings'])
+    conf.set_level(base_path + ['authentication', 'radius'])
     if conf.exists(['acct-timeout']):
         ipoe['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
 
