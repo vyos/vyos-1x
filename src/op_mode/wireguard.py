@@ -147,8 +147,12 @@ if __name__ == '__main__':
         if args.listkdir:
             list_key_dirs()
         if args.showinterface:
-            intf = WireGuardIf(args.showinterface, create=False, debug=False)
-            print(intf.operational.show_interface())
+            try:
+                intf = WireGuardIf(args.showinterface, create=False, debug=False)
+                print(intf.operational.show_interface())
+            # the interface does not exists
+            except Exception:
+                pass
         if args.delkdir:
             if args.location:
                 del_key_dir(args.location)

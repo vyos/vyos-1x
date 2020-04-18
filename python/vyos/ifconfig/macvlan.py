@@ -35,7 +35,8 @@ class MACVLANIf(Interface):
             'prefixes': ['peth', ],
         },
     }
-    options = Interface.options + ['source_interface', 'mode']
+    options = Interface.options + \
+        ['source_interface', 'mode']
 
     def _create(self):
         cmd = 'ip link add {ifname} link {source_interface} type macvlan mode {mode}'.format(

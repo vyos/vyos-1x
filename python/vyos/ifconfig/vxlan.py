@@ -59,7 +59,8 @@ class VXLANIf(Interface):
             'bridgeable': True,
         }
     }
-    options = ['group', 'remote', 'src_interface', 'port', 'vni', 'src_address']
+    options = Interface.options + \
+        ['group', 'remote', 'src_interface', 'port', 'vni', 'src_address']
 
     mapping = {
         'ifname': 'add',

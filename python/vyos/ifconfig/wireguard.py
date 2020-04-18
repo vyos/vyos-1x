@@ -165,8 +165,9 @@ class WireGuardIf(Interface):
             'bridgeable': True,
         }
     }
-    options = ['port', 'private-key', 'pubkey', 'psk',
-               'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
+    options = Interface.options + \
+        ['port', 'private-key', 'pubkey', 'psk',
+         'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
 
     """
     Wireguard interface class, contains a comnfig dictionary since
