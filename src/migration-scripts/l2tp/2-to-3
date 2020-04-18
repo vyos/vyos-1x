@@ -95,13 +95,13 @@ else:
         # delete old delegate prefix CLI nodes
         config.delete(ipv6_base + ['delegate-prefix'])
         # create ned delegation tag node
-        config.set(ipv6_base + ['delegate '])
-        config.set_tag(ipv6_base + ['delegate '])
+        config.set(ipv6_base + ['delegate'])
+        config.set_tag(ipv6_base + ['delegate'])
 
         for p in prefix_old:
             prefix = p.split(',')[0]
             mask = p.split(',')[1]
-            config.set(ipv6_base + ['delegate', prefix, 'mask'], value=mask)
+            config.set(ipv6_base + ['delegate', prefix, 'delegate-prefix'], value=mask)
 
     try:
         with open(file_name, 'w') as f:

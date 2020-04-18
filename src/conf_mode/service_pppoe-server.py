@@ -35,7 +35,8 @@ default_config_data = {
     'chap_secrets_file': pppoe_chap_secrets, # used in Jinja2 template
     'client_ip_pool': '',
     'client_ip_subnets': [],
-    'client_ipv6_pool': {},
+    'client_ipv6_pool': [],
+    'client_ipv6_delegate_prefix': [],
     'concentrator': 'vyos-ac',
     'interfaces': [],
     'local_users' : [],
@@ -130,6 +131,7 @@ def get_config():
     if conf.exists(['wins-server']):
         pppoe['wins'] = conf.return_values(['wins-server'])
 
+
     if conf.exists(['client-ip-pool']):
         if conf.exists(['client-ip-pool', 'start']) and conf.exists(['client-ip-pool', 'stop']):
             start = conf.return_value(['client-ip-pool', 'start'])
@@ -139,10 +141,32 @@ def get_config():
         if conf.exists(['client-ip-pool', 'subnet']):
             pppoe['client_ip_subnets'] = conf.return_values(['client-ip-pool', 'subnet'])
 
+
     if conf.exists(['client-ipv6-pool', 'prefix']):
-        pppoe['client_ipv6_pool']['prefix'] = conf.return_values(['client-ipv6-pool', 'prefix'])
-        if conf.exists(['client-ipv6-pool', 'delegate-prefix']):
-            pppoe['client_ipv6_pool']['delegate-prefix'] = conf.return_values(['client-ipv6-pool', 'delegate-prefix'])
+        for prefix in conf.list_nodes(['client-ipv6-pool', 'prefix']):
+            tmp = {
+                'prefix': prefix,
+                'mask': '64'
+            }
+
+            if conf.exists(['client-ipv6-pool', 'prefix', prefix, 'mask']):
+                tmp['mask'] = conf.return_value(['client-ipv6-pool', 'prefix', prefix, 'mask'])
+
+            pppoe['client_ipv6_pool'].append(tmp)
+
+
+    if conf.exists(['client-ipv6-pool', 'delegate']):
+        for prefix in conf.list_nodes(['client-ipv6-pool', 'delegate']):
+            tmp = {
+                'prefix': prefix,
+                'mask': ''
+            }
+
+            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix']):
+                tmp['mask'] = conf.return_value(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix'])
+
+            pppoe['client_ipv6_delegate_prefix'].append(tmp)
+
 
     if conf.exists(['limits']):
         if conf.exists(['limits', 'burst']):

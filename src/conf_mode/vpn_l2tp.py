@@ -252,7 +252,7 @@ def get_config():
                 'mask': ''
             }
 
-            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'mask']):
+            if conf.exists(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix']):
                 tmp['mask'] = conf.return_value(['client-ipv6-pool', 'delegate', prefix, 'delegation-prefix'])
 
             l2tp['client_ipv6_delegate_prefix'].append(tmp)

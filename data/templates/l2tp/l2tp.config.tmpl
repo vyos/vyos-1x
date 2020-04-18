@@ -124,7 +124,6 @@ ipv6=allow
 {% for p in client_ipv6_delegate_prefix %}
 delegate={{ p.prefix }},{{ p.mask }}
 {% endfor %}
-
 {% endif %}
 
 {% if client_ipv6_delegate_prefix %}
