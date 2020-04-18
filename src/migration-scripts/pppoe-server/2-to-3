@@ -103,9 +103,6 @@ else:
             mask = p.split(',')[1]
             config.set(ipv6_base + ['delegate', prefix, 'delegation-prefix'], value=mask)
 
-    print(config.to_string())
-    exit(1)
-
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
