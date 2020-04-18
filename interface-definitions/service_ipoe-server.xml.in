@@ -111,60 +111,24 @@
               </leafNode>
             </children>
           </tagNode>
-          <node name="dns-server">
+          <leafNode name="name-server">
             <properties>
-              <help>DNS servers offered via internal DHCP</help>
+              <help>Domain Name Server (DNS) propagated to client</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Domain Name Server (DNS) IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Domain Name Server (DNS) IPv6 address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+              <multi/>
             </properties>
-            <children>
-              <leafNode name="server-1">
-                <properties>
-                  <help>IP address of the primary DNS server</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-2">
-                <properties>
-                  <help>IP address of the secondary DNS server</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-          <node name="dnsv6-server">
-            <properties>
-              <help>DNSv6 servers offered via internal DHCPv6</help>
-            </properties>
-            <children>
-              <leafNode name="server-1">
-                <properties>
-                  <help>IP address of the primary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-2">
-                <properties>
-                  <help>IP address of the secondary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="server-3">
-                <properties>
-                  <help>IP address of the tertiary DNS server</help>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          </leafNode>
           <node name="client-ipv6-pool">
             <properties>
               <help>Pool of client IPv6 addresses</help>

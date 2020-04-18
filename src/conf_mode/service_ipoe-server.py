@@ -22,9 +22,10 @@ from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call, get_half_cpus
 from vyos.template import render
+from vyos.util import call, get_half_cpus
+from vyos.validate import is_ipv4
+from vyos import ConfigError
 
 ipoe_conf = '/run/accel-pppd/ipoe.conf'
 ipoe_chap_secrets = '/run/accel-pppd/ipoe.chap-secrets'
@@ -94,15 +95,13 @@ def get_config():
         ipoe['interfaces'].append(tmp)
 
     conf.set_level(base_path)
-    for server in ['server-1', 'server-2']:
-        if conf.exists(['dns-server', server]):
-            tmp = conf.return_value(['dns-server', server])
-            ipoe['dnsv4'].append(tmp)
 
-    for server in ['server-1', 'server-2', 'server-3']:
-        if conf.exists(['dnsv6-server', server]):
-            tmp = conf.return_value(['dnsv6-server', server])
-            ipoe['dnsv6'].append(tmp)
+    if conf.exists(['name-server']):
+        for name_server in conf.return_values(['name-server']):
+            if is_ipv4(name_server):
+                ipoe['dnsv4'].append(name_server)
+            else:
+                ipoe['dnsv6'].append(name_server)
 
     if conf.exists(['authentication', 'mode']):
         ipoe['auth_mode'] = conf.return_value(['authentication', 'mode'])
@@ -215,15 +214,18 @@ def verify(ipoe):
     if not ipoe:
         return None
 
-    import pprint
-    pprint.pprint(ipoe)
-
     if not ipoe['interfaces']:
         raise ConfigError('No IPoE interface configured')
 
     for interface in ipoe['interfaces']:
         if not interface['range']:
             raise ConfigError(f'No IPoE client subnet defined on interface "{{ interface }}"')
+
+    if len(ipoe['dnsv4']) > 2:
+        raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
+
+    if len(ipoe['dnsv6']) > 3:
+        raise ConfigError('Not more then three IPv6 DNS name-servers can be configured')
 
     if ipoe['auth_mode'] == 'radius':
         if len(ipoe['radius_server']) == 0:
@@ -271,8 +273,6 @@ def apply(ipoe):
         return None
 
     call('systemctl restart accel-ppp@ipoe.service')
-
-    raise ConfigError("faslkdjfhaslkjdfhklsjahdf")
 
 if __name__ == '__main__':
     try:
