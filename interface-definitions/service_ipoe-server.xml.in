@@ -292,6 +292,12 @@
                       <help>If server does not respond, mark it unavailable for this time (seconds)</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Temporary disable this server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
               <node name="radius-settings">

@@ -17,174 +17,227 @@
 import os
 import re
 
-from sys import exit
-from time import sleep
-
+from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
+from sys import exit
+
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call
+from vyos.util import call, get_half_cpus
 from vyos.template import render
-
 
 ipoe_conf = '/run/accel-pppd/ipoe.conf'
 ipoe_chap_secrets = '/run/accel-pppd/ipoe.chap-secrets'
 
-
-def _get_cpu():
-    cpu_cnt = 1
-    if os.cpu_count() == 1:
-        cpu_cnt = 1
-    else:
-        cpu_cnt = int(os.cpu_count()/2)
-    return cpu_cnt
-
+default_config_data = {
+    'auth_mode': 'local',
+    'auth_interfaces': [],
+    'chap_secrets_file': ipoe_chap_secrets, # used in Jinja2 template
+    'interfaces': [],
+    'dnsv4': [],
+    'dnsv6': [],
+    'client_ipv6_pool': [],
+    'client_ipv6_delegate_prefix': [],
+    'radius_server': [],
+    'radius_acct_tmo': '3',
+    'radius_max_try': '3',
+    'radius_timeout': '3',
+    'radius_nas_id': '',
+    'radius_nas_ip': '',
+    'radius_source_address': '',
+    'radius_shaper_attr': '',
+    'radius_shaper_vendor': '',
+    'radius_dynamic_author': '',
+    'thread_cnt': get_half_cpus()
+}
 
 def get_config():
-    c = Config()
-    if not c.exists(['service', 'ipoe-server']):
+    conf = Config()
+    base_path = ['service', 'ipoe-server']
+    if not conf.exists(base_path):
         return None
 
-    config_data = {
-        'chap_secrets_file' : ipoe_chap_secrets
-    }
+    conf.set_level(base_path)
+    ipoe = deepcopy(default_config_data)
 
-    c.set_level(['service', 'ipoe-server'])
-    config_data['interfaces'] = {}
-    for intfc in c.list_nodes(['interface']):
-        config_data['interfaces'][intfc] = {
+    for interface in conf.list_nodes(['interface']):
+        tmp  = {
             'mode': 'L2',
+            'name': interface,
             'shared': '1',
-            # may need a conifg option, can be dhcpv4 or up for unclassified pkts
+            # may need a config option, can be dhcpv4 or up for unclassified pkts
             'sess_start': 'dhcpv4',
             'range': None,
             'ifcfg': '1',
             'vlan_mon': []
         }
-        config_data['dns'] = {
-            'server1': None,
-            'server2': None
-        }
-        config_data['dnsv6'] = {
-            'server1': None,
-            'server2': None,
-            'server3': None
-        }
-        config_data['ipv6'] = {
-            'prfx': [],
-            'pd': [],
-        }
-        config_data['auth'] = {
-            'auth_if': {},
-            'mech': 'noauth',
-            'radius': {},
-            'radsettings': {
-                'dae-server': {}
+
+        conf.set_level(base_path + ['interface', interface])
+
+        if conf.exists(['network-mode']):
+            tmp['mode'] = conf.return_value(['network-mode'])
+
+        if conf.exists(['network']):
+            mode = conf.return_value(['network'])
+            if mode == 'vlan':
+                tmp['shared'] = '0'
+
+                if conf.exists(['vlan-id']):
+                    tmp['vlan_mon'] += conf.return_values(['vlan-id'])
+
+                if conf.exists(['vlan-range']):
+                    tmp['vlan_mon'] += conf.return_values(['vlan-range'])
+
+        if conf.exists(['client-subnet']):
+            tmp['range'] = conf.return_value(['client-subnet'])
+
+        ipoe['interfaces'].append(tmp)
+
+    conf.set_level(base_path)
+    for server in ['server-1', 'server-2']:
+        if conf.exists(['dns-server', server]):
+            tmp = conf.return_value(['dns-server', server])
+            ipoe['dnsv4'].append(tmp)
+
+    for server in ['server-1', 'server-2', 'server-3']:
+        if conf.exists(['dnsv6-server', server]):
+            tmp = conf.return_value(['dnsv6-server', server])
+            ipoe['dnsv6'].append(tmp)
+
+    if conf.exists(['authentication', 'mode']):
+        ipoe['auth_mode'] = conf.return_value(['authentication', 'mode'])
+
+    if conf.exists(['authentication', 'interface']):
+        for interface in conf.list_nodes(['authentication', 'interface']):
+            tmp = {
+                'name': interface,
+                'mac': []
             }
+            for client in conf.list_nodes(base_path + ['authentication', 'interface', interface, 'mac-address']):
+                mac = {
+                    'address': mac,
+                    'rate_download': '',
+                    'rate_upload': '',
+                    'vlan_id': ''
+                }
+                conf.set_level(base_path + ['authentication', 'interface', interface, 'mac-address', client])
+
+                if conf.exists(['rate-limit', 'download']):
+                    mac['rate_download'] = conf.return_value(['rate-limit', 'download'])
+
+                if conf.exists(['rate-limit', 'upload']):
+                    mac['rate_upload'] = conf.return_value(['rate-limit', 'upload'])
+
+                if conf.exists(['vlan-id']):
+                    mac['vlan'] = conf.return_value(['vlan-id'])
+
+                tmp['mac'].append(mac)
+
+            ipoe['auth_interfaces'].append(tmp)
+
+    #
+    # authentication mode radius servers and settings
+    if conf.exists(['authentication', 'mode', 'radius']):
+        for server in conf.list_nodes(['authentication', 'radius-server']):
+            radius = {
+                'server' : server,
+                'key' : '',
+                'fail_time' : 0,
+                'port' : '1812'
+            }
+
+            conf.set_level(base_path + ['authentication', 'radius-server', server])
+
+            if conf.exists(['fail-time']):
+                radius['fail-time'] = conf.return_value(['fail-time'])
+
+            if conf.exists(['port']):
+                radius['port'] = conf.return_value(['port'])
+
+            if conf.exists(['key']):
+                radius['key'] = conf.return_value(['key'])
+
+            if not conf.exists(['disable']):
+                ipoe['radius_server'].append(radius)
+
+    #
+    # advanced radius-setting
+    conf.set_level(base_path + ['authentication', 'radius-settings'])
+    if conf.exists(['acct-timeout']):
+        ipoe['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
+
+    if conf.exists(['max-try']):
+        ipoe['radius_max_try'] = conf.return_value(['max-try'])
+
+    if conf.exists(['timeout']):
+        ipoe['radius_timeout'] = conf.return_value(['timeout'])
+
+    if conf.exists(['nas-identifier']):
+        ipoe['radius_nas_id'] = conf.return_value(['nas-identifier'])
+
+    if conf.exists(['nas-ip-address']):
+        ipoe['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+
+    if conf.exists(['source-address']):
+        ipoe['radius_source_address'] = conf.return_value(['source-address'])
+
+    # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
+    if conf.exists(['dynamic-author']):
+        dae = {
+            'port' : '',
+            'server' : '',
+            'key' : ''
         }
 
-        if c.exists(['interface', intfc, 'network-mode']):
-            config_data['interfaces'][intfc]['mode'] = c.return_value(
-                ['interface', intfc, 'network-mode'])
-        if c.return_value(['interface', intfc, 'network']) == 'vlan':
-            config_data['interfaces'][intfc]['shared'] = '0'
-            if c.exists(['interface', intfc, 'vlan-id']):
-                config_data['interfaces'][intfc]['vlan_mon'] += c.return_values(
-                    ['interface', intfc, 'vlan-id'])
-            if c.exists(['interface', intfc, 'vlan-range']):
-                config_data['interfaces'][intfc]['vlan_mon'] += c.return_values(
-                    ['interface', intfc, 'vlan-range'])
-        if c.exists(['interface', intfc, 'client-subnet']):
-            config_data['interfaces'][intfc]['range'] = c.return_value(
-                ['interface', intfc, 'client-subnet'])
-        if c.exists(['dns-server', 'server-1']):
-            config_data['dns']['server1'] = c.return_value(
-                ['dns-server', 'server-1'])
-        if c.exists(['dns-server', 'server-2']):
-            config_data['dns']['server2'] = c.return_value(
-                ['dns-server', 'server-2'])
-        if c.exists(['dnsv6-server', 'server-1']):
-            config_data['dnsv6']['server1'] = c.return_value(
-                ['dnsv6-server', 'server-1'])
-        if c.exists(['dnsv6-server', 'server-2']):
-            config_data['dnsv6']['server2'] = c.return_value(
-                ['dnsv6-server', 'server-2'])
-        if c.exists(['dnsv6-server', 'server-3']):
-            config_data['dnsv6']['server3'] = c.return_value(
-                ['dnsv6-server', 'server-3'])
-        if not c.exists(['authentication', 'mode', 'noauth']):
-            config_data['auth']['mech'] = c.return_value(
-                ['authentication', 'mode'])
-        if c.exists(['authentication', 'mode', 'local']):
-            for auth_int in c.list_nodes(['authentication', 'interface']):
-                for mac in c.list_nodes(['authentication', 'interface', auth_int, 'mac-address']):
-                    config_data['auth']['auth_if'][auth_int] = {}
-                    if c.exists(['authentication', 'interface', auth_int, 'mac-address',  mac, 'rate-limit']):
-                        config_data['auth']['auth_if'][auth_int][mac] = {}
-                        config_data['auth']['auth_if'][auth_int][mac]['up'] = c.return_value(
-                            ['authentication', 'interface', auth_int, 'mac-address', mac, 'rate-limit upload'])
-                        config_data['auth']['auth_if'][auth_int][mac]['down'] = c.return_value(
-                            ['authentication', 'interface', auth_int, 'mac-address', 'mac', 'rate-limit download'])
-                    else:
-                        config_data['auth']['auth_if'][auth_int][mac] = {}
-                        config_data['auth']['auth_if'][auth_int][mac]['up'] = None
-                        config_data['auth']['auth_if'][auth_int][mac]['down'] = None
-                    # client vlan-id
-                    if c.exists(['authentication', 'interface', auth_int, 'mac-address', mac, 'vlan-id']):
-                        config_data['auth']['auth_if'][auth_int][mac]['vlan'] = c.return_value(
-                            ['authentication', 'interface', auth_int, 'mac-address', mac, 'vlan-id'])
-        if c.exists(['authentication', 'mode',  'radius']):
-            for rsrv in c.list_nodes(['authentication', 'radius-server']):
-                config_data['auth']['radius'][rsrv] = {}
-                if c.exists(['authentication', 'radius-server', rsrv, 'secret']):
-                    config_data['auth']['radius'][rsrv]['secret'] = c.return_value(
-                        ['authentication', 'radius-server', rsrv, 'secret'])
-                else:
-                    config_data['auth']['radius'][rsrv]['secret'] = None
-                if c.exists(['authentication', 'radius-server', rsrv, 'fail-time']):
-                    config_data['auth']['radius'][rsrv]['fail-time'] = c.return_value(
-                        ['authentication', 'radius-server', rsrv, 'fail-time'])
-                else:
-                    config_data['auth']['radius'][rsrv]['fail-time'] = '0'
-                if c.exists(['authentication', 'radius-server', rsrv, 'req-limit']):
-                    config_data['auth']['radius'][rsrv]['req-limit'] = c.return_value(
-                        ['authentication', 'radius-server', rsrv, 'req-limit'])
-                else:
-                    config_data['auth']['radius'][rsrv]['req-limit'] = '0'
-            if c.exists(['authentication', 'radius-settings']):
-                if c.exists(['authentication', 'radius-settings', 'timeout']):
-                    config_data['auth']['radsettings']['timeout'] = c.return_value(
-                        ['authentication', 'radius-settings', 'timeout'])
-                if c.exists(['authentication', 'radius-settings', 'nas-ip-address']):
-                    config_data['auth']['radsettings']['nas-ip-address'] = c.return_value(
-                        ['authentication', 'radius-settings', 'nas-ip-address'])
-                if c.exists(['authentication', 'radius-settings', 'nas-identifier']):
-                    config_data['auth']['radsettings']['nas-identifier'] = c.return_value(
-                        ['authentication', 'radius-settings', 'nas-identifier'])
-                if c.exists(['authentication', 'radius-settings', 'max-try']):
-                    config_data['auth']['radsettings']['max-try'] = c.return_value(
-                        ['authentication', 'radius-settings', 'max-try'])
-                if c.exists(['authentication', 'radius-settings', 'acct-timeout']):
-                    config_data['auth']['radsettings']['acct-timeout'] = c.return_value(
-                        ['authentication', 'radius-settings', 'acct-timeout'])
-                if c.exists(['authentication', 'radius-settings', 'dae-server', 'ip-address']):
-                    config_data['auth']['radsettings']['dae-server']['ip-address'] = c.return_value(
-                        ['authentication', 'radius-settings', 'dae-server', 'ip-address'])
-                if c.exists(['authentication', 'radius-settings', 'dae-server', 'port']):
-                    config_data['auth']['radsettings']['dae-server']['port'] = c.return_value(
-                        ['authentication', 'radius-settings', 'dae-server', 'port'])
-                if c.exists(['authentication', 'radius-settings', 'dae-server', 'secret']):
-                    config_data['auth']['radsettings']['dae-server']['secret'] = c.return_value(
-                        ['authentication', 'radius-settings', 'dae-server', 'secret'])
+        if conf.exists(['dynamic-author', 'ip-address']):
+            dae['server'] = conf.return_value(['dynamic-author', 'ip-address'])
 
-        if c.exists(['client-ipv6-pool', 'prefix']):
-            config_data['ipv6']['prfx'] = c.return_values(
-                ['client-ipv6-pool', 'prefix'])
-        if c.exists(['client-ipv6-pool', 'delegate-prefix']):
-            config_data['ipv6']['pd'] = c.return_values(
-                ['client-ipv6-pool', 'delegate-prefix'])
+        if conf.exists(['dynamic-author', 'port']):
+            dae['port'] = conf.return_value(['dynamic-author', 'port'])
 
-    return config_data
+        if conf.exists(['dynamic-author', 'secret']):
+            dae['key'] = conf.return_value(['dynamic-author', 'secret'])
+
+        ipoe['radius_dynamic_author'] = dae
+
+
+    conf.set_level(base_path)
+    if conf.exists(['client-ipv6-pool', 'prefix']):
+        ipoe['client_ipv6_pool'] = conf.return_values(['client-ipv6-pool', 'prefix'])
+
+    if conf.exists(['client-ipv6-pool', 'delegate-prefix']):
+        ipoe['client_ipv6_delegate_prefix'] = conf.return_values(['client-ipv6-pool', 'delegate-prefix'])
+
+    return ipoe
+
+
+def verify(ipoe):
+    if not ipoe:
+        return None
+
+    import pprint
+    pprint.pprint(ipoe)
+
+    if not ipoe['interfaces']:
+        raise ConfigError('No IPoE interface configured')
+
+    for interface in ipoe['interfaces']:
+        if not interface['range']:
+            raise ConfigError(f'No IPoE client subnet defined on interface "{{ interface }}"')
+
+    if ipoe['auth_mode'] == 'radius':
+        if len(ipoe['radius_server']) == 0:
+            raise ConfigError('RADIUS authentication requires at least one server')
+
+        for radius in ipoe['radius_server']:
+            if not radius['key']:
+                server = radius['server']
+                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+
+    if ipoe['client_ipv6_delegate_prefix'] and not ipoe['client_ipv6_pool']:
+        raise ConfigError('IPoE IPv6 deletate-prefix requires IPv6 prefix to be configured!')
+
+    return None
 
 
 def generate(ipoe):
@@ -195,10 +248,9 @@ def generate(ipoe):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    ipoe['thread_cnt'] = _get_cpu()
     render(ipoe_conf, 'ipoe-server/ipoe.config.tmpl', ipoe, trim_blocks=True)
 
-    if ipoe['auth']['mech'] == 'local':
+    if ipoe['auth_mode'] == 'local':
         render(ipoe_chap_secrets, 'ipoe-server/chap-secrets.tmpl', ipoe)
         os.chmod(ipoe_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
@@ -209,69 +261,18 @@ def generate(ipoe):
     return None
 
 
-def verify(c):
-    if c == None or not c:
-        return None
-
-    if not c['interfaces']:
-        raise ConfigError("service ipoe-server interface requires a value")
-
-    for intfc in c['interfaces']:
-        if not c['interfaces'][intfc]['range']:
-            raise ConfigError("service ipoe-server interface " +
-                              intfc + " client-subnet needs a value")
-
-    if c['auth']['mech'] == 'radius':
-        if not c['auth']['radius']:
-            raise ConfigError(
-                "service ipoe-server authentication radius-server requires a value for authentication mode radius")
-        else:
-            for radsrv in c['auth']['radius']:
-                if not c['auth']['radius'][radsrv]['secret']:
-                    raise ConfigError(
-                        "service ipoe-server authentication radius-server " + radsrv + " secret requires a value")
-
-    if c['auth']['radsettings']['dae-server']:
-        try:
-            if c['auth']['radsettings']['dae-server']['ip-address']:
-                pass
-        except:
-            raise ConfigError(
-                "service ipoe-server authentication radius-settings dae-server ip-address value required")
-        try:
-            if c['auth']['radsettings']['dae-server']['secret']:
-                pass
-        except:
-            raise ConfigError(
-                "service ipoe-server authentication radius-settings dae-server secret value required")
-        try:
-            if c['auth']['radsettings']['dae-server']['port']:
-                pass
-        except:
-            raise ConfigError(
-                "service ipoe-server authentication radius-settings dae-server port value required")
-
-    if len(c['ipv6']['pd']) != 0 and len(c['ipv6']['prfx']) == 0:
-        raise ConfigError(
-            "service ipoe-server client-ipv6-pool prefix needs a value")
-
-    return c
-
-
 def apply(ipoe):
     if ipoe == None:
         call('systemctl stop accel-ppp@ipoe.service')
-
-        if os.path.exists(ipoe_conf):
-             os.unlink(ipoe_conf)
-
-        if os.path.exists(ipoe_chap_secrets):
-             os.unlink(ipoe_chap_secrets)
+        for file in [ipoe_conf, ipoe_chap_secrets]:
+            if os.path.exists(file):
+                os.unlink(file)
 
         return None
 
     call('systemctl restart accel-ppp@ipoe.service')
 
+    raise ConfigError("faslkdjfhaslkjdfhklsjahdf")
 
 if __name__ == '__main__':
     try:
