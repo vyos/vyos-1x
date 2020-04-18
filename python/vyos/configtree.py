@@ -10,7 +10,7 @@
 # See the GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along with this library;
-# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import re
 import json
@@ -200,7 +200,7 @@ class ConfigTree(object):
             raise ConfigTreeError()
         res = self.__rename(self.__config, path_str, newname_str)
         if (res != 0):
-            raise ConfigTreeError("Path [{}] doesn't exist".format(oldpath))
+            raise ConfigTreeError("Path [{}] doesn't exist".format(path))
 
     def copy(self, old_path, new_path):
         check_path(old_path)
@@ -213,7 +213,7 @@ class ConfigTree(object):
             raise ConfigTreeError()
         res = self.__copy(self.__config, oldpath_str, newpath_str)
         if (res != 0):
-            raise ConfigTreeError("Path [{}] doesn't exist".format(oldpath))
+            raise ConfigTreeError("Path [{}] doesn't exist".format(old_path))
 
     def exists(self, path):
         check_path(path)
