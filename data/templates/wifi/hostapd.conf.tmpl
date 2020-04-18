@@ -572,6 +572,16 @@ wpa_pairwise={{ sec_wpa_cipher | join(" ") }}
 {%- endif -%}
 {% endif %}
 
+{% if sec_wpa_group_cipher -%}
+# Optional override for automatic group cipher selection
+# This can be used to select a specific group cipher regardless of which
+# pairwise ciphers were enabled for WPA and RSN. It should be noted that
+# overriding the group cipher with an unexpected value can result in
+# interoperability issues and in general, this parameter is mainly used for
+# testing purposes.
+group_cipher={{ sec_wpa_group_cipher | join(" ") }}
+{% endif %}
+
 {% if sec_wpa_passphrase -%}
 # IEEE 802.11 specifies two authentication algorithms. hostapd can be
 # configured to allow both of these or only one. Open system authentication

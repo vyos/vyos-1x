@@ -442,6 +442,10 @@ def get_config():
             wifi['sec_wpa_cipher'].append('CCMP')
             wifi['sec_wpa_cipher'].append('TKIP')
 
+    # WPA Group Cipher suite
+    if conf.exists('security wpa group-cipher'):
+        wifi['sec_wpa_group_cipher'] = conf.return_values('security wpa group-cipher')
+
     # WPA personal shared pass phrase
     if conf.exists('security wpa passphrase'):
         wifi['sec_wpa_passphrase'] = conf.return_value('security wpa passphrase')

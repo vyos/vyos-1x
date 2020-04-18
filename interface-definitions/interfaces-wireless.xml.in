@@ -605,22 +605,67 @@
                 <children>
                   <leafNode name="cipher">
                     <properties>
-                      <help>Cipher suite for WPA</help>
+                      <help>Cipher suite for WPA unicast packets</help>
                       <completionHelp>
-                        <list>TKIP CCMP</list>
+                        <list>GCMP-256 GCMP CCMP-256 CCMP TKIP</list>
                       </completionHelp>
                       <valueHelp>
+                        <format>GCMP-256</format>
+                        <description>AES in Galois/counter mode with 256-bit key</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>GCMP</format>
+                        <description>AES in Galois/counter mode with 128-bit key</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>CCMP-256</format>
+                        <description>AES in Counter mode with CBC-MAC with 256-bit key</description>
+                      </valueHelp>
+                      <valueHelp>
                         <format>CCMP</format>
-                        <description>AES in Counter mode with CBC-MAC [RFC 3610, IEEE 802.11i/D7.0]</description>
+                        <description>AES in Counter mode with CBC-MAC [RFC 3610, IEEE 802.11i/D7.0] (supported on all WPA2 APs)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>TKIP</format>
                         <description>Temporal Key Integrity Protocol [IEEE 802.11i/D7.0]</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(CCMP|TKIP)</regex>
+                        <regex>(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)</regex>
                       </constraint>
-                      <constraintErrorMessage>Invalid WEP key</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid cipher selection</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="group-cipher">
+                    <properties>
+                      <help>Cipher suite for WPA multicast and broadcast packets</help>
+                      <completionHelp>
+                        <list>GCMP-256 GCMP CCMP-256 CCMP TKIP</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>GCMP-256</format>
+                        <description>AES in Galois/counter mode with 256-bit key</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>GCMP</format>
+                        <description>AES in Galois/counter mode with 128-bit key</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>CCMP-256</format>
+                        <description>AES in Counter mode with CBC-MAC with 256-bit key</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>CCMP</format>
+                        <description>AES in Counter mode with CBC-MAC [RFC 3610, IEEE 802.11i/D7.0] (supported on all WPA2 APs)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>TKIP</format>
+                        <description>Temporal Key Integrity Protocol [IEEE 802.11i/D7.0]</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid group cipher selection</constraintErrorMessage>
                       <multi/>
                     </properties>
                   </leafNode>
