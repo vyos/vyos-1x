@@ -269,10 +269,10 @@ def generate(ipoe):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    render(ipoe_conf, 'ipoe-server/ipoe.config.tmpl', ipoe, trim_blocks=True)
+    render(ipoe_conf, 'accel-ppp/ipoe.config.tmpl', ipoe, trim_blocks=True)
 
     if ipoe['auth_mode'] == 'local':
-        render(ipoe_chap_secrets, 'ipoe-server/chap-secrets.tmpl', ipoe)
+        render(ipoe_chap_secrets, 'accel-ppp/chap-secrets.ipoe.tmpl', ipoe)
         os.chmod(ipoe_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
     else:
