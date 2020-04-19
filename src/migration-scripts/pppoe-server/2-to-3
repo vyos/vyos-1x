@@ -74,6 +74,18 @@ else:
     if config.exists(radius_settings):
         config.rename(radius_settings, 'radius')
 
+    # Migrate RADIUS dynamic author / change of authorisation server
+    dae_old = base + ['authentication', 'radius', 'dae-server']
+    if config.exists(dae_old):
+        config.rename(dae_old, 'dynamic-author')
+        dae_new = base + ['authentication', 'radius', 'dynamic-author']
+
+        if config.exists(dae_new + ['ip-address']):
+            config.rename(dae_new + ['ip-address'], 'server')
+
+        if config.exists(dae_new + ['secret']):
+            config.rename(dae_new + ['secret'], 'key')
+
     # Migrate RADIUS server
     radius_server = base + ['authentication', 'radius-server']
     if config.exists(radius_server):

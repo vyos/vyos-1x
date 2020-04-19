@@ -188,14 +188,14 @@ def get_config():
             'key' : ''
         }
 
-        if conf.exists(['dynamic-author', 'ip-address']):
-            dae['server'] = conf.return_value(['dynamic-author', 'ip-address'])
+        if conf.exists(['dynamic-author', 'server']):
+            dae['server'] = conf.return_value(['dynamic-author', 'server'])
 
         if conf.exists(['dynamic-author', 'port']):
             dae['port'] = conf.return_value(['dynamic-author', 'port'])
 
-        if conf.exists(['dynamic-author', 'secret']):
-            dae['key'] = conf.return_value(['dynamic-author', 'secret'])
+        if conf.exists(['dynamic-author', 'key']):
+            dae['key'] = conf.return_value(['dynamic-author', 'key'])
 
         ipoe['radius_dynamic_author'] = dae
 
