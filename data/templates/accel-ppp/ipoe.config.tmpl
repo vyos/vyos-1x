@@ -25,7 +25,7 @@ level=5
 verbose=1
 {% for interface in interfaces %}
 {% if interface.vlan_mon %}
-interface=re:{{ interface.name }}\.\d+,{% else %}interface={{ interface }},{% endif %}shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }},range={{ interface.range }},start={{ interface.sess_start }},ipv6=1
+interface=re:{{ interface.name }}\.\d+,{% else %}interface={{ interface.name }},{% endif %}shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }},range={{ interface.range }},start={{ interface.sess_start }},ipv6=1
 {% endfor %}
 {% if auth_mode == 'noauth' %}
 noauth=1
