@@ -20,11 +20,11 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
+from vyos.config import Config
+from vyos.configdict import list_diff, vlan_to_dict
 from vyos.ifconfig import MACVLANIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.configdict import list_diff, vlan_to_dict
-from vyos.config import Config
-from vyos.util import is_bridge_member
+from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -39,6 +39,7 @@ default_config_data = {
     'dhcpv6_temporary': False,
     'disable': False,
     'disable_link_detect': 1,
+    'intf': '',
     'ip_arp_cache_tmo': 30,
     'ip_disable_arp_filter': 1,
     'ip_enable_arp_accept': 0,
@@ -50,7 +51,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
-    'intf': '',
+    'is_bridge_member': False,
     'source_interface': '',
     'source_interface_changed': False,
     'mac': '',
@@ -76,6 +77,8 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists(cfg_base):
         peth['deleted'] = True
+        # check if interface is member if a bridge
+        peth['is_bridge_member'] = is_bridge_member(conf, peth['intf'])
         return peth
 
     # set new configuration level
@@ -218,13 +221,11 @@ def get_config():
 
 def verify(peth):
     if peth['deleted']:
-        interface = peth['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if peth['is_bridge_member']::
+            interface = peth['intf']
+            bridge = peth['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     if not peth['source_interface']:

@@ -26,11 +26,10 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.ifconfig import VTunIf
-from vyos.util import call, is_bridge_member, chown, chmod_600, chmod_755
-from vyos.validate import is_addr_assigned
-from vyos import ConfigError
 from vyos.template import render
-
+from vyos.util import call, chown, chmod_600, chmod_755
+from vyos.validate import is_addr_assigned, is_bridge_member
+from vyos import ConfigError
 
 user = 'openvpn'
 group = 'openvpn'
@@ -55,6 +54,7 @@ default_config_data = {
     'ipv6_dup_addr_detect': 1,
     'ipv6_local_address': [],
     'ipv6_remote_address': [],
+    'is_bridge_member': False,
     'ping_restart': '60',
     'ping_interval': '10',
     'local_address': [],
@@ -197,6 +197,8 @@ def get_config():
     # Check if interface instance has been removed
     if not conf.exists('interfaces openvpn ' + openvpn['intf']):
         openvpn['deleted'] = True
+        # check if interface is member if a bridge
+        openvpn['is_bridge_member'] = is_bridge_member(conf, openvpn['intf'])
         return openvpn
 
     # Check if we belong to any bridge interface
@@ -598,13 +600,11 @@ def get_config():
 
 def verify(openvpn):
     if openvpn['deleted']:
-        interface = openvpn['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if openvpn['is_bridge_member']:
+            interface = openvpn['intf']
+            bridge = openvpn['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
 

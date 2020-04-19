@@ -86,8 +86,8 @@ def _is_intf_addr_assigned(intf, address, netmask=''):
 
     # check if the requested address type is configured at all
     # {
-    # 17: [{'addr': '08:00:27:d9:5b:04', 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 
-    # 2:  [{'addr': '10.0.2.15', 'netmask': '255.255.255.0', 'broadcast': '10.0.2.255'}], 
+    # 17: [{'addr': '08:00:27:d9:5b:04', 'broadcast': 'ff:ff:ff:ff:ff:ff'}],
+    # 2:  [{'addr': '10.0.2.15', 'netmask': '255.255.255.0', 'broadcast': '10.0.2.255'}],
     # 10: [{'addr': 'fe80::a00:27ff:fed9:5b04%eth0', 'netmask': 'ffff:ffff:ffff:ffff::'}]
     # }
     try:
@@ -240,3 +240,28 @@ def assert_mac(m):
 
     if octets[:5] == (0, 0, 94, 0, 1):
         raise ValueError(f'{m} is a VRRP MAC address')
+
+def is_bridge_member(conf, interface):
+    """
+    Checks if passed interfaces is part of a bridge device or not.
+
+    Returns a tuple:
+    None -> Interface not a bridge member
+    Bridge -> Interface is a member of this bridge
+    """
+    ret_val = None
+    old_level = conf.get_level()
+
+    # set config level to root
+    conf.set_level([])
+    base = ['interfaces', 'bridge']
+    for bridge in conf.list_nodes(base):
+        members = conf.list_nodes(base + [bridge, 'member', 'interface'])
+        print(members)
+        if interface in members:
+            ret_val = bridge
+            break
+
+    old_level = conf.set_level(old_level)
+    return ret_val
+

@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import VXLANIf, Interface
-from vyos.util import is_bridge_member
+from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -42,6 +42,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'is_bridge_member': False,
     'source_address': '',
     'source_interface': '',
     'mtu': 1450,
@@ -64,6 +65,8 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists('interfaces vxlan ' + vxlan['intf']):
         vxlan['deleted'] = True
+        # check if interface is member if a bridge
+        vxlan['is_bridge_member'] = is_bridge_member(conf, vxlan['intf'])
         return vxlan
 
     # set new configuration level
@@ -154,13 +157,11 @@ def get_config():
 
 def verify(vxlan):
     if vxlan['deleted']:
-        interface = vxlan['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if vxlan['is_bridge_member']:
+            interface = vxlan['intf']
+            bridge = vxlan['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     if vxlan['mtu'] < 1500:
@@ -250,7 +251,7 @@ def apply(vxlan):
         for addr in vxlan['address']:
             v.add_addr(addr)
 
-        # As the bond interface is always disabled first when changing
+        # As the VXLAN interface is always disabled first when changing
         # parameters we will only re-enable the interface if it is not
         # administratively disabled
         if not vxlan['disable']:

@@ -429,24 +429,6 @@ def mac2eui64(mac, prefix=None):
         except:  # pylint: disable=bare-except
             return
 
-def is_bridge_member(interface):
-    """
-    Checks if passed interfaces is part of a bridge device or not.
-
-    Returns a tuple:
-    False, None -> Not part of a bridge
-    True, bridge-name -> If it is assigned to a bridge
-    """
-    from vyos.config import Config
-    c = Config()
-    base = ['interfaces', 'bridge']
-    for bridge in c.list_nodes(base):
-        members = c.list_nodes(base + [bridge, 'member', 'interface'])
-        if interface in members:
-            return (True, bridge)
-
-    return False, None
-
 def get_half_cpus():
     """ return 1/2 of the numbers of available CPUs """
     cpu = os.cpu_count()

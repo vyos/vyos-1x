@@ -21,14 +21,10 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.util import chown
-from vyos.util import chmod_755
-from vyos.util import is_bridge_member
-from vyos.util import cmd
-from vyos.util import call
-from vyos import ConfigError
 from vyos.template import render
-
+from vyos.util import chown, chmod_755, cmd, call
+from vyos.validate import is_bridge_member
+from vyos import ConfigError
 
 default_config_data = {
     'address': [],
@@ -44,6 +40,7 @@ default_config_data = {
     'metric': '10',
     'mtu': '1500',
     'name_server': True,
+    'is_bridge_member': False,
     'intf': '',
     'vrf': ''
 }
@@ -70,6 +67,8 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists('interfaces wirelessmodem ' + wwan['intf']):
         wwan['deleted'] = True
+        # check if interface is member if a bridge
+        wwan['is_bridge_member'] = is_bridge_member(conf, wwan['intf'])
         return wwan
 
     # set new configuration level
@@ -119,13 +118,11 @@ def get_config():
 
 def verify(wwan):
     if wwan['deleted']:
-        interface = wwan['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if wwan['is_bridge_member']::
+            interface = wwan['intf']
+            bridge = wwan['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     if not wwan['apn']:

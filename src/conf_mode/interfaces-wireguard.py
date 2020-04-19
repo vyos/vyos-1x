@@ -24,8 +24,8 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
-from vyos.util import chown, is_bridge_member, chmod_750
-from vyos.util import call
+from vyos.util import chown, chmod_750, call
+from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -38,6 +38,7 @@ default_config_data = {
     'lport': None,
     'deleted': False,
     'disable': False,
+    'is_bridge_member': False,
     'fwmark': 0x00,
     'mtu': 1420,
     'peer': [],
@@ -80,6 +81,8 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists(base + [wg['intf']]):
         wg['deleted'] = True
+        # check if interface is member if a bridge
+        wg['is_bridge_member'] = is_bridge_member(conf, wg['intf'])
         return wg
 
     conf.set_level(base + [wg['intf']])
@@ -189,12 +192,11 @@ def verify(wg):
     interface = wg['intf']
 
     if wg['deleted']:
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if wg['is_bridge_member']:
+            interface = wg['intf']
+            bridge = wg['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     vrf_name = wg['vrf']

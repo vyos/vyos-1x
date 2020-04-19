@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.ifconfig import DummyIf
 from vyos.configdict import list_diff
 from vyos.config import Config
-from vyos.util import is_bridge_member
+from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -33,6 +33,7 @@ default_config_data = {
     'description': '',
     'disable': False,
     'intf': '',
+    'is_bridge_member': False,
     'vrf': ''
 }
 
@@ -49,6 +50,8 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists('interfaces dummy ' + dummy['intf']):
         dummy['deleted'] = True
+        # check if interface is member if a bridge
+        dummy['is_bridge_member'] = is_bridge_member(conf, dummy['intf'])
         return dummy
 
     # set new configuration level
@@ -80,13 +83,11 @@ def get_config():
 
 def verify(dummy):
     if dummy['deleted']:
-        interface = dummy['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if dummy['is_bridge_member']::
+            interface = dummy['intf']
+            bridge = dummy['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     vrf_name = dummy['vrf']

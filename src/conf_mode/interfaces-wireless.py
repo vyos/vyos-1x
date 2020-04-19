@@ -27,10 +27,10 @@ from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.ifconfig import WiFiIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.util import chown, is_bridge_member, call
-from vyos import ConfigError
 from vyos.template import render
-
+from vyos.util import chown, call
+from vyos.validate import is_bridge_member
+from vyos import ConfigError
 
 default_config_data = {
     'address': [],
@@ -91,6 +91,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'is_bridge_member': False,
     'mac' : '',
     'max_stations' : '',
     'mgmt_frame_protection' : 'disabled',
@@ -136,6 +137,8 @@ def get_config():
     cfg_base = 'interfaces wireless ' + wifi['intf']
     if not conf.exists(cfg_base):
         wifi['deleted'] = True
+        # check if interface is member if a bridge
+        wifi['is_bridge_member'] = is_bridge_member(conf, wifi['intf'])
         # we can not bail out early as wireless interface can not be removed
         # Kernel will complain with: RTNETLINK answers: Operation not supported.
         # Thus we need to remove individual settings
@@ -528,15 +531,12 @@ def get_config():
 
 def verify(wifi):
     if wifi['deleted']:
-        interface = wifi['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
-        return None
+        if wifi['is_bridge_member']:
+            interface = wifi['intf']
+            bridge = wifi['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
 
+        return None
 
     if wifi['op_mode'] != 'monitor' and not wifi['ssid']:
         raise ConfigError('SSID must be set for {}'.format(wifi['intf']))

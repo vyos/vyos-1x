@@ -24,8 +24,8 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
-from vyos.util import is_bridge_member
 from vyos.util import call
+from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -43,6 +43,7 @@ default_config_data = {
     'disable': False,
     'disable_link_detect': 1,
     'hash_policy': 'layer2',
+    'intf': '',
     'ip_arp_cache_tmo': 30,
     'ip_disable_arp_filter': 1,
     'ip_enable_arp_accept': 0,
@@ -54,7 +55,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
-    'intf': '',
+    'is_bridge_member': False,
     'mac': '',
     'mode': '802.3ad',
     'member': [],
@@ -109,6 +110,8 @@ def get_config():
     cfg_base = 'interfaces bonding ' + bond['intf']
     if not conf.exists(cfg_base):
         bond['deleted'] = True
+        # check if interface is member if a bridge
+        bond['is_bridge_member'] = is_bridge_member(conf, bond['intf'])
         return bond
 
     # set new configuration level
@@ -279,13 +282,10 @@ def get_config():
 
 def verify(bond):
     if bond['deleted']:
-        interface = bond['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if bond['is_bridge_member']:
+            interface = bond['intf']
+            bridge = bond['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
         return None
 
     if len (bond['arp_mon_tgt']) > 16:

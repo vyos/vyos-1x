@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import GeneveIf
-from vyos.util import is_bridge_member
+from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -33,6 +33,7 @@ default_config_data = {
     'intf': '',
     'ip_arp_cache_tmo': 30,
     'ip_proxy_arp': 0,
+    'is_bridge_member': False,
     'mtu': 1500,
     'remote': '',
     'vni': ''
@@ -51,6 +52,8 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists('interfaces geneve ' + geneve['intf']):
         geneve['deleted'] = True
+        # check if interface is member if a bridge
+        geneve['is_bridge_member'] = is_bridge_member(conf, geneve['intf'])
         return geneve
 
     # set new configuration level
@@ -93,13 +96,11 @@ def get_config():
 
 def verify(geneve):
     if geneve['deleted']:
-        interface = geneve['intf']
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if geneve['is_bridge_member']:
+            interface = geneve['intf']
+            bridge = geneve['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     if not geneve['remote']:

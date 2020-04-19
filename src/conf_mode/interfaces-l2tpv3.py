@@ -18,13 +18,13 @@ import os
 
 from sys import exit
 from copy import deepcopy
+from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
 from vyos.util import call
-from vyos.util import is_bridge_member
-from netifaces import interfaces
+from vyos.validate import is_bridge_member
 
 default_config_data = {
     'address': [],
@@ -39,6 +39,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'is_bridge_member': False
     'mtu': 1488,
     'peer_session_id': '',
     'peer_tunnel_id': '',
@@ -68,15 +69,16 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists('interfaces l2tpv3 ' + l2tpv3['intf']):
         l2tpv3['deleted'] = True
-        # to delete the l2tpv3 interface we need to current
-        # tunnel_id and session_id
-        if conf.exists_effective('interfaces l2tpv3 {} tunnel-id'.format(l2tpv3['intf'])):
-            l2tpv3['tunnel_id'] = conf.return_effective_value(
-                'interfaces l2tpv3 {} tunnel-id'.format(l2tpv3['intf']))
+        interface = l2tpv3['intf']
+        # check if interface is member if a bridge
+        l2tpv3['is_bridge_member'] = is_bridge_member(conf, interface)
 
-        if conf.exists_effective('interfaces l2tpv3 {} session-id'.format(l2tpv3['intf'])):
-            l2tpv3['session_id'] = conf.return_effective_value(
-                'interfaces l2tpv3 {} session-id'.format(l2tpv3['intf']))
+        # to delete the l2tpv3 interface we need the current tunnel_id and session_id
+        if conf.exists_effective(f'interfaces l2tpv3 {interface} tunnel-id'):
+            l2tpv3['tunnel_id'] = conf.return_effective_value(f'interfaces l2tpv3 {interface} tunnel-id')
+
+        if conf.exists_effective(f'interfaces l2tpv3 {interface} session-id'):
+            l2tpv3['session_id'] = conf.return_effective_value(f'interfaces l2tpv3 {interface} session-id')
 
         return l2tpv3
 
@@ -158,12 +160,11 @@ def verify(l2tpv3):
     interface = l2tpv3['intf']
 
     if l2tpv3['deleted']:
-        is_member, bridge = is_bridge_member(interface)
-        if is_member:
-            # can not use a f'' formatted-string here as bridge would not get
-            # expanded in the print statement
-            raise ConfigError('Can not delete interface "{0}" as it ' \
-                              'is a member of bridge "{1}"!'.format(interface, bridge))
+        if l2tpv3['is_bridge_member']:
+            interface = l2tpv3['intf']
+            bridge = l2tpv3['is_bridge_member']
+            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         return None
 
     if not l2tpv3['local_address']:
