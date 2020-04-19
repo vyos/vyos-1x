@@ -39,7 +39,7 @@ default_config_data = {
     'ipv6_eui64_prefix': '',
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
-    'is_bridge_member': False
+    'is_bridge_member': False,
     'mtu': 1488,
     'peer_session_id': '',
     'peer_tunnel_id': '',
