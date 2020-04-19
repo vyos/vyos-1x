@@ -38,6 +38,7 @@ default_config_data = {
     'address': [],
     'auth_user': '',
     'auth_pass': '',
+    'auth_user_pass_file': '',
     'auth': False,
     'bridge_member': [],
     'compress_lzo': False,
@@ -944,17 +945,17 @@ def generate(openvpn):
     fix_permissions.append(openvpn['tls_key'])
 
     # Generate User/Password authentication file
-    user_auth_file = f'/tmp/openvpn-{interface}-pw'
+    openvpn['auth_user_pass_file'] = f'/run/openvpn/{interface}.pw'
     if openvpn['auth']:
-        with open(user_auth_file, 'w') as f:
+        with open(openvpn['auth_user_pass_file'], 'w') as f:
             f.write('{}\n{}'.format(openvpn['auth_user'], openvpn['auth_pass']))
         # also change permission on auth file
-        fix_permissions.append(user_auth_file)
+        fix_permissions.append(openvpn['auth_user_pass_file'])
 
     else:
         # delete old auth file if present
-        if os.path.isfile(user_auth_file):
-            os.remove(user_auth_file)
+        if os.path.isfile(openvpn['auth_user_pass_file']):
+            os.remove(openvpn['auth_user_pass_file'])
 
     # Generate client specific configuration
     for client in openvpn['client']:

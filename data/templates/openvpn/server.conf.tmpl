@@ -233,7 +233,7 @@ auth {{ hash }}
 {%- endif -%}
 
 {%- if auth %}
-auth-user-pass /tmp/openvpn-{{ intf }}-pw
+auth-user-pass {{ auth_user_pass_file }}
 auth-retry nointeract
 {%- endif %}
 
