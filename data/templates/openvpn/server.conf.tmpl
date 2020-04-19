@@ -98,7 +98,7 @@ ccd-exclusive
 {%- endif %}
 
 keepalive {{ ping_interval }} {{ ping_restart }}
-management /tmp/openvpn-mgmt-intf unix
+management /run/openvpn/openvpn-mgmt-intf unix
 
 {% for route in server_push_route -%}
 push "route {{ route }}"

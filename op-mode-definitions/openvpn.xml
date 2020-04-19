@@ -59,7 +59,7 @@
                 <script>sudo ${vyos_completion_dir}/list_openvpn_clients.py --all</script>
               </completionHelp>
             </properties>
-            <command>echo kill $4 | socat - UNIX-CONNECT:/tmp/openvpn-mgmt-intf &gt; /dev/null</command>
+            <command>echo kill $4 | socat - UNIX-CONNECT:/run/openvpn/openvpn-mgmt-intf &gt; /dev/null</command>
           </tagNode>
           <tagNode name="interface">
             <properties>
