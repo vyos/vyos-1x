@@ -919,10 +919,6 @@ def verify(openvpn):
 
 def generate(openvpn):
     if openvpn['deleted'] or openvpn['disable']:
-        # delete old auth file if present
-        if os.path.isfile(openvpn['auth_user_pass_file']):
-            os.remove(openvpn['auth_user_pass_file'])
-
         return None
 
     interface = openvpn['intf']
