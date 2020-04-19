@@ -257,7 +257,6 @@ def is_bridge_member(conf, interface):
     base = ['interfaces', 'bridge']
     for bridge in conf.list_nodes(base):
         members = conf.list_nodes(base + [bridge, 'member', 'interface'])
-        print(members)
         if interface in members:
             ret_val = bridge
             break
