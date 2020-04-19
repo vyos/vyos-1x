@@ -88,35 +88,30 @@ wins{{ loop.index }}={{ server }}
 {% if auth_mode == 'local' %}
 [chap-secrets]
 chap-secrets={{ chap_secrets_file }}
-{% endif %}
-
-{% if auth_mode == 'radius' %}
+{% elif auth_mode == 'radius' %}
 [radius]
 verbose=1
-{% for srv in auth['radius'] %}
-server={{srv}},{{auth['radius'][srv]['secret']}},
-req-limit={{auth['radius'][srv]['req-limit']}},
-fail-time={{auth['radius'][srv]['fail-time']}}
-{% endfor %}
-{% if auth['radsettings']['dae-server']['ip-address'] %}
-dae-server={{auth['radsettings']['dae-server']['ip-address']}}:
-{{auth['radsettings']['dae-server']['port']}},
-{{auth['radsettings']['dae-server']['secret']}}
+{% for r in radius_server %}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
+{% endfor -%}
+
+acct-timeout={{ radius_acct_tmo }}
+timeout={{ radius_timeout }}
+max-try={{ radius_max_try }}
+
+{% if radius_nas_id %}
+nas-identifier={{ radius_nas_id }}
 {% endif -%}
-{% if auth['radsettings']['acct-timeout'] %}
-acct-timeout={{auth['radsettings']['acct-timeout']}}
+{% if radius_nas_ip %}
+nas-ip-address={{ radius_nas_ip }}
 {% endif -%}
-{% if auth['radsettings']['max-try'] %}
-max-try={{auth['radsettings']['max-try']}}
+{% if radius_source_address %}
+bind={{ radius_source_address }}
 {% endif -%}
-{% if auth['radsettings']['timeout'] %}
-timeout={{auth['radsettings']['timeout']}}
-{% endif -%}
-{% if auth['radsettings']['nas-ip-address'] %}
-nas-ip-address={{auth['radsettings']['nas-ip-address']}}
-{% endif -%}
-{% if auth['radsettings']['nas-identifier'] %}
-nas-identifier={{auth['radsettings']['nas-identifier']}}
+
+
+{% if radius_dynamic_author %}
+dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {% endif -%}
 {% endif %}
 
