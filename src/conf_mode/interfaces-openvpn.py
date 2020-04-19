@@ -194,6 +194,7 @@ def get_config():
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     openvpn['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+    openvpn['auth_user_pass_file'] = f"/run/openvpn/{openvpn['intf']}.pw"
 
     # Check if interface instance has been removed
     if not conf.exists('interfaces openvpn ' + openvpn['intf']):
@@ -918,17 +919,17 @@ def verify(openvpn):
     return None
 
 def generate(openvpn):
-    if openvpn['deleted'] or openvpn['disable']:
-        return None
-
     interface = openvpn['intf']
     directory = os.path.dirname(get_config_name(interface))
 
-    # we can't know in advance which clients have been,
-    # remove all client configs
+    # we can't know in advance which clients have been removed,
+    # thus all client configs will be removed and re-added on demand
     ccd_dir = os.path.join(directory, 'ccd', interface)
     if os.path.isdir(ccd_dir):
         rmtree(ccd_dir, ignore_errors=True)
+
+    if openvpn['deleted'] or openvpn['disable']:
+        return None
 
     # create config directory on demand
     directories = []
@@ -945,7 +946,6 @@ def generate(openvpn):
     fix_permissions.append(openvpn['tls_key'])
 
     # Generate User/Password authentication file
-    openvpn['auth_user_pass_file'] = f'/run/openvpn/{interface}.pw'
     if openvpn['auth']:
         with open(openvpn['auth_user_pass_file'], 'w') as f:
             f.write('{}\n{}'.format(openvpn['auth_user'], openvpn['auth_pass']))
@@ -981,15 +981,14 @@ def apply(openvpn):
 
     # Do some cleanup when OpenVPN is disabled/deleted
     if openvpn['deleted'] or openvpn['disable']:
-        # cleanup old configuration file
-        if os.path.isfile(get_config_name(interface)):
-            os.remove(get_config_name(interface))
+        # cleanup old configuration files
+        cleanup = []
+        cleanup.append(get_config_name(interface))
+        cleanup.append(openvpn['auth_user_pass_file'])
 
-        # cleanup client config dir
-        directory = os.path.dirname(get_config_name(interface))
-        ccd_dir = os.path.join(directory, 'ccd', interface)
-        if os.path.isdir(ccd_dir):
-            rmtree(ccd_dir, ignore_errors=True)
+        for file in cleanup:
+            if os.path.isfile(file):
+                os.unlink(file)
 
         return None
 
