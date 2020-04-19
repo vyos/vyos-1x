@@ -1,4 +1,4 @@
-<leafNode name="mac">
+<leafNode name="hw-id">
   <properties>
     <help>Associate Ethernet Interface with given Media Access Control (MAC) address</help>
     <valueHelp>
