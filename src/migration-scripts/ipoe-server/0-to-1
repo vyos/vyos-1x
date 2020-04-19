@@ -40,7 +40,7 @@ if not config.exists(base):
 else:
 
     # Migrate IPv4 DNS servers
-    dns_base = base + ['dns-servers']
+    dns_base = base + ['dns-server']
     if config.exists(dns_base):
         for server in ['server-1', 'server-2']:
           if config.exists(dns_base + [server]):
@@ -50,7 +50,7 @@ else:
         config.delete(dns_base)
 
     # Migrate IPv6 DNS servers
-    dns_base = base + ['dnsv6-servers']
+    dns_base = base + ['dnsv6-server']
     if config.exists(dns_base):
         for server in ['server-1', 'server-2', 'server-3']:
           if config.exists(dns_base + [server]):
