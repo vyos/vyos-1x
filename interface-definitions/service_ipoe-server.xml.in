@@ -215,69 +215,7 @@
                 </children>
               </tagNode>
               #include <include/radius-server.xml.i>
-              <node name="radius">
-                <children>
-                  <tagNode name="server">
-                    <children>
-                      <leafNode name="fail-time">
-                        <properties>
-                          <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
-                          <valueHelp>
-                            <format>0-600</format>
-                            <description>Fail time penalty</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="numeric" argument="--range 0-600"/>
-                          </constraint>
-                          <constraintErrorMessage>Fail time must be between 0 and 600 seconds</constraintErrorMessage>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </tagNode>
-                  <leafNode name="timeout">
-                    <properties>
-                      <help>Timeout to wait response from server (seconds)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="acct-timeout">
-                    <properties>
-                      <help>Timeout to wait reply for Interim-Update packets. (default 3 seconds)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="max-try">
-                    <properties>
-                      <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nas-identifier">
-                    <properties>
-                      <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
-                    </properties>
-                  </leafNode>
-                  <node name="dae-server">
-                    <properties>
-                      <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
-                    </properties>
-                    <children>
-                      <leafNode name="ip-address">
-                        <properties>
-                          <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="port">
-                        <properties>
-                          <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="secret">
-                        <properties>
-                          <help>Secret for Dynamic Authorization Extension server (DM/CoA)</help>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
-                </children>
-              </node>
+              #include <include/accel-radius-additions.xml.in>
             </children>
           </node>
         </children>
