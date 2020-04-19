@@ -118,7 +118,7 @@ def get_config():
 
 def verify(wwan):
     if wwan['deleted']:
-        if wwan['is_bridge_member']::
+        if wwan['is_bridge_member']:
             interface = wwan['intf']
             bridge = wwan['is_bridge_member']
             raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')

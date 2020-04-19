@@ -221,7 +221,7 @@ def get_config():
 
 def verify(peth):
     if peth['deleted']:
-        if peth['is_bridge_member']::
+        if peth['is_bridge_member']:
             interface = peth['intf']
             bridge = peth['is_bridge_member']
             raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')

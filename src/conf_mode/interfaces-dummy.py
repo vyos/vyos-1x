@@ -83,7 +83,7 @@ def get_config():
 
 def verify(dummy):
     if dummy['deleted']:
-        if dummy['is_bridge_member']::
+        if dummy['is_bridge_member']:
             interface = dummy['intf']
             bridge = dummy['is_bridge_member']
             raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
