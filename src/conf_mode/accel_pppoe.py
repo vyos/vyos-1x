@@ -47,11 +47,11 @@ pppoe
 {% if authentication['mode'] == 'radius' %}
 radius
 {% endif %}
+chap-secrets
 ippool
 {% if client_ipv6_pool %}
 ipv6pool
 {% endif %}
-chap-secrets
 auth_pap
 auth_chap_md5
 auth_mschap_v1
@@ -132,6 +132,7 @@ wins2={{wins[1]}}
 
 {% if authentication['mode'] == 'local' %}
 [chap-secrets]
+gw-ip-address={{ppp_gw}}
 chap-secrets=/etc/accel-ppp/pppoe/chap-secrets
 {% endif -%}
 
