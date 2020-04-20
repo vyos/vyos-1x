@@ -240,7 +240,7 @@ if __name__ == '__main__':
         stats = []
         for p in pools:
             size = get_pool_size(conf, p)
-            leases = len(get_leases(lease_file, state='active', pool=p))
+            leases = len(get_leases(conf, lease_file, state='active', pool=p))
 
             use_percentage = round(leases / size * 100) if size != 0 else 0
 
