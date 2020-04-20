@@ -28,7 +28,7 @@ from vyos.config import Config
 from vyos.ifconfig import VTunIf
 from vyos.template import render
 from vyos.util import call, chown, chmod_600, chmod_755
-from vyos.validate import is_addr_assigned, is_bridge_member
+from vyos.validate import is_addr_assigned, is_bridge_member, is_ipv4
 from vyos import ConfigError
 
 user = 'openvpn'
@@ -67,6 +67,7 @@ default_config_data = {
     'options': [],
     'persistent_tunnel': False,
     'protocol': 'udp',
+    'protocol_real': '',
     'redirect_gateway': '',
     'remote_address': [],
     'remote_host': [],
@@ -556,6 +557,23 @@ def get_config():
     # set default server topology to net30
     if openvpn['mode'] == 'server' and not openvpn['server_topology']:
         openvpn['server_topology'] = 'net30'
+
+    # Convert protocol to real protocol used by openvpn.
+    # To make openvpn listen on both IPv4 and IPv6 we must use *6 protocols
+    # (https://community.openvpn.net/openvpn/ticket/360), unless local is IPv4
+    # in which case it must use the standard protocols.
+    # Note: this will break openvpn if IPv6 is disabled on the system.
+    # This currently isn't supported, a check can be added in the future.
+    if openvpn['protocol'] == 'tcp-active':
+        openvpn['protocol_real'] = 'tcp6-client'
+    elif openvpn['protocol'] == 'tcp-passive':
+        openvpn['protocol_real'] = 'tcp6-server'
+    else:
+        openvpn['protocol_real'] = 'udp6'
+
+    if is_ipv4(openvpn['local_host']):
+        # takes out the '6'
+        openvpn['protocol_real'] = openvpn['protocol_real'][:3] + openvpn['protocol_real'][4:]
 
     # Set defaults where necessary.
     # If any of the input parameters are wrong,
