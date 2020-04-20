@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.ifconfig import Interface, GREIf, GRETapIf, IPIPIf, IP6GREIf, IPIP6If, IP6IP6If, SitIf, Sit6RDIf
 from vyos.ifconfig.afi import IP4, IP6
 from vyos.configdict import list_diff
-from vyos.validate import is_ipv4, is_ipv6
+from vyos.validate import is_ipv4, is_ipv6, is_bridge_member
 from vyos import ConfigError
 from vyos.dicts import FixedDict
 
@@ -275,6 +275,7 @@ default_config_data = {
     'tclass': 'inherit',
     '6rd-prefix': '',
     '6rd-relay-prefix': '',
+    'bridge': '',
 }
 
 # dict name -> config name, multiple values, default
@@ -405,6 +406,9 @@ def get_config():
     ct = conf.get_config_dict()['tunnel']
     options['tunnel'] = {}
 
+    # check for bridges
+    options['bridge'] = is_bridge_member(conf, ifname)
+
     for name in ct:
         tunnel = ct[name]
         encap = tunnel.get('encapsulation', '')
@@ -429,6 +433,11 @@ def verify(conf):
     if changes['section'] == 'delete':
         if ifname in options['nhrp']:
             raise ConfigError(f'Can not delete interface tunnel {iftype} {ifname}, it is used by nhrp')
+
+        bridge = changes['bridge']
+        if bridge:
+            raise ConfigError(f'Interface "{ifname}" can not be deleted as it belongs to bridge "{bridge}"!')
+
         # done, bail out early
         return None
 
