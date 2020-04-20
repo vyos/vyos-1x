@@ -119,3 +119,15 @@ debian/vyos-1x.*
 # Sonar Cloud
 .scannerwork
 /.vs
+
+# SlickEdit
+*.vpj
+*.vpw
+*.vpwhist
+*.vtg
+
+# VIM
+*.swp
+
+# vyos-1x JSON version
+data/component-versions.json
