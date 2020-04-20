@@ -22,6 +22,7 @@ import grp
 import json
 import traceback
 import threading
+import signal
 
 import vyos.config
 
@@ -350,6 +351,8 @@ def show_op():
 
     return success(res)
 
+def shutdown():
+    raise KeyboardInterrupt
 
 if __name__ == '__main__':
     # systemd's user and group options don't work, do it by hand here,
@@ -371,5 +374,10 @@ if __name__ == '__main__':
     app.config['vyos_session'] = session
     app.config['vyos_keys'] = server_config['api_keys']
     app.config['vyos_debug'] = server_config['debug']
+
+    def sig_handler(signum, frame):
+        shutdown()
+
+    signal.signal(signal.SIGTERM, sig_handler)
 
     bottle.run(app, host=server_config["listen_address"], port=server_config["port"], debug=True)
