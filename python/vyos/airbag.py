@@ -15,15 +15,13 @@
 
 import os
 import sys
-import logging
-import logging.handlers
 from datetime import datetime
 
 from vyos import debug
 from vyos.config import Config
 from vyos.version import get_version
 from vyos.util import run
-
+from vyos.logger import syslog
 
 # we allow to disable the extra logging
 DISABLE = False
@@ -62,7 +60,7 @@ def bug_report(dtype, value, trace):
     information = {
         'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'version': get_version(),
-        'trace': format_exception(dtype, value, trace),
+        'trace': '\n'.join(format_exception(dtype, value, trace)),
         'instructions': COMMUNITY if 'rolling' in get_version() else SUPPORTED,
     }
 
@@ -82,19 +80,14 @@ def intercepter(dtype, value, trace):
         pdb.pm()
 
 
-def InterceptingLogger(address, _singleton=[False]):
+def InterceptingLogger(_singleton=[False]):
     skip = _singleton.pop()
     _singleton.append(True)
     if skip:
         return
 
-    logger = logging.getLogger('VyOS')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.handlers.SysLogHandler(address='/dev/log', facility='syslog')
-    logger.addHandler(handler)
-
     # log to syslog any message sent to stderr
-    sys.stderr = _IO(sys.stderr, logger.critical)
+    sys.stderr = _IO(sys.stderr, syslog.critical)
 
 
 # lists as default arguments in function is normally dangerous
@@ -124,14 +117,15 @@ except:
 # running testing so we are checking that we are on the router
 # as otherwise it prevents dpkg-buildpackage to work
 if get_version() and insession:
-    InterceptingLogger('/run/systemd/journal/dev-log')
+    InterceptingLogger()
     InterceptingException(intercepter)
 
 
 # Messages to print
+# if the key before the value has not time, syslog takes that as the source of the message
 
 FAULT = """\
-Date:       {date}
+Fault Time: {date}
 VyOS image: {version}
 
 {trace}
