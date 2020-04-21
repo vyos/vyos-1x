@@ -107,25 +107,7 @@
                   </tagNode>
                 </children>
               </node>
-              <leafNode name="mode">
-                <properties>
-                  <help>Authentication mode for PPPoE Server</help>
-                  <valueHelp>
-                    <format>local</format>
-                    <description>Use local username/password configuration</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>radius</format>
-                    <description>Use a RADIUS server to autenticate users</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(local|radius)</regex>
-                  </constraint>
-                  <completionHelp>
-                    <list>local radius</list>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/accel-auth-mode.xml.i>
               #include <include/radius-server.xml.i>
               #include <include/accel-radius-additions.xml.in>
               <node name="radius">
