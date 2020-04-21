@@ -17,47 +17,36 @@
 import os
 import re
 
+from copy import deepcopy
 from socket import socket, AF_INET, SOCK_STREAM
 from sys import exit
 from time import sleep
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run, get_half_cpus
+from vyos.util import call, get_half_cpus
 from vyos.template import render
 
+pptp_conf = '/run/accel-pppd/pptp.conf'
+pptp_chap_secrets = '/run/accel-pppd/pptp.chap-secrets'
 
-pidfile = r'/var/run/accel_pptp.pid'
-pptp_cnf_dir = r'/etc/accel-ppp/pptp'
-chap_secrets = pptp_cnf_dir + '/chap-secrets'
-pptp_conf = pptp_cnf_dir + '/pptp.config'
-
-# config path creation
-if not os.path.exists(pptp_cnf_dir):
-    os.makedirs(pptp_cnf_dir)
-
-def _chk_con():
-    cnt = 0
-    s = socket(AF_INET, SOCK_STREAM)
-    while True:
-        try:
-            s.connect(("127.0.0.1", 2003))
-            break
-        except ConnectionRefusedError:
-            sleep(0.5)
-            cnt += 1
-            if cnt == 100:
-                raise("failed to start pptp server")
-                break
-
-
-def _accel_cmd(command):
-    return run('/usr/bin/accel-cmd -p 2003 {command}')
-
-###
-# inline helper functions end
-###
-
+default_pptp = {
+    'authentication': {
+        'mode': 'local',
+        'local-users': {
+        },
+        'radiussrv': {},
+        'auth_proto': 'auth_mschap_v2',
+        'mppe': 'require'
+    },
+    'chap_secrets_file': pptp_chap_secrets, # used in Jinja2 template
+    'outside_addr': '',
+    'dns': [],
+    'wins': [],
+    'client_ip_pool': '',
+    'mtu': '1436',
+    'thread_cnt': get_half_cpus()
+}
 
 def get_config():
     c = Config()
@@ -65,43 +54,28 @@ def get_config():
         return None
 
     c.set_level(['vpn', 'pptp', 'remote-access'])
-    config_data = {
-        'authentication': {
-            'mode': 'local',
-            'local-users': {
-            },
-            'radiussrv': {},
-            'auth_proto': 'auth_mschap_v2',
-            'mppe': 'require'
-        },
-        'outside_addr': '',
-        'dns': [],
-        'wins': [],
-        'client_ip_pool': '',
-        'mtu': '1436',
-        'thread_cnt': get_half_cpus()
-    }
+    pptp = deepcopy(default_pptp)
 
     ### general options ###
 
     if c.exists(['dns-servers', 'server-1']):
-        config_data['dns'].append(c.return_value(['dns-servers', 'server-1']))
+        pptp['dns'].append(c.return_value(['dns-servers', 'server-1']))
     if c.exists(['dns-servers', 'server-2']):
-        config_data['dns'].append(c.return_value(['dns-servers', 'server-2']))
+        pptp['dns'].append(c.return_value(['dns-servers', 'server-2']))
     if c.exists(['wins-servers', 'server-1']):
-        config_data['wins'].append(
+        pptp['wins'].append(
             c.return_value(['wins-servers', 'server-1']))
     if c.exists(['wins-servers', 'server-2']):
-        config_data['wins'].append(
+        pptp['wins'].append(
             c.return_value(['wins-servers', 'server-2']))
     if c.exists(['outside-address']):
-        config_data['outside_addr'] = c.return_value(['outside-address'])
+        pptp['outside_addr'] = c.return_value(['outside-address'])
 
     # auth local
     if c.exists(['authentication', 'mode', 'local']):
         if c.exists(['authentication', 'local-users', 'username']):
             for usr in c.list_nodes(['authentication', 'local-users', 'username']):
-                config_data['authentication']['local-users'].update(
+                pptp['authentication']['local-users'].update(
                     {
                         usr: {
                             'passwd': '',
@@ -112,18 +86,18 @@ def get_config():
                 )
 
                 if c.exists(['authentication', 'local-users', 'username', usr, 'password']):
-                    config_data['authentication']['local-users'][usr]['passwd'] = c.return_value(
+                    pptp['authentication']['local-users'][usr]['passwd'] = c.return_value(
                         ['authentication', 'local-users', 'username', usr, 'password'])
                 if c.exists(['authentication', 'local-users', 'username', usr, 'disable']):
-                    config_data['authentication']['local-users'][usr]['state'] = 'disable'
+                    pptp['authentication']['local-users'][usr]['state'] = 'disable'
                 if c.exists(['authentication', 'local-users', 'username', usr, 'static-ip']):
-                    config_data['authentication']['local-users'][usr]['ip'] = c.return_value(
+                    pptp['authentication']['local-users'][usr]['ip'] = c.return_value(
                         ['authentication', 'local-users', 'username', usr, 'static-ip'])
 
     # authentication mode radius servers and settings
 
     if c.exists(['authentication', 'mode', 'radius']):
-        config_data['authentication']['mode'] = 'radius'
+        pptp['authentication']['mode'] = 'radius'
         rsrvs = c.list_nodes(['authentication', 'radius', 'server'])
         for rsrv in rsrvs:
             if not c.return_value(['authentication', 'radius', 'server', rsrv, 'fail-time']):
@@ -137,7 +111,7 @@ def get_config():
                 reql = c.return_value(
                     ['authentication', 'radius', 'server', rsrv, 'req-limit'])
 
-            config_data['authentication']['radiussrv'].update(
+            pptp['authentication']['radiussrv'].update(
                 {
                     rsrv: {
                         'secret': c.return_value(['authentication', 'radius', 'server', rsrv, 'key']),
@@ -149,91 +123,86 @@ def get_config():
 
     if c.exists(['client-ip-pool']):
         if c.exists(['client-ip-pool', 'start']):
-            config_data['client_ip_pool'] = c.return_value(
+            pptp['client_ip_pool'] = c.return_value(
                 ['client-ip-pool', 'start'])
         if c.exists(['client-ip-pool', 'stop']):
-            config_data['client_ip_pool'] += '-' + \
+            pptp['client_ip_pool'] += '-' + \
                 re.search(
                     '[0-9]+$', c.return_value(['client-ip-pool', 'stop'])).group(0)
     if c.exists(['mtu']):
-        config_data['mtu'] = c.return_value(['mtu'])
+        pptp['mtu'] = c.return_value(['mtu'])
 
     # gateway address
     if c.exists(['gateway-address']):
-        config_data['gw_ip'] = c.return_value(['gateway-address'])
+        pptp['gw_ip'] = c.return_value(['gateway-address'])
     else:
-        config_data['gw_ip'] = re.sub(
-            '[0-9]+$', '1', config_data['client_ip_pool'])
+        pptp['gw_ip'] = re.sub(
+            '[0-9]+$', '1', pptp['client_ip_pool'])
 
     if c.exists(['authentication', 'require']):
         if c.return_value(['authentication', 'require']) == 'pap':
-            config_data['authentication']['auth_proto'] = 'auth_pap'
+            pptp['authentication']['auth_proto'] = 'auth_pap'
         if c.return_value(['authentication', 'require']) == 'chap':
-            config_data['authentication']['auth_proto'] = 'auth_chap_md5'
+            pptp['authentication']['auth_proto'] = 'auth_chap_md5'
         if c.return_value(['authentication', 'require']) == 'mschap':
-            config_data['authentication']['auth_proto'] = 'auth_mschap_v1'
+            pptp['authentication']['auth_proto'] = 'auth_mschap_v1'
         if c.return_value(['authentication', 'require']) == 'mschap-v2':
-            config_data['authentication']['auth_proto'] = 'auth_mschap_v2'
+            pptp['authentication']['auth_proto'] = 'auth_mschap_v2'
 
         if c.exists(['authentication', 'mppe']):
-            config_data['authentication']['mppe'] = c.return_value(
+            pptp['authentication']['mppe'] = c.return_value(
                 ['authentication', 'mppe'])
 
-    return config_data
+    return pptp
 
 
-def verify(c):
-    if c == None:
+def verify(pptp):
+    if not pptp:
         return None
 
-    if c['authentication']['mode'] == 'local':
-        if not c['authentication']['local-users']:
+    if pptp['authentication']['mode'] == 'local':
+        if not pptp['authentication']['local-users']:
             raise ConfigError(
                 'pptp-server authentication local-users required')
-        for usr in c['authentication']['local-users']:
-            if not c['authentication']['local-users'][usr]['passwd']:
+        for usr in pptp['authentication']['local-users']:
+            if not pptp['authentication']['local-users'][usr]['passwd']:
                 raise ConfigError('user ' + usr + ' requires a password')
 
-    if c['authentication']['mode'] == 'radius':
-        if len(c['authentication']['radiussrv']) == 0:
+    if pptp['authentication']['mode'] == 'radius':
+        if len(pptp['authentication']['radiussrv']) == 0:
             raise ConfigError('radius server required')
-        for rsrv in c['authentication']['radiussrv']:
-            if c['authentication']['radiussrv'][rsrv]['secret'] == None:
+        for rsrv in pptp['authentication']['radiussrv']:
+            if pptp['authentication']['radiussrv'][rsrv]['secret'] == None:
                 raise ConfigError('radius server ' + rsrv +
                                   ' needs a secret configured')
 
 
-def generate(c):
-    if c == None:
+def generate(pptp):
+    if not pptp:
         return None
 
-    render(pptp_conf, 'pptp/pptp.config.tmpl', c, trim_blocks=True)
+    dirname = os.path.dirname(pptp_conf)
+    if not os.path.exists(dirname):
+        os.mkdir(dirname)
 
-    if c['authentication']['local-users']:
+    render(pptp_conf, 'pptp/pptp.config.tmpl', pptp, trim_blocks=True)
+
+    if pptp['authentication']['local-users']:
         old_umask = os.umask(0o077)
-        render(chap_secrets, 'pptp/chap-secrets.tmpl', c, trim_blocks=True)
+        render(pptp_chap_secrets, 'pptp/chap-secrets.tmpl', pptp, trim_blocks=True)
         os.umask(old_umask)
-    # return c ??
-    return c
 
 
-def apply(c):
-    if c == None:
-        if os.path.exists(pidfile):
-            _accel_cmd('shutdown hard')
-            if os.path.exists(pidfile):
-                os.remove(pidfile)
+def apply(pptp):
+    if not pptp:
+        call('systemctl stop accel-ppp@pptp.service')
+        for file in [pptp_conf, pptp_chap_secrets]:
+            if os.path.exists(file):
+                os.unlink(file)
+
         return None
 
-    if not os.path.exists(pidfile):
-        ret = run(f'/usr/sbin/accel-pppd -c {pptp_conf} -p {pidfile} -d')
-        _chk_con()
-        if ret != 0 and os.path.exists(pidfile):
-            os.remove(pidfile)
-            raise ConfigError('accel-pppd failed to start')
-    else:
-        # if gw ip changes, only restart doesn't work
-        _accel_cmd('restart')
+    call('systemctl restart accel-ppp@pptp.service')
 
 if __name__ == '__main__':
     try:
