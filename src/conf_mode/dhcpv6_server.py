@@ -213,6 +213,10 @@ def get_config():
             # append shared network configuration to config dictionary
             dhcpv6['shared_network'].append(config)
 
+    # If all shared-networks are disabled, there's nothing to do.
+    if all(net['disabled'] for net in dhcpv6['shared_network']):
+        return None
+
     return dhcpv6
 
 def verify(dhcpv6):
@@ -302,22 +306,22 @@ def verify(dhcpv6):
             else:
                 subnets.append(subnet['network'])
 
-        # DHCPv6 requires at least one configured address range or one static mapping
-        # (FIXME: is not actually checked right now?)
+            # DHCPv6 requires at least one configured address range or one static mapping
+            # (FIXME: is not actually checked right now?)
 
-        # There must be one subnet connected to a listen interface if network is not disabled.
-        if not network['disabled']:
-            if is_subnet_connected(subnet['network']):
-                listen_ok = True
+            # There must be one subnet connected to a listen interface if network is not disabled.
+            if not network['disabled']:
+                if is_subnet_connected(subnet['network']):
+                    listen_ok = True
 
-        # DHCPv6 subnet must not overlap. ISC DHCP also complains about overlapping
-        # subnets: "Warning: subnet 2001:db8::/32 overlaps subnet 2001:db8:1::/32"
-        net = ipaddress.ip_network(subnet['network'])
-        for n in subnets:
-            net2 = ipaddress.ip_network(n)
-            if (net != net2):
-                if net.overlaps(net2):
-                    raise ConfigError('DHCPv6 conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
+            # DHCPv6 subnet must not overlap. ISC DHCP also complains about overlapping
+            # subnets: "Warning: subnet 2001:db8::/32 overlaps subnet 2001:db8:1::/32"
+            net = ipaddress.ip_network(subnet['network'])
+            for n in subnets:
+                net2 = ipaddress.ip_network(n)
+                if (net != net2):
+                    if net.overlaps(net2):
+                        raise ConfigError('DHCPv6 conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
 
     if not listen_ok:
         raise ConfigError('None of the DHCPv6 subnets are connected to a subnet6 on\n' \
@@ -346,6 +350,7 @@ def apply(dhcpv6):
         if os.path.exists(config_file):
             os.unlink(config_file)
 
+    else:
         call('systemctl restart isc-dhcp-server6.service')
 
     return None
