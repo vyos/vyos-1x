@@ -149,7 +149,7 @@
             <properties>
               <help>Restart the DHCPv6 server process</help>
             </properties>
-            <command>sudo systemctl restart isc-dhcpv6-server.service</command>
+            <command>sudo systemctl restart isc-dhcp-server6.service</command>
           </node>
           <node name="relay-agent">
             <properties>
