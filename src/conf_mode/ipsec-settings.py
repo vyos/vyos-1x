@@ -170,7 +170,7 @@ def generate(data):
     if data["ipsec_l2tp"]:
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_file)
         # old_umask = os.umask(0o077)
-        # render(ipsec_secrets_file, 'ipsec/ipsec.secrets.tmpl', c, trim_blocks=True)
+        # render(ipsec_secrets_file, 'ipsec/ipsec.secrets.tmpl', data, trim_blocks=True)
         # os.umask(old_umask)
         ## Use this method while IPSec CLI handler won't be overwritten to python
         write_ipsec_secrets(data)
@@ -181,12 +181,12 @@ def generate(data):
         if not os.path.exists(ipsec_ra_conn_dir):
             os.makedirs(ipsec_ra_conn_dir)
 
-        render(ipsec_ra_conn_file, 'ipsec/remote-access.tmpl', c, trim_blocks=True)
+        render(ipsec_ra_conn_file, 'ipsec/remote-access.tmpl', data, trim_blocks=True)
         os.umask(old_umask)
 
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_file)
         # old_umask = os.umask(0o077)
-        # render(ipsec_conf_file, 'ipsec/ipsec.conf.tmpl', c, trim_blocks=True)
+        # render(ipsec_conf_file, 'ipsec/ipsec.conf.tmpl', data, trim_blocks=True)
         # os.umask(old_umask)
         ## Use this method while IPSec CLI handler won't be overwritten to python
         write_ipsec_conf(data)
