@@ -23,7 +23,6 @@
 <node name="dhcpv6-options">
   <properties>
     <help>DHCPv6 options</help>
-    <priority>319</priority>
   </properties>
   <children>
     <leafNode name="parameters-only">
