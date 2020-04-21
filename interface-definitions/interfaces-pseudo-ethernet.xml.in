@@ -45,7 +45,7 @@
               <help>Physical Interface used for this device</help>
               <valueHelp>
                 <format>interface</format>
-                <description>Interface used for VXLAN underlay</description>
+                <description>Physical interface used for this pseudo device</description>
               </valueHelp>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py -t ethernet</script>
