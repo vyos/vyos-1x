@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import json
 from copy import deepcopy
 
@@ -63,6 +64,7 @@ class Interface(Control):
         'bondable': False,
         'broadcast': False,
         'bridgeable':  False,
+        'eternal': '',
     }
 
     _command_get = {
@@ -249,28 +251,14 @@ class Interface(Control):
             self.del_addr(addr)
 
         # ---------------------------------------------------------------------
-        # A code refactoring is required as this type check is present as
-        # Interface implement behaviour for one of it's sub-class.
+        # Any class can define an eternal regex in its definition
+        # interface matching the regex will not be deleted
 
-        # It is required as the current pattern for vlan is:
-        # Interface('name').remove() to delete an interface
-        # The code should be modified to have a class method called connect and
-        # have Interface.connect('name').remove()
-
-        # each subclass should register within Interface the pattern for that
-        # interface ie: (ethX, etc.) and use this to create an instance of
-        # the right class (EthernetIf, ...)
-
-        # Ethernet interfaces can not be removed
-
-        # Commented out as nowhere in the code do we call Interface()
-        # This would also cause an import loop
-        # if self.__class__ == EthernetIf:
-        #     return
-
-        # ---------------------------------------------------------------------
-
-        self._delete()
+        eternal = self.definition['eternal']
+        if not eternal:
+            self._delete()
+        elif not re.match(eternal, self.ifname):
+            self._delete()
 
     def _delete(self):
         # NOTE (Improvement):
