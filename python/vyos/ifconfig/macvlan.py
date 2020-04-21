@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
@@ -27,6 +28,9 @@ class MACVLANIf(Interface):
 
     default = {
         'type': 'macvlan',
+        'address': '',
+        'source_interface': '',
+        'mode': '',
     }
     definition = {
         **Interface.definition,
@@ -39,30 +43,28 @@ class MACVLANIf(Interface):
         ['source_interface', 'mode']
 
     def _create(self):
-        cmd = 'ip link add {ifname} link {source_interface} type macvlan mode {mode}'.format(
-            **self.config)
-        self._cmd(cmd)
+        # please do not change the order when assembling the command
+        cmd = 'ip link add {ifname}'
+        if self.config['source_interface']:
+            cmd += ' link {source_interface}'
+        cmd += ' type macvlan'
+        if self.config['mode']:
+            cmd += ' mode {mode}'
+        self._cmd(cmd.format(**self.config))
 
-    @staticmethod
-    def get_config():
+    def set_mode(self, mode):
+        ifname = self.config['ifname']
+        cmd = f'ip link set dev {ifname} type macvlan mode {mode}'
+        return self._cmd(cmd)
+
+    @classmethod
+    def get_config(cls):
         """
-        VXLAN interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
+        MACVLAN interfaces require a configuration when they are added using
+        iproute2. This method will provide the configuration dictionary used
+        by this class.
 
         Example:
         >> dict = MACVLANIf().get_config()
         """
-        config = {
-            'address': '',
-            'source_interface': '',
-            'mode': ''
-        }
-        return config
-
-    def set_mode(self, mode):
-        """
-        """
-        ifname = self.config['ifname']
-        cmd = f'ip link set dev {ifname} type macvlan mode {mode}'
-        return self._cmd(cmd)
+        return deepcopy(cls.default)

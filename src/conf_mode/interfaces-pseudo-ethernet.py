@@ -246,38 +246,29 @@ def generate(peth):
     return None
 
 def apply(peth):
-
-    p = ''
     if peth['deleted']:
         # delete interface
-        p = MACVLANIf(peth['intf'])
-        p.remove()
+        MACVLANIf(peth['intf']).remove()
         return None
 
-    elif peth['source_interface_changed']:
-        # Check if MACVLAN interface already exists. Parameters like the
-        # underlaying source-interface device can not be changed  on the fly
-        # and the interface needs to be recreated from the bottom.
-        #
-        # source_interface_changed also means - the interface was not present in the
-        # beginning and is newly created
-        if peth['intf'] in interfaces():
-            p = MACVLANIf(peth['intf'])
-            p.remove()
+    # Check if MACVLAN interface already exists. Parameters like the underlaying
+    # source-interface device can not be changed on the fly and the interface
+    # needs to be recreated from the bottom.
+    if peth['intf'] in interfaces():
+        if peth['source_interface_changed']:
+            MACVLANIf(peth['intf']).remove()
 
-        # MACVLAN interface needs to be created on-block instead of passing a ton
-        # of arguments, I just use a dict that is managed by vyos.ifconfig
-        conf = deepcopy(MACVLANIf.get_config())
+    # MACVLAN interface needs to be created on-block instead of passing a ton
+    # of arguments, I just use a dict that is managed by vyos.ifconfig
+    conf = deepcopy(MACVLANIf.get_config())
 
-        # Assign MACVLAN instance configuration parameters to config dict
-        conf['source_interface'] = peth['source_interface']
-        conf['mode'] = peth['mode']
+    # Assign MACVLAN instance configuration parameters to config dict
+    conf['source_interface'] = peth['source_interface']
+    conf['mode'] = peth['mode']
 
-        # It is safe to "re-create" the interface always, there is a sanity check
-        # that the interface will only be create if its non existent
-        p = MACVLANIf(peth['intf'], **conf)
-    else:
-        p = MACVLANIf(peth['intf'])
+    # It is safe to "re-create" the interface always, there is a sanity check
+    # that the interface will only be create if its non existent
+    p = MACVLANIf(peth['intf'], **conf)
 
     # update interface description used e.g. within SNMP
     p.set_alias(peth['description'])
