@@ -109,7 +109,7 @@ class VRRP(object):
             return []
 
         disabled = []
-        config = json.loads(util.readfile(cls.location['vyos']))
+        config = json.loads(util.read_file(cls.location['vyos']))
 
         # add disabled groups to the list
         for group in config['vrrp_groups']:
