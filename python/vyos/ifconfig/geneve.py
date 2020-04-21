@@ -35,6 +35,8 @@ class GeneveIf(Interface):
         'vni': 0,
         'remote': '',
     }
+    options = Interface.options + \
+        ['vni', 'remote']
     definition = {
         **Interface.definition,
         **{
