@@ -155,7 +155,8 @@ def call(command, flag='', shell=None, input=None, timeout=None, env=None,
         env=env, shell=shell,
         decode=decode,
     )
-    print(out)
+    if out:
+        print(out)
     return code
 
 
