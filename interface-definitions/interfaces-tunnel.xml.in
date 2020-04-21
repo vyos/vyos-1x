@@ -66,6 +66,14 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="source-interface">
+            <properties>
+              <help>Physical Interface used for underlaying traffic</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
           <leafNode name="6rd-prefix">
             <properties>
               <help>6rd network prefix</help>

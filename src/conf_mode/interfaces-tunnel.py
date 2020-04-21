@@ -255,7 +255,9 @@ default_config_data = {
     'ipv6_forwarding': 1,
     'ipv6_dad_transmits': 1,
     # internal
+    'interfaces': [],
     'tunnel': {},
+    'bridge': '',
     # the following names are exactly matching the name
     # for the ip command and must not be changed
     'ifname': '',
@@ -264,6 +266,7 @@ default_config_data = {
     'mtu': '1476',
     'local': '',
     'remote': '',
+    'dev': '',
     'multicast': 'disable',
     'allmulticast': 'disable',
     'ttl': '255',
@@ -275,7 +278,6 @@ default_config_data = {
     'tclass': 'inherit',
     '6rd-prefix': '',
     '6rd-relay-prefix': '',
-    'bridge': '',
 }
 
 # dict name -> config name, multiple values, default
@@ -286,6 +288,7 @@ mapping = {
     'local':               ('local-ip', False, None),
     'remote':              ('remote-ip', False, None),
     'multicast':           ('multicast', False, None),
+    'dev':                 ('source-interface', False, None),
     'ttl':                 ('parameters ip ttl', False, None),
     'tos':                 ('parameters ip tos', False, None),
     'key':                 ('parameters ip key', False, None),
@@ -408,6 +411,7 @@ def get_config():
 
     # check for bridges
     options['bridge'] = is_bridge_member(conf, ifname)
+    options['interfaces'] = interfaces()
 
     for name in ct:
         tunnel = ct[name]
@@ -483,6 +487,7 @@ def verify(conf):
     afi_remote = get_afi(tun_remote)
     tun_ismgre = iftype == 'gre' and not options['remote']
     tun_is6rd = iftype == 'sit' and options['6rd-prefix']
+    tun_dev = options['dev']
 
     # incompatible options
 
@@ -491,6 +496,9 @@ def verify(conf):
 
     if tun_local and options['dhcp-interface']:
         raise ConfigError(f'Must configure only one of local-ip or dhcp-interface for tunnel {iftype} {ifname}')
+
+    if tun_dev and iftype in ('gre-bridge', 'sit'):
+        raise ConfigError(f'source interface can not be used with {iftype} {ifname}')
 
     # tunnel endpoint
 
@@ -519,8 +527,13 @@ def verify(conf):
     # vrf check
 
     vrf = options['vrf']
-    if vrf and vrf not in interfaces():
+    if vrf and vrf not in options['interfaces']:
         raise ConfigError(f'VRF "{vrf}" does not exist')
+
+    # source-interface check
+
+    if tun_dev and tun_dev not in options['interfaces']:
+        raise ConfigError(f'device "{dev}" does not exist')
 
     # tunnel encapsulation check
 

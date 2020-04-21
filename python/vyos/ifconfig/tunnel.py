@@ -141,8 +141,8 @@ class GREIf(_Tunnel):
     default = {'type': 'gre'}
     required = ['local', ]  # mGRE is a GRE without remote endpoint
 
-    options = ['local', 'remote', 'ttl', 'tos', 'key']
-    updates = ['local', 'remote', 'ttl', 'tos',
+    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    updates = ['local', 'remote', 'dev', 'ttl', 'tos',
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
@@ -189,9 +189,9 @@ class IP6GREIf(_Tunnel):
     default = {'type': 'ip6gre'}
     required = ['local', 'remote']
 
-    options = ['local', 'remote', 'encaplimit',
+    options = ['local', 'remote', 'dev', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel']
-    updates = ['local', 'remote', 'encaplimit',
+    updates = ['local', 'remote', 'dev', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel',
                'mtu', 'multicast', 'allmulticast']
 
@@ -225,8 +225,8 @@ class IPIPIf(_Tunnel):
     default = {'type': 'ipip'}
     required = ['local', 'remote']
 
-    options = ['local', 'remote', 'ttl', 'tos', 'key']
-    updates = ['local', 'remote', 'ttl', 'tos',
+    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    updates = ['local', 'remote', 'dev', 'ttl', 'tos',
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
@@ -248,9 +248,9 @@ class IPIP6If(_Tunnel):
     default = {'type': 'ipip6'}
     required = ['local', 'remote']
 
-    options = ['local', 'remote', 'encaplimit',
+    options = ['local', 'remote', 'dev', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel']
-    updates = ['local', 'remote', 'encaplimit',
+    updates = ['local', 'remote', 'dev', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel',
                'mtu', 'multicast', 'allmulticast']
 
@@ -286,8 +286,8 @@ class SitIf(_Tunnel):
     default = {'type': 'sit'}
     required = ['local', 'remote']
 
-    options = ['local', 'remote', 'ttl', 'tos', 'key']
-    updates = ['local', 'remote', 'ttl', 'tos',
+    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    updates = ['local', 'remote', 'dev', 'ttl', 'tos',
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
