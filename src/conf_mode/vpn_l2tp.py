@@ -25,7 +25,7 @@ from time import sleep
 from ipaddress import ip_network
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.util import call, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 from vyos.template import render
@@ -65,7 +65,7 @@ default_config_data = {
     'radius_dynamic_author': '',
     'wins': [],
     'ip6_column': [],
-    'thread_cnt': 1
+    'thread_cnt': get_half_cpus()
 }
 
 def get_config():
@@ -76,10 +76,6 @@ def get_config():
 
     conf.set_level(base_path)
     l2tp = deepcopy(default_config_data)
-
-    cpu = os.cpu_count()
-    if cpu > 1:
-        l2tp['thread_cnt'] = int(cpu/2)
 
     ### general options ###
     if conf.exists(['name-server']):

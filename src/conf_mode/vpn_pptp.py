@@ -23,7 +23,7 @@ from time import sleep
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.util import run, get_half_cpus
 from vyos.template import render
 
 
@@ -79,6 +79,7 @@ def get_config():
         'wins': [],
         'client_ip_pool': '',
         'mtu': '1436',
+        'thread_cnt': get_half_cpus()
     }
 
     ### general options ###
@@ -205,18 +206,6 @@ def verify(c):
 def generate(c):
     if c == None:
         return None
-
-    # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    try:
-        if os.cpu_count() == 1:
-            c['thread_cnt'] = 1
-        else:
-            c['thread_cnt'] = int(os.cpu_count()/2)
-    except KeyError:
-        if os.cpu_count() == 1:
-            c['thread_cnt'] = 1
-        else:
-            c['thread_cnt'] = int(os.cpu_count()/2)
 
     render(pptp_conf, 'pptp/pptp.config.tmpl', c, trim_blocks=True)
 
