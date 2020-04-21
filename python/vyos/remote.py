@@ -91,7 +91,7 @@ def get_remote_config(remote_file):
                 ftp://<user>[:<passwd>]@<host>/<file>
                 tftp://<host>/<file>
     """
-    request = dict.fromkeys(['protocol', 'host', 'file', 'user', 'passwd'])
+    request = dict.fromkeys(['protocol', 'user', 'host', 'file'])
     protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
     or_protocols = '|'.join(protocols)
 
@@ -108,11 +108,6 @@ def get_remote_config(remote_file):
     if user_match:
         request['user'] = user_match.groups()[0]
         request['host'] = user_match.groups()[1]
-        passwd_match = re.search(r'(.*):(.*)', request['user'])
-        if passwd_match:
-            # Deprectated in RFC 3986, but maintain for backward compatability.
-            request['user'] = passwd_match.groups()[0]
-            request['passwd'] = passwd_match.groups()[1]
 
     remote_file = '{0}://{1}{2}'.format(request['protocol'], request['host'], request['file'])
 
@@ -137,7 +132,7 @@ def get_remote_config(remote_file):
                 print('HTTP error: {0} {1}'.format(*val))
                 sys.exit(1)
 
-    if request['user'] and not request['passwd']:
+    if request['user']:
         curl_cmd = 'curl -# -u {0} {1}'.format(request['user'], remote_file)
     else:
         curl_cmd = 'curl {0} -# {1}'.format(redirect_opt, remote_file)
