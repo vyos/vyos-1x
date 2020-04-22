@@ -194,8 +194,10 @@ def get_config():
     if conf.exists(['gateway-address']):
         pptp['gw_ip'] = conf.return_value(['gateway-address'])
     else:
-        pptp['gw_ip'] = re.sub(
-            '[0-9]+$', '1', pptp['client_ip_pool'])
+        # calculate gw-ip-address
+        if conf.exists(['client-ip-pool', 'start']):
+            # use start ip as gw-ip-address
+            pptp['gateway_address'] = conf.return_value(['client-ip-pool', 'start'])
 
     if conf.exists(['authentication', 'require']):
         # clear default list content, now populate with actual CLI values
@@ -245,9 +247,6 @@ def verify(pptp):
 def generate(pptp):
     if not pptp:
         return None
-
-    import pprint
-    pprint.pprint(pptp)
 
     dirname = os.path.dirname(pptp_conf)
     if not os.path.exists(dirname):
