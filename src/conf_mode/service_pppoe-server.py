@@ -389,7 +389,7 @@ def verify(pppoe):
         for radius in pppoe['radius_server']:
             if not radius['key']:
                 server = radius['server']
-                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+                raise ConfigError(f'Missing RADIUS secret key for server "{ server }"')
 
     if len(pppoe['wins']) > 2:
         raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')

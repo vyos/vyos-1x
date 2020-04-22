@@ -297,7 +297,7 @@ def verify(sstp):
         for radius in sstp['radius_server']:
             if not radius['key']:
                 server = radius['server']
-                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+                raise ConfigError(f'Missing RADIUS secret key for server "{ server }"')
 
 def generate(sstp):
     if not sstp:

@@ -309,7 +309,7 @@ def verify(l2tp):
 
         for radius in l2tp['radius_server']:
             if not radius['key']:
-                raise ConfigError(f"Missing RADIUS secret for server {{ radius['key'] }}")
+                raise ConfigError(f"Missing RADIUS secret for server { radius['key'] }")
 
     # check for the existence of a client ip pool
     if not (l2tp['client_ip_pool'] or l2tp['client_ip_subnets']):

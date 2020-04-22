@@ -234,7 +234,7 @@ def verify(pptp):
         for radius in pptp['radius_server']:
             if not radius['key']:
                 server = radius['server']
-                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+                raise ConfigError(f'Missing RADIUS secret key for server "{ server }"')
 
     if len(pptp['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
