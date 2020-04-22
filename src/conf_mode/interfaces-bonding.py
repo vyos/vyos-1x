@@ -20,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BondIf
+from vyos.ifconfig import BondIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, vlan_to_dict
 from vyos.config import Config
@@ -227,6 +227,12 @@ def get_config():
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         bond['mac'] = conf.return_value('mac')
+
+    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
+    # before re-adding them
+    if ( bond['mac'] and bond['intf'] in Section.interfaces(section='bonding')
+            and bond['mac'] != BondIf(bond['intf'], create=False).get_mac() ):
+        bond['ipv6_eui64_prefix_remove'] += bond['ipv6_eui64_prefix']
 
     # Bonding mode
     if conf.exists('mode'):

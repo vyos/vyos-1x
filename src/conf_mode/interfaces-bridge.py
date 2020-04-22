@@ -20,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BridgeIf
+from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
 from vyos.config import Config
@@ -185,6 +185,12 @@ def get_config():
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         bridge['mac'] = conf.return_value('mac')
+
+    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
+    # before re-adding them
+    if ( bridge['mac'] and bridge['intf'] in Section.interfaces(section='bridge')
+             and bridge['mac'] != BridgeIf(bridge['intf'], create=False).get_mac() ):
+        bridge['ipv6_eui64_prefix_remove'] += bridge['ipv6_eui64_prefix']
 
     # Interval at which neighbor bridges are removed
     if conf.exists('max-age'):

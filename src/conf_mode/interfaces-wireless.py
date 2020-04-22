@@ -25,7 +25,7 @@ from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
-from vyos.ifconfig import WiFiIf
+from vyos.ifconfig import WiFiIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.template import render
 from vyos.util import chown, call
@@ -401,6 +401,12 @@ def get_config():
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         wifi['mac'] = conf.return_value('mac')
+
+    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
+    # before re-adding them
+    if ( wifi['mac'] and wifi['intf'] in Section.interfaces(section='wireless')
+            and wifi['mac'] != WiFiIf(wifi['intf'], create=False).get_mac() ):
+        wifi['ipv6_eui64_prefix_remove'] += wifi['ipv6_eui64_prefix']
 
     # Maximum number of wireless radio stations
     if conf.exists('max-stations'):

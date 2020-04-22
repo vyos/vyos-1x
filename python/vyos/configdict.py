@@ -225,6 +225,9 @@ def vlan_to_dict(conf):
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         vlan['mac'] = conf.return_value('mac')
+        # always recreate EUI64 addresses if mac is set
+        # I'm not sure how to check if a vlan interface exists or how to get its current mac.
+        vlan['ipv6_eui64_prefix_remove'] += vlan['ipv6_eui64_prefix']
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):

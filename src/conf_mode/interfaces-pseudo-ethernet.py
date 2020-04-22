@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
-from vyos.ifconfig import MACVLANIf
+from vyos.ifconfig import MACVLANIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.validate import is_bridge_member
 from vyos import ConfigError
@@ -189,6 +189,12 @@ def get_config():
     # Media Access Control (MAC) address
     if conf.exists(['mac']):
         peth['mac'] = conf.return_value(['mac'])
+
+    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
+    # before re-adding them
+    if ( peth['mac'] and peth['intf'] in Section.interfaces(section='pseudo-ethernet')
+            and peth['mac'] != MACVLANIf(peth['intf'], create=False).get_mac() ):
+        peth['ipv6_eui64_prefix_remove'] += peth['ipv6_eui64_prefix']
 
     # MACvlan mode
     if conf.exists(['mode']):
