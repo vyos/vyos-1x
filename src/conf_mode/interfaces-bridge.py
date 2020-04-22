@@ -336,16 +336,9 @@ def apply(bridge):
         br.set_vrf(bridge['vrf'])
 
         # Delete old IPv6 EUI64 addresses before changing MAC
+        # (adding members to a fresh bridge changes its MAC too)
         for addr in bridge['ipv6_eui64_prefix_remove']:
             br.del_ipv6_eui64_address(addr)
-
-        # Change interface MAC address
-        if bridge['mac']:
-            br.set_mac(bridge['mac'])
-
-        # Add IPv6 EUI-based addresses
-        for addr in bridge['ipv6_eui64_prefix']:
-            br.add_ipv6_eui64_address(addr)
 
         # remove interface from bridge
         for intf in bridge['member_remove']:
@@ -354,6 +347,15 @@ def apply(bridge):
         # add interfaces to bridge
         for member in bridge['member']:
             br.add_port(member['name'])
+
+        # Change interface MAC address
+        if bridge['mac']:
+            br.set_mac(bridge['mac'])
+
+        # Add IPv6 EUI-based addresses (must be done after adding the
+        # 1st bridge member or setting its MAC)
+        for addr in bridge['ipv6_eui64_prefix']:
+            br.add_ipv6_eui64_address(addr)
 
         # up/down interface
         if bridge['disable']:
