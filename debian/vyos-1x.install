@@ -2,6 +2,7 @@ etc/dhcp
 etc/ppp
 etc/rsyslog.d
 etc/systemd
+etc/sysctl.d
 etc/udev
 etc/vyos
 lib/
