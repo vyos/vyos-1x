@@ -21,7 +21,6 @@ import argparse
 import json
 import tabulate
 
-import vyos.keepalived
 import vyos.util
 
 from vyos.ifconfig.vrrp import VRRP
