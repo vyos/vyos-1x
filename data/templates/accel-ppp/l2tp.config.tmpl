@@ -85,7 +85,6 @@ verbose=1
 {% for r in radius_server %}
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
 {% endfor -%}
-{% endif %}
 
 acct-timeout={{ radius_acct_tmo }}
 timeout={{ radius_timeout }}
@@ -100,6 +99,7 @@ nas-ip-address={{ radius_nas_ip }}
 {% if radius_source_address %}
 bind={{ radius_source_address }}
 {% endif -%}
+{% endif %}
 
 [ppp]
 verbose=1
