@@ -119,8 +119,8 @@ def get_config():
             if conf.exists(['port']):
                 radius['port'] = conf.return_value(['port'])
 
-            if conf.exists(['secret']):
-                radius['key'] = conf.return_value(['secret'])
+            if conf.exists(['key']):
+                radius['key'] = conf.return_value(['key'])
 
             if not conf.exists(['disable']):
                 pptp['radius_server'].append(radius)
@@ -161,8 +161,8 @@ def get_config():
             if conf.exists(['dynamic-author', 'port']):
                 dae['port'] = conf.return_value(['dynamic-author', 'port'])
 
-            if conf.exists(['dynamic-author', 'secret']):
-                dae['key'] = conf.return_value(['dynamic-author', 'secret'])
+            if conf.exists(['dynamic-author', 'key']):
+                dae['key'] = conf.return_value(['dynamic-author', 'key'])
 
             pptp['radius_dynamic_author'] = dae
 

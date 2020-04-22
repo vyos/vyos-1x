@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # - migrate dns-servers node to common name-servers
+# - remove radios req-limit node
 
 from sys import argv, exit
 
@@ -55,7 +56,12 @@ else:
 
         config.delete(wins_base)
 
-
+    # Remove RADIUS server req-limit node
+    radius_base = base + ['authentication', 'radius']
+    if config.exists(radius_base):
+        for server in config.list_nodes(radius_base + ['server']):
+            if config.exists(radius_base + ['server', server, 'req-limit']):
+                config.delete(radius_base + ['server', server, 'req-limit'])
 
     try:
         with open(file_name, 'w') as f:
