@@ -238,7 +238,7 @@ def verify(ipoe):
 
     for interface in ipoe['interfaces']:
         if not interface['range']:
-            raise ConfigError(f'No IPoE client subnet defined on interface "{{ interface }}"')
+            raise ConfigError(f'No IPoE client subnet defined on interface "{ interface }"')
 
     if len(ipoe['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
@@ -253,7 +253,7 @@ def verify(ipoe):
         for radius in ipoe['radius_server']:
             if not radius['key']:
                 server = radius['server']
-                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+                raise ConfigError(f'Missing RADIUS secret key for server "{ server }"')
 
     if ipoe['client_ipv6_delegate_prefix'] and not ipoe['client_ipv6_pool']:
         raise ConfigError('IPoE IPv6 deletate-prefix requires IPv6 prefix to be configured!')

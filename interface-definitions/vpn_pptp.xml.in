@@ -28,60 +28,20 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <node name="dns-servers">
+              <leafNode name="name-server">
                 <properties>
-                  <help>IPv4 Domain Name Service (DNS) server</help>
+                  <help>Domain Name Server (DNS) propagated to client</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Domain Name Server (DNS) IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                  <multi/>
                 </properties>
-                <children>
-                  <leafNode name="server-1">
-                    <properties>
-                      <help>Primary DNS server</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="server-2">
-                    <properties>
-                      <help>Secondary DNS server</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
-              <node name="wins-servers">
-                <properties>
-                  <help>Windows Internet Name Service (WINS) server settings</help>
-                </properties>
-                <children>
-                  <leafNode name="server-1">
-                    <properties>
-                      <help>Primary WINS server</help>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="server-2">
-                    <properties>
-                      <help>Secondary WINS server</help>
-                    <constraint>
-                      <validator name="ipv4-address"/>
-                    </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              </leafNode>
+              #include <include/accel-wins-server.xml.i>
               <node name="client-ip-pool">
                 <properties>
                   <help>Pool of client IP addresses (must be within a /24)</help>
@@ -192,39 +152,8 @@
                       </tagNode>
                     </children>
                   </node>
-                  <node name="radius">
-                    <properties>
-                      <help>RADIUS specific configuration</help>
-                    </properties>
-                    <children>
-                      <tagNode name="server">
-                        <properties>
-                          <help>IP address of radius server</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IP address of RADIUS server</description>
-                          </valueHelp>
-                        </properties>
-                        <children>
-                          <leafNode name="key">
-                            <properties>
-                              <help>Key for accessing the specified server</help>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="req-limit">
-                            <properties>
-                              <help>Maximum number of simultaneous requests to server (default: unlimited)</help>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="fail-time">
-                            <properties>
-                              <help>If server does not responds mark it as unavailable for this time (seconds)</help>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </tagNode>
-                    </children>
-                  </node>
+                  #include <include/radius-server.xml.i>
+                  #include <include/accel-radius-additions.xml.in>
                 </children>
               </node>
             </children>

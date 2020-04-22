@@ -23,7 +23,7 @@ from stat import S_IRUSR, S_IWUSR, S_IRGRP
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call, run
+from vyos.util import call, run, get_half_cpus
 from vyos.template import render
 
 
@@ -56,7 +56,7 @@ default_config_data = {
     'ppp_echo_failure' : '',
     'ppp_echo_interval' : '',
     'ppp_echo_timeout' : '',
-    'thread_cnt' : 1
+    'thread_cnt' : get_half_cpus()
 }
 
 def get_config():
@@ -67,10 +67,6 @@ def get_config():
         return None
 
     conf.set_level(base_path)
-
-    cpu = os.cpu_count()
-    if cpu > 1:
-        sstp['thread_cnt'] = int(cpu/2)
 
     if conf.exists(['authentication', 'mode']):
         sstp['auth_mode'] = conf.return_value(['authentication', 'mode'])
@@ -301,7 +297,7 @@ def verify(sstp):
         for radius in sstp['radius_server']:
             if not radius['key']:
                 server = radius['server']
-                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+                raise ConfigError(f'Missing RADIUS secret key for server "{ server }"')
 
 def generate(sstp):
     if not sstp:
