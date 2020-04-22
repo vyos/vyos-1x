@@ -160,11 +160,36 @@ def call(command, flag='', shell=None, input=None, timeout=None, env=None,
     return code
 
 
-def read_file(path):
-    """ Read a file to string """
-    with open(path, 'r') as f:
-        data = f.read().strip()
-    return data
+def read_file(fname, defaultonfailure=None):
+    """
+    read the content of a file, stripping any end characters (space, newlines)
+    should defaultonfailure be not None, it is returned on failure to read
+    """
+    try:
+        """ Read a file to string """
+        with open(fname, 'r') as f:
+            data = f.read().strip()
+        return data
+    except Exception as e:
+        if defaultonfailure is not None:
+            return defaultonfailure
+        raise e
+
+
+def read_json(fname, defaultonfailure=None):
+    """
+    read and json decode the content of a file
+    should defaultonfailure be not None, it is returned on failure to read
+    """
+    import json
+    try:
+        with open(fname, 'r') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        if defaultonfailure is not None:
+            return defaultonfailure
+        raise e
 
 
 def chown(path, user, group):

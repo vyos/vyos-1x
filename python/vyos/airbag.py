@@ -13,17 +13,14 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
-import logging
-import logging.handlers
 from datetime import datetime
 
 from vyos import debug
 from vyos.config import Config
+from vyos.logger import syslog
 from vyos.version import get_version
-from vyos.util import run
-
+from vyos.version import get_full_version_data
 
 # we allow to disable the extra logging
 DISABLE = False
@@ -59,12 +56,14 @@ def bug_report(dtype, value, trace):
     sys.stdout.flush()
     sys.stderr.flush()
 
-    information = {
+    information = get_full_version_data()
+    trace = '\n'.join(format_exception(dtype, value, trace)).replace('\n\n','\n')
+
+    information.update({
         'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'version': get_version(),
-        'trace': format_exception(dtype, value, trace),
+        'trace': trace,
         'instructions': COMMUNITY if 'rolling' in get_version() else SUPPORTED,
-    }
+    })
 
     sys.stdout.write(INTRO.format(**information))
     sys.stdout.flush()
@@ -82,19 +81,14 @@ def intercepter(dtype, value, trace):
         pdb.pm()
 
 
-def InterceptingLogger(address, _singleton=[False]):
+def InterceptingLogger(_singleton=[False]):
     skip = _singleton.pop()
     _singleton.append(True)
     if skip:
         return
 
-    logger = logging.getLogger('VyOS')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.handlers.SysLogHandler(address='/dev/log', facility='syslog')
-    logger.addHandler(handler)
-
     # log to syslog any message sent to stderr
-    sys.stderr = _IO(sys.stderr, logger.critical)
+    sys.stderr = _IO(sys.stderr, syslog.critical)
 
 
 # lists as default arguments in function is normally dangerous
@@ -124,15 +118,31 @@ except:
 # running testing so we are checking that we are on the router
 # as otherwise it prevents dpkg-buildpackage to work
 if get_version() and insession:
-    InterceptingLogger('/run/systemd/journal/dev-log')
+    InterceptingLogger()
     InterceptingException(intercepter)
 
 
 # Messages to print
+# if the key before the value has not time, syslog takes that as the source of the message
 
 FAULT = """\
-Date:       {date}
-VyOS image: {version}
+Report Time:      {date}
+Image Version:    VyOS {version}
+Release Train:    {release_train}
+
+Built by:         {built_by}
+Built on:         {built_on}
+Build UUID:       {build_uuid}
+Build Commit ID:  {build_git}
+
+Architecture:     {system_arch}
+Boot via:         {boot_via}
+System type:      {system_type}
+
+Hardware vendor:  {hardware_vendor}
+Hardware model:   {hardware_model}
+Hardware S/N:     {hardware_serial}
+Hardware UUID:    {hardware_uuid}
 
 {trace}
 """
@@ -140,13 +150,13 @@ VyOS image: {version}
 INTRO = """\
 VyOS had an issue completing a command.
 
-We are sorry that you encountered a problem with VyOS.
+We are sorry that you encountered a problem while using VyOS.
 There are a few things you can do to help us (and yourself):
 {instructions}
 
-PLEASE, when reporting, do include as much information as you can:
-- do not obfuscate any data (feel free to send us a private communication with
-  the extra information if your business policy is strict on information sharing)
+When reporting problems, please include as much information as possible:
+- do not obfuscate any data (feel free to contact us privately if your 
+  business policy requires it)
 - and include all the information presented below
 
 """
@@ -163,6 +173,8 @@ COMMUNITY = """\
 SUPPORTED = """\
 - Make sure you are running the latest stable version of VyOS
   the code is available at https://downloads.vyos.io/?dir=release/current
-- Contact us on our online help desk
+- Contact us using the online help desk
   https://support.vyos.io/
+- Join our community on slack where our users exchange help and advice
+  https://vyos.slack.com
 """.strip()
