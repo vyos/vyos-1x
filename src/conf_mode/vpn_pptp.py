@@ -62,15 +62,11 @@ def get_config():
     pptp = deepcopy(default_pptp)
     conf.set_level(base_path)
 
-    for server in ['server-1', 'server-2']:
-        if conf.exists(['dns-servers', server]):
-            tmp = conf.return_value(['dns-servers', server])
-            pptp['dnsv4'].append(tmp)
+    if conf.exists(['name-server']):
+        pptp['dnsv4'] = conf.return_values(['name-server'])
 
-    for server in ['server-1', 'server-2']:
-        if conf.exists(['wins-servers', server]):
-            tmp = conf.return_value(['wins-servers', server])
-            pptp['wins'].append(tmp)
+    if conf.exists(['wins-server']):
+        pptp['wins'] = conf.return_values(['wins-server'])
 
     if conf.exists(['outside-address']):
         pptp['outside_addr'] = conf.return_value(['outside-address'])
@@ -242,6 +238,9 @@ def verify(pptp):
 
     if len(pptp['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
+
+    if len(pptp['wins']) > 2:
+        raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')
 
 
 def generate(pptp):

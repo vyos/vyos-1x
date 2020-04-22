@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - migrate dns-servers node to common name-servers
+
+from sys import argv, exit
+
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['vpn', 'pptp', 'remote-access']
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+else:
+    # Migrate IPv4 DNS servers
+    dns_base = base + ['dns-servers']
+    if config.exists(dns_base):
+        for server in ['server-1', 'server-2']:
+          if config.exists(dns_base + [server]):
+            dns = config.return_value(dns_base + [server])
+            config.set(base + ['name-server'], value=dns, replace=False)
+
+        config.delete(dns_base)
+
+    # Migrate IPv4 WINS servers
+    wins_base = base + ['wins-servers']
+    if config.exists(wins_base):
+        for server in ['server-1', 'server-2']:
+          if config.exists(wins_base + [server]):
+            wins = config.return_value(wins_base + [server])
+            config.set(base + ['wins-server'], value=wins, replace=False)
+
+        config.delete(wins_base)
+
+
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)
