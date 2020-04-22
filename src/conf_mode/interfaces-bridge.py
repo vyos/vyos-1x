@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -47,7 +47,8 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': '',
+    'ipv6_eui64_prefix': [],
+    'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'igmp_querier': 0,
@@ -162,7 +163,13 @@ def get_config():
 
     # Get prefix for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        bridge['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+        bridge['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
+
+    # Determine currently effective EUI64 address - to determine which
+    # address is no longer valid and needs to be removed
+    eff_addr = conf.return_effective_value('ipv6 address eui64')
+    if eff_addr and eff_addr not in bridge['ipv6_eui64_prefix']:
+        bridge['ipv6_eui64_prefix_remove'].append(eff_addr)
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -283,8 +290,6 @@ def apply(bridge):
         br.set_arp_ignore(bridge['ip_enable_arp_ignore'])
         # IPv6 address autoconfiguration
         br.set_ipv6_autoconf(bridge['ipv6_autoconf'])
-        # IPv6 EUI-based address
-        br.set_ipv6_eui64_address(bridge['ipv6_eui64_prefix'])
         # IPv6 forwarding
         br.set_ipv6_forwarding(bridge['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
@@ -318,9 +323,17 @@ def apply(bridge):
         # assign/remove VRF
         br.set_vrf(bridge['vrf'])
 
+        # Delete old IPv6 EUI64 addresses before changing MAC
+        for addr in bridge['ipv6_eui64_prefix_remove']:
+            br.del_ipv6_eui64_address(addr)
+
         # Change interface MAC address
         if bridge['mac']:
             br.set_mac(bridge['mac'])
+
+        # Add IPv6 EUI-based addresses
+        for addr in bridge['ipv6_eui64_prefix']:
+            br.add_ipv6_eui64_address(addr)
 
         # remove interface from bridge
         for intf in bridge['member_remove']:

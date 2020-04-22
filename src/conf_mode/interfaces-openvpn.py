@@ -50,7 +50,8 @@ default_config_data = {
     'hash': '',
     'intf': '',
     'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': '',
+    'ipv6_eui64_prefix': [],
+    'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'ipv6_local_address': [],
@@ -316,7 +317,13 @@ def get_config():
 
     # Get prefix for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        openvpn['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+        openvpn['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
+
+    # Determine currently effective EUI64 address - to determine which
+    # address is no longer valid and needs to be removed
+    eff_addr = conf.return_effective_value('ipv6 address eui64')
+    if eff_addr and eff_addr not in openvpn['ipv6_eui64_prefix']:
+        openvpn['ipv6_eui64_prefix_remove'].append(eff_addr)
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -1043,12 +1050,23 @@ def apply(openvpn):
         o.set_alias(openvpn['description'])
         # IPv6 address autoconfiguration
         o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
-        # IPv6 EUI-based address
-        o.set_ipv6_eui64_address(openvpn['ipv6_eui64_prefix'])
         # IPv6 forwarding
         o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
         o.set_ipv6_dad_messages(openvpn['ipv6_dup_addr_detect'])
+
+        # IPv6 EUI-based addresses - only in TAP mode (TUN's have no MAC)
+        # If MAC has changed, old EUI64 addresses won't get deleted,
+        # but this isn't easy to solve, so leave them.
+        # This is even more difficult as openvpn uses a random MAC for the
+        # initial interface creation, unless set by 'lladdr'.
+        # NOTE: right now the interface is always deleted. For future
+        # compatibility when tap's are not deleted, leave the del_ in
+        if openvpn['mode'] == 'tap':
+            for addr in openvpn['ipv6_eui64_prefix_remove']:
+                o.del_ipv6_eui64_address(addr)
+            for addr in openvpn['ipv6_eui64_prefix']:
+                o.add_ipv6_eui64_address(addr)
 
     except:
         pass

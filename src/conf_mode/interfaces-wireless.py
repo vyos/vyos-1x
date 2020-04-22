@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -88,7 +88,8 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': '',
+    'ipv6_eui64_prefix': [],
+    'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'is_bridge_member': False,
@@ -370,7 +371,13 @@ def get_config():
 
     # Get prefix for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        wifi['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+        wifi['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
+
+    # Determine currently effective EUI64 address - to determine which
+    # address is no longer valid and needs to be removed
+    eff_addr = conf.return_effective_value('ipv6 address eui64')
+    if eff_addr and eff_addr not in wifi['ipv6_eui64_prefix']:
+        wifi['ipv6_eui64_prefix_remove'].append(eff_addr)
 
     # ARP enable ignore
     if conf.exists('ip enable-arp-ignore'):
@@ -696,12 +703,20 @@ def apply(wifi):
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])
 
+        # Delete old IPv6 EUI64 addresses before changing MAC
+        for addr in wifi['ipv6_eui64_prefix_remove']:
+            w.del_ipv6_eui64_address(addr)
+
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed
         if wifi['mac']:
             w.set_mac(wifi['mac'])
         elif wifi['hw_id']:
             w.set_mac(wifi['hw_id'])
+
+        # Add IPv6 EUI-based addresses
+        for addr in wifi['ipv6_eui64_prefix']:
+            w.add_ipv6_eui64_address(addr)
 
         # configure ARP filter configuration
         w.set_arp_filter(wifi['ip_disable_arp_filter'])
@@ -713,8 +728,6 @@ def apply(wifi):
         w.set_arp_ignore(wifi['ip_enable_arp_ignore'])
         # IPv6 address autoconfiguration
         w.set_ipv6_autoconf(wifi['ipv6_autoconf'])
-        # IPv6 EUI-based address
-        w.set_ipv6_eui64_address(wifi['ipv6_eui64_prefix'])
         # IPv6 forwarding
         w.set_ipv6_forwarding(wifi['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries

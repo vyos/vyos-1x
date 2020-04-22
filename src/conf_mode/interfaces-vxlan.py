@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,7 +39,7 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': '',
+    'ipv6_eui64_prefix': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'is_bridge_member': False,
@@ -118,7 +118,7 @@ def get_config():
 
     # Get prefix for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        vxlan['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+        vxlan['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -238,8 +238,6 @@ def apply(vxlan):
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
         # IPv6 address autoconfiguration
         v.set_ipv6_autoconf(vxlan['ipv6_autoconf'])
-        # IPv6 EUI-based address
-        v.set_ipv6_eui64_address(vxlan['ipv6_eui64_prefix'])
         # IPv6 forwarding
         v.set_ipv6_forwarding(vxlan['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
@@ -250,6 +248,10 @@ def apply(vxlan):
         # interface above
         for addr in vxlan['address']:
             v.add_addr(addr)
+
+        # IPv6 EUI-based addresses
+        for addr in vxlan['ipv6_eui64_prefix']:
+            v.add_ipv6_eui64_address(addr)
 
         # As the VXLAN interface is always disabled first when changing
         # parameters we will only re-enable the interface if it is not
