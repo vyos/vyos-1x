@@ -43,7 +43,7 @@ class _Tunnel(Interface):
         **{
             'section': 'tunnel',
             'prefixes': ['tun',],
-            'bridgeable': True,
+            'bridgeable': False,
         },
     }
 
@@ -135,6 +135,13 @@ class GREIf(_Tunnel):
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre.c
     """
 
+    definition = {
+        **_Tunnel.definition,
+        **{
+            'bridgeable': True,
+        },
+    }
+
     ip = [IP4, IP6]
     tunnel = IP4
 
@@ -159,6 +166,13 @@ class GRETapIf(_Tunnel):
     """
 
     # no multicast, ttl or tos for gretap
+
+    definition = {
+        **_Tunnel.definition,
+        **{
+            'bridgeable': True,
+        },
+    }
 
     ip = [IP4, ]
     tunnel = IP4
