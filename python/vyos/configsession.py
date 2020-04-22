@@ -181,11 +181,11 @@ class ConfigSession(object):
         out = self.__run_command(REMOVE_IMAGE + [name])
         return out
 
-    def generate(self, cmd):
-        out = self.__run_command(GENERATE + cmd.split())
+    def generate(self, path):
+        out = self.__run_command(GENERATE + path)
         return out
 
-    def show(self, cmd):
-        out = self.__run_command(SHOW + cmd.split())
+    def show(self, path):
+        out = self.__run_command(SHOW + path)
         return out
 

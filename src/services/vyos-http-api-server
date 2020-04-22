@@ -318,11 +318,20 @@ def generate_op():
     command = json.loads(command)
 
     try:
-        cmd = command['cmd']
-        res = session.generate(cmd)
+        op = command['op']
+        path = command['path']
     except KeyError:
-        return error(400, "Missing required field \"cmd\"")
-    except VyOSError as e:
+        return error(400, "Missing required field. \"op\" and \"path\" fields are required")
+
+    if not isinstance(path, list):
+        return error(400, "Malformed command: \"path\" field must be a list of strings")
+
+    try:
+        if op == 'generate':
+            res = session.generate(path)
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
@@ -339,11 +348,20 @@ def show_op():
     command = json.loads(command)
 
     try:
-        cmd = command['cmd']
-        res = session.show(cmd)
+        op = command['op']
+        path = command['path']
     except KeyError:
-        return error(400, "Missing required field \"cmd\"")
-    except VyOSError as e:
+        return error(400, "Missing required field. \"op\" and \"path\" fields are required")
+
+    if not isinstance(path, list):
+        return error(400, "Malformed command: \"path\" field must be a list of strings")
+
+    try:
+        if op == 'show':
+            res = session.show(path)
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
