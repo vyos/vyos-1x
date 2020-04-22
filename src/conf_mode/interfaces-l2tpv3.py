@@ -117,6 +117,9 @@ def get_config():
     if conf.exists('ipv6 address eui64'):
         l2tpv3['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
 
+    # add the link-local by default to make IPv6 work
+    l2tpv3['ipv6_eui64_prefix'].append('fe80::/64')
+
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
         l2tpv3['ipv6_forwarding'] = 0

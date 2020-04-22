@@ -213,6 +213,9 @@ def get_config():
     if eff_addr and eff_addr not in bond['ipv6_eui64_prefix']:
         bond['ipv6_eui64_prefix_remove'].append(eff_addr)
 
+    # add the link-local by default to make IPv6 work
+    bond['ipv6_eui64_prefix'].append('fe80::/64')
+
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
         bond['ipv6_forwarding'] = 0
