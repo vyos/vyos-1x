@@ -66,9 +66,17 @@ def apply_vlan_config(vlan, config):
     # assign/remove VRF
     vlan.set_vrf(config['vrf'])
 
+    # Delete old IPv6 EUI64 addresses before changing MAC
+    for addr in config['ipv6_eui64_prefix_remove']:
+        vlan.del_ipv6_eui64_address(addr)
+
     # Change VLAN interface MAC address
     if config['mac']:
         vlan.set_mac(config['mac'])
+
+    # Add IPv6 EUI-based addresses
+    for addr in config['ipv6_eui64_prefix']:
+        vlan.add_ipv6_eui64_address(addr)
 
     # enable/disable VLAN interface
     if config['disable']:
