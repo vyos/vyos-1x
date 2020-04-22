@@ -153,6 +153,7 @@
                     </children>
                   </node>
                   #include <include/radius-server.xml.i>
+                  #include <include/accel-radius-additions.xml.in>
                 </children>
               </node>
             </children>
