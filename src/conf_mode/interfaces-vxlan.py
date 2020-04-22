@@ -116,9 +116,9 @@ def get_config():
     if conf.exists('ipv6 address autoconf'):
         vxlan['ipv6_autoconf'] = 1
 
-    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        vxlan['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
+        vxlan['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
 
     # add the link-local by default to make IPv6 work
     vxlan['ipv6_eui64_prefix'].append('fe80::/64')

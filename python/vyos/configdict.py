@@ -201,15 +201,14 @@ def vlan_to_dict(conf):
     if conf.exists('ipv6 address autoconf'):
         vlan['ipv6_autoconf'] = 1
 
-    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        vlan['ipv6_eui64_prefix'].append(conf.return_value('ipv6 address eui64'))
+        vlan['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
 
-    # Determine currently effective EUI64 address - to determine which
+    # Determine currently effective EUI64 addresses - to determine which
     # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_value('ipv6 address eui64')
-    if eff_addr and eff_addr not in vlan['ipv6_eui64_prefix']:
-        vlan['ipv6_eui64_prefix_remove'].append(eff_addr)
+    eff_addr = conf.return_effective_values('ipv6 address eui64')
+    vlan['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, vlan['ipv6_eui64_prefix'])
 
     # add the link-local by default to make IPv6 work
     vlan['ipv6_eui64_prefix'].append('fe80::/64')
