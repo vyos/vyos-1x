@@ -40,6 +40,7 @@ class EthernetIf(Interface):
             'bondable': True,
             'broadcast': True,
             'bridgeable': True,
+            'eternal': '(lan|eth|eno|ens|enp|enx)[0-9]+$',
         }
     }
 
@@ -75,10 +76,6 @@ class EthernetIf(Interface):
             # 'shellcmd': '/sbin/ethtool -K {ifname} ufo {value}',
         },
     }}
-
-    def _delete(self):
-        # Ethernet interfaces can not be removed
-        pass
 
     def get_driver_name(self):
         """
