@@ -18,140 +18,200 @@ import os
 import re
 
 from copy import deepcopy
-from socket import socket, AF_INET, SOCK_STREAM
+from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
-from time import sleep
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call, get_half_cpus
 from vyos.template import render
+from vyos.util import call, get_half_cpus
+from vyos import ConfigError
 
 pptp_conf = '/run/accel-pppd/pptp.conf'
 pptp_chap_secrets = '/run/accel-pppd/pptp.chap-secrets'
 
 default_pptp = {
-    'authentication': {
-        'mode': 'local',
-        'local-users': {
-        },
-        'radiussrv': {},
-        'auth_proto': 'auth_mschap_v2',
-        'mppe': 'require'
-    },
+    'auth_mode' : 'local',
+    'local_users' : [],
+    'radius_server' : [],
+    'radius_acct_tmo' : '30',
+    'radius_max_try' : '3',
+    'radius_timeout' : '30',
+    'radius_nas_id' : '',
+    'radius_nas_ip' : '',
+    'radius_source_address' : '',
+    'radius_shaper_attr' : '',
+    'radius_shaper_vendor': '',
+    'radius_dynamic_author' : '',
     'chap_secrets_file': pptp_chap_secrets, # used in Jinja2 template
     'outside_addr': '',
-    'dns': [],
+    'dnsv4': [],
     'wins': [],
     'client_ip_pool': '',
     'mtu': '1436',
+    'auth_proto' : ['auth_mschap_v2'],
+    'ppp_mppe' : 'prefer',
     'thread_cnt': get_half_cpus()
 }
 
 def get_config():
-    c = Config()
-    if not c.exists(['vpn', 'pptp', 'remote-access']):
+    conf = Config()
+    base_path = ['vpn', 'pptp', 'remote-access']
+    if not conf.exists(base_path):
         return None
 
-    c.set_level(['vpn', 'pptp', 'remote-access'])
     pptp = deepcopy(default_pptp)
+    conf.set_level(base_path)
 
-    ### general options ###
+    for server in ['server-1', 'server-2']:
+        if conf.exists(['dns-servers', server]):
+            tmp = conf.return_value(['dns-servers', server])
+            pptp['dnsv4'].append(tmp)
 
-    if c.exists(['dns-servers', 'server-1']):
-        pptp['dns'].append(c.return_value(['dns-servers', 'server-1']))
-    if c.exists(['dns-servers', 'server-2']):
-        pptp['dns'].append(c.return_value(['dns-servers', 'server-2']))
-    if c.exists(['wins-servers', 'server-1']):
-        pptp['wins'].append(
-            c.return_value(['wins-servers', 'server-1']))
-    if c.exists(['wins-servers', 'server-2']):
-        pptp['wins'].append(
-            c.return_value(['wins-servers', 'server-2']))
-    if c.exists(['outside-address']):
-        pptp['outside_addr'] = c.return_value(['outside-address'])
+    for server in ['server-1', 'server-2']:
+        if conf.exists(['wins-servers', server]):
+            tmp = conf.return_value(['wins-servers', server])
+            pptp['wins'].append(tmp)
 
-    # auth local
-    if c.exists(['authentication', 'mode', 'local']):
-        if c.exists(['authentication', 'local-users', 'username']):
-            for usr in c.list_nodes(['authentication', 'local-users', 'username']):
-                pptp['authentication']['local-users'].update(
-                    {
-                        usr: {
-                            'passwd': '',
-                            'state': 'enabled',
-                            'ip': ''
-                        }
-                    }
-                )
+    if conf.exists(['outside-address']):
+        pptp['outside_addr'] = conf.return_value(['outside-address'])
 
-                if c.exists(['authentication', 'local-users', 'username', usr, 'password']):
-                    pptp['authentication']['local-users'][usr]['passwd'] = c.return_value(
-                        ['authentication', 'local-users', 'username', usr, 'password'])
-                if c.exists(['authentication', 'local-users', 'username', usr, 'disable']):
-                    pptp['authentication']['local-users'][usr]['state'] = 'disable'
-                if c.exists(['authentication', 'local-users', 'username', usr, 'static-ip']):
-                    pptp['authentication']['local-users'][usr]['ip'] = c.return_value(
-                        ['authentication', 'local-users', 'username', usr, 'static-ip'])
+    if conf.exists(['authentication', 'mode']):
+        pptp['auth_mode'] = conf.return_value(['authentication', 'mode'])
 
-    # authentication mode radius servers and settings
+    #
+    # local auth
+    if conf.exists(['authentication', 'local-users']):
+        for username in conf.list_nodes(['authentication', 'local-users', 'username']):
+            user = {
+                'name': username,
+                'password' : '',
+                'state' : 'enabled',
+                'ip' : '*',
+            }
 
-    if c.exists(['authentication', 'mode', 'radius']):
-        pptp['authentication']['mode'] = 'radius'
-        rsrvs = c.list_nodes(['authentication', 'radius', 'server'])
-        for rsrv in rsrvs:
-            if not c.return_value(['authentication', 'radius', 'server', rsrv, 'fail-time']):
-                ftime = '0'
-            else:
-                ftime = c.return_value(
-                    ['authentication', 'radius', 'server', rsrv, 'fail-time'])
-            if not c.return_value(['authentication', 'radius-server', rsrv, 'req-limit']):
-                reql = '0'
-            else:
-                reql = c.return_value(
-                    ['authentication', 'radius', 'server', rsrv, 'req-limit'])
+            conf.set_level(base_path + ['authentication', 'local-users', 'username', username])
 
-            pptp['authentication']['radiussrv'].update(
-                {
-                    rsrv: {
-                        'secret': c.return_value(['authentication', 'radius', 'server', rsrv, 'key']),
-                        'fail-time': ftime,
-                        'req-limit': reql
-                    }
-                }
-            )
+            if conf.exists(['password']):
+                user['password'] = conf.return_value(['password'])
 
-    if c.exists(['client-ip-pool']):
-        if c.exists(['client-ip-pool', 'start']):
-            pptp['client_ip_pool'] = c.return_value(
-                ['client-ip-pool', 'start'])
-        if c.exists(['client-ip-pool', 'stop']):
-            pptp['client_ip_pool'] += '-' + \
-                re.search(
-                    '[0-9]+$', c.return_value(['client-ip-pool', 'stop'])).group(0)
-    if c.exists(['mtu']):
-        pptp['mtu'] = c.return_value(['mtu'])
+            if conf.exists(['disable']):
+                user['state'] = 'disable'
+
+            if conf.exists(['static-ip']):
+                user['ip'] = conf.return_value(['static-ip'])
+
+            if not conf.exists(['disable']):
+                pptp['local_users'].append(user)
+
+    #
+    # RADIUS auth and settings
+    conf.set_level(base_path + ['authentication', 'radius'])
+    if conf.exists(['server']):
+        for server in conf.list_nodes(['server']):
+            radius = {
+                'server' : server,
+                'key' : '',
+                'fail_time' : 0,
+                'port' : '1812'
+            }
+
+            conf.set_level(base_path + ['authentication', 'radius', 'server', server])
+
+            if conf.exists(['fail-time']):
+                radius['fail-time'] = conf.return_value(['fail-time'])
+
+            if conf.exists(['port']):
+                radius['port'] = conf.return_value(['port'])
+
+            if conf.exists(['secret']):
+                radius['key'] = conf.return_value(['secret'])
+
+            if not conf.exists(['disable']):
+                pptp['radius_server'].append(radius)
+
+        #
+        # advanced radius-setting
+        conf.set_level(base_path + ['authentication', 'radius'])
+
+        if conf.exists(['acct-timeout']):
+            pptp['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
+
+        if conf.exists(['max-try']):
+            pptp['radius_max_try'] = conf.return_value(['max-try'])
+
+        if conf.exists(['timeout']):
+            pptp['radius_timeout'] = conf.return_value(['timeout'])
+
+        if conf.exists(['nas-identifier']):
+            pptp['radius_nas_id'] = conf.return_value(['nas-identifier'])
+
+        if conf.exists(['nas-ip-address']):
+            pptp['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+
+        if conf.exists(['source-address']):
+            pptp['radius_source_address'] = conf.return_value(['source-address'])
+
+        # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
+        if conf.exists(['dae-server']):
+            dae = {
+                'port' : '',
+                'server' : '',
+                'key' : ''
+            }
+
+            if conf.exists(['dynamic-author', 'ip-address']):
+                dae['server'] = conf.return_value(['dynamic-author', 'ip-address'])
+
+            if conf.exists(['dynamic-author', 'port']):
+                dae['port'] = conf.return_value(['dynamic-author', 'port'])
+
+            if conf.exists(['dynamic-author', 'secret']):
+                dae['key'] = conf.return_value(['dynamic-author', 'secret'])
+
+            pptp['radius_dynamic_author'] = dae
+
+        if conf.exists(['rate-limit', 'enable']):
+            pptp['radius_shaper_attr'] = 'Filter-Id'
+            c_attr = ['rate-limit', 'enable', 'attribute']
+            if conf.exists(c_attr):
+                pptp['radius_shaper_attr'] = conf.return_value(c_attr)
+
+            c_vendor = ['rate-limit', 'enable', 'vendor']
+            if conf.exists(c_vendor):
+                pptp['radius_shaper_vendor'] = conf.return_value(c_vendor)
+
+    conf.set_level(base_path)
+    if conf.exists(['client-ip-pool']):
+        if conf.exists(['client-ip-pool', 'start']) and conf.exists(['client-ip-pool', 'stop']):
+            start = conf.return_value(['client-ip-pool', 'start'])
+            stop  = conf.return_value(['client-ip-pool', 'stop'])
+            pptp['client_ip_pool'] = start + '-' + re.search('[0-9]+$', stop).group(0)
+
+    if conf.exists(['mtu']):
+        pptp['mtu'] = conf.return_value(['mtu'])
 
     # gateway address
-    if c.exists(['gateway-address']):
-        pptp['gw_ip'] = c.return_value(['gateway-address'])
+    if conf.exists(['gateway-address']):
+        pptp['gw_ip'] = conf.return_value(['gateway-address'])
     else:
         pptp['gw_ip'] = re.sub(
             '[0-9]+$', '1', pptp['client_ip_pool'])
 
-    if c.exists(['authentication', 'require']):
-        if c.return_value(['authentication', 'require']) == 'pap':
-            pptp['authentication']['auth_proto'] = 'auth_pap'
-        if c.return_value(['authentication', 'require']) == 'chap':
-            pptp['authentication']['auth_proto'] = 'auth_chap_md5'
-        if c.return_value(['authentication', 'require']) == 'mschap':
-            pptp['authentication']['auth_proto'] = 'auth_mschap_v1'
-        if c.return_value(['authentication', 'require']) == 'mschap-v2':
-            pptp['authentication']['auth_proto'] = 'auth_mschap_v2'
+    if conf.exists(['authentication', 'require']):
+        # clear default list content, now populate with actual CLI values
+        pptp['auth_proto'] = []
+        auth_mods = {
+            'pap': 'auth_pap',
+            'chap': 'auth_chap_md5',
+            'mschap': 'auth_mschap_v1',
+            'mschap-v2': 'auth_mschap_v2'
+        }
 
-        if c.exists(['authentication', 'mppe']):
-            pptp['authentication']['mppe'] = c.return_value(
-                ['authentication', 'mppe'])
+        for proto in conf.return_values(['authentication', 'require']):
+            pptp['auth_proto'].append(auth_mods[proto])
+
+    if conf.exists(['authentication', 'mppe']):
+        pptp['ppp_mppe'] = conf.return_value(['authentication', 'mppe'])
 
     return pptp
 
@@ -160,37 +220,47 @@ def verify(pptp):
     if not pptp:
         return None
 
-    if pptp['authentication']['mode'] == 'local':
-        if not pptp['authentication']['local-users']:
-            raise ConfigError(
-                'pptp-server authentication local-users required')
-        for usr in pptp['authentication']['local-users']:
-            if not pptp['authentication']['local-users'][usr]['passwd']:
-                raise ConfigError('user ' + usr + ' requires a password')
+    if pptp['auth_mode'] == 'local':
+        if not pptp['local_users']:
+            raise ConfigError('PPTP local auth mode requires local users to be configured!')
 
-    if pptp['authentication']['mode'] == 'radius':
-        if len(pptp['authentication']['radiussrv']) == 0:
-            raise ConfigError('radius server required')
-        for rsrv in pptp['authentication']['radiussrv']:
-            if pptp['authentication']['radiussrv'][rsrv]['secret'] == None:
-                raise ConfigError('radius server ' + rsrv +
-                                  ' needs a secret configured')
+        for user in pptp['local_users']:
+            username = user['name']
+            if not user['password']:
+                raise ConfigError(f'Password required for local user "{username}"')
+
+    elif pptp['auth_mode'] == 'radius':
+        if len(pptp['radius_server']) == 0:
+            raise ConfigError('RADIUS authentication requires at least one server')
+
+        for radius in pptp['radius_server']:
+            if not radius['key']:
+                server = radius['server']
+                raise ConfigError(f'Missing RADIUS secret key for server "{{ server }}"')
+
+    if len(pptp['dnsv4']) > 2:
+        raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
 
 
 def generate(pptp):
     if not pptp:
         return None
 
+    import pprint
+    pprint.pprint(pptp)
+
     dirname = os.path.dirname(pptp_conf)
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
-    render(pptp_conf, 'pptp/pptp.config.tmpl', pptp, trim_blocks=True)
+    render(pptp_conf, 'accel-ppp/pptp.config.tmpl', pptp, trim_blocks=True)
 
-    if pptp['authentication']['local-users']:
-        old_umask = os.umask(0o077)
-        render(pptp_chap_secrets, 'pptp/chap-secrets.tmpl', pptp, trim_blocks=True)
-        os.umask(old_umask)
+    if pptp['local_users']:
+        render(pptp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', pptp, trim_blocks=True)
+        os.chmod(pptp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
+    else:
+        if os.path.exists(pptp_chap_secrets):
+             os.unlink(pptp_chap_secrets)
 
 
 def apply(pptp):
