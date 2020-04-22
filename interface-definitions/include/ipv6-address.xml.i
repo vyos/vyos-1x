@@ -19,5 +19,11 @@
         <multi/>
       </properties>
     </leafNode>
+    <leafNode name="no-default-link-local">
+      <properties>
+        <help>Remove the default link-local address from the interface</help>
+        <valueless/>
+      </properties>
+    </leafNode>
   </children>
 </node>

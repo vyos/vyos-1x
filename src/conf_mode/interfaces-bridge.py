@@ -170,8 +170,12 @@ def get_config():
     eff_addr = conf.return_effective_values('ipv6 address eui64')
     bridge['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, bridge['ipv6_eui64_prefix'])
 
-    # add the link-local by default to make IPv6 work
-    bridge['ipv6_eui64_prefix'].append('fe80::/64')
+    # Remove the default link-local address if set.
+    if conf.exists('ipv6 address no-default-link-local'):
+        bridge['ipv6_eui64_prefix_remove'].append('fe80::/64')
+    else:
+        # add the link-local by default to make IPv6 work
+        bridge['ipv6_eui64_prefix'].append('fe80::/64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
