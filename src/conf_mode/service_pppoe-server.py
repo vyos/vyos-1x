@@ -23,7 +23,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, get_half_cpus()
+from vyos.util import call, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 
@@ -32,6 +32,7 @@ pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
 
 default_config_data = {
     'auth_mode': 'local',
+    'auth_proto': ['auth_mschap_v2', 'auth_mschap_v1', 'auth_chap_md5', 'auth_pap'],
     'chap_secrets_file': pppoe_chap_secrets, # used in Jinja2 template
     'client_ip_pool': '',
     'client_ip_subnets': [],
@@ -216,6 +217,19 @@ def get_config():
             pppoe['local_users'].append(user)
 
     conf.set_level(base_path)
+
+    if conf.exists(['authentication', 'protocols']):
+        auth_mods = {
+            'mschap-v2': 'auth_mschap_v2',
+            'mschap': 'auth_mschap_v1',
+            'chap': 'auth_chap_md5',
+            'pap': 'auth_pap'
+        }
+
+        pppoe['auth_proto'] = []
+        for proto in conf.return_values(['authentication', 'protocols']):
+            pppoe['auth_proto'].append(auth_mods[proto])
+
     #
     # authentication mode radius servers and settings
     if conf.exists(['authentication', 'mode', 'radius']):

@@ -12,10 +12,9 @@ ipv6pool
 ipv6_nd
 ipv6_dhcp
 {% endif %}
-auth_pap
-auth_chap_md5
-auth_mschap_v1
-auth_mschap_v2
+{% for proto in auth_proto: %}
+{{proto}}
+{% endfor%}
 shaper
 {% if snmp %}
 net-snmp
