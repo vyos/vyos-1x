@@ -29,7 +29,10 @@
   <start>
     <element name="interfaceDefinition">
       <zeroOrMore>
-        <ref name="node"/>
+        <choice>
+          <ref name="node"/>
+          <ref name="tagNode"/>
+        </choice>
       </zeroOrMore>
     </element>
   </start>

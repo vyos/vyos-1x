@@ -24,7 +24,7 @@
 # Interface definition starts with interfaceDefinition tag that may contain node tags
 start = element interfaceDefinition
 {
-    node*
+    (node | tagNode)*
 }
 
 # node tag may contain node, leafNode, or tagNode tags
