@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
 from vyos.util import call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_bridge_member, is_addr_assigned
 
 default_config_data = {
     'address': [],
@@ -169,6 +169,9 @@ def verify(l2tpv3):
 
     if not l2tpv3['local_address']:
         raise ConfigError(f'Must configure the l2tpv3 local-ip for {interface}')
+
+    if not is_addr_assigned(l2tpv3['local_address']):
+        raise ConfigError(f'Must use a configured IP on l2tpv3 local-ip for {interface}')
 
     if not l2tpv3['remote_address']:
         raise ConfigError(f'Must configure the l2tpv3 remote-ip for {interface}')
