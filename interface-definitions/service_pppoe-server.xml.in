@@ -137,6 +137,34 @@
                   </node>
                 </children>
               </node>
+              <leafNode name="protocols">
+                <properties>
+                  <help>Authentication protocol</help>
+                  <valueHelp>
+                    <format>pap</format>
+                    <description>Allow PAP authentication [Password Authentication Protocol]</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>chap</format>
+                    <description>Allow CHAP authentication [Challenge Handshake Authentication Protocol]</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mschap</format>
+                    <description>Allow MS-CHAP authentication [Microsoft Challenge Handshake Authentication Protocol, Version 1]</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mschap-v2</format>
+                    <description>Allow MS-CHAPv2 authentication [Microsoft Challenge Handshake Authentication Protocol, Version 2]</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(pap|chap|mschap|mschap-v2)</regex>
+                  </constraint>
+                  <completionHelp>
+                    <list>pap chap mschap mschap-v2</list>
+                  </completionHelp>
+                  <multi />
+                </properties>
+              </leafNode>
             </children>
           </node>
           <node name="client-ip-pool">
