@@ -461,7 +461,7 @@ def verify(conf):
     # what are the tunnel options we can set / modified / deleted
 
     kls = get_class(options)
-    valid = kls.updates + ['alias', 'addresses-add', 'addresses-del', 'vrf']
+    valid = kls.updates + ['alias', 'addresses-add', 'addresses-del', 'vrf', 'state']
 
     if changes['section'] == 'create':
         valid.extend(['type',])
