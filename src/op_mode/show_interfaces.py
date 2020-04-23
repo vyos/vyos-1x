@@ -18,6 +18,7 @@
 import os
 import re
 import sys
+import glob
 import datetime
 import argparse
 import netifaces
@@ -146,9 +147,20 @@ def run_allowed(**kwarg):
     sys.stdout.write(' '.join(Section.interfaces()))
 
 
+def pppoe(ifname):
+    out = cmd(f'ps -C pppd -f')
+    if ifname in out:
+        return 'C'
+    elif ifname in [_.split('/')[-1] for _ in glob.glob('/etc/ppp/peers/pppoe*')]:
+	    return 'D'
+    return ''
+
+
 @register('show')
 def run_show_intf(ifnames, iftypes, vif, vrrp):
+    handled = []
     for interface in filtered_interfaces(ifnames, iftypes, vif, vrrp):
+        handled.append(interface.ifname)
         cache = interface.operational.load_counters()
 
         out = cmd(f'ip addr show {interface.ifname}')
@@ -173,6 +185,17 @@ def run_show_intf(ifnames, iftypes, vif, vrrp):
         print()
         print(interface.operational.formated_stats())
 
+    for ifname in ifnames:
+        if ifname not in handled and ifname.startswith('pppoe'):
+            state = pppoe(ifname)
+            if not state:
+                continue
+            string = {
+                'C': 'Coming up',
+                'D': 'Link down',
+            }[state]
+            print('{}: {}'.format(ifname, string))
+
 
 @register('show-brief')
 def run_show_intf_brief(ifnames, iftypes, vif, vrrp):
@@ -183,7 +206,10 @@ def run_show_intf_brief(ifnames, iftypes, vif, vrrp):
     print(format1 % ("Interface", "IP Address", "S/L", "Description"))
     print(format1 % ("---------", "----------", "---", "-----------"))
 
+    handled = []
     for interface in filtered_interfaces(ifnames, iftypes, vif, vrrp):
+        handled.append(interface.ifname)
+
         oper_state = interface.operational.get_state()
         admin_state = interface.get_admin_state()
 
@@ -205,6 +231,17 @@ def run_show_intf_brief(ifnames, iftypes, vif, vrrp):
             else:
                 print(format2 % (i, a))
                 print(format1 % ('', '', '/'.join(s+l), d))
+
+    for ifname in ifnames:
+        if ifname not in handled and ifname.startswith('pppoe'):
+            state = pppoe(ifname)
+            if not state:
+                continue
+            string = {
+                'C': 'u/D',
+                'D': 'A/D',
+            }[state]
+            print(format1 % (ifname, '', string, ''))
 
 
 @register('show-count')
