@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -36,7 +36,7 @@ default_config_data = {
     'local_port': 5000,
     'intf': '',
     'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': '',
+    'ipv6_eui64_prefix': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'is_bridge_member': False,
@@ -113,9 +113,14 @@ def get_config():
     if conf.exists('ipv6 address autoconf'):
         l2tpv3['ipv6_autoconf'] = 1
 
-    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        l2tpv3['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+        l2tpv3['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
+
+    # Remove the default link-local address if set.
+    if not conf.exists('ipv6 address no-default-link-local'):
+        # add the link-local by default to make IPv6 work
+        l2tpv3['ipv6_eui64_prefix'].append('fe80::/64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -228,8 +233,6 @@ def apply(l2tpv3):
         l.set_mtu(l2tpv3['mtu'])
         # IPv6 address autoconfiguration
         l.set_ipv6_autoconf(l2tpv3['ipv6_autoconf'])
-        # IPv6 EUI-based address
-        l.set_ipv6_eui64_address(l2tpv3['ipv6_eui64_prefix'])
         # IPv6 forwarding
         l.set_ipv6_forwarding(l2tpv3['ipv6_forwarding'])
         # IPv6 Duplicate Address Detection (DAD) tries
@@ -240,6 +243,10 @@ def apply(l2tpv3):
         # interface above
         for addr in l2tpv3['address']:
             l.add_addr(addr)
+
+        # IPv6 EUI-based addresses
+        for addr in l2tpv3['ipv6_eui64_prefix']:
+            l.add_ipv6_eui64_address(addr)
 
         # As the interface is always disabled first when changing parameters
         # we will only re-enable the interface if it is not  administratively

@@ -125,6 +125,8 @@ def vlan_to_dict(conf):
         'ip_enable_arp_ignore': 0,
         'ip_proxy_arp': 0,
         'ipv6_autoconf': 0,
+        'ipv6_eui64_prefix': [],
+        'ipv6_eui64_prefix_remove': [],
         'ipv6_forwarding': 1,
         'ipv6_dup_addr_detect': 1,
         'ingress_qos': '',
@@ -199,6 +201,22 @@ def vlan_to_dict(conf):
     if conf.exists('ipv6 address autoconf'):
         vlan['ipv6_autoconf'] = 1
 
+    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
+    if conf.exists('ipv6 address eui64'):
+        vlan['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
+
+    # Determine currently effective EUI64 addresses - to determine which
+    # address is no longer valid and needs to be removed
+    eff_addr = conf.return_effective_values('ipv6 address eui64')
+    vlan['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, vlan['ipv6_eui64_prefix'])
+
+    # Remove the default link-local address if set.
+    if conf.exists('ipv6 address no-default-link-local'):
+        vlan['ipv6_eui64_prefix_remove'].append('fe80::/64')
+    else:
+        # add the link-local by default to make IPv6 work
+        vlan['ipv6_eui64_prefix'].append('fe80::/64')
+
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
         vlan['ipv6_forwarding'] = 0
@@ -210,6 +228,9 @@ def vlan_to_dict(conf):
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         vlan['mac'] = conf.return_value('mac')
+        # always recreate EUI64 addresses if mac is set
+        # I'm not sure how to check if a vlan interface exists or how to get its current mac.
+        vlan['ipv6_eui64_prefix_remove'] += vlan['ipv6_eui64_prefix']
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):

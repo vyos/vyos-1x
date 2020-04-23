@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -419,39 +419,28 @@ class Interface(Control):
         """
         return self.set_interface('ipv6_autoconf', autoconf)
 
-    def set_ipv6_eui64_address(self, prefix):
+    def add_ipv6_eui64_address(self, prefix):
         """
         Extended Unique Identifier (EUI), as per RFC2373, allows a host to
-        assign iteslf a unique IPv6 address based on a given IPv6 prefix.
+        assign itself a unique IPv6 address based on a given IPv6 prefix.
 
-        If prefix is passed address is assigned, if prefix is '' address is
-        removed from interface.
+        Calculate the EUI64 from the interface's MAC, then assign it
+        with the given prefix to the interface.
         """
-        # if prefix is an empty string convert it to None so mac2eui64 works
-        # as expected
-        if not prefix:
-            prefix = None
 
         eui64 = mac2eui64(self.get_mac(), prefix)
+        prefixlen = prefix.split('/')[1]
+        self.add_addr(f'{eui64}/{prefixlen}')
 
-        if not prefix:
-            # if prefix is empty - thus removed - we need to walk through all
-            # interface IPv6 addresses and find the one with the calculated
-            # EUI-64 identifier. The address is then removed
-            for addr in self.get_addr():
-                addr_wo_prefix = addr.split('/')[0]
-                if is_ipv6(addr_wo_prefix):
-                    if eui64 in IPv6Address(addr_wo_prefix).exploded:
-                        self.del_addr(addr)
+    def del_ipv6_eui64_address(self, prefix):
+        """
+        Delete the address based on the interface's MAC-based EUI64
+        combined with the prefix address.
+        """
+        eui64 = mac2eui64(self.get_mac(), prefix)
+        prefixlen = prefix.split('/')[1]
+        self.del_addr(f'{eui64}/{prefixlen}')
 
-            return None
-
-        # calculate and add EUI-64 IPv6 address
-        if IPv6Network(prefix):
-            # we also need to take the subnet length into account
-            prefix = prefix.split('/')[1]
-            eui64 = f'{eui64}/{prefix}'
-            self.add_addr(eui64 )
 
     def set_ipv6_forwarding(self, forwarding):
         """

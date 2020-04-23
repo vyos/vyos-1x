@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import list_diff, vlan_to_dict
-from vyos.ifconfig import MACVLANIf
+from vyos.ifconfig import MACVLANIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.validate import is_bridge_member
 from vyos import ConfigError
@@ -48,7 +48,8 @@ default_config_data = {
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
     'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': '',
+    'ipv6_eui64_prefix': [],
+    'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
     'is_bridge_member': False,
@@ -157,9 +158,21 @@ def get_config():
     if conf.exists('ipv6 address autoconf'):
         peth['ipv6_autoconf'] = 1
 
-    # Get prefix for IPv6 addressing based on MAC address (EUI-64)
+    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
     if conf.exists('ipv6 address eui64'):
-        peth['ipv6_eui64_prefix'] = conf.return_value('ipv6 address eui64')
+        peth['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
+
+    # Determine currently effective EUI64 addresses - to determine which
+    # address is no longer valid and needs to be removed
+    eff_addr = conf.return_effective_values('ipv6 address eui64')
+    peth['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, peth['ipv6_eui64_prefix'])
+
+    # Remove the default link-local address if set.
+    if conf.exists('ipv6 address no-default-link-local'):
+        peth['ipv6_eui64_prefix_remove'].append('fe80::/64')
+    else:
+        # add the link-local by default to make IPv6 work
+        peth['ipv6_eui64_prefix'].append('fe80::/64')
 
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
@@ -179,6 +192,12 @@ def get_config():
     # Media Access Control (MAC) address
     if conf.exists(['mac']):
         peth['mac'] = conf.return_value(['mac'])
+
+    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
+    # before re-adding them
+    if ( peth['mac'] and peth['intf'] in Section.interfaces(section='pseudo-ethernet')
+            and peth['mac'] != MACVLANIf(peth['intf'], create=False).get_mac() ):
+        peth['ipv6_eui64_prefix_remove'] += peth['ipv6_eui64_prefix']
 
     # MACvlan mode
     if conf.exists(['mode']):
@@ -306,8 +325,6 @@ def apply(peth):
     p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
     # IPv6 address autoconfiguration
     p.set_ipv6_autoconf(peth['ipv6_autoconf'])
-    # IPv6 EUI-based address
-    p.set_ipv6_eui64_address(peth['ipv6_eui64_prefix'])
     # IPv6 forwarding
     p.set_ipv6_forwarding(peth['ipv6_forwarding'])
     # IPv6 Duplicate Address Detection (DAD) tries
@@ -316,9 +333,17 @@ def apply(peth):
     # assign/remove VRF
     p.set_vrf(peth['vrf'])
 
+    # Delete old IPv6 EUI64 addresses before changing MAC
+    for addr in peth['ipv6_eui64_prefix_remove']:
+        p.del_ipv6_eui64_address(addr)
+
     # Change interface MAC address
     if peth['mac']:
         p.set_mac(peth['mac'])
+
+    # Add IPv6 EUI-based addresses
+    for addr in peth['ipv6_eui64_prefix']:
+        p.add_ipv6_eui64_address(addr)
 
     # Change interface mode
     p.set_mode(peth['mode'])

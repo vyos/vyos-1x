@@ -8,14 +8,21 @@
     </leafNode>
     <leafNode name="eui64">
       <properties>
-        <help>ssign IPv6 address using EUI-64 based on MAC address</help>
+        <help>Prefix for IPv6 address with MAC-based EUI-64</help>
         <valueHelp>
           <format>ipv6net</format>
-          <description>IPv6 address and prefix length</description>
+          <description>IPv6 network and prefix length</description>
         </valueHelp>
         <constraint>
           <validator name="ipv6-prefix"/>
         </constraint>
+        <multi/>
+      </properties>
+    </leafNode>
+    <leafNode name="no-default-link-local">
+      <properties>
+        <help>Remove the default link-local address from the interface</help>
+        <valueless/>
       </properties>
     </leafNode>
   </children>
