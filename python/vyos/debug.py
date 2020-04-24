@@ -41,8 +41,9 @@ def message(message, flag='', destination=sys.stdout):
     try:
         # at boot the file is created as root:vyattacfg
         # at runtime the file is created as user:vyattacfg
-        # the default permission are 644
-        mask = os.umask(0o113)
+        # but the helper scripts are not run as this so it
+        # need the default permission to be 666 (an not 660)
+        mask = os.umask(0o111)
 
         with open(logfile, 'a') as f:
             f.write(_format('log', message))
@@ -133,7 +134,7 @@ def _contentenv(flag):
     return os.environ.get(f'VYOS_{flag.upper()}_DEBUG', '').strip()
 
 
-def _contentfile(flag):
+def _contentfile(flag, default=''):
     """
     Check if debug exist for a given debug flag name
 
@@ -153,7 +154,8 @@ def _contentfile(flag):
         if not os.path.isfile(flagfile):
             continue
         with open(flagfile) as f:
-            return f.readline().strip()
+            content = f.readline().strip()
+        return content or default
 
     return ''
 
@@ -166,7 +168,7 @@ def _logfile(flag, default):
     """
 
     # For log we return the location of the log file
-    log_location = _contentenv(flag) or _contentfile(flag)
+    log_location = _contentenv(flag) or _contentfile(flag, default)
 
     # it was not set
     if not log_location:
@@ -177,6 +179,15 @@ def _logfile(flag, default):
        not log_location.startswith('/config/') and \
        not log_location.startswith('/var/log/'):
         return default
+    # Do not allow to escape the folders
     if '..' in log_location:
+        return default
+
+    if not os.path.exists(log_location):
+        return log_location
+
+    # this permission is unique the the config and var folder
+    stat = os.stat(log_location).st_mode
+    if stat != 0o100666:
         return default
     return log_location
