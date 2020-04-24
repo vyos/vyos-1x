@@ -222,6 +222,12 @@ def verify(wg):
         if not peer['pubkey']:
             raise ConfigError(f'Peer public-key required for peer "{peer_name}"!')
 
+        if peer['address'] and not peer['port']:
+            raise ConfigError(f'Peer "{peer_name}" port must be defined if address is defined!')
+
+        if not peer['address'] and peer['port']:
+           raise ConfigError(f'Peer "{peer_name}" address must be defined if port is defined!')
+
 
 def apply(wg):
     # init wg class
