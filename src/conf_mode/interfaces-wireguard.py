@@ -35,11 +35,11 @@ default_config_data = {
     'address': [],
     'address_remove': [],
     'description': '',
-    'lport': None,
+    'listen_port': '',
     'deleted': False,
     'disable': False,
     'is_bridge_member': False,
-    'fwmark': 0x00,
+    'fwmark': 0,
     'mtu': 1420,
     'peer': [],
     'peer_remove': [], # stores public keys of peers to remove
@@ -106,7 +106,7 @@ def get_config():
 
     # local port to listen on
     if conf.exists(['port']):
-        wg['lport'] = conf.return_value(['port'])
+        wg['listen_port'] = conf.return_value(['port'])
 
     # fwmark value
     if conf.exists(['fwmark']):
@@ -263,8 +263,8 @@ def apply(wg):
         # peer allowed-ips
         w.config['allowed-ips'] = peer['allowed-ips']
         # local listen port
-        if wg['lport']:
-            w.config['port'] = wg['lport']
+        if wg['listen_port']:
+            w.config['port'] = wg['listen_port']
         # fwmark
         if c['fwmark']:
             w.config['fwmark'] = wg['fwmark']
