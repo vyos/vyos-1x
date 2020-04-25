@@ -10,4 +10,8 @@
 
 priv-lvl 15
 mapped_priv_user radius_priv_user
+
+{% if radius_vrf %}
+vrf-name {{ radius_vrf }}
+{% endif %}
 {% endif %}

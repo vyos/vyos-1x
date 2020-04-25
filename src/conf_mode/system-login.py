@@ -17,6 +17,7 @@
 import os
 
 from crypt import crypt, METHOD_SHA512
+from netifaces import interfaces
 from psutil import users
 from pwd import getpwall, getpwnam
 from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
@@ -39,6 +40,7 @@ default_config_data = {
     'del_users': [],
     'radius_server': [],
     'radius_source_address': '',
+    'radius_vrf': ''
 }
 
 def get_local_users():
@@ -127,6 +129,10 @@ def get_config():
     if conf.exists(['source-address']):
         login['radius_source_address'] = conf.return_value(['source-address'])
 
+    # retrieve VRF instance
+    if conf.exists(['vrf']):
+        login['radius_vrf'] = conf.return_value(['vrf'])
+
     # Read in all RADIUS servers and store to list
     for server in conf.list_nodes(['server']):
         server_cfg = {
@@ -193,6 +199,9 @@ def verify(login):
         if fail:
             raise ConfigError('At least one RADIUS server must be active.')
 
+    vrf_name = login['radius_vrf']
+    if vrf_name and vrf_name not in interfaces():
+        raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     return None
 
@@ -217,7 +226,7 @@ def generate(login):
             #     env=env)
 
     if len(login['radius_server']) > 0:
-        render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl', login)
+        render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl', login, trim_blocks=True)
 
         uid = getpwnam('root').pw_uid
         gid = getpwnam('root').pw_gid
