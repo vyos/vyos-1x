@@ -1,0 +1,1227 @@
+<?xml version="1.0"?>
+<!-- Border Gateway Protocol (BGP) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <tagNode name="nbgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py">
+        <properties>
+          <help>Border Gateway Protocol (BGP) parameters</help>
+          <valueHelp>
+            <format>&lt;1-4294967294&gt;</format>
+            <description>AS number</description>
+          </valueHelp>
+          <constraint>
+            <validator name="numeric" argument="--range 1-4294967294"/>
+          </constraint>
+          <priority>820</priority>
+        </properties>
+        <children>
+          <node name="address-family">
+            <properties>
+              <help>BGP address-family parameters</help>
+            </properties>
+            <children>
+              <node name="ipv4-unicast">
+                <properties>
+                  <help>IPv4 BGP settings</help>
+                </properties>
+                <children>
+                  <tagNode name="aggregate-address">
+                    <properties>
+                      <help>BGP aggregate network</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>BGP aggregate network</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="as-set">
+                        <properties>
+                          <help>Generate AS-set path information for this aggregate address</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="summary-only">
+                        <properties>
+                          <help>Announce the aggregate summary network only</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="network">
+                    <properties>
+                      <help>BGP network</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>BGP network</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="backdoor">
+                        <properties>
+                          <help>Network as a backdoor route</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="route-map">
+                        <properties>
+                          <help>Route-map to modify route attributes</help>
+                          <completionHelp>
+                            <path>policy route-map</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <node name="redistribute">
+                    <properties>
+                      <help>Redistribute routes from other protocols into BGP</help>
+                    </properties>
+                    <children>
+                      <node name="connected">
+                        <properties>
+                          <help>Redistribute connected routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="kernel">
+                        <properties>
+                          <help>Redistribute kernel routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="ospf">
+                        <properties>
+                          <help>Redistribute OSPF routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="rip">
+                        <properties>
+                          <help>Redistribute RIP routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="static">
+                        <properties>
+                          <help>Redistribute static routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <leafNode name="table">
+                        <properties>
+                          <help>Redistribute non-main Kernel Routing Table</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="ipv6-unicast">
+                <properties>
+                  <help>IPv6 BGP settings</help>
+                </properties>
+                <children>
+                  <tagNode name="aggregate-address">
+                    <properties>
+                      <help>BGP aggregate network</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>Aggregate network</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="as-set">
+                        <properties>
+                          <help>Generate AS-set path information for this aggregate address</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="summary-only">
+                        <properties>
+                          <help>Announce the aggregate summary network only</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="network">
+                    <properties>
+                      <help>BGP network</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>Aggregate network</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="path-limit">
+                        <properties>
+                          <help>AS-path hopcount limit</help>
+                          <valueHelp>
+                            <format>&lt;0-255&gt;</format>
+                            <description>AS path hop count limit</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-255"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="route-map">
+                        <properties>
+                          <help>Route-map to modify route attributes</help>
+                          <completionHelp>
+                            <path>policy route-map</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <node name="redistribute">
+                    <properties>
+                      <help>Redistribute routes from other protocols into BGP</help>
+                    </properties>
+                    <children>
+                      <node name="connected">
+                        <properties>
+                          <help>Redistribute connected routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="kernel">
+                        <properties>
+                          <help>Redistribute kernel routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="ospf">
+                        <properties>
+                          <help>Redistribute OSPF routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="rip">
+                        <properties>
+                          <help>Redistribute RIP routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <node name="static">
+                        <properties>
+                          <help>Redistribute static routes into BGP</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                        </children>
+                      </node>
+                      <leafNode name="table">
+                        <properties>
+                          <help>Redistribute non-main Kernel Routing Table</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="maximum-paths">
+            <properties>
+              <help>BGP multipaths</help>
+            </properties>
+            <children>
+              <leafNode name="ebgp">
+                <properties>
+                  <help>Maximum ebgp multipaths</help>
+                  <valueHelp>
+                    <format>&lt;1-255&gt;</format>
+                    <description>EBGP multipaths</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="ibgp">
+                <properties>
+                  <help>Maximum ibgp multipaths</help>
+                  <valueHelp>
+                    <format>&lt;1-255&gt;</format>
+                    <description>EBGP multipaths</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="neighbor">
+            <properties>
+              <help>BGP neighbor</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>BGP neighbor IP address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>BGP neighbor IPv6 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>&lt;interface&gt;</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+                <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+              </constraint>
+            </properties>
+            <children>
+              <node name="address-family">
+                <properties>
+                  <help>Parameters relating to IPv4 or IPv6 routes</help>
+                </properties>
+                <children>
+                  #include <include/bgp-neighbor-afi-ipv4-unicast.xml.i>
+                  #include <include/bgp-neighbor-afi-ipv6-unicast.xml.i>
+                </children>
+              </node>
+              <leafNode name="advertisement-interval">
+                <properties>
+                  <help>Minimum interval for sending routing updates</help>
+                  <valueHelp>
+                    <format>&lt;0-600&gt;</format>
+                    <description>Advertisement interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-600"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="bfd">
+                <properties>
+                  <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
+                </properties>
+                <children>
+                  <leafNode name="check-control-plane-failure">
+                    <properties>
+                      <help>Allow to write CBIT independence in BFD outgoing packets and read both C-BIT value of BFD and lookup BGP peer status</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="capability">
+                <properties>
+                  <help>Advertise capabilities to this neighbor</help>
+                </properties>
+                <children>
+                  <leafNode name="dynamic">
+                    <properties>
+                      <help>Advertise dynamic capability to this neighbor</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="extended-nexthop">
+                    <properties>
+                      <help>Advertise extended-nexthop capability to this neighbor</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="description">
+                <properties>
+                  <help>Description for this neighbor</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-capability-negotiation">
+                <properties>
+                  <help>Disable capability negotiation with this neighbor</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-connected-check">
+                <properties>
+                  <help>Disable check to see if EBGP peer's address is a connected route</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="disable-send-community">
+                <properties>
+                  <help>Disable sending community attributes to this neighbor (IPv4)</help>
+                </properties>
+                <children>
+                  <leafNode name="extended">
+                    <properties>
+                      <help>Disable sending extended community attributes to this neighbor (IPv4)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="standard">
+                    <properties>
+                      <help>Disable sending standard community attributes to this neighbor (IPv4)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="ebgp-multihop">
+                <properties>
+                  <help>Allow this EBGP neighbor to not be on a directly connected network</help>
+                  <valueHelp>
+                    <format>&lt;1-255&gt;</format>
+                    <description>Number of hops</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="interface">
+                <properties>
+                  <help>Interface parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="peer-group">
+                    <properties>
+                      <help>Peer group for this peer</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="remote-as">
+                    <properties>
+                      <help>Neighbor BGP AS number [REQUIRED]</help>
+                      <completionHelp>
+                        <list>external internal</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>&lt;1-4294967294&gt;</format>
+                        <description>Neighbor AS number</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>external</format>
+                        <description>Any AS different from the local AS</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>internal</format>
+                        <description>Neighbor AS number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967294"/>
+                        <regex>(external|internal)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid ASN value</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <node name="v6only">
+                    <properties>
+                      <help>Enable BGP with v6 link-local only</help>
+                    </properties>
+                    <children>
+                      <leafNode name="peer-group">
+                        <properties>
+                          <help>Peer group for this peer</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="remote-as">
+                        <properties>
+                          <help>Neighbor BGP AS number [REQUIRED]</help>
+                          <completionHelp>
+                            <list>external internal</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>&lt;1-4294967294&gt;</format>
+                            <description>Neighbor AS number</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>external</format>
+                            <description>Any AS different from the local AS</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>internal</format>
+                            <description>Neighbor AS number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-4294967294"/>
+                            <regex>(external|internal)</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid ASN value</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="local-as">
+                <properties>
+                  <help>Local AS number</help>
+                  <valueHelp>
+                    <format>&lt;1-4294967294&gt;</format>
+                    <description>Local AS number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967294"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="no-prepend">
+                    <properties>
+                      <help>Disable prepending local-as to updates from EBGP peers</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="override-capability">
+                <properties>
+                  <help>Ignore capability negotiation with specified neighbor</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="passive">
+                <properties>
+                  <help>Do not initiate a session with this neighbor</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="password">
+                <properties>
+                  <help>BGP MD5 password</help>
+                </properties>
+              </leafNode>
+              <leafNode name="peer-group">
+                <properties>
+                  <help>IPv4 peer group for this peer</help>
+                </properties>
+              </leafNode>
+              <leafNode name="port">
+                <properties>
+                  <help>Neighbor's BGP port</help>
+                  <valueHelp>
+                    <format>&lt;1-65535&gt;</format>
+                    <description>Neighbor BGP port number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="remote-as">
+                <properties>
+                  <help>Neighbor BGP AS number [REQUIRED]</help>
+                  <completionHelp>
+                    <list>external internal</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>&lt;1-4294967294&gt;</format>
+                    <description>Neighbor AS number</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>external</format>
+                    <description>Any AS different from the local AS</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>internal</format>
+                    <description>Neighbor AS number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967294"/>
+                    <regex>(external|internal)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid ASN value</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="shutdown">
+                <properties>
+                  <help>Administratively shut down neighbor</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="strict-capability-match">
+                <properties>
+                  <help>Enable strict capability negotiation</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="timers">
+                <properties>
+                  <help>Neighbor timers</help>
+                </properties>
+                <children>
+                  <leafNode name="connect">
+                    <properties>
+                      <help>BGP connect timer for this neighbor</help>
+                      <valueHelp>
+                        <format>&lt;1-65535&gt;</format>
+                        <description>Connect timer in seconds</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>0</format>
+                        <description>Disable connect timer</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="holdtime">
+                    <properties>
+                      <help>BGP hold timer for this neighbor</help>
+                      <valueHelp>
+                        <format>&lt;1-65535&gt;</format>
+                        <description>Hold timer in seconds</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>0</format>
+                        <description>Don't hold timer</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="keepalive">
+                    <properties>
+                      <help>BGP keepalive interval for this neighbor</help>
+                      <valueHelp>
+                        <format>&lt;1-65535&gt;</format>
+                        <description>Keepalive interval in seconds (default 60)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="ttl-security">
+                <properties>
+                  <help>Ttl security mechanism for this BGP peer</help>
+                </properties>
+                <children>
+                  <leafNode name="hops">
+                    <properties>
+                      <help>Number of the maximum number of hops to the BGP peer</help>
+                      <valueHelp>
+                        <format>&lt;1-254&gt;</format>
+                        <description>Number of hops</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-254"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="update-source">
+                <!-- Need to check format interfaces -->
+                <properties>
+                  <help>Source IP of routing updates</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address of route source</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;interface&gt;</format>
+                    <description>Interface as route source</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+                  </constraint>
+                </properties>
+              </leafNode>              
+            </children>
+          </tagNode>
+          <node name="parameters">
+            <properties>
+              <help>BGP parameters</help>
+            </properties>
+            <children>
+              <leafNode name="always-compare-med">
+                <properties>
+                  <help>Always compare MEDs from different neighbors</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="bestpath">
+                <properties>
+                  <help>Default bestpath selection mechanism</help>
+                </properties>
+                <children>
+                  <node name="as-path">
+                    <properties>
+                      <help>AS-path attribute comparison parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="confed">
+                        <properties>
+                          <help>Compare AS-path lengths including confederation sets and sequences</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ignore">
+                        <properties>
+                          <help>Ignore AS-path length in selecting a route</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="multipath-relax">
+                        <properties>
+                          <help>Allow load sharing across routes that have different AS paths (but same length)</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="compare-routerid">
+                    <properties>
+                      <help>Compare the router-id for identical EBGP paths</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <node name="med">
+                    <properties>
+                      <help>MED attribute comparison parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="confed">
+                        <properties>
+                          <help>Compare MEDs among confederation paths</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="missing-as-worst">
+                        <properties>
+                          <help>Treat missing route as a MED as the least preferred one</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <leafNode name="cluster-id">
+                <properties>
+                  <help>Route-reflector cluster-id</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Route-reflector cluster-id</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="confederation">
+                <properties>
+                  <help>AS confederation parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="identifier">
+                    <properties>
+                      <help>Confederation AS identifier [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;1-4294967294&gt;</format>
+                        <description>Confederation AS id</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967294"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="peers">
+                    <properties>
+                      <help>Peer ASs in the BGP confederation</help>
+                      <valueHelp>
+                        <format>&lt;1-4294967294&gt;</format>
+                        <description>Peer AS number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967294"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="dampening">
+                <properties>
+                  <help>Enable route-flap dampening</help>
+                </properties>
+                <children>
+                  <leafNode name="half-life">
+                    <properties>
+                      <help>Half-life time for dampening [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;1-45&gt;</format>
+                        <description>Half-life penalty in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-45"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-suppress-time">
+                    <properties>
+                      <help>Maximum duration to suppress a stable route [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;1-255&gt;</format>
+                        <description>Maximum suppress duration in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="re-use">
+                    <properties>
+                      <help>Time to start reusing a route [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;1-20000&gt;</format>
+                        <description>Re-use time in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-20000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="start-suppress-time">
+                    <properties>
+                      <help>When to start suppressing a route [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;1-20000&gt;</format>
+                        <description>Start-suppress-time</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-20000"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="default">
+                <properties>
+                  <help>BGP defaults</help>
+                </properties>
+                <children>
+                  <leafNode name="local-pref">
+                    <properties>
+                      <help>Default local preference</help>
+                      <valueHelp>
+                        <format>&lt;0-4294967295&gt;</format>
+                        <description>Local preference</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="no-ipv4-unicast">
+                    <properties>
+                      <help>Deactivate IPv4 unicast for a peer by default</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="deterministic-med">
+                <properties>
+                  <help>Compare MEDs between different peers in the same AS</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="distance">
+                <properties>
+                  <help>Administratives distances for BGP routes</help>
+                </properties>
+                <children>
+                  <node name="global">
+                    <properties>
+                      <help>Global administratives distances for BGP routes</help>
+                    </properties>
+                    <children>
+                      <leafNode name="external">
+                        <properties>
+                          <help>Administrative distance for external BGP routes</help>
+                          <valueHelp>
+                            <format>&lt;1-255&gt;</format>
+                            <description>Administrative distance for external BGP routes</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-255"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="internal">
+                        <properties>
+                          <help>Administrative distance for internal BGP routes</help>
+                          <valueHelp>
+                            <format>&lt;1-255&gt;</format>
+                            <description>Administrative distance for internal BGP routes</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-255"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="local">
+                        <properties>
+                          <help>Administrative distance for local BGP routes</help>
+                          <valueHelp>
+                            <format>&lt;1-255&gt;</format>
+                            <description>Administrative distance for internal BGP routes</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-255"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <tagNode name="prefix">
+                    <properties>
+                      <help>Administrative distance for a specific BGP prefix</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>Administrative distance for a specific BGP prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="distance">
+                        <properties>
+                          <help>Administrative distance for prefix</help>
+                          <valueHelp>
+                            <format>&lt;1-255&gt;</format>
+                            <description>Administrative distance for external BGP routes</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-255"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <leafNode name="enforce-first-as">
+                <properties>
+                  <help>Require first AS in the path to match peer's AS</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="graceful-restart">
+                <properties>
+                  <help>Graceful restart capability parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="stalepath-time">
+                    <properties>
+                      <help>Maximum time to hold onto restarting peer's stale paths</help>
+                      <valueHelp>
+                        <format>&lt;1-3600&gt;</format>
+                        <description>Hold time in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-3600"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="log-neighbor-changes">
+                <properties>
+                  <help>Log neighbor up/down changes and reset reason</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="network-import-check">
+                <properties>
+                  <help>Enable IGP route check for network statements</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="no-client-to-client-reflection">
+                <properties>
+                  <help>Disable client to client route reflection</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="no-fast-external-failover">
+                <properties>
+                  <help>Disable immediate session reset if peer's connected link goes down</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="router-id">
+                <properties>
+                  <help>BGP router id</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>BGP router id</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="peer-group">
+            <properties>
+              <help>BGP peer-group</help>
+            </properties>
+            <children>
+              <node name="address-family">
+                <properties>
+                  <help>BGP peer-group address-family parameters</help>
+                </properties>
+                <children>
+                  #include <include/bgp-peer-group-afi-ipv4-unicast.xml.i>
+                  #include <include/bgp-peer-group-afi-ipv6-unicast.xml.i>
+                </children>
+              </node>
+              <leafNode name="bfd">
+                <properties>
+                  <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="capability">
+                <properties>
+                  <help>Advertise capabilities to this peer-group</help>
+                </properties>
+                <children>
+                  <leafNode name="dynamic">
+                    <properties>
+                      <help>Advertise dynamic capability to this peer-group</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="extended-nexthop">
+                    <properties>
+                      <help>Advertise extended-nexthop capability to this neighbor</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="description">
+                <properties>
+                  <help>Description for this peer-group</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-capability-negotiation">
+                <properties>
+                  <help>Disable capability negotiation with this peer-group</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-connected-check">
+                <properties>
+                  <help>Disable check to see if EBGP peer's address is a connected route</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ebgp-multihop">
+                <properties>
+                  <help>Allow this EBGP peer-group to not be on a directly connected network</help>
+                  <valueHelp>
+                    <format>&lt;1-255&gt;</format>
+                    <description>Number of hops</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="local-as">
+                <properties>
+                  <help>Local AS number [REQUIRED]</help>
+                  <valueHelp>
+                    <format>&lt;1-4294967294&gt;</format>
+                    <description>Local AS number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967294"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="no-prepend">
+                    <properties>
+                      <help>Disable prepending local-as to updates from EBGP peers</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="override-capability">
+                <properties>
+                  <help>Ignore capability negotiation with specified peer-group</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="passive">
+                <properties>
+                  <help>Do not intiate a session with this peer-group</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="password">
+                <properties>
+                  <help>BGP MD5 password</help>
+                </properties>
+              </leafNode>
+              <leafNode name="remote-as">
+                <properties>
+                  <help>Neighbor BGP AS number [REQUIRED]</help>
+                  <completionHelp>
+                    <list>external internal</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>&lt;1-4294967294&gt;</format>
+                    <description>Neighbor AS number</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>external</format>
+                    <description>Any AS different from the local AS</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>internal</format>
+                    <description>Neighbor AS number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967294"/>
+                    <regex>(external|internal)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid ASN value</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="shutdown">
+                <properties>
+                  <help>Administratively shut down peer-group</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="ttl-security">
+                <properties>
+                  <help>Ttl security mechanism</help>
+                </properties>
+                <children>
+                  <leafNode name="hops">
+                    <properties>
+                      <help>Number of the maximum number of hops to the BGP peer</help>
+                      <valueHelp>
+                        <format>&lt;1-254&gt;</format>
+                        <description>Number of hops</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-254"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="update-source">
+                <!-- Need to check format interfaces -->
+                <properties>
+                  <help>Source IP of routing updates</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address of route source</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;interface&gt;</format>
+                    <description>Interface as route source</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="route-map">
+            <properties>
+              <help>Filter routes installed in local route map</help>
+              <completionHelp>
+                <path>policy route-map</path>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <node name="timers">
+            <properties>
+              <help>BGP protocol timers</help>
+            </properties>
+            <children>
+              <leafNode name="holdtime">
+                <properties>
+                  <help>BGP holdtime interval</help>
+                  <valueHelp>
+                    <format>&lt;4-65535&gt;</format>
+                    <description>Hold-time in seconds (default 180)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>0</format>
+                    <description>Don't hold routes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="keepalive">
+                <properties>
+                  <help>Keepalive interval</help>
+                  <valueHelp>
+                    <format>&lt;1-65535&gt;</format>
+                    <description>Keep-alive time in seconds (default 60)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
