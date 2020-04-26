@@ -1,0 +1,21 @@
+#!/bin/sh -e
+if ! deb-systemd-helper --quiet was-enabled salt-minion.service; then
+    # Enables the unit on first installation, creates new
+    # symlinks on upgrades if the unit file has changed.
+    deb-systemd-helper disable salt-minion.service >/dev/null || true
+fi
+
+if [ -x "/etc/init.d/salt-minion" ]; then
+    update-rc.d -f salt-minion remove >/dev/null
+fi
+
+# Add minion user for salt-minion
+if ! grep -q '^minion' /etc/passwd; then
+    adduser --quiet --firstuid 100 --system --disabled-login --ingroup vyattacfg --gecos "salt minion user" --shell /bin/vbash minion
+    adduser --quiet minion frrvty
+    adduser --quiet minion sudo
+    adduser --quiet minion adm
+    adduser --quiet minion dip
+    adduser --quiet minion disk
+    adduser --quiet minion users
+fi
