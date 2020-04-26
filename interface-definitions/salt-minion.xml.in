@@ -40,7 +40,7 @@
           </leafNode>
           <leafNode name="id">
             <properties>
-              <help>Explicitly declare the id for this minion to use.</help>
+              <help>Explicitly declare ID for this minion to use (default: hostname)</help>
             </properties>
           </leafNode>
           <leafNode name="interval">
@@ -57,7 +57,7 @@
           </leafNode>
           <leafNode name="master-key">
             <properties>
-              <help>Enables verification of the master-public-signature returned by the master in auth-replies.</help>
+              <help>URL with signature of master for auth reply verification</help>
             </properties>
           </leafNode>
         </children>
