@@ -23,10 +23,9 @@ from sys import exit
 from urllib3 import PoolManager
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
 from vyos.template import render
-
+from vyos.util import call
+from vyos import ConfigError
 
 config_file = r'/etc/salt/minion'
 
@@ -35,7 +34,7 @@ default_config_data = {
     'log_file': '/var/log/salt/minion',
     'log_level': 'warning',
     'master' : 'salt',
-    'user': 'minion',
+    'user': 'nobody',
     'salt_id': gethostname(),
     'mine_interval': '60',
     'verify_master_pubkey_sign': 'false'
@@ -79,13 +78,13 @@ def get_config():
     return salt
 
 def generate(salt):
+    if not salt:
+        return None
+
     paths = ['/etc/salt/','/var/run/salt','/opt/vyatta/etc/config/salt/']
     directory = '/opt/vyatta/etc/config/salt/pki/minion'
     uid = getpwnam(salt['user']).pw_uid
     http = PoolManager()
-
-    if salt is None:
-        return None
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -117,10 +116,10 @@ def generate(salt):
 
 def apply(salt):
     if salt is not None:
-        call("sudo systemctl restart salt-minion")
+        call('systemctl restart salt-minion.service')
     else:
         # Salt access is removed in the commit
-        call("sudo systemctl stop salt-minion")
+        call('systemctl stop salt-minion.service')
         os.unlink(config_file)
 
     return None
