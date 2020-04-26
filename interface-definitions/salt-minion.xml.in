@@ -10,7 +10,13 @@
         <children>
           <leafNode name="hash_type">
             <properties>
-              <help>The hash_type is the hash to use when discovering the hash of a file on the master server.</help>
+              <help>Hash used when discovering file on master server (default: sha256)</help>
+              <completionHelp>
+                <list>md5 sha1 sha224 sha256 sha384 sha512</list>
+              </completionHelp>
+              <constraint>
+                <regex>(md5|sha1|sha224|sha256|sha384|sha512)</regex>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="master">
