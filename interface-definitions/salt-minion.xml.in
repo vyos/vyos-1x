@@ -45,7 +45,14 @@
           </leafNode>
           <leafNode name="interval">
             <properties>
-              <help>The number of minutes between mine updates.</help>
+              <help>Interval in minutes between updates (default: 60)</help>
+              <valueHelp>
+                <format>&lt;1-1440&gt;</format>
+                <description>Update interval in minutes</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-1440"/>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="master-key">
