@@ -15,16 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
-import argparse
 import re
 
+from argparse import ArgumentParser
 from datetime import datetime, timedelta, time as type_time, date as type_date
-from vyos.util import ask_yes_no
-from vyos.util import cmd
-from vyos.util import call
-from vyos.util import run
-from vyos.util import STDOUT
+from sys import exit
+
+from vyos.util import ask_yes_no, cmd, call, run, STDOUT
 
 systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
@@ -85,7 +82,7 @@ def cancel_shutdown():
         try:
             cmd('/sbin/shutdown -c --no-wall')
         except OSError as e:
-            sys.exit("Could not cancel a reboot or poweroff: %s" % e)
+            exit("Could not cancel a reboot or poweroff: %s" % e)
         message = "Scheduled %s has been cancelled %s" % (
             output['MODE'], timenow)
         run(f'wall {message}')
@@ -97,7 +94,7 @@ def execute_shutdown(time, reboot=True, ask=True):
     if not ask:
         action = "reboot" if reboot else "poweroff"
         if not ask_yes_no("Are you sure you want to %s this system?" % action):
-            sys.exit(0)
+            exit(0)
 
     action = "-r" if reboot else "-P"
 
@@ -115,8 +112,7 @@ def execute_shutdown(time, reboot=True, ask=True):
         if ts:
             cmd(f'/sbin/shutdown {action} {time[0]}', stderr=STDOUT)
         else:
-            sys.exit(
-                "Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
+            exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
     elif len(time) == 2:
         # Assume it's date and time
         ts = parse_time(time[0])
@@ -128,14 +124,11 @@ def execute_shutdown(time, reboot=True, ask=True):
             cmd('/sbin/shutdown {action} {t2}', stderr=STDOUT)
         else:
             if not ts:
-                sys.exit(
-                    "Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
+                exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
             else:
-                sys.exit(
-                    "Invalid time \"{0}\". A valid format is YYYY-MM-DD [HH:MM]".format(time[1]))
+                exit("Invalid time \"{0}\". A valid format is YYYY-MM-DD [HH:MM]".format(time[1]))
     else:
-        sys.exit(
-            "Could not decode date and time. Valids formats are HH:MM or YYYY-MM-DD HH:MM")
+        exit("Could not decode date and time. Valids formats are HH:MM or YYYY-MM-DD HH:MM")
     check_shutdown()
 
 
@@ -153,7 +146,7 @@ def chk_vyatta_based_reboots():
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument("--yes", "-y",
                         help="Do not ask for confirmation",
                         action="store_true",
@@ -188,8 +181,7 @@ def main():
         if args.check:
             check_shutdown()
     except KeyboardInterrupt:
-        sys.exit("Interrupted")
-
+        exit("Interrupted")
 
 if __name__ == "__main__":
     main()
