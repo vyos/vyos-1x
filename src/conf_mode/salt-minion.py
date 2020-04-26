@@ -77,6 +77,9 @@ def get_config():
 
     return salt
 
+def verify(salt):
+    return None
+
 def generate(salt):
     if not salt:
         return None
@@ -127,6 +130,7 @@ def apply(salt):
 if __name__ == '__main__':
     try:
         c = get_config()
+        verify(c)
         generate(c)
         apply(c)
     except ConfigError as e:
