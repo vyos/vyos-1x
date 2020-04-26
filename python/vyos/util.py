@@ -123,13 +123,14 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdout=PIPE, stderr=PIPE, decode='utf-8',
-        raising=None, message=''):
+        raising=None, message='', expect=[0]):
     """
     A wrapper around vyos.util.popen, which returns the stdout and
     will raise the error code of a command
 
     raising: specify which call should be used when raising (default is OSError)
              the class should only require a string as parameter
+    expect:  a list of error codes to consider as normal
     """
     decoded, code = popen(
         command, flag,
@@ -138,7 +139,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         env=env, shell=shell,
         decode=decode,
     )
-    if code != 0:
+    if code not in expect:
         feedback = message + '\n' if message else ''
         feedback += f'failed to run command: {command}\n'
         feedback += f'returned: {decoded}\n'
