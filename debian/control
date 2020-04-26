@@ -89,6 +89,7 @@ Depends: python3,
   pmacct (>= 1.6.0),
   python3-certbot-nginx,
   pppoe,
+  salt-minion,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
