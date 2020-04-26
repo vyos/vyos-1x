@@ -1,0 +1,148 @@
+# support for RFC3442 routes in DHCP RENEW
+
+function convert_to_cidr () {
+	cidr=""
+	set -- $1
+	while [ $# -gt 0 ]; do
+		net_length=$1
+
+		case $net_length in
+			32|31|30|29|28|27|26|25)
+				if [ $# -lt 9 ]; then
+					return 1
+				fi
+				net_address="${2}.${3}.${4}.${5}"
+				gateway="${6}.${7}.${8}.${9}"
+				shift 9
+				;;
+			24|23|22|21|20|19|18|17)
+				if [ $# -lt 8 ]; then
+					return 1
+				fi
+				net_address="${2}.${3}.${4}.0"
+				gateway="${5}.${6}.${7}.${8}"
+				shift 8
+				;;
+			16|15|14|13|12|11|10|9)
+				if [ $# -lt 7 ]; then
+					return 1
+				fi
+				net_address="${2}.${3}.0.0"
+				gateway="${4}.${5}.${6}.${7}"
+				shift 7
+				;;
+			8|7|6|5|4|3|2|1)
+				if [ $# -lt 6 ]; then
+					return 1
+				fi
+				net_address="${2}.0.0.0"
+				gateway="${3}.${4}.${5}.${6}"
+				shift 6
+				;;
+			0)	# default route
+				if [ $# -lt 5 ]; then
+					return 1
+				fi
+				net_address="0.0.0.0"
+				gateway="${2}.${3}.${4}.${5}"
+				shift 5
+				;;
+			*)	# error
+				return 1
+				;;
+		esac
+
+		cidr+="${net_address}/${net_length}:${gateway} "
+	done
+}
+
+# main script starts here
+
+RUN="yes"
+
+if [ "$RUN" = "yes" ]; then
+	convert_to_cidr "$old_rfc3442_classless_static_routes"
+	old_cidr=$cidr
+	convert_to_cidr "$new_rfc3442_classless_static_routes"
+	new_cidr=$cidr
+
+	if [ "$reason" = "RENEW" ]; then
+		if [ "$new_rfc3442_classless_static_routes" != "$old_rfc3442_classless_static_routes" ]; then
+			logmsg info "RFC3442 route change detected, old_routes: $old_rfc3442_classless_static_routes"
+			logmsg info "RFC3442 route change detected, new_routes: $new_rfc3442_classless_static_routes"
+			if [ -z "$new_rfc3442_classless_static_routes" ]; then
+				# delete all routes from the old_rfc3442_classless_static_routes
+				for route in $old_cidr; do
+					network=$(printf "${route}" | awk -F ":" '{print $1}')
+					gateway=$(printf "${route}" | awk -F ":" '{print $2}')
+					# take care of link-local routes
+					if [ "${gateway}" != '0.0.0.0' ]; then
+						via_arg="via ${gateway}"
+					else
+						via_arg=""
+					fi
+					ip -4 route del "${network}" "${via_arg}" dev "${interface}" >/dev/null 2>&1
+				done
+			elif [ -z "$old_rfc3442_classless_static_routes" ]; then
+				# add all routes from the new_rfc3442_classless_static_routes
+				for route in $new_cidr; do
+					network=$(printf "${route}" | awk -F ":" '{print $1}')
+					gateway=$(printf "${route}" | awk -F ":" '{print $2}')
+					# take care of link-local routes
+					if [ "${gateway}" != '0.0.0.0' ]; then
+						via_arg="via ${gateway}"
+					else
+						via_arg=""
+					fi
+					ip -4 route add "${network}" "${via_arg}" dev "${interface}" >/dev/null 2>&1
+				done
+			else
+				# update routes
+				# delete old
+				for old_route in $old_cidr; do
+					match="false"
+					for new_route in $new_cidr; do
+						if [[ "$old_route" == "$new_route" ]]; then
+							match="true"
+							break
+						fi
+					done
+					if [[ "$match" == "false" ]]; then
+						# delete old_route
+						network=$(printf "${old_route}" | awk -F ":" '{print $1}')
+						gateway=$(printf "${old_route}" | awk -F ":" '{print $2}')
+						# take care of link-local routes
+						if [ "${gateway}" != '0.0.0.0' ]; then
+							via_arg="via ${gateway}"
+						else
+							via_arg=""
+						fi
+						ip -4 route del "${network}" "${via_arg}" dev "${interface}" >/dev/null 2>&1
+					fi
+				done
+				# add new
+				for new_route in $new_cidr; do
+					match="false"
+					for old_route in $old_cidr; do
+						if [[ "$new_route" == "$old_route" ]]; then
+							match="true"
+							break
+						fi
+					done
+					if [[ "$match" == "false" ]]; then
+						# add new_route
+						network=$(printf "${new_route}" | awk -F ":" '{print $1}')
+						gateway=$(printf "${new_route}" | awk -F ":" '{print $2}')
+						# take care of link-local routes
+						if [ "${gateway}" != '0.0.0.0' ]; then
+							via_arg="via ${gateway}"
+						else
+							via_arg=""
+						fi
+						ip -4 route add "${network}" "${via_arg}" dev "${interface}" >/dev/null 2>&1
+					fi
+				done
+			fi
+		fi
+	fi
+fi

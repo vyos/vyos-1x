@@ -15,8 +15,11 @@ function frr_alive () {
 # convert ip route command to vtysh
 function iptovtysh () {
     # prepare variables for vtysh command
-    VTYSH_DISTANCE="210"
-    VTYSH_TAG="210"
+    local VTYSH_DISTANCE="210"
+    local VTYSH_TAG="210"
+    local VTYSH_NETADDR=""
+    local VTYSH_GATEWAY=""
+    local VTYSH_DEV=""
     # convert default route to 0.0.0.0/0
     if [ "$4" == "default" ] ; then
         VTYSH_NETADDR="0.0.0.0/0"
@@ -74,3 +77,4 @@ function ip () {
         fi
     fi
 }
+
