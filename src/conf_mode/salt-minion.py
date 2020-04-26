@@ -43,36 +43,36 @@ default_config_data = {
 def get_config():
     salt = deepcopy(default_config_data)
     conf = Config()
-    if not conf.exists('service salt-minion'):
+    base = ['service', 'salt-minion']
+
+    if not conf.exists(base):
         return None
     else:
-        conf.set_level('service salt-minion')
+        conf.set_level(base)
 
-    if conf.exists('hash_type'):
-        salt['hash_type'] = conf.return_value('hash_type')
+    if conf.exists(['hash_type']):
+        salt['hash_type'] = conf.return_value(['hash_type'])
 
-    if conf.exists('log_file'):
-        salt['log_file'] = conf.return_value('log_file')
+    if conf.exists(['log_file']):
+        salt['log_file'] = conf.return_value(['log_file'])
 
-    if conf.exists('log_level'):
-        salt['log_level'] = conf.return_value('log_level')
+    if conf.exists(['log_level']):
+        salt['log_level'] = conf.return_value(['log_level'])
 
-    if conf.exists('master'):
-        master = conf.return_values('master')
-        salt['master'] = master
+    if conf.exists(['master']):
+        salt['master'] = conf.return_values(['master'])
 
-    if conf.exists('id'):
-        salt['salt_id'] = conf.return_value('id')
+    if conf.exists(['id']):
+        salt['salt_id'] = conf.return_value(['id'])
 
-    if conf.exists('user'):
-        salt['user'] = conf.return_value('user')
+    if conf.exists(['user']):
+        salt['user'] = conf.return_value(['user'])
 
-    if conf.exists('mine_interval'):
-        salt['mine_interval'] = conf.return_value('mine_interval')
+    if conf.exists(['mine_interval']):
+        salt['mine_interval'] = conf.return_value(['mine_interval'])
 
-    salt['master-key'] = None
-    if conf.exists('master-key'):
-        salt['master-key'] = conf.return_value('master-key')
+    if conf.exists(['master-key']):
+        salt['master_key'] = conf.return_value(['master-key'])
         salt['verify_master_pubkey_sign'] = 'true'
 
     return salt
