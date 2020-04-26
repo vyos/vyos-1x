@@ -31,7 +31,6 @@ master_keyfile = r'/opt/vyatta/etc/config/salt/pki/minion/master_sign.pub'
 
 default_config_data = {
     'hash_type': 'sha256',
-    'log_file': '/var/log/salt/minion',
     'log_level': 'warning',
     'master' : 'salt',
     'user': 'nobody',
@@ -54,12 +53,6 @@ def get_config():
 
     if conf.exists(['hash_type']):
         salt['hash_type'] = conf.return_value(['hash_type'])
-
-    if conf.exists(['log_file']):
-        salt['log_file'] = conf.return_value(['log_file'])
-
-    if conf.exists(['log_level']):
-        salt['log_level'] = conf.return_value(['log_level'])
 
     if conf.exists(['master']):
         salt['master'] = conf.return_values(['master'])
@@ -90,6 +83,7 @@ def generate(salt):
         dirname = os.path.dirname(file)
         if not os.path.exists(dirname):
             os.mkdir(dirname)
+            chown(dirname, salt['user'], salt['group'])
 
     render(config_file, 'salt-minion/minion.tmpl', salt)
     chown(config_file, salt['user'], salt['group'])
