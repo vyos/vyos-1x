@@ -20,11 +20,16 @@ import re
 from argparse import ArgumentParser
 from datetime import datetime, timedelta, time as type_time, date as type_date
 from sys import exit
+from time import time
 
 from vyos.util import ask_yes_no, cmd, call, run, STDOUT
 
 systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
+def utc2local(datetime):
+    now = time()
+    offs = datetime.fromtimestamp(now) - datetime.utcfromtimestamp(now)
+    return datetime + offs
 
 def parse_time(s):
     try:
@@ -66,11 +71,12 @@ def get_shutdown_status():
 
 def check_shutdown():
     output = get_shutdown_status()
+    dt = datetime.strptime(output['DATETIME'], '%Y-%m-%d %H:%M:%S')
     if output and 'MODE' in output:
         if output['MODE'] == 'reboot':
-            print("Reboot is scheduled", output['DATETIME'])
+            print("Reboot is scheduled", utc2local(dt))
         elif output['MODE'] == 'poweroff':
-            print("Poweroff is scheduled", output['DATETIME'])
+            print("Poweroff is scheduled", utc2local(dt))
     else:
         print("Reboot or poweroff is not scheduled")
 
