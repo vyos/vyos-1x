@@ -80,15 +80,6 @@ def get_config():
     return salt
 
 def verify(salt):
-    if not salt:
-        return None
-
-    if not salt['salt_id']:
-        raise ConfigError('Missing mandatory salt id!')
-
-    if not salt['master']:
-        raise ConfigError('Salt master must be defined!')
-
     return None
 
 def generate(salt):
