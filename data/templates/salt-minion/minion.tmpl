@@ -12,7 +12,7 @@
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
-hash_type: {{ hash_type }}
+hash_type: {{ hash }}
 
 #####         Logging settings       #####
 ##########################################
@@ -21,11 +21,7 @@ hash_type: {{ hash_type }}
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-#log_file: /var/log/salt/minion
-#log_file: file:///dev/log
-#log_file: udp://loghost:10514
-#
-log_file: {{ log_file }}
+log_file: file:///dev/log
 
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
@@ -58,6 +54,6 @@ id: {{ salt_id }}
 
 
 # The number of minutes between mine updates.
-mine_interval: {{ mine_interval }}
+mine_interval: {{ interval }}
 
 verify_master_pubkey_sign: {{ verify_master_pubkey_sign }}

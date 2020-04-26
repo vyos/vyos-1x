@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!--Salt-minion configuration -->
 <interfaceDefinition>
   <node name="service">
     <children>
@@ -9,52 +8,33 @@
           <priority>500</priority>
         </properties>
         <children>
-          <leafNode name="hash_type">
+          <leafNode name="hash">
             <properties>
-              <help>The hash_type is the hash to use when discovering the hash of a file on the master server.</help>
-            </properties>
-          </leafNode>
-          <leafNode name="log_file">
-            <properties>
-              <help>The location of the minion log file.</help>
-            </properties>
-          </leafNode>
-          <leafNode name="log_level">
-            <properties>
-              <help>Log level</help>
-              <valueHelp>
-                <format>garbage</format>
-                <description>log garbage info</description>
-              </valueHelp>
-              <valueHelp>
-                <format>trace</format>
-                <description>log trace info</description>
-              </valueHelp>
-              <valueHelp>
-                <format>debug</format>
-                <description>log debug info</description>
-              </valueHelp>
-              <valueHelp>
-                <format>info</format>
-                <description>log info</description>
-              </valueHelp>
-              <valueHelp>
-                <format>warning</format>
-                <description>log warning info</description>
-              </valueHelp>
-              <valueHelp>
-                <format>error</format>
-                <description>log error info</description>
-              </valueHelp>
-              <valueHelp>
-                <format>critical</format>
-                <description>log critical info</description>
-              </valueHelp>
+              <help>Hash used when discovering file on master server (default: sha256)</help>
+              <completionHelp>
+                <list>md5 sha1 sha224 sha256 sha384 sha512</list>
+              </completionHelp>
+              <constraint>
+                <regex>(md5|sha1|sha224|sha256|sha384|sha512)</regex>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="master">
             <properties>
               <help>The hostname or IP address of the master.</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote syslog server IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Remote syslog server FQDN</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-address"/>
+                <validator name="fqdn"/>
+              </constraint>
+              <constraintErrorMessage>Invalid FQDN or IP address</constraintErrorMessage>
               <multi/>
             </properties>
           </leafNode>
@@ -63,12 +43,7 @@
               <help>Explicitly declare the id for this minion to use.</help>
             </properties>
           </leafNode>
-          <leafNode name="user">
-            <properties>
-              <help>The user to run the Salt processes.</help>
-            </properties>
-          </leafNode>
-          <leafNode name="mine_interval">
+          <leafNode name="interval">
             <properties>
               <help>The number of minutes between mine updates.</help>
             </properties>

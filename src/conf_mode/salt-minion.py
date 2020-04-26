@@ -17,117 +17,108 @@
 import os
 
 from copy import deepcopy
-from pwd import getpwnam
 from socket import gethostname
 from sys import exit
 from urllib3 import PoolManager
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
 from vyos.template import render
-
+from vyos.util import call, chown
+from vyos import ConfigError
 
 config_file = r'/etc/salt/minion'
+master_keyfile = r'/opt/vyatta/etc/config/salt/pki/minion/master_sign.pub'
 
 default_config_data = {
-    'hash_type': 'sha256',
-    'log_file': '/var/log/salt/minion',
+    'hash': 'sha256',
     'log_level': 'warning',
     'master' : 'salt',
-    'user': 'minion',
+    'user': 'nobody',
+    'group': 'nogroup',
     'salt_id': gethostname(),
     'mine_interval': '60',
-    'verify_master_pubkey_sign': 'false'
+    'verify_master_pubkey_sign': 'false',
+    'master_key': ''
 }
 
 def get_config():
     salt = deepcopy(default_config_data)
     conf = Config()
-    if not conf.exists('service salt-minion'):
+    base = ['service', 'salt-minion']
+
+    if not conf.exists(base):
         return None
     else:
-        conf.set_level('service salt-minion')
+        conf.set_level(base)
 
-    if conf.exists('hash_type'):
-        salt['hash_type'] = conf.return_value('hash_type')
+    if conf.exists(['hash']):
+        salt['hash'] = conf.return_value(['hash'])
 
-    if conf.exists('log_file'):
-        salt['log_file'] = conf.return_value('log_file')
+    if conf.exists(['master']):
+        salt['master'] = conf.return_values(['master'])
 
-    if conf.exists('log_level'):
-        salt['log_level'] = conf.return_value('log_level')
+    if conf.exists(['id']):
+        salt['salt_id'] = conf.return_value(['id'])
 
-    if conf.exists('master'):
-        master = conf.return_values('master')
-        salt['master'] = master
+    if conf.exists(['user']):
+        salt['user'] = conf.return_value(['user'])
 
-    if conf.exists('id'):
-        salt['salt_id'] = conf.return_value('id')
+    if conf.exists(['interval']):
+        salt['interval'] = conf.return_value(['interval'])
 
-    if conf.exists('user'):
-        salt['user'] = conf.return_value('user')
-
-    if conf.exists('mine_interval'):
-        salt['mine_interval'] = conf.return_value('mine_interval')
-
-    salt['master-key'] = None
-    if conf.exists('master-key'):
-        salt['master-key'] = conf.return_value('master-key')
+    if conf.exists(['master-key']):
+        salt['master_key'] = conf.return_value(['master-key'])
         salt['verify_master_pubkey_sign'] = 'true'
 
     return salt
 
-def generate(salt):
-    paths = ['/etc/salt/','/var/run/salt','/opt/vyatta/etc/config/salt/']
-    directory = '/opt/vyatta/etc/config/salt/pki/minion'
-    uid = getpwnam(salt['user']).pw_uid
-    http = PoolManager()
+def verify(salt):
+    return None
 
-    if salt is None:
+def generate(salt):
+    if not salt:
         return None
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    for file in [config_file, master_keyfile]:
+        dirname = os.path.dirname(file)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+            chown(dirname, salt['user'], salt['group'])
 
     render(config_file, 'salt-minion/minion.tmpl', salt)
+    chown(config_file, salt['user'], salt['group'])
 
-    path = "/etc/salt/"
-    for path in paths:
-      for root, dirs, files in os.walk(path):
-        for usgr in dirs:
-          os.chown(os.path.join(root, usgr), uid, 100)
-        for usgr in files:
-          os.chown(os.path.join(root, usgr), uid, 100)
+    if not os.path.exists(master_keyfile):
+        if salt['master_key']:
+            req = PoolManager().request('GET', salt['master_key'], preload_content=False)
 
-    if not os.path.exists('/opt/vyatta/etc/config/salt/pki/minion/master_sign.pub'):
-        if not salt['master-key'] is None:
-            r = http.request('GET', salt['master-key'], preload_content=False)
-
-            with open('/opt/vyatta/etc/config/salt/pki/minion/master_sign.pub', 'wb') as out:
+            with open(master_keyfile, 'wb') as f:
                 while True:
-                    data = r.read(1024)
+                    data = req.read(1024)
                     if not data:
                         break
-                    out.write(data)
+                    f.write(data)
 
-            r.release_conn()
+            req.release_conn()
+            chown(master_keyfile, salt['user'], salt['group'])
 
     return None
 
 def apply(salt):
-    if salt is not None:
-        call("sudo systemctl restart salt-minion")
+    if not salt:
+        # Salt removed from running config
+        call('systemctl stop salt-minion.service')
+        if os.path.exists(config_file):
+            os.unlink(config_file)
     else:
-        # Salt access is removed in the commit
-        call("sudo systemctl stop salt-minion")
-        os.unlink(config_file)
+        call('systemctl restart salt-minion.service')
 
     return None
 
 if __name__ == '__main__':
     try:
         c = get_config()
+        verify(c)
         generate(c)
         apply(c)
     except ConfigError as e:
