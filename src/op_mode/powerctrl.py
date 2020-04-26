@@ -86,12 +86,12 @@ def cancel_shutdown():
     if output and 'MODE' in output:
         timenow = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         try:
-            cmd('/sbin/shutdown -c --no-wall')
+            run('/sbin/shutdown -c --no-wall')
         except OSError as e:
             exit("Could not cancel a reboot or poweroff: %s" % e)
-        message = "Scheduled %s has been cancelled %s" % (
-            output['MODE'], timenow)
-        run(f'wall {message}')
+
+        message = 'Scheduled {} has been cancelled {}'.format(output['MODE'], timenow)
+        run(f'wall {message} > /dev/null 2>&1')
     else:
         print("Reboot or poweroff is not scheduled")
 
