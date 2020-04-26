@@ -56,6 +56,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     to discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
     """
     from vyos import debug
+    from vyos import airbag
     # log if the flag is set, otherwise log if command is set
     if not debug.enabled(flag):
         flag = 'command'
@@ -93,14 +94,19 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     str_out = pipe_out.decode(decode).replace('\r\n', '\n').strip()
     str_err = pipe_err.decode(decode).replace('\r\n', '\n').strip()
 
+    out_msg = f"returned (out):\n{str_out}"
     if str_out:
-        ret_msg = f"returned (out):\n{str_out}"
-        debug.message(ret_msg, flag)
+        debug.message(out_msg, flag)
 
     if str_err:
-        ret_msg = f"returned (err):\n{str_err}"
+        err_msg = f"returned (err):\n{str_err}"
         # this message will also be send to syslog via airbag
-        debug.message(ret_msg, flag, destination=sys.stderr)
+        debug.message(err_msg, flag, destination=sys.stderr)
+
+        # should something go wrong, report this too via airbag
+        airbag.noteworthy(cmd_msg)
+        airbag.noteworthy(out_msg)
+        airbag.noteworthy(err_msg)
 
     return str_out, p.returncode
 

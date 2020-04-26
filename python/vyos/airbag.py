@@ -26,6 +26,17 @@ from vyos.version import get_full_version_data
 DISABLE = False
 
 
+_noteworthy = []
+
+def noteworthy(msg):
+    """
+    noteworthy can be use to take note things which we may not want to
+    report to the user may but be worth including in bug report
+    if something goes wrong later on
+    """
+    _noteworthy.append(msg)
+
+
 # emulate a file object
 class _IO(object):
     def __init__(self, std, log):
@@ -58,11 +69,16 @@ def bug_report(dtype, value, trace):
 
     information = get_full_version_data()
     trace = '\n'.join(format_exception(dtype, value, trace)).replace('\n\n','\n')
+    note = ''
+    if _noteworthy:
+        note = 'noteworthy:\n'
+        note += '\n'.join(_noteworthy)
 
     information.update({
         'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'trace': trace,
         'instructions': COMMUNITY if 'rolling' in get_version() else SUPPORTED,
+        'note': note,
     })
 
     sys.stdout.write(INTRO.format(**information))
@@ -145,6 +161,7 @@ Hardware S/N:     {hardware_serial}
 Hardware UUID:    {hardware_uuid}
 
 {trace}
+{note}
 """
 
 INTRO = """\
