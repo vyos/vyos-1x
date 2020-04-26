@@ -30,7 +30,7 @@ config_file = r'/etc/salt/minion'
 master_keyfile = r'/opt/vyatta/etc/config/salt/pki/minion/master_sign.pub'
 
 default_config_data = {
-    'hash_type': 'sha256',
+    'hash': 'sha256',
     'log_level': 'warning',
     'master' : 'salt',
     'user': 'nobody',
@@ -51,8 +51,8 @@ def get_config():
     else:
         conf.set_level(base)
 
-    if conf.exists(['hash_type']):
-        salt['hash_type'] = conf.return_value(['hash_type'])
+    if conf.exists(['hash']):
+        salt['hash'] = conf.return_value(['hash'])
 
     if conf.exists(['master']):
         salt['master'] = conf.return_values(['master'])
@@ -63,8 +63,8 @@ def get_config():
     if conf.exists(['user']):
         salt['user'] = conf.return_value(['user'])
 
-    if conf.exists(['mine_interval']):
-        salt['mine_interval'] = conf.return_value(['mine_interval'])
+    if conf.exists(['interval']):
+        salt['interval'] = conf.return_value(['interval'])
 
     if conf.exists(['master-key']):
         salt['master_key'] = conf.return_value(['master-key'])

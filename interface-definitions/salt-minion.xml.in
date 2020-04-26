@@ -8,7 +8,7 @@
           <priority>500</priority>
         </properties>
         <children>
-          <leafNode name="hash_type">
+          <leafNode name="hash">
             <properties>
               <help>Hash used when discovering file on master server (default: sha256)</help>
               <completionHelp>
@@ -43,12 +43,7 @@
               <help>Explicitly declare the id for this minion to use.</help>
             </properties>
           </leafNode>
-          <leafNode name="user">
-            <properties>
-              <help>The user to run the Salt processes.</help>
-            </properties>
-          </leafNode>
-          <leafNode name="mine_interval">
+          <leafNode name="interval">
             <properties>
               <help>The number of minutes between mine updates.</help>
             </properties>

@@ -12,7 +12,7 @@
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
-hash_type: {{ hash_type }}
+hash_type: {{ hash }}
 
 #####         Logging settings       #####
 ##########################################
@@ -54,6 +54,6 @@ id: {{ salt_id }}
 
 
 # The number of minutes between mine updates.
-mine_interval: {{ mine_interval }}
+mine_interval: {{ interval }}
 
 verify_master_pubkey_sign: {{ verify_master_pubkey_sign }}
