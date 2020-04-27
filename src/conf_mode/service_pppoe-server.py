@@ -315,7 +315,7 @@ def get_config():
         pppoe['mtu'] = conf.return_value(['mtu'])
 
     if conf.exists(['session-control']):
-        pppoe['session_control'] = conf.return_value(['session-control'])
+        pppoe['sesscrtl'] = conf.return_value(['session-control'])
 
     # ppp_options
     if conf.exists(['ppp-options']):
