@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.configdict import list_diff, vlan_to_dict
+from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -70,18 +70,18 @@ default_config_data = {
 }
 
 def get_config():
-    eth = deepcopy(default_config_data)
-    conf = Config()
-
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    eth['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    conf = Config()
 
     # check if ethernet interface has been removed
-    cfg_base = ['interfaces', 'ethernet', eth['intf']]
+    cfg_base = ['interfaces', 'ethernet', ifname]
     if not conf.exists(cfg_base):
+        eth = deepcopy(default_config_data)
+        eth['intf'] = ifname
         eth['deleted'] = True
         # we can not bail out early as ethernet interface can not be removed
         # Kernel will complain with: RTNETLINK answers: Operation not supported.
@@ -91,42 +91,8 @@ def get_config():
     # set new configuration level
     conf.set_level(cfg_base)
 
-    # retrieve configured interface addresses
-    if conf.exists('address'):
-        eth['address'] = conf.return_values('address')
-
-    # get interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_values('address')
-    eth['address_remove'] = list_diff(eff_addr, eth['address'])
-
-    # retrieve interface description
-    if conf.exists('description'):
-        eth['description'] = conf.return_value('description')
-
-    # get DHCP client identifier
-    if conf.exists('dhcp-options client-id'):
-        eth['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
-
-    # DHCP client host name (overrides the system host name)
-    if conf.exists('dhcp-options host-name'):
-        eth['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
-
-    # DHCP client vendor identifier
-    if conf.exists('dhcp-options vendor-class-id'):
-        eth['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
-
-    # DHCPv6 only acquire config parameters, no address
-    if conf.exists('dhcpv6-options parameters-only'):
-        eth['dhcpv6_prm_only'] = True
-
-    # DHCPv6 temporary IPv6 address
-    if conf.exists('dhcpv6-options temporary'):
-        eth['dhcpv6_temporary'] = True
-
-    # ignore link state changes
-    if conf.exists('disable-link-detect'):
-        eth['disable_link_detect'] = 2
+    eth, disabled = intf_to_dict(conf, default_config_data)
+    eth['intf'] = ifname
 
     # disable ethernet flow control (pause frames)
     if conf.exists('disable-flow-control'):
@@ -136,10 +102,6 @@ def get_config():
     if conf.exists('hw-id'):
         eth['hw_id'] = conf.return_value('hw-id')
 
-    # disable interface
-    if conf.exists('disable'):
-        eth['disable'] = True
-
     # interface duplex
     if conf.exists('duplex'):
         eth['duplex'] = conf.return_value('duplex')
@@ -148,71 +110,9 @@ def get_config():
     if conf.exists('ip arp-cache-timeout'):
         eth['ip_arp_cache_tmo'] = int(conf.return_value('ip arp-cache-timeout'))
 
-    # ARP filter configuration
-    if conf.exists('ip disable-arp-filter'):
-        eth['ip_disable_arp_filter'] = 0
-
-    # ARP enable accept
-    if conf.exists('ip enable-arp-accept'):
-        eth['ip_enable_arp_accept'] = 1
-
-    # ARP enable announce
-    if conf.exists('ip enable-arp-announce'):
-        eth['ip_enable_arp_announce'] = 1
-
-    # ARP enable ignore
-    if conf.exists('ip enable-arp-ignore'):
-        eth['ip_enable_arp_ignore'] = 1
-
-    # Enable proxy-arp on this interface
-    if conf.exists('ip enable-proxy-arp'):
-        eth['ip_proxy_arp'] = 1
-
     # Enable private VLAN proxy ARP on this interface
     if conf.exists('ip proxy-arp-pvlan'):
         eth['ip_proxy_arp_pvlan'] = 1
-
-    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
-    if conf.exists('ipv6 address autoconf'):
-        eth['ipv6_autoconf'] = 1
-
-    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
-    if conf.exists('ipv6 address eui64'):
-        eth['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
-
-    # Determine currently effective EUI64 addresses - to determine which
-    # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_values('ipv6 address eui64')
-    eth['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, eth['ipv6_eui64_prefix'])
-
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
-        eth['ipv6_eui64_prefix_remove'].append('fe80::/64')
-    else:
-        # add the link-local by default to make IPv6 work
-        eth['ipv6_eui64_prefix'].append('fe80::/64')
-
-    # Disable IPv6 forwarding on this interface
-    if conf.exists('ipv6 disable-forwarding'):
-        eth['ipv6_forwarding'] = 0
-
-    # IPv6 Duplicate Address Detection (DAD) tries
-    if conf.exists('ipv6 dup-addr-detect-transmits'):
-        eth['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
-
-    # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        eth['mac'] = conf.return_value('mac')
-
-    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
-    # before re-adding them
-    if ( eth['mac'] and eth['intf'] in Section.interfaces(section='ethernet')
-            and eth['mac'] != EthernetIf(eth['intf'], create=False).get_mac() ):
-        eth['ipv6_eui64_prefix_remove'] += eth['ipv6_eui64_prefix']
-
-    # Maximum Transmission Unit (MTU)
-    if conf.exists('mtu'):
-        eth['mtu'] = int(conf.return_value('mtu'))
 
     # GRO (generic receive offload)
     if conf.exists('offload-options generic-receive'):
@@ -238,37 +138,8 @@ def get_config():
     if conf.exists('speed'):
         eth['speed'] = conf.return_value('speed')
 
-    # retrieve VRF instance
-    if conf.exists('vrf'):
-        eth['vrf'] = conf.return_value('vrf')
-
-    # re-set configuration level to parse new nodes
-    conf.set_level(cfg_base)
-    # get vif-s interfaces (currently effective) - to determine which vif-s
-    # interface is no longer present and needs to be removed
-    eff_intf = conf.list_effective_nodes('vif-s')
-    act_intf = conf.list_nodes('vif-s')
-    eth['vif_s_remove'] = list_diff(eff_intf, act_intf)
-
-    if conf.exists('vif-s'):
-        for vif_s in conf.list_nodes('vif-s'):
-            # set config level to vif-s interface
-            conf.set_level(cfg_base + ['vif-s', vif_s])
-            eth['vif_s'].append(vlan_to_dict(conf))
-
-    # re-set configuration level to parse new nodes
-    conf.set_level(cfg_base)
-    # Determine vif interfaces (currently effective) - to determine which
-    # vif interface is no longer present and needs to be removed
-    eff_intf = conf.list_effective_nodes('vif')
-    act_intf = conf.list_nodes('vif')
-    eth['vif_remove'] = list_diff(eff_intf, act_intf)
-
-    if conf.exists('vif'):
-        for vif in conf.list_nodes('vif'):
-            # set config level to vif interface
-            conf.set_level(cfg_base + ['vif', vif])
-            eth['vif'].append(vlan_to_dict(conf))
+    add_to_dict(conf, disabled, eth, 'vif', 'vif')
+    add_to_dict(conf, disabled, eth, 'vif-s', 'vif_s')
 
     return eth
 
