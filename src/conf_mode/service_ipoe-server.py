@@ -265,10 +265,6 @@ def generate(ipoe):
     if not ipoe:
         return None
 
-    dirname = os.path.dirname(ipoe_conf)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     render(ipoe_conf, 'accel-ppp/ipoe.config.tmpl', ipoe, trim_blocks=True)
 
     if ipoe['auth_mode'] == 'local':

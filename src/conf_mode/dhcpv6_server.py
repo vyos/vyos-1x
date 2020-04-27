@@ -335,11 +335,6 @@ def generate(dhcpv6):
     if not dhcpv6 or dhcpv6['disabled']:
         return None
 
-    # Create configuration directory on demand
-    dirname = os.path.dirname(config_file)
-    if not os.path.isdir(dirname):
-        os.mkdir(dirname)
-
     render(config_file, 'dhcpv6-server/dhcpdv6.conf.tmpl', dhcpv6)
     return None
 

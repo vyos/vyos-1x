@@ -98,11 +98,6 @@ def generate(relay):
     if not relay:
         return None
 
-    # Create configuration directory on demand
-    dirname = os.path.dirname(config_file)
-    if not os.path.isdir(dirname):
-        os.mkdir(dirname)
-
     render(config_file, 'dhcp-relay/config.tmpl', relay)
     return None
 

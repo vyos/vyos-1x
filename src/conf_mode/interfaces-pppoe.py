@@ -173,12 +173,6 @@ def generate(pppoe):
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
                     script_pppoe_ip_down, script_pppoe_ipv6_up]
 
-    # Ensure directories for config files exist - otherwise create them on demand
-    for file in config_files:
-        dirname = os.path.dirname(file)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd(f'systemctl stop ppp@{intf}.service')
 
@@ -189,27 +183,23 @@ def generate(pppoe):
                 os.unlink(file)
 
     else:
+        # generated script must be executable
+
         # Create PPP configuration files
         render(config_pppoe, 'pppoe/peer.tmpl',
-               pppoe, trim_blocks=True)
+               pppoe, trim_blocks=True, permision=0o755)
         # Create script for ip-pre-up.d
         render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl',
-               pppoe, trim_blocks=True)
+               pppoe, trim_blocks=True, permision=0o755)
         # Create script for ip-up.d
         render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl',
-               pppoe, trim_blocks=True)
+               pppoe, trim_blocks=True, permision=0o755)
         # Create script for ip-down.d
         render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl',
-               pppoe, trim_blocks=True)
+               pppoe, trim_blocks=True, permision=0o755)
         # Create script for ipv6-up.d
         render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
-               pppoe, trim_blocks=True)
-
-        # make generated script file executable
-        chmod_755(script_pppoe_pre_up)
-        chmod_755(script_pppoe_ip_up)
-        chmod_755(script_pppoe_ip_down)
-        chmod_755(script_pppoe_ipv6_up)
+               pppoe, trim_blocks=True, permision=0o755)
 
     return None
 

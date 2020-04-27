@@ -429,10 +429,6 @@ def generate(pppoe):
     if not pppoe:
         return None
 
-    dirname = os.path.dirname(pppoe_conf)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', pppoe, trim_blocks=True)
 
     if pppoe['local_users']:

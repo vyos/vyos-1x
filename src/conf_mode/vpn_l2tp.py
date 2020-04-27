@@ -340,10 +340,6 @@ def generate(l2tp):
     if not l2tp:
         return None
 
-    dirname = os.path.dirname(l2tp_conf)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     render(l2tp_conf, 'accel-ppp/l2tp.config.tmpl', l2tp, trim_blocks=True)
 
     if l2tp['auth_mode'] == 'local':

@@ -217,10 +217,6 @@ def generate(dyndns):
     if dyndns['deleted']:
         return None
 
-    dirname = os.path.dirname(config_file)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns)
 
     # Config file must be accessible only by its owner

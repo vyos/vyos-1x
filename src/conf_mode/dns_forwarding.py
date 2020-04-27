@@ -152,10 +152,6 @@ def generate(dns):
     if dns is None:
         return None
 
-    dirname = os.path.dirname(config_file)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True)
     return None
 
