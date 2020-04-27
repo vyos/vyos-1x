@@ -114,12 +114,14 @@ dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{
 {% endif -%}
 {% endif %}
 
+{% if sesscrtl != 'disable' %}
+[common]
+single-session={{ sesscrtl }}
+{% endif %}
+
 [ppp]
 verbose=1
 check-ip=1
-{% if not sesscrtl == 'disable' %}
-single-session={{sesscrtl}}
-{% endif -%}
 {% if ppp_ccp %}
 ccp=1
 {% endif %}
