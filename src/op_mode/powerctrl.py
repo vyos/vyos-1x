@@ -71,8 +71,8 @@ def get_shutdown_status():
 
 def check_shutdown():
     output = get_shutdown_status()
-    dt = datetime.strptime(output['DATETIME'], '%Y-%m-%d %H:%M:%S')
     if output and 'MODE' in output:
+        dt = datetime.strptime(output['DATETIME'], '%Y-%m-%d %H:%M:%S')
         if output['MODE'] == 'reboot':
             print("Reboot is scheduled", utc2local(dt))
         elif output['MODE'] == 'poweroff':
