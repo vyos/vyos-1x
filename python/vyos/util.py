@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 
 #
 # NOTE: Do not import full classes here, move your import to the function
@@ -25,7 +26,7 @@ import os
 # which all have slighty different behaviour
 from subprocess import Popen, PIPE, STDOUT, DEVNULL
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=None, decode=None):
+          stdout=PIPE, stderr=PIPE, decode='utf-8'):
     """
     popen is a wrapper helper aound subprocess.Popen
     with it default setting it will return a tuple (out, err)
@@ -48,12 +49,14 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
               - STDOUT, send the data to be merged with stdout
               - DEVNULL, discard the output
     decode:  specify the expected text encoding (utf-8, ascii, ...)
+             the default is explicitely utf-8 which is python's own default
 
     usage:
     to get both stdout, and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
     to discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
     """
     from vyos import debug
+    from vyos import airbag
     # log if the flag is set, otherwise log if command is set
     if not debug.enabled(flag):
         flag = 'command'
@@ -77,27 +80,39 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdin=stdin, stdout=stdout, stderr=stderr,
         env=env, shell=use_shell,
     )
-    tmp = p.communicate(input, timeout)
-    out1 = b''
-    out2 = b''
+
+    pipe = p.communicate(input, timeout)
+
+    pipe_out = b''
     if stdout == PIPE:
-        out1 = tmp[0]
+        pipe_out = pipe[0]
+
+    pipe_err = b''
     if stderr == PIPE:
-        out2 += tmp[1]
-    decoded1 = out1.decode(decode) if decode else out1.decode()
-    decoded2 = out2.decode(decode) if decode else out2.decode()
-    decoded1 = decoded1.replace('\r\n', '\n').strip()
-    decoded2 = decoded2.replace('\r\n', '\n').strip()
-    nl = '\n' if decoded1 and decoded2 else ''
-    decoded = decoded1 + nl + decoded2
-    if decoded:
-        ret_msg = f"returned:\n{decoded}"
-        debug.message(ret_msg, flag)
-    return decoded, p.returncode
+        pipe_err = pipe[1]
+
+    str_out = pipe_out.decode(decode).replace('\r\n', '\n').strip()
+    str_err = pipe_err.decode(decode).replace('\r\n', '\n').strip()
+
+    out_msg = f"returned (out):\n{str_out}"
+    if str_out:
+        debug.message(out_msg, flag)
+
+    if str_err:
+        err_msg = f"returned (err):\n{str_err}"
+        # this message will also be send to syslog via airbag
+        debug.message(err_msg, flag, destination=sys.stderr)
+
+        # should something go wrong, report this too via airbag
+        airbag.noteworthy(cmd_msg)
+        airbag.noteworthy(out_msg)
+        airbag.noteworthy(err_msg)
+
+    return str_out, p.returncode
 
 
 def run(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=DEVNULL, stderr=None, decode=None):
+        stdout=DEVNULL, stderr=PIPE, decode='utf-8'):
     """
     A wrapper around vyos.util.popen, which discard the stdout and
     will return the error code of a command
@@ -113,14 +128,15 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=None, decode=None,
-        raising=None, message=''):
+        stdout=PIPE, stderr=PIPE, decode='utf-8',
+        raising=None, message='', expect=[0]):
     """
     A wrapper around vyos.util.popen, which returns the stdout and
     will raise the error code of a command
 
     raising: specify which call should be used when raising (default is OSError)
              the class should only require a string as parameter
+    expect:  a list of error codes to consider as normal
     """
     decoded, code = popen(
         command, flag,
@@ -129,7 +145,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         env=env, shell=shell,
         decode=decode,
     )
-    if code != 0:
+    if code not in expect:
         feedback = message + '\n' if message else ''
         feedback += f'failed to run command: {command}\n'
         feedback += f'returned: {decoded}\n'
@@ -143,7 +159,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=PIPE, stderr=None, decode=None):
+         stdout=PIPE, stderr=PIPE, decode='utf-8'):
     """
     A wrapper around vyos.util.popen, which print the stdout and
     will return the error code of a command
