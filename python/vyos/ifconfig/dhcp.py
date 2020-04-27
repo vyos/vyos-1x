@@ -187,14 +187,14 @@ class _DHCPv6 (_DHCP):
 
         # stop dhclient
         cmd = 'start-stop-daemon'
-        cmd += ' --start'
+        cmd += ' --stop'
         cmd += ' --oknodo'
         cmd += ' --quiet'
         cmd += ' --pidfile {pid}'
         self._cmd(cmd.format(**self.file))
 
         # accept router announcements on this interface
-        self._write_sysfs(self.options['accept_ra'], 1)
+        self._write_sysfs(self.file['accept_ra'], 1)
 
         # cleanup old config files
         for name in ('conf', 'pid', 'lease'):
