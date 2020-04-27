@@ -213,10 +213,24 @@ def chown(path, user, group):
     from pwd import getpwnam
     from grp import getgrnam
 
-    if os.path.exists(path):
-        uid = getpwnam(user).pw_uid
-        gid = getgrnam(group).gr_gid
-        os.chown(path, uid, gid)
+    if user is None or group is None:
+        return False
+
+    if not os.path.exists(path):
+        return False
+	
+    uid = getpwnam(user).pw_uid
+    gid = getgrnam(group).gr_gid
+    os.chown(path, uid, gid)
+    return True
+
+
+def chmod(path, bitmask):
+    if not os.path.exists(path):
+        return
+    if bitmask is None:
+        return
+    os.chmod(path, bitmask)
 
 
 def chmod_600(path):
@@ -245,6 +259,13 @@ def chmod_755(path):
         bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
                   S_IROTH | S_IXOTH
         os.chmod(path, bitmask)
+
+
+def makedir(path, user=None, group=None):
+    if not os.path.exists(path):
+        return
+    os.mkdir(path)
+    chown(path, user, group)
 
 
 def colon_separated_to_dict(data_string, uniquekeys=False):

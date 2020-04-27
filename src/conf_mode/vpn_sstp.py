@@ -303,10 +303,6 @@ def generate(sstp):
     if not sstp:
         return None
 
-    dirname = os.path.dirname(sstp_conf)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
     render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp, trim_blocks=True)
 

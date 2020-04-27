@@ -152,12 +152,6 @@ def generate(wwan):
     config_files = [config_wwan, config_wwan_chat, script_wwan_pre_up,
                     script_wwan_ip_up, script_wwan_ip_down]
 
-    # Ensure directories for config files exist - otherwise create them on demand
-    for file in config_files:
-        dirname = os.path.dirname(file)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-
     # Always hang-up WWAN connection prior generating new configuration file
     cmd(f'systemctl stop ppp@{intf}.service')
 
@@ -172,17 +166,18 @@ def generate(wwan):
         render(config_wwan, 'wwan/peer.tmpl', wwan)
         # Create PPP chat script
         render(config_wwan_chat, 'wwan/chat.tmpl', wwan)
-        # Create script for ip-pre-up.d
-        render(script_wwan_pre_up, 'wwan/ip-pre-up.script.tmpl', wwan)
-        # Create script for ip-up.d
-        render(script_wwan_ip_up, 'wwan/ip-up.script.tmpl', wwan)
-        # Create script for ip-down.d
-        render(script_wwan_ip_down, 'wwan/ip-down.script.tmpl', wwan)
 
-        # make generated script file executable
-        chmod_755(script_wwan_pre_up)
-        chmod_755(script_wwan_ip_up)
-        chmod_755(script_wwan_ip_down)
+        # generated script file must be executable
+
+        # Create script for ip-pre-up.d
+        render(script_wwan_pre_up, 'wwan/ip-pre-up.script.tmpl',
+               wwan, permission=0o755)
+        # Create script for ip-up.d
+        render(script_wwan_ip_up, 'wwan/ip-up.script.tmpl',
+               wwan, permission=0o755)
+        # Create script for ip-down.d
+        render(script_wwan_ip_down, 'wwan/ip-down.script.tmpl',
+               wwan, permission=0o755)
 
     return None
 

@@ -594,11 +594,6 @@ def generate(dhcp):
     if not dhcp or dhcp['disabled']:
         return None
 
-    # Create configuration directory on demand
-    dirname = os.path.dirname(config_file)
-    if not os.path.isdir(dirname):
-        os.mkdir(dirname)
-
     # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw parameters
     # we can pass to ISC DHCPd
     render(config_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,

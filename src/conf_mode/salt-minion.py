@@ -79,14 +79,8 @@ def generate(salt):
     if not salt:
         return None
 
-    for file in [config_file, master_keyfile]:
-        dirname = os.path.dirname(file)
-        if not os.path.exists(dirname):
-            os.mkdir(dirname)
-            chown(dirname, salt['user'], salt['group'])
-
-    render(config_file, 'salt-minion/minion.tmpl', salt)
-    chown(config_file, salt['user'], salt['group'])
+    render(config_file, 'salt-minion/minion.tmpl', salt,
+           user=salt['user'], group=salt['group'])
 
     if not os.path.exists(master_keyfile):
         if salt['master_key']:

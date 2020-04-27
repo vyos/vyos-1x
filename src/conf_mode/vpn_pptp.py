@@ -247,10 +247,6 @@ def generate(pptp):
     if not pptp:
         return None
 
-    dirname = os.path.dirname(pptp_conf)
-    if not os.path.exists(dirname):
-        os.mkdir(dirname)
-
     render(pptp_conf, 'accel-ppp/pptp.config.tmpl', pptp, trim_blocks=True)
 
     if pptp['local_users']:

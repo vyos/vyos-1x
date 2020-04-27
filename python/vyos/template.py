@@ -19,6 +19,7 @@ from jinja2 import Environment
 from jinja2 import FileSystemLoader
 
 from vyos.defaults import directories
+from vyos.util import chmod, chown, makedir
 
 
 # reuse the same Environment to improve performance
@@ -32,7 +33,7 @@ _templates_mem = {
 }
 
 
-def render(destination, template, content, trim_blocks=False, formater=None):
+def render(destination, template, content, trim_blocks=False, formater=None, permission=None, user=None, group=None):
     """
     render a template from the template directory, it will raise on any errors
     destination: the file where the rendered template must be saved
@@ -45,6 +46,10 @@ def render(destination, template, content, trim_blocks=False, formater=None):
     python module generated when the debian package is build 
     (recovering the load time and overhead caused by having the file out of the code)
     """
+
+    # Create the directory if it does not exists
+    folder = os.path.dirname(destination)
+    makedir(folder, user, group)
 
     # Setup a renderer for the given template
     # This is cached and re-used for performance
@@ -63,3 +68,6 @@ def render(destination, template, content, trim_blocks=False, formater=None):
     # Write client config file
     with open(destination, 'w') as f:
         f.write(content)
+
+    chmod(destination, permission)
+    chown(destination, user, group)
