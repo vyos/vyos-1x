@@ -262,7 +262,7 @@ def chmod_755(path):
 
 
 def makedir(path, user=None, group=None):
-    if not os.path.exists(path):
+    if os.path.exists(path):
         return
     os.mkdir(path)
     chown(path, user, group)
