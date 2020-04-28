@@ -1,1 +1,1 @@
-DHCLIENT_OPTS="-nw -cf {{ config_path }}/{{ ifname }}.conf -pf {{ config_path }}/{{ ifname }}.pid -lf {{ config_path }}/{{ ifname }}.leases {{ '-S' if dhcpv6_prm_only }} {{ '-T' if dhcpv6_temporary }} {{ ifname }}"
+DHCLIENT_OPTS="-nw -cf {{ conf_file }} -pf {{ pid_file }} -lf {{ lease_file }} {{ '-S' if dhcpv6_prm_only }} {{ '-T' if dhcpv6_temporary }} {{ ifname }}"

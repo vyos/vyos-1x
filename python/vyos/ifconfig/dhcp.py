@@ -19,28 +19,20 @@ from vyos.dicts import FixedDict
 from vyos.ifconfig.control import Control
 from vyos.template import render
 
-class _DHCP (Control):
-    def __init__(self, ifname, **kargs):
-        super().__init__(**kargs)
-        self.file = {
-            'ifname': ifname,
-            'conf': self.client_base + f'/{ifname}.conf',
-            'options': self.client_base + f'/{ifname}.options',
-            'pid': self.client_base + f'/{ifname}.pid',
-            'lease': self.client_base + f'/{ifname}.leases',
-        }
 
-class _DHCPv4 (_DHCP):
-    client_base = r'/run/dhclient'
-
+class _DHCPv4 (Control):
     def __init__(self, ifname):
-        super().__init__(ifname)
+        super().__init__()
+        config_base = r'/run/dhclient'
         self.options = FixedDict(**{
             'ifname': ifname,
-            'config_path': self.client_base,
             'hostname': '',
             'client_id': '',
-            'vendor_class_id': ''
+            'vendor_class_id': '',
+            'conf_file': config_base + f'/{ifname}.conf',
+            'options_file': config_base + f'/{ifname}.options',
+            'pid_file': config_base + f'/{ifname}.pid',
+            'lease_file': config_base + f'/{ifname}.leases',
         })
 
     # replace dhcpv4/v6 with systemd.networkd?
@@ -55,17 +47,16 @@ class _DHCPv4 (_DHCP):
         >>> j = Interface('eth0')
         >>> j.dhcp.v4.set()
         """
-
         if not self.options['hostname']:
             # read configured system hostname.
             # maybe change to vyos hostd client ???
             with open('/etc/hostname', 'r') as f:
                 self.options['hostname'] = f.read().rstrip('\n')
 
-        render(self.file['options'], 'dhcp-client/daemon-options.tmpl', self.options)
-        render(self.file['conf'], 'dhcp-client/ipv4.tmpl', self.options)
+        render(self.options['options_file'], 'dhcp-client/daemon-options.tmpl', self.options)
+        render(self.options['conf_file'], 'dhcp-client/ipv4.tmpl', self.options)
 
-        return self._cmd('systemctl restart dhclient@{ifname}.service'.format(**self.file))
+        return self._cmd('systemctl restart dhclient@{ifname}.service'.format(**self.options))
 
     def delete(self):
         """
@@ -78,30 +69,29 @@ class _DHCPv4 (_DHCP):
         >>> j = Interface('eth0')
         >>> j.dhcp.v4.delete()
         """
-        if not os.path.isfile(self.file['pid']):
+        if not os.path.isfile(self.options['pid_file']):
             self._debug_msg('No DHCP client PID found')
             return None
 
-        return self._cmd('systemctl stop dhclient@{ifname}.service'.format(**self.file))
+        self._cmd('systemctl stop dhclient@{ifname}.service'.format(**self.options))
 
         # cleanup old config files
-        for name in ('conf', 'options', 'pid', 'lease'):
-            if os.path.isfile(self.file[name]):
-                os.remove(self.file[name])
+        for name in ('conf_file', 'options_file', 'pid_file', 'lease_file'):
+            if os.path.isfile(self.options[name]):
+                os.remove(self.options[name])
 
-class _DHCPv6 (_DHCP):
-    client_base = r'/run/dhclient6'
-
+class _DHCPv6 (Control):
     def __init__(self, ifname):
-        super().__init__(ifname)
+        super().__init__()
+        config_base = r'/run/dhclient6'
         self.options = FixedDict(**{
             'ifname': ifname,
-            'config_path': self.client_base,
+            'conf_file': config_base + f'/{ifname}.conf',
+            'options_file': config_base + f'/{ifname}.options',
+            'pid_file': config_base + f'/{ifname}.pid',
+            'lease_file': config_base + f'/{ifname}.leases',
             'dhcpv6_prm_only': False,
             'dhcpv6_temporary': False,
-        })
-        self.file.update({
-            'accept_ra': f'/proc/sys/net/ipv6/conf/{ifname}/accept_ra',
         })
 
     def set(self):
@@ -122,13 +112,13 @@ class _DHCPv6 (_DHCP):
             raise Exception(
                 'DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-        render(self.file['options'], 'dhcp-client/daemon-options.tmpl', self.options)
-        render(self.file['conf'], 'dhcp-client/ipv6.tmpl', self.options)
+        render(self.options['options_file'], 'dhcp-client/daemon-options.tmpl', self.options)
+        render(self.options['conf_file'], 'dhcp-client/ipv6.tmpl', self.options)
 
         # no longer accept router announcements on this interface
-        self._write_sysfs(self.file['accept_ra'], 0)
+        self._write_sysfs('/proc/sys/net/ipv6/conf/{ifname}/accept_ra'.format(**self.options), 0)
 
-        return self._cmd('systemctl restart dhclient6@{ifname}.service'.format(**self.file))
+        return self._cmd('systemctl restart dhclient6@{ifname}.service'.format(**self.options))
 
     def delete(self):
         """
@@ -141,19 +131,19 @@ class _DHCPv6 (_DHCP):
         >>> j = Interface('eth0')
         >>> j.dhcp.v6.delete()
         """
-        if not os.path.isfile(self.file['pid']):
+        if not os.path.isfile(self.options['pid_file']):
             self._debug_msg('No DHCPv6 client PID found')
             return None
 
-        return self._cmd('systemctl stop dhclient6@{ifname}.service'.format(**self.file))
+        self._cmd('systemctl stop dhclient6@{ifname}.service'.format(**self.options))
 
         # accept router announcements on this interface
-        self._write_sysfs(self.file['accept_ra'], 1)
+        self._write_sysfs('/proc/sys/net/ipv6/conf/{ifname}/accept_ra'.format(**self.options), 1)
 
         # cleanup old config files
-        for name in ('conf', 'options', 'pid', 'lease'):
-            if os.path.isfile(self.file[name]):
-                os.remove(self.file[name])
+        for name in ('conf_file', 'options_file', 'pid_file', 'lease_file'):
+            if os.path.isfile(self.options[name]):
+                os.remove(self.options[name])
 
 
 class DHCP(object):
