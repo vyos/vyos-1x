@@ -1,5 +1,5 @@
 [Unit]
-Description=DHCP client on %i (IPv4)
+Description=DHCP client on %i
 Documentation=man:dhclient(8)
 RequiresMountsFor=/run
 ConditionPathExists=/run/dhclient/%i.conf
@@ -8,7 +8,7 @@ After=vyos-router.service
 
 [Service]
 WorkingDirectory=/run/dhclient
-Type=simple
+Type=forking
 EnvironmentFile=-/run/dhclient/%i.options
 PIDFile=/run/dhclient/%i.pid
 ExecStart=/sbin/dhclient -4 $DHCLIENT_OPTS

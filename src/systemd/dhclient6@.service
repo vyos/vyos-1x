@@ -1,0 +1,18 @@
+[Unit]
+Description=DHCPv6 client on %i
+Documentation=man:dhclient(8)
+RequiresMountsFor=/run
+ConditionPathExists=/run/dhclient6/%i.conf
+ConditionPathExists=/run/dhclient6/%i.options
+After=vyos-router.service
+
+[Service]
+WorkingDirectory=/run/dhclient6
+Type=exec
+EnvironmentFile=-/run/dhclient6/%i.options
+PIDFile=/run/dhclient6/%i.pid
+ExecStart=/sbin/dhclient -6 $DHCLIENT_OPTS
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
