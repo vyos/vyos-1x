@@ -186,8 +186,12 @@
               </constraint>
               <constraintErrorMessage>Invalid host FQDN or IP address</constraintErrorMessage>
               <valueHelp>
-                <format>x.x.x.x or host.domain.tld</format>
-                <description>Remote host name or IP address</description>
+                <format>ipv4</format>
+                <description>Remote syslog server IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Remote syslog server FQDN</description>
               </valueHelp>
             </properties>
             <children>
@@ -200,7 +204,7 @@
                   <constraint>
                     <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
                   </constraint>
-                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage> 
+                  <constraintErrorMessage>Invalid facility type</constraintErrorMessage>
                   <valueHelp>
                     <format>all</format>
                     <description>All facilities excluding "mark"</description>
@@ -561,7 +565,7 @@
                       <help>time interval how often a mark message is being sent in seconds (default: 1200)</help>
                       <constraint>
                         <validator name="numeric" argument="--positive"/>
-                      </constraint> 
+                      </constraint>
                     </properties>
                   </leafNode>
                 </children>
