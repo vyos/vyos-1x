@@ -19,23 +19,22 @@ from vyos.dicts import FixedDict
 from vyos.ifconfig.control import Control
 from vyos.template import render
 
-
 class _DHCP (Control):
-    client_base = r'/var/lib/dhcp/dhclient_'
-
-    def __init__(self, ifname, version, **kargs):
+    def __init__(self, ifname, **kargs):
         super().__init__(**kargs)
-        self.version = version
         self.file = {
             'ifname': ifname,
-            'conf': self.client_base + ifname + '.' + version + 'conf',
-            'pid': self.client_base + ifname + '.' + version + 'pid',
-            'lease': self.client_base + ifname + '.' + version + 'leases',
+            'conf': self.client_base + f'{ifname}.conf',
+            'options': self.client_base + f'{ifname}.options',
+            'pid': self.client_base + f'{ifname}.pid',
+            'lease': self.client_base + f'{ifname}.leases',
         }
 
 class _DHCPv4 (_DHCP):
+    client_base = r'/run/dhclient/'
+
     def __init__(self, ifname):
-        super().__init__(ifname, '')
+        super().__init__(ifname)
         self.options = FixedDict(**{
             'ifname': ifname,
             'hostname': '',
@@ -62,18 +61,10 @@ class _DHCPv4 (_DHCP):
             with open('/etc/hostname', 'r') as f:
                 self.options['hostname'] = f.read().rstrip('\n')
 
+        render(self.file['options'], 'dhcp-client/daemon-options.tmpl', self.options)
         render(self.file['conf'], 'dhcp-client/ipv4.tmpl' ,self.options)
 
-        cmd = 'start-stop-daemon'
-        cmd += ' --start'
-        cmd += ' --oknodo'
-        cmd += ' --quiet'
-        cmd += ' --pidfile {pid}'
-        cmd += ' --exec /sbin/dhclient'
-        cmd += ' --'
-        # now pass arguments to dhclient binary
-        cmd += ' -4 -nw -cf {conf} -pf {pid} -lf {lease} {ifname}'
-        return self._cmd(cmd.format(**self.file))
+        return self._cmd('systemctl restart dhclient@{ifname}.service'.format(**self.file))
 
     def delete(self):
         """
@@ -90,32 +81,18 @@ class _DHCPv4 (_DHCP):
             self._debug_msg('No DHCP client PID found')
             return None
 
-	# with open(self.file['pid'], 'r') as f:
-	# 	pid = int(f.read())
-
-        # stop dhclient, we need to call dhclient and tell it should release the
-        # aquired IP address. tcpdump tells me:
-        # 172.16.35.103.68 > 172.16.35.254.67: [bad udp cksum 0xa0cb -> 0xb943!] BOOTP/DHCP, Request from 00:50:56:9d:11:df, length 300, xid 0x620e6946, Flags [none] (0x0000)
-        #  Client-IP 172.16.35.103
-        #  Client-Ethernet-Address 00:50:56:9d:11:df
-        #  Vendor-rfc1048 Extensions
-        #    Magic Cookie 0x63825363
-        #    DHCP-Message Option 53, length 1: Release
-        #    Server-ID Option 54, length 4: 172.16.35.254
-        #    Hostname Option 12, length 10: "vyos"
-        #
-        cmd = '/sbin/dhclient -cf {conf} -pf {pid} -lf {lease} -r {ifname}'
-        self._cmd(cmd.format(**self.file))
+        return self._cmd('systemctl stop dhclient@{ifname}.service'.format(**self.file))
 
         # cleanup old config files
-        for name in ('conf', 'pid', 'lease'):
+        for name in ('conf', 'options', 'pid', 'lease'):
             if os.path.isfile(self.file[name]):
                 os.remove(self.file[name])
 
-
 class _DHCPv6 (_DHCP):
+    client_base = r'/run/dhclient6/'
+
     def __init__(self, ifname):
-        super().__init__(ifname, 'v6')
+        super().__init__(ifname)
         self.options = FixedDict(**{
             'ifname': ifname,
             'dhcpv6_prm_only': False,

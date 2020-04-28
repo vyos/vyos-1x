@@ -1,0 +1,1 @@
+DHCLIENT_OPTS="-nw -cf /run/dhclient/{{ ifname }}.conf -pf /run/dhclient/{{ ifname }}.pid -lf /run/dhclient/{{ ifname }}.leases {{ ifname }}"
