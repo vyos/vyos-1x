@@ -181,8 +181,8 @@
             <properties>
               <help>Logging to a remote host</help>
               <constraint>
-                <validator name="ip-address" />
-                <regex>(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{0,62}[a-zA-Z0-9]\.)+[a-zA-Z]{2,63}$)</regex>
+                <validator name="ip-address"/>
+                <validator name="fqdn"/>
               </constraint>
               <constraintErrorMessage>Invalid host FQDN or IP address</constraintErrorMessage>
               <valueHelp>
