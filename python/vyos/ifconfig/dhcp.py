@@ -19,20 +19,20 @@ from vyos.dicts import FixedDict
 from vyos.ifconfig.control import Control
 from vyos.template import render
 
+config_base = r'/var/lib/dhcp/dhclient_'
 
 class _DHCPv4 (Control):
     def __init__(self, ifname):
         super().__init__()
-        config_base = r'/run/dhclient'
         self.options = FixedDict(**{
             'ifname': ifname,
             'hostname': '',
             'client_id': '',
             'vendor_class_id': '',
-            'conf_file': config_base + f'/{ifname}.conf',
-            'options_file': config_base + f'/{ifname}.options',
-            'pid_file': config_base + f'/{ifname}.pid',
-            'lease_file': config_base + f'/{ifname}.leases',
+            'conf_file': config_base + f'{ifname}.conf',
+            'options_file': config_base + f'{ifname}.options',
+            'pid_file': config_base + f'{ifname}.pid',
+            'lease_file': config_base + f'{ifname}.leases',
         })
 
     # replace dhcpv4/v6 with systemd.networkd?
@@ -83,13 +83,12 @@ class _DHCPv4 (Control):
 class _DHCPv6 (Control):
     def __init__(self, ifname):
         super().__init__()
-        config_base = r'/run/dhclient6'
         self.options = FixedDict(**{
             'ifname': ifname,
-            'conf_file': config_base + f'/{ifname}.conf',
-            'options_file': config_base + f'/{ifname}.options',
-            'pid_file': config_base + f'/{ifname}.pid',
-            'lease_file': config_base + f'/{ifname}.leases',
+            'conf_file': config_base + f'v6_{ifname}.conf',
+            'options_file': config_base + f'v6_{ifname}.options',
+            'pid_file': config_base + f'v6_{ifname}.pid',
+            'lease_file': config_base + f'v6_{ifname}.leases',
             'dhcpv6_prm_only': False,
             'dhcpv6_temporary': False,
         })

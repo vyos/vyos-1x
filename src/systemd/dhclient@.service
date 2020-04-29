@@ -1,16 +1,15 @@
 [Unit]
 Description=DHCP client on %i
 Documentation=man:dhclient(8)
-RequiresMountsFor=/run
-ConditionPathExists=/run/dhclient/%i.conf
-ConditionPathExists=/run/dhclient/%i.options
+ConditionPathExists=/var/lib/dhcp/dhclient_%i.conf
+ConditionPathExists=/var/lib/dhcp/dhclient_%i.options
 After=vyos-router.service
 
 [Service]
-WorkingDirectory=/run/dhclient
+WorkingDirectory=/var/lib/dhcp
 Type=exec
-EnvironmentFile=-/run/dhclient/%i.options
-PIDFile=/run/dhclient/%i.pid
+EnvironmentFile=-/var/lib/dhcp/dhclient_%i.options
+PIDFile=/var/lib/dhcp/dhclient_%i.pid
 ExecStart=/sbin/dhclient -4 $DHCLIENT_OPTS
 ExecStop=/sbin/dhclient -4 $DHCLIENT_OPTS -r
 Restart=always
