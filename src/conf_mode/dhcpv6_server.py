@@ -122,8 +122,7 @@ def get_config():
                     # The domain-search option specifies a 'search list' of Domain Names to be used
                     # by the client to locate not-fully-qualified domain names.
                     if conf.exists('domain-search'):
-                        for value in conf.return_values('domain-search'):
-                            subnet['domain_search'].append(f'"{value}"')
+                        subnet['domain_search'] = conf.return_values('domain-search')
 
                     # IPv6 address valid lifetime
                     #  (at the end the address is no longer usable by the client)
@@ -172,7 +171,7 @@ def get_config():
                             if is_ipv6(value):
                                 subnet['sip_address'].append(value)
                             else:
-                                subnet['sip_hostname'].append(f'"{value}"')
+                                subnet['sip_hostname'].append(value)
 
                     # List of local SNTP servers available for the client to synchronize their clocks
                     if conf.exists('sntp-server'):

@@ -21,7 +21,7 @@ shared-network {{ network.name }} {
         range6 {{ range.start }} {{ range.stop }};
         {%- endfor %}
         {%- if subnet.domain_search %}
-        option dhcp6.domain-search {{ subnet.domain_search | join(', ') }};
+        option dhcp6.domain-search "{{ subnet.domain_search | join('", "') }}";
         {%- endif %}
         {%- if subnet.lease_def %}
         default-lease-time {{ subnet.lease_def }};
@@ -51,7 +51,7 @@ shared-network {{ network.name }} {
         option dhcp6.sip-servers-addresses {{ subnet.sip_address | join(', ') }};
         {%- endif %}
         {%- if subnet.sip_hostname %}
-        option dhcp6.sip-servers-names {{ subnet.sip_hostname | join(', ') }};
+        option dhcp6.sip-servers-names "{{ subnet.sip_hostname | join('", "') }}";
         {%- endif %}
         {%- if subnet.sntp_server %}
         option dhcp6.sntp-servers {{ subnet.sntp_server | join(', ') }};
