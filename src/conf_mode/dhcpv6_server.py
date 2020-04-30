@@ -23,7 +23,7 @@ from copy import deepcopy
 from vyos.config import Config
 from vyos.template import render
 from vyos.util import call
-from vyos.validate import is_subnet_connected
+from vyos.validate import is_subnet_connected, is_ipv6
 from vyos import ConfigError
 
 config_file = r'/run/dhcp-server/dhcpdv6.conf'
@@ -37,10 +37,11 @@ default_config_data = {
 def get_config():
     dhcpv6 = deepcopy(default_config_data)
     conf = Config()
-    if not conf.exists('service dhcpv6-server'):
+    base = ['service', 'dhcpv6-server']
+    if not conf.exists(base):
         return None
     else:
-        conf.set_level('service dhcpv6-server')
+        conf.set_level(base)
 
     # Check for global disable of DHCPv6 service
     if conf.exists('disable'):
@@ -121,8 +122,8 @@ def get_config():
                     # The domain-search option specifies a 'search list' of Domain Names to be used
                     # by the client to locate not-fully-qualified domain names.
                     if conf.exists('domain-search'):
-                        for domain in conf.return_values('domain-search'):
-                            subnet['domain_search'].append('"' + domain + '"')
+                        for value in conf.return_values('domain-search'):
+                            subnet['domain_search'].append(f'"{value}"')
 
                     # IPv6 address valid lifetime
                     #  (at the end the address is no longer usable by the client)
@@ -166,13 +167,12 @@ def get_config():
                         print('TODO: This option is actually not implemented right now!')
 
                     # Local SIP server that is to be used for all outbound SIP requests - IPv6 address
-                    if conf.exists('sip-server-address'):
-                        subnet['sip_address'] = conf.return_values('sip-server-address')
-
-                    # Local SIP server that is to be used for all outbound SIP requests - hostname
-                    if conf.exists('sip-server-name'):
-                        for hostname in conf.return_values('sip-server-name'):
-                            subnet['sip_hostname'].append('"' + hostname + '"')
+                    if conf.exists('sip-server'):
+                        for value in conf.return_values('sip-server'):
+                            if is_ipv6(value):
+                                subnet['sip_address'].append(value)
+                            else:
+                                subnet['sip_hostname'].append(f'"{value}"')
 
                     # List of local SNTP servers available for the client to synchronize their clocks
                     if conf.exists('sntp-server'):
