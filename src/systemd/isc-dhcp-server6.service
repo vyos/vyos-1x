@@ -2,7 +2,7 @@
 Description=ISC DHCP IPv6 server
 Documentation=man:dhcpd(8)
 RequiresMountsFor=/run
-ConditionPathExists=/run/dhcp-server/dhcpd.conf
+ConditionPathExists=/run/dhcp-server/dhcpdv6.conf
 After=vyos-router.service
 
 [Service]
