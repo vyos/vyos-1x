@@ -20,7 +20,7 @@ from sys import exit
 from copy import deepcopy
 from netifaces import interfaces
 
-from vyos.ifconfig import EthernetIf, Section
+from vyos.ifconfig import EthernetIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.validate import is_member
@@ -297,8 +297,14 @@ def apply(eth):
         for addr in eth['address']:
             e.add_addr(addr)
 
-        # assign/remove VRF
-        e.set_vrf(eth['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge or bond,
+        # otherwise 'nomaster' removes it from it)
+        if not ( eth['is_bridge_member'] or eth['is_bond_member'] ):
+            e.set_vrf(eth['vrf'])
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if eth['is_bridge_member']:
+            e.add_to_bridge(eth['is_bridge_member'])
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in eth['vif_s_remove']:
