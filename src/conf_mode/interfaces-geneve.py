@@ -164,6 +164,10 @@ def apply(geneve):
         if not geneve['disable']:
             g.set_admin_state('up')
 
+        # re-add ourselves to any bridge we might have fallen out of
+        if geneve['is_bridge_member']:
+            g.add_to_bridge(geneve['is_bridge_member'])
+
     return None
 
 
