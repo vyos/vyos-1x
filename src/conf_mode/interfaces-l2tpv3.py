@@ -168,9 +168,9 @@ def verify(l2tpv3):
 
     if l2tpv3['deleted']:
         if l2tpv3['is_bridge_member']:
-            interface = l2tpv3['intf']
-            bridge = l2tpv3['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Interface "{l2tpv3["intf"]}" cannot be deleted as it is a '
+                f'member of bridge "{l2tpv3["is_bridge_member"]}"!'))
 
         return None
 
