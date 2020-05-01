@@ -200,6 +200,11 @@ def verify(wg):
 
         return None
 
+    if wg['is_bridge_member'] and wg['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{wg["intf"]}" '
+            f'as it is a member of bridge "{wg["is_bridge_member"]}"!'))
+
     if wg['vrf']:
         if wg['vrf'] not in interfaces():
             raise ConfigError(f'VRF "{wg["vrf"]}" does not exist')
