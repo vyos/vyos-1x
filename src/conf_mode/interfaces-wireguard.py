@@ -264,8 +264,10 @@ def apply(wg):
     # update interface description used e.g. within SNMP
     w.set_alias(wg['description'])
 
-    # assign/remove VRF
-    w.set_vrf(wg['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not wg['is_bridge_member']:
+        w.set_vrf(wg['vrf'])
 
     # remove peers
     for pub_key in wg['peer_remove']:
