@@ -23,6 +23,7 @@ from netifaces import interfaces
 from vyos.ifconfig import EthernetIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
+from vyos.validate import is_member
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -53,6 +54,8 @@ default_config_data = {
     'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'is_bridge_member': False,
+    'is_bond_member': False,
     'intf': '',
     'mac': '',
     'mtu': 1500,
@@ -112,6 +115,9 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists('ip proxy-arp-pvlan'):
         eth['ip_proxy_arp_pvlan'] = 1
+
+    # check if we are a member of any bond
+    eth['is_bond_member'] = is_member(conf, eth['intf'], 'bonding')
 
     # GRO (generic receive offload)
     if conf.exists('offload-options generic-receive'):
