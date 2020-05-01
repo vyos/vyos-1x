@@ -535,6 +535,14 @@ def verify(conf):
                 f'"{options["vrf"]}" and bridge {options["bridge"]} '
                 f'at the same time!'))
 
+    # bridge and address check
+    if ( options['bridge']
+            and ( options['addresses-add']
+                or options['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{options["name"]}" '
+            f'as it is a member of bridge "{options["bridge"]}"!'))
+
     # source-interface check
 
     if tun_dev and tun_dev not in options['interfaces']:
