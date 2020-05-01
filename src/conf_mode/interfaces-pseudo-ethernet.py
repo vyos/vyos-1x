@@ -110,17 +110,19 @@ def get_config():
 def verify(peth):
     if peth['deleted']:
         if peth['is_bridge_member']:
-            interface = peth['intf']
-            bridge = peth['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{peth["intf"]}" as it is a '
+                f'member of bridge "{peth["is_bridge_member"]}"!'))
 
         return None
 
     if not peth['source_interface']:
-        raise ConfigError('source-interface must be set for virtual ethernet {}'.format(peth['intf']))
+        raise ConfigError((
+            f'Link device must be set for pseudo-ethernet "{peth["intf"]}"'))
 
     if not peth['source_interface'] in interfaces():
-        raise ConfigError('Pseudo-ethernet source-interface does not exist')
+        raise ConfigError((
+            f'Pseudo-ethernet "{peth["intf"]}" link device does not exist')
 
     if ( peth['is_bridge_member']
             and ( peth['address']
