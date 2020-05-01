@@ -436,11 +436,14 @@ def verify(conf):
 
     if changes['section'] == 'delete':
         if ifname in options['nhrp']:
-            raise ConfigError(f'Can not delete interface tunnel {iftype} {ifname}, it is used by nhrp')
+            raise ConfigError((
+                f'Cannot delete interface tunnel {iftype} {ifname}, '
+                'it is used by NHRP'))
 
-        bridge = options['bridge']
-        if bridge:
-            raise ConfigError(f'Interface "{ifname}" can not be deleted as it belongs to bridge "{bridge}"!')
+        if options['bridge']:
+             raise ConfigError((
+                f'Cannot delete interface "{options["ifname"]}" as it is a '
+                f'member of bridge "{options["bridge"]}"!'))
 
         # done, bail out early
         return None
