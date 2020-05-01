@@ -122,7 +122,8 @@ def get_config():
         vxlan['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
 
     # Remove the default link-local address if set.
-    if not conf.exists('ipv6 address no-default-link-local'):
+    if not ( conf.exists('ipv6 address no-default-link-local')
+            or vxlan['is_bridge_member'] ):
         # add the link-local by default to make IPv6 work
         vxlan['ipv6_eui64_prefix'].append('fe80::/64')
 
@@ -193,6 +194,14 @@ def verify(vxlan):
         if underlay_mtu < (vxlan['mtu'] + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               'MTU is to small ({})'.format(underlay_mtu))
+
+    if ( vxlan['is_bridge_member']
+            and ( vxlan['address']
+                or vxlan['ipv6_eui64_prefix']
+                or vxlan['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{vxlan["intf"]}" '
+            f'as it is a member of bridge "{vxlan["is_bridge_member"]}"!'))
 
     return None
 
