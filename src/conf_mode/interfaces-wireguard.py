@@ -190,13 +190,11 @@ def get_config():
 
 
 def verify(wg):
-    interface = wg['intf']
-
     if wg['deleted']:
         if wg['is_bridge_member']:
-            interface = wg['intf']
-            bridge = wg['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{wg["intf"]}" as it is a member '
+                f'of bridge "{wg["is_bridge_member"]}"!'))
 
         return None
 
@@ -220,25 +218,24 @@ def verify(wg):
                           '"run generate wireguard [keypair|named-keypairs]"')
 
     if not wg['address']:
-        raise ConfigError(f'IP address required for interface "{interface}"!')
+        raise ConfigError(f'IP address required for interface "{wg["intf"]}"!')
 
     if not wg['peer']:
-        raise ConfigError(f'Peer required for interface "{interface}"!')
+        raise ConfigError(f'Peer required for interface "{wg["intf"]}"!')
 
     # run checks on individual configured WireGuard peer
     for peer in wg['peer']:
-        peer_name = peer['name']
         if not peer['allowed-ips']:
-            raise ConfigError(f'Peer allowed-ips required for peer "{peer_name}"!')
+            raise ConfigError(f'Peer allowed-ips required for peer "{peer["name"]}"!')
 
         if not peer['pubkey']:
-            raise ConfigError(f'Peer public-key required for peer "{peer_name}"!')
+            raise ConfigError(f'Peer public-key required for peer "{peer["name"]}"!')
 
         if peer['address'] and not peer['port']:
-            raise ConfigError(f'Peer "{peer_name}" port must be defined if address is defined!')
+            raise ConfigError(f'Peer "{peer["name"]}" port must be defined if address is defined!')
 
         if not peer['address'] and peer['port']:
-           raise ConfigError(f'Peer "{peer_name}" address must be defined if port is defined!')
+           raise ConfigError(f'Peer "{peer["name"]}" address must be defined if port is defined!')
 
 
 def apply(wg):
