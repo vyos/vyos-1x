@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
-from vyos.validate import is_member
+from vyos.validate import is_member, has_address_configured
 from vyos.config import Config
 from vyos.util import cmd, get_bridge_member_config
 from vyos import ConfigError
@@ -267,6 +267,12 @@ def verify(bridge):
             raise ConfigError((
                 f'Cannot add interface "{intf["name"]}" to bridge '
                 f'"{bridge["intf"]}", it is already a member of bond "{tmp}"!'))
+
+        # bridge members must not have an assigned address
+        if has_address_configured(conf, intf['name']):
+            raise ConfigError((
+                f'Cannot add interface "{intf["name"]}" to bridge '
+                f'"{bridge["intf"]}", it has an address assigned!'))
 
     return None
 
