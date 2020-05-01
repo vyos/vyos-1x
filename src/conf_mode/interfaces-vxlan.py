@@ -274,6 +274,10 @@ def apply(vxlan):
         if not vxlan['disable']:
             v.set_admin_state('up')
 
+        # re-add ourselves to any bridge we might have fallen out of
+        if vxlan['is_bridge_member']:
+            v.add_to_bridge(vxlan['is_bridge_member'])
+
     return None
 
 
