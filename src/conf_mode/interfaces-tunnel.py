@@ -525,10 +525,15 @@ def verify(conf):
         print(f'Should not use IPv6 addresses on tunnel {iftype} {ifname}')
 
     # vrf check
+    if options['vrf']:
+        if options['vrf'] not in options['interfaces']:
+            raise ConfigError(f'VRF "{options["vrf"]}" does not exist')
 
-    vrf = options['vrf']
-    if vrf and vrf not in options['interfaces']:
-        raise ConfigError(f'VRF "{vrf}" does not exist')
+        if options['bridge']:
+            raise ConfigError((
+                f'Interface "{options["ifname"]}" cannot be member of VRF '
+                f'"{options["vrf"]}" and bridge {options["bridge"]} '
+                f'at the same time!'))
 
     # source-interface check
 
