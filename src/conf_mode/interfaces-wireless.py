@@ -599,9 +599,15 @@ def verify(wifi):
         if not radius['key']:
             raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
 
-    vrf_name = wifi['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if wifi['vrf']:
+        if wifi['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{wifi["vrf"]}" does not exist')
+
+        if wifi['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{wifi["intf"]}" cannot be member of VRF '
+                f'"{wifi["vrf"]}" and bridge {wifi["is_bridge_member"]} '
+                f'at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(wifi)
