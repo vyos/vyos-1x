@@ -98,9 +98,9 @@ def get_config():
 def verify(geneve):
     if geneve['deleted']:
         if geneve['is_bridge_member']:
-            interface = geneve['intf']
-            bridge = geneve['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{geneve["intf"]}" as it is a '
+                f'member of bridge "{geneve["is_bridge_member"]}"!'))
 
         return None
 
