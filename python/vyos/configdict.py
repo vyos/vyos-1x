@@ -416,13 +416,13 @@ def add_to_dict(conf, disabled, ifdict, section, key):
 
 def vlan_to_dict(conf, default=vlan_default):
     vlan, disabled = intf_to_dict(conf, default)
-    # get the '100' in 'interfaces bonding bond0 vif-s 100
-    vlan['id'] = conf.get_level()[-1]
 
-    current_level = conf.get_level()
+    level = conf.get_level()
+    # get the '100' in 'interfaces bonding bond0 vif-s 100'
+    vlan['id'] = level[-1]
 
     # if this is a not within vif-s node, we are done
-    if current_level[-2] != 'vif-s':
+    if level[-2] != 'vif-s':
         return vlan
 
     # ethertype is mandatory on vif-s nodes and only exists here!
