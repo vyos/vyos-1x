@@ -54,7 +54,7 @@ class Section:
         name = name.rstrip('0123456789')
         name = name.rstrip('.')
         if vlan:
-            name = name.rstrip('0123456789')
+            name = name.rstrip('0123456789.')
         return name
 
     @classmethod
