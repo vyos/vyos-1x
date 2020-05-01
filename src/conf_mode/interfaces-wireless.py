@@ -379,8 +379,8 @@ def get_config():
     eff_addr = conf.return_effective_values('ipv6 address eui64')
     wifi['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, wifi['ipv6_eui64_prefix'])
 
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
+    # Remove the default link-local address if set or if member of a bridge
+    if conf.exists('ipv6 address no-default-link-local') or wifi['is_bridge_member']:
         wifi['ipv6_eui64_prefix_remove'].append('fe80::/64')
     else:
         # add the link-local by default to make IPv6 work
@@ -598,6 +598,14 @@ def verify(wifi):
     for radius in wifi['sec_wpa_radius']:
         if not radius['key']:
             raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
+
+    if ( wifi['is_bridge_member']
+            and ( wifi['address']
+                or wifi['ipv6_eui64_prefix']
+                or wifi['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{wifi["intf"]}" '
+            f'as it is a member of bridge "{wifi["is_bridge_member"]}"!'))
 
     if wifi['vrf']:
         if wifi['vrf'] not in interfaces():
