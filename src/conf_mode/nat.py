@@ -19,6 +19,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.util import call
 from vyos.template import render
 from vyos import ConfigError
 
@@ -27,8 +28,7 @@ default_config_data = {
     'destination': []
 }
 
-nat_source_config = '/tmp/nat_source'
-nat_destination_config = '/tmp/nat_destination'
+iptables_nat_config = '/tmp/iptables_nat_config'
 
 def parse_source_destination(conf, source_dest):
     """ Common wrapper to read in both NAT source and destination CLI """
@@ -128,12 +128,14 @@ def generate(nat):
     if not nat:
         return None
 
-    render(nat_source_config, 'nat/nat-source.tmpl', nat, trim_blocks=True)
-    render(nat_destination_config, 'nat/nat-destination.tmpl', nat, trim_blocks=True)
-
+    render(iptables_nat_config, 'nat/iptables-restore.tmpl', nat, trim_blocks=True)
     return None
 
 def apply(nat):
+    if not nat:
+        return None
+
+    call(f'iptables-restore --test < {iptables_nat_config}')
 
     return None
 
