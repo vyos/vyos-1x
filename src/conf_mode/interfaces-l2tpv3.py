@@ -264,6 +264,10 @@ def apply(l2tpv3):
         if not l2tpv3['disable']:
             l.set_admin_state('up')
 
+        # re-add ourselves to any bridge we might have fallen out of
+        if l2tpv3['is_bridge_member']:
+            l.add_to_bridge(l2tpv3['is_bridge_member'])
+
     return None
 
 if __name__ == '__main__':
