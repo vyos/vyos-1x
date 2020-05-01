@@ -706,8 +706,10 @@ def apply(wifi):
         # Finally create the new interface
         w = WiFiIf(interface, **conf)
 
-        # assign/remove VRF
-        w.set_vrf(wifi['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not wifi['is_bridge_member']:
+            w.set_vrf(wifi['vrf'])
 
         # update interface description used e.g. within SNMP
         w.set_alias(wifi['description'])
