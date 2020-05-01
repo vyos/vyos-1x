@@ -23,6 +23,7 @@ from netifaces import interfaces
 from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
+from vyos.validate import is_member
 from vyos.config import Config
 from vyos.util import cmd, get_bridge_member_config
 from vyos import ConfigError
@@ -238,30 +239,34 @@ def verify(bridge):
         raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     conf = Config()
-    for br in conf.list_nodes('interfaces bridge'):
-        # it makes no sense to verify ourself in this case
-        if br == bridge['intf']:
-            continue
-
-        for intf in bridge['member']:
-            tmp = conf.list_nodes('interfaces bridge {} member interface'.format(br))
-            if intf['name'] in tmp:
-                raise ConfigError('Interface "{}" belongs to bridge "{}" and can not be enslaved.'.format(intf['name'], bridge['intf']))
-
-    # the interface must exist prior adding it to a bridge
     for intf in bridge['member']:
+        # the interface must exist prior adding it to a bridge
         if intf['name'] not in interfaces():
-            raise ConfigError('Can not add non existing interface "{}" to bridge "{}"'.format(intf['name'], bridge['intf']))
+            raise ConfigError((
+                f'Cannot add nonexistent interface "{intf["name"]}" '
+                f'to bridge "{bridge["intf"]}"'))
 
         if intf['name'] == 'lo':
             raise ConfigError('Loopback interface "lo" can not be added to a bridge')
 
-    # bridge members are not allowed to be bond members, too
-    for intf in bridge['member']:
-        for bond in conf.list_nodes('interfaces bonding'):
-            if conf.exists('interfaces bonding ' + bond + ' member interface'):
-                if intf['name'] in conf.return_values('interfaces bonding ' + bond + ' member interface'):
-                    raise ConfigError('Interface {} belongs to bond {}, can not add it to {}'.format(intf['name'], bond, bridge['intf']))
+        # bridge members aren't allowed to be members of another bridge
+        for br in conf.list_nodes('interfaces bridge'):
+            # it makes no sense to verify ourself in this case
+            if br == bridge['intf']:
+                continue
+
+            tmp = conf.list_nodes(f'interfaces bridge {br} member interface')
+            if intf['name'] in tmp:
+                raise ConfigError((
+                    f'Cannot add interface "{intf["name"]}" to bridge '
+                    f'"{bridge["intf"]}", it is already a member of bridge "{br}"!'))
+
+        # bridge members are not allowed to be bond members
+        tmp = is_member(conf, intf['name'], 'bonding')
+        if tmp:
+            raise ConfigError((
+                f'Cannot add interface "{intf["name"]}" to bridge '
+                f'"{bridge["intf"]}", it is already a member of bond "{tmp}"!'))
 
     return None
 
