@@ -184,9 +184,15 @@ def verify(bond):
             raise ConfigError('Mode dependency failed, primary not supported ' \
                               'in mode "{}"!'.format(bond['mode']))
 
-    vrf_name = bond['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if bond['vrf']:
+        if bond['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{bond["vrf"]}" does not exist')
+
+        if bond['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{bond["intf"]}" cannot be member of VRF '
+                f'"{bond["vrf"]}" and bridge {bond["is_bridge_member"]} '
+                f'at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(bond)
