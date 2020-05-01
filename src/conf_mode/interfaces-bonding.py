@@ -405,8 +405,14 @@ def apply(bond):
         for addr in bond['address']:
             b.add_addr(addr)
 
-        # assign/remove VRF
-        b.set_vrf(bond['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not bond['is_bridge_member']:
+            b.set_vrf(bond['vrf'])
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if bond['is_bridge_member']:
+            b.add_to_bridge(bond['is_bridge_member'])
 
         # remove no longer required service VLAN interfaces (vif-s)
         for vif_s in bond['vif_s_remove']:
