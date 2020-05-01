@@ -122,9 +122,15 @@ def verify(peth):
     if not peth['source_interface'] in interfaces():
         raise ConfigError('Pseudo-ethernet source-interface does not exist')
 
-    vrf_name = peth['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if peth['vrf']:
+        if peth['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{peth["vrf"]}" does not exist')
+
+        if peth['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{peth["intf"]}" cannot be member of VRF '
+                f'"{peth["vrf"]}" and bridge {peth["is_bridge_member"]} '
+                f'at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
