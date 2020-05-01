@@ -633,11 +633,16 @@ def apply(conf):
 
     # set other interface properties
     for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast',
-                   'vrf', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
+                   'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
         if not options[option]:
             # should never happen but better safe
             continue
         tunnel.set_interface(option, options[option])
+
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not options['bridge']:
+        tunnel.set_vrf(options['vrf'])
 
     # Configure interface address(es)
     for addr in options['addresses-del']:
