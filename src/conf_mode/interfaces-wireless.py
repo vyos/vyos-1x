@@ -552,9 +552,9 @@ def get_config():
 def verify(wifi):
     if wifi['deleted']:
         if wifi['is_bridge_member']:
-            interface = wifi['intf']
-            bridge = wifi['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{wifi["intf"]}" as it is a '
+                f'member of bridge "{wifi["is_bridge_member"]}"!'))
 
         return None
 
