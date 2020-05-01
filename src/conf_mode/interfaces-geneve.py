@@ -104,6 +104,11 @@ def verify(geneve):
 
         return None
 
+    if geneve['is_bridge_member'] and geneve['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{geneve["intf"]}" '
+            f'as it is a member of bridge "{geneve["is_bridge_member"]}"!'))
+
     if not geneve['remote']:
         raise ConfigError('GENEVE remote must be configured')
 
