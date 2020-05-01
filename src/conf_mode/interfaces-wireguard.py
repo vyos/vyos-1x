@@ -38,8 +38,8 @@ default_config_data = {
     'listen_port': '',
     'deleted': False,
     'disable': False,
-    'is_bridge_member': False,
     'fwmark': 0,
+    'is_bridge_member': False,
     'mtu': 1420,
     'peer': [],
     'peer_remove': [], # stores public keys of peers to remove
@@ -200,9 +200,15 @@ def verify(wg):
 
         return None
 
-    vrf_name = wg['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if wg['vrf']:
+        if wg['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{wg["vrf"]}" does not exist')
+
+        if wg['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{wg["intf"]}" cannot be member of VRF '
+                f'"{wg["vrf"]}" and bridge {wg["is_bridge_member"]} '
+                f'at the same time!'))
 
     if not os.path.exists(wg['pk']):
         raise ConfigError('No keys found, generate them by executing:\n' \
