@@ -167,9 +167,7 @@ def verify(eth):
     if eth['dhcpv6_prm_only'] and eth['dhcpv6_temporary']:
         raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-    vrf_name = eth['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    memberof = eth['is_bridge_member'] if eth['is_bridge_member'] else eth['is_bond_member']
 
     conf = Config()
     # some options can not be changed when interface is enslaved to a bond
@@ -179,6 +177,15 @@ def verify(eth):
             if eth['intf'] in bond_member:
                 if eth['address']:
                     raise ConfigError(f"Can not assign address to interface {eth['intf']} which is a member of {bond}")
+
+    if eth['vrf']:
+        if eth['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{eth["vrf"]}" does not exist')
+
+        if memberof:
+            raise ConfigError((
+                    f'Interface "{eth["intf"]}" cannot be member of VRF "{eth["vrf"]}" '
+                    f'and "{memberof}" at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(eth)
