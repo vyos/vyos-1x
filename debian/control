@@ -92,6 +92,9 @@ Depends: python3,
   pppoe,
   salt-minion,
   vyos-utils,
+  iptables,
+  nftables,
+  conntrack,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
