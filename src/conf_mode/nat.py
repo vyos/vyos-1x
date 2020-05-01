@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
@@ -28,7 +30,14 @@ default_config_data = {
     'destination': []
 }
 
-iptables_nat_config = '/tmp/iptables_nat_config'
+iptables_nat_config = '/tmp/vyos-nat-rules.nft'
+
+def _check_kmod():
+    modules = ['nft_nat', 'nft_chain_nat_ipv4']
+    for module in modules:
+        if not os.path.exists(f'/sys/module/{module}'):
+            if call(f'modprobe {module}') != 0:
+                raise ConfigError(f'Loading Kernel module {module} failed')
 
 def parse_source_destination(conf, source_dest):
     """ Common wrapper to read in both NAT source and destination CLI """
@@ -128,19 +137,19 @@ def generate(nat):
     if not nat:
         return None
 
-    render(iptables_nat_config, 'nat/iptables-restore.tmpl', nat, trim_blocks=True)
+    render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat, trim_blocks=True, permission=0o755)
     return None
 
 def apply(nat):
     if not nat:
         return None
 
-    call(f'iptables-restore --test < {iptables_nat_config}')
-
+    call(f'{iptables_nat_config}')
     return None
 
 if __name__ == '__main__':
     try:
+        _check_kmod()
         c = get_config()
         verify(c)
         generate(c)
