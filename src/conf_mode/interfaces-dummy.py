@@ -91,9 +91,15 @@ def verify(dummy):
 
         return None
 
-    vrf_name = dummy['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if dummy['vrf']:
+        if dummy['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{dummy["vrf"]}" does not exist')
+
+        if dummy['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{dummy["intf"]}" cannot be member of VRF '
+                f'"{dummy["vrf"]}" and bridge "{dummy["is_bridge_member"]}" '
+                f'at the same time!'))
 
     return None
 
