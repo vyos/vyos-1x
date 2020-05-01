@@ -134,6 +134,11 @@ def verify(wwan):
     if not os.path.exists(f"/dev/{wwan['device']}"):
         raise ConfigError(f"Device {wwan['device']} does not exist")
 
+    if wwan['is_bridge_member'] and wwan['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{wwan["intf"]}" '
+            f'as it is a member of bridge "{wwan["is_bridge_member"]}"!'))
+
     if wwan['vrf']:
         if wwan['vrf'] not in interfaces():
             raise ConfigError(f'VRF "{wwan["vrf"]}" does not exist')
