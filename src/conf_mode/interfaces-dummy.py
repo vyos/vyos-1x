@@ -129,8 +129,10 @@ def apply(dummy):
         for addr in dummy['address']:
             d.add_addr(addr)
 
-        # assign/remove VRF
-        d.set_vrf(dummy['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not dummy['is_bridge_member']:
+            d.set_vrf(dummy['vrf'])
 
         # disable interface on demand
         if dummy['disable']:
