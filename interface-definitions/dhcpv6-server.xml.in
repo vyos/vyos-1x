@@ -126,16 +126,37 @@
                       <leafNode name="default">
                         <properties>
                           <help>Default time (in seconds) that will be assigned to a lease</help>
+                          <valueHelp>
+                            <format>1-4294967295</format>
+                            <description>DHCPv6 valid lifetime</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-4294967295"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="maximum">
                         <properties>
                           <help>Maximum time (in seconds) that will be assigned to a lease</help>
+                          <valueHelp>
+                            <format>1-4294967295</format>
+                            <description>Maximum lease time in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-4294967295"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="minimum">
                         <properties>
                           <help>Minimum time (in seconds) that will be assigned to a lease</help>
+                          <valueHelp>
+                            <format>1-4294967295</format>
+                            <description>Minimum lease time in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-4294967295"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                     </children>
@@ -243,26 +264,21 @@
                       </tagNode>
                     </children>
                   </node>
-                  <leafNode name="sip-server-address">
+                  <leafNode name="sip-server">
                     <properties>
                       <help>IPv6 address of SIP server</help>
                       <valueHelp>
                         <format>ipv6</format>
                         <description>IPv6 address of SIP server</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>hostname</format>
+                        <description>FQDN of SIP server</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv6-address"/>
+                        <validator name="fqdn"/>
                       </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="sip-server-name">
-                    <properties>
-                      <help>SIP server name</help>
-                      <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>Invalid SIP server name. May only contain letters, numbers and .-_</constraintErrorMessage>
                       <multi/>
                     </properties>
                   </leafNode>

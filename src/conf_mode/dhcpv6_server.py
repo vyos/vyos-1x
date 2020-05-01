@@ -23,7 +23,7 @@ from copy import deepcopy
 from vyos.config import Config
 from vyos.template import render
 from vyos.util import call
-from vyos.validate import is_subnet_connected
+from vyos.validate import is_subnet_connected, is_ipv6
 from vyos import ConfigError
 
 config_file = r'/run/dhcp-server/dhcpdv6.conf'
@@ -37,24 +37,25 @@ default_config_data = {
 def get_config():
     dhcpv6 = deepcopy(default_config_data)
     conf = Config()
-    if not conf.exists('service dhcpv6-server'):
+    base = ['service', 'dhcpv6-server']
+    if not conf.exists(base):
         return None
     else:
-        conf.set_level('service dhcpv6-server')
+        conf.set_level(base)
 
     # Check for global disable of DHCPv6 service
-    if conf.exists('disable'):
+    if conf.exists(['disable']):
         dhcpv6['disabled'] = True
         return dhcpv6
 
     # Preference of this DHCPv6 server compared with others
-    if conf.exists('preference'):
-        dhcpv6['preference'] = conf.return_value('preference')
+    if conf.exists(['preference']):
+        dhcpv6['preference'] = conf.return_value(['preference'])
 
     # check for multiple, shared networks served with DHCPv6 addresses
-    if conf.exists('shared-network-name'):
-        for network in conf.list_nodes('shared-network-name'):
-            conf.set_level('service dhcpv6-server shared-network-name {0}'.format(network))
+    if conf.exists(['shared-network-name']):
+        for network in conf.list_nodes(['shared-network-name']):
+            conf.set_level(base + ['shared-network-name', network])
             config = {
                 'name': network,
                 'disabled': False,
@@ -62,13 +63,13 @@ def get_config():
             }
 
             # If disabled, the shared-network configuration becomes inactive
-            if conf.exists('disable'):
+            if conf.exists(['disable']):
                 config['disabled'] = True
 
             # check for multiple subnet configurations in a shared network
-            if conf.exists('subnet'):
-                for net in conf.list_nodes('subnet'):
-                    conf.set_level('service dhcpv6-server shared-network-name {0} subnet {1}'.format(network, net))
+            if conf.exists(['subnet']):
+                for net in conf.list_nodes(['subnet']):
+                    conf.set_level(base + ['shared-network-name', network, 'subnet', net])
                     subnet = {
                         'network': net,
                         'range6_prefix': [],
@@ -94,25 +95,25 @@ def get_config():
                     # least one address range statement. The range statement gives the lowest and highest
                     # IP addresses in a range. All IP addresses in the range should be in the subnet in
                     # which the range statement is declared.
-                    if conf.exists('address-range prefix'):
-                        for prefix in conf.list_nodes('address-range prefix'):
+                    if conf.exists(['address-range', 'prefix']):
+                        for prefix in conf.list_nodes(['address-range', 'prefix']):
                             range = {
                                 'prefix': prefix,
                                 'temporary': False
                             }
 
                             # Address range will be used for temporary addresses
-                            if conf.exists('address-range prefix {0} temporary'.format(range['prefix'])):
+                            if conf.exists(['address-range' 'prefix', prefix, 'temporary']):
                                 range['temporary'] = True
 
                             # Append to subnet temporary range6 list
                             subnet['range6_prefix'].append(range)
 
-                    if conf.exists('address-range start'):
-                        for range in conf.list_nodes('address-range start'):
+                    if conf.exists(['address-range', 'start']):
+                        for range in conf.list_nodes(['address-range', 'start']):
                             range = {
                                 'start': range,
-                                'stop': conf.return_value('address-range start {0} stop'.format(range))
+                                'stop': conf.return_value(['address-range', 'start', range, 'stop'])
                             }
 
                             # Append to subnet range6 list
@@ -120,70 +121,68 @@ def get_config():
 
                     # The domain-search option specifies a 'search list' of Domain Names to be used
                     # by the client to locate not-fully-qualified domain names.
-                    if conf.exists('domain-search'):
-                        for domain in conf.return_values('domain-search'):
-                            subnet['domain_search'].append('"' + domain + '"')
+                    if conf.exists(['domain-search']):
+                        subnet['domain_search'] = conf.return_values(['domain-search'])
 
                     # IPv6 address valid lifetime
                     #  (at the end the address is no longer usable by the client)
                     #  (set to 30 days, the usual IPv6 default)
-                    if conf.exists('lease-time default'):
-                        subnet['lease_def'] = conf.return_value('lease-time default')
+                    if conf.exists(['lease-time', 'default']):
+                        subnet['lease_def'] = conf.return_value(['lease-time', 'default'])
 
                     # Time should be the maximum length in seconds that will be assigned to a lease.
                     # The only exception to this is that Dynamic BOOTP lease lengths, which are not
                     # specified by the client, are not limited by this maximum.
-                    if conf.exists('lease-time maximum'):
-                        subnet['lease_max'] = conf.return_value('lease-time maximum')
+                    if conf.exists(['lease-time', 'maximum']):
+                        subnet['lease_max'] = conf.return_value(['lease-time', 'maximum'])
 
                     # Time should be the minimum length in seconds that will be assigned to a lease
-                    if conf.exists('lease-time minimum'):
-                        subnet['lease_min'] = conf.return_value('lease-time minimum')
+                    if conf.exists(['lease-time', 'minimum']):
+                        subnet['lease_min'] = conf.return_value(['lease-time', 'minimum'])
 
                     # Specifies a list of Domain Name System name servers available to the client.
                     # Servers should be listed in order of preference.
-                    if conf.exists('name-server'):
-                        subnet['dns_server'] = conf.return_values('name-server')
+                    if conf.exists(['name-server']):
+                        subnet['dns_server'] = conf.return_values(['name-server'])
 
                     # Ancient NIS (Network Information Service) domain name
-                    if conf.exists('nis-domain'):
-                        subnet['nis_domain'] = conf.return_value('nis-domain')
+                    if conf.exists(['nis-domain']):
+                        subnet['nis_domain'] = conf.return_value(['nis-domain'])
 
                     # Ancient NIS (Network Information Service) servers
-                    if conf.exists('nis-server'):
-                        subnet['nis_server'] = conf.return_values('nis-server')
+                    if conf.exists(['nis-server']):
+                        subnet['nis_server'] = conf.return_values(['nis-server'])
 
                     # Ancient NIS+ (Network Information Service) domain name
-                    if conf.exists('nisplus-domain'):
-                        subnet['nisp_domain'] = conf.return_value('nisplus-domain')
+                    if conf.exists(['nisplus-domain']):
+                        subnet['nisp_domain'] = conf.return_value(['nisplus-domain'])
 
                     # Ancient NIS+ (Network Information Service) servers
-                    if conf.exists('nisplus-server'):
-                        subnet['nisp_server'] = conf.return_values('nisplus-server')
+                    if conf.exists(['nisplus-server']):
+                        subnet['nisp_server'] = conf.return_values(['nisplus-server'])
 
                     # Prefix Delegation (RFC 3633)
-                    if conf.exists('prefix-delegation'):
+                    if conf.exists(['prefix-delegation']):
                         print('TODO: This option is actually not implemented right now!')
 
                     # Local SIP server that is to be used for all outbound SIP requests - IPv6 address
-                    if conf.exists('sip-server-address'):
-                        subnet['sip_address'] = conf.return_values('sip-server-address')
-
-                    # Local SIP server that is to be used for all outbound SIP requests - hostname
-                    if conf.exists('sip-server-name'):
-                        for hostname in conf.return_values('sip-server-name'):
-                            subnet['sip_hostname'].append('"' + hostname + '"')
+                    if conf.exists(['sip-server']):
+                        for value in conf.return_values(['sip-server']):
+                            if is_ipv6(value):
+                                subnet['sip_address'].append(value)
+                            else:
+                                subnet['sip_hostname'].append(value)
 
                     # List of local SNTP servers available for the client to synchronize their clocks
-                    if conf.exists('sntp-server'):
-                        subnet['sntp_server'] = conf.return_values('sntp-server')
+                    if conf.exists(['sntp-server']):
+                        subnet['sntp_server'] = conf.return_values(['sntp-server'])
 
                     #
                     # Static DHCP v6 leases
                     #
-                    if conf.exists('static-mapping'):
-                        for mapping in conf.list_nodes('static-mapping'):
-                            conf.set_level('service dhcpv6-server shared-network-name {0} subnet {1} static-mapping {2}'.format(network, net, mapping))
+                    if conf.exists(['static-mapping']):
+                        for mapping in conf.list_nodes(['static-mapping']):
+                            conf.set_level(base + ['shared-network-name', network, 'subnet', net, 'static-mapping', mapping])
                             mapping = {
                                'name': mapping,
                                'disabled': False,
@@ -192,23 +191,22 @@ def get_config():
                             }
 
                             # This static lease is disabled
-                            if conf.exists('disable'):
+                            if conf.exists(['disable']):
                                 mapping['disabled'] = True
 
                             # IPv6 address used for this DHCP client
-                            if conf.exists('ipv6-address'):
-                                mapping['ipv6_address'] = conf.return_value('ipv6-address')
+                            if conf.exists(['ipv6-address']):
+                                mapping['ipv6_address'] = conf.return_value(['ipv6-address'])
 
                             # This option specifies the client’s DUID identifier. DUIDs are similar but different from DHCPv4 client identifiers
-                            if conf.exists('identifier'):
-                                mapping['client_identifier'] = conf.return_value('identifier')
+                            if conf.exists(['identifier']):
+                                mapping['client_identifier'] = conf.return_value(['identifier'])
 
                             # append static mapping configuration tu subnet list
                             subnet['static_mapping'].append(mapping)
 
                     # append subnet configuration to shared network subnet list
                     config['subnet'].append(subnet)
-
 
             # append shared network configuration to config dictionary
             dhcpv6['shared_network'].append(config)
