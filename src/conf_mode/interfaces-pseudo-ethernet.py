@@ -213,8 +213,10 @@ def apply(peth):
     # IPv6 Duplicate Address Detection (DAD) tries
     p.set_ipv6_dad_messages(peth['ipv6_dup_addr_detect'])
 
-    # assign/remove VRF
-    p.set_vrf(peth['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not peth['is_bridge_member']:
+        p.set_vrf(peth['vrf'])
 
     # Delete old IPv6 EUI64 addresses before changing MAC
     for addr in peth['ipv6_eui64_prefix_remove']:
@@ -244,6 +246,10 @@ def apply(peth):
         p.del_addr(addr)
     for addr in peth['address']:
         p.add_addr(addr)
+
+    # re-add ourselves to any bridge we might have fallen out of
+    if peth['is_bridge_member']:
+        p.add_to_bridge(peth['is_bridge_member'])
 
     # remove no longer required service VLAN interfaces (vif-s)
     for vif_s in peth['vif_s_remove']:
