@@ -143,6 +143,11 @@ def get_config():
     if conf.exists('speed'):
         eth['speed'] = conf.return_value('speed')
 
+    # remove default IPv6 link-local address if member of a bond
+    if eth['is_bond_member'] and 'fe80::/64' in eth['ipv6_eui64_prefix']:
+        eth['ipv6_eui64_prefix'].remove('fe80::/64')
+        eth['ipv6_eui64_prefix_remove'].append('fe80::/64')
+
     add_to_dict(conf, disabled, eth, 'vif', 'vif')
     add_to_dict(conf, disabled, eth, 'vif-s', 'vif_s')
 
@@ -169,14 +174,13 @@ def verify(eth):
 
     memberof = eth['is_bridge_member'] if eth['is_bridge_member'] else eth['is_bond_member']
 
-    conf = Config()
-    # some options can not be changed when interface is enslaved to a bond
-    for bond in conf.list_nodes('interfaces bonding'):
-        if conf.exists('interfaces bonding ' + bond + ' member interface'):
-            bond_member = conf.return_values('interfaces bonding ' + bond + ' member interface')
-            if eth['intf'] in bond_member:
-                if eth['address']:
-                    raise ConfigError(f"Can not assign address to interface {eth['intf']} which is a member of {bond}")
+    if ( memberof
+            and ( eth['address']
+                or eth['ipv6_eui64_prefix']
+                or eth['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{eth["intf"]}" '
+            f'as it is a member of "{memberof}"!'))
 
     if eth['vrf']:
         if eth['vrf'] not in interfaces():
