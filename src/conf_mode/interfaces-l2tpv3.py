@@ -119,7 +119,8 @@ def get_config():
         l2tpv3['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
 
     # Remove the default link-local address if set.
-    if not conf.exists('ipv6 address no-default-link-local'):
+    if not ( conf.exists('ipv6 address no-default-link-local') or
+            l2tpv3['is_bridge_member'] ):
         # add the link-local by default to make IPv6 work
         l2tpv3['ipv6_eui64_prefix'].append('fe80::/64')
 
@@ -193,6 +194,14 @@ def verify(l2tpv3):
 
     if not l2tpv3['peer_session_id']:
         raise ConfigError(f'Must configure the l2tpv3 peer-session-id for {interface}')
+
+    if ( l2tpv3['is_bridge_member']
+            and ( l2tpv3['address']
+                or l2tpv3['ipv6_eui64_prefix']
+                or l2tpv3['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{l2tpv3["intf"]}" '
+            f'as it is a member of bridge "{l2tpv3["is_bridge_member"]}"!'))
 
     return None
 
