@@ -122,6 +122,14 @@ def verify(peth):
     if not peth['source_interface'] in interfaces():
         raise ConfigError('Pseudo-ethernet source-interface does not exist')
 
+    if ( peth['is_bridge_member']
+            and ( peth['address']
+                or peth['ipv6_eui64_prefix']
+                or peth['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{peth["intf"]}" '
+            f'as it is a member of bridge "{peth["is_bridge_member"]}"!'))
+
     if peth['vrf']:
         if peth['vrf'] not in interfaces():
             raise ConfigError(f'VRF "{peth["vrf"]}" does not exist')
