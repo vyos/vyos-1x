@@ -165,9 +165,9 @@ def get_config():
 def verify(vxlan):
     if vxlan['deleted']:
         if vxlan['is_bridge_member']:
-            interface = vxlan['intf']
-            bridge = vxlan['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{vxlan["intf"]}" as it is a '
+                f'member of bridge "{vxlan["is_bridge_member"]}"!')
 
         return None
 
