@@ -7,7 +7,7 @@
         <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
       </completionHelp>
     </properties>
-    <command>/usr/bin/traceroute $2</command>
+    <command>/usr/bin/traceroute "$2"</command>
   </tagNode>
   <node name="traceroute">
     <children>
@@ -18,7 +18,7 @@
             <list>&lt;hostname&gt; &lt;x.x.x.x&gt;</list>
           </completionHelp>
         </properties>
-        <command>/usr/bin/traceroute -4 $3</command>
+        <command>/usr/bin/traceroute -4 "$3"</command>
       </tagNode>
       <tagNode name="ipv6">
         <properties>
@@ -27,21 +27,21 @@
             <list>&lt;hostname&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
           </completionHelp>
         </properties>
-        <command>/usr/bin/traceroute -6 $3</command>
+        <command>/usr/bin/traceroute -6 "$3"</command>
       </tagNode>
       <tagNode name="vrf">
         <properties>
-          <help>Track network path to specified node via given VRF instance</help>
+          <help>Track network path to specified node via given VRF</help>
           <completionHelp>
             <path>vrf name</path>
           </completionHelp>
         </properties>
         <children>
-          <!-- we need an empty tag node to pass in a plain fqdn/ip address and
+          <!-- we need an empty tagNode to pass in a plain fqdn/ip address and
                let traceroute decide how to handle this parameter -->
           <tagNode name="">
             <properties>
-              <help>Track network path to specified node via given VRF instance</help>
+              <help>Track network path to specified node via given VRF</help>
               <completionHelp>
                 <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
               </completionHelp>
@@ -74,13 +74,38 @@
     <children>
       <tagNode name="traceroute">
         <properties>
-          <help>Monitor the path to a destination in realtime</help>
+          <help>Monitor path to destination in realtime</help>
           <completionHelp>
             <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
           </completionHelp>
         </properties>
-        <command>/usr/bin/mtr $3</command>
+        <command>/usr/bin/mtr "$3"</command>
       </tagNode>
+      <node name="traceroute">
+        <children>
+          <tagNode name="vrf">
+            <properties>
+              <help>Monitor path to destination in realtime via given VRF</help>
+              <completionHelp>
+                <path>vrf name</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <!-- we need an empty tagNode to pass in a plain fqdn/ip address and
+                   let traceroute decide how to handle this parameter -->
+              <tagNode name="">
+                <properties>
+                  <help>Track network path to specified node via given VRF</help>
+                  <completionHelp>
+                    <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$4" /usr/bin/mtr "$5"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>
