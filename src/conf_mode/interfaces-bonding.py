@@ -25,7 +25,7 @@ from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.config import Config
 from vyos.util import call, cmd
-from vyos.validate import has_address_configured
+from vyos.validate import is_member, has_address_configured
 from vyos import ConfigError
 
 default_config_data = {
@@ -172,18 +172,20 @@ def get_config():
 def verify(bond):
     if bond['deleted']:
         if bond['is_bridge_member']:
-            interface = bond['intf']
-            bridge = bond['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{bond["intf"]}" as it is a '
+                f'member of bridge "{bond["is_bridge_member"]}"!'))
+
         return None
 
-    if len (bond['arp_mon_tgt']) > 16:
-        raise ConfigError('The maximum number of targets that can be specified is 16')
+    if len(bond['arp_mon_tgt']) > 16:
+        raise ConfigError('The maximum number of arp-monitor targets is 16')
 
     if bond['primary']:
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
-            raise ConfigError('Mode dependency failed, primary not supported ' \
-                              'in mode "{}"!'.format(bond['mode']))
+            raise ConfigError((
+                'Mode dependency failed, primary not supported in mode '
+                f'"{bond["mode"]}"!'))
 
     if ( bond['is_bridge_member']
             and ( bond['address']
@@ -210,16 +212,17 @@ def verify(bond):
     for intf in bond['member']:
         # check if member interface is "real"
         if intf not in interfaces():
-            raise ConfigError('interface {} does not exist!'.format(intf))
+            raise ConfigError(f'Interface {intf} does not exist!')
 
         # a bonding member interface is only allowed to be assigned to one bond!
         all_bonds = conf.list_nodes('interfaces bonding')
         # We do not need to check our own bond
         all_bonds.remove(bond['intf'])
         for tmp in all_bonds:
-            if conf.exists('interfaces bonding ' + tmp + ' member interface ' + intf):
-                raise ConfigError('can not enslave interface {} which already ' \
-                                  'belongs to {}'.format(intf, tmp))
+            if conf.exists('interfaces bonding {tmp} member interface {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already a member of bond "{tmp}"!'))
 
         # can not add interfaces with an assigned address to a bond
         if has_address_configured(conf, intf):
@@ -227,35 +230,37 @@ def verify(bond):
                 f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
                 f'it has an address assigned!'))
 
-        # bond members are not allowed to be bridge members, too
-        for tmp in conf.list_nodes('interfaces bridge'):
-            if conf.exists('interfaces bridge ' + tmp + ' member interface ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'bridge {}'.format(intf, tmp))
+        # bond members are not allowed to be bridge members
+        tmp = is_member(conf, intf, 'bridge')
+        if tmp:
+            raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already a member of bridge "{tmp}"!'))
 
-        # bond members are not allowed to be vrrp members, too
+        # bond members are not allowed to be vrrp members
         for tmp in conf.list_nodes('high-availability vrrp group'):
-            if conf.exists('high-availability vrrp group ' + tmp + ' interface ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'VRRP group {}'.format(intf, tmp))
+            if conf.exists('high-availability vrrp group {tmp} interface {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already a member of VRRP group "{tmp}"!'))
 
         # bond members are not allowed to be underlaying psuedo-ethernet devices
         for tmp in conf.list_nodes('interfaces pseudo-ethernet'):
-            if conf.exists('interfaces pseudo-ethernet ' + tmp + ' link ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'pseudo-ethernet {}'.format(intf, tmp))
+            if conf.exists('interfaces pseudo-ethernet {tmp} link {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already the link of pseudo-ethernet "{tmp}"!'))
 
         # bond members are not allowed to be underlaying vxlan devices
         for tmp in conf.list_nodes('interfaces vxlan'):
-            if conf.exists('interfaces vxlan ' + tmp + ' link ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'vxlan {}'.format(intf, tmp))
-
+            if conf.exists('interfaces vxlan {tmp} link {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already the link of VXLAN "{tmp}"!'))
 
     if bond['primary']:
         if bond['primary'] not in bond['member']:
-            raise ConfigError('primary interface must be a member interface of {}' \
-                              .format(bond['intf']))
+            raise ConfigError(f'Bond "{bond["intf"]}" primary interface must be a member')
 
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
             raise ConfigError('primary interface only works for mode active-backup, ' \
@@ -267,7 +272,6 @@ def verify(bond):
                               'transmit-load-balance or adaptive-load-balance')
 
     return None
-
 
 def generate(bond):
     return None
