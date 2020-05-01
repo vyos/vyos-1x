@@ -74,7 +74,7 @@ nobind
 topology {% if server_topology == 'point-to-point' %}p2p{% else %}{{ server_topology }}{% endif %}
 {%- endif %}
 
-{%- if bridge_member %}
+{%- if is_bridge_member %}
 mode server
 tls-server
 {%- else %}

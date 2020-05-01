@@ -41,7 +41,6 @@ default_config_data = {
     'auth_pass': '',
     'auth_user_pass_file': '',
     'auth': False,
-    'bridge_member': [],
     'compress_lzo': False,
     'deleted': False,
     'description': '',
@@ -207,14 +206,8 @@ def get_config():
         openvpn['deleted'] = True
         return openvpn
 
-    # Check if we belong to any bridge interface
-    for bridge in conf.list_nodes('interfaces bridge'):
-        for intf in conf.list_nodes('interfaces bridge {} member interface'.format(bridge)):
-            if intf == openvpn['intf']:
-                openvpn['bridge_member'].append(intf)
-
     # bridged server should not have a pool by default (but can be specified manually)
-    if openvpn['bridge_member']:
+    if openvpn['is_bridge_member']:
         openvpn['server_pool'] = False
         openvpn['server_ipv6_pool'] = False
 
@@ -598,7 +591,7 @@ def get_config():
         default_server = getDefaultServer(server_network_v4, openvpn['server_topology'], openvpn['type'])
         if default_server:
             # server-bridge doesn't require a pool so don't set defaults for it
-            if openvpn['server_pool'] and not openvpn['bridge_member']:
+            if openvpn['server_pool'] and not openvpn['is_bridge_member']:
                 if not openvpn['server_pool_start']:
                     openvpn['server_pool_start'] = default_server['pool_start']
 
@@ -636,21 +629,14 @@ def get_config():
 def verify(openvpn):
     if openvpn['deleted']:
         if openvpn['is_bridge_member']:
-            interface = openvpn['intf']
-            bridge = openvpn['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
-
-        return None
+            raise ConfigError((
+                f'Cannot delete interface "{openvpn["intf"]}" as it is a '
+                f'member of bridge "{openvpn["is_bridge_menber"]}"!'))
+       return None
 
 
     if not openvpn['mode']:
         raise ConfigError('Must specify OpenVPN operation mode')
-
-    # Checks which need to be performed on interface rmeoval
-    if openvpn['deleted']:
-        # OpenVPN interface can not be deleted if it's still member of a bridge
-        if openvpn['bridge_member']:
-            raise ConfigError('Can not delete {} as it is a member interface of bridge {}!'.format(openvpn['intf'], bridge))
 
     # Check if we have disabled ncp and at the same time specified ncp-ciphers
     if openvpn['disable_ncp'] and openvpn['ncp_ciphers']:
@@ -681,9 +667,9 @@ def verify(openvpn):
         if openvpn['ncp_ciphers']:
             raise ConfigError('encryption ncp-ciphers cannot be specified in site-to-site mode, only server or client')
 
-    if openvpn['mode'] == 'site-to-site' and not openvpn['bridge_member']:
+    if openvpn['mode'] == 'site-to-site' and not openvpn['is_bridge_member']:
         if not (openvpn['local_address'] or openvpn['ipv6_local_address']):
-            raise ConfigError('Must specify "local-address" or "bridge member interface"')
+            raise ConfigError('Must specify "local-address" or add interface to bridge')
 
         if len(openvpn['local_address']) > 1 or len(openvpn['ipv6_local_address']) > 1:
             raise ConfigError('Cannot specify more than 1 IPv4 and 1 IPv6 "local-address"')
@@ -762,8 +748,8 @@ def verify(openvpn):
                     raise ConfigError(f'Client "{client["name"]}" IP {client["ip"][0]} not in server subnet {subnet}')
 
         else:
-            if not openvpn['bridge_member']:
-                raise ConfigError('Must specify "server subnet" or "bridge member interface" in server mode')
+            if not openvpn['is_bridge_member']:
+                raise ConfigError('Must specify "server subnet" or add interface to bridge in server mode')
 
         if openvpn['server_pool']:
             if not (openvpn['server_pool_start'] and openvpn['server_pool_stop']):
