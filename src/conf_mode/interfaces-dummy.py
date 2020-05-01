@@ -101,6 +101,11 @@ def verify(dummy):
                 f'"{dummy["vrf"]}" and bridge "{dummy["is_bridge_member"]}" '
                 f'at the same time!'))
 
+    if dummy['is_bridge_member'] and dummy['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{dummy["intf"]}" '
+            f'as it is a member of bridge "{dummy["is_bridge_member"]}"!'))
+
     return None
 
 def generate(dummy):
