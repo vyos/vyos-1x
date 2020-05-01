@@ -21,6 +21,7 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.ifconfig import BridgeIf, Section
 from vyos.template import render
 from vyos.util import chown, chmod_755, cmd, call
 from vyos.validate import is_member
@@ -204,6 +205,12 @@ def apply(wwan):
         cmd(f'systemctl start ppp@{intf}.service')
         # make logfile owned by root / vyattacfg
         chown(wwan['logfile'], 'root', 'vyattacfg')
+
+        # re-add ourselves to any bridge we might have fallen out of
+        # FIXME: wwan isn't under vyos.ifconfig so we can't call
+        # Interfaces.add_to_bridge() so STP settings won't get applied
+        if wwan['is_bridge_member'] in Section.interfaces('bridge'):
+            BridgeIf(wwan['is_bridge_member'], create=False).add_port(wwan['intf'])
 
     return None
 
