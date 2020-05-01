@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
 from vyos.util import call
-from vyos.validate import is_bridge_member, is_addr_assigned
+from vyos.validate import is_member, is_addr_assigned
 
 default_config_data = {
     'address': [],
@@ -66,12 +66,13 @@ def get_config():
 
     l2tpv3['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member of a bridge
+    l2tpv3['is_bridge_member'] = is_member(conf, l2tpv3['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces l2tpv3 ' + l2tpv3['intf']):
         l2tpv3['deleted'] = True
         interface = l2tpv3['intf']
-        # check if interface is member if a bridge
-        l2tpv3['is_bridge_member'] = is_bridge_member(conf, interface)
 
         # to delete the l2tpv3 interface we need the current tunnel_id and session_id
         if conf.exists_effective(f'interfaces l2tpv3 {interface} tunnel-id'):
