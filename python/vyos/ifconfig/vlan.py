@@ -101,26 +101,26 @@ class VLAN:
         >>> i.add_vlan(10)
         """
         vlan_ifname = self.config['ifname'] + '.' + str(vlan_id)
-        if not os.path.exists(f'/sys/class/net/{vlan_ifname}'):
-            self._vlan_id = int(vlan_id)
+        if os.path.exists(f'/sys/class/net/{vlan_ifname}'):
+            return self.__class__(vlan_ifname)
 
-            if ethertype:
-                self._ethertype = ethertype
-                ethertype = 'proto {}'.format(ethertype)
+        if ethertype:
+            self._ethertype = ethertype
+            ethertype = 'proto {}'.format(ethertype)
 
-            # Optional ingress QOS mapping
-            opt_i = ''
-            if ingress_qos:
-                opt_i = 'ingress-qos-map ' + ingress_qos
-            # Optional egress QOS mapping
-            opt_e = ''
-            if egress_qos:
-                opt_e = 'egress-qos-map ' + egress_qos
+        # Optional ingress QOS mapping
+        opt_i = ''
+        if ingress_qos:
+            opt_i = 'ingress-qos-map ' + ingress_qos
+        # Optional egress QOS mapping
+        opt_e = ''
+        if egress_qos:
+            opt_e = 'egress-qos-map ' + egress_qos
 
-            # create interface in the system
-            cmd = 'ip link add link {ifname} name {ifname}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
-                .format(ifname=self.config['ifname'], vlan=self._vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
-            self._cmd(cmd)
+        # create interface in the system
+        cmd = 'ip link add link {ifname} name {ifname}.{vlan} type vlan {proto} id {vlan} {opt_e} {opt_i}' \
+            .format(ifname=self.ifname, vlan=vlan_id, proto=ethertype, opt_e=opt_e, opt_i=opt_i)
+        self._cmd(cmd)
 
         # return new object mapping to the newly created interface
         # we can now work on this object for e.g. IP address setting
