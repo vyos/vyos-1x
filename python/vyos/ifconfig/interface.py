@@ -219,7 +219,7 @@ class Interface(Control):
             else:
                 raise Exception('interface "{}" not found'.format(self.config['ifname']))
 
-        # list of assigned IP addresses
+        # temporary list of assigned IP addresses
         self._addr = []
 
         self.operational = self.OperationalClass(ifname)
@@ -240,15 +240,11 @@ class Interface(Control):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
-        # stop DHCP(v6) if running
-        self.dhcp.v4.delete()
-        self.dhcp.v6.delete()
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
         # can not delete ALL interfaces, see below
-        for addr in self.get_addr():
-            self.del_addr(addr)
+        self.flush_addrs()
 
         # ---------------------------------------------------------------------
         # Any class can define an eternal regex in its definition
@@ -621,7 +617,8 @@ class Interface(Control):
     def add_addr(self, addr):
         """
         Add IP(v6) address to interface. Address is only added if it is not
-        already assigned to that interface.
+        already assigned to that interface. Address format must be validated
+        and compressed/normalized before calling this function.
 
         addr: can be an IPv4 address, IPv6 address, dhcp or dhcpv6!
               IPv4: add IPv4 address to interface
@@ -629,6 +626,7 @@ class Interface(Control):
               dhcp: start dhclient (IPv4) on interface
               dhcpv6: start dhclient (IPv6) on interface
 
+        Returns False if address is already assigned and wasn't re-added.
         Example:
         >>> from vyos.ifconfig import Interface
         >>> j = Interface('eth0')
@@ -637,32 +635,42 @@ class Interface(Control):
         >>> j.get_addr()
         ['192.0.2.1/24', '2001:db8::ffff/64']
         """
+        # XXX: normalize/compress with ipaddress if calling functions don't?
+        # is subnet mask always passed, and in the same way?
+        ret = True
 
-        # cache new IP address which is assigned to interface
-        self._addr.append(addr)
+        # we can't have both DHCP and static IPv4 addresses assigned
+        for a in self._addr:
+            if ( ( addr == 'dhcp' and a != 'dhcpv6' and is_ipv4(a) ) or
+                    ( a == 'dhcp' and addr != 'dhcpv6' and is_ipv4(addr) ) ):
+                raise ConfigError((
+                    "Can't configure both static IPv4 and DHCP address "
+                    "on the same interface"))
 
-        # we can not have both DHCP and static IPv4 addresses assigned to an interface
-        if 'dhcp' in self._addr:
-            for addr in self._addr:
-                # do not change below 'if' ordering esle you will get an exception as:
-                #   ValueError: 'dhcp' does not appear to be an IPv4 or IPv6 address
-                if addr != 'dhcp' and is_ipv4(addr):
-                    raise ConfigError(
-                        "Can't configure both static IPv4 and DHCP address on the same interface")
-
-        if addr == 'dhcp':
-            self.dhcp.v4.set()
-        elif addr == 'dhcpv6':
-            self.dhcp.v6.set()
+        # do not add same address twice
+        if addr not in self._addr:
+            # add to interface
+            if addr == 'dhcp':
+                self.dhcp.v4.set()
+            elif addr == 'dhcpv6':
+                self.dhcp.v6.set()
+            else:
+                if not is_intf_addr_assigned(self.ifname, addr):
+                    ret = self._cmd(f'ip addr add "{addr}" dev "{self.ifname}"')
+                else:
+                    return False
+            # add to cache
+            self._addr.append(addr)
         else:
-            if not is_intf_addr_assigned(self.config['ifname'], addr):
-                cmd = 'ip addr add "{}" dev "{}"'.format(addr, self.config['ifname'])
-                return self._cmd(cmd)
+            return False
+
+        return ret
 
     def del_addr(self, addr):
         """
-        Delete IP(v6) address to interface. Address is only added if it is
-        assigned to that interface.
+        Delete IP(v6) address from interface. Address is only deleted if it is
+        assigned to that interface. Address format must be exactly the same as
+        was used when adding the address.
 
         addr: can be an IPv4 address, IPv6 address, dhcp or dhcpv6!
               IPv4: delete IPv4 address from interface
@@ -670,6 +678,7 @@ class Interface(Control):
               dhcp: stop dhclient (IPv4) on interface
               dhcpv6: stop dhclient (IPv6) on interface
 
+        Returns False if address isn't already assigned and wasn't deleted.
         Example:
         >>> from vyos.ifconfig import Interface
         >>> j = Interface('eth0')
@@ -681,11 +690,34 @@ class Interface(Control):
         >>> j.get_addr()
         ['2001:db8::ffff/64']
         """
+        ret = True
+
+        # remove from interface
         if addr == 'dhcp':
             self.dhcp.v4.delete()
         elif addr == 'dhcpv6':
             self.dhcp.v6.delete()
         else:
-            if is_intf_addr_assigned(self.config['ifname'], addr):
-                cmd = 'ip addr del "{}" dev "{}"'.format(addr, self.config['ifname'])
-                return self._cmd(cmd)
+            if is_intf_addr_assigned(self.ifname, addr):
+                ret = self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
+            else:
+                return False
+
+        if addr in self._addr:
+            # remove from cache
+            self._addr.remove(addr)
+
+        return ret
+
+    def flush_addrs(self):
+        """
+        Flush all addresses from an interface, including DHCP.
+
+        Will raise an exception on error.
+        """
+        # stop DHCP(v6) if running
+        self.dhcp.v4.delete()
+        self.dhcp.v6.delete()
+
+        # flush all addresses
+        self._cmd(f'ip addr flush dev "{self.config["ifname"]}"')
