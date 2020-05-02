@@ -19,7 +19,6 @@
 
 import sys
 import argparse
-import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--float", action="store_true", help="Accept floating point values")
@@ -50,8 +49,9 @@ if args.range:
     valid = False
     for r in args.range:
         try:
-            lower, upper = re.match(r'(\d+)\s*\-\s*(\d+)', r).groups()
-            lower, upper = int(lower), int(upper)
+            list = r.split('-')
+            lower = int(list[0])
+            upper = int(list[1])
         except:
             print("{0} is not a valid number range",format(args.range), file=sys.stderr)
             sys.exit(1)
