@@ -15,25 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-
-from sys import exit
+import sys
 
 from vyos.util import cmd
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--validate", action="store", help="Check if timezone is valid")
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--validate", action="store", required=True, help="Check if timezone is valid")
     args = parser.parse_args()
 
-    if args.validate:
-        tz_data = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
-        tz_data = tz_data.split('\n')
-        # if timezone can't be found in list it's invalid
-        if args.validate not in tz_data:
-            exit(1)
-    else:
-        parser.print_help()
-        exit(1)
+    tz_data = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+    tz_data = tz_data.split('\n')
 
-    exit(0)
+    if args.validate not in tz_data:
+        sys.exit("the timezone can't be found in the timezone list')
+    sys.exit()

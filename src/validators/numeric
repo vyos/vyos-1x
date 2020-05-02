@@ -20,59 +20,47 @@
 import sys
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--float", action="store_true", help="Accept floating point values")
-group = parser.add_mutually_exclusive_group()
-group.add_argument("-r", "--range", type=str, help="Check if the number is within range (inclusive), example: 1024-65535", action='append')
-group.add_argument("-n", "--non-negative", action="store_true", help="Check if the number is non-negative (>= 0)")
-group.add_argument("-p", "--positive", action="store_true", help="Check if the number is positive (> 0)")
-parser.add_argument("number", type=str, help="Number to validate")
 
-args = parser.parse_args()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--float", action="store_true", help="Accept floating point values")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-r", "--range", type=str, help="Check if the number is within range (inclusive), example: 1024-65535", action='append')
+    group.add_argument("-n", "--non-negative", action="store_true", help="Check if the number is non-negative (>= 0)")
+    group.add_argument("-p", "--positive", action="store_true", help="Check if the number is positive (> 0)")
+    parser.add_argument("number", type=str, help="Number to validate")
 
-# Try to load the argument
-number = None
-if args.float:
+    args = parser.parse_args()
+
+    if args.float:
+        converter = float
+        name = 'floating point'
+    else:
+        converter = int
+        name = 'integer'
+
     try:
-        number = float(args.number)
+        number = converter(args.number)
     except:
-        print("{0} is not a valid floating point number".format(args.number), file=sys.stderr)
-        sys.exit(1)
-else:
-    try:
-        number = int(args.number)
-    except:
-        print("{0} is not a valid integer number".format(args.number), file=sys.stderr)
-        sys.exit(1)
+        sys.exit(f'{args.number} is not a valid {name} number')
 
-if args.range:
-    valid = False
-    for r in args.range:
+    if args.range:
         try:
-            list = r.split('-')
-            lower = int(list[0])
-            upper = int(list[1])
+            for r in args.range:
+                _lower, _upper = r.split('-')
+                lower = int(_lower)
+                upper = int(_upper)
         except:
-            print("{0} is not a valid number range",format(args.range), file=sys.stderr)
-            sys.exit(1)
+            sys.exit(f'{args.range} is not a valid number range')
 
-        if (number >= lower) and (number <= upper):
-            valid = True
-    # end for
+        if number < lower or number > upper:
+            span = args.range if len(args.range) > 1 else args.range[0]
+            sys.exit('Number {number} is not in the range {span}')
 
-    if not valid:
-        if len(args.range) > 1:
-            err_msg = "Number {0} is not in any of the ranges {1}".format(number, args.range)
-        else:
-            err_msg = "Number {0} is not in the range {1}".format(number, args.range[0])
-        print(err_msg, file=sys.stderr)
-        sys.exit(1)
-elif args.non_negative:
-    if number < 0:
-        print("Number should be non-negative", file=sys.stderr)
-        sys.exit(1)
-elif args.positive:
-    if number <= 0:
-        print("Number should be positive", file=sys.stderr)
-        sys.exit(1)
+    elif args.non_negative and number < 0:
+        sys.exit('Number should be non-negative')
 
+    elif args.positive and number <= 0:
+        sys.exit('Number should be positive')
+
+    sys.exit()

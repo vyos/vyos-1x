@@ -14,27 +14,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-from sys import exit, argv
 
-if len(argv) == 2:
-    len = len(argv[1])
-    # VRF instance name must be 16 characters or less, python range needs to be
-    # extended by one
-    if not len in range(1, 17):
-        exit(1)
+import re
+import sys
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        sys.exit(1)
+
+    vrf = sys.argv[1]
+    length = len(vrf)
+
+    if length not in range(1, 17):
+        sys.exit('VRF instance name must be 16 characters or less')
 
     # Treat loopback interface "lo" explicitly. Adding "lo" explicitly to the
     # following regex pattern would deny any VRF name starting with lo - thuse
     # local-vrf would be illegal - and that we do not want.
-    if argv[1] == "lo":
-        exit(1)
+    if vrf == "lo":
+        exit(f'"{vrf}" is invalid as VRF name as it is an interface name')
 
-    # VRF instances should not be named after regular interface names like bond0,
-    # br10 and so on - this can cause a lot of confusion/trouble
     pattern = "^(?!(bond|br|dum|eth|lan|eno|ens|enp|enx|gnv|ipoe|l2tp|l2tpeth|" \
               "vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wlm)\d+(\.\d+(v.+)?)?$).*$"
-    if re.match(pattern, argv[1]):
-        exit(0)
+    if not re.match(pattern, vrf):
+        sys.exit(f'"{vrf}" is invalid as VRF name as it is an interface name')
 
-exit(1)
+    sys.exit(0)
