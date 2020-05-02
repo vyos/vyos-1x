@@ -637,7 +637,6 @@ class Interface(Control):
         """
         # XXX: normalize/compress with ipaddress if calling functions don't?
         # is subnet mask always passed, and in the same way?
-        ret = True
 
         # we can't have both DHCP and static IPv4 addresses assigned
         for a in self._addr:
@@ -648,23 +647,26 @@ class Interface(Control):
                     "on the same interface"))
 
         # do not add same address twice
-        if addr not in self._addr:
-            # add to interface
-            if addr == 'dhcp':
-                self.dhcp.v4.set()
-            elif addr == 'dhcpv6':
-                self.dhcp.v6.set()
-            else:
-                if not is_intf_addr_assigned(self.ifname, addr):
-                    ret = self._cmd(f'ip addr add "{addr}" dev "{self.ifname}"')
-                else:
-                    return False
-            # add to cache
-            self._addr.append(addr)
-        else:
+        if addr in self._addr:
             return False
 
-        return ret
+        # add to interface
+        if addr == 'dhcp':
+            self._addr.append(addr)
+            self.dhcp.v4.set()
+            return True
+
+        if addr == 'dhcpv6':
+            self._addr.append(addr)
+            self.dhcp.v6.set()
+            return True
+
+        if not is_intf_addr_assigned(self.ifname, addr):
+            self._addr.append(addr)
+            self._cmd(f'ip addr add "{addr}" dev "{self.ifname}"')
+            return True
+
+        return False
 
     def del_addr(self, addr):
         """
@@ -690,24 +692,25 @@ class Interface(Control):
         >>> j.get_addr()
         ['2001:db8::ffff/64']
         """
-        ret = True
+
+        # remove from cache (dhcp, and dhcpv6 can not be in it)
+        if addr in self._addr:
+            self._addr.remove(addr)
 
         # remove from interface
         if addr == 'dhcp':
             self.dhcp.v4.delete()
-        elif addr == 'dhcpv6':
+            return True
+
+        if addr == 'dhcpv6':
             self.dhcp.v6.delete()
-        else:
-            if is_intf_addr_assigned(self.ifname, addr):
-                ret = self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
-            else:
-                return False
+            return True
 
-        if addr in self._addr:
-            # remove from cache
-            self._addr.remove(addr)
+        if is_intf_addr_assigned(self.ifname, addr):
+            self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
+            return True
 
-        return ret
+        return False
 
     def flush_addrs(self):
         """
@@ -720,4 +723,4 @@ class Interface(Control):
         self.dhcp.v6.delete()
 
         # flush all addresses
-        self._cmd(f'ip addr flush dev "{self.config["ifname"]}"')
+        self._cmd(f'ip addr flush dev "{self.ifname}"')
