@@ -20,7 +20,7 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BondIf, Section
+from vyos.ifconfig import BondIf
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.config import Config
@@ -381,12 +381,9 @@ def apply(bond):
 
             # Add (enslave) interfaces to bond
             for intf in bond['member']:
-                # flushes only children of Interfaces class (e.g. vlan are not)
-                if intf in Section.interfaces():
-                    klass = Section.klass(intf, vlan=False)
-                    klass(intf, create=False).flush_addrs()
-                # flushes also vlan interfaces
-                call(f'ip addr flush dev "{intf}"')
+                # if we've come here we already verified the interface doesn't
+                # have addresses configured so just flush any remaining ones
+                cmd(f'ip addr flush dev "{intf}"')
                 b.add_port(intf)
 
         # As the bond interface is always disabled first when changing
