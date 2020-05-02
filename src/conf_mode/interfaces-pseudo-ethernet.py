@@ -21,7 +21,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.configdict import list_diff, vlan_to_dict
+from vyos.configdict import list_diff, vlan_to_dict, intf_to_dict, add_to_dict
 from vyos.ifconfig import MACVLANIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.validate import is_bridge_member
@@ -65,122 +65,35 @@ default_config_data = {
 }
 
 def get_config():
-    peth = deepcopy(default_config_data)
-    conf = Config()
-
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    peth['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    cfg_base = ['interfaces', 'pseudo-ethernet', peth['intf']]
+    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    conf = Config()
 
     # Check if interface has been removed
+    cfg_base = ['interfaces', 'pseudo-ethernet', ifname]
     if not conf.exists(cfg_base):
+        peth = deepcopy(default_config_data)
         peth['deleted'] = True
         # check if interface is member if a bridge
-        peth['is_bridge_member'] = is_bridge_member(conf, peth['intf'])
+        peth['is_bridge_member'] = is_bridge_member(conf, ifname)
         return peth
 
     # set new configuration level
     conf.set_level(cfg_base)
 
-    # retrieve configured interface addresses
-    if conf.exists(['address']):
-        peth['address'] = conf.return_values(['address'])
-
-    # get interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_values(['address'])
-    peth['address_remove'] = list_diff(eff_addr, peth['address'])
-
-    # retrieve interface description
-    if conf.exists(['description']):
-        peth['description'] = conf.return_value(['description'])
-
-    # get DHCP client identifier
-    if conf.exists(['dhcp-options', 'client-id']):
-        peth['dhcp_client_id'] = conf.return_value(['dhcp-options', 'client-id'])
-
-    # DHCP client host name (overrides the system host name)
-    if conf.exists(['dhcp-options', 'host-name']):
-        peth['dhcp_hostname'] = conf.return_value(['dhcp-options', 'host-name'])
-
-    # DHCP client vendor identifier
-    if conf.exists(['dhcp-options', 'vendor-class-id']):
-        peth['dhcp_vendor_class_id'] = conf.return_value(['dhcp-options', 'vendor-class-id'])
-
-    # DHCPv6 only acquire config parameters, no address
-    if conf.exists(['dhcpv6-options parameters-only']):
-        peth['dhcpv6_prm_only'] = True
-
-    # DHCPv6 temporary IPv6 address
-    if conf.exists(['dhcpv6-options temporary']):
-        peth['dhcpv6_temporary'] = True
-
-    # disable interface
-    if conf.exists(['disable']):
-        peth['disable'] = True
-
-    # ignore link state changes
-    if conf.exists(['disable-link-detect']):
-        peth['disable_link_detect'] = 2
+    peth, disabled = intf_to_dict(conf, default_config_data)
+    peth['intf'] = ifname
 
     # ARP cache entry timeout in seconds
     if conf.exists(['ip', 'arp-cache-timeout']):
         peth['ip_arp_cache_tmo'] = int(conf.return_value(['ip', 'arp-cache-timeout']))
 
-    # ARP filter configuration
-    if conf.exists(['ip', 'disable-arp-filter']):
-        peth['ip_disable_arp_filter'] = 0
-
-    # ARP enable accept
-    if conf.exists(['ip', 'enable-arp-accept']):
-        peth['ip_enable_arp_accept'] = 1
-
-    # ARP enable announce
-    if conf.exists(['ip', 'enable-arp-announce']):
-        peth['ip_enable_arp_announce'] = 1
-
-    # ARP enable ignore
-    if conf.exists(['ip', 'enable-arp-ignore']):
-        peth['ip_enable_arp_ignore'] = 1
-
-    # Enable proxy-arp on this interface
-    if conf.exists(['ip', 'enable-proxy-arp']):
-        peth['ip_proxy_arp'] = 1
-
     # Enable private VLAN proxy ARP on this interface
     if conf.exists(['ip', 'proxy-arp-pvlan']):
         peth['ip_proxy_arp_pvlan'] = 1
-
-    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
-    if conf.exists('ipv6 address autoconf'):
-        peth['ipv6_autoconf'] = 1
-
-    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
-    if conf.exists('ipv6 address eui64'):
-        peth['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
-
-    # Determine currently effective EUI64 addresses - to determine which
-    # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_values('ipv6 address eui64')
-    peth['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, peth['ipv6_eui64_prefix'])
-
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
-        peth['ipv6_eui64_prefix_remove'].append('fe80::/64')
-    else:
-        # add the link-local by default to make IPv6 work
-        peth['ipv6_eui64_prefix'].append('fe80::/64')
-
-    # Disable IPv6 forwarding on this interface
-    if conf.exists('ipv6 disable-forwarding'):
-        peth['ipv6_forwarding'] = 0
-
-    # IPv6 Duplicate Address Detection (DAD) tries
-    if conf.exists('ipv6 dup-addr-detect-transmits'):
-        peth['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
 
     # Physical interface
     if conf.exists(['source-interface']):
@@ -189,52 +102,12 @@ def get_config():
         if tmp != peth['source_interface']:
             peth['source_interface_changed'] = True
 
-    # Media Access Control (MAC) address
-    if conf.exists(['mac']):
-        peth['mac'] = conf.return_value(['mac'])
-
-    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
-    # before re-adding them
-    if ( peth['mac'] and peth['intf'] in Section.interfaces(section='pseudo-ethernet')
-            and peth['mac'] != MACVLANIf(peth['intf'], create=False).get_mac() ):
-        peth['ipv6_eui64_prefix_remove'] += peth['ipv6_eui64_prefix']
-
     # MACvlan mode
     if conf.exists(['mode']):
         peth['mode'] = conf.return_value(['mode'])
 
-    # retrieve VRF instance
-    if conf.exists('vrf'):
-        peth['vrf'] = conf.return_value('vrf')
-
-    # re-set configuration level to parse new nodes
-    conf.set_level(cfg_base)
-    # get vif-s interfaces (currently effective) - to determine which vif-s
-    # interface is no longer present and needs to be removed
-    eff_intf = conf.list_effective_nodes('vif-s')
-    act_intf = conf.list_nodes('vif-s')
-    peth['vif_s_remove'] = list_diff(eff_intf, act_intf)
-
-    if conf.exists('vif-s'):
-        for vif_s in conf.list_nodes('vif-s'):
-            # set config level to vif-s interface
-            conf.set_level(cfg_base + ['vif-s', vif_s])
-            peth['vif_s'].append(vlan_to_dict(conf))
-
-    # re-set configuration level to parse new nodes
-    conf.set_level(cfg_base)
-    # Determine vif interfaces (currently effective) - to determine which
-    # vif interface is no longer present and needs to be removed
-    eff_intf = conf.list_effective_nodes('vif')
-    act_intf = conf.list_nodes('vif')
-    peth['vif_remove'] = list_diff(eff_intf, act_intf)
-
-    if conf.exists('vif'):
-        for vif in conf.list_nodes('vif'):
-            # set config level to vif interface
-            conf.set_level(cfg_base + ['vif', vif])
-            peth['vif'].append(vlan_to_dict(conf))
-
+    add_to_dict(conf, disabled, peth, 'vif', 'vif')
+    add_to_dict(conf, disabled, peth, 'vif-s', 'vif_s')
 
     return peth
 
@@ -248,10 +121,10 @@ def verify(peth):
         return None
 
     if not peth['source_interface']:
-        raise ConfigError('Link device must be set for virtual ethernet {}'.format(peth['intf']))
+        raise ConfigError('source-interface must be set for virtual ethernet {}'.format(peth['intf']))
 
     if not peth['source_interface'] in interfaces():
-        raise ConfigError('Pseudo-ethernet source interface does not exist')
+        raise ConfigError('Pseudo-ethernet source-interface does not exist')
 
     vrf_name = peth['vrf']
     if vrf_name and vrf_name not in interfaces():
