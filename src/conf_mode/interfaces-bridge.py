@@ -24,6 +24,7 @@ from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
 from vyos.config import Config
+from vyos.util import cmd
 from vyos import ConfigError
 
 default_config_data = {
@@ -346,6 +347,13 @@ def apply(bridge):
 
         # add interfaces to bridge
         for member in bridge['member']:
+            # flushes address of only children of Interfaces class
+            # (e.g. vlan are not)
+            if member['name'] in Section.interfaces():
+                klass = Section.klass(member['name'], vlan=False)
+                klass(member['name'], create=False).flush_addrs()
+            # flushes all interfaces
+            cmd(f'ip addr flush dev "{member["name"]}"')
             br.add_port(member['name'])
 
         # Change interface MAC address
