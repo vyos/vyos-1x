@@ -312,31 +312,31 @@ def intf_to_dict(conf, default):
     if disabled == disable.both:
         # was and is still disabled
         intf['disable'] = True
-        intf['address_remove'] = []
         intf['address'] = []
+        intf['address_remove'] = []
         intf['ipv6_eui64_prefix'] = []
         intf['ipv6_eui64_prefix_remove'] = []
     elif disabled == disable.now:
         # it is now disable but was not before
         intf['disable'] = True
-        intf['address_remove'] = eff_addr
         intf['address'] = []
-        intf['ipv6_eui64_prefix'] = eff_eui
-        intf['ipv6_eui64_prefix_remove'] = []
+        intf['address_remove'] = eff_addr
+        intf['ipv6_eui64_prefix'] = []
+        intf['ipv6_eui64_prefix_remove'] = eff_eui
     elif disabled == disable.was:
         # it was disable but not anymore
         intf['disable'] = False
-        intf['address_remove'] = []
         intf['address'] = act_addr
-        intf['ipv6_eui64_prefix'] = []
-        intf['ipv6_eui64_prefix_remove'] = act_eui
+        intf['address_remove'] = []
+        intf['ipv6_eui64_prefix'] = act_eui
+        intf['ipv6_eui64_prefix_remove'] = []
     else:
         # normal change
         intf['disable'] = False
-        intf['address_remove'] = list_diff(eff_addr, act_addr)
         intf['address'] = act_addr
-        intf['ipv6_eui64_prefix_remove'] = list_diff(eff_eui, act_eui)
+        intf['address_remove'] = list_diff(eff_addr, act_addr)
         intf['ipv6_eui64_prefix'] = act_eui
+        intf['ipv6_eui64_prefix_remove'] = list_diff(eff_eui, act_eui)
 
     # Remove the default link-local address if set.
     if conf.exists('ipv6 address no-default-link-local'):
