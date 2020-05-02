@@ -723,4 +723,4 @@ class Interface(Control):
         self.dhcp.v6.delete()
 
         # flush all addresses
-        self._cmd(f'ip addr flush dev "{self.config["ifname"]}"')
+        self._cmd(f'ip addr flush dev "{self.ifname}"')
