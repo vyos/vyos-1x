@@ -348,12 +348,8 @@ def apply(bridge):
 
         # add interfaces to bridge
         for member in bridge['member']:
-            # flushes address of only children of Interfaces class
-            # (e.g. vlan are not)
-            if member['name'] in Section.interfaces():
-                klass = Section.klass(member['name'], vlan=False)
-                klass(member['name'], create=False).flush_addrs()
-            # flushes all interfaces
+            # if we've come here we already verified the interface doesn't
+            # have addresses configured so just flush any remaining ones
             cmd(f'ip addr flush dev "{member["name"]}"')
             br.add_port(member['name'])
 
