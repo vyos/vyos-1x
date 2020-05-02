@@ -240,15 +240,11 @@ class Interface(Control):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
-        # stop DHCP(v6) if running
-        self.dhcp.v4.delete()
-        self.dhcp.v6.delete()
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
         # can not delete ALL interfaces, see below
-        for addr in self.get_addr():
-            self.del_addr(addr)
+        self.flush_addrs()
 
         # ---------------------------------------------------------------------
         # Any class can define an eternal regex in its definition
@@ -712,3 +708,16 @@ class Interface(Control):
             self._addr.remove(addr)
 
         return ret
+
+    def flush_addrs(self):
+        """
+        Flush all addresses from an interface, including DHCP.
+
+        Will raise an exception on error.
+        """
+        # stop DHCP(v6) if running
+        self.dhcp.v4.delete()
+        self.dhcp.v6.delete()
+
+        # flush all addresses
+        self._cmd(f'ip addr flush dev "{self.config["ifname"]}"')
