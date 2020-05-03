@@ -498,3 +498,27 @@ def get_half_cpus():
     if cpu > 1:
         cpu /= 2
     return int(cpu)
+
+def ifname_from_config(conf):
+    """
+    Gets interface name with VLANs from current config level.
+    Level must be at the interface whose name we want.
+
+    Example:
+    >>> from vyos.util import ifname_from_config
+    >>> from vyos.config import Config
+    >>> conf = Config()
+    >>> conf.set_level('interfaces ethernet eth0 vif-s 1 vif-c 2')
+    >>> ifname_from_config(conf)
+    'eth0.1.2'
+    """
+    level = conf.get_level()
+
+    # vlans
+    if level[-2] == 'vif' or level[-2] == 'vif-s':
+        return level[-3] + '.' + level[-1]
+    if level[-2] == 'vif-c':
+        return level[-5] + '.' + level[-3] + '.' + level[-1]
+
+    # no vlans
+    return level[-1]
