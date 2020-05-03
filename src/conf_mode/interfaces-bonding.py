@@ -185,6 +185,14 @@ def verify(bond):
             raise ConfigError('Mode dependency failed, primary not supported ' \
                               'in mode "{}"!'.format(bond['mode']))
 
+    if ( bond['is_bridge_member']
+            and ( bond['address']
+                or bond['ipv6_eui64_prefix']
+                or bond['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{bond["intf"]}" '
+            f'as it is a member of bridge "{bond["is_bridge_member"]}"!'))
+
     if bond['vrf']:
         if bond['vrf'] not in interfaces():
             raise ConfigError(f'VRF "{bond["vrf"]}" does not exist')
