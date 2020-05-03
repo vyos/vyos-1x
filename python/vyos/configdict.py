@@ -266,9 +266,6 @@ def intf_to_dict(conf, default):
     if conf.exists('ipv6 disable-forwarding'):
         intf['ipv6_forwarding'] = 0
 
-    # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        intf['mac'] = conf.return_value('mac')
     # check if interface is member of a bridge
     intf['is_bridge_member'] = is_member(conf, intf['intf'], 'bridge')
 
@@ -276,6 +273,10 @@ def intf_to_dict(conf, default):
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         intf['ipv6_dup_addr_detect'] = int(
             conf.return_value('ipv6 dup-addr-detect-transmits'))
+
+    # Media Access Control (MAC) address
+    if conf.exists('mac'):
+        intf['mac'] = conf.return_value('mac')
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -350,7 +351,7 @@ def intf_to_dict(conf, default):
         # add the link-local by default to make IPv6 work
         intf['ipv6_eui64_prefix'].append('fe80::/64')
 
-    # Find out if MAC has changed
+    # If MAC has changed, remove and re-add all IPv6 EUI64 addresses
     try:
         interface = Interface(intf['intf'], create=False)
         if intf['mac'] and intf['mac'] != interface.get_mac():
