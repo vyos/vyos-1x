@@ -25,6 +25,7 @@ from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.config import Config
 from vyos.util import call, cmd
+from vyos.validate import has_address_configured
 from vyos import ConfigError
 
 default_config_data = {
@@ -213,9 +214,10 @@ def verify(bond):
                                   'belongs to {}'.format(intf, tmp))
 
         # can not add interfaces with an assigned address to a bond
-        if conf.exists('interfaces ethernet ' + intf + ' address'):
-            raise ConfigError('can not enslave interface {} which has an address ' \
-                              'assigned'.format(intf))
+        if has_address_configured(conf, intf):
+            raise ConfigError((
+                f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                f'it has an address assigned!'))
 
         # bond members are not allowed to be bridge members, too
         for tmp in conf.list_nodes('interfaces bridge'):
