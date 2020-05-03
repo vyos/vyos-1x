@@ -26,7 +26,6 @@ from vyos.ifconfig import Interface
 from vyos.validate import is_member
 from vyos.util import ifname_from_config
 
-
 def retrieve_config(path_hash, base_path, config):
     """
     Retrieves a VyOS config as a dict according to a declarative description
@@ -130,6 +129,7 @@ vlan_default = {
     'ipv6_dup_addr_detect': 1,
     'ingress_qos': '',
     'ingress_qos_changed': False,
+    'is_bridge_member': False,
     'mac': '',
     'mtu': 1500,
     'vif_c': [],
