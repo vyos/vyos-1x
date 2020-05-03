@@ -21,10 +21,9 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.configdict import list_diff, vlan_to_dict, intf_to_dict, add_to_dict
+from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.ifconfig import MACVLANIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.validate import is_bridge_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -77,8 +76,6 @@ def get_config():
     if not conf.exists(cfg_base):
         peth = deepcopy(default_config_data)
         peth['deleted'] = True
-        # check if interface is member if a bridge
-        peth['is_bridge_member'] = is_bridge_member(conf, ifname)
         return peth
 
     # set new configuration level

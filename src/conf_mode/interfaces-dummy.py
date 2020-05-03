@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.ifconfig import DummyIf
 from vyos.configdict import list_diff
 from vyos.config import Config
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -47,11 +47,12 @@ def get_config():
 
     dummy['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if we are a member of any bridge
+    dummy['is_bridge_member'] = is_member(conf, dummy['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces dummy ' + dummy['intf']):
         dummy['deleted'] = True
-        # check if interface is member if a bridge
-        dummy['is_bridge_member'] = is_bridge_member(conf, dummy['intf'])
         return dummy
 
     # set new configuration level

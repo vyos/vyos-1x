@@ -23,6 +23,7 @@ from copy import deepcopy
 
 from vyos import ConfigError
 from vyos.ifconfig import Interface
+from vyos.validate import is_member
 from vyos.util import ifname_from_config
 
 
@@ -268,6 +269,8 @@ def intf_to_dict(conf, default):
     # Media Access Control (MAC) address
     if conf.exists('mac'):
         intf['mac'] = conf.return_value('mac')
+    # check if interface is member of a bridge
+    intf['is_bridge_member'] = is_member(conf, intf['intf'], 'bridge')
 
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):

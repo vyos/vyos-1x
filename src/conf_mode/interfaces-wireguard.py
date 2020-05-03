@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
 from vyos.util import chown, chmod_750, call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -78,11 +78,12 @@ def get_config():
     wg = deepcopy(default_config_data)
     wg['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    wg['is_bridge_member'] = is_member(conf, wg['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists(base + [wg['intf']]):
         wg['deleted'] = True
-        # check if interface is member if a bridge
-        wg['is_bridge_member'] = is_bridge_member(conf, wg['intf'])
         return wg
 
     conf.set_level(base + [wg['intf']])

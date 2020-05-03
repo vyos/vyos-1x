@@ -29,7 +29,7 @@ from vyos.ifconfig import WiFiIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.template import render
 from vyos.util import chown, call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -134,12 +134,13 @@ def get_config():
 
     wifi['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    wifi['is_bridge_member'] = is_member(conf, wifi['intf'], 'bridge')
+
     # check if wireless interface has been removed
     cfg_base = 'interfaces wireless ' + wifi['intf']
     if not conf.exists(cfg_base):
         wifi['deleted'] = True
-        # check if interface is member if a bridge
-        wifi['is_bridge_member'] = is_bridge_member(conf, wifi['intf'])
         # we can not bail out early as wireless interface can not be removed
         # Kernel will complain with: RTNETLINK answers: Operation not supported.
         # Thus we need to remove individual settings

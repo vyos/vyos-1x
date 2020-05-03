@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import VXLANIf, Interface
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -62,11 +62,12 @@ def get_config():
 
     vxlan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    vxlan['is_bridge_member'] = is_member(conf, vxlan['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces vxlan ' + vxlan['intf']):
         vxlan['deleted'] = True
-        # check if interface is member if a bridge
-        vxlan['is_bridge_member'] = is_bridge_member(conf, vxlan['intf'])
         return vxlan
 
     # set new configuration level

@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.template import render
 from vyos.util import chown, chmod_755, cmd, call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -64,11 +64,12 @@ def get_config():
     wwan['logfile'] = f"/var/log/vyatta/ppp_{wwan['intf']}.log"
     wwan['chat_script'] = f"/etc/ppp/peers/chat.{wwan['intf']}"
 
+    # check if interface is member if a bridge
+    wwan['is_bridge_member'] = is_member(conf, wwan['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces wirelessmodem ' + wwan['intf']):
         wwan['deleted'] = True
-        # check if interface is member if a bridge
-        wwan['is_bridge_member'] = is_bridge_member(conf, wwan['intf'])
         return wwan
 
     # set new configuration level

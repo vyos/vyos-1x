@@ -29,7 +29,7 @@ from vyos.configdict import list_diff
 from vyos.ifconfig import VTunIf
 from vyos.template import render
 from vyos.util import call, chown, chmod_600, chmod_755
-from vyos.validate import is_addr_assigned, is_bridge_member, is_ipv4
+from vyos.validate import is_addr_assigned, is_member, is_ipv4
 from vyos import ConfigError
 
 user = 'openvpn'
@@ -199,11 +199,12 @@ def get_config():
     openvpn['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     openvpn['auth_user_pass_file'] = f"/run/openvpn/{openvpn['intf']}.pw"
 
+    # check if interface is member of a bridge
+    openvpn['is_bridge_member'] = is_member(conf, openvpn['intf'], 'bridge')
+
     # Check if interface instance has been removed
     if not conf.exists('interfaces openvpn ' + openvpn['intf']):
         openvpn['deleted'] = True
-        # check if interface is member if a bridge
-        openvpn['is_bridge_member'] = is_bridge_member(conf, openvpn['intf'])
         return openvpn
 
     # Check if we belong to any bridge interface

@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import GeneveIf
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -49,11 +49,12 @@ def get_config():
 
     geneve['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    geneve['is_bridge_member'] = is_member(conf, geneve['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces geneve ' + geneve['intf']):
         geneve['deleted'] = True
-        # check if interface is member if a bridge
-        geneve['is_bridge_member'] = is_bridge_member(conf, geneve['intf'])
         return geneve
 
     # set new configuration level
