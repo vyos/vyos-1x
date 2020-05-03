@@ -63,8 +63,10 @@ def apply_vlan_config(vlan, config):
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
 
-    # assign/remove VRF
-    vlan.set_vrf(config['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not config['is_bridge_member']:
+        vlan.set_vrf(config['vrf'])
 
     # Delete old IPv6 EUI64 addresses before changing MAC
     for addr in config['ipv6_eui64_prefix_remove']:
@@ -92,6 +94,10 @@ def apply_vlan_config(vlan, config):
     for addr in config['address']:
         vlan.add_addr(addr)
 
+    # re-add ourselves to any bridge we might have fallen out of
+    if config['is_bridge_member']:
+        vlan.add_to_bridge(config['is_bridge_member'])
+
 def verify_vlan_config(config):
     """
     Generic function to verify VLAN config consistency. Instead of re-
@@ -102,7 +108,6 @@ def verify_vlan_config(config):
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
 
         if vif['vrf']:
             if vif['vrf'] not in interfaces():
@@ -127,7 +132,6 @@ def verify_vlan_config(config):
         if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-
         if vif_s['vrf']:
             if vif_s['vrf'] not in interfaces():
                 raise ConfigError(f'VRF "{vif_s["vrf"]}" does not exist')
@@ -141,7 +145,6 @@ def verify_vlan_config(config):
             # DHCPv6 parameters-only and temporary address are mutually exclusive
             if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
                 raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
-
 
             if vif_c['vrf']:
                 if vif_c['vrf'] not in interfaces():
