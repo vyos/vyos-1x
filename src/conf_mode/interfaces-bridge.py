@@ -24,7 +24,7 @@ from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
 from vyos.config import Config
-from vyos.util import cmd
+from vyos.util import cmd, get_bridge_member_config
 from vyos import ConfigError
 
 default_config_data = {
@@ -202,22 +202,12 @@ def get_config():
 
     # Determine bridge member interface (currently configured)
     for intf in conf.list_nodes('member interface'):
-        # cost and priority initialized with linux defaults
-        # by reading /sys/devices/virtual/net/br0/brif/eth2/{path_cost,priority}
-        # after adding interface to bridge after reboot
-        iface = {
-            'name': intf,
-            'cost': 100,
-            'priority': 32
-        }
-
-        if conf.exists('member interface {} cost'.format(intf)):
-            iface['cost'] = int(conf.return_value('member interface {} cost'.format(intf)))
-
-        if conf.exists('member interface {} priority'.format(intf)):
-            iface['priority'] = int(conf.return_value('member interface {} priority'.format(intf)))
-
-        bridge['member'].append(iface)
+        # defaults are stored in util.py (they can't be here as all interface
+        # scripts use the function)
+        memberconf = get_bridge_member_config(conf, bridge['intf'], intf)
+        if memberconf:
+            memberconf['name'] = intf
+            bridge['member'].append(memberconf)
 
     # Determine bridge member interface (currently effective) - to determine which
     # interfaces is no longer assigend to the bridge and thus can be removed
@@ -382,9 +372,9 @@ def apply(bridge):
         for member in bridge['member']:
             i = STPBridgeIf(member['name'])
             # configure ARP cache timeout
-            i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
+            i.set_arp_cache_tmo(member['arp_cache_tmo'])
             # ignore link state changes
-            i.set_link_detect(bridge['disable_link_detect'])
+            i.set_link_detect(member['disable_link_detect'])
             # set bridge port path cost
             i.set_path_cost(member['cost'])
             # set bridge port path priority
