@@ -282,3 +282,25 @@ def is_member(conf, interface, intftype=None):
     old_level = conf.set_level(old_level)
     return ret_val
 
+def has_address_configured(conf, intf):
+    """
+    Checks if interface has an address configured.
+    Checks the following config nodes:
+    'address', 'ipv6 address eui64', 'ipv6 address autoconf'
+
+    Returns True if interface has address configured, False if it doesn't.
+    """
+    from vyos.ifconfig import Section
+    ret = False
+
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    intfpath = 'interfaces ' + Section.get_config_path(intf)
+    if ( conf.exists(f'{intfpath} address') or
+            conf.exists(f'{intfpath} ipv6 address autoconf') or
+            conf.exists(f'{intfpath} ipv6 address eui64') ):
+        ret = True
+
+    conf.set_level(old_level)
+    return ret
