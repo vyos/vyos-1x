@@ -344,8 +344,9 @@ def intf_to_dict(conf, default):
         intf['ipv6_eui64_prefix'] = act_eui
         intf['ipv6_eui64_prefix_remove'] = list_diff(eff_eui, act_eui)
 
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
+    # Remove the default link-local address if set or if member of a bridge
+    if ( conf.exists('ipv6 address no-default-link-local')
+            or intf.get('is_bridge_member') ):
         intf['ipv6_eui64_prefix_remove'].append('fe80::/64')
     else:
         # add the link-local by default to make IPv6 work
