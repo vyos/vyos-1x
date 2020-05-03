@@ -92,7 +92,6 @@ def get_config():
     conf.set_level(cfg_base)
 
     eth, disabled = intf_to_dict(conf, default_config_data)
-    eth['intf'] = ifname
 
     # disable ethernet flow control (pause frames)
     if conf.exists('disable-flow-control'):

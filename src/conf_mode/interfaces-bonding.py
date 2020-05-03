@@ -119,7 +119,6 @@ def get_config():
     conf.set_level(cfg_base)
 
     bond, disabled = intf_to_dict(conf, default_config_data)
-    bond['intf'] = ifname
 
     # ARP link monitoring frequency in milliseconds
     if conf.exists('arp-monitor interval'):

@@ -85,7 +85,6 @@ def get_config():
     conf.set_level(cfg_base)
 
     peth, disabled = intf_to_dict(conf, default_config_data)
-    peth['intf'] = ifname
 
     # ARP cache entry timeout in seconds
     if conf.exists(['ip', 'arp-cache-timeout']):

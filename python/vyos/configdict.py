@@ -23,6 +23,7 @@ from copy import deepcopy
 
 from vyos import ConfigError
 from vyos.ifconfig import Interface
+from vyos.util import ifname_from_config
 
 
 def retrieve_config(path_hash, base_path, config):
@@ -197,6 +198,7 @@ def intf_to_dict(conf, default):
     """
 
     intf = deepcopy(default)
+    intf['intf'] = ifname_from_config(conf)
 
     # retrieve configured interface addresses
     if conf.exists('address'):
