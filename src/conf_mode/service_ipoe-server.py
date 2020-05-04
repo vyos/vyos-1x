@@ -112,27 +112,29 @@ def get_config():
                 'name': interface,
                 'mac': []
             }
-            for client in conf.list_nodes(base_path + ['authentication', 'interface', interface, 'mac-address']):
-                mac = {
+            for mac in conf.list_nodes(['authentication', 'interface', interface, 'mac-address']):
+                client = {
                     'address': mac,
                     'rate_download': '',
                     'rate_upload': '',
                     'vlan_id': ''
                 }
-                conf.set_level(base_path + ['authentication', 'interface', interface, 'mac-address', client])
+                conf.set_level(base_path + ['authentication', 'interface', interface, 'mac-address', mac])
 
                 if conf.exists(['rate-limit', 'download']):
-                    mac['rate_download'] = conf.return_value(['rate-limit', 'download'])
+                    client['rate_download'] = conf.return_value(['rate-limit', 'download'])
 
                 if conf.exists(['rate-limit', 'upload']):
-                    mac['rate_upload'] = conf.return_value(['rate-limit', 'upload'])
+                    client['rate_upload'] = conf.return_value(['rate-limit', 'upload'])
 
                 if conf.exists(['vlan-id']):
-                    mac['vlan'] = conf.return_value(['vlan-id'])
+                    client['vlan'] = conf.return_value(['vlan-id'])
 
-                tmp['mac'].append(mac)
+                tmp['mac'].append(client)
 
             ipoe['auth_interfaces'].append(tmp)
+
+    conf.set_level(base_path)
 
     #
     # authentication mode radius servers and settings
