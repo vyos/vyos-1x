@@ -63,8 +63,10 @@ def apply_vlan_config(vlan, config):
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
 
-    # assign/remove VRF
-    vlan.set_vrf(config['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not config['is_bridge_member']:
+        vlan.set_vrf(config['vrf'])
 
     # Delete old IPv6 EUI64 addresses before changing MAC
     for addr in config['ipv6_eui64_prefix_remove']:
@@ -92,6 +94,10 @@ def apply_vlan_config(vlan, config):
     for addr in config['address']:
         vlan.add_addr(addr)
 
+    # re-add ourselves to any bridge we might have fallen out of
+    if config['is_bridge_member']:
+        vlan.add_to_bridge(config['is_bridge_member'])
+
 def verify_vlan_config(config):
     """
     Generic function to verify VLAN config consistency. Instead of re-
@@ -103,9 +109,22 @@ def verify_vlan_config(config):
         if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-        vrf_name = vif['vrf']
-        if vrf_name and vrf_name not in interfaces():
-            raise ConfigError(f'VRF "{vrf_name}" does not exist')
+        if ( vif['is_bridge_member']
+                and ( vif['address']
+                    or vif['ipv6_eui64_prefix']
+                    or vif['ipv6_autoconf'] ) ):
+            raise ConfigError((
+                    f'Cannot assign address to vif interface {vif["intf"]} '
+                    f'which is a member of bridge {vif["is_bridge_member"]}'))
+
+        if vif['vrf']:
+            if vif['vrf'] not in interfaces():
+                raise ConfigError(f'VRF "{vif["vrf"]}" does not exist')
+
+            if vif['is_bridge_member']:
+                raise ConfigError((
+                    f'vif {vif["intf"]} cannot be member of VRF {vif["vrf"]} '
+                    f'and bridge {vif["is_bridge_member"]} at the same time!'))
 
     # e.g. wireless interface has no vif_s support
     # thus we bail out eraly.
@@ -121,17 +140,42 @@ def verify_vlan_config(config):
         if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-            vrf_name = vif_s['vrf']
-            if vrf_name and vrf_name not in interfaces():
-                raise ConfigError(f'VRF "{vrf_name}" does not exist')
+        if ( vif_s['is_bridge_member']
+                and ( vif_s['address']
+                    or vif_s['ipv6_eui64_prefix']
+                    or vif_s['ipv6_autoconf'] ) ):
+            raise ConfigError((
+                    f'Cannot assign address to vif-s interface {vif_s["intf"]} '
+                    f'which is a member of bridge {vif_s["is_bridge_member"]}'))
+
+        if vif_s['vrf']:
+            if vif_s['vrf'] not in interfaces():
+                raise ConfigError(f'VRF "{vif_s["vrf"]}" does not exist')
+
+            if vif_s['is_bridge_member']:
+                raise ConfigError((
+                    f'vif-s {vif_s["intf"]} cannot be member of VRF {vif_s["vrf"]} '
+                    f'and bridge {vif_s["is_bridge_member"]} at the same time!'))
 
         for vif_c in vif_s['vif_c']:
             # DHCPv6 parameters-only and temporary address are mutually exclusive
             if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
                 raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-            vrf_name = vif_c['vrf']
-            if vrf_name and vrf_name not in interfaces():
-                raise ConfigError(f'VRF "{vrf_name}" does not exist')
+            if ( vif_c['is_bridge_member']
+                    and ( vif_c['address']
+                        or vif_c['ipv6_eui64_prefix']
+                        or vif_c['ipv6_autoconf'] ) ):
+                raise ConfigError((
+                    f'Cannot assign address to vif-c interface {vif_c["intf"]} '
+                    f'which is a member of bridge {vif_c["is_bridge_member"]}'))
 
+            if vif_c['vrf']:
+                if vif_c['vrf'] not in interfaces():
+                    raise ConfigError(f'VRF "{vif_c["vrf"]}" does not exist')
+
+                if vif_c['is_bridge_member']:
+                    raise ConfigError((
+                    f'vif-c {vif_c["intf"]} cannot be member of VRF {vif_c["vrf"]} '
+                    f'and bridge {vif_c["is_bridge_member"]} at the same time!'))
 

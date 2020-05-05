@@ -498,3 +498,74 @@ def get_half_cpus():
     if cpu > 1:
         cpu /= 2
     return int(cpu)
+
+def ifname_from_config(conf):
+    """
+    Gets interface name with VLANs from current config level.
+    Level must be at the interface whose name we want.
+
+    Example:
+    >>> from vyos.util import ifname_from_config
+    >>> from vyos.config import Config
+    >>> conf = Config()
+    >>> conf.set_level('interfaces ethernet eth0 vif-s 1 vif-c 2')
+    >>> ifname_from_config(conf)
+    'eth0.1.2'
+    """
+    level = conf.get_level()
+
+    # vlans
+    if level[-2] == 'vif' or level[-2] == 'vif-s':
+        return level[-3] + '.' + level[-1]
+    if level[-2] == 'vif-c':
+        return level[-5] + '.' + level[-3] + '.' + level[-1]
+
+    # no vlans
+    return level[-1]
+
+def get_bridge_member_config(conf, br, intf):
+    """
+    Gets bridge port (member) configuration
+
+    Arguments:
+    conf: Config
+    br: bridge name
+    intf: interface name
+
+    Returns:
+    dict with the configuration
+    False if bridge or bridge port doesn't exist
+    """
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    bridge = f'interfaces bridge {br}'
+    member = f'{bridge} member interface {intf}'
+    if not ( conf.exists(bridge) and conf.exists(member) ):
+        return False
+
+    # default bridge port configuration
+    # cost and priority initialized with linux defaults
+    # by reading /sys/devices/virtual/net/br0/brif/eth2/{path_cost,priority}
+    # after adding interface to bridge after reboot
+    memberconf = {
+        'cost': 100,
+        'priority': 32,
+        'arp_cache_tmo': 30,
+        'disable_link_detect': 1,
+    }
+
+    if conf.exists(f'{member} cost'):
+        memberconf['cost'] = int(conf.return_value(f'{member} cost'))
+
+    if conf.exists(f'{member} priority'):
+        memberconf['priority'] = int(conf.return_value(f'{member} priority'))
+
+    if conf.exists(f'{bridge} ip arp-cache-timeout'):
+        memberconf['arp_cache_tmo'] = int(conf.return_value(f'{bridge} ip arp-cache-timeout'))
+
+    if conf.exists(f'{bridge} disable-link-detect'):
+        memberconf['disable_link_detect'] = 2
+
+    conf.set_level(old_level)
+    return memberconf

@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import GeneveIf
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -49,11 +49,12 @@ def get_config():
 
     geneve['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    geneve['is_bridge_member'] = is_member(conf, geneve['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces geneve ' + geneve['intf']):
         geneve['deleted'] = True
-        # check if interface is member if a bridge
-        geneve['is_bridge_member'] = is_bridge_member(conf, geneve['intf'])
         return geneve
 
     # set new configuration level
@@ -97,11 +98,16 @@ def get_config():
 def verify(geneve):
     if geneve['deleted']:
         if geneve['is_bridge_member']:
-            interface = geneve['intf']
-            bridge = geneve['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{geneve["intf"]}" as it is a '
+                f'member of bridge "{geneve["is_bridge_member"]}"!'))
 
         return None
+
+    if geneve['is_bridge_member'] and geneve['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{geneve["intf"]}" '
+            f'as it is a member of bridge "{geneve["is_bridge_member"]}"!'))
 
     if not geneve['remote']:
         raise ConfigError('GENEVE remote must be configured')
@@ -157,6 +163,10 @@ def apply(geneve):
         # administratively disabled
         if not geneve['disable']:
             g.set_admin_state('up')
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if geneve['is_bridge_member']:
+            g.add_to_bridge(geneve['is_bridge_member'])
 
     return None
 

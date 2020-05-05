@@ -29,7 +29,7 @@ from vyos.ifconfig import WiFiIf, Section
 from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
 from vyos.template import render
 from vyos.util import chown, call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -134,12 +134,13 @@ def get_config():
 
     wifi['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    wifi['is_bridge_member'] = is_member(conf, wifi['intf'], 'bridge')
+
     # check if wireless interface has been removed
     cfg_base = 'interfaces wireless ' + wifi['intf']
     if not conf.exists(cfg_base):
         wifi['deleted'] = True
-        # check if interface is member if a bridge
-        wifi['is_bridge_member'] = is_bridge_member(conf, wifi['intf'])
         # we can not bail out early as wireless interface can not be removed
         # Kernel will complain with: RTNETLINK answers: Operation not supported.
         # Thus we need to remove individual settings
@@ -378,8 +379,8 @@ def get_config():
     eff_addr = conf.return_effective_values('ipv6 address eui64')
     wifi['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, wifi['ipv6_eui64_prefix'])
 
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
+    # Remove the default link-local address if set or if member of a bridge
+    if conf.exists('ipv6 address no-default-link-local') or wifi['is_bridge_member']:
         wifi['ipv6_eui64_prefix_remove'].append('fe80::/64')
     else:
         # add the link-local by default to make IPv6 work
@@ -551,9 +552,9 @@ def get_config():
 def verify(wifi):
     if wifi['deleted']:
         if wifi['is_bridge_member']:
-            interface = wifi['intf']
-            bridge = wifi['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{wifi["intf"]}" as it is a '
+                f'member of bridge "{wifi["is_bridge_member"]}"!'))
 
         return None
 
@@ -598,9 +599,23 @@ def verify(wifi):
         if not radius['key']:
             raise ConfigError('Misssing RADIUS shared secret key for server: {}'.format(radius['server']))
 
-    vrf_name = wifi['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if ( wifi['is_bridge_member']
+            and ( wifi['address']
+                or wifi['ipv6_eui64_prefix']
+                or wifi['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{wifi["intf"]}" '
+            f'as it is a member of bridge "{wifi["is_bridge_member"]}"!'))
+
+    if wifi['vrf']:
+        if wifi['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{wifi["vrf"]}" does not exist')
+
+        if wifi['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{wifi["intf"]}" cannot be member of VRF '
+                f'"{wifi["vrf"]}" and bridge {wifi["is_bridge_member"]} '
+                f'at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(wifi)
@@ -691,8 +706,10 @@ def apply(wifi):
         # Finally create the new interface
         w = WiFiIf(interface, **conf)
 
-        # assign/remove VRF
-        w.set_vrf(wifi['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not wifi['is_bridge_member']:
+            w.set_vrf(wifi['vrf'])
 
         # update interface description used e.g. within SNMP
         w.set_alias(wifi['description'])

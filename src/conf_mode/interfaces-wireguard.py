@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
 from vyos.util import chown, chmod_750, call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -38,8 +38,8 @@ default_config_data = {
     'listen_port': '',
     'deleted': False,
     'disable': False,
-    'is_bridge_member': False,
     'fwmark': 0,
+    'is_bridge_member': False,
     'mtu': 1420,
     'peer': [],
     'peer_remove': [], # stores public keys of peers to remove
@@ -78,11 +78,12 @@ def get_config():
     wg = deepcopy(default_config_data)
     wg['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    wg['is_bridge_member'] = is_member(conf, wg['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists(base + [wg['intf']]):
         wg['deleted'] = True
-        # check if interface is member if a bridge
-        wg['is_bridge_member'] = is_bridge_member(conf, wg['intf'])
         return wg
 
     conf.set_level(base + [wg['intf']])
@@ -189,44 +190,52 @@ def get_config():
 
 
 def verify(wg):
-    interface = wg['intf']
-
     if wg['deleted']:
         if wg['is_bridge_member']:
-            interface = wg['intf']
-            bridge = wg['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{wg["intf"]}" as it is a member '
+                f'of bridge "{wg["is_bridge_member"]}"!'))
 
         return None
 
-    vrf_name = wg['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if wg['is_bridge_member'] and wg['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{wg["intf"]}" '
+            f'as it is a member of bridge "{wg["is_bridge_member"]}"!'))
+
+    if wg['vrf']:
+        if wg['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{wg["vrf"]}" does not exist')
+
+        if wg['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{wg["intf"]}" cannot be member of VRF '
+                f'"{wg["vrf"]}" and bridge {wg["is_bridge_member"]} '
+                f'at the same time!'))
 
     if not os.path.exists(wg['pk']):
         raise ConfigError('No keys found, generate them by executing:\n' \
                           '"run generate wireguard [keypair|named-keypairs]"')
 
     if not wg['address']:
-        raise ConfigError(f'IP address required for interface "{interface}"!')
+        raise ConfigError(f'IP address required for interface "{wg["intf"]}"!')
 
     if not wg['peer']:
-        raise ConfigError(f'Peer required for interface "{interface}"!')
+        raise ConfigError(f'Peer required for interface "{wg["intf"]}"!')
 
     # run checks on individual configured WireGuard peer
     for peer in wg['peer']:
-        peer_name = peer['name']
         if not peer['allowed-ips']:
-            raise ConfigError(f'Peer allowed-ips required for peer "{peer_name}"!')
+            raise ConfigError(f'Peer allowed-ips required for peer "{peer["name"]}"!')
 
         if not peer['pubkey']:
-            raise ConfigError(f'Peer public-key required for peer "{peer_name}"!')
+            raise ConfigError(f'Peer public-key required for peer "{peer["name"]}"!')
 
         if peer['address'] and not peer['port']:
-            raise ConfigError(f'Peer "{peer_name}" port must be defined if address is defined!')
+            raise ConfigError(f'Peer "{peer["name"]}" port must be defined if address is defined!')
 
         if not peer['address'] and peer['port']:
-           raise ConfigError(f'Peer "{peer_name}" address must be defined if port is defined!')
+           raise ConfigError(f'Peer "{peer["name"]}" address must be defined if port is defined!')
 
 
 def apply(wg):
@@ -252,8 +261,10 @@ def apply(wg):
     # update interface description used e.g. within SNMP
     w.set_alias(wg['description'])
 
-    # assign/remove VRF
-    w.set_vrf(wg['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not wg['is_bridge_member']:
+        w.set_vrf(wg['vrf'])
 
     # remove peers
     for pub_key in wg['peer_remove']:

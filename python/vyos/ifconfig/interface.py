@@ -42,6 +42,7 @@ from vyos.ifconfig.control import Control
 from vyos.ifconfig.dhcp import DHCP
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
+from vyos.ifconfig import Section
 
 
 class Interface(Control):
@@ -718,3 +719,22 @@ class Interface(Control):
 
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
+
+    def add_to_bridge(self, br):
+        """
+        Adds the interface to the bridge with the passed port config.
+
+        Returns False if bridge doesn't exist.
+        """
+
+        # check if the bridge exists (on boot it doesn't)
+        if br not in Section.interfaces('bridge'):
+            return False
+
+        self.flush_addrs()
+        # add interface to bridge - use Section.klass to get BridgeIf class
+        Section.klass(br)(br, create=False).add_port(self.ifname)
+
+        # TODO: port config (STP)
+
+        return True

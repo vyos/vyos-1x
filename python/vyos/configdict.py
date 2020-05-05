@@ -23,7 +23,8 @@ from copy import deepcopy
 
 from vyos import ConfigError
 from vyos.ifconfig import Interface
-
+from vyos.validate import is_member
+from vyos.util import ifname_from_config
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -128,6 +129,7 @@ vlan_default = {
     'ipv6_dup_addr_detect': 1,
     'ingress_qos': '',
     'ingress_qos_changed': False,
+    'is_bridge_member': False,
     'mac': '',
     'mtu': 1500,
     'vif_c': [],
@@ -197,6 +199,7 @@ def intf_to_dict(conf, default):
     """
 
     intf = deepcopy(default)
+    intf['intf'] = ifname_from_config(conf)
 
     # retrieve configured interface addresses
     if conf.exists('address'):
@@ -263,14 +266,17 @@ def intf_to_dict(conf, default):
     if conf.exists('ipv6 disable-forwarding'):
         intf['ipv6_forwarding'] = 0
 
-    # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        intf['mac'] = conf.return_value('mac')
+    # check if interface is member of a bridge
+    intf['is_bridge_member'] = is_member(conf, intf['intf'], 'bridge')
 
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         intf['ipv6_dup_addr_detect'] = int(
             conf.return_value('ipv6 dup-addr-detect-transmits'))
+
+    # Media Access Control (MAC) address
+    if conf.exists('mac'):
+        intf['mac'] = conf.return_value('mac')
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -338,14 +344,15 @@ def intf_to_dict(conf, default):
         intf['ipv6_eui64_prefix'] = act_eui
         intf['ipv6_eui64_prefix_remove'] = list_diff(eff_eui, act_eui)
 
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
+    # Remove the default link-local address if set or if member of a bridge
+    if ( conf.exists('ipv6 address no-default-link-local')
+            or intf.get('is_bridge_member') ):
         intf['ipv6_eui64_prefix_remove'].append('fe80::/64')
     else:
         # add the link-local by default to make IPv6 work
         intf['ipv6_eui64_prefix'].append('fe80::/64')
 
-    # Find out if MAC has changed
+    # If MAC has changed, remove and re-add all IPv6 EUI64 addresses
     try:
         interface = Interface(intf['intf'], create=False)
         if intf['mac'] and intf['mac'] != interface.get_mac():
@@ -416,13 +423,13 @@ def add_to_dict(conf, disabled, ifdict, section, key):
 
 def vlan_to_dict(conf, default=vlan_default):
     vlan, disabled = intf_to_dict(conf, default)
-    # get the '100' in 'interfaces bonding bond0 vif-s 100
-    vlan['id'] = conf.get_level()[-1]
 
-    current_level = conf.get_level()
+    level = conf.get_level()
+    # get the '100' in 'interfaces bonding bond0 vif-s 100'
+    vlan['id'] = level[-1]
 
     # if this is a not within vif-s node, we are done
-    if current_level[-2] != 'vif-s':
+    if level[-2] != 'vif-s':
         return vlan
 
     # ethertype is mandatory on vif-s nodes and only exists here!

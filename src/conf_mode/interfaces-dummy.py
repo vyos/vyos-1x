@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.ifconfig import DummyIf
 from vyos.configdict import list_diff
 from vyos.config import Config
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -47,11 +47,12 @@ def get_config():
 
     dummy['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if we are a member of any bridge
+    dummy['is_bridge_member'] = is_member(conf, dummy['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces dummy ' + dummy['intf']):
         dummy['deleted'] = True
-        # check if interface is member if a bridge
-        dummy['is_bridge_member'] = is_bridge_member(conf, dummy['intf'])
         return dummy
 
     # set new configuration level
@@ -84,15 +85,26 @@ def get_config():
 def verify(dummy):
     if dummy['deleted']:
         if dummy['is_bridge_member']:
-            interface = dummy['intf']
-            bridge = dummy['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Interface "{dummy["intf"]}" cannot be deleted as it is a '
+                f'member of bridge "{dummy["is_bridge_member"]}"!'))
 
         return None
 
-    vrf_name = dummy['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if dummy['vrf']:
+        if dummy['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{dummy["vrf"]}" does not exist')
+
+        if dummy['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{dummy["intf"]}" cannot be member of VRF '
+                f'"{dummy["vrf"]}" and bridge "{dummy["is_bridge_member"]}" '
+                f'at the same time!'))
+
+    if dummy['is_bridge_member'] and dummy['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{dummy["intf"]}" '
+            f'as it is a member of bridge "{dummy["is_bridge_member"]}"!'))
 
     return None
 
@@ -117,8 +129,10 @@ def apply(dummy):
         for addr in dummy['address']:
             d.add_addr(addr)
 
-        # assign/remove VRF
-        d.set_vrf(dummy['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not dummy['is_bridge_member']:
+            d.set_vrf(dummy['vrf'])
 
         # disable interface on demand
         if dummy['disable']:
