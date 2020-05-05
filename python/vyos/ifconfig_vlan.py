@@ -16,6 +16,53 @@
 from netifaces import interfaces
 from vyos import ConfigError
 
+def apply_all_vlans(intf, intfconfig):
+    """
+    Function applies all VLANs to the passed interface.
+
+    intf: object of Interface class
+    intfconfig: dict with interface configuration
+    """
+    # remove no longer required service VLAN interfaces (vif-s)
+    for vif_s in intfconfig['vif_s_remove']:
+        intf.del_vlan(vif_s)
+
+    # create service VLAN interfaces (vif-s)
+    for vif_s_id, vif_s in intfconfig['vif_s'].items():
+        s_vlan = intf.add_vlan(vif_s_id, ethertype=vif_s['ethertype'])
+        apply_vlan_config(s_vlan, vif_s)
+
+        # remove no longer required client VLAN interfaces (vif-c)
+        # on lower service VLAN interface
+        for vif_c in intfconfig['vif_c_remove']:
+            s_vlan.del_vlan(vif_c)
+
+        # create client VLAN interfaces (vif-c)
+        # on lower service VLAN interface
+        for vif_c_id, vif_c in vif_s['vif_c'].items():
+            c_vlan = s_vlan.add_vlan(vif_c_id)
+            apply_vlan_config(c_vlan, vif_c)
+
+    # remove no longer required VLAN interfaces (vif)
+    for vif in intfconfig['vif_remove']:
+        intf.del_vlan(vif)
+
+    # create VLAN interfaces (vif)
+    for vif_id, vif in intfconfig['vif'].items():
+        # QoS priority mapping can only be set during interface creation
+        # so we delete the interface first if required.
+        if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
+            try:
+                # on system bootup the above condition is true but the interface
+                # does not exists, which throws an exception, but that's legal
+                intf.del_vlan(vif_id)
+            except:
+                pass
+
+        vlan = intf.add_vlan(vif_id, ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
+        apply_vlan_config(vlan, vif)
+
+
 def apply_vlan_config(vlan, config):
     """
     Generic function to apply a VLAN configuration from a dictionary
