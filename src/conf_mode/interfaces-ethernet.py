@@ -21,7 +21,7 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.validate import is_member
 from vyos.config import Config
@@ -65,9 +65,9 @@ default_config_data = {
     'offload_tso': 'off',
     'offload_ufo': 'off',
     'speed': 'auto',
-    'vif_s': [],
+    'vif_s': {},
     'vif_s_remove': [],
-    'vif': [],
+    'vif': {},
     'vif_remove': [],
     'vrf': ''
 }
@@ -306,44 +306,8 @@ def apply(eth):
         if eth['is_bridge_member']:
             e.add_to_bridge(eth['is_bridge_member'])
 
-        # remove no longer required service VLAN interfaces (vif-s)
-        for vif_s in eth['vif_s_remove']:
-            e.del_vlan(vif_s)
-
-        # create service VLAN interfaces (vif-s)
-        for vif_s in eth['vif_s']:
-            s_vlan = e.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-            apply_vlan_config(s_vlan, vif_s)
-
-            # remove no longer required client VLAN interfaces (vif-c)
-            # on lower service VLAN interface
-            for vif_c in vif_s['vif_c_remove']:
-                s_vlan.del_vlan(vif_c)
-
-            # create client VLAN interfaces (vif-c)
-            # on lower service VLAN interface
-            for vif_c in vif_s['vif_c']:
-                c_vlan = s_vlan.add_vlan(vif_c['id'])
-                apply_vlan_config(c_vlan, vif_c)
-
-        # remove no longer required VLAN interfaces (vif)
-        for vif in eth['vif_remove']:
-            e.del_vlan(vif)
-
-        # create VLAN interfaces (vif)
-        for vif in eth['vif']:
-            # QoS priority mapping can only be set during interface creation
-            # so we delete the interface first if required.
-            if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
-                try:
-                    # on system bootup the above condition is true but the interface
-                    # does not exists, which throws an exception, but that's legal
-                    e.del_vlan(vif['id'])
-                except:
-                    pass
-
-            vlan = e.add_vlan(vif['id'], ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
-            apply_vlan_config(vlan, vif)
+        # apply all vlans to interface
+        apply_all_vlans(e, eth)
 
     return None
 
