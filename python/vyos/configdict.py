@@ -375,8 +375,7 @@ def add_to_dict(conf, disabled, ifdict, section, key):
     # the section to parse for vlan
     sections = []
 
-    # Determine interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the bond
+    # determine which interfaces to add or remove based on disable state
     if disabled == disable.both:
         # was and is still disabled
         ifdict[f'{key}_remove'] = []
@@ -389,7 +388,7 @@ def add_to_dict(conf, disabled, ifdict, section, key):
         sections = active
     else:
         # normal change
-        # get vif-s interfaces (currently effective) - to determine which vif-s
+        # get interfaces (currently effective) - to determine which
         # interface is no longer present and needs to be removed
         ifdict[f'{key}_remove'] = list_diff(effect, active)
         sections = active
