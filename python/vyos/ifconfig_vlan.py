@@ -104,7 +104,8 @@ def verify_vlan_config(config):
     implementing this function in multiple places use single source \o/
     """
 
-    for vif in config['vif']:
+    # config['vif'] is a dict with ids as keys and config dicts as values
+    for vif in config['vif'].values():
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
@@ -131,14 +132,19 @@ def verify_vlan_config(config):
     if 'vif_s' not in config.keys():
         return
 
-    for vif_s in config['vif_s']:
-        for vif in config['vif']:
-            if vif['id'] == vif_s['id']:
-                raise ConfigError('Can not use identical ID on vif and vif-s interface')
+    # config['vif_s'] is a dict with ids as keys and config dicts as values
+    for vif_s_id, vif_s in config['vif_s'].items():
+        for vif_id, vif in config['vif'].items():
+            if vif_id == vif_s_id:
+                raise ConfigError((
+                    f'Cannot use identical ID on vif "{vif["intf"]}" '
+                    f'and vif-s "{vif_s}"'))
 
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+            raise ConfigError((
+                'DHCPv6 temporary and parameters-only options are mutually '
+                'exclusive!'))
 
         if ( vif_s['is_bridge_member']
                 and ( vif_s['address']
@@ -157,10 +163,13 @@ def verify_vlan_config(config):
                     f'vif-s {vif_s["intf"]} cannot be member of VRF {vif_s["vrf"]} '
                     f'and bridge {vif_s["is_bridge_member"]} at the same time!'))
 
-        for vif_c in vif_s['vif_c']:
+        # vif_c is a dict with ids as keys and config dicts as values
+        for vif_c in vif_s['vif_c'].values():
             # DHCPv6 parameters-only and temporary address are mutually exclusive
             if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
-                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+                raise ConfigError((
+                    'DHCPv6 temporary and parameters-only options are '
+                    'mutually exclusive!'))
 
             if ( vif_c['is_bridge_member']
                     and ( vif_c['address']

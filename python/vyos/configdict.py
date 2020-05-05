@@ -132,7 +132,7 @@ vlan_default = {
     'is_bridge_member': False,
     'mac': '',
     'mtu': 1500,
-    'vif_c': [],
+    'vif_c': {},
     'vif_c_remove': [],
     'vrf': ''
 }
@@ -400,7 +400,8 @@ def add_to_dict(conf, disabled, ifdict, section, key):
     for s in sections:
         # set config level to vif interface
         conf.set_level(current_level + [section, s])
-        ifdict[f'{key}'].append(vlan_to_dict(conf))
+        # add the vlan config as a key (vlan id) - value (config) pair
+        ifdict[key][s] = vlan_to_dict(conf)
 
     # re-set configuration level to leave things as found
     conf.set_level(current_level)
@@ -411,12 +412,8 @@ def add_to_dict(conf, disabled, ifdict, section, key):
 def vlan_to_dict(conf, default=vlan_default):
     vlan, disabled = intf_to_dict(conf, default)
 
-    level = conf.get_level()
-    # get the '100' in 'interfaces bonding bond0 vif-s 100'
-    vlan['id'] = level[-1]
-
     # if this is a not within vif-s node, we are done
-    if level[-2] != 'vif-s':
+    if conf.get_level()[-2] != 'vif-s':
         return vlan
 
     # ethertype is mandatory on vif-s nodes and only exists here!
@@ -428,7 +425,6 @@ def vlan_to_dict(conf, default=vlan_default):
 
     # check if there is a Q-in-Q vlan customer interface
     # and call this function recursively
-
     add_to_dict(conf, disable, vlan, 'vif-c', 'vif_c')
 
     return vlan
