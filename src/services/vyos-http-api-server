@@ -63,6 +63,20 @@ def success(data):
     resp = {"success": True, "data": data, "error": None}
     return json.dumps(resp)
 
+def get_command(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        cmd = bottle.request.forms.get("data")
+        if not cmd:
+            return error(400, "Non-empty data field is required")
+        try:
+            cmd = json.loads(cmd)
+        except Exception as e:
+            return error(400, "Failed to parse JSON: {0}".format(e))
+        return f(cmd, *args, **kwargs)
+
+    return decorated_function
+
 def auth_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -76,8 +90,9 @@ def auth_required(f):
     return decorated_function
 
 @app.route('/configure', method='POST')
+@get_command
 @auth_required
-def configure_op():
+def configure_op(commands):
     session = app.config['vyos_session']
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
@@ -87,15 +102,6 @@ def configure_op():
         strict = True
     else:
         strict = False
-
-    commands = bottle.request.forms.get("data")
-    if not commands:
-        return error(400, "Non-empty data field is required")
-    else:
-        try:
-            commands = json.loads(commands)
-        except Exception as e:
-            return error(400, "Failed to parse JSON: {0}".format(e))
 
     # Allow users to pass just one command
     if not isinstance(commands, list):
@@ -187,14 +193,12 @@ def configure_op():
         return success(None)
 
 @app.route('/retrieve', method='POST')
+@get_command
 @auth_required
-def retrieve_op():
+def retrieve_op(command):
     session = app.config['vyos_session']
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -238,12 +242,10 @@ def retrieve_op():
     return success(res)
 
 @app.route('/config-file', method='POST')
+@get_command
 @auth_required
-def config_file_op():
+def config_file_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -275,12 +277,10 @@ def config_file_op():
     return success(res)
 
 @app.route('/image', method='POST')
+@get_command
 @auth_required
-def image_op():
+def image_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -312,12 +312,10 @@ def image_op():
 
 
 @app.route('/generate', method='POST')
+@get_command
 @auth_required
-def generate_op():
+def generate_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -342,12 +340,10 @@ def generate_op():
     return success(res)
 
 @app.route('/show', method='POST')
+@get_command
 @auth_required
-def show_op():
+def show_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
