@@ -77,7 +77,7 @@ def auth_required(f):
 
 @app.route('/configure', method='POST')
 @auth_required
-def configure():
+def configure_op():
     session = app.config['vyos_session']
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
@@ -188,7 +188,7 @@ def configure():
 
 @app.route('/retrieve', method='POST')
 @auth_required
-def get_value():
+def retrieve_op():
     session = app.config['vyos_session']
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
@@ -274,7 +274,7 @@ def config_file_op():
 
 @app.route('/image', method='POST')
 @auth_required
-def config_file_op():
+def image_op():
     session = app.config['vyos_session']
 
     command = bottle.request.forms.get("data")
