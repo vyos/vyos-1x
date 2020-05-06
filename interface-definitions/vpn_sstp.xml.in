@@ -220,6 +220,7 @@
                       <multi/>
                 </properties>
               </leafNode>
+              #include <include/accel-client-ipv6-pool.xml.in>
               #include <include/interface-mtu-68-1500.xml.i>
             </children>
           </node>

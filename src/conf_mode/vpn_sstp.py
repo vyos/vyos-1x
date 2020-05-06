@@ -35,7 +35,11 @@ default_config_data = {
     'auth_mode' : 'local',
     'auth_proto' : ['auth_mschap_v2'],
     'chap_secrets_file': sstp_chap_secrets, # used in Jinja2 template
+    'client_ip_pool' : [],
+    'client_ipv6_pool': [],
+    'client_ipv6_delegate_prefix': [],
     'client_gateway': '',
+    'dnsv4' : [],
     'radius_server' : [],
     'radius_acct_tmo' : '3',
     'radius_max_try' : '3',
@@ -49,8 +53,6 @@ default_config_data = {
     'ssl_ca' : '',
     'ssl_cert' : '',
     'ssl_key' : '',
-    'client_ip_pool' : [],
-    'dnsv4' : [],
     'mtu' : '',
     'ppp_mppe' : 'prefer',
     'ppp_echo_failure' : '',
@@ -210,13 +212,40 @@ def get_config():
 
 
     #
-    # read in client ip pool settings
+    # read in client IPv4 pool
     conf.set_level(base_path + ['network-settings', 'client-ip-settings'])
     if conf.exists(['subnet']):
         sstp['client_ip_pool'] = conf.return_values(['subnet'])
 
     if conf.exists(['gateway-address']):
         sstp['client_gateway'] = conf.return_value(['gateway-address'])
+
+    #
+    # read in client IPv6 pool
+    conf.set_level(base_path + ['network-settings', 'client-ipv6-pool'])
+    if conf.exists(['prefix']):
+        for prefix in conf.list_nodes(['prefix']):
+            tmp = {
+                'prefix': prefix,
+                'mask': '64'
+            }
+
+            if conf.exists(['prefix', prefix, 'mask']):
+                tmp['mask'] = conf.return_value(['prefix', prefix, 'mask'])
+
+            sstp['client_ipv6_pool'].append(tmp)
+
+    if conf.exists(['delegate']):
+        for prefix in conf.list_nodes(['delegate']):
+            tmp = {
+                'prefix': prefix,
+                'mask': ''
+            }
+
+            if conf.exists(['delegate', prefix, 'delegation-prefix']):
+                tmp['mask'] = conf.return_value(['delegate', prefix, 'delegation-prefix'])
+
+            sstp['client_ipv6_delegate_prefix'].append(tmp)
 
     #
     # read in network settings
@@ -274,6 +303,14 @@ def verify(sstp):
 
     if len(sstp['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
+
+    # check ipv6
+    if sstp['client_ipv6_delegate_prefix'] and not sstp['client_ipv6_pool']:
+        raise ConfigError('IPv6 prefix delegation requires client-ipv6-pool prefix')
+
+    for prefix in sstp['client_ipv6_delegate_prefix']:
+        if not prefix['mask']:
+            raise ConfigError('Delegation-prefix required for individual delegated networks')
 
     if not sstp['ssl_ca'] or not sstp['ssl_cert'] or not sstp['ssl_key']:
         raise ConfigError('One or more SSL certificates missing')
