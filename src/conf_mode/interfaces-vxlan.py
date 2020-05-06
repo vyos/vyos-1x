@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import VXLANIf, Interface
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -62,11 +62,12 @@ def get_config():
 
     vxlan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
+    # check if interface is member if a bridge
+    vxlan['is_bridge_member'] = is_member(conf, vxlan['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces vxlan ' + vxlan['intf']):
         vxlan['deleted'] = True
-        # check if interface is member if a bridge
-        vxlan['is_bridge_member'] = is_bridge_member(conf, vxlan['intf'])
         return vxlan
 
     # set new configuration level
@@ -121,7 +122,8 @@ def get_config():
         vxlan['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
 
     # Remove the default link-local address if set.
-    if not conf.exists('ipv6 address no-default-link-local'):
+    if not ( conf.exists('ipv6 address no-default-link-local')
+            or vxlan['is_bridge_member'] ):
         # add the link-local by default to make IPv6 work
         vxlan['ipv6_eui64_prefix'].append('fe80::/64')
 
@@ -163,9 +165,9 @@ def get_config():
 def verify(vxlan):
     if vxlan['deleted']:
         if vxlan['is_bridge_member']:
-            interface = vxlan['intf']
-            bridge = vxlan['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{vxlan["intf"]}" as it is a '
+                f'member of bridge "{vxlan["is_bridge_member"]}"!')
 
         return None
 
@@ -192,6 +194,14 @@ def verify(vxlan):
         if underlay_mtu < (vxlan['mtu'] + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               'MTU is to small ({})'.format(underlay_mtu))
+
+    if ( vxlan['is_bridge_member']
+            and ( vxlan['address']
+                or vxlan['ipv6_eui64_prefix']
+                or vxlan['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{vxlan["intf"]}" '
+            f'as it is a member of bridge "{vxlan["is_bridge_member"]}"!'))
 
     return None
 
@@ -263,6 +273,10 @@ def apply(vxlan):
         # administratively disabled
         if not vxlan['disable']:
             v.set_admin_state('up')
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if vxlan['is_bridge_member']:
+            v.add_to_bridge(vxlan['is_bridge_member'])
 
     return None
 

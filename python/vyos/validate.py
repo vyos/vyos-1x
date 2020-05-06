@@ -241,26 +241,66 @@ def assert_mac(m):
     if octets[:5] == (0, 0, 94, 0, 1):
         raise ValueError(f'{m} is a VRRP MAC address')
 
-def is_bridge_member(conf, interface):
+def is_member(conf, interface, intftype=None):
     """
-    Checks if passed interfaces is part of a bridge device or not.
+    Checks if passed interface is member of other interface of specified type.
+    intftype is optional, if not passed it will search all known types
+    (currently bridge and bonding)
 
-    Returns a tuple:
-    None -> Interface not a bridge member
-    Bridge -> Interface is a member of this bridge
+    Returns:
+    None -> Interface is not a member
+    interface name -> Interface is a member of this interface
+    False -> interface type cannot have members
     """
     ret_val = None
-    old_level = conf.get_level()
+
+    if intftype not in ['bonding', 'bridge', None]:
+        raise ValueError((
+            f'unknown interface type "{intftype}" or it cannot '
+            f'have member interfaces'))
+
+    intftype = ['bonding', 'bridge'] if intftype == None else [intftype]
 
     # set config level to root
+    old_level = conf.get_level()
     conf.set_level([])
-    base = ['interfaces', 'bridge']
-    for bridge in conf.list_nodes(base):
-        members = conf.list_nodes(base + [bridge, 'member', 'interface'])
-        if interface in members:
-            ret_val = bridge
-            break
+
+    for it in intftype:
+        base = 'interfaces ' + it
+        for intf in conf.list_nodes(base):
+            memberintf = f'{base} {intf} member interface'
+            if conf.is_tag(memberintf):
+                if interface in conf.list_nodes(memberintf):
+                    ret_val = intf
+                    break
+            elif conf.is_leaf(memberintf):
+                if ( conf.exists(memberintf) and
+                        interface in conf.return_values(memberintf) ):
+                    ret_val = intf
+                    break
 
     old_level = conf.set_level(old_level)
     return ret_val
 
+def has_address_configured(conf, intf):
+    """
+    Checks if interface has an address configured.
+    Checks the following config nodes:
+    'address', 'ipv6 address eui64', 'ipv6 address autoconf'
+
+    Returns True if interface has address configured, False if it doesn't.
+    """
+    from vyos.ifconfig import Section
+    ret = False
+
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    intfpath = 'interfaces ' + Section.get_config_path(intf)
+    if ( conf.exists(f'{intfpath} address') or
+            conf.exists(f'{intfpath} ipv6 address autoconf') or
+            conf.exists(f'{intfpath} ipv6 address eui64') ):
+        ret = True
+
+    conf.set_level(old_level)
+    return ret

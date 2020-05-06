@@ -23,7 +23,8 @@ from copy import deepcopy
 
 from vyos import ConfigError
 from vyos.ifconfig import Interface
-
+from vyos.validate import is_member
+from vyos.util import ifname_from_config
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -128,9 +129,10 @@ vlan_default = {
     'ipv6_dup_addr_detect': 1,
     'ingress_qos': '',
     'ingress_qos_changed': False,
+    'is_bridge_member': False,
     'mac': '',
     'mtu': 1500,
-    'vif_c': [],
+    'vif_c': {},
     'vif_c_remove': [],
     'vrf': ''
 }
@@ -197,10 +199,7 @@ def intf_to_dict(conf, default):
     """
 
     intf = deepcopy(default)
-
-    # retrieve configured interface addresses
-    if conf.exists('address'):
-        intf['address'] = conf.return_values('address')
+    intf['intf'] = ifname_from_config(conf)
 
     # retrieve interface description
     if conf.exists('description'):
@@ -255,22 +254,21 @@ def intf_to_dict(conf, default):
     if conf.exists('ipv6 address autoconf'):
         intf['ipv6_autoconf'] = 1
 
-    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
-    if conf.exists('ipv6 address eui64'):
-        intf['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
-
     # Disable IPv6 forwarding on this interface
     if conf.exists('ipv6 disable-forwarding'):
         intf['ipv6_forwarding'] = 0
 
-    # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        intf['mac'] = conf.return_value('mac')
+    # check if interface is member of a bridge
+    intf['is_bridge_member'] = is_member(conf, intf['intf'], 'bridge')
 
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         intf['ipv6_dup_addr_detect'] = int(
             conf.return_value('ipv6 dup-addr-detect-transmits'))
+
+    # Media Access Control (MAC) address
+    if conf.exists('mac'):
+        intf['mac'] = conf.return_value('mac')
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -298,60 +296,56 @@ def intf_to_dict(conf, default):
         if intf['ingress_qos'] != conf.return_effective_value('ingress-qos'):
             intf['ingress_qos_changed'] = True
 
-    disabled = disable_state(conf)
+    # Get the interface addresses
+    intf['address'] = conf.return_values('address')
 
-    # Get the interface IPs
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
+    # addresses to remove - difference between effective and working config
+    intf['address_remove'] = list_diff(
+            conf.return_effective_values('address'),
+            intf['address']
+            )
 
     # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
-    eff_eui = conf.return_effective_values('ipv6 address eui64')
-    act_eui = conf.return_values('ipv6 address eui64')
+    intf['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
 
-    # Determine what should stay or be removed
+    # EUI64 to remove - difference between effective and working config
+    intf['ipv6_eui64_prefix_remove'] = list_diff(
+            conf.return_effective_values('ipv6 address eui64'),
+            intf['ipv6_eui64_prefix']
+            )
+
+    # Determine if the interface should be disabled
+    disabled = disable_state(conf)
     if disabled == disable.both:
         # was and is still disabled
         intf['disable'] = True
-        intf['address'] = []
-        intf['address_remove'] = []
-        intf['ipv6_eui64_prefix'] = []
-        intf['ipv6_eui64_prefix_remove'] = []
     elif disabled == disable.now:
         # it is now disable but was not before
         intf['disable'] = True
-        intf['address'] = []
-        intf['address_remove'] = eff_addr
-        intf['ipv6_eui64_prefix'] = []
-        intf['ipv6_eui64_prefix_remove'] = eff_eui
     elif disabled == disable.was:
         # it was disable but not anymore
         intf['disable'] = False
-        intf['address'] = act_addr
-        intf['address_remove'] = []
-        intf['ipv6_eui64_prefix'] = act_eui
-        intf['ipv6_eui64_prefix_remove'] = []
     else:
         # normal change
         intf['disable'] = False
-        intf['address'] = act_addr
-        intf['address_remove'] = list_diff(eff_addr, act_addr)
-        intf['ipv6_eui64_prefix'] = act_eui
-        intf['ipv6_eui64_prefix_remove'] = list_diff(eff_eui, act_eui)
 
-    # Remove the default link-local address if set.
-    if conf.exists('ipv6 address no-default-link-local'):
+    # Remove the default link-local address if no-default-link-local is set,
+    # if member of a bridge or if disabled (it may not have a MAC if it's down)
+    if ( conf.exists('ipv6 address no-default-link-local')
+            or intf.get('is_bridge_member')
+            or intf['disable'] ):
         intf['ipv6_eui64_prefix_remove'].append('fe80::/64')
     else:
         # add the link-local by default to make IPv6 work
         intf['ipv6_eui64_prefix'].append('fe80::/64')
 
-    # Find out if MAC has changed
+    # If MAC has changed, remove and re-add all IPv6 EUI64 addresses
     try:
         interface = Interface(intf['intf'], create=False)
         if intf['mac'] and intf['mac'] != interface.get_mac():
             intf['ipv6_eui64_prefix_remove'] += intf['ipv6_eui64_prefix']
     except Exception:
-        # If the interface does not exists, it can not have changed
+        # If the interface does not exist, it could not have changed
         pass
 
     return intf, disable
@@ -381,8 +375,7 @@ def add_to_dict(conf, disabled, ifdict, section, key):
     # the section to parse for vlan
     sections = []
 
-    # Determine interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the bond
+    # determine which interfaces to add or remove based on disable state
     if disabled == disable.both:
         # was and is still disabled
         ifdict[f'{key}_remove'] = []
@@ -395,7 +388,7 @@ def add_to_dict(conf, disabled, ifdict, section, key):
         sections = active
     else:
         # normal change
-        # get vif-s interfaces (currently effective) - to determine which vif-s
+        # get interfaces (currently effective) - to determine which
         # interface is no longer present and needs to be removed
         ifdict[f'{key}_remove'] = list_diff(effect, active)
         sections = active
@@ -406,7 +399,8 @@ def add_to_dict(conf, disabled, ifdict, section, key):
     for s in sections:
         # set config level to vif interface
         conf.set_level(current_level + [section, s])
-        ifdict[f'{key}'].append(vlan_to_dict(conf))
+        # add the vlan config as a key (vlan id) - value (config) pair
+        ifdict[key][s] = vlan_to_dict(conf)
 
     # re-set configuration level to leave things as found
     conf.set_level(current_level)
@@ -416,13 +410,9 @@ def add_to_dict(conf, disabled, ifdict, section, key):
 
 def vlan_to_dict(conf, default=vlan_default):
     vlan, disabled = intf_to_dict(conf, default)
-    # get the '100' in 'interfaces bonding bond0 vif-s 100
-    vlan['id'] = conf.get_level()[-1]
-
-    current_level = conf.get_level()
 
     # if this is a not within vif-s node, we are done
-    if current_level[-2] != 'vif-s':
+    if conf.get_level()[-2] != 'vif-s':
         return vlan
 
     # ethertype is mandatory on vif-s nodes and only exists here!
@@ -434,7 +424,6 @@ def vlan_to_dict(conf, default=vlan_default):
 
     # check if there is a Q-in-Q vlan customer interface
     # and call this function recursively
-
     add_to_dict(conf, disable, vlan, 'vif-c', 'vif_c')
 
     return vlan

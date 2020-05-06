@@ -86,10 +86,17 @@ def _timed(message):
     return f'{now} {message}'
 
 
+def _remove_invisible(string):
+    for char in ('\0', '\a', '\b', '\f', '\v'):
+        string = string.replace(char, '')
+    return string
+
+
 def _format(flag, message):
     """
     format a log message
     """
+    message = _remove_invisible(message)
     return f'DEBUG/{flag.upper():<7} {message}\n'
 
 

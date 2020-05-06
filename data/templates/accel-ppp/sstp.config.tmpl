@@ -9,6 +9,9 @@ chap-secrets
 radius
 {% endif -%}
 ippool
+ipv6pool
+ipv6_nd
+ipv6_dhcp
 
 {% for proto in auth_proto %}
 {{proto}}
@@ -51,6 +54,14 @@ dns{{ loop.index }}={{ dns }}
 {% endfor -%}
 {% endif %}
 
+{% if dnsv6 %}
+[ipv6-dns]
+{% for dns in dnsv6 -%}
+{{ dns }}
+{% endfor -%}
+{% endif %}
+
+
 {% if auth_mode == 'local' %}
 [chap-secrets]
 chap-secrets={{ chap_secrets_file }}
@@ -87,6 +98,9 @@ check-ip=1
 {% if mtu %}
 mtu={{ mtu }}
 {% endif -%}
+{% if client_ipv6_pool %}
+ipv6=allow
+{% endif %}
 
 {% if ppp_mppe %}
 mppe={{ ppp_mppe }}
@@ -99,6 +113,21 @@ lcp-echo-failure={{ ppp_echo_failure }}
 {% endif -%}
 {% if ppp_echo_timeout %}
 lcp-echo-timeout={{ ppp_echo_timeout }}
+{% endif %}
+
+{% if client_ipv6_pool %}
+[ipv6-pool]
+{% for p in client_ipv6_pool %}
+{{ p.prefix }},{{ p.mask }}
+{% endfor %}
+{% for p in client_ipv6_delegate_prefix %}
+delegate={{ p.prefix }},{{ p.mask }}
+{% endfor %}
+{% endif %}
+
+{% if client_ipv6_delegate_prefix %}
+[ipv6-dhcp]
+verbose=1
 {% endif %}
 
 {% if radius_shaper_attr %}

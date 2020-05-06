@@ -20,9 +20,10 @@ from sys import exit
 from copy import deepcopy
 from netifaces import interfaces
 
-from vyos.ifconfig import EthernetIf, Section
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos.ifconfig import EthernetIf
+from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
+from vyos.validate import is_member
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -53,6 +54,8 @@ default_config_data = {
     'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
+    'is_bridge_member': False,
+    'is_bond_member': False,
     'intf': '',
     'mac': '',
     'mtu': 1500,
@@ -62,9 +65,9 @@ default_config_data = {
     'offload_tso': 'off',
     'offload_ufo': 'off',
     'speed': 'auto',
-    'vif_s': [],
+    'vif_s': {},
     'vif_s_remove': [],
-    'vif': [],
+    'vif': {},
     'vif_remove': [],
     'vrf': ''
 }
@@ -92,7 +95,6 @@ def get_config():
     conf.set_level(cfg_base)
 
     eth, disabled = intf_to_dict(conf, default_config_data)
-    eth['intf'] = ifname
 
     # disable ethernet flow control (pause frames)
     if conf.exists('disable-flow-control'):
@@ -113,6 +115,9 @@ def get_config():
     # Enable private VLAN proxy ARP on this interface
     if conf.exists('ip proxy-arp-pvlan'):
         eth['ip_proxy_arp_pvlan'] = 1
+
+    # check if we are a member of any bond
+    eth['is_bond_member'] = is_member(conf, eth['intf'], 'bonding')
 
     # GRO (generic receive offload)
     if conf.exists('offload-options generic-receive'):
@@ -138,6 +143,11 @@ def get_config():
     if conf.exists('speed'):
         eth['speed'] = conf.return_value('speed')
 
+    # remove default IPv6 link-local address if member of a bond
+    if eth['is_bond_member'] and 'fe80::/64' in eth['ipv6_eui64_prefix']:
+        eth['ipv6_eui64_prefix'].remove('fe80::/64')
+        eth['ipv6_eui64_prefix_remove'].append('fe80::/64')
+
     add_to_dict(conf, disabled, eth, 'vif', 'vif')
     add_to_dict(conf, disabled, eth, 'vif-s', 'vif_s')
 
@@ -162,18 +172,24 @@ def verify(eth):
     if eth['dhcpv6_prm_only'] and eth['dhcpv6_temporary']:
         raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-    vrf_name = eth['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    memberof = eth['is_bridge_member'] if eth['is_bridge_member'] else eth['is_bond_member']
 
-    conf = Config()
-    # some options can not be changed when interface is enslaved to a bond
-    for bond in conf.list_nodes('interfaces bonding'):
-        if conf.exists('interfaces bonding ' + bond + ' member interface'):
-            bond_member = conf.return_values('interfaces bonding ' + bond + ' member interface')
-            if eth['intf'] in bond_member:
-                if eth['address']:
-                    raise ConfigError(f"Can not assign address to interface {eth['intf']} which is a member of {bond}")
+    if ( memberof
+            and ( eth['address']
+                or eth['ipv6_eui64_prefix']
+                or eth['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{eth["intf"]}" '
+            f'as it is a member of "{memberof}"!'))
+
+    if eth['vrf']:
+        if eth['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{eth["vrf"]}" does not exist')
+
+        if memberof:
+            raise ConfigError((
+                    f'Interface "{eth["intf"]}" cannot be member of VRF "{eth["vrf"]}" '
+                    f'and "{memberof}" at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(eth)
@@ -281,47 +297,17 @@ def apply(eth):
         for addr in eth['address']:
             e.add_addr(addr)
 
-        # assign/remove VRF
-        e.set_vrf(eth['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge or bond,
+        # otherwise 'nomaster' removes it from it)
+        if not ( eth['is_bridge_member'] or eth['is_bond_member'] ):
+            e.set_vrf(eth['vrf'])
 
-        # remove no longer required service VLAN interfaces (vif-s)
-        for vif_s in eth['vif_s_remove']:
-            e.del_vlan(vif_s)
+        # re-add ourselves to any bridge we might have fallen out of
+        if eth['is_bridge_member']:
+            e.add_to_bridge(eth['is_bridge_member'])
 
-        # create service VLAN interfaces (vif-s)
-        for vif_s in eth['vif_s']:
-            s_vlan = e.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-            apply_vlan_config(s_vlan, vif_s)
-
-            # remove no longer required client VLAN interfaces (vif-c)
-            # on lower service VLAN interface
-            for vif_c in vif_s['vif_c_remove']:
-                s_vlan.del_vlan(vif_c)
-
-            # create client VLAN interfaces (vif-c)
-            # on lower service VLAN interface
-            for vif_c in vif_s['vif_c']:
-                c_vlan = s_vlan.add_vlan(vif_c['id'])
-                apply_vlan_config(c_vlan, vif_c)
-
-        # remove no longer required VLAN interfaces (vif)
-        for vif in eth['vif_remove']:
-            e.del_vlan(vif)
-
-        # create VLAN interfaces (vif)
-        for vif in eth['vif']:
-            # QoS priority mapping can only be set during interface creation
-            # so we delete the interface first if required.
-            if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
-                try:
-                    # on system bootup the above condition is true but the interface
-                    # does not exists, which throws an exception, but that's legal
-                    e.del_vlan(vif['id'])
-                except:
-                    pass
-
-            vlan = e.add_vlan(vif['id'], ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
-            apply_vlan_config(vlan, vif)
+        # apply all vlans to interface
+        apply_all_vlans(e, eth)
 
     return None
 

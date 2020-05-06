@@ -21,10 +21,9 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.configdict import list_diff, vlan_to_dict, intf_to_dict, add_to_dict
+from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.ifconfig import MACVLANIf, Section
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
-from vyos.validate import is_bridge_member
+from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos import ConfigError
 
 default_config_data = {
@@ -57,9 +56,9 @@ default_config_data = {
     'source_interface_changed': False,
     'mac': '',
     'mode': 'private',
-    'vif_s': [],
+    'vif_s': {},
     'vif_s_remove': [],
-    'vif': [],
+    'vif': {},
     'vif_remove': [],
     'vrf': ''
 }
@@ -77,15 +76,12 @@ def get_config():
     if not conf.exists(cfg_base):
         peth = deepcopy(default_config_data)
         peth['deleted'] = True
-        # check if interface is member if a bridge
-        peth['is_bridge_member'] = is_bridge_member(conf, ifname)
         return peth
 
     # set new configuration level
     conf.set_level(cfg_base)
 
     peth, disabled = intf_to_dict(conf, default_config_data)
-    peth['intf'] = ifname
 
     # ARP cache entry timeout in seconds
     if conf.exists(['ip', 'arp-cache-timeout']):
@@ -114,21 +110,37 @@ def get_config():
 def verify(peth):
     if peth['deleted']:
         if peth['is_bridge_member']:
-            interface = peth['intf']
-            bridge = peth['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{peth["intf"]}" as it is a '
+                f'member of bridge "{peth["is_bridge_member"]}"!'))
 
         return None
 
     if not peth['source_interface']:
-        raise ConfigError('source-interface must be set for virtual ethernet {}'.format(peth['intf']))
+        raise ConfigError((
+            f'Link device must be set for pseudo-ethernet "{peth["intf"]}"'))
 
     if not peth['source_interface'] in interfaces():
-        raise ConfigError('Pseudo-ethernet source-interface does not exist')
+        raise ConfigError((
+            f'Pseudo-ethernet "{peth["intf"]}" link device does not exist')
 
-    vrf_name = peth['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if ( peth['is_bridge_member']
+            and ( peth['address']
+                or peth['ipv6_eui64_prefix']
+                or peth['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{peth["intf"]}" '
+            f'as it is a member of bridge "{peth["is_bridge_member"]}"!'))
+
+    if peth['vrf']:
+        if peth['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{peth["vrf"]}" does not exist')
+
+        if peth['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{peth["intf"]}" cannot be member of VRF '
+                f'"{peth["vrf"]}" and bridge {peth["is_bridge_member"]} '
+                f'at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
@@ -203,8 +215,10 @@ def apply(peth):
     # IPv6 Duplicate Address Detection (DAD) tries
     p.set_ipv6_dad_messages(peth['ipv6_dup_addr_detect'])
 
-    # assign/remove VRF
-    p.set_vrf(peth['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not peth['is_bridge_member']:
+        p.set_vrf(peth['vrf'])
 
     # Delete old IPv6 EUI64 addresses before changing MAC
     for addr in peth['ipv6_eui64_prefix_remove']:
@@ -235,34 +249,12 @@ def apply(peth):
     for addr in peth['address']:
         p.add_addr(addr)
 
-    # remove no longer required service VLAN interfaces (vif-s)
-    for vif_s in peth['vif_s_remove']:
-        p.del_vlan(vif_s)
+    # re-add ourselves to any bridge we might have fallen out of
+    if peth['is_bridge_member']:
+        p.add_to_bridge(peth['is_bridge_member'])
 
-    # create service VLAN interfaces (vif-s)
-    for vif_s in peth['vif_s']:
-        s_vlan = p.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-        apply_vlan_config(s_vlan, vif_s)
-
-        # remove no longer required client VLAN interfaces (vif-c)
-        # on lower service VLAN interface
-        for vif_c in vif_s['vif_c_remove']:
-            s_vlan.del_vlan(vif_c)
-
-        # create client VLAN interfaces (vif-c)
-        # on lower service VLAN interface
-        for vif_c in vif_s['vif_c']:
-            c_vlan = s_vlan.add_vlan(vif_c['id'])
-            apply_vlan_config(c_vlan, vif_c)
-
-    # remove no longer required VLAN interfaces (vif)
-    for vif in peth['vif_remove']:
-        p.del_vlan(vif)
-
-    # create VLAN interfaces (vif)
-    for vif in peth['vif']:
-        vlan = p.add_vlan(vif['id'])
-        apply_vlan_config(vlan, vif)
+    # apply all vlans to interface
+    apply_all_vlans(b, bond)
 
     return None
 

@@ -42,6 +42,7 @@ from vyos.ifconfig.control import Control
 from vyos.ifconfig.dhcp import DHCP
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
+from vyos.ifconfig import Section
 
 
 class Interface(Control):
@@ -638,6 +639,10 @@ class Interface(Control):
         # XXX: normalize/compress with ipaddress if calling functions don't?
         # is subnet mask always passed, and in the same way?
 
+        # do not add same address twice
+        if addr in self._addr:
+            return False
+
         # we can't have both DHCP and static IPv4 addresses assigned
         for a in self._addr:
             if ( ( addr == 'dhcp' and a != 'dhcpv6' and is_ipv4(a) ) or
@@ -646,27 +651,20 @@ class Interface(Control):
                     "Can't configure both static IPv4 and DHCP address "
                     "on the same interface"))
 
-        # do not add same address twice
-        if addr in self._addr:
-            return False
-
         # add to interface
         if addr == 'dhcp':
-            self._addr.append(addr)
             self.dhcp.v4.set()
-            return True
-
-        if addr == 'dhcpv6':
-            self._addr.append(addr)
+        elif addr == 'dhcpv6':
             self.dhcp.v6.set()
-            return True
-
-        if not is_intf_addr_assigned(self.ifname, addr):
-            self._addr.append(addr)
+        elif not is_intf_addr_assigned(self.ifname, addr):
             self._cmd(f'ip addr add "{addr}" dev "{self.ifname}"')
-            return True
+        else:
+            return False
 
-        return False
+        # add to cache
+        self._addr.append(addr)
+
+        return True
 
     def del_addr(self, addr):
         """
@@ -693,24 +691,21 @@ class Interface(Control):
         ['2001:db8::ffff/64']
         """
 
-        # remove from cache (dhcp, and dhcpv6 can not be in it)
-        if addr in self._addr:
-            self._addr.remove(addr)
-
         # remove from interface
         if addr == 'dhcp':
             self.dhcp.v4.delete()
-            return True
-
-        if addr == 'dhcpv6':
+        elif addr == 'dhcpv6':
             self.dhcp.v6.delete()
-            return True
-
-        if is_intf_addr_assigned(self.ifname, addr):
+        elif is_intf_addr_assigned(self.ifname, addr):
             self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
-            return True
+        else:
+            return False
 
-        return False
+        # remove from cache
+        if addr in self._addr:
+            self._addr.remove(addr)
+
+        return True
 
     def flush_addrs(self):
         """
@@ -724,3 +719,22 @@ class Interface(Control):
 
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
+
+    def add_to_bridge(self, br):
+        """
+        Adds the interface to the bridge with the passed port config.
+
+        Returns False if bridge doesn't exist.
+        """
+
+        # check if the bridge exists (on boot it doesn't)
+        if br not in Section.interfaces('bridge'):
+            return False
+
+        self.flush_addrs()
+        # add interface to bridge - use Section.klass to get BridgeIf class
+        Section.klass(br)(br, create=False).add_port(self.ifname)
+
+        # TODO: port config (STP)
+
+        return True

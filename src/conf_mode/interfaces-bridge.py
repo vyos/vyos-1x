@@ -23,8 +23,9 @@ from netifaces import interfaces
 from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
 from vyos.configdict import list_diff
+from vyos.validate import is_member, has_address_configured
 from vyos.config import Config
-from vyos.util import cmd
+from vyos.util import cmd, get_bridge_member_config
 from vyos import ConfigError
 
 default_config_data = {
@@ -202,22 +203,12 @@ def get_config():
 
     # Determine bridge member interface (currently configured)
     for intf in conf.list_nodes('member interface'):
-        # cost and priority initialized with linux defaults
-        # by reading /sys/devices/virtual/net/br0/brif/eth2/{path_cost,priority}
-        # after adding interface to bridge after reboot
-        iface = {
-            'name': intf,
-            'cost': 100,
-            'priority': 32
-        }
-
-        if conf.exists('member interface {} cost'.format(intf)):
-            iface['cost'] = int(conf.return_value('member interface {} cost'.format(intf)))
-
-        if conf.exists('member interface {} priority'.format(intf)):
-            iface['priority'] = int(conf.return_value('member interface {} priority'.format(intf)))
-
-        bridge['member'].append(iface)
+        # defaults are stored in util.py (they can't be here as all interface
+        # scripts use the function)
+        memberconf = get_bridge_member_config(conf, bridge['intf'], intf)
+        if memberconf:
+            memberconf['name'] = intf
+            bridge['member'].append(memberconf)
 
     # Determine bridge member interface (currently effective) - to determine which
     # interfaces is no longer assigend to the bridge and thus can be removed
@@ -248,30 +239,40 @@ def verify(bridge):
         raise ConfigError(f'VRF "{vrf_name}" does not exist')
 
     conf = Config()
-    for br in conf.list_nodes('interfaces bridge'):
-        # it makes no sense to verify ourself in this case
-        if br == bridge['intf']:
-            continue
-
-        for intf in bridge['member']:
-            tmp = conf.list_nodes('interfaces bridge {} member interface'.format(br))
-            if intf['name'] in tmp:
-                raise ConfigError('Interface "{}" belongs to bridge "{}" and can not be enslaved.'.format(intf['name'], bridge['intf']))
-
-    # the interface must exist prior adding it to a bridge
     for intf in bridge['member']:
+        # the interface must exist prior adding it to a bridge
         if intf['name'] not in interfaces():
-            raise ConfigError('Can not add non existing interface "{}" to bridge "{}"'.format(intf['name'], bridge['intf']))
+            raise ConfigError((
+                f'Cannot add nonexistent interface "{intf["name"]}" '
+                f'to bridge "{bridge["intf"]}"'))
 
         if intf['name'] == 'lo':
             raise ConfigError('Loopback interface "lo" can not be added to a bridge')
 
-    # bridge members are not allowed to be bond members, too
-    for intf in bridge['member']:
-        for bond in conf.list_nodes('interfaces bonding'):
-            if conf.exists('interfaces bonding ' + bond + ' member interface'):
-                if intf['name'] in conf.return_values('interfaces bonding ' + bond + ' member interface'):
-                    raise ConfigError('Interface {} belongs to bond {}, can not add it to {}'.format(intf['name'], bond, bridge['intf']))
+        # bridge members aren't allowed to be members of another bridge
+        for br in conf.list_nodes('interfaces bridge'):
+            # it makes no sense to verify ourself in this case
+            if br == bridge['intf']:
+                continue
+
+            tmp = conf.list_nodes(f'interfaces bridge {br} member interface')
+            if intf['name'] in tmp:
+                raise ConfigError((
+                    f'Cannot add interface "{intf["name"]}" to bridge '
+                    f'"{bridge["intf"]}", it is already a member of bridge "{br}"!'))
+
+        # bridge members are not allowed to be bond members
+        tmp = is_member(conf, intf['name'], 'bonding')
+        if tmp:
+            raise ConfigError((
+                f'Cannot add interface "{intf["name"]}" to bridge '
+                f'"{bridge["intf"]}", it is already a member of bond "{tmp}"!'))
+
+        # bridge members must not have an assigned address
+        if has_address_configured(conf, intf['name']):
+            raise ConfigError((
+                f'Cannot add interface "{intf["name"]}" to bridge '
+                f'"{bridge["intf"]}", it has an address assigned!'))
 
     return None
 
@@ -347,12 +348,8 @@ def apply(bridge):
 
         # add interfaces to bridge
         for member in bridge['member']:
-            # flushes address of only children of Interfaces class
-            # (e.g. vlan are not)
-            if member['name'] in Section.interfaces():
-                klass = Section.klass(member['name'], vlan=False)
-                klass(member['name'], create=False).flush_addrs()
-            # flushes all interfaces
+            # if we've come here we already verified the interface doesn't
+            # have addresses configured so just flush any remaining ones
             cmd(f'ip addr flush dev "{member["name"]}"')
             br.add_port(member['name'])
 
@@ -382,9 +379,9 @@ def apply(bridge):
         for member in bridge['member']:
             i = STPBridgeIf(member['name'])
             # configure ARP cache timeout
-            i.set_arp_cache_tmo(bridge['arp_cache_tmo'])
+            i.set_arp_cache_tmo(member['arp_cache_tmo'])
             # ignore link state changes
-            i.set_link_detect(bridge['disable_link_detect'])
+            i.set_link_detect(member['disable_link_detect'])
             # set bridge port path cost
             i.set_path_cost(member['cost'])
             # set bridge port path priority

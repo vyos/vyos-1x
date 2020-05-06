@@ -16,6 +16,53 @@
 from netifaces import interfaces
 from vyos import ConfigError
 
+def apply_all_vlans(intf, intfconfig):
+    """
+    Function applies all VLANs to the passed interface.
+
+    intf: object of Interface class
+    intfconfig: dict with interface configuration
+    """
+    # remove no longer required service VLAN interfaces (vif-s)
+    for vif_s in intfconfig['vif_s_remove']:
+        intf.del_vlan(vif_s)
+
+    # create service VLAN interfaces (vif-s)
+    for vif_s_id, vif_s in intfconfig['vif_s'].items():
+        s_vlan = intf.add_vlan(vif_s_id, ethertype=vif_s['ethertype'])
+        apply_vlan_config(s_vlan, vif_s)
+
+        # remove no longer required client VLAN interfaces (vif-c)
+        # on lower service VLAN interface
+        for vif_c in intfconfig['vif_c_remove']:
+            s_vlan.del_vlan(vif_c)
+
+        # create client VLAN interfaces (vif-c)
+        # on lower service VLAN interface
+        for vif_c_id, vif_c in vif_s['vif_c'].items():
+            c_vlan = s_vlan.add_vlan(vif_c_id)
+            apply_vlan_config(c_vlan, vif_c)
+
+    # remove no longer required VLAN interfaces (vif)
+    for vif in intfconfig['vif_remove']:
+        intf.del_vlan(vif)
+
+    # create VLAN interfaces (vif)
+    for vif_id, vif in intfconfig['vif'].items():
+        # QoS priority mapping can only be set during interface creation
+        # so we delete the interface first if required.
+        if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
+            try:
+                # on system bootup the above condition is true but the interface
+                # does not exists, which throws an exception, but that's legal
+                intf.del_vlan(vif_id)
+            except:
+                pass
+
+        vlan = intf.add_vlan(vif_id, ingress_qos=vif['ingress_qos'], egress_qos=vif['egress_qos'])
+        apply_vlan_config(vlan, vif)
+
+
 def apply_vlan_config(vlan, config):
     """
     Generic function to apply a VLAN configuration from a dictionary
@@ -63,8 +110,10 @@ def apply_vlan_config(vlan, config):
     # Maximum Transmission Unit (MTU)
     vlan.set_mtu(config['mtu'])
 
-    # assign/remove VRF
-    vlan.set_vrf(config['vrf'])
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not config['is_bridge_member']:
+        vlan.set_vrf(config['vrf'])
 
     # Delete old IPv6 EUI64 addresses before changing MAC
     for addr in config['ipv6_eui64_prefix_remove']:
@@ -92,46 +141,97 @@ def apply_vlan_config(vlan, config):
     for addr in config['address']:
         vlan.add_addr(addr)
 
+    # re-add ourselves to any bridge we might have fallen out of
+    if config['is_bridge_member']:
+        vlan.add_to_bridge(config['is_bridge_member'])
+
 def verify_vlan_config(config):
     """
     Generic function to verify VLAN config consistency. Instead of re-
     implementing this function in multiple places use single source \o/
     """
 
-    for vif in config['vif']:
+    # config['vif'] is a dict with ids as keys and config dicts as values
+    for vif in config['vif'].values():
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-        vrf_name = vif['vrf']
-        if vrf_name and vrf_name not in interfaces():
-            raise ConfigError(f'VRF "{vrf_name}" does not exist')
+        if ( vif['is_bridge_member']
+                and ( vif['address']
+                    or vif['ipv6_eui64_prefix']
+                    or vif['ipv6_autoconf'] ) ):
+            raise ConfigError((
+                    f'Cannot assign address to vif interface {vif["intf"]} '
+                    f'which is a member of bridge {vif["is_bridge_member"]}'))
+
+        if vif['vrf']:
+            if vif['vrf'] not in interfaces():
+                raise ConfigError(f'VRF "{vif["vrf"]}" does not exist')
+
+            if vif['is_bridge_member']:
+                raise ConfigError((
+                    f'vif {vif["intf"]} cannot be member of VRF {vif["vrf"]} '
+                    f'and bridge {vif["is_bridge_member"]} at the same time!'))
 
     # e.g. wireless interface has no vif_s support
     # thus we bail out eraly.
     if 'vif_s' not in config.keys():
         return
 
-    for vif_s in config['vif_s']:
-        for vif in config['vif']:
-            if vif['id'] == vif_s['id']:
-                raise ConfigError('Can not use identical ID on vif and vif-s interface')
+    # config['vif_s'] is a dict with ids as keys and config dicts as values
+    for vif_s_id, vif_s in config['vif_s'].items():
+        for vif_id, vif in config['vif'].items():
+            if vif_id == vif_s_id:
+                raise ConfigError((
+                    f'Cannot use identical ID on vif "{vif["intf"]}" '
+                    f'and vif-s "{vif_s}"'))
 
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
-            raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+            raise ConfigError((
+                'DHCPv6 temporary and parameters-only options are mutually '
+                'exclusive!'))
 
-            vrf_name = vif_s['vrf']
-            if vrf_name and vrf_name not in interfaces():
-                raise ConfigError(f'VRF "{vrf_name}" does not exist')
+        if ( vif_s['is_bridge_member']
+                and ( vif_s['address']
+                    or vif_s['ipv6_eui64_prefix']
+                    or vif_s['ipv6_autoconf'] ) ):
+            raise ConfigError((
+                    f'Cannot assign address to vif-s interface {vif_s["intf"]} '
+                    f'which is a member of bridge {vif_s["is_bridge_member"]}'))
 
-        for vif_c in vif_s['vif_c']:
+        if vif_s['vrf']:
+            if vif_s['vrf'] not in interfaces():
+                raise ConfigError(f'VRF "{vif_s["vrf"]}" does not exist')
+
+            if vif_s['is_bridge_member']:
+                raise ConfigError((
+                    f'vif-s {vif_s["intf"]} cannot be member of VRF {vif_s["vrf"]} '
+                    f'and bridge {vif_s["is_bridge_member"]} at the same time!'))
+
+        # vif_c is a dict with ids as keys and config dicts as values
+        for vif_c in vif_s['vif_c'].values():
             # DHCPv6 parameters-only and temporary address are mutually exclusive
             if vif_c['dhcpv6_prm_only'] and vif_c['dhcpv6_temporary']:
-                raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
+                raise ConfigError((
+                    'DHCPv6 temporary and parameters-only options are '
+                    'mutually exclusive!'))
 
-            vrf_name = vif_c['vrf']
-            if vrf_name and vrf_name not in interfaces():
-                raise ConfigError(f'VRF "{vrf_name}" does not exist')
+            if ( vif_c['is_bridge_member']
+                    and ( vif_c['address']
+                        or vif_c['ipv6_eui64_prefix']
+                        or vif_c['ipv6_autoconf'] ) ):
+                raise ConfigError((
+                    f'Cannot assign address to vif-c interface {vif_c["intf"]} '
+                    f'which is a member of bridge {vif_c["is_bridge_member"]}'))
 
+            if vif_c['vrf']:
+                if vif_c['vrf'] not in interfaces():
+                    raise ConfigError(f'VRF "{vif_c["vrf"]}" does not exist')
+
+                if vif_c['is_bridge_member']:
+                    raise ConfigError((
+                    f'vif-c {vif_c["intf"]} cannot be member of VRF {vif_c["vrf"]} '
+                    f'and bridge {vif_c["is_bridge_member"]} at the same time!'))
 

@@ -207,19 +207,8 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="name-server">
-                <properties>
-                  <help>DNS servers propagated to clients</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                      <multi/>
-                </properties>
-              </leafNode>
+              #include <include/accel-client-ipv6-pool.xml.in>
+              #include <include/accel-name-server.xml.in>
               #include <include/interface-mtu-68-1500.xml.i>
             </children>
           </node>

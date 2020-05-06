@@ -21,9 +21,10 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.ifconfig import BridgeIf, Section
 from vyos.template import render
 from vyos.util import chown, chmod_755, cmd, call
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
@@ -64,11 +65,12 @@ def get_config():
     wwan['logfile'] = f"/var/log/vyatta/ppp_{wwan['intf']}.log"
     wwan['chat_script'] = f"/etc/ppp/peers/chat.{wwan['intf']}"
 
+    # check if interface is member if a bridge
+    wwan['is_bridge_member'] = is_member(conf, wwan['intf'], 'bridge')
+
     # Check if interface has been removed
     if not conf.exists('interfaces wirelessmodem ' + wwan['intf']):
         wwan['deleted'] = True
-        # check if interface is member if a bridge
-        wwan['is_bridge_member'] = is_bridge_member(conf, wwan['intf'])
         return wwan
 
     # set new configuration level
@@ -119,9 +121,9 @@ def get_config():
 def verify(wwan):
     if wwan['deleted']:
         if wwan['is_bridge_member']:
-            interface = wwan['intf']
-            bridge = wwan['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{wwan["intf"]}" as it is a '
+                f'member of bridge "{wwan["is_bridge_member"]}"!'))
 
         return None
 
@@ -133,9 +135,20 @@ def verify(wwan):
     if not os.path.exists(f"/dev/{wwan['device']}"):
         raise ConfigError(f"Device {wwan['device']} does not exist")
 
-    vrf_name = wwan['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF {vrf_name} does not exist')
+    if wwan['is_bridge_member'] and wwan['address']:
+        raise ConfigError((
+            f'Cannot assign address to interface "{wwan["intf"]}" '
+            f'as it is a member of bridge "{wwan["is_bridge_member"]}"!'))
+
+    if wwan['vrf']:
+        if wwan['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{wwan["vrf"]}" does not exist')
+
+        if wwan['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{wwan["intf"]}" cannot be member of VRF '
+                f'"{wwan["vrf"]}" and bridge {wwan["is_bridge_member"]} '
+                f'at the same time!'))
 
     return None
 
@@ -192,6 +205,12 @@ def apply(wwan):
         cmd(f'systemctl start ppp@{intf}.service')
         # make logfile owned by root / vyattacfg
         chown(wwan['logfile'], 'root', 'vyattacfg')
+
+        # re-add ourselves to any bridge we might have fallen out of
+        # FIXME: wwan isn't under vyos.ifconfig so we can't call
+        # Interfaces.add_to_bridge() so STP settings won't get applied
+        if wwan['is_bridge_member'] in Section.interfaces('bridge'):
+            BridgeIf(wwan['is_bridge_member'], create=False).add_port(wwan['intf'])
 
     return None
 

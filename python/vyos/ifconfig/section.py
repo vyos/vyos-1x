@@ -54,7 +54,7 @@ class Section:
         name = name.rstrip('0123456789')
         name = name.rstrip('.')
         if vlan:
-            name = name.rstrip('0123456789')
+            name = name.rstrip('0123456789.')
         return name
 
     @classmethod
@@ -137,3 +137,22 @@ class Section:
         eth, lo, vxlan, dum, ...
         """
         return list(cls._prefixes.keys())
+
+    @classmethod
+    def get_config_path(cls, name):
+        """
+        get config path to interface with .vif or .vif-s.vif-c
+        example: eth0.1.2 -> 'ethernet eth0 vif-s 1 vif-c 2'
+        Returns False if interface name is invalid (not found in sections)
+        """
+        sect = cls.section(name)
+        if sect:
+            splinterface = name.split('.')
+            intfpath = f'{sect} {splinterface[0]}'
+            if len(splinterface) == 2:
+                intfpath += f' vif {splinterface[1]}'
+            elif len(splinterface) == 3:
+                intfpath += f' vif-s {splinterface[1]} vif-c {splinterface[2]}'
+            return intfpath
+        else:
+            return False

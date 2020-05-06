@@ -20,12 +20,12 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import BondIf, Section
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos.ifconfig import BondIf
+from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.config import Config
 from vyos.util import call, cmd
-from vyos.validate import is_bridge_member
+from vyos.validate import is_member, has_address_configured
 from vyos import ConfigError
 
 default_config_data = {
@@ -63,9 +63,9 @@ default_config_data = {
     'shutdown_required': False,
     'mtu': 1500,
     'primary': '',
-    'vif_s': [],
+    'vif_s': {},
     'vif_s_remove': [],
-    'vif': [],
+    'vif': {},
     'vif_remove': [],
     'vrf': ''
 }
@@ -111,15 +111,12 @@ def get_config():
         bond = deepcopy(default_config_data)
         bond['intf'] = ifname
         bond['deleted'] = True
-        # check if interface is member if a bridge
-        bond['is_bridge_member'] = is_bridge_member(conf, ifname)
         return bond
 
     # set new configuration level
     conf.set_level(cfg_base)
 
     bond, disabled = intf_to_dict(conf, default_config_data)
-    bond['intf'] = ifname
 
     # ARP link monitoring frequency in milliseconds
     if conf.exists('arp-monitor interval'):
@@ -175,22 +172,38 @@ def get_config():
 def verify(bond):
     if bond['deleted']:
         if bond['is_bridge_member']:
-            interface = bond['intf']
-            bridge = bond['is_bridge_member']
-            raise ConfigError(f'Interface "{interface}" can not be deleted as it belongs to bridge "{bridge}"!')
+            raise ConfigError((
+                f'Cannot delete interface "{bond["intf"]}" as it is a '
+                f'member of bridge "{bond["is_bridge_member"]}"!'))
+
         return None
 
-    if len (bond['arp_mon_tgt']) > 16:
-        raise ConfigError('The maximum number of targets that can be specified is 16')
+    if len(bond['arp_mon_tgt']) > 16:
+        raise ConfigError('The maximum number of arp-monitor targets is 16')
 
     if bond['primary']:
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
-            raise ConfigError('Mode dependency failed, primary not supported ' \
-                              'in mode "{}"!'.format(bond['mode']))
+            raise ConfigError((
+                'Mode dependency failed, primary not supported in mode '
+                f'"{bond["mode"]}"!'))
 
-    vrf_name = bond['vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+    if ( bond['is_bridge_member']
+            and ( bond['address']
+                or bond['ipv6_eui64_prefix']
+                or bond['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{bond["intf"]}" '
+            f'as it is a member of bridge "{bond["is_bridge_member"]}"!'))
+
+    if bond['vrf']:
+        if bond['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{bond["vrf"]}" does not exist')
+
+        if bond['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{bond["intf"]}" cannot be member of VRF '
+                f'"{bond["vrf"]}" and bridge {bond["is_bridge_member"]} '
+                f'at the same time!'))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(bond)
@@ -199,51 +212,55 @@ def verify(bond):
     for intf in bond['member']:
         # check if member interface is "real"
         if intf not in interfaces():
-            raise ConfigError('interface {} does not exist!'.format(intf))
+            raise ConfigError(f'Interface {intf} does not exist!')
 
         # a bonding member interface is only allowed to be assigned to one bond!
         all_bonds = conf.list_nodes('interfaces bonding')
         # We do not need to check our own bond
         all_bonds.remove(bond['intf'])
         for tmp in all_bonds:
-            if conf.exists('interfaces bonding ' + tmp + ' member interface ' + intf):
-                raise ConfigError('can not enslave interface {} which already ' \
-                                  'belongs to {}'.format(intf, tmp))
+            if conf.exists('interfaces bonding {tmp} member interface {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already a member of bond "{tmp}"!'))
 
         # can not add interfaces with an assigned address to a bond
-        if conf.exists('interfaces ethernet ' + intf + ' address'):
-            raise ConfigError('can not enslave interface {} which has an address ' \
-                              'assigned'.format(intf))
+        if has_address_configured(conf, intf):
+            raise ConfigError((
+                f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                f'it has an address assigned!'))
 
-        # bond members are not allowed to be bridge members, too
-        for tmp in conf.list_nodes('interfaces bridge'):
-            if conf.exists('interfaces bridge ' + tmp + ' member interface ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'bridge {}'.format(intf, tmp))
+        # bond members are not allowed to be bridge members
+        tmp = is_member(conf, intf, 'bridge')
+        if tmp:
+            raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already a member of bridge "{tmp}"!'))
 
-        # bond members are not allowed to be vrrp members, too
+        # bond members are not allowed to be vrrp members
         for tmp in conf.list_nodes('high-availability vrrp group'):
-            if conf.exists('high-availability vrrp group ' + tmp + ' interface ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'VRRP group {}'.format(intf, tmp))
+            if conf.exists('high-availability vrrp group {tmp} interface {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already a member of VRRP group "{tmp}"!'))
 
         # bond members are not allowed to be underlaying psuedo-ethernet devices
         for tmp in conf.list_nodes('interfaces pseudo-ethernet'):
-            if conf.exists('interfaces pseudo-ethernet ' + tmp + ' link ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'pseudo-ethernet {}'.format(intf, tmp))
+            if conf.exists('interfaces pseudo-ethernet {tmp} link {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already the link of pseudo-ethernet "{tmp}"!'))
 
         # bond members are not allowed to be underlaying vxlan devices
         for tmp in conf.list_nodes('interfaces vxlan'):
-            if conf.exists('interfaces vxlan ' + tmp + ' link ' + intf):
-                raise ConfigError('can not enslave interface {} which belongs to ' \
-                                  'vxlan {}'.format(intf, tmp))
-
+            if conf.exists('interfaces vxlan {tmp} link {intf}'):
+                raise ConfigError((
+                    f'Cannot add interface "{intf}" to bond "{bond["intf"]}", '
+                    f'it is already the link of VXLAN "{tmp}"!'))
 
     if bond['primary']:
         if bond['primary'] not in bond['member']:
-            raise ConfigError('primary interface must be a member interface of {}' \
-                              .format(bond['intf']))
+            raise ConfigError(f'Bond "{bond["intf"]}" primary interface must be a member')
 
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
             raise ConfigError('primary interface only works for mode active-backup, ' \
@@ -255,7 +272,6 @@ def verify(bond):
                               'transmit-load-balance or adaptive-load-balance')
 
     return None
-
 
 def generate(bond):
     return None
@@ -365,12 +381,9 @@ def apply(bond):
 
             # Add (enslave) interfaces to bond
             for intf in bond['member']:
-                # flushes only children of Interfaces class (e.g. vlan are not)
-                if intf in Section.interfaces():
-                    klass = Section.klass(intf, vlan=False)
-                    klass(intf, create=False).flush_addrs()
-                # flushes also vlan interfaces
-                call(f'ip addr flush dev "{intf}"')
+                # if we've come here we already verified the interface doesn't
+                # have addresses configured so just flush any remaining ones
+                cmd(f'ip addr flush dev "{intf}"')
                 b.add_port(intf)
 
         # As the bond interface is always disabled first when changing
@@ -389,37 +402,17 @@ def apply(bond):
         for addr in bond['address']:
             b.add_addr(addr)
 
-        # assign/remove VRF
-        b.set_vrf(bond['vrf'])
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not bond['is_bridge_member']:
+            b.set_vrf(bond['vrf'])
 
-        # remove no longer required service VLAN interfaces (vif-s)
-        for vif_s in bond['vif_s_remove']:
-            b.del_vlan(vif_s)
+        # re-add ourselves to any bridge we might have fallen out of
+        if bond['is_bridge_member']:
+            b.add_to_bridge(bond['is_bridge_member'])
 
-        # create service VLAN interfaces (vif-s)
-        for vif_s in bond['vif_s']:
-            s_vlan = b.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-            apply_vlan_config(s_vlan, vif_s)
-
-            # remove no longer required client VLAN interfaces (vif-c)
-            # on lower service VLAN interface
-            for vif_c in vif_s['vif_c_remove']:
-                s_vlan.del_vlan(vif_c)
-
-            # create client VLAN interfaces (vif-c)
-            # on lower service VLAN interface
-            for vif_c in vif_s['vif_c']:
-                c_vlan = s_vlan.add_vlan(vif_c['id'])
-                apply_vlan_config(c_vlan, vif_c)
-
-        # remove no longer required VLAN interfaces (vif)
-        for vif in bond['vif_remove']:
-            b.del_vlan(vif)
-
-        # create VLAN interfaces (vif)
-        for vif in bond['vif']:
-            vlan = b.add_vlan(vif['id'])
-            apply_vlan_config(vlan, vif)
+        # apply all vlans to interface
+        apply_all_vlans(b, bond)
 
     return None
 

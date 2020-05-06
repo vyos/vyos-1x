@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.ifconfig import Interface, GREIf, GRETapIf, IPIPIf, IP6GREIf, IPIP6If, IP6IP6If, SitIf, Sit6RDIf
 from vyos.ifconfig.afi import IP4, IP6
 from vyos.configdict import list_diff
-from vyos.validate import is_ipv4, is_ipv6, is_bridge_member
+from vyos.validate import is_ipv4, is_ipv6, is_member
 from vyos import ConfigError
 from vyos.dicts import FixedDict
 
@@ -410,7 +410,7 @@ def get_config():
     options['tunnel'] = {}
 
     # check for bridges
-    options['bridge'] = is_bridge_member(conf, ifname)
+    options['bridge'] = is_member(conf, ifname, 'bridge')
     options['interfaces'] = interfaces()
 
     for name in ct:
@@ -436,11 +436,14 @@ def verify(conf):
 
     if changes['section'] == 'delete':
         if ifname in options['nhrp']:
-            raise ConfigError(f'Can not delete interface tunnel {iftype} {ifname}, it is used by nhrp')
+            raise ConfigError((
+                f'Cannot delete interface tunnel {iftype} {ifname}, '
+                'it is used by NHRP'))
 
-        bridge = options['bridge']
-        if bridge:
-            raise ConfigError(f'Interface "{ifname}" can not be deleted as it belongs to bridge "{bridge}"!')
+        if options['bridge']:
+             raise ConfigError((
+                f'Cannot delete interface "{options["ifname"]}" as it is a '
+                f'member of bridge "{options["bridge"]}"!'))
 
         # done, bail out early
         return None
@@ -525,10 +528,23 @@ def verify(conf):
         print(f'Should not use IPv6 addresses on tunnel {iftype} {ifname}')
 
     # vrf check
+    if options['vrf']:
+        if options['vrf'] not in options['interfaces']:
+            raise ConfigError(f'VRF "{options["vrf"]}" does not exist')
 
-    vrf = options['vrf']
-    if vrf and vrf not in options['interfaces']:
-        raise ConfigError(f'VRF "{vrf}" does not exist')
+        if options['bridge']:
+            raise ConfigError((
+                f'Interface "{options["ifname"]}" cannot be member of VRF '
+                f'"{options["vrf"]}" and bridge {options["bridge"]} '
+                f'at the same time!'))
+
+    # bridge and address check
+    if ( options['bridge']
+            and ( options['addresses-add']
+                or options['ipv6_autoconf'] ) ):
+        raise ConfigError((
+            f'Cannot assign address to interface "{options["name"]}" '
+            f'as it is a member of bridge "{options["bridge"]}"!'))
 
     # source-interface check
 
@@ -620,11 +636,16 @@ def apply(conf):
 
     # set other interface properties
     for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast',
-                   'vrf', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
+                   'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
         if not options[option]:
             # should never happen but better safe
             continue
         tunnel.set_interface(option, options[option])
+
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not options['bridge']:
+        tunnel.set_vrf(options['vrf'])
 
     # Configure interface address(es)
     for addr in options['addresses-del']:
