@@ -27,6 +27,7 @@ import signal
 import vyos.config
 
 from flask import Flask, request
+from waitress import serve
 
 from functools import wraps
 
@@ -395,4 +396,8 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGTERM, sig_handler)
 
-    app.run(host=server_config["listen_address"], port=server_config["port"], debug=True)
+    try:
+        serve(app, host=server_config["listen_address"],
+                   port=server_config["port"])
+    except OSError as e:
+        print(f"OSError {e}")
