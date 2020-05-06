@@ -155,7 +155,7 @@ class Config(object):
         ``exists("system name-server"`` without ``set_level``.
 
         Args:
-            path (str): relative config path
+            path (str|list): relative config path
         """
         # Make sure there's always a space between default path (level)
         # and path supplied as method argument
@@ -166,7 +166,7 @@ class Config(object):
             else:
                 self._level = []
         elif isinstance(path, list):
-            self._level = path
+            self._level = path.copy()
         else:
             raise TypeError("Level path must be either a whitespace-separated string or a list")
 
@@ -177,7 +177,7 @@ class Config(object):
         Returns:
             str: current edit level
         """
-        return(self._level)
+        return(self._level.copy())
 
     def exists(self, path):
         """
@@ -386,7 +386,7 @@ class Config(object):
             values = []
 
         if not values:
-            return(default)
+            return(default.copy())
         else:
             return(values)
 
@@ -407,7 +407,7 @@ class Config(object):
             nodes = []
 
         if not nodes:
-            return(default)
+            return(default.copy())
         else:
             return(nodes)
 
@@ -448,7 +448,6 @@ class Config(object):
         else:
             return(value)
 
-
     def return_effective_values(self, path, default=[]):
         """
         Retrieve all values of a multi-value node in a running (effective) config
@@ -465,7 +464,7 @@ class Config(object):
             values = []
 
         if not values:
-            return(default)
+            return(default.copy())
         else:
             return(values)
 
@@ -488,6 +487,6 @@ class Config(object):
             nodes = []
 
         if not nodes:
-            return(default)
+            return(default.copy())
         else:
             return(nodes)

@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.ifconfig import MACVLANIf, Section
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos import ConfigError
 
 default_config_data = {
@@ -56,9 +56,9 @@ default_config_data = {
     'source_interface_changed': False,
     'mac': '',
     'mode': 'private',
-    'vif_s': [],
+    'vif_s': {},
     'vif_s_remove': [],
-    'vif': [],
+    'vif': {},
     'vif_remove': [],
     'vrf': ''
 }
@@ -253,34 +253,8 @@ def apply(peth):
     if peth['is_bridge_member']:
         p.add_to_bridge(peth['is_bridge_member'])
 
-    # remove no longer required service VLAN interfaces (vif-s)
-    for vif_s in peth['vif_s_remove']:
-        p.del_vlan(vif_s)
-
-    # create service VLAN interfaces (vif-s)
-    for vif_s in peth['vif_s']:
-        s_vlan = p.add_vlan(vif_s['id'], ethertype=vif_s['ethertype'])
-        apply_vlan_config(s_vlan, vif_s)
-
-        # remove no longer required client VLAN interfaces (vif-c)
-        # on lower service VLAN interface
-        for vif_c in vif_s['vif_c_remove']:
-            s_vlan.del_vlan(vif_c)
-
-        # create client VLAN interfaces (vif-c)
-        # on lower service VLAN interface
-        for vif_c in vif_s['vif_c']:
-            c_vlan = s_vlan.add_vlan(vif_c['id'])
-            apply_vlan_config(c_vlan, vif_c)
-
-    # remove no longer required VLAN interfaces (vif)
-    for vif in peth['vif_remove']:
-        p.del_vlan(vif)
-
-    # create VLAN interfaces (vif)
-    for vif in peth['vif']:
-        vlan = p.add_vlan(vif['id'])
-        apply_vlan_config(vlan, vif)
+    # apply all vlans to interface
+    apply_all_vlans(b, bond)
 
     return None
 
