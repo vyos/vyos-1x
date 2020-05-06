@@ -54,6 +54,14 @@ dns{{ loop.index }}={{ dns }}
 {% endfor -%}
 {% endif %}
 
+{% if dnsv6 %}
+[ipv6-dns]
+{% for dns in dnsv6 -%}
+{{ dns }}
+{% endfor -%}
+{% endif %}
+
+
 {% if auth_mode == 'local' %}
 [chap-secrets]
 chap-secrets={{ chap_secrets_file }}

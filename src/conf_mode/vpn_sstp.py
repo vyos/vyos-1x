@@ -22,10 +22,10 @@ from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call, run, get_half_cpus
 from vyos.template import render
-
+from vyos.util import call, run, get_half_cpus
+from vyos.validate import is_ipv4
+from vyos import ConfigError
 
 sstp_conf = '/run/accel-pppd/sstp.conf'
 sstp_chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
@@ -40,6 +40,7 @@ default_config_data = {
     'client_ipv6_delegate_prefix': [],
     'client_gateway': '',
     'dnsv4' : [],
+    'dnsv6' : [],
     'radius_server' : [],
     'radius_acct_tmo' : '3',
     'radius_max_try' : '3',
@@ -251,7 +252,11 @@ def get_config():
     # read in network settings
     conf.set_level(base_path + ['network-settings'])
     if conf.exists(['name-server']):
-        sstp['dnsv4'] = conf.return_values(['name-server'])
+        for name_server in conf.return_values(['name-server']):
+            if is_ipv4(name_server):
+                sstp['dnsv4'].append(name_server)
+            else:
+                sstp['dnsv6'].append(name_server)
 
     if conf.exists(['mtu']):
         sstp['mtu'] = conf.return_value(['mtu'])
