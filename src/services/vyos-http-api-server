@@ -229,6 +229,8 @@ def retrieve_op():
             return error(400, "\"{0}\" is not a valid operation".format(op))
     except VyOSError as e:
         return error(400, str(e))
+    except ConfigSessionError as e:
+        return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
         return error(500, "An internal error occured. Check the logs for details.")
@@ -264,7 +266,7 @@ def config_file_op():
             res = session.commit()
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
-    except VyOSError as e:
+    except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
@@ -300,7 +302,7 @@ def image_op():
             res = session.remove_image(name)
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
-    except VyOSError as e:
+    except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
