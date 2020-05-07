@@ -24,9 +24,9 @@ from netifaces import interfaces
 from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
-from vyos.configdict import list_diff, vlan_to_dict
+from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.ifconfig import WiFiIf, Section
-from vyos.ifconfig_vlan import apply_vlan_config, verify_vlan_config
+from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.template import render
 from vyos.util import chown, call
 from vyos.validate import is_member
@@ -87,6 +87,7 @@ default_config_data = {
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
+    'ip_proxy_arp': 0,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_eui64_prefix_remove': [],
@@ -108,8 +109,10 @@ default_config_data = {
     'sec_wpa_radius' : [],
     'ssid' : '',
     'op_mode' : 'monitor',
-    'vif': [],
+    'vif': {},
     'vif_remove': [],
+    'vif_s': {},
+    'vif_s_remove': [],
     'vrf': ''
 }
 
@@ -125,22 +128,21 @@ def get_conf_file(conf_type, intf):
     return cfg_file
 
 def get_config():
-    wifi = deepcopy(default_config_data)
-    conf = Config()
-
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    wifi['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-
-    # check if interface is member if a bridge
-    wifi['is_bridge_member'] = is_member(conf, wifi['intf'], 'bridge')
+    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    conf = Config()
 
     # check if wireless interface has been removed
-    cfg_base = 'interfaces wireless ' + wifi['intf']
+    cfg_base = ['interfaces', 'wireless ', ifname]
     if not conf.exists(cfg_base):
+        wifi = deepcopy(default_config_data)
+        wifi['intf'] = ifname
         wifi['deleted'] = True
+        # we need to know if we're a bridge member so we can refuse deletion
+        wifi['is_bridge_member'] = is_member(conf, wifi['intf'], 'bridge')
         # we can not bail out early as wireless interface can not be removed
         # Kernel will complain with: RTNETLINK answers: Operation not supported.
         # Thus we need to remove individual settings
@@ -149,14 +151,8 @@ def get_config():
     # set new configuration level
     conf.set_level(cfg_base)
 
-    # retrieve configured interface addresses
-    if conf.exists('address'):
-        wifi['address'] = conf.return_values('address')
-
-    # get interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_values('address')
-    wifi['address_remove'] = list_diff(eff_addr, wifi['address'])
+    # get common interface settings
+    wifi, disabled = intf_to_dict(conf, default_config_data)
 
     # 40MHz intolerance, use 20MHz only
     if conf.exists('capabilities ht 40mhz-incapable'):
@@ -310,37 +306,9 @@ def get_config():
     if conf.exists('channel'):
         wifi['channel'] = conf.return_value('channel')
 
-    # retrieve interface description
-    if conf.exists('description'):
-        wifi['description'] = conf.return_value('description')
-
-    # get DHCP client identifier
-    if conf.exists('dhcp-options client-id'):
-        wifi['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
-
-    # DHCP client host name (overrides the system host name)
-    if conf.exists('dhcp-options host-name'):
-        wifi['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
-
-    # DHCP client vendor identifier
-    if conf.exists('dhcp-options vendor-class-id'):
-        wifi['dhcp_vendor_class_id'] = conf.return_value('dhcp-options vendor-class-id')
-
-    # DHCPv6 only acquire config parameters, no address
-    if conf.exists('dhcpv6-options parameters-only'):
-        wifi['dhcpv6_prm_only'] = conf.return_value('dhcpv6-options parameters-only')
-
-    # DHCPv6 temporary IPv6 address
-    if conf.exists('dhcpv6-options temporary'):
-        wifi['dhcpv6_temporary'] = conf.return_value('dhcpv6-options temporary')
-
     # Disable broadcast of SSID from access-point
     if conf.exists('disable-broadcast-ssid'):
         wifi['disable_broadcast_ssid'] = True
-
-    # ignore link state changes on this interface
-    if conf.exists('disable-link-detect'):
-        wifi['disable_link_detect'] = 2
 
     # Disassociate stations based on excessive transmission failures
     if conf.exists('expunge-failing-stations'):
@@ -354,63 +322,9 @@ def get_config():
     if conf.exists('isolate-stations'):
         wifi['isolate_stations'] = True
 
-    # ARP filter configuration
-    if conf.exists('ip disable-arp-filter'):
-        wifi['ip_disable_arp_filter'] = 0
-
-    # ARP enable accept
-    if conf.exists('ip enable-arp-accept'):
-        wifi['ip_enable_arp_accept'] = 1
-
-    # ARP enable announce
-    if conf.exists('ip enable-arp-announce'):
-        wifi['ip_enable_arp_announce'] = 1
-
-    # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
-    if conf.exists('ipv6 address autoconf'):
-        wifi['ipv6_autoconf'] = 1
-
-    # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
-    if conf.exists('ipv6 address eui64'):
-        wifi['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
-
-    # Determine currently effective EUI64 addresses - to determine which
-    # address is no longer valid and needs to be removed
-    eff_addr = conf.return_effective_values('ipv6 address eui64')
-    wifi['ipv6_eui64_prefix_remove'] = list_diff(eff_addr, wifi['ipv6_eui64_prefix'])
-
-    # Remove the default link-local address if set or if member of a bridge
-    if conf.exists('ipv6 address no-default-link-local') or wifi['is_bridge_member']:
-        wifi['ipv6_eui64_prefix_remove'].append('fe80::/64')
-    else:
-        # add the link-local by default to make IPv6 work
-        wifi['ipv6_eui64_prefix'].append('fe80::/64')
-
-    # ARP enable ignore
-    if conf.exists('ip enable-arp-ignore'):
-        wifi['ip_enable_arp_ignore'] = 1
-
-    # Disable IPv6 forwarding on this interface
-    if conf.exists('ipv6 disable-forwarding'):
-        wifi['ipv6_forwarding'] = 0
-
-    # IPv6 Duplicate Address Detection (DAD) tries
-    if conf.exists('ipv6 dup-addr-detect-transmits'):
-        wifi['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
-
     # Wireless physical device
     if conf.exists('physical-device'):
         wifi['phy'] = conf.return_value('physical-device')
-
-    # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        wifi['mac'] = conf.return_value('mac')
-
-    # Find out if MAC has changed - if so, we need to delete all IPv6 EUI64 addresses
-    # before re-adding them
-    if ( wifi['mac'] and wifi['intf'] in Section.interfaces(section='wireless')
-            and wifi['mac'] != WiFiIf(wifi['intf'], create=False).get_mac() ):
-        wifi['ipv6_eui64_prefix_remove'] += wifi['ipv6_eui64_prefix']
 
     # Maximum number of wireless radio stations
     if conf.exists('max-stations'):
@@ -423,10 +337,6 @@ def get_config():
     # Wireless radio mode
     if conf.exists('mode'):
         wifi['mode'] = conf.return_value('mode')
-
-    # retrieve VRF instance
-    if conf.exists('vrf'):
-        wifi['vrf'] = conf.return_value('vrf')
 
     # Transmission power reduction in dBm
     if conf.exists('reduce-transmit-power'):
@@ -522,24 +432,6 @@ def get_config():
             tmp = 'ap'
 
         wifi['op_mode'] = tmp
-
-    # re-set configuration level to parse new nodes
-    conf.set_level(cfg_base)
-    # Determine vif interfaces (currently effective) - to determine which
-    # vif interface is no longer present and needs to be removed
-    eff_intf = conf.list_effective_nodes('vif')
-    act_intf = conf.list_nodes('vif')
-    wifi['vif_remove'] = list_diff(eff_intf, act_intf)
-
-    if conf.exists('vif'):
-        for vif in conf.list_nodes('vif'):
-            # set config level to vif interface
-            conf.set_level(cfg_base + ' vif ' + vif)
-            wifi['vif'].append(vlan_to_dict(conf))
-
-    # disable interface
-    if conf.exists('disable'):
-        wifi['disable'] = True
 
     # retrieve configured regulatory domain
     conf.set_level('system')
@@ -770,24 +662,8 @@ def apply(wifi):
         for addr in wifi['address']:
             w.add_addr(addr)
 
-        # remove no longer required VLAN interfaces (vif)
-        for vif in wifi['vif_remove']:
-            w.del_vlan(vif)
-
-        # create VLAN interfaces (vif)
-        for vif in wifi['vif']:
-            # QoS priority mapping can only be set during interface creation
-            # so we delete the interface first if required.
-            if vif['egress_qos_changed'] or vif['ingress_qos_changed']:
-                try:
-                    # on system bootup the above condition is true but the interface
-                    # does not exists, which throws an exception, but that's legal
-                    w.del_vlan(vif['id'])
-                except:
-                    pass
-
-            vlan = w.add_vlan(vif['id'])
-            apply_vlan_config(vlan, vif)
+        # apply all vlans to interface
+        apply_all_vlans(w, wifi)
 
         # Enable/Disable interface - interface is always placed in
         # administrative down state in WiFiIf class
