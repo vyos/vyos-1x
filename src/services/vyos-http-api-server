@@ -26,7 +26,8 @@ import signal
 
 import vyos.config
 
-import bottle
+from flask import Flask, request
+from waitress import serve
 
 from functools import wraps
 
@@ -37,7 +38,7 @@ from vyos.config import VyOSError
 DEFAULT_CONFIG_FILE = '/etc/vyos/http-api.conf'
 CFG_GROUP = 'vyattacfg'
 
-app = bottle.default_app()
+app = Flask(__name__)
 
 # Giant lock!
 lock = threading.Lock()
@@ -55,18 +56,31 @@ def check_auth(key_list, key):
     return id
 
 def error(code, msg):
-    bottle.response.status = code
     resp = {"success": False, "error": msg, "data": None}
-    return json.dumps(resp)
+    return json.dumps(resp), code
 
 def success(data):
     resp = {"success": True, "data": data, "error": None}
     return json.dumps(resp)
 
+def get_command(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        cmd = request.form.get("data")
+        if not cmd:
+            return error(400, "Non-empty data field is required")
+        try:
+            cmd = json.loads(cmd)
+        except Exception as e:
+            return error(400, "Failed to parse JSON: {0}".format(e))
+        return f(cmd, *args, **kwargs)
+
+    return decorated_function
+
 def auth_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        key = bottle.request.forms.get("key")
+        key = request.form.get("key")
         api_keys = app.config['vyos_keys']
         id = check_auth(api_keys, key)
         if not id:
@@ -75,27 +89,19 @@ def auth_required(f):
 
     return decorated_function
 
-@app.route('/configure', method='POST')
+@app.route('/configure', methods=['POST'])
+@get_command
 @auth_required
-def configure():
+def configure_op(commands):
     session = app.config['vyos_session']
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
 
-    strict_field = bottle.request.forms.get("strict")
+    strict_field = request.form.get("strict")
     if strict_field == "true":
         strict = True
     else:
         strict = False
-
-    commands = bottle.request.forms.get("data")
-    if not commands:
-        return error(400, "Non-empty data field is required")
-    else:
-        try:
-            commands = json.loads(commands)
-        except Exception as e:
-            return error(400, "Failed to parse JSON: {0}".format(e))
 
     # Allow users to pass just one command
     if not isinstance(commands, list):
@@ -186,15 +192,13 @@ def configure():
     else:
         return success(None)
 
-@app.route('/retrieve', method='POST')
+@app.route('/retrieve', methods=['POST'])
+@get_command
 @auth_required
-def get_value():
+def retrieve_op(command):
     session = app.config['vyos_session']
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -229,19 +233,19 @@ def get_value():
             return error(400, "\"{0}\" is not a valid operation".format(op))
     except VyOSError as e:
         return error(400, str(e))
+    except ConfigSessionError as e:
+        return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
         return error(500, "An internal error occured. Check the logs for details.")
 
     return success(res)
 
-@app.route('/config-file', method='POST')
+@app.route('/config-file', methods=['POST'])
+@get_command
 @auth_required
-def config_file_op():
+def config_file_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -264,7 +268,7 @@ def config_file_op():
             res = session.commit()
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
-    except VyOSError as e:
+    except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
@@ -272,13 +276,11 @@ def config_file_op():
 
     return success(res)
 
-@app.route('/image', method='POST')
+@app.route('/image', methods=['POST'])
+@get_command
 @auth_required
-def config_file_op():
+def image_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -300,7 +302,7 @@ def config_file_op():
             res = session.remove_image(name)
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
-    except VyOSError as e:
+    except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
         print(traceback.format_exc(), file=sys.stderr)
@@ -309,13 +311,11 @@ def config_file_op():
     return success(res)
 
 
-@app.route('/generate', method='POST')
+@app.route('/generate', methods=['POST'])
+@get_command
 @auth_required
-def generate_op():
+def generate_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -339,13 +339,11 @@ def generate_op():
 
     return success(res)
 
-@app.route('/show', method='POST')
+@app.route('/show', methods=['POST'])
+@get_command
 @auth_required
-def show_op():
+def show_op(command):
     session = app.config['vyos_session']
-
-    command = bottle.request.forms.get("data")
-    command = json.loads(command)
 
     try:
         op = command['op']
@@ -398,4 +396,8 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGTERM, sig_handler)
 
-    bottle.run(app, host=server_config["listen_address"], port=server_config["port"], debug=True)
+    try:
+        serve(app, host=server_config["listen_address"],
+                   port=server_config["port"])
+    except OSError as e:
+        print(f"OSError {e}")
