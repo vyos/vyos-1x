@@ -91,6 +91,7 @@ Depends: python3,
   python3-certbot-nginx,
   pppoe,
   salt-minion,
+  vyos-utils,
   ${shlibs:Depends},
   ${misc:Depends}
 Description: VyOS configuration scripts and data
