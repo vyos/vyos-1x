@@ -152,7 +152,7 @@ def verify_vlan_config(config):
     """
 
     # config['vif'] is a dict with ids as keys and config dicts as values
-    for vif in config['vif'].values():
+    for vif in config['vif']:
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif['dhcpv6_prm_only'] and vif['dhcpv6_temporary']:
             raise ConfigError('DHCPv6 temporary and parameters-only options are mutually exclusive!')
