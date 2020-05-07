@@ -632,7 +632,7 @@ def verify(openvpn):
             raise ConfigError((
                 f'Cannot delete interface "{openvpn["intf"]}" as it is a '
                 f'member of bridge "{openvpn["is_bridge_menber"]}"!'))
-       return None
+        return None
 
 
     if not openvpn['mode']:
