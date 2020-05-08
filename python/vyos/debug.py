@@ -15,7 +15,7 @@
 
 import os
 import sys
-
+from datetime import datetime
 
 def message(message, flag='', destination=sys.stdout):
     """
@@ -46,7 +46,7 @@ def message(message, flag='', destination=sys.stdout):
         mask = os.umask(0o111)
 
         with open(logfile, 'a') as f:
-            f.write(_format('log', message))
+            f.write(_timed(_format('log', message)))
     finally:
         os.umask(mask)
 
@@ -79,6 +79,11 @@ def enabled(flag):
         return ''
 
     return _fromenv(flag) or _fromfile(flag)
+
+
+def _timed(message):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return f'{now} {message}'
 
 
 def _remove_invisible(string):
