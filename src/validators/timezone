@@ -29,5 +29,5 @@ if __name__ == '__main__':
     tz_data = tz_data.split('\n')
 
     if args.validate not in tz_data:
-        sys.exit("the timezone can't be found in the timezone list')
+        sys.exit("the timezone can't be found in the timezone list")
     sys.exit()
