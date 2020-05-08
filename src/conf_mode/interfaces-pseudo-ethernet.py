@@ -122,7 +122,7 @@ def verify(peth):
 
     if not peth['source_interface'] in interfaces():
         raise ConfigError((
-            f'Pseudo-ethernet "{peth["intf"]}" link device does not exist')
+            f'Pseudo-ethernet "{peth["intf"]}" link device does not exist'))
 
     if ( peth['is_bridge_member']
             and ( peth['address']
@@ -254,7 +254,7 @@ def apply(peth):
         p.add_to_bridge(peth['is_bridge_member'])
 
     # apply all vlans to interface
-    apply_all_vlans(b, bond)
+    apply_all_vlans(p, peth)
 
     return None
 
