@@ -389,12 +389,9 @@ def get_cfg_group_id():
 
 def file_is_persistent(path):
     import re
-    if not re.match(r'^(/config|/opt/vyatta/etc/config)', os.path.dirname(path)):
-        warning = "Warning: file {0} is outside the /config directory\n".format(path)
-        warning += "It will not be automatically migrated to a new image on system update"
-        return (False, warning)
-    else:
-        return (True, None)
+    location = r'^(/config|/opt/vyatta/etc/config)'
+    absolute = os.path.abspath(os.path.dirname(path))
+    return re.match(location,absolute)
 
 
 def commit_in_progress():

@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
 import sys
 import shlex
@@ -25,22 +24,22 @@ import shlex
 import vyos.util
 
 
-if len(sys.argv) < 2:
-    print("Please specify script file to check")
-    sys.exit(1)
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        sys.exit('Please specify script file to check')
 
-#if the "script" is a script+ stowaway arugments, this removes the aguements
-script = shlex.split(sys.argv[1])[0]
+    # if the "script" is a script+ stowaway arguments, this removes the aguements
+    script = shlex.split(sys.argv[1])[0]
 
-if not os.path.exists(script):
-    print("File {0} does not exist".format(script))
-    sys.exit(1)
+    if not os.path.exists(script):
+        sys.exit(f'File {script} does not exist')
 
-if not (os.path.isfile(script) and os.access(script, os.X_OK)):
-    print("File {0} is not an executable file".format(script))
-    sys.exit(1)
+    if not (os.path.isfile(script) and os.access(script, os.X_OK)):
+        sys.exit('File {script} is not an executable file')
 
-# File outside the config dir is just a warning
-res, warning = vyos.util.file_is_persistent(script)
-if not res:
-    print(warning)
+    # File outside the config dir is just a warning
+    if not vyos.util.file_is_persistent(script):
+        sys.exit(
+            'Warning: file {path} is outside the / config directory\n'
+            'It will not be automatically migrated to a new image on system update'
+        )
