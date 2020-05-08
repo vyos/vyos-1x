@@ -7,12 +7,11 @@ After=vyos-router.service
 
 [Service]
 WorkingDirectory=/run/dhcp-server
-# The leases files need to be root:vyattacfg even when dropping privileges
 ExecStart=/bin/sh -ec '\
     CONFIG_FILE=/run/dhcp-server/dhcpd.conf; \
     [ -e /config/dhcpd.leases ] || touch /config/dhcpd.leases; \
-    chown root:vyattacfg /config/dhcpd.leases; \
-    chmod 664 /config/dhcpd.leases; \
+    chown nobody:nogroup /config/dhcpd.leases*; \
+    chmod 664 /config/dhcpd.leases*; \
     exec /usr/sbin/dhcpd -user nobody -group nogroup -f -4 -pf /run/dhcp-server/dhcpd.pid -cf $CONFIG_FILE -lf /config/dhcpd.leases'
 
 [Install]
