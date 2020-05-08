@@ -185,7 +185,7 @@ def verify_vlan_config(config):
             if vif_id == vif_s_id:
                 raise ConfigError((
                     f'Cannot use identical ID on vif "{vif["intf"]}" '
-                    f'and vif-s "{vif_s}"'))
+                    f'and vif-s "{vif_s["intf"]}"'))
 
         # DHCPv6 parameters-only and temporary address are mutually exclusive
         if vif_s['dhcpv6_prm_only'] and vif_s['dhcpv6_temporary']:
