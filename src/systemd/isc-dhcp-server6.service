@@ -6,13 +6,19 @@ ConditionPathExists=/run/dhcp-server/dhcpdv6.conf
 After=vyos-router.service
 
 [Service]
+Type=forking
 WorkingDirectory=/run/dhcp-server
-# The leases files need to be root:vyattacfg even when dropping privileges
-ExecStart=/bin/sh -ec '\
-    [ -e /config/dhcpdv6.leases ] || touch /config/dhcpdv6.leases; \
-    chown root:vyattacfg /config/dhcpdv6.leases; \
-    chmod 664 /config/dhcpdv6.leases; \
-    exec /usr/sbin/dhcpd -user nobody -group nogroup -f -6 -pf /run/dhcp-server/dhcpdv6.pid -cf /run/dhcp-server/dhcpdv6.conf -lf /config/dhcpdv6.leases'
+RuntimeDirectory=dhcp-server
+RuntimeDirectoryPreserve=yes
+Environment=PID_FILE=/run/dhcp-server/dhcpdv6.pid CONFIG_FILE=/run/dhcp-server/dhcpdv6.conf LEASE_FILE=/config/dhcpdv6.leases
+PIDFile=/run/dhcp-server/dhcpdv6.pid
+ExecStartPre=/bin/sh -ec '\
+touch ${LEASE_FILE}; \
+chown nobody:nogroup ${LEASE_FILE}* ; \
+chmod 664 ${LEASE_FILE}* ; \
+/usr/sbin/dhcpd -6 -t -T -q -user nobody -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE} '
+ExecStart=/usr/sbin/dhcpd -6 -q -user nobody -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE}
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

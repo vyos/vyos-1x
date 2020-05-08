@@ -2,13 +2,19 @@
 Description=ISC DHCP IPv6 relay
 Documentation=man:dhcrelay(8)
 Wants=network-online.target
+RequiresMountsFor=/run
 ConditionPathExists=/run/dhcp-relay/dhcpv6.conf
 After=vyos-router.service
 
 [Service]
+Type=forking
 WorkingDirectory=/run/dhcp-relay
+RuntimeDirectory=dhcp-relay
+RuntimeDirectoryPreserve=yes
 EnvironmentFile=/run/dhcp-relay/dhcpv6.conf
-ExecStart=/usr/sbin/dhcrelay -d -6 $OPTIONS
+PIDFile=/run/dhcp-relay/dhcrelayv6.pid
+ExecStart=/usr/sbin/dhcrelay -6 -pf /run/dhcp-relay/dhcrelayv6.pid $OPTIONS
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
