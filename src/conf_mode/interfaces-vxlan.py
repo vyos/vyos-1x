@@ -167,7 +167,7 @@ def verify(vxlan):
         if vxlan['is_bridge_member']:
             raise ConfigError((
                 f'Cannot delete interface "{vxlan["intf"]}" as it is a '
-                f'member of bridge "{vxlan["is_bridge_member"]}"!')
+                f'member of bridge "{vxlan["is_bridge_member"]}"!'))
 
         return None
 
