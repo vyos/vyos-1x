@@ -15,6 +15,9 @@ SERVICES_DIR := usr/libexec/vyos/services
 %:
 	dh $@ --with python3, --with quilt
 
+override_dh_gencontrol:
+	dh_gencontrol -- -v$(shell (git describe --tags --long --match 'vyos/*' --dirty 2>/dev/null || echo 0.0-no.git.tag) | sed -E 's%vyos/%%' | sed -E 's%-dirty%+dirty%')
+
 override_dh_auto_build:
 	make all
 
