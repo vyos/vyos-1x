@@ -278,8 +278,12 @@ class Config(object):
         Returns: a dict representation of the config
         """
         res = self.show_config(self._make_path(path), effective=effective)
-        config_tree = vyos.configtree.ConfigTree(res)
-        config_dict = json.loads(config_tree.to_json())
+        if res:
+            config_tree = vyos.configtree.ConfigTree(res)
+            config_dict = json.loads(config_tree.to_json())
+        else:
+            config_dict = {}
+
         return config_dict
 
     def is_multi(self, path):
