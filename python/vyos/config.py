@@ -97,12 +97,12 @@ class Config(object):
             self.__session_env = None
 
         # Running config can be obtained either from op or conf mode, it always succeeds
-        # (if config system is initialized at all).
+        # once the config system is initialized during boot;
+        # before initialization, set to empty string
         if os.path.isfile('/tmp/vyos-config-status'):
             running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
-            with open('/opt/vyatta/etc/config/config.boot') as f:
-                running_config_text = f.read()
+            running_config_text = ''
 
         # Session config ("active") only exists in conf mode.
         # In op mode, we'll just use the same running config for both active and session configs.
@@ -112,7 +112,10 @@ class Config(object):
             session_config_text = running_config_text
 
         self._session_config = vyos.configtree.ConfigTree(session_config_text)
-        self._running_config = vyos.configtree.ConfigTree(running_config_text)
+        if running_config_text:
+            self._running_config = vyos.configtree.ConfigTree(running_config_text)
+        else:
+            self._running_config = None
 
     def _make_command(self, op, path):
         args = path.split()
@@ -429,7 +432,10 @@ class Config(object):
             This function is safe to use in operational mode. In configuration mode,
             it ignores uncommited changes.
         """
-        return(self._running_config.exists(self._make_path(path)))
+        if self._running_config:
+            return(self._running_config.exists(self._make_path(path)))
+
+        return False
 
     def return_effective_value(self, path, default=None):
         """
@@ -442,9 +448,12 @@ class Config(object):
         Returns:
             str: Node value
         """
-        try:
-            value = self._running_config.return_value(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
+        if self._running_config:
+            try:
+                value = self._running_config.return_value(self._make_path(path))
+            except vyos.configtree.ConfigTreeError:
+                value = None
+        else:
             value = None
 
         if not value:
@@ -462,9 +471,12 @@ class Config(object):
         Returns:
             str list: A list of values
         """
-        try:
-            values = self._running_config.return_values(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
+        if self._running_config:
+            try:
+                values = self._running_config.return_values(self._make_path(path))
+            except vyos.configtree.ConfigTreeError:
+                values = []
+        else:
             values = []
 
         if not values:
@@ -485,9 +497,12 @@ class Config(object):
         Raises:
             VyOSError: if the node is not a tag node
         """
-        try:
-            nodes = self._running_config.list_nodes(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
+        if self._running_config:
+            try:
+                nodes = self._running_config.list_nodes(self._make_path(path))
+            except vyos.configtree.ConfigTreeError:
+                nodes = []
+        else:
             nodes = []
 
         if not nodes:
