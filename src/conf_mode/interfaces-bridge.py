@@ -48,6 +48,7 @@ default_config_data = {
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_eui64_prefix_remove': [],
@@ -197,6 +198,11 @@ def get_config():
              and bridge['mac'] != BridgeIf(bridge['intf'], create=False).get_mac() ):
         bridge['ipv6_eui64_prefix_remove'] += bridge['ipv6_eui64_prefix']
 
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if bridge['ipv6_autoconf'] or 'dhcpv6' in bridge['address']:
+        bridge['ipv6_accept_ra'] = 2
+
     # Interval at which neighbor bridges are removed
     if conf.exists('max-age'):
         bridge['max_age'] = int(conf.return_value('max-age'))
@@ -302,6 +308,8 @@ def apply(bridge):
         br.set_arp_announce(bridge['ip_enable_arp_announce'])
         # configure ARP ignore
         br.set_arp_ignore(bridge['ip_enable_arp_ignore'])
+        # IPv6 accept RA
+        br.set_ipv6_accept_ra(bridge['ipv6_accept_ra'])
         # IPv6 address autoconfiguration
         br.set_ipv6_autoconf(bridge['ipv6_autoconf'])
         # IPv6 forwarding

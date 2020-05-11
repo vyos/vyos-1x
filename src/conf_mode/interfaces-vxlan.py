@@ -38,6 +38,7 @@ default_config_data = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_forwarding': 1,
@@ -134,6 +135,11 @@ def get_config():
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         vxlan['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
+
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if vxlan['ipv6_autoconf'] or 'dhcpv6' in vxlan['address']:
+        vxlan['ipv6_accept_ra'] = 2
 
     # VXLAN source address
     if conf.exists('source-address'):
@@ -251,6 +257,8 @@ def apply(vxlan):
         v.set_arp_ignore(vxlan['ip_enable_arp_ignore'])
         # Enable proxy-arp on this interface
         v.set_proxy_arp(vxlan['ip_proxy_arp'])
+        # IPv6 accept RA
+        v.set_ipv6_accept_ra(vxlan['ipv6_accept_ra'])
         # IPv6 address autoconfiguration
         v.set_ipv6_autoconf(vxlan['ipv6_autoconf'])
         # IPv6 forwarding

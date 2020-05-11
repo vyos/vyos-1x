@@ -251,6 +251,7 @@ default_config_data = {
     'ip': False,
     'ipv6': False,
     'nhrp': [],
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_forwarding': 1,
     'ipv6_dad_transmits': 1,
@@ -400,6 +401,11 @@ def get_config():
     # could be done within ConfigurationState
     eff_addr = conf.return_effective_values('address')
     options['addresses-del'] = list_diff(eff_addr, options['addresses-add'])
+
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if options['ipv6_autoconf'] or 'dhcpv6' in options['address']:
+        options['ipv6_accept_ra'] = 2
 
     # allmulticast fate is linked to multicast
     options['allmulticast'] = options['multicast']
@@ -636,7 +642,7 @@ def apply(conf):
 
     # set other interface properties
     for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast',
-                   'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
+                   'ipv6_accept_ra', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
         if not options[option]:
             # should never happen but better safe
             continue

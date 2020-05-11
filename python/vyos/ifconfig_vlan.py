@@ -101,6 +101,8 @@ def apply_vlan_config(vlan, config):
     vlan.set_arp_ignore(config['ip_enable_arp_ignore'])
     # configure Proxy ARP
     vlan.set_proxy_arp(config['ip_proxy_arp'])
+    # IPv6 accept RA
+    vlan.set_ipv6_accept_ra(config['ipv6_accept_ra'])
     # IPv6 address autoconfiguration
     vlan.set_ipv6_autoconf(config['ipv6_autoconf'])
     # IPv6 forwarding

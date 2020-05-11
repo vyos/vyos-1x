@@ -122,6 +122,7 @@ vlan_default = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_eui64_prefix_remove': [],
@@ -347,6 +348,11 @@ def intf_to_dict(conf, default):
     except Exception:
         # If the interface does not exist, it could not have changed
         pass
+
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if intf['ipv6_autoconf'] or 'dhcpv6' in intf['address']:
+        intf['ipv6_accept_ra'] = 2
 
     return intf, disable
 
