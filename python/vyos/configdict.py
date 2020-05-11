@@ -348,6 +348,11 @@ def intf_to_dict(conf, default):
         # If the interface does not exist, it could not have changed
         pass
 
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if intf['ipv6_autoconf'] or 'dhcpv6' in intf['address']:
+        intf['ipv6_accept_ra'] = 2
+
     return intf, disable
 
 
