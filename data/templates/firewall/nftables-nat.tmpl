@@ -3,11 +3,22 @@
 # Start with a "clean" NAT table
 flush table nat
 
+{% for rule in init_deinit -%}
+# Add or remove conntrack helper rules for NAT operation-
+{{ rule }}
+{% endfor %}
+
 add chain ip raw NAT_CONNTRACK
-add rule ip raw PREROUTING position 25 counter jump VYATTA_CT_HELPER
-add rule ip raw PREROUTING position 17 counter jump NAT_CONNTRACK
-add rule ip raw OUTPUT position 26 counter jump VYATTA_CT_HELPER
-add rule ip raw OUTPUT position 21 counter jump NAT_CONNTRACK
+
+# insert rule after VYATTA_CT_IGNORE
+add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
+# insert rule after VYATTA_CT_PREROUTING_HOOK
+add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
+# insert rule after VYATTA_CT_IGNORE
+add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
+# insert rule after VYATTA_CT_PREROUTING_HOOK
+add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
+
 add rule ip raw NAT_CONNTRACK counter accept
 
 

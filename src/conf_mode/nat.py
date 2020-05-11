@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import os
 
 from copy import deepcopy
@@ -21,23 +22,52 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.util import call
 from vyos.template import render
+from vyos.util import call, cmd
 from vyos import ConfigError
 
 default_config_data = {
-    'source': [],
-    'destination': []
+    'prerouting_ct_helper': '',
+    'prerouting_ct_conntrack': '',
+    'output_ct_helper': '',
+    'output_ct_conntrack': '',
+    'destination': [],
+    'source': []
 }
 
 iptables_nat_config = '/tmp/vyos-nat-rules.nft'
 
 def _check_kmod():
+    """ load required Kernel modules """
     modules = ['nft_nat', 'nft_chain_nat_ipv4']
     for module in modules:
         if not os.path.exists(f'/sys/module/{module}'):
             if call(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
+
+
+def get_handler(chain, target):
+    """ Get handler number of given chain/target combination. Handler is
+        required when adding NAT/Conntrack helper targets """
+    tmp = json.loads(cmd('nft -j list table raw'))
+    for rule in tmp.get('nftables'):
+        # We're only interested in rules - not chains
+        if not 'rule' in rule.keys():
+            continue
+
+        # Search for chain of interest
+        if rule['rule']['chain'] == chain:
+            for expr in rule['rule']['expr']:
+                # We're only interested in jump targets
+                if not 'jump' in expr.keys():
+                    continue
+
+                # Search for target of interest
+                if expr['jump']['target'] == target:
+                    return rule['rule']['handle']
+
+    return None
+
 
 def parse_source_destination(conf, source_dest):
     """ Common wrapper to read in both NAT source and destination CLI """
@@ -114,6 +144,11 @@ def get_config():
     else:
         conf.set_level(['nat'])
 
+    nat['pre_ct_ignore'] = get_handler('PREROUTING', 'VYATTA_CT_IGNORE')
+    nat['pre_ct_conntrack'] = get_handler('PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
+    nat['out_ct_ignore'] = get_handler('OUTPUT', 'VYATTA_CT_IGNORE')
+    nat['out_ct_conntrack'] = get_handler('OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
+
     # use a common wrapper function to read in the source / destination
     # tree from the config - thus we do not need to replicate almost the
     # same code :-)
@@ -125,6 +160,9 @@ def get_config():
 def verify(nat):
     if not nat:
         return None
+
+    if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
+        raise Exception('could not determine nftable ruleset handlers')
 
     for rule in nat['source']:
         interface = rule['interface_out']
@@ -138,6 +176,7 @@ def generate(nat):
         return None
 
     render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat, trim_blocks=True, permission=0o755)
+
     return None
 
 def apply(nat):
