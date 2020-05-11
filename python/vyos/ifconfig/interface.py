@@ -134,8 +134,12 @@ class Interface(Control):
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
         },
+        'ipv6_accept_ra': {
+            'validate': lambda ara: assert_range(ara,0,3),
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra',
+        },
         'ipv6_autoconf': {
-            'validate': lambda fwd: assert_range(fwd,0,2),
+            'validate': lambda aco: assert_range(aco,0,2),
             'location': '/proc/sys/net/ipv6/conf/{ifname}/autoconf',
         },
         'ipv6_forwarding': {
@@ -408,6 +412,21 @@ class Interface(Control):
             configured on the incoming interface
         """
         return self.set_interface('arp_ignore', arp_ignore)
+
+    def set_ipv6_accept_ra(self, accept_ra):
+        """
+        Accept Router Advertisements; autoconfigure using them.
+
+        It also determines whether or not to transmit Router Solicitations.
+        If and only if the functional setting is to accept Router
+        Advertisements, Router Solicitations will be transmitted.
+
+        0 - Do not accept Router Advertisements.
+        1 - (default) Accept Router Advertisements if forwarding is disabled.
+        2 - Overrule forwarding behaviour. Accept Router Advertisements even if
+            forwarding is enabled.
+        """
+        return self.set_interface('ipv6_accept_ra', accept_ra)
 
     def set_ipv6_autoconf(self, autoconf):
         """
