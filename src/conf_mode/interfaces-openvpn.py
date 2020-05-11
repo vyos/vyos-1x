@@ -49,6 +49,7 @@ default_config_data = {
     'encryption': '',
     'hash': '',
     'intf': '',
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_eui64_prefix_remove': [],
@@ -333,6 +334,11 @@ def get_config():
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         openvpn['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
+
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if openvpn['ipv6_autoconf'] or 'dhcpv6' in openvpn['address']:
+        openvpn['ipv6_accept_ra'] = 2
 
     # OpenVPN operation mode
     if conf.exists('mode'):
@@ -1042,6 +1048,8 @@ def apply(openvpn):
         o = VTunIf(interface)
         # update interface description used e.g. within SNMP
         o.set_alias(openvpn['description'])
+        # IPv6 accept RA
+        o.set_ipv6_accept_ra(openvpn['ipv6_accept_ra'])
         # IPv6 address autoconfiguration
         o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
         # IPv6 forwarding
