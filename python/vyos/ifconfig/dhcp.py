@@ -114,9 +114,6 @@ class _DHCPv6 (Control):
         render(self.options['options_file'], 'dhcp-client/daemon-options.tmpl', self.options)
         render(self.options['conf_file'], 'dhcp-client/ipv6.tmpl', self.options)
 
-        # no longer accept router announcements on this interface
-        self._write_sysfs('/proc/sys/net/ipv6/conf/{ifname}/accept_ra'.format(**self.options), 0)
-
         return self._cmd('systemctl restart dhclient6@{ifname}.service'.format(**self.options))
 
     def delete(self):
@@ -135,9 +132,6 @@ class _DHCPv6 (Control):
             return None
 
         self._cmd('systemctl stop dhclient6@{ifname}.service'.format(**self.options))
-
-        # accept router announcements on this interface
-        self._write_sysfs('/proc/sys/net/ipv6/conf/{ifname}/accept_ra'.format(**self.options), 1)
 
         # cleanup old config files
         for name in ('conf_file', 'options_file', 'pid_file', 'lease_file'):
