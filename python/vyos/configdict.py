@@ -122,6 +122,7 @@ vlan_default = {
     'ip_enable_arp_announce': 0,
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_eui64_prefix_remove': [],
