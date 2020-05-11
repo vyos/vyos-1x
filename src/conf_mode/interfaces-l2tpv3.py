@@ -35,6 +35,7 @@ default_config_data = {
     'local_address': '',
     'local_port': 5000,
     'intf': '',
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_forwarding': 1,
@@ -131,6 +132,11 @@ def get_config():
     # IPv6 Duplicate Address Detection (DAD) tries
     if conf.exists('ipv6 dup-addr-detect-transmits'):
         l2tpv3['ipv6_dup_addr_detect'] = int(conf.return_value('ipv6 dup-addr-detect-transmits'))
+
+    # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
+    # accept_ra must be 2
+    if l2tpv3['ipv6_autoconf'] or 'dhcpv6' in l2tpv3['address']:
+        l2tpv3['ipv6_accept_ra'] = 2
 
     # Maximum Transmission Unit (MTU)
     if conf.exists('mtu'):
@@ -241,6 +247,8 @@ def apply(l2tpv3):
         l.set_alias(l2tpv3['description'])
         # Maximum Transfer Unit (MTU)
         l.set_mtu(l2tpv3['mtu'])
+        # IPv6 accept RA
+        l.set_ipv6_accept_ra(l2tpv3['ipv6_accept_ra'])
         # IPv6 address autoconfiguration
         l.set_ipv6_autoconf(l2tpv3['ipv6_autoconf'])
         # IPv6 forwarding
