@@ -46,6 +46,7 @@ default_config_data = {
     'ip_enable_arp_ignore': 0,
     'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
+    'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_eui64_prefix': [],
     'ipv6_eui64_prefix_remove': [],
@@ -208,6 +209,8 @@ def apply(peth):
     p.set_proxy_arp(peth['ip_proxy_arp'])
     # Enable private VLAN proxy ARP on this interface
     p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
+    # IPv6 accept RA
+    p.set_ipv6_accept_ra(peth['ipv6_accept_ra'])
     # IPv6 address autoconfiguration
     p.set_ipv6_autoconf(peth['ipv6_autoconf'])
     # IPv6 forwarding
