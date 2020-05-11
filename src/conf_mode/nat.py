@@ -27,11 +27,12 @@ from vyos.util import call, cmd
 from vyos import ConfigError
 
 default_config_data = {
-    'prerouting_ct_helper': '',
-    'prerouting_ct_conntrack': '',
-    'output_ct_helper': '',
-    'output_ct_conntrack': '',
+    'deleted': False,
     'destination': [],
+    'pre_ct_helper': '',
+    'pre_ct_conntrack': '',
+    'out_ct_helper': '',
+    'out_ct_conntrack': '',
     'source': []
 }
 
@@ -139,11 +140,21 @@ def parse_source_destination(conf, source_dest):
 def get_config():
     nat = deepcopy(default_config_data)
     conf = Config()
+
     if not conf.exists(['nat']):
-        return None
+        # Retrieve current table handler positions
+        nat['pre_ct_ignore'] = get_handler('PREROUTING', 'VYATTA_CT_HELPER')
+        nat['pre_ct_conntrack'] = get_handler('PREROUTING', 'NAT_CONNTRACK')
+        nat['out_ct_ignore'] = get_handler('OUTPUT', 'VYATTA_CT_HELPER')
+        nat['out_ct_conntrack'] = get_handler('OUTPUT', 'NAT_CONNTRACK')
+
+        nat['deleted'] = True
+
+        return nat
     else:
         conf.set_level(['nat'])
 
+    # Retrieve current table handler positions
     nat['pre_ct_ignore'] = get_handler('PREROUTING', 'VYATTA_CT_IGNORE')
     nat['pre_ct_conntrack'] = get_handler('PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
     nat['out_ct_ignore'] = get_handler('OUTPUT', 'VYATTA_CT_IGNORE')
@@ -158,7 +169,8 @@ def get_config():
     return nat
 
 def verify(nat):
-    if not nat:
+    if nat['deleted']:
+        # no need to verify the CLI as NAT is going to be deactivated
         return None
 
     if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
@@ -172,18 +184,13 @@ def verify(nat):
     return None
 
 def generate(nat):
-    if not nat:
-        return None
-
     render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat, trim_blocks=True, permission=0o755)
 
     return None
 
 def apply(nat):
-    if not nat:
-        return None
+    cmd(f'{iptables_nat_config}')
 
-    call(f'{iptables_nat_config}')
     return None
 
 if __name__ == '__main__':

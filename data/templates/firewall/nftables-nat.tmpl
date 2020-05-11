@@ -8,18 +8,26 @@ flush table nat
 {{ rule }}
 {% endfor %}
 
+
+{% if deleted %}
+# NAT if going to be disabled - remove rules and targets from nftables
+delete rule ip raw PREROUTING handle {{ pre_ct_ignore }}
+delete rule ip raw PREROUTING handle {{ pre_ct_conntrack }}
+delete rule ip raw OUTPUT handle {{ out_ct_ignore }}
+delete rule ip raw OUTPUT handle {{ out_ct_conntrack }}
+
+delete chain ip raw NAT_CONNTRACK
+
+{% else %}
+# NAT if enabled - add targets to nftables
 add chain ip raw NAT_CONNTRACK
-
-# insert rule after VYATTA_CT_IGNORE
-add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
-# insert rule after VYATTA_CT_PREROUTING_HOOK
-add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
-# insert rule after VYATTA_CT_IGNORE
-add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
-# insert rule after VYATTA_CT_PREROUTING_HOOK
-add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
-
 add rule ip raw NAT_CONNTRACK counter accept
+
+add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
+add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
+add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
+add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
+{% endif %}
 
 
 {% for r in destination -%}
