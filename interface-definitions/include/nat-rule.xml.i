@@ -21,7 +21,8 @@
         <help>NAT destination parameters</help>
       </properties>
       <children>
-        #include <include/nat-address-port.xml.i>
+        #include <include/nat-address.xml.i>
+        #include <include/nat-port.xml.i>
       </children>
     </node>
     <leafNode name="disable">
@@ -79,7 +80,8 @@
         <help>NAT source parameters</help>
       </properties>
       <children>
-        #include <include/nat-address-port.xml.i>
+        #include <include/nat-address.xml.i>
+        #include <include/nat-port.xml.i>
       </children>
     </node>
   </children>
