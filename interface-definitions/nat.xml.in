@@ -95,7 +95,12 @@
                         <format>masquerade</format>
                         <description>NAT to the primary address of outbound-interface</description>
                       </valueHelp>
-                      <!-- TODO: add general iptables constraint script -->
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv4-range"/>
+                        <regex>(masquerade)</regex>
+                      </constraint>
                     </properties>
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
