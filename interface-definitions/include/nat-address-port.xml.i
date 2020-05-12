@@ -25,7 +25,14 @@
       <format>!ipv4range</format>
       <description>Match everything except the specified range</description>
     </valueHelp>
-    <!-- TODO: add general iptables constraint script -->
+    <constraint>
+      <validator name="ipv4-address"/>
+      <validator name="ipv4-prefix"/>
+      <validator name="ipv4-range"/>
+      <validator name="ipv4-address-exclude"/>
+      <validator name="ipv4-prefix-exclude"/>
+      <validator name="ipv4-range-exclude"/>
+    </constraint>
   </properties>
 </leafNode>
 <leafNode name="port">

@@ -7,24 +7,27 @@ ip2dec () {
     printf '%d\n' "$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
 }
 
-# This only works with real bash (<<<) - split IP addresses into array with
-# hyphen as delimiter
-readarray -d - -t strarr <<< $1
+# Only run this if there is a hypen present in $1
+if [[ "$1" =~ "-" ]]; then
+  # This only works with real bash (<<<) - split IP addresses into array with
+  # hyphen as delimiter
+  readarray -d - -t strarr <<< $1
 
-ipaddrcheck --is-ipv4-single ${strarr[0]}
-if [ $? -gt 0 ]; then
-  exit 1
-fi
+  ipaddrcheck --is-ipv4-single ${strarr[0]}
+  if [ $? -gt 0 ]; then
+    exit 1
+  fi
 
-ipaddrcheck --is-ipv4-single ${strarr[1]}
-if [ $? -gt 0 ]; then
-  exit 1
-fi
+  ipaddrcheck --is-ipv4-single ${strarr[1]}
+  if [ $? -gt 0 ]; then
+    exit 1
+  fi
 
-start=$(ip2dec ${strarr[0]})
-stop=$(ip2dec ${strarr[1]})
-if [ $start -ge $stop ]; then
-  exit 1
+  start=$(ip2dec ${strarr[0]})
+  stop=$(ip2dec ${strarr[1]})
+  if [ $start -ge $stop ]; then
+    exit 1
+  fi
 fi
 
 exit 0
