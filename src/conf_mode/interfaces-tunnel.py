@@ -404,7 +404,7 @@ def get_config():
 
     # to make IPv6 SLAAC and DHCPv6 work with forwarding=1,
     # accept_ra must be 2
-    if options['ipv6_autoconf'] or 'dhcpv6' in options['address']:
+    if options['ipv6_autoconf'] or 'dhcpv6' in options['address-add']:
         options['ipv6_accept_ra'] = 2
 
     # allmulticast fate is linked to multicast
