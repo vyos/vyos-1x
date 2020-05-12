@@ -1,62 +1,55 @@
 #!/usr/sbin/nft -f
 
-# Start with a "clean" NAT table
+# Start with clean NAT table
 flush table nat
 
-{% for rule in init_deinit -%}
-# Add or remove conntrack helper rules for NAT operation-
-{{ rule }}
-{% endfor %}
+{% if helper_functions == 'remove' %}
+  # NAT if going to be disabled - remove rules and targets from nftables
+  delete rule ip raw PREROUTING handle {{ pre_ct_ignore }}
+  delete rule ip raw PREROUTING handle {{ pre_ct_conntrack }}
+  delete rule ip raw OUTPUT handle {{ out_ct_ignore }}
+  delete rule ip raw OUTPUT handle {{ out_ct_conntrack }}
 
+  delete chain ip raw NAT_CONNTRACK
+{% elif helper_functions == 'add' %}
+  # NAT if enabled - add targets to nftables
+  add chain ip raw NAT_CONNTRACK
+  add rule ip raw NAT_CONNTRACK counter accept
 
-{% if deleted %}
-# NAT if going to be disabled - remove rules and targets from nftables
-delete rule ip raw PREROUTING handle {{ pre_ct_ignore }}
-delete rule ip raw PREROUTING handle {{ pre_ct_conntrack }}
-delete rule ip raw OUTPUT handle {{ out_ct_ignore }}
-delete rule ip raw OUTPUT handle {{ out_ct_conntrack }}
-
-delete chain ip raw NAT_CONNTRACK
-
-{% else %}
-# NAT if enabled - add targets to nftables
-add chain ip raw NAT_CONNTRACK
-add rule ip raw NAT_CONNTRACK counter accept
-
-add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
-add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
-add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
-add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
+  add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
+  add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
+  add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
+  add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}
 
 
 {% for r in destination -%}
-{% if r.protocol == 'tcp_udp' %}
-{# Special handling for protocol tcp_udp which is represented as two individual rules #}
-add rule ip nat PREROUTING iifname "{{ r.interface_in }}" tcp dport { {{ r.dest_port }} } counter dnat to {{ r.translation_address }}{{ ":" + r.translation_port if r.translation_port }} comment "DST-NAT-{{ r.number }} tcp_udp"
-add rule ip nat PREROUTING iifname "{{ r.interface_in }}" udp dport { {{ r.dest_port }} } counter dnat to {{ r.translation_address }}{{ ":" + r.translation_port if r.translation_port }} comment "DST-NAT-{{ r.number }} tcp_udp"
-{% else %}
-add rule ip nat PREROUTING iifname "{{ r.interface_in }}" {{ r.protocol }} dport { {{ r.dest_port }} } counter dnat to {{ r.translation_address }}{{ ":" + r.translation_port if r.translation_port }} comment "DST-NAT-{{ r.number }}"
-{% endif %}
+{%   if r.protocol == 'tcp_udp' %}
+  {# Special handling for protocol tcp_udp which is represented as two individual rules #}
+  add rule ip nat PREROUTING iifname "{{ r.interface_in }}" tcp dport { {{ r.dest_port }} } counter dnat to {{ r.translation_address }}{{ ":" + r.translation_port if r.translation_port }} comment "DST-NAT-{{ r.number }} tcp_udp"
+  add rule ip nat PREROUTING iifname "{{ r.interface_in }}" udp dport { {{ r.dest_port }} } counter dnat to {{ r.translation_address }}{{ ":" + r.translation_port if r.translation_port }} comment "DST-NAT-{{ r.number }} tcp_udp"
+{%   else %}
+  add rule ip nat PREROUTING iifname "{{ r.interface_in }}" {{ r.protocol }} dport { {{ r.dest_port }} } counter dnat to {{ r.translation_address }}{{ ":" + r.translation_port if r.translation_port }} comment "DST-NAT-{{ r.number }}"
+{%   endif %}
 {% endfor %}
 
 
 {% for r in source -%}
-{% if r.log %}
-{% if r.exclude %}
-{% set value = 'EXCL' %}
-{% elif r.translation_address == 'masquerade' %}
-{% set value = 'MASQ' %}
-{% endif %}
-add rule ip nat POSTROUTING oifname "{{ r.interface_out }}" ip saddr {{ r.source_address }} counter log prefix "[NAT-SRC-{{ r.number }}-{{ value }}]" comment "SRC-NAT-{{ r.number }}"
-{% endif %}
+{%   if r.log %}
+{%     if r.exclude %}
+{%       set value = 'EXCL' %}
+{%     elif r.translation_address == 'masquerade' %}
+{%       set value = 'MASQ' %}
+{%     endif %}
+  add rule ip nat POSTROUTING oifname "{{ r.interface_out }}" ip saddr {{ r.source_address }} counter log prefix "[NAT-SRC-{{ r.number }}-{{ value }}]" comment "SRC-NAT-{{ r.number }}"
+{%   endif %}
 
-{% if r.exclude %}
-{% set value = 'return' %}
-{% elif r.translation_address == 'masquerade' %}
-{% set value = 'masquerade' %}
-{% else %}
-{% set value = 'snat to ' + r.translation_address %}
-{% endif %}
-add rule ip nat POSTROUTING oifname "{{ r.interface_out }}" ip saddr {{ r.source_address }} counter {{ value }} comment "SRC-NAT-{{ r.number }}"
+{%   if r.exclude %}
+{%     set value = 'return' %}
+{%   elif r.translation_address == 'masquerade' %}
+{%     set value = 'masquerade' %}
+{%   else %}
+{%     set value = 'snat to ' + r.translation_address %}
+{%   endif %}
+  add rule ip nat POSTROUTING oifname "{{ r.interface_out }}" ip saddr {{ r.source_address }} counter {{ value }} comment "SRC-NAT-{{ r.number }}"
 {% endfor %}

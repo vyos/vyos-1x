@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import jmespath
 import json
 import os
 
@@ -29,6 +30,7 @@ from vyos import ConfigError
 default_config_data = {
     'deleted': False,
     'destination': [],
+    'helper_functions': None,
     'pre_ct_helper': '',
     'pre_ct_conntrack': '',
     'out_ct_helper': '',
@@ -47,25 +49,15 @@ def _check_kmod():
                 raise ConfigError(f'Loading Kernel module {module} failed')
 
 
-def get_handler(chain, target):
-    """ Get handler number of given chain/target combination. Handler is
-        required when adding NAT/Conntrack helper targets """
-    tmp = json.loads(cmd('nft -j list table raw'))
-    for rule in tmp.get('nftables'):
-        # We're only interested in rules - not chains
-        if not 'rule' in rule.keys():
+def get_handler(json, chain, target):
+    """ Get nftable rule handler number of given chain/target combination.
+    Handler is required when adding NAT/Conntrack helper targets """
+    for x in json:
+        if x['chain'] != chain:
             continue
-
-        # Search for chain of interest
-        if rule['rule']['chain'] == chain:
-            for expr in rule['rule']['expr']:
-                # We're only interested in jump targets
-                if not 'jump' in expr.keys():
-                    continue
-
-                # Search for target of interest
-                if expr['jump']['target'] == target:
-                    return rule['rule']['handle']
+        if x['target'] != target:
+            continue
+        return x['handle']
 
     return None
 
@@ -141,24 +133,40 @@ def get_config():
     nat = deepcopy(default_config_data)
     conf = Config()
 
+    # read in current nftable (once) for further processing
+    tmp = cmd('nft -j list table raw')
+    nftable_json = json.loads(tmp)
+
+    # condense the full JSON table into a list with only relevand informations
+    pattern = 'nftables[?rule].rule[?expr[].jump].{chain: chain, handle: handle, target: expr[].jump.target | [0]}'
+    condensed_json = jmespath.search(pattern, nftable_json)
+
     if not conf.exists(['nat']):
+        nat['helper_functions'] = 'remove'
+
         # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler('PREROUTING', 'VYATTA_CT_HELPER')
-        nat['pre_ct_conntrack'] = get_handler('PREROUTING', 'NAT_CONNTRACK')
-        nat['out_ct_ignore'] = get_handler('OUTPUT', 'VYATTA_CT_HELPER')
-        nat['out_ct_conntrack'] = get_handler('OUTPUT', 'NAT_CONNTRACK')
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_HELPER')
+        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_HELPER')
+        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
 
         nat['deleted'] = True
 
         return nat
-    else:
-        conf.set_level(['nat'])
 
-    # Retrieve current table handler positions
-    nat['pre_ct_ignore'] = get_handler('PREROUTING', 'VYATTA_CT_IGNORE')
-    nat['pre_ct_conntrack'] = get_handler('PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
-    nat['out_ct_ignore'] = get_handler('OUTPUT', 'VYATTA_CT_IGNORE')
-    nat['out_ct_conntrack'] = get_handler('OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
+    # check if NAT connection tracking helpers need to be set up - this has to
+    # be done only once
+    if not get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK'):
+        nat['helper_functions'] = 'add'
+
+        # Retrieve current table handler positions
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_IGNORE')
+        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_IGNORE')
+        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
+
+    # set config level for parsing in NAT configuration
+    conf.set_level(['nat'])
 
     # use a common wrapper function to read in the source / destination
     # tree from the config - thus we do not need to replicate almost the
@@ -173,8 +181,9 @@ def verify(nat):
         # no need to verify the CLI as NAT is going to be deactivated
         return None
 
-    if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
-        raise Exception('could not determine nftable ruleset handlers')
+    if nat['helper_functions']:
+        if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
+            raise Exception('could not determine nftable ruleset handlers')
 
     for rule in nat['source']:
         interface = rule['interface_out']
