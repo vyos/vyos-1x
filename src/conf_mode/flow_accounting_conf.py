@@ -281,7 +281,7 @@ def verify(config):
         # check if configured netflow source-ip exist in the system
         if config['netflow']['source-ip']:
             source_ip_presented = None
-            for iface in Interface.listing():
+            for iface in Section.interfaces():
                 for address in Interface(iface).get_addr():
                     # check an IP
                     regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')
