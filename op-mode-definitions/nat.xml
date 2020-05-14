@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="nat">
+        <properties>
+          <help>Show Network Address Translation (NAT) information</help>
+        </properties>
+        <children>
+          <node name="source">
+            <properties>
+              <help>Show source Network Address Translation (NAT) information</help>
+            </properties>
+            <children>
+              <node name="rules">
+                <properties>
+                  <help>Show configured source NAT rules</help>
+                </properties>
+                <command>echo To be migrated to Python - https://phabricator.vyos.net/T2459</command>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show statistics for configured source NAT rules</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_nat_statistics.py --source</command>
+              </node>
+              <node name="translations">
+                <properties>
+                  <help>Show active source NAT translations</help>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show active source NAT translations for an IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=source --verbose --ipaddr="$6"</command>
+                  </tagNode>
+                  <node name="detail">
+                    <properties>
+                      <help>Show active source NAT translations detail</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=source --verbose</command>
+                  </node>
+                </children>
+                <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=source</command>
+              </node>
+            </children>
+          </node>
+          <node name="destination">
+            <properties>
+              <help>Show destination Network Address Translation (NAT) information</help>
+            </properties>
+            <children>
+              <node name="rules">
+                <properties>
+                  <help>Show configured destination NAT rules</help>
+                </properties>
+                <command>echo To be migrated to Python - https://phabricator.vyos.net/T2459</command>
+              </node>
+              <node name="statistics">
+                <properties>
+                  <help>Show statistics for configured destination NAT rules</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_nat_statistics.py --destination</command>
+              </node>
+              <node name="translations">
+                <properties>
+                  <help>Show active destination NAT translations</help>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show active NAT destination translations for an IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=destination --verbose --ipaddr="$6"</command>
+                  </tagNode>
+                  <node name="detail">
+                    <properties>
+                      <help>Show active destination NAT translations detail</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=destination --verbose</command>
+                  </node>
+                </children>
+                <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=destination</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
