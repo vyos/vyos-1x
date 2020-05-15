@@ -63,6 +63,19 @@ def get_handler(json, chain, target):
     return None
 
 
+def verify_rule(rule, err_msg):
+    if rule['translation_port'] or rule['dest_port']:
+        if rule['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
+            proto = rule['protocol']
+            raise ConfigError(f'{err_msg} ports can only be specified when protocol is "tcp", "udp" or "tcp_udp" (currently "{proto}")')
+
+        if '/' in rule['translation_address']:
+            raise ConfigError(f'{err_msg}\n' \
+                             'Cannot use ports with an IPv4net type translation address as it\n' \
+                             'statically maps a whole network of addresses onto another\n' \
+                             'network of addresses')
+
+
 def parse_source_destination(conf, source_dest):
     """ Common wrapper to read in both NAT source and destination CLI """
     tmp = []
@@ -177,18 +190,6 @@ def get_config():
 
     return nat
 
-def verify_rule(rule):
-    if rule['translation_port']:
-        if rule['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
-            proto = rule['protocol']
-            raise ConfigError(f'{err_msg} ports can only be specified when protocol is "tcp", "udp" or "tcp_udp" (currently "{proto}")')
-
-        if '/' in rule['translation_address']:
-            raise ConfigError(f'{err_msg}\n' \
-                             'Cannot use ports with an IPv4net type translation address as it\n' \
-                             'statically maps a whole network of addresses onto another\n' \
-                             'network of addresses')
-
 def verify(nat):
     if nat['deleted']:
         # no need to verify the CLI as NAT is going to be deactivated
@@ -200,10 +201,10 @@ def verify(nat):
 
     for rule in nat['source']:
         interface = rule['interface_out']
+        err_msg = f"Source NAT configuration error in rule {rule['number']}:"
+
         if interface and interface not in interfaces():
             print(f'NAT configuration warning: interface {interface} does not exist on this system')
-
-        err_msg = f"Source NAT configuration error in rule {rule['number']}:"
 
         if not rule['interface_out']:
             raise ConfigError(f'{err_msg} outbound-interface not specified')
@@ -216,10 +217,12 @@ def verify(nat):
                 printf(f'Warning: IP address {addr} does not exist on the system!')
 
         # common rule verification
-        verify_rule(rule)
+        verify_rule(rule, err_msg)
 
     for rule in nat['destination']:
         interface = rule['interface_in']
+        err_msg = f"Destination NAT configuration error in rule {rule['number']}:"
+
         if interface and interface not in interfaces():
             print(f'NAT configuration warning: interface {interface} does not exist on this system')
 
@@ -227,7 +230,7 @@ def verify(nat):
             raise ConfigError(f'{err_msg} inbound-interface not specified')
 
         # common rule verification
-        verify_rule(rule)
+        verify_rule(rule, err_msg)
 
     return None
 
@@ -238,6 +241,8 @@ def generate(nat):
 
 def apply(nat):
     cmd(f'{iptables_nat_config}')
+    if os.path.isfile(iptables_nat_config):
+        os.unlink(iptables_nat_config)
 
     return None
 
