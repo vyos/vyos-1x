@@ -64,6 +64,7 @@ def get_handler(json, chain, target):
 
 
 def verify_rule(rule, err_msg):
+    """ Common verify steps used for both source and destination NAT """
     if rule['translation_port'] or rule['dest_port']:
         if rule['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
             proto = rule['protocol']
@@ -74,6 +75,13 @@ def verify_rule(rule, err_msg):
                              'Cannot use ports with an IPv4net type translation address as it\n' \
                              'statically maps a whole network of addresses onto another\n' \
                              'network of addresses')
+
+    if not rule['translation_address']:
+        raise ConfigError(f'{err_msg} translation address not specified')
+    else:
+        addr = rule['translation_address']
+        if addr != 'masquerade' and not is_addr_assigned(addr):
+            print(f'Warning: IP address {addr} does not exist on the system!')
 
 
 def parse_source_destination(conf, source_dest):
@@ -208,13 +216,6 @@ def verify(nat):
 
         if not rule['interface_out']:
             raise ConfigError(f'{err_msg} outbound-interface not specified')
-
-        if not rule['translation_address']:
-            raise ConfigError(f'{err_msg} translation address not specified')
-        else:
-            addr = rule['translation_address']
-            if addr != 'masquerade' and not is_addr_assigned(addr):
-                printf(f'Warning: IP address {addr} does not exist on the system!')
 
         # common rule verification
         verify_rule(rule, err_msg)
