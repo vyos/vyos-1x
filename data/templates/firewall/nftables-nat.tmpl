@@ -23,8 +23,11 @@ add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPE
 add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}
 
+
 {% for r in destination if not r.disabled -%}
 {%   set chain     = "PREROUTING" %}
+{%   set src_addr  = "ip saddr " + r.source_address if r.source_address %}
+{%   set src_port  = "sport { " + r.source_port +" }" if r.source_port %}
 {%   set dst_addr  = "ip daddr " + r.dest_address if r.dest_address %}
 {%   set dst_port  = "dport { " + r.dest_port +" }" if r.dest_port %}
 {%   set trns_addr = "dnat to " + r.translation_address %}
@@ -56,29 +59,33 @@ add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRAC
 {%       set tcp_dst_port = "tcp " + dst_port if dst_port else "ip protocol tcp" %}
 {%       set udp_dst_port = "udp " + dst_port if dst_port else "ip protocol udp" %}
 
-add rule ip nat {{ chain }} iifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ src_addr }} {{ src_port }} {{ tcp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} iifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ src_addr }} {{ src_port }} {{ tcp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 {%     if log %}
-add rule ip nat {{ chain }} iifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ src_addr }} {{ src_port }} {{ udp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} iifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ src_addr }} {{ src_port }} {{ udp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 
 {%   else %}
 {%       set proto_dst_port = dst_port if dst_port else "ip protocol " + r.protocol %}
+{%       set proto_dst_port = "" if r.protocol == "all" %}
+
 {%     if log %}
-add rule ip nat {{ chain }} iifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ src_addr }} {{ src_port }} {{ proto_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} iifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ src_addr }} {{ src_port }} {{ proto_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 {%   endif %}
 {% endfor %}
 
 
 {% for r in source if not r.disabled -%}
 {%   set chain     = "POSTROUTING" %}
+{%   set src_addr  = "ip saddr " + r.source_address if r.source_address %}
+{%   set src_port  = "sport { " + r.source_port +" }" if r.source_port %}
 {%   set dst_addr  = "ip daddr " + r.dest_address if r.dest_address %}
 {%   set dst_port  = "dport { " + r.dest_port +" }" if r.dest_port %}
-{%   set trns_addr = "snat to " + r.translation_address %}
+{%   set trns_addr = "snat to " + r.translation_address if r.translation_address != "masquerade" else "masquerade" %}
 {%   set trns_port = ":" + r.translation_port if r.translation_port %}
 {%   set comment   = "SRC-NAT-" + r.number %}
 {%   set iface     = r.interface_out %}
@@ -106,20 +113,25 @@ add rule ip nat {{ chain }} iifname "{{ iface }}" {{ proto_dst_port }} {{ dst_ad
 
 {%       set tcp_dst_port = "tcp " + dst_port if dst_port else "ip protocol tcp" %}
 {%       set udp_dst_port = "udp " + dst_port if dst_port else "ip protocol udp" %}
+{%       set tcp_src_port = "tcp " + src_port if src_port %}
+{%       set udp_src_port = "udp " + src_port if src_port %}
 
-add rule ip nat {{ chain }} oifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ tcp_src_port }} {{ src_port }} {{ tcp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} oifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ tcp_src_port }} {{ src_port }} {{ tcp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 {%     if log %}
-add rule ip nat {{ chain }} oifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ udp_src_port }} {{ src_port }} {{ udp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} oifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ udp_src_port }} {{ src_port }} {{ udp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 
 {%   else %}
 {%       set proto_dst_port = dst_port if dst_port else "ip protocol " + r.protocol %}
+{%       set proto_dst_port = proto_dst_port if r.protocol != "all" %}
+{%       set proto_src_port = r.protocol + " " + src_port if r.protocol != "all" else src_port %}
+
 {%     if log %}
-add rule ip nat {{ chain }} oifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ src_addr }} {{ proto_src_port }} {{ proto_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} oifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ src_addr }} {{ proto_src_port }} {{ proto_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 {%   endif %}
 {% endfor %}

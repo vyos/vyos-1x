@@ -65,7 +65,7 @@ def get_handler(json, chain, target):
 
 def verify_rule(rule, err_msg):
     """ Common verify steps used for both source and destination NAT """
-    if rule['translation_port'] or rule['dest_port']:
+    if rule['translation_port'] or rule['dest_port'] or rule['source_port']:
         if rule['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
             proto = rule['protocol']
             raise ConfigError(f'{err_msg} ports can only be specified when protocol is "tcp", "udp" or "tcp_udp" (currently "{proto}")')
