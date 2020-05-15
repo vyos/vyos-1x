@@ -94,7 +94,7 @@ def parse_source_destination(conf, source_dest):
             'description': '',
             'dest_address': '',
             'dest_port': '',
-            'disable': False,
+            'disabled': False,
             'exclude': False,
             'interface_in': '',
             'interface_out': '',
@@ -118,7 +118,7 @@ def parse_source_destination(conf, source_dest):
             rule['dest_port'] = conf.return_value(['destination', 'port'])
 
         if conf.exists(['disable']):
-            rule['disable'] = True
+            rule['disabled'] = True
 
         if conf.exists(['exclude']):
             rule['exclude'] = True

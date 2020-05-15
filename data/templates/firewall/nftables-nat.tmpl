@@ -4,34 +4,33 @@
 flush table nat
 
 {% if helper_functions == 'remove' %}
-  # NAT if going to be disabled - remove rules and targets from nftables
-  delete rule ip raw PREROUTING handle {{ pre_ct_ignore }}
-  delete rule ip raw PREROUTING handle {{ pre_ct_conntrack }}
-  delete rule ip raw OUTPUT handle {{ out_ct_ignore }}
-  delete rule ip raw OUTPUT handle {{ out_ct_conntrack }}
+{# NAT if going to be disabled - remove rules and targets from nftables #}
+delete rule ip raw PREROUTING handle {{ pre_ct_ignore }}
+delete rule ip raw PREROUTING handle {{ pre_ct_conntrack }}
+delete rule ip raw OUTPUT handle {{ out_ct_ignore }}
+delete rule ip raw OUTPUT handle {{ out_ct_conntrack }}
 
-  delete chain ip raw NAT_CONNTRACK
+delete chain ip raw NAT_CONNTRACK
+
 {% elif helper_functions == 'add' %}
-  # NAT if enabled - add targets to nftables
-  add chain ip raw NAT_CONNTRACK
-  add rule ip raw NAT_CONNTRACK counter accept
+{# NAT if enabled - add targets to nftables #}
+add chain ip raw NAT_CONNTRACK
+add rule ip raw NAT_CONNTRACK counter accept
 
-  add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
-  add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
-  add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
-  add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
+add rule ip raw PREROUTING position {{ pre_ct_ignore }} counter jump VYATTA_CT_HELPER
+add rule ip raw PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
+add rule ip raw OUTPUT position {{ out_ct_ignore }} counter jump VYATTA_CT_HELPER
+add rule ip raw OUTPUT position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}
-
 
 {% for r in destination if not r.disabled -%}
 {%   set chain     = "PREROUTING" %}
 {%   set dst_addr  = "ip daddr " + r.dest_address if r.dest_address %}
-{%   set dst_port  = "dport { " + r.dest_port +" }" %}
-{%   set trns_addr = r.translation_address %}
+{%   set dst_port  = "dport { " + r.dest_port +" }" if r.dest_port %}
+{%   set trns_addr = "dnat to " + r.translation_address %}
 {%   set trns_port = ":" + r.translation_port if r.translation_port %}
-{%   set trns      = "dnat to " + trns_addr + trns_port if trns_port %}
 {%   set comment   = "DST-NAT-" + r.number %}
-{%   set iface     = "iifname " + r.interface_in %}
+{%   set iface     = r.interface_in %}
 
 {%   if r.log %}
 {%     if r.exclude %}
@@ -45,25 +44,32 @@ flush table nat
 
 {%   if r.exclude %}
 {#     rule has been marked as "exclude" thus we simply return here #}
-{%     set trns      = "return" %}
+{%     set trns_addr = "return" %}
+{%     set trns_port = "" %}
 {%   endif %}
 
 {%   if r.protocol == 'tcp_udp' %}
 {#     Special handling for protocol tcp_udp which is represented as two individual rules #}
+{%     set comment = comment + " tcp_udp" %}
 {%     if log %}
-add rule ip nat {{ chain }} {{ iface }} tcp {{ dst_port }} counter log prefix "{{ log }}" comment "{{ comment }} tcp_udp"
-{%     endif %}
-add rule ip nat {{ chain }} {{ iface }} tcp {{ dst_port }} counter {{ trns }} comment {{ comment }}
-{%     if log %}
-add rule ip nat {{ chain }} {{ iface }} udp {{ dst_port }} counter log prefix "{{ log }}" comment "{{ comment }} tcp_udp"
-{%     endif %}
-add rule ip nat {{ chain }} {{ iface }} udp {{ dst_port }} counter {{ trns }} comment {{ comment }}
-{%   else %}
 
-{%     if log %}
-add rule ip nat {{ chain }} {{ iface }} {{ r.protocol }} counter log prefix "{{ log }}" comment {{ comment }}
+{%       set tcp_dst_port = "tcp " + dst_port if dst_port else "ip protocol tcp" %}
+{%       set udp_dst_port = "udp " + dst_port if dst_port else "ip protocol udp" %}
+
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
 {%     endif %}
-add rule ip nat {{ chain }} {{ iface }} {{ dst_addr }} {{ r.protocol }} {{ dst_port }} counter {{ trns }} comment {{ comment }}
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+{%     if log %}
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+{%     endif %}
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+
+{%   else %}
+{%       set proto_dst_port = dst_port if dst_port else "ip protocol " + r.protocol %}
+{%     if log %}
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+{%     endif %}
+add rule ip nat {{ chain }} iifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
 {%   endif %}
 {% endfor %}
 
