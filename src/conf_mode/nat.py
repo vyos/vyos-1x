@@ -99,7 +99,7 @@ def parse_source_destination(conf, source_dest):
             'interface_in': '',
             'interface_out': '',
             'log': False,
-            'protocol': '',
+            'protocol': 'all',
             'number': number,
             'source_address': '',
             'source_port': '',
