@@ -74,23 +74,52 @@ add rule ip nat {{ chain }} iifname "{{ iface }}" {{ proto_dst_port }} {{ dst_ad
 {% endfor %}
 
 
-{% for r in source -%}
+{% for r in source if not r.disabled -%}
+{%   set chain     = "POSTROUTING" %}
+{%   set dst_addr  = "ip daddr " + r.dest_address if r.dest_address %}
+{%   set dst_port  = "dport { " + r.dest_port +" }" if r.dest_port %}
+{%   set trns_addr = "snat to " + r.translation_address %}
+{%   set trns_port = ":" + r.translation_port if r.translation_port %}
+{%   set comment   = "SRC-NAT-" + r.number %}
+{%   set iface     = r.interface_out %}
+
 {%   if r.log %}
 {%     if r.exclude %}
-{%       set value = 'EXCL' %}
+{%       set log = "[" + comment + "-EXCL]" %}
 {%     elif r.translation_address == 'masquerade' %}
-{%       set value = 'MASQ' %}
+{%       set log = "[" + comment + "-MASQ]" %}
+{%     else %}
+{%       set log = "[" + comment + "]" %}
 {%     endif %}
-  add rule ip nat POSTROUTING oifname "{{ r.interface_out }}" ip saddr {{ r.source_address }} counter log prefix "[NAT-SRC-{{ r.number }}-{{ value }}]" comment "SRC-NAT-{{ r.number }}"
 {%   endif %}
 
 {%   if r.exclude %}
-{%     set value = 'return' %}
-{%   elif r.translation_address == 'masquerade' %}
-{%     set value = 'masquerade' %}
-{%   else %}
-{%     set value = 'snat to ' + r.translation_address %}
+{#     rule has been marked as "exclude" thus we simply return here #}
+{%     set trns_addr = "return" %}
+{%     set trns_port = "" %}
 {%   endif %}
-  add rule ip nat POSTROUTING oifname "{{ r.interface_out }}" ip saddr {{ r.source_address }} counter {{ value }} comment "SRC-NAT-{{ r.number }}"
-{% endfor %}
 
+{%   if r.protocol == 'tcp_udp' %}
+{#     Special handling for protocol tcp_udp which is represented as two individual rules #}
+{%     set comment = comment + " tcp_udp" %}
+{%     if log %}
+
+{%       set tcp_dst_port = "tcp " + dst_port if dst_port else "ip protocol tcp" %}
+{%       set udp_dst_port = "udp " + dst_port if dst_port else "ip protocol udp" %}
+
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+{%     endif %}
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ tcp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+{%     if log %}
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+{%     endif %}
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ udp_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+
+{%   else %}
+{%       set proto_dst_port = dst_port if dst_port else "ip protocol " + r.protocol %}
+{%     if log %}
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter log prefix "{{ log }}" comment "{{ comment }}"
+{%     endif %}
+add rule ip nat {{ chain }} oifname "{{ iface }}" {{ proto_dst_port }} {{ dst_addr }} counter {{ trns_addr }}{{ trns_port }} comment "{{ comment }}"
+{%   endif %}
+{% endfor %}
