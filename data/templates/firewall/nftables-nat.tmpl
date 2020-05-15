@@ -23,7 +23,7 @@ flush table nat
 {% endif %}
 
 
-{% for r in destination -%}
+{% for r in destination if not r.disabled -%}
 {%   set chain     = "PREROUTING" %}
 {%   set dst_addr  = "ip daddr " + r.dest_address if r.dest_address %}
 {%   set dst_port  = "dport { " + r.dest_port +" }" %}
@@ -47,7 +47,6 @@ flush table nat
 {#     rule has been marked as "exclude" thus we simply return here #}
 {%     set trns      = "return" %}
 {%   endif %}
-
 
 {%   if r.protocol == 'tcp_udp' %}
 {#     Special handling for protocol tcp_udp which is represented as two individual rules #}
