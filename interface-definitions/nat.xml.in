@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="nat" owner="sudo ${vyos_conf_scripts_dir}/nat.py">
+    <properties>
+      <help>Network Address Translation (NAT) parameters</help>
+      <priority>220</priority>
+    </properties>
+    <children>
+      <node name="destination">
+        <properties>
+          <help>Destination NAT settings</help>
+        </properties>
+        <children>
+          #include <include/nat-rule.xml.i>
+          <tagNode name="rule">
+            <children>
+              <leafNode name="inbound-interface">
+                <properties>
+                  <help>Inbound interface of NAT traffic</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <node name="translation">
+                <properties>
+                  <help>Inside NAT IP (destination NAT only)</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IP address, subnet, or range</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range to match</description>
+                      </valueHelp>
+                      <!-- TODO: add general iptables constraint script -->
+                    </properties>
+                  </leafNode>
+                  #include <include/nat-translation-port.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="source">
+        <properties>
+          <help>Source NAT settings</help>
+        </properties>
+        <children>
+          #include <include/nat-rule.xml.i>
+          <tagNode name="rule">
+            <children>
+              <leafNode name="outbound-interface">
+                <properties>
+                  <help>Outbound interface of NAT traffic</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <node name="translation">
+                <properties>
+                  <help>Outside NAT IP (source NAT only)</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IP address, subnet, or range</help>
+                      <completionHelp>
+                        <list>masquerade</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>masquerade</format>
+                        <description>NAT to the primary address of outbound-interface</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv4-range"/>
+                        <regex>(masquerade)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/nat-translation-port.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

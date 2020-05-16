@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+from sys import argv,exit
+
+if __name__ == '__main__':
+    if len(argv) != 2:
+        exit(1)
+
+    input = argv[1]
+    try:
+        # IP protocol can be in the range 0 - 255, thus the range must end with 256
+        if int(input) in range(0, 256):
+            exit(0)
+    except ValueError:
+        pass
+
+    pattern = "!?\\b(all|ip|hopopt|icmp|igmp|ggp|ipencap|st|tcp|egp|igp|pup|udp|" \
+              "tcp_udp|hmp|xns-idp|rdp|iso-tp4|dccp|xtp|ddp|idpr-cmtp|ipv6|" \
+              "ipv6-route|ipv6-frag|idrp|rsvp|gre|esp|ah|skip|ipv6-icmp|" \
+              "ipv6-nonxt|ipv6-opts|rspf|vmtp|eigrp|ospf|ax.25|ipip|etherip|" \
+              "encap|99|pim|ipcomp|vrrp|l2tp|isis|sctp|fc|mobility-header|" \
+              "udplite|mpls-in-ip|manet|hip|shim6|wesp|rohc)\\b"
+    if re.match(pattern, input):
+        exit(0)
+
+    exit(1)
