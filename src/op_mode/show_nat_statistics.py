@@ -31,7 +31,7 @@ rule      pkts        bytes   interface
 {%- set bytes     = r.counter.bytes -%}
 {%- set interface = r.interface -%}
 {# remove rule comment prefix #}
-{%- set comment   = r.comment | replace('SRC-NAT-', '') | replace('DST-NAT-', '') -%}
+{%- set comment   = r.comment | replace('SRC-NAT-', '') | replace('DST-NAT-', '') | replace(' tcp_udp', '') -%}
 {{ "%-4s" | format(comment) }} {{ "%9s" | format(packets) }} {{ "%12s" | format(bytes) }}   {{ interface }}
 {%- endif %}
 {% endfor %}
