@@ -286,7 +286,7 @@
           <description>IP protocol number</description>
         </valueHelp>
         <constraint>
-          <regex>!?(all|ip|hopopt|icmp|igmp|ggp|ipencap|st|tcp|egp|igp|pup|udp|tcp_udp|hmp|xns-idp|rdp|iso-tp4|dccp|xtp|ddp|idpr-cmtp|ipv6|ipv6-route|ipv6-frag|idrp|rsvp|gre|esp|ah|skip|ipv6-icmp|ipv6-nonxt|ipv6-opts|rspf|vmtp|eigrp|ospf|ax.25|ipip|etherip|encap|99|pim|ipcomp|vrrp|l2tp|isis|sctp|fc|mobility-header|udplite|mpls-in-ip|manet|hip|shim6|wesp|rohc|[01]?[0-9][0-9]?)</regex>
+          <validator name="ip-protocol"/>
         </constraint>
       </properties>
     </leafNode>
