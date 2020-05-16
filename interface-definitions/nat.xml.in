@@ -52,6 +52,78 @@
           </tagNode>
         </children>
       </node>
+      <node name="nptv6">
+        <properties>
+          <help>IPv6-to-IPv6 Network Prefix Translation Settings</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>NPTv6 rule number</help>
+              <valueHelp>
+                <format>1-9999</format>
+                <description>Number for this rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-9999"/>
+              </constraint>
+              <constraintErrorMessage>NAT rule number must be between 1 and 9999</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="description">
+                <properties>
+                  <help>Rule description</help>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable NAT rule</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              #include <include/nat-outbound-interface.xml.i>
+              <node name="source">
+                <properties>
+                  <help>IPv6 source prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPv6 prefix to be translated</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="translation">
+                <properties>
+                  <help>Translated IPv6 prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPv6 prefix to translate to</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
       <node name="source">
         <properties>
           <help>Source NAT settings</help>
@@ -60,14 +132,7 @@
           #include <include/nat-rule.xml.i>
           <tagNode name="rule">
             <children>
-              <leafNode name="outbound-interface">
-                <properties>
-                  <help>Outbound interface of NAT traffic</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/nat-outbound-interface.xml.i>
               <node name="translation">
                 <properties>
                   <help>Outside NAT IP (source NAT only)</help>

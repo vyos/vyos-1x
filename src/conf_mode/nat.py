@@ -102,8 +102,10 @@ def parse_source_destination(conf, source_dest):
             'protocol': 'all',
             'number': number,
             'source_address': '',
+            'source_prefix': '',
             'source_port': '',
             'translation_address': '',
+            'translation_prefix': '',
             'translation_port': ''
         }
         conf.set_level(base_level + ['rule', number])
@@ -138,11 +140,17 @@ def parse_source_destination(conf, source_dest):
         if conf.exists(['source', 'address']):
             rule['source_address'] = conf.return_value(['source', 'address'])
 
+        if conf.exists(['source', 'prefix']):
+            rule['source_prefix'] = conf.return_value(['source', 'prefix'])
+
         if conf.exists(['source', 'port']):
             rule['source_port'] = conf.return_value(['source', 'port'])
 
         if conf.exists(['translation', 'address']):
             rule['translation_address'] = conf.return_value(['translation', 'address'])
+
+        if conf.exists(['translation', 'prefix']):
+            rule['translation_prefix'] = conf.return_value(['translation', 'prefix'])
 
         if conf.exists(['translation', 'port']):
             rule['translation_port'] = conf.return_value(['translation', 'port'])
@@ -193,7 +201,7 @@ def get_config():
     # use a common wrapper function to read in the source / destination
     # tree from the config - thus we do not need to replicate almost the
     # same code :-)
-    for tgt in ['source', 'destination']:
+    for tgt in ['source', 'destination', 'nptv6']:
         nat[tgt] = parse_source_destination(conf, tgt)
 
     return nat
