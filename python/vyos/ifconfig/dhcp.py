@@ -19,11 +19,10 @@ from vyos.dicts import FixedDict
 from vyos.ifconfig.control import Control
 from vyos.template import render
 
-config_base = r'/var/lib/dhcp/dhclient_'
-
 class _DHCPv4 (Control):
     def __init__(self, ifname):
         super().__init__()
+        config_base = r'/var/lib/dhcp/dhclient_'
         self.options = FixedDict(**{
             'ifname': ifname,
             'hostname': '',
@@ -85,13 +84,10 @@ class _DHCPv6 (Control):
         super().__init__()
         self.options = FixedDict(**{
             'ifname': ifname,
-            'conf_file': config_base + f'v6_{ifname}.conf',
-            'options_file': config_base + f'v6_{ifname}.options',
-            'pid_file': config_base + f'v6_{ifname}.pid',
-            'lease_file': config_base + f'v6_{ifname}.leases',
             'dhcpv6_prm_only': False,
             'dhcpv6_temporary': False,
         })
+        self._conf_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
 
     def set(self):
         """
@@ -111,10 +107,8 @@ class _DHCPv6 (Control):
             raise Exception(
                 'DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-        render(self.options['options_file'], 'dhcp-client/daemon-options.tmpl', self.options)
-        render(self.options['conf_file'], 'dhcp-client/ipv6.tmpl', self.options)
-
-        return self._cmd('systemctl restart dhclient6@{ifname}.service'.format(**self.options))
+        render(self._conf_file, 'dhcp-client/ipv6.tmpl', self.options)
+        return self._cmd('systemctl restart dhcp6c@{ifname}.service'.format(**self.options))
 
     def delete(self):
         """
@@ -127,16 +121,11 @@ class _DHCPv6 (Control):
         >>> j = Interface('eth0')
         >>> j.dhcp.v6.delete()
         """
-        if not os.path.isfile(self.options['pid_file']):
-            self._debug_msg('No DHCPv6 client PID found')
-            return None
-
-        self._cmd('systemctl stop dhclient6@{ifname}.service'.format(**self.options))
+        self._cmd('systemctl stop dhcp6c@{ifname}.service'.format(**self.options))
 
         # cleanup old config files
-        for name in ('conf_file', 'options_file', 'pid_file', 'lease_file'):
-            if os.path.isfile(self.options[name]):
-                os.remove(self.options[name])
+        if os.path.isfile(self._conf_file):
+            os.remove(self._conf_file)
 
 
 class DHCP(object):

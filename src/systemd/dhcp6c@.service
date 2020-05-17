@@ -1,0 +1,16 @@
+[Unit]
+Description=WIDE DHCPv6 client on %i
+Documentation=man:dhcp6c(8) man:dhcp6c.conf(5)
+ConditionPathExists=/run/dhcp6c/dhcp6c.%i.conf
+After=vyos-router.service
+
+[Service]
+WorkingDirectory=/run/dhcp6c
+Type=exec
+PIDFile=/run/dhcp6c/dhcp6c.%i.pid
+ExecStart=/usr/sbin/dhcp6c -D -k /run/dhcp6c/dhcp6c.%i.sock -c /run/dhcp6c/dhcp6c.%i.conf -p /run/dhcp6c/dhcp6c.%i.pid %i
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
