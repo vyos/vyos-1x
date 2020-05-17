@@ -191,13 +191,15 @@ def generate(pppoe):
     script_pppoe_ip_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ip_down = f'/etc/ppp/ip-down.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{intf}'
+    config_wide_dhcp6c = f'/run/dhcp6c/dhcp6c.{intf}.conf'
 
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
-                    script_pppoe_ip_down, script_pppoe_ipv6_up]
+                    script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
 
     # Shutdown DHCPv6 prefix delegation client
-    if pppoe['dhcpv6_pd']:
+    if not pppoe['dhcpv6_pd']:
         cmd(f'systemctl stop dhcp6c@{intf}.service')
+
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd(f'systemctl stop ppp@{intf}.service')
@@ -228,9 +230,10 @@ def generate(pppoe):
                pppoe, trim_blocks=True, permission=0o755)
 
         if len(pppoe['dhcpv6_pd']) > 0:
-            ifname = pppoe['intf']
-            pppoe['ifname'] = ifname
-            render(f'/run/dhcp6c/dhcp6c.{ifname}.conf', 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
+            # ipv6.tmpl relies on ifname - this should be made consitent in the
+            # future better then double key-ing the same value
+            pppoe['ifname'] = intf
+            render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
 
     return None
 
