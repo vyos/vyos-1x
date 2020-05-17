@@ -36,6 +36,7 @@ default_config_data = {
     'deleted': False,
     'description': '\0',
     'disable': False,
+    'dhcpv6_pd': [],
     'intf': '',
     'idle_timeout': '',
     'ipv6_autoconf': False,
@@ -138,6 +139,27 @@ def get_config():
     if conf.exists('vrf'):
         pppoe['vrf'] = conf.return_value(['vrf'])
 
+    if conf.exists(['dhcpv6-options', 'delegate']):
+        for interface in conf.list_nodes(['dhcpv6-options', 'delegate']):
+            pd = {
+                'ifname': interface,
+                'sla_id': '',
+                'sla_len': '',
+                'if_id': ''
+            }
+            conf.set_level(base_path + [pppoe['intf'], 'dhcpv6-options', 'delegate', interface])
+
+            if conf.exists(['sla-id']):
+                pd['sla_id'] = conf.return_value(['sla-id'])
+
+            if conf.exists(['sla-len']):
+                pd['sla_len'] = conf.return_value(['sla-len'])
+
+            if conf.exists(['interface-id']):
+                pd['if_id'] = conf.return_value(['interface-id'])
+
+            pppoe['dhcpv6_pd'].append(pd)
+
     return pppoe
 
 def verify(pppoe):
@@ -200,6 +222,11 @@ def generate(pppoe):
         # Create script for ipv6-up.d
         render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
                pppoe, trim_blocks=True, permission=0o755)
+
+        if len(pppoe['dhcpv6_pd']) > 0:
+            ifname = pppoe['intf']
+            pppoe['ifname'] = ifname
+            render(f'/run/dhcp6c/dhcp6c.{ifname}.conf', 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
 
     return None
 

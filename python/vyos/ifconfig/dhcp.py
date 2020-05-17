@@ -86,6 +86,7 @@ class _DHCPv6 (Control):
             'ifname': ifname,
             'dhcpv6_prm_only': False,
             'dhcpv6_temporary': False,
+            'dhcpv6_pd': [],
         })
         self._conf_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
 
@@ -107,7 +108,7 @@ class _DHCPv6 (Control):
             raise Exception(
                 'DHCPv6 temporary and parameters-only options are mutually exclusive!')
 
-        render(self._conf_file, 'dhcp-client/ipv6.tmpl', self.options)
+        render(self._conf_file, 'dhcp-client/ipv6.tmpl', self.options, trim_blocks=True)
         return self._cmd('systemctl restart dhcp6c@{ifname}.service'.format(**self.options))
 
     def delete(self):
