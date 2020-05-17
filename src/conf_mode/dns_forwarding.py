@@ -152,7 +152,7 @@ def generate(dns):
     if dns is None:
         return None
 
-    render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True)
+    render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True, user='pdns', group='pdns')
     return None
 
 def apply(dns):
