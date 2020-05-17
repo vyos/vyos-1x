@@ -36,6 +36,7 @@ default_config_data = {
     'deleted': False,
     'description': '\0',
     'disable': False,
+    'dhcpv6_pd': [],
     'intf': '',
     'idle_timeout': '',
     'ipv6_autoconf': False,
@@ -138,6 +139,27 @@ def get_config():
     if conf.exists('vrf'):
         pppoe['vrf'] = conf.return_value(['vrf'])
 
+    if conf.exists(['dhcpv6-options', 'delegate']):
+        for interface in conf.list_nodes(['dhcpv6-options', 'delegate']):
+            pd = {
+                'ifname': interface,
+                'sla_id': '',
+                'sla_len': '',
+                'if_id': ''
+            }
+            conf.set_level(base_path + [pppoe['intf'], 'dhcpv6-options', 'delegate', interface])
+
+            if conf.exists(['sla-id']):
+                pd['sla_id'] = conf.return_value(['sla-id'])
+
+            if conf.exists(['sla-len']):
+                pd['sla_len'] = conf.return_value(['sla-len'])
+
+            if conf.exists(['interface-id']):
+                pd['if_id'] = conf.return_value(['interface-id'])
+
+            pppoe['dhcpv6_pd'].append(pd)
+
     return pppoe
 
 def verify(pppoe):
@@ -169,9 +191,15 @@ def generate(pppoe):
     script_pppoe_ip_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ip_down = f'/etc/ppp/ip-down.d/1000-vyos-pppoe-{intf}'
     script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{intf}'
+    config_wide_dhcp6c = f'/run/dhcp6c/dhcp6c.{intf}.conf'
 
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
-                    script_pppoe_ip_down, script_pppoe_ipv6_up]
+                    script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
+
+    # Shutdown DHCPv6 prefix delegation client
+    if not pppoe['dhcpv6_pd']:
+        cmd(f'systemctl stop dhcp6c@{intf}.service')
+
 
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd(f'systemctl stop ppp@{intf}.service')
@@ -200,6 +228,12 @@ def generate(pppoe):
         # Create script for ipv6-up.d
         render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
                pppoe, trim_blocks=True, permission=0o755)
+
+        if len(pppoe['dhcpv6_pd']) > 0:
+            # ipv6.tmpl relies on ifname - this should be made consitent in the
+            # future better then double key-ing the same value
+            pppoe['ifname'] = intf
+            render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
 
     return None
 
