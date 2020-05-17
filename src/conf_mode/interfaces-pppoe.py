@@ -195,6 +195,10 @@ def generate(pppoe):
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
                     script_pppoe_ip_down, script_pppoe_ipv6_up]
 
+    # Shutdown DHCPv6 prefix delegation client
+    if pppoe['dhcpv6_pd']:
+        cmd(f'systemctl stop dhcp6c@{intf}.service')
+
     # Always hang-up PPPoE connection prior generating new configuration file
     cmd(f'systemctl stop ppp@{intf}.service')
 
