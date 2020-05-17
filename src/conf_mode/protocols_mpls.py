@@ -127,7 +127,7 @@ def generate(mpls):
     if mpls is None:
         return None
 
-    render(config_file, 'mpls/ldpd.frr.tmpl', mpls)
+    render(config_file, 'frr/ldpd.frr.tmpl', mpls)
     return None
 
 def apply(mpls):

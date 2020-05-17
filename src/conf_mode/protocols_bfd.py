@@ -190,7 +190,7 @@ def generate(bfd):
     if bfd is None:
         return None
 
-    render(config_file, 'frr-bfd/bfd.frr.tmpl', bfd)
+    render(config_file, 'frr/bfd.frr.tmpl', bfd)
     return None
 
 def apply(bfd):
