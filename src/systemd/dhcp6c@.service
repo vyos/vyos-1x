@@ -6,7 +6,7 @@ After=vyos-router.service
 
 [Service]
 WorkingDirectory=/run/dhcp6c
-Type=exec
+Type=forking
 PIDFile=/run/dhcp6c/dhcp6c.%i.pid
 ExecStart=/usr/sbin/dhcp6c -D -k /run/dhcp6c/dhcp6c.%i.sock -c /run/dhcp6c/dhcp6c.%i.conf -p /run/dhcp6c/dhcp6c.%i.pid %i
 
