@@ -15,6 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from vyos import ConfigError
+
+
 class FixedDict(dict):
     """
     FixedDict: A dictionnary not allowing new keys to be created after initialisation.

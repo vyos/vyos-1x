@@ -99,7 +99,7 @@ def get_config():
 def write_ipsec_secrets(c):
     if c.get("ipsec_l2tp_auth_mode") == "pre-shared-secret":
         secret_txt = "{0}\n{1} %any : PSK \"{2}\"\n{3}\n".format(delim_ipsec_l2tp_begin, c['outside_addr'], c['ipsec_l2tp_secret'], delim_ipsec_l2tp_end)
-    elif data.get("ipsec_l2tp_auth_mode") == "x509":
+    elif c.get("ipsec_l2tp_auth_mode") == "x509":
         secret_txt = "{0}\n: RSA {1}\n{2}\n".format(delim_ipsec_l2tp_begin, c['server_key_file_copied'], delim_ipsec_l2tp_end)
 
     old_umask = os.umask(0o077)
