@@ -267,17 +267,15 @@ def run_show_counters(ifnames, iftypes, vif, vrrp):
 
 
 @register('clear')
-def run_clear_intf(intf, iftypes, vif, vrrp):
+def run_clear_intf(ifnames, iftypes, vif, vrrp):
     for interface in filtered_interfaces(ifnames, iftypes, vif, vrrp):
         print(f'Clearing {interface.ifname}')
-        interface = Interface(ifname, create=False, debug=False)
         interface.operational.clear_counters()
 
 
 @register('reset')
-def run_reset_intf(intf, iftypes, vif, vrrp):
+def run_reset_intf(ifnames, iftypes, vif, vrrp):
     for interface in filtered_interfaces(ifnames, iftypes, vif, vrrp):
-        interface = Interface(ifname, create=False, debug=False)
         interface.operational.reset_counters()
 
 

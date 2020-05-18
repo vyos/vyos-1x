@@ -205,7 +205,7 @@ def assert_number(n):
 def assert_positive(n, smaller=0):
     assert_number(n)
     if int(n) < smaller:
-        raise ValueError(f'{n} is smaller than {limit}')
+        raise ValueError(f'{n} is smaller than {smaller}')
 
 
 def assert_mtu(mtu, min=68, max=9000):

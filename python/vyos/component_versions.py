@@ -51,7 +51,7 @@ def get_component_versions_from_file(config_file_name='/opt/vyatta/etc/config/co
     """
     f = open(config_file_name, 'r')
     for line_in_config in f:
-        component_version = return_version(line_in_config)
+        component_version = get_component_version(line_in_config)
         if component_version:
             return component_version
     raise ValueError("no config string in file:", config_file_name)

@@ -222,7 +222,7 @@ class ConfigurationState(Config):
         remove all the values which were not changed from the default
         """
         for option in options:
-            if self.exists(option) and self_return_value(option) != self.default[option]:
+            if self.exists(option) and self.self_return_value(option) != self.default[option]:
                 continue
             del self.options[option]
 
@@ -555,7 +555,7 @@ def verify(conf):
     # source-interface check
 
     if tun_dev and tun_dev not in options['interfaces']:
-        raise ConfigError(f'device "{dev}" does not exist')
+        raise ConfigError(f'device "{tun_dev}" does not exist')
 
     # tunnel encapsulation check
 
