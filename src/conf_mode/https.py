@@ -141,9 +141,9 @@ def generate(https):
 
 def apply(https):
     if https is not None:
-        call('sudo systemctl restart nginx.service')
+        call('systemctl restart nginx.service')
     else:
-        call('sudo systemctl stop nginx.service')
+        call('systemctl stop nginx.service')
 
 if __name__ == '__main__':
     try:

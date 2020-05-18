@@ -227,17 +227,17 @@ def apply(data):
 
         if not VRRP.is_running():
             print("Starting the VRRP process")
-            ret = call("sudo systemctl restart keepalived.service")
+            ret = call("systemctl restart keepalived.service")
         else:
             print("Reloading the VRRP process")
-            ret = call("sudo systemctl reload keepalived.service")
+            ret = call("systemctl reload keepalived.service")
 
         if ret != 0:
             raise ConfigError("keepalived failed to start")
     else:
         # VRRP is removed in the commit
         print("Stopping the VRRP process")
-        call("sudo systemctl stop keepalived.service")
+        call("systemctl stop keepalived.service")
         os.unlink(VRRP.location['daemon'])
 
     return None

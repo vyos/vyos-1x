@@ -92,9 +92,9 @@ def generate(http_api):
 
 def apply(http_api):
     if http_api is not None:
-        call('sudo systemctl restart vyos-http-api.service')
+        call('systemctl restart vyos-http-api.service')
     else:
-        call('sudo systemctl stop vyos-http-api.service')
+        call('systemctl stop vyos-http-api.service')
 
     for dep in dependencies:
         cmd(f'{vyos_conf_scripts_dir}/{dep}', raising=ConfigError)

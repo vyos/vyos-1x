@@ -103,10 +103,10 @@ def generate(ntp):
 
 def apply(ntp):
     if ntp is not None:
-        call('sudo systemctl restart ntp.service')
+        call('systemctl restart ntp.service')
     else:
         # NTP support is removed in the commit
-        call('sudo systemctl stop ntp.service')
+        call('systemctl stop ntp.service')
         os.unlink(config_file)
 
     return None
