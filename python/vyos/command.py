@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 
 from subprocess import Popen
@@ -20,8 +21,18 @@ from subprocess import PIPE
 from subprocess import DEVNULL
 
 
+def _need_sudo(command):
+    return os.path.basename(command.split()[0]) in ('', )
+
+
+def _add_sudo(command):
+    if _need_sudo(command):
+        return 'sudo ' + command
+    return command
+
+
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=PIPE, decode='utf-8'):
+          stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True):
     """
     popen is a wrapper helper aound subprocess.Popen
     with it default setting it will return a tuple (out, err)
@@ -60,6 +71,9 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     if not debug.enabled(flag):
         flag = 'command'
 
+    if autosudo:
+        command = _add_sudo(command)
+
     cmd_msg = f"cmd '{command}'"
     debug.message(cmd_msg, flag)
 
@@ -71,9 +85,11 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
             use_shell = True
         if env:
             use_shell = True
+
     if input:
         stdin = PIPE
         input = input.encode() if type(input) is str else input
+
     p = Popen(
         command,
         stdin=stdin, stdout=stdout, stderr=stderr,
@@ -111,7 +127,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def run(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=DEVNULL, stderr=PIPE, decode='utf-8'):
+        stdout=DEVNULL, stderr=PIPE, decode='utf-8', autosudo=True):
     """
     A wrapper around popen, which discard the stdout and
     will return the error code of a command
@@ -127,7 +143,7 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, decode='utf-8',
+        stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True,
         raising=None, message='', expect=[0]):
     """
     A wrapper around popen, which returns the stdout and
@@ -159,7 +175,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=PIPE, stderr=PIPE, decode='utf-8'):
+         stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True):
     """
     A wrapper around popen, which print the stdout and
     will return the error code of a command
