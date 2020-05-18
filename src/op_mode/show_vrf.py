@@ -18,7 +18,7 @@ import argparse
 import jinja2
 from json import loads
 
-from vyos.util import cmd
+from vyos.command import cmd
 
 vrf_out_tmpl = """
 VRF name          state     mac address        flags                     interfaces

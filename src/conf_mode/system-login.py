@@ -26,8 +26,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos import ConfigError
-from vyos.util import cmd
-from vyos.util import call
+from vyos.command import cmd
+from vyos.command import call
 from vyos.util import DEVNULL
 from vyos.template import render
 

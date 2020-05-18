@@ -15,7 +15,7 @@
 
 import re
 
-from vyos.util import cmd
+from vyos.command import cmd
 
 
 def make_password_hash(password):

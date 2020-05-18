@@ -19,7 +19,7 @@ import re
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 from vyos.validate import assert_list
-from vyos.util import run
+from vyos.command import run
 
 
 @Interface.register

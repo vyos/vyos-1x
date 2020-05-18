@@ -21,7 +21,7 @@ import sys
 import time
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.command import call
 
 cache_file = r'/run/ddclient/ddclient.cache'
 

@@ -17,7 +17,7 @@
 import argparse
 import sys
 
-from vyos.util import cmd
+from vyos.command import cmd
 
 
 if __name__ == '__main__':

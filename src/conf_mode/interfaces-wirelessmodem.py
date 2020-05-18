@@ -23,7 +23,9 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.ifconfig import BridgeIf, Section
 from vyos.template import render
-from vyos.util import chown, chmod_755, cmd, call
+from vyos.util import chown, chmod_755
+from vyos.command import cmd
+from vyos.command import call
 from vyos.validate import is_member
 from vyos import ConfigError
 

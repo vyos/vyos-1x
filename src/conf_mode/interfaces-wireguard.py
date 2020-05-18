@@ -24,7 +24,8 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
-from vyos.util import chown, chmod_750, call
+from vyos.util import chown, chmod_750
+from vyos.command import call
 from vyos.validate import is_member
 from vyos import ConfigError
 

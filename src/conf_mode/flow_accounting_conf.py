@@ -26,7 +26,7 @@ from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd
+from vyos.command import cmd
 from vyos.template import render
 
 # default values

@@ -4,7 +4,7 @@ import jinja2
 from sys import exit
 
 from vyos.config import Config
-from vyos.util import cmd
+from vyos.command import cmd
 
 PDNS_CMD='/usr/bin/rec_control --socket-dir=/run/powerdns'
 

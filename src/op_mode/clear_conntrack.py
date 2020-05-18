@@ -17,7 +17,7 @@
 import sys
 
 from vyos.util import ask_yes_no
-from vyos.util import cmd, DEVNULL
+from vyos.command import cmd, DEVNULL
 
 if not ask_yes_no("This will clear all currently tracked and expected connections. Continue?"):
     sys.exit(1)

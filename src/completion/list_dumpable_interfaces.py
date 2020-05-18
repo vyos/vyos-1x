@@ -4,7 +4,7 @@
 
 import re
 
-from vyos.util import cmd
+from vyos.command import cmd
 
 if __name__ == '__main__':
     out = cmd('/usr/sbin/tcpdump -D').split('\n')

@@ -25,7 +25,7 @@ from vyos.ifconfig import WireGuardIf
 
 from vyos import ConfigError
 from vyos.config import Config
-from vyos.util import cmd, run
+from vyos.command import cmd, run
 
 dir = r'/config/auth/wireguard'
 psk = dir + '/preshared.key'

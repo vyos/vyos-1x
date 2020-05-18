@@ -22,7 +22,7 @@ from xml.dom import minidom
 from sys import exit
 from tabulate import tabulate
 
-from vyos.util import popen
+from vyos.command import popen
 from vyos.config import Config
 
 parser = argparse.ArgumentParser()

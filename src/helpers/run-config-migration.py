@@ -20,7 +20,7 @@ import sys
 import argparse
 import datetime
 
-from vyos.util import cmd
+from vyos.command import cmd
 from vyos.migrator import Migrator, VirtualMigrator
 
 def main():

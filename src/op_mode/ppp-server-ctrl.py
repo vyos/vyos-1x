@@ -18,7 +18,7 @@ import sys
 import argparse
 
 from vyos.config import Config
-from vyos.util import popen, DEVNULL
+from vyos.command import popen, DEVNULL
 
 cmd_dict = {
     'cmd_base'  : '/usr/bin/accel-cmd -p {} ',

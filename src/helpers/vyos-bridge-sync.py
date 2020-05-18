@@ -25,7 +25,7 @@ from sys import exit
 from time import sleep
 
 from vyos.config import Config
-from vyos.util import cmd, run
+from vyos.command import cmd, run
 
 
 if __name__ == '__main__':

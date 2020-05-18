@@ -20,7 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call
+from vyos.command import call
 from vyos import ConfigError
 
 config_file = r'/run/dhcp-relay/dhcp.conf'

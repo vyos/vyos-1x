@@ -17,8 +17,8 @@
 import os
 
 from vyos import debug
-from vyos.util import popen
-from vyos.util import cmd
+from vyos.command import popen
+from vyos.command import cmd
 from vyos.ifconfig.section import Section
 
 

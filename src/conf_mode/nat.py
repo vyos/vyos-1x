@@ -24,7 +24,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, cmd
+from vyos.command import call, cmd
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 

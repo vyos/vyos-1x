@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.util import wait_for_commit_lock
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 from vyos.template import render
 
 parser = argparse.ArgumentParser()

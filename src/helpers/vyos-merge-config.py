@@ -23,7 +23,7 @@ import vyos.remote
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.migrator import Migrator, VirtualMigrator
-from vyos.util import cmd, DEVNULL
+from vyos.command import cmd, DEVNULL
 
 
 if (len(sys.argv) < 2):

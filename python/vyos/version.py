@@ -36,9 +36,9 @@ import vyos.defaults
 
 from vyos.util import read_file
 from vyos.util import read_json
-from vyos.util import popen
-from vyos.util import run
-from vyos.util import DEVNULL
+from vyos.command import popen
+from vyos.command import run
+from vyos.command import DEVNULL
 
 
 version_file = os.path.join(vyos.defaults.directories['data'], 'version.json')

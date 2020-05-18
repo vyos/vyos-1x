@@ -24,7 +24,7 @@ from pathlib import Path
 import vyos.config
 
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 from vyos.template import render
 
 from vyos.ifconfig.vrrp import VRRP

@@ -25,7 +25,7 @@ import ssl
 import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd
+from vyos.command import cmd
 
 vyos_conf_scripts_dir = vyos.defaults.directories['conf_mode']
 

@@ -23,7 +23,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, get_half_cpus
+from vyos.command import call, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 

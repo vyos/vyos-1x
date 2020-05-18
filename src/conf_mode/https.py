@@ -24,7 +24,7 @@ import vyos.certbot_util
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 from vyos.template import render
 
 

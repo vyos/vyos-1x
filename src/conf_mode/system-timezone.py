@@ -20,7 +20,7 @@ import os
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 
 
 default_config_data = {

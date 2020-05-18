@@ -21,7 +21,7 @@ from sys import exit
 from psutil import process_iter
 from time import strftime, localtime, time
 
-from vyos.util import call
+from vyos.command import call
 
 
 PPP_LOGFILE = '/var/log/vyatta/ppp_{}.log'

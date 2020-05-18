@@ -16,7 +16,7 @@
 
 import os
 from sys import argv, exit
-from vyos.util import call
+from vyos.command import call
 
 if __name__ == '__main__':
     if (len(argv) < 1):

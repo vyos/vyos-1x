@@ -23,7 +23,7 @@ import argparse
 import os
 
 import vyos.config
-from vyos.util import call
+from vyos.command import call
 
 
 parser = argparse.ArgumentParser()

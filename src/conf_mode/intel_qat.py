@@ -22,7 +22,7 @@ import re
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import popen, run
+from vyos.command import popen, run
 
 # Define for recovering
 gl_ipsec_conf = None

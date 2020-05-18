@@ -23,7 +23,7 @@ from stat import S_IRUSR, S_IWUSR, S_IRGRP
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, run, get_half_cpus
+from vyos.command import call, run, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 

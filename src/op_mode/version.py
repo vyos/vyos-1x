@@ -28,9 +28,9 @@ import json
 import vyos.version
 import vyos.limericks
 
-from vyos.util import cmd
-from vyos.util import call
-from vyos.util import run
+from vyos.command import cmd
+from vyos.command import call
+from vyos.command import run
 from vyos.util import read_file
 from vyos.util import DEVNULL
 

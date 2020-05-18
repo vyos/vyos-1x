@@ -22,7 +22,7 @@ import re
 import itertools
 from datetime import datetime, timedelta
 
-from vyos.util import cmd
+from vyos.command import cmd
 
 verf = r'/usr/libexec/vyos/op_mode/version.py'
 

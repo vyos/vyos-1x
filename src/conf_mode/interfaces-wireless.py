@@ -28,7 +28,8 @@ from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.ifconfig import WiFiIf, Section
 from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.template import render
-from vyos.util import chown, call
+from vyos.util import chown
+from vyos.command import call
 from vyos.validate import is_member
 from vyos import ConfigError
 

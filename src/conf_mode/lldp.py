@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.validate import is_addr_assigned,is_loopback_addr
 from vyos.version import get_version_data
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 from vyos.template import render
 
 

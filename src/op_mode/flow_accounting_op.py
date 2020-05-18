@@ -22,7 +22,7 @@ import ipaddress
 import os.path
 from tabulate import tabulate
 
-from vyos.util import cmd, run
+from vyos.command import cmd, run
 
 # some default values
 uacctd_pidfile = '/var/run/uacctd.pid'

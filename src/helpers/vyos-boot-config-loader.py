@@ -26,7 +26,7 @@ from datetime import datetime
 from vyos.defaults import directories
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.configtree import ConfigTree
-from vyos.util import cmd
+from vyos.command import cmd
 
 STATUS_FILE = '/tmp/vyos-config-status'
 TRACE_FILE = '/tmp/boot-config-trace'

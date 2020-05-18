@@ -23,7 +23,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 from vyos.validate import is_member, is_addr_assigned
 
 default_config_data = {

@@ -19,7 +19,7 @@ import syslog as sl
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.command import run
 
 
 def get_config():

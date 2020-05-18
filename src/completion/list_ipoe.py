@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from vyos.util import popen
+from vyos.command import popen
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

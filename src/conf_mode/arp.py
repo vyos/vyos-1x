@@ -22,7 +22,7 @@ import re
 import syslog as sl
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.command import call
 from vyos import ConfigError
 
 arp_cmd = '/usr/sbin/arp'

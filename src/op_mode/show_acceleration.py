@@ -21,8 +21,8 @@ import re
 import argparse
 
 from vyos.config import Config
-from vyos.util import popen
-from vyos.util import call
+from vyos.command import popen
+from vyos.command import call
 
 
 def detect_qat_dev():

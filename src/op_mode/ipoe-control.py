@@ -18,7 +18,7 @@ import sys
 import argparse
 
 from vyos.config import Config
-from vyos.util import popen, run
+from vyos.command import popen, run
 
 cmd_dict = {
     'cmd_base'   : '/usr/bin/accel-cmd -p 2002 ',

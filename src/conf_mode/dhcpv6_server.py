@@ -22,7 +22,7 @@ from copy import deepcopy
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call
+from vyos.command import call
 from vyos.validate import is_subnet_connected, is_ipv6
 from vyos import ConfigError
 

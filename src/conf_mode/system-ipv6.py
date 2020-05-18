@@ -21,7 +21,7 @@ from sys import exit
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 
 
 ipv6_disable_file = '/etc/modprobe.d/vyos_disable_ipv6.conf'

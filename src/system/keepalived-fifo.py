@@ -27,7 +27,7 @@ from queue import Queue
 import logging
 from logging.handlers import SysLogHandler
 
-from vyos.util import cmd
+from vyos.command import cmd
 
 # configure logging
 logger = logging.getLogger(__name__)

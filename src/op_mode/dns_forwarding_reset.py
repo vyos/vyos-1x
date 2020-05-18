@@ -25,7 +25,7 @@ import argparse
 
 from sys import exit
 from vyos.config import Config
-from vyos.util import call
+from vyos.command import call
 
 PDNS_CMD='/usr/bin/rec_control --socket-dir=/run/powerdns'
 

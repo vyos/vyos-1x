@@ -23,7 +23,7 @@ from urllib3 import PoolManager
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, chown
+from vyos.command import call, chown
 from vyos import ConfigError
 
 config_file = r'/etc/salt/minion'

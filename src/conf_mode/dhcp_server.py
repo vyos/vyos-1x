@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
 from vyos.template import render
-from vyos.util import call, chown
+from vyos.command import call, chown
 
 config_file = r'/run/dhcp-server/dhcpd.conf'
 

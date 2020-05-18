@@ -18,8 +18,8 @@ import os
 import re
 import fileinput
 
-from vyos.util import cmd
-from vyos.util import DEVNULL
+from vyos.command import cmd
+from vyos.command import DEVNULL
 
 
 def check_and_add_host_key(host_name):

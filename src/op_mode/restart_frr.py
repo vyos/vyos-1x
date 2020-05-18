@@ -22,7 +22,7 @@ from logging.handlers import SysLogHandler
 from pathlib import Path
 import psutil
 
-from vyos.util import call
+from vyos.command import call
 
 # some default values
 watchfrr = '/usr/lib/frr/watchfrr.sh'

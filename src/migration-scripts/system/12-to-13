@@ -12,7 +12,7 @@ import re
 import sys
 
 from vyos.configtree import ConfigTree
-from vyos.util import cmd
+from vyos.command import cmd
 
 
 if (len(sys.argv) < 1):

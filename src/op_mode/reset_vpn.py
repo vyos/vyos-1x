@@ -17,7 +17,7 @@
 import sys
 import argparse
 
-from vyos.util import run
+from vyos.command import run
 
 cmd_dict = {
     'cmd_base'  : '/usr/bin/accel-cmd -p {} terminate {} {}',

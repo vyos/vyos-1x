@@ -21,7 +21,7 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
-from vyos.util import popen
+from vyos.command import popen
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--scan", help="Scan for Wireless APs on given interface, e.g. 'wlan0'")

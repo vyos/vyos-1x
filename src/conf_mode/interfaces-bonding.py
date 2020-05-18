@@ -24,7 +24,7 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.configdict import list_diff, intf_to_dict, add_to_dict
 from vyos.config import Config
-from vyos.util import call, cmd
+from vyos.command import call, cmd
 from vyos.validate import is_member, has_address_configured
 from vyos import ConfigError
 

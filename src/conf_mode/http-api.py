@@ -24,8 +24,8 @@ from copy import deepcopy
 import vyos.defaults
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd
-from vyos.util import call
+from vyos.command import cmd
+from vyos.command import call
 
 config_file = '/etc/vyos/http-api.conf'
 

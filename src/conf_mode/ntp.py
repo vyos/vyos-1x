@@ -21,7 +21,7 @@ from ipaddress import ip_network
 from sys import exit
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.command import call
 from vyos.template import render
 from vyos import ConfigError
 

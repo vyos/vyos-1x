@@ -26,7 +26,7 @@ import netifaces
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VRRP
-from vyos.util import cmd
+from vyos.command import cmd
 
 
 # interfaces = Sections.reserved()

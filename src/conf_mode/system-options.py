@@ -20,7 +20,7 @@ from sys import exit
 from copy import deepcopy
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.command import run
 
 systemd_ctrl_alt_del = '/lib/systemd/system/ctrl-alt-del.target'
 

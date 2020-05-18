@@ -16,7 +16,7 @@
 
 from sys import exit
 from vyos.util import ask_yes_no
-from vyos.util import cmd
+from vyos.command import cmd
 
 if not ask_yes_no('Do you really want to remove the existing SSH host keys?'):
     exit(0)

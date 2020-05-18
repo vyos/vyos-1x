@@ -25,7 +25,7 @@ from time import sleep
 from ipaddress import ip_network
 
 from vyos.config import Config
-from vyos.util import call, get_half_cpus
+from vyos.command import call, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 from vyos.template import render

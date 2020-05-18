@@ -27,7 +27,7 @@ from datetime import datetime
 from isc_dhcp_leases import Lease, IscDhcpLeases
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.command import call
 
 lease_file = "/config/dhcpdv6.leases"
 pool_key = "shared-networkname"

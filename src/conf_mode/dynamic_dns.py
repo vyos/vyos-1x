@@ -22,7 +22,7 @@ from stat import S_IRUSR, S_IWUSR
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call
+from vyos.command import call
 from vyos.template import render
 
 config_file = r'/run/ddclient/ddclient.conf'

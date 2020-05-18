@@ -20,7 +20,7 @@ import json
 from argparse import ArgumentParser
 from jinja2 import Template
 from sys import exit
-from vyos.util import cmd
+from vyos.command import cmd
 
 OUT_TMPL_SRC="""
 rule      pkts        bytes   interface

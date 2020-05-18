@@ -22,7 +22,8 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import Interface
-from vyos.util import chown, chmod_755, cmd
+from vyos.util import chown, chmod_755
+from vyos.command import cmd
 from vyos import ConfigError
 from vyos.template import render
 

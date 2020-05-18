@@ -21,7 +21,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import run
+from vyos.command import run
 from vyos.template import render
 
 

@@ -18,7 +18,7 @@ import os
 import sys
 import re
 
-from vyos.util import popen
+from vyos.command import popen
 
 # chech connection to pptp and l2tp daemon
 def get_sessions():
