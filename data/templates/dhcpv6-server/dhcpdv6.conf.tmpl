@@ -56,6 +56,9 @@ shared-network {{ network.name }} {
         {%- if subnet.sntp_server %}
         option dhcp6.sntp-servers {{ subnet.sntp_server | join(', ') }};
         {%- endif %}
+        {%- for prefix in subnet.prefix_delegation %}
+        prefix6 {{ prefix.start }} {{ prefix.stop }} /{{ prefix.length }};
+        {%- endfor %}
         {%- for host in subnet.static_mapping %}
         {% if not host.disabled -%}
         host {{ network.name }}_{{ host.name }} {

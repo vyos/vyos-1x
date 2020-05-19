@@ -85,6 +85,7 @@ def get_config():
                         'nis_server': [],
                         'nisp_domain': '',
                         'nisp_server': [],
+                        'prefix_delegation': [],
                         'sip_address': [],
                         'sip_hostname': [],
                         'sntp_server': [],
@@ -161,10 +162,6 @@ def get_config():
                     if conf.exists(['nisplus-server']):
                         subnet['nisp_server'] = conf.return_values(['nisplus-server'])
 
-                    # Prefix Delegation (RFC 3633)
-                    if conf.exists(['prefix-delegation']):
-                        print('TODO: This option is actually not implemented right now!')
-
                     # Local SIP server that is to be used for all outbound SIP requests - IPv6 address
                     if conf.exists(['sip-server']):
                         for value in conf.return_values(['sip-server']):
@@ -177,9 +174,28 @@ def get_config():
                     if conf.exists(['sntp-server']):
                         subnet['sntp_server'] = conf.return_values(['sntp-server'])
 
+                    # Prefix Delegation (RFC 3633)
+                    if conf.exists(['prefix-delegation', 'start']):
+                        for address in conf.list_nodes(['prefix-delegation', 'start']):
+                            conf.set_level(base + ['shared-network-name', network, 'subnet', net, 'prefix-delegation', 'start', address])
+                            prefix = {
+                                'start' : address,
+                                'stop' : '',
+                                'length' : ''
+                            }
+
+                            if conf.exists(['prefix-length']):
+                                prefix['length'] = conf.return_value(['prefix-length'])
+
+                            if conf.exists(['stop']):
+                                prefix['stop'] = conf.return_value(['stop'])
+
+                            subnet['prefix_delegation'].append(prefix)
+
                     #
                     # Static DHCP v6 leases
                     #
+                    conf.set_level(base + ['shared-network-name', network, 'subnet', net])
                     if conf.exists(['static-mapping']):
                         for mapping in conf.list_nodes(['static-mapping']):
                             conf.set_level(base + ['shared-network-name', network, 'subnet', net, 'static-mapping', mapping])
@@ -279,6 +295,14 @@ def verify(dhcpv6):
                                       'Pool stop address {0} defined multipe times!'.format(stop))
                 else:
                     range6_stop.append(stop)
+
+            # Prefix delegation sanity checks
+            for prefix in subnet['prefix_delegation']:
+                if not prefix['stop']:
+                    raise ConfigError('Stop address of delegated IPv6 prefix range must be configured')
+
+                if not prefix['length']:
+                    raise ConfigError('Length of delegated IPv6 prefix must be configured')
 
             # We also have prefixes that require checking
             for prefix in subnet['range6_prefix']:
