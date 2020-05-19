@@ -24,7 +24,7 @@ from netifaces import interfaces
 from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
-from vyos.configdict import list_diff, intf_to_dict, add_to_dict
+from vyos.configdict import list_diff, intf_to_dict, add_to_dict, interface_default_data
 from vyos.ifconfig import WiFiIf, Section
 from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos.template import render
@@ -33,8 +33,7 @@ from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
-    'address': [],
-    'address_remove': [],
+    **interface_default_data,
     'cap_ht' : False,
     'cap_ht_40mhz_incapable' : False,
     'cap_ht_powersave' : False,
@@ -69,33 +68,13 @@ default_config_data = {
     'cap_vht_vht_cf' : False,
     'channel': '',
     'country_code': '',
-    'description': '',
     'deleted': False,
-    'dhcp_client_id': '',
-    'dhcp_hostname': '',
-    'dhcp_vendor_class_id': '',
-    'dhcpv6_prm_only': False,
-    'dhcpv6_temporary': False,
-    'disable': False,
     'disable_broadcast_ssid' : False,
     'disable_link_detect' : 1,
     'expunge_failing_stations' : False,
     'hw_id' : '',
     'intf': '',
     'isolate_stations' : False,
-    'ip_disable_arp_filter': 1,
-    'ip_enable_arp_accept': 0,
-    'ip_enable_arp_announce': 0,
-    'ip_enable_arp_ignore': 0,
-    'ip_proxy_arp': 0,
-    'ipv6_accept_ra': 1,
-    'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': [],
-    'ipv6_eui64_prefix_remove': [],
-    'ipv6_forwarding': 1,
-    'ipv6_dup_addr_detect': 1,
-    'is_bridge_member': False,
-    'mac' : '',
     'max_stations' : '',
     'mgmt_frame_protection' : 'disabled',
     'mode' : 'g',
@@ -113,8 +92,7 @@ default_config_data = {
     'vif': {},
     'vif_remove': [],
     'vif_s': {},
-    'vif_s_remove': [],
-    'vrf': ''
+    'vif_s_remove': []
 }
 
 def get_conf_file(conf_type, intf):

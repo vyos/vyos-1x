@@ -22,44 +22,21 @@ from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
-from vyos.configdict import list_diff, intf_to_dict, add_to_dict
+from vyos.configdict import list_diff, intf_to_dict, add_to_dict, interface_default_data
 from vyos.validate import is_member
 from vyos.config import Config
 from vyos import ConfigError
 
 default_config_data = {
-    'address': [],
-    'address_remove': [],
-    'description': '',
+    **interface_default_data,
     'deleted': False,
-    'dhcp_client_id': '',
-    'dhcp_hostname': '',
-    'dhcp_vendor_class_id': '',
-    'dhcpv6_prm_only': False,
-    'dhcpv6_temporary': False,
-    'disable': False,
-    'disable_link_detect': 1,
     'duplex': 'auto',
     'flow_control': 'on',
     'hw_id': '',
     'ip_arp_cache_tmo': 30,
-    'ip_disable_arp_filter': 1,
-    'ip_enable_arp_accept': 0,
-    'ip_enable_arp_announce': 0,
-    'ip_enable_arp_ignore': 0,
-    'ip_proxy_arp': 0,
     'ip_proxy_arp_pvlan': 0,
-    'ipv6_accept_ra': 1,
-    'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': [],
-    'ipv6_eui64_prefix_remove': [],
-    'ipv6_forwarding': 1,
-    'ipv6_dup_addr_detect': 1,
-    'is_bridge_member': False,
     'is_bond_member': False,
     'intf': '',
-    'mac': '',
-    'mtu': 1500,
     'offload_gro': 'off',
     'offload_gso': 'off',
     'offload_sg': 'off',
@@ -72,6 +49,7 @@ default_config_data = {
     'vif_remove': [],
     'vrf': ''
 }
+
 
 def get_config():
     # determine tagNode instance

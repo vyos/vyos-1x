@@ -22,47 +22,26 @@ from netifaces import interfaces
 
 from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
-from vyos.configdict import list_diff
+from vyos.configdict import list_diff, interface_default_data
 from vyos.validate import is_member, has_address_configured
 from vyos.config import Config
 from vyos.util import cmd, get_bridge_member_config
 from vyos import ConfigError
 
 default_config_data = {
-    'address': [],
-    'address_remove': [],
+    **interface_default_data,
     'aging': 300,
     'arp_cache_tmo': 30,
-    'description': '',
     'deleted': False,
-    'dhcp_client_id': '',
-    'dhcp_hostname': '',
-    'dhcp_vendor_class_id': '',
-    'dhcpv6_prm_only': False,
-    'dhcpv6_temporary': False,
-    'disable': False,
-    'disable_link_detect': 1,
     'forwarding_delay': 14,
     'hello_time': 2,
-    'ip_disable_arp_filter': 1,
-    'ip_enable_arp_accept': 0,
-    'ip_enable_arp_announce': 0,
-    'ip_enable_arp_ignore': 0,
-    'ipv6_accept_ra': 1,
-    'ipv6_autoconf': 0,
-    'ipv6_eui64_prefix': [],
-    'ipv6_eui64_prefix_remove': [],
-    'ipv6_forwarding': 1,
-    'ipv6_dup_addr_detect': 1,
     'igmp_querier': 0,
     'intf': '',
-    'mac' : '',
     'max_age': 20,
     'member': [],
     'member_remove': [],
     'priority': 32768,
-    'stp': 0,
-    'vrf': ''
+    'stp': 0
 }
 
 def get_config():
