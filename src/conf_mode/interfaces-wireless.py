@@ -600,6 +600,9 @@ def apply(wifi):
         if wifi['dhcpv6_temporary']:
             w.dhcp.v6.options['dhcpv6_temporary'] = True
 
+        if wifi['dhcpv6_pd']:
+            w.dhcp.v6.options['dhcpv6_pd'] = wifi['dhcpv6_pd']
+
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])
 

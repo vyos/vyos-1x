@@ -201,6 +201,9 @@ def apply(eth):
         if eth['dhcpv6_temporary']:
             e.dhcp.v6.options['dhcpv6_temporary'] = True
 
+        if eth['dhcpv6_pd']:
+            e.dhcp.v6.options['dhcpv6_pd'] = e['dhcpv6_pd']
+
         # ignore link state changes
         e.set_link_detect(eth['disable_link_detect'])
         # disable ethernet flow control (pause frames)

@@ -112,6 +112,7 @@ interface_default_data = {
     'dhcp_vendor_class_id': '',
     'dhcpv6_prm_only': False,
     'dhcpv6_temporary': False,
+    'dhcpv6_pd': [],
     'disable': False,
     'disable_link_detect': 1,
     'ip_disable_arp_filter': 1,
@@ -225,6 +226,32 @@ def intf_to_dict(conf, default):
     # DHCPv6 only acquire config parameters, no address
     if conf.exists(['dhcpv6-options', 'parameters-only']):
         intf['dhcpv6_prm_only'] = True
+
+    # DHCPv6 prefix delegation (RFC3633)
+    current_level = conf.get_level()
+    if conf.exists(['dhcpv6-options', 'delegate']):
+        for interface in conf.list_nodes(['dhcpv6-options', 'delegate']):
+            conf.set_level(current_level + ['dhcpv6-options', 'delegate', interface])
+            pd = {
+                'ifname': interface,
+                'sla_id': '',
+                'sla_len': '',
+                'if_id': ''
+            }
+
+            if conf.exists(['sla-id']):
+                pd['sla_id'] = conf.return_value(['sla-id'])
+
+            if conf.exists(['sla-len']):
+                pd['sla_len'] = conf.return_value(['sla-len'])
+
+            if conf.exists(['interface-id']):
+                pd['if_id'] = conf.return_value(['interface-id'])
+
+            intf['dhcpv6_pd'].append(pd)
+
+    # re-set config level
+    conf.set_level(current_level)
 
     # DHCPv6 temporary IPv6 address
     if conf.exists(['dhcpv6-options', 'temporary']):

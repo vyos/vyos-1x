@@ -171,6 +171,9 @@ def apply(peth):
     if peth['dhcpv6_temporary']:
         p.dhcp.v6.options['dhcpv6_temporary'] = True
 
+    if peth['dhcpv6_pd']:
+        p.dhcp.v6.options['dhcpv6_pd'] = peth['dhcpv6_pd']
+
     # ignore link state changes
     p.set_link_detect(peth['disable_link_detect'])
     # configure ARP cache timeout in milliseconds
