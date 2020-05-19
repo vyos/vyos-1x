@@ -206,117 +206,114 @@ def intf_to_dict(conf, default):
     intf['intf'] = ifname_from_config(conf)
 
     # retrieve interface description
-    if conf.exists('description'):
-        intf['description'] = conf.return_value('description')
+    if conf.exists(['description']):
+        intf['description'] = conf.return_value(['description'])
 
     # get DHCP client identifier
-    if conf.exists('dhcp-options client-id'):
-        intf['dhcp_client_id'] = conf.return_value('dhcp-options client-id')
+    if conf.exists(['dhcp-options', 'client-id']):
+        intf['dhcp_client_id'] = conf.return_value(['dhcp-options', 'client-id'])
 
     # DHCP client host name (overrides the system host name)
-    if conf.exists('dhcp-options host-name'):
-        intf['dhcp_hostname'] = conf.return_value('dhcp-options host-name')
+    if conf.exists(['dhcp-options', 'host-name']):
+        intf['dhcp_hostname'] = conf.return_value(['dhcp-options', 'host-name'])
 
     # DHCP client vendor identifier
-    if conf.exists('dhcp-options vendor-class-id'):
+    if conf.exists(['dhcp-options', 'vendor-class-id']):
         intf['dhcp_vendor_class_id'] = conf.return_value(
-            'dhcp-options vendor-class-id')
+            ['dhcp-options', 'vendor-class-id'])
 
     # DHCPv6 only acquire config parameters, no address
-    if conf.exists('dhcpv6-options parameters-only'):
+    if conf.exists(['dhcpv6-options', 'parameters-only']):
         intf['dhcpv6_prm_only'] = True
 
     # DHCPv6 temporary IPv6 address
-    if conf.exists('dhcpv6-options temporary'):
+    if conf.exists(['dhcpv6-options', 'temporary']):
         intf['dhcpv6_temporary'] = True
 
     # ignore link state changes
-    if conf.exists('disable-link-detect'):
+    if conf.exists(['disable-link-detect']):
         intf['disable_link_detect'] = 2
 
     # ARP filter configuration
-    if conf.exists('ip disable-arp-filter'):
+    if conf.exists(['ip', 'disable-arp-filter']):
         intf['ip_disable_arp_filter'] = 0
 
     # ARP enable accept
-    if conf.exists('ip enable-arp-accept'):
+    if conf.exists(['ip', 'enable-arp-accept']):
         intf['ip_enable_arp_accept'] = 1
 
     # ARP enable announce
-    if conf.exists('ip enable-arp-announce'):
+    if conf.exists(['ip', 'enable-arp-announce']):
         intf['ip_enable_arp_announce'] = 1
 
     # ARP enable ignore
-    if conf.exists('ip enable-arp-ignore'):
+    if conf.exists(['ip', 'enable-arp-ignore']):
         intf['ip_enable_arp_ignore'] = 1
 
     # Enable Proxy ARP
-    if conf.exists('ip enable-proxy-arp'):
+    if conf.exists(['ip', 'enable-proxy-arp']):
         intf['ip_proxy_arp'] = 1
 
     # Enable acquisition of IPv6 address using stateless autoconfig (SLAAC)
-    if conf.exists('ipv6 address autoconf'):
+    if conf.exists(['ipv6', 'address', 'autoconf']):
         intf['ipv6_autoconf'] = 1
 
     # Disable IPv6 forwarding on this interface
-    if conf.exists('ipv6 disable-forwarding'):
+    if conf.exists(['ipv6', 'disable-forwarding']):
         intf['ipv6_forwarding'] = 0
 
     # check if interface is member of a bridge
     intf['is_bridge_member'] = is_member(conf, intf['intf'], 'bridge')
 
     # IPv6 Duplicate Address Detection (DAD) tries
-    if conf.exists('ipv6 dup-addr-detect-transmits'):
+    if conf.exists(['ipv6', 'dup-addr-detect-transmits']):
         intf['ipv6_dup_addr_detect'] = int(
-            conf.return_value('ipv6 dup-addr-detect-transmits'))
+            conf.return_value(['ipv6', 'dup-addr-detect-transmits']))
 
     # Media Access Control (MAC) address
-    if conf.exists('mac'):
-        intf['mac'] = conf.return_value('mac')
+    if conf.exists(['mac']):
+        intf['mac'] = conf.return_value(['mac'])
 
     # Maximum Transmission Unit (MTU)
-    if conf.exists('mtu'):
-        intf['mtu'] = int(conf.return_value('mtu'))
+    if conf.exists(['mtu']):
+        intf['mtu'] = int(conf.return_value(['mtu']))
 
     # retrieve VRF instance
-    if conf.exists('vrf'):
-        intf['vrf'] = conf.return_value('vrf')
+    if conf.exists(['vrf']):
+        intf['vrf'] = conf.return_value(['vrf'])
 
     #  egress QoS
-    if conf.exists('egress-qos'):
-        intf['egress_qos'] = conf.return_value('egress-qos')
+    if conf.exists(['egress-qos']):
+        intf['egress_qos'] = conf.return_value(['egress-qos'])
 
     # egress changes QoS require VLAN interface recreation
-    if conf.return_effective_value('egress-qos'):
-        if intf['egress_qos'] != conf.return_effective_value('egress-qos'):
+    if conf.return_effective_value(['egress-qos']):
+        if intf['egress_qos'] != conf.return_effective_value(['egress-qos']):
             intf['egress_qos_changed'] = True
 
     # ingress QoS
-    if conf.exists('ingress-qos'):
-        intf['ingress_qos'] = conf.return_value('ingress-qos')
+    if conf.exists(['ingress-qos']):
+        intf['ingress_qos'] = conf.return_value(['ingress-qos'])
 
     # ingress changes QoS require VLAN interface recreation
-    if conf.return_effective_value('ingress-qos'):
-        if intf['ingress_qos'] != conf.return_effective_value('ingress-qos'):
+    if conf.return_effective_value(['ingress-qos']):
+        if intf['ingress_qos'] != conf.return_effective_value(['ingress-qos']):
             intf['ingress_qos_changed'] = True
 
     # Get the interface addresses
-    intf['address'] = conf.return_values('address')
+    intf['address'] = conf.return_values(['address'])
 
     # addresses to remove - difference between effective and working config
     intf['address_remove'] = list_diff(
-            conf.return_effective_values('address'),
-            intf['address']
-            )
+            conf.return_effective_values(['address']), intf['address'])
 
     # Get prefixes for IPv6 addressing based on MAC address (EUI-64)
-    intf['ipv6_eui64_prefix'] = conf.return_values('ipv6 address eui64')
+    intf['ipv6_eui64_prefix'] = conf.return_values(['ipv6', 'address', 'eui64'])
 
     # EUI64 to remove - difference between effective and working config
     intf['ipv6_eui64_prefix_remove'] = list_diff(
-            conf.return_effective_values('ipv6 address eui64'),
-            intf['ipv6_eui64_prefix']
-            )
+            conf.return_effective_values(['ipv6', 'address', 'eui64']),
+            intf['ipv6_eui64_prefix'])
 
     # Determine if the interface should be disabled
     disabled = disable_state(conf)
@@ -335,9 +332,8 @@ def intf_to_dict(conf, default):
 
     # Remove the default link-local address if no-default-link-local is set,
     # if member of a bridge or if disabled (it may not have a MAC if it's down)
-    if ( conf.exists('ipv6 address no-default-link-local')
-            or intf.get('is_bridge_member')
-            or intf['disable'] ):
+    if ( conf.exists(['ipv6', 'address', 'no-default-link-local'])
+            or intf.get('is_bridge_member') or intf['disable'] ):
         intf['ipv6_eui64_prefix_remove'].append('fe80::/64')
     else:
         # add the link-local by default to make IPv6 work
