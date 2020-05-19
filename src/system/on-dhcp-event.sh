@@ -43,13 +43,13 @@ case "$action" in
        exit 1
     fi
     # add host
-    /usr/bin/vyos-hostsd-client --add-hosts --tag "DHCP-$client_ip" --host "$client_fqdn_name,$client_ip"
+    sudo /usr/bin/vyos-hostsd-client --add-hosts --tag "DHCP-$client_ip" --host "$client_fqdn_name,$client_ip"
     ((changes++))
     ;;
 
   release) # delete mapping for released address
     # delete host
-    /usr/bin/vyos-hostsd-client --delete-hosts --tag "DHCP-$client_ip"
+    sudo /usr/bin/vyos-hostsd-client --delete-hosts --tag "DHCP-$client_ip"
     ((changes++))
     ;;
 
