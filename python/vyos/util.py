@@ -21,12 +21,24 @@ import sys
 # where it is used so it is as local as possible to the execution
 #
 
-# There is many (too many) ways to run command with python
-# os.system, subprocess.Popen, subproces.{run,call,check_output}
-# which all have slighty different behaviour
-from subprocess import Popen, PIPE, STDOUT, DEVNULL
+
+def _need_sudo(command):
+    return os.path.basename(command.split()[0]) in ('', )
+
+
+def _add_sudo(command):
+    if _need_sudo(command):
+        return 'sudo ' + command
+    return command
+
+
+from subprocess import Popen
+from subprocess import PIPE
+from subprocess import DEVNULL
+
+
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=PIPE, decode='utf-8'):
+          stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True):
     """
     popen is a wrapper helper aound subprocess.Popen
     with it default setting it will return a tuple (out, err)
@@ -52,14 +64,21 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
              the default is explicitely utf-8 which is python's own default
 
     usage:
-    to get both stdout, and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
-    to discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
+    get both stdout and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
+    discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
     """
+
+    # airbag must be left as an import in the function as otherwise we have a
+    # a circual import dependency
     from vyos import debug
     from vyos import airbag
+
     # log if the flag is set, otherwise log if command is set
     if not debug.enabled(flag):
         flag = 'command'
+
+    if autosudo:
+        command = _add_sudo(command)
 
     cmd_msg = f"cmd '{command}'"
     debug.message(cmd_msg, flag)
@@ -72,9 +91,11 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
             use_shell = True
         if env:
             use_shell = True
+
     if input:
         stdin = PIPE
         input = input.encode() if type(input) is str else input
+
     p = Popen(
         command,
         stdin=stdin, stdout=stdout, stderr=stderr,
@@ -112,9 +133,9 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def run(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=DEVNULL, stderr=PIPE, decode='utf-8'):
+        stdout=DEVNULL, stderr=PIPE, decode='utf-8', autosudo=True):
     """
-    A wrapper around vyos.util.popen, which discard the stdout and
+    A wrapper around popen, which discard the stdout and
     will return the error code of a command
     """
     _, code = popen(
@@ -128,14 +149,15 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, decode='utf-8',
+        stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True,
         raising=None, message='', expect=[0]):
     """
-    A wrapper around vyos.util.popen, which returns the stdout and
+    A wrapper around popen, which returns the stdout and
     will raise the error code of a command
 
-    raising: specify which call should be used when raising (default is OSError)
+    raising: specify which call should be used when raising
              the class should only require a string as parameter
+             (default is OSError) with the error code
     expect:  a list of error codes to consider as normal
     """
     decoded, code = popen(
@@ -159,9 +181,9 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=PIPE, stderr=PIPE, decode='utf-8'):
+         stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True):
     """
-    A wrapper around vyos.util.popen, which print the stdout and
+    A wrapper around popen, which print the stdout and
     will return the error code of a command
     """
     out, code = popen(
