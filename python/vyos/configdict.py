@@ -103,8 +103,7 @@ def get_ethertype(ethertype_val):
     else:
         raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
 
-
-vlan_default = {
+interface_default_data = {
     'address': [],
     'address_remove': [],
     'description': '',
@@ -115,8 +114,6 @@ vlan_default = {
     'dhcpv6_temporary': False,
     'disable': False,
     'disable_link_detect': 1,
-    'egress_qos': '',
-    'egress_qos_changed': False,
     'ip_disable_arp_filter': 1,
     'ip_enable_arp_accept': 0,
     'ip_enable_arp_announce': 0,
@@ -128,14 +125,20 @@ vlan_default = {
     'ipv6_eui64_prefix_remove': [],
     'ipv6_forwarding': 1,
     'ipv6_dup_addr_detect': 1,
-    'ingress_qos': '',
-    'ingress_qos_changed': False,
     'is_bridge_member': False,
     'mac': '',
     'mtu': 1500,
-    'vif_c': {},
-    'vif_c_remove': [],
     'vrf': ''
+}
+
+vlan_default = {
+    **interface_default_data,
+    'egress_qos': '',
+    'egress_qos_changed': False,
+    'ingress_qos': '',
+    'ingress_qos_changed': False,
+    'vif_c': {},
+    'vif_c_remove': []
 }
 
 # see: https://docs.python.org/3/library/enum.html#functional-api
