@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<!-- Enhanced Interior Gateway Routing Protocol (EIGRP) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <tagNode name="eigrp" owner="${vyos_conf_scripts_dir}/protocols_eigrp.py">
+        <properties>
+          <help>Enhanced Interior Gateway Routing Protocol (EIGRP) parameters</help>
+          <valueHelp>
+            <format>&lt;1-65535&gt;</format>
+            <description>AS number</description>
+          </valueHelp>
+          <constraint>
+            <validator name="numeric" argument="--range 1-65535"/>
+          </constraint>
+        </properties>
+        <children>
+          <leafNode name="maximum-paths">
+            <properties>
+              <help>Forward packets over multiple paths</help>
+              <valueHelp>
+                <format>&lt;1-32&gt;</format>
+                <description>Number of paths</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-32"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="metric">
+            <properties>
+              <help>Modify metrics and parameters for advertisement</help>
+            </properties>
+            <children>
+              <leafNode name="weights">
+                <properties>
+                  <help>Modify metric coefficients</help>
+                  <valueHelp>
+                    <format>&lt;0-255&gt;</format>
+                    <description>K1</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="network">
+            <properties>
+              <help>Enable routing on an IP network</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>EIGRP network prefix</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-prefix"/>
+              </constraint>
+              <multi/>  
+            </properties>
+          </leafNode>
+          <leafNode name="passive-interface">
+            <properties>
+              <help>Suppress routing updates on an interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <leafNode name="redistribute">
+            <properties>
+              <help>Redistribute information from another routing protocol</help>
+              <valueHelp>
+                <format>bgp</format>
+                <description>Border Gateway Protocol (BGP)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>connected</format>
+                <description>Connected routes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>nhrp</format>
+                <description>Next Hop Resolution Protocol (NHRP)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ospf</format>
+                <description>Open Shortest Path First (OSPFv2)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>rip</format>
+                <description>Routing Information Protocol (RIP)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>static</format>
+                <description>Statically configured routes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>vnc</format>
+                <description>Virtual Network Control (VNC)</description>
+              </valueHelp>
+              <completionHelp>
+                <list>bgp connected nhrp ospf rip static vnc</list>
+              </completionHelp>
+              <constraint>
+                <regex>(bgp|connected|nhrp|ospf|rip|static|vnc)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="router-id">
+            <properties>
+              <help>Router ID for this EIGRP process</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>EIGRP Router-ID in IP address format</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+      <!-- Timers don't work in FRR    
+      <leafNode name="timers">
+            <properties>
+              <help>test</help>
+              <valueless/>
+            </properties>
+          </leafNode>  -->
+          <leafNode name="variance">
+            <properties>
+              <help>Control load balancing variance</help>
+              <valueHelp>
+                <format>&lt;1-128&gt;</format>
+                <description>Metric variance multiplier</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-128"/>
+              </constraint>            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
