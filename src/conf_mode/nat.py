@@ -78,10 +78,6 @@ def verify_rule(rule, err_msg):
 
     if not rule['translation_address']:
         raise ConfigError(f'{err_msg} translation address not specified')
-    else:
-        addr = rule['translation_address']
-        if addr != 'masquerade' and not is_addr_assigned(addr):
-            print(f'Warning: IP address {addr} does not exist on the system!')
 
 
 def parse_source_destination(conf, source_dest):
@@ -224,6 +220,11 @@ def verify(nat):
 
         if not rule['interface_out']:
             raise ConfigError(f'{err_msg} outbound-interface not specified')
+
+        if rule['translation_address']:
+            addr = rule['translation_address']
+            if addr != 'masquerade' and not is_addr_assigned(addr):
+                print(f'Warning: IP address {addr} does not exist on the system!')
 
         # common rule verification
         verify_rule(rule, err_msg)
