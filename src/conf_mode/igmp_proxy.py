@@ -121,7 +121,7 @@ def generate(igmp_proxy):
 def apply(igmp_proxy):
     if igmp_proxy is None or igmp_proxy['disable']:
          # IGMP Proxy support is removed in the commit
-         call('sudo systemctl stop igmpproxy.service')
+         call('systemctl stop igmpproxy.service')
          if os.path.exists(config_file):
              os.unlink(config_file)
     else:

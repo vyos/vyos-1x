@@ -228,10 +228,10 @@ def generate(lldp):
 def apply(lldp):
     if lldp:
         # start/restart lldp service
-        call('sudo systemctl restart lldpd.service')
+        call('systemctl restart lldpd.service')
     else:
         # LLDP service has been terminated
-        call('sudo systemctl stop lldpd.service')
+        call('systemctl stop lldpd.service')
         os.unlink(config_file)
         os.unlink(vyos_config_file)
 

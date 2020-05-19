@@ -195,7 +195,7 @@ if not _uacctd_running():
 # restart pmacct daemon
 if cmd_args.action == 'restart':
     # run command to restart flow-accounting
-    cmd('sudo systemctl restart uacctd.service',
+    cmd('systemctl restart uacctd.service',
         message='Failed to restart flow-accounting')
 
 # clear in-memory collected flows
