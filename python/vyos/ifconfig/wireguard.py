@@ -208,7 +208,7 @@ class WireGuardIf(Interface):
             else:
                 cmd += aip
         if self.config['endpoint']:
-            cmd += " endpoint {}".format(self.config['endpoint'])
+            cmd += " endpoint '{}'".format(self.config['endpoint'])
         cmd += " persistent-keepalive {}".format(self.config['keepalive'])
 
         self._cmd(cmd)

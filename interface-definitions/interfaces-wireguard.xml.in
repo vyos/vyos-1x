@@ -89,10 +89,14 @@
                   <help>IP address of tunnel remote end</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IP address to listen for incoming connections</description>
+                    <description>IPv4 address to listen for incoming connections</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to listen for incoming connections</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="ipv4-address"/>
+                    <validator name="ip-address"/>
                   </constraint>
                 </properties>
               </leafNode>

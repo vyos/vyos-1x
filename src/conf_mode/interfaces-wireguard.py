@@ -25,7 +25,7 @@ from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
 from vyos.util import chown, chmod_750, call
-from vyos.validate import is_member
+from vyos.validate import is_member, is_ipv6
 from vyos import ConfigError
 
 kdir = r'/config/auth/wireguard'
@@ -288,8 +288,10 @@ def apply(wg):
 
         # endpoint
         if peer['address'] and peer['port']:
-            w.config['endpoint'] = '{}:{}'.format(
-                peer['address'], peer['port'])
+            if is_ipv6(peer['address']):
+                w.config['endpoint'] = '[{}]:{}'.format(peer['address'], peer['port'])
+            else:
+                w.config['endpoint'] = '{}:{}'.format(peer['address'], peer['port'])
 
         # persistent-keepalive
         if peer['persistent_keepalive']:
