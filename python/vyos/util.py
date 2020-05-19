@@ -23,7 +23,7 @@ import sys
 
 
 def _need_sudo(command):
-    return os.path.basename(command.split()[0]) in ('', )
+    return os.path.basename(command.split()[0]) in ('systemctl', )
 
 
 def _add_sudo(command):
