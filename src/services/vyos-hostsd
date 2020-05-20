@@ -28,6 +28,7 @@ import zmq
 import collections
 
 import jinja2
+from vyos.util import popen, process_named_running
 
 debug = True
 
@@ -212,13 +213,17 @@ def handle_message(msg_json):
     op = get_option(msg, 'op')
     _type = get_option(msg, 'type')
 
+    changes = 0
+
     if op == 'delete':
         tag = get_option(msg, 'tag')
 
         if _type == 'name_servers':
             delete_name_servers(STATE, tag)
+            changes += 1
         elif _type == 'hosts':
             delete_hosts(STATE, tag)
+            changes += 1
         else:
             raise ValueError("Unknown message type {0}".format(_type))
     elif op == 'add':
@@ -226,8 +231,10 @@ def handle_message(msg_json):
         entries = get_option(msg, 'data')
         if _type == 'name_servers':
             add_name_servers(STATE, entries, tag)
+            changes += 1
         elif _type == 'hosts':
             add_hosts(STATE, entries, tag)
+            changes += 1
         else:
             raise ValueError("Unknown message type {0}".format(_type))
     elif op == 'set':
@@ -236,6 +243,7 @@ def handle_message(msg_json):
         data = get_option(msg, 'data')
         if _type == 'host_name':
             set_host_name(STATE, data)
+            changes += 1
         else:
             raise ValueError("Unknown message type {0}".format(_type))
     elif op == 'get':
@@ -254,6 +262,12 @@ def handle_message(msg_json):
     logger.info("Saving state to {0}".format(STATE_FILE))
     with open(STATE_FILE, 'w') as f:
         json.dump(STATE, f)
+
+    if changes > 0:
+        if process_named_running("pdns_recursor"):
+            (ret,return_code) = popen("sudo rec_control --socket-dir=/run/powerdns reload-zones")
+            if return_code > 0:
+                logger.exception("PowerDNS rec_control failed to reload")
 
 def exit_handler(sig, frame):
     """ Clean up the state when shutdown correctly """
