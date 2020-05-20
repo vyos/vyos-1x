@@ -22,7 +22,7 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos.ifconfig import WireGuardIf
 from vyos.util import chown, chmod_750, call
 from vyos.validate import is_member, is_ipv6

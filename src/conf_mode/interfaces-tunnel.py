@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.ifconfig import Interface, GREIf, GRETapIf, IPIPIf, IP6GREIf, IPIP6If, IP6IP6If, SitIf, Sit6RDIf
 from vyos.ifconfig.afi import IP4, IP6
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos.validate import is_ipv4, is_ipv6, is_member
 from vyos import ConfigError
 from vyos.dicts import FixedDict

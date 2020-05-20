@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
-from vyos.configdict import list_diff, intf_to_dict, add_to_dict, interface_default_data
+from vyos.config.interface import list_diff, intf_to_dict, add_to_dict, interface_default_data
 from vyos.validate import is_member
 from vyos.config import Config
 from vyos import ConfigError

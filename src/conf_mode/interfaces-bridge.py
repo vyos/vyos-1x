@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.ifconfig import BridgeIf, Section
 from vyos.ifconfig.stp import STP
-from vyos.configdict import list_diff, interface_default_data
+from vyos.config.interface import list_diff, interface_default_data
 from vyos.validate import is_member, has_address_configured
 from vyos.config import Config
 from vyos.util import cmd, get_bridge_member_config

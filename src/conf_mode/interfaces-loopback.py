@@ -20,7 +20,7 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.ifconfig import LoopbackIf
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos.config import Config
 from vyos import ConfigError
 

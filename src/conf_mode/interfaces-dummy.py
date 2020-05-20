@@ -21,7 +21,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.ifconfig import DummyIf
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos.config import Config
 from vyos.validate import is_member
 from vyos import ConfigError

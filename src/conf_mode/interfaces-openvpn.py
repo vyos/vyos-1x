@@ -25,7 +25,7 @@ from time import sleep
 from shutil import rmtree
 
 from vyos.config import Config
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos.ifconfig import VTunIf
 from vyos.template import render
 from vyos.util import call, chown, chmod_600, chmod_755

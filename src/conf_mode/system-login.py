@@ -24,7 +24,7 @@ from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos import ConfigError
 from vyos.util import cmd
 from vyos.util import call

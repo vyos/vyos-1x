@@ -21,7 +21,7 @@ from copy import deepcopy
 from json import loads
 
 from vyos.config import Config
-from vyos.configdict import list_diff
+from vyos.config.interface import list_diff
 from vyos.ifconfig import Interface
 from vyos.util import read_file, cmd
 from vyos import ConfigError
