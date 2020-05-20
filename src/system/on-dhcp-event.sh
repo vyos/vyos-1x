@@ -59,15 +59,6 @@ case "$action" in
     ;;
 esac
 
-if [ $changes -gt 0 ]; then
-  echo Success
-  pid=`pgrep pdns_recursor`
-  if [ -n "$pid" ]; then
-     sudo rec_control --socket-dir=/run/powerdns reload-zones
-  fi
-else
-  echo No changes made
-fi
 exit 0
 
 
