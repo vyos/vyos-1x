@@ -278,7 +278,11 @@ if __name__ == '__main__':
 
     context = zmq.Context()
     socket = context.socket(zmq.REP)
+    
+    # Set the right permissions on the socket, then change it back
+    o_mask = os.umask(0)
     socket.bind(SOCKET_PATH)
+    os.umask(o_mask)
 
     while True:
         #  Wait for next request from client
