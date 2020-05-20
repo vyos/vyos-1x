@@ -31,7 +31,7 @@ from waitress import serve
 
 from functools import wraps
 
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.config.session import ConfigSession, ConfigSessionError
 from vyos.config import VyOSError
 
 

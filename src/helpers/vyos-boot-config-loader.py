@@ -24,7 +24,7 @@ import traceback
 from datetime import datetime
 
 from vyos.defaults import directories
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.config.session import ConfigSession, ConfigSessionError
 from vyos.config.tree import ConfigTree
 from vyos.util import cmd
 
