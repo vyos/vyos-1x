@@ -5,7 +5,7 @@
 # https://phabricator.vyos.net/T1704
 
 import sys
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")

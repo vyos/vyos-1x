@@ -19,7 +19,7 @@
 
 from sys import argv, exit
 
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if (len(argv) < 1):
     print("Must specify file name!")

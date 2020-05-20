@@ -9,7 +9,7 @@ import sys
 
 ipv6_blacklist_file = '/etc/modprobe.d/vyatta_blacklist_ipv6.conf'
 
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")

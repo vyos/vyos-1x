@@ -19,7 +19,7 @@
 # - pseudo ethernet
 
 from sys import exit, argv
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if __name__ == '__main__':
     if (len(argv) < 1):

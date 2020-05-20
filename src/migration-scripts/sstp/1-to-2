@@ -23,7 +23,7 @@ import sys
 
 from shutil import copy2
 from stat import S_IRUSR, S_IWUSR, S_IRGRP, S_IROTH
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")

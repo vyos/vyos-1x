@@ -2,7 +2,7 @@
 
 import argparse
 
-import vyos.configtree
+import vyos.config.tree
 
 
 parser = argparse.ArgumentParser()
@@ -20,7 +20,7 @@ args = parser.parse_args()
 with open(args.config_file, 'r') as f:
     config_file = f.read()
 
-config = vyos.configtree.ConfigTree(config_file)
+config = vyos.config.tree.ConfigTree(config_file)
 
 
 # Interface names and addresses are comma-separated,

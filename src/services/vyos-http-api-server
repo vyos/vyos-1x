@@ -220,10 +220,10 @@ def retrieve_op(command):
 
             res = session.show_config(path=command['path'])
             if config_format == 'json':
-                config_tree = vyos.configtree.ConfigTree(res)
+                config_tree = vyos.config.tree.ConfigTree(res)
                 res = json.loads(config_tree.to_json())
             elif config_format == 'json_ast':
-                config_tree = vyos.configtree.ConfigTree(res)
+                config_tree = vyos.config.tree.ConfigTree(res)
                 res = json.loads(config_tree.to_json_ast())
             elif config_format == 'raw':
                 pass

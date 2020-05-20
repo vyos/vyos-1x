@@ -10,7 +10,7 @@ setup(
     license = "LGPLv2+",
     keywords = "vyos",
     url = "http://www.vyos.io",
-    packages=["vyos","vyos.ifconfig"],
+    packages=["vyos", "vyos.ifconfig", "vyos.config"],
     long_description="VyOS configuration libraries",
     classifiers=[
         "Development Status :: 4 - Beta",

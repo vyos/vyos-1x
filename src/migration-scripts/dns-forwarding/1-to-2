@@ -23,7 +23,7 @@
 from ipaddress import ip_interface
 from sys import argv, exit
 from vyos.ifconfig import Interface
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if (len(argv) < 1):
     print("Must specify file name!")

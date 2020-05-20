@@ -21,7 +21,7 @@ import tempfile
 import unittest
 from unittest import TestCase, mock
 
-import vyos.configtree
+import vyos.config.tree
 import vyos.initialsetup as vis
 
 
@@ -29,7 +29,7 @@ class TestInitialSetup(TestCase):
     def setUp(self):
         with open('tests/data/config.boot.default', 'r') as f:
             config_string = f.read()
-            self.config = vyos.configtree.ConfigTree(config_string)
+            self.config = vyos.config.tree.ConfigTree(config_string)
 
     def test_set_user_password(self):
         vis.set_user_password(self.config, 'vyos', 'vyosvyos')

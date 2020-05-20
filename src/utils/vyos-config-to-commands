@@ -3,7 +3,7 @@
 import sys
 
 from signal import signal, SIGPIPE, SIG_DFL
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 signal(SIGPIPE,SIG_DFL)
 

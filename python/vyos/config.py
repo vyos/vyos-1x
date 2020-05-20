@@ -68,7 +68,7 @@ import re
 import json
 import subprocess
 
-import vyos.configtree
+import vyos.config.tree
 
 
 class VyOSError(Exception):
@@ -111,9 +111,9 @@ class Config(object):
         else:
             session_config_text = running_config_text
 
-        self._session_config = vyos.configtree.ConfigTree(session_config_text)
+        self._session_config = vyos.config.tree.ConfigTree(session_config_text)
         if running_config_text:
-            self._running_config = vyos.configtree.ConfigTree(running_config_text)
+            self._running_config = vyos.config.tree.ConfigTree(running_config_text)
         else:
             self._running_config = None
 
@@ -205,7 +205,7 @@ class Config(object):
             try:
                 value = self._session_config.return_value(self._make_path(path_str))
                 return (value == path[-1])
-            except vyos.configtree.ConfigTreeError:
+            except vyos.config.tree.ConfigTreeError:
                 # node doesn't exist at all
                 return False
 
@@ -282,7 +282,7 @@ class Config(object):
         """
         res = self.show_config(self._make_path(path), effective=effective)
         if res:
-            config_tree = vyos.configtree.ConfigTree(res)
+            config_tree = vyos.config.tree.ConfigTree(res)
             config_dict = json.loads(config_tree.to_json())
         else:
             config_dict = {}
@@ -364,7 +364,7 @@ class Config(object):
         """
         try:
             value = self._session_config.return_value(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
+        except vyos.config.tree.ConfigTreeError:
             value = None
 
         if not value:
@@ -389,7 +389,7 @@ class Config(object):
         """
         try:
             values = self._session_config.return_values(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
+        except vyos.config.tree.ConfigTreeError:
             values = []
 
         if not values:
@@ -410,7 +410,7 @@ class Config(object):
         """
         try:
             nodes = self._session_config.list_nodes(self._make_path(path))
-        except vyos.configtree.ConfigTreeError:
+        except vyos.config.tree.ConfigTreeError:
             nodes = []
 
         if not nodes:
@@ -451,7 +451,7 @@ class Config(object):
         if self._running_config:
             try:
                 value = self._running_config.return_value(self._make_path(path))
-            except vyos.configtree.ConfigTreeError:
+            except vyos.config.tree.ConfigTreeError:
                 value = None
         else:
             value = None
@@ -474,7 +474,7 @@ class Config(object):
         if self._running_config:
             try:
                 values = self._running_config.return_values(self._make_path(path))
-            except vyos.configtree.ConfigTreeError:
+            except vyos.config.tree.ConfigTreeError:
                 values = []
         else:
             values = []
@@ -500,7 +500,7 @@ class Config(object):
         if self._running_config:
             try:
                 nodes = self._running_config.list_nodes(self._make_path(path))
-            except vyos.configtree.ConfigTreeError:
+            except vyos.config.tree.ConfigTreeError:
                 nodes = []
         else:
             nodes = []

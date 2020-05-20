@@ -17,7 +17,7 @@
 # Remove network provider name from CLI and rather use provider APN from CLI
 
 import sys
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 if __name__ == '__main__':
     if (len(sys.argv) < 1):

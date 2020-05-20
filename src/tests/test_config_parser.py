@@ -21,14 +21,14 @@ import tempfile
 import unittest
 from unittest import TestCase, mock
 
-import vyos.configtree
+import vyos.config.tree
 
 
 class TestConfigParser(TestCase):
     def setUp(self):
         with open('tests/data/config.valid', 'r') as f:
             config_string = f.read()
-            self.config = vyos.configtree.ConfigTree(config_string)
+            self.config = vyos.config.tree.ConfigTree(config_string)
 
     def test_top_level_valueless(self):
         self.assertTrue(self.config.exists(["top-level-valueless-node"]))
@@ -48,7 +48,7 @@ class TestConfigParser(TestCase):
         self.assertTrue(self.config.exists(["top-level-tag-node", "baz"]))
 
     def test_copy_duplicate(self):
-        with self.assertRaises(vyos.configtree.ConfigTreeError):
+        with self.assertRaises(vyos.config.tree.ConfigTreeError):
             self.config.copy(["top-level-tag-node", "foo"], ["top-level-tag-node", "bar"])
 
     def test_rename(self):
@@ -57,5 +57,5 @@ class TestConfigParser(TestCase):
         self.assertTrue(self.config.exists(["top-level-tag-node", "quux"]))
 
     def test_rename_duplicate(self):
-        with self.assertRaises(vyos.configtree.ConfigTreeError):
+        with self.assertRaises(vyos.config.tree.ConfigTreeError):
             self.config.rename(["top-level-tag-node", "foo"], "bar")

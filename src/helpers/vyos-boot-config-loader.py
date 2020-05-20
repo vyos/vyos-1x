@@ -25,7 +25,7 @@ from datetime import datetime
 
 from vyos.defaults import directories
 from vyos.configsession import ConfigSession, ConfigSessionError
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 from vyos.util import cmd
 
 STATUS_FILE = '/tmp/vyos-config-status'

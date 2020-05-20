@@ -6,7 +6,7 @@
 # https://phabricator.vyos.net/T1556
 
 import sys
-from vyos.configtree import ConfigTree
+from vyos.config.tree import ConfigTree
 
 def migrate_bridge(config, tree, intf):
     # check if bridge-group exists
