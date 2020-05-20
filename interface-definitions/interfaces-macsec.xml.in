@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="macsec" owner="${vyos_conf_scripts_dir}/interfaces-macsec.py">
+        <properties>
+          <help>MACsec Interface (802.1ae)</help>
+          <priority>319</priority>
+          <constraint>
+            <regex>^macsec[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>MACsec interface must be named macsecN</constraintErrorMessage>
+          <valueHelp>
+            <format>macsecN</format>
+            <description>MACsec interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/address-ipv4-ipv6.xml.i>
+          <leafNode name="cipher">
+            <properties>
+              <help>Cipher suite used (default: gcm-aes-128)</help>
+              <completionHelp>
+                <list>gcm-aes-128 gcm-aes-256</list>
+              </completionHelp>
+              <valueHelp>
+                <format>gcm-aes-128</format>
+                <description>Galois/Counter Mode of AES cipher with 128-bit key (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>gcm-aes-256</format>
+                <description>Galois/Counter Mode of AES cipher with 256-bit key</description>
+              </valueHelp>
+              <constraint>
+                <regex>(gcm-aes-128|gcm-aes-256)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          #include <include/interface-description.xml.i>
+          #include <include/interface-disable.xml.i>
+          #include <include/interface-vrf.xml.i>
+          #include <include/source-interface-ethernet.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
