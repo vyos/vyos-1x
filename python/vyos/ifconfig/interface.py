@@ -51,7 +51,7 @@ class Interface(Control):
     # WireGuard to modify their display behaviour
     OperationalClass = Operational
 
-    options = ['debug', 'create',]
+    options = ['debug', 'create']
     required = []
     default = {
         'type': '',
