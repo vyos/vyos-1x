@@ -21,7 +21,7 @@ from sys import exit
 from netifaces import interfaces
 
 from vyos.ifconfig import BondIf
-from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
+from vyos.config.vlan import apply_all_vlans, verify_vlan_config
 from vyos.config.interface import list_diff, intf_to_dict, add_to_dict, interface_default_data
 from vyos.config import Config
 from vyos.util import call, cmd

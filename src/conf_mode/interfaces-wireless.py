@@ -26,7 +26,7 @@ from netaddr import EUI, mac_unix_expanded
 from vyos.config import Config
 from vyos.config.interface import list_diff, intf_to_dict, add_to_dict, interface_default_data
 from vyos.ifconfig import WiFiIf, Section
-from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
+from vyos.config.vlan import apply_all_vlans, verify_vlan_config
 from vyos.template import render
 from vyos.util import chown, call
 from vyos.validate import is_member
