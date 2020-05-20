@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="macsec-key">
+        <properties>
+          <help>Generate MACsec secure channel key</help>
+        </properties>
+        <command>/usr/bin/hexdump -n 16 -e '4/4 "%08x" 1 "\n"' /dev/random</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
