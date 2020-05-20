@@ -34,6 +34,7 @@ def _add_sudo(command):
 
 from subprocess import Popen
 from subprocess import PIPE
+from subprocess import STDOUT
 from subprocess import DEVNULL
 
 
