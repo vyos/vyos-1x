@@ -20,9 +20,10 @@ from copy import deepcopy
 from sys import exit
 from netifaces import interfaces
 
-from vyos.ifconfig import MACsecIf
-from vyos.configdict import list_diff
 from vyos.config import Config
+from vyos.configdict import list_diff
+from vyos.ifconfig import MACsecIf
+from vyos.template import render
 from vyos.validate import is_member
 from vyos import ConfigError
 
@@ -66,10 +67,6 @@ def get_config():
     if conf.exists(['address']):
         macsec['address'] = conf.return_values(['address'])
 
-    # retrieve interface cipher
-    if conf.exists(['cipher']):
-        macsec['cipher'] = conf.return_value(['cipher'])
-
     # retrieve interface description
     if conf.exists(['description']):
         macsec['description'] = conf.return_value(['description'])
@@ -78,8 +75,12 @@ def get_config():
     if conf.exists(['disable']):
         macsec['disable'] = True
 
+    # retrieve interface cipher
+    if conf.exists(['security', 'cipher']):
+        macsec['cipher'] = conf.return_value(['security', 'cipher'])
+
     # Enable optional MACsec encryption
-    if conf.exists(['encrypt']):
+    if conf.exists(['security', 'encrypt']):
         macsec['encrypt'] = 'on'
 
     # Physical interface

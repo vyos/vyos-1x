@@ -17,27 +17,34 @@
         </properties>
         <children>
           #include <include/address-ipv4-ipv6.xml.i>
-          <leafNode name="cipher">
+          <node name="security">
             <properties>
-              <help>Cipher suite used</help>
-              <completionHelp>
-                <list>gcm-aes-128</list>
-              </completionHelp>
-              <valueHelp>
-                <format>gcm-aes-128</format>
-                <description>Galois/Counter Mode of AES cipher with 128-bit key (default)</description>
-              </valueHelp>
-              <constraint>
-                <regex>(gcm-aes-128)</regex>
-              </constraint>
+              <help>Security/Encryption Settings</help>
             </properties>
-          </leafNode>
-          <leafNode name="encrypt">
-            <properties>
-              <help>Enable optional MACsec encryption</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+            <children>
+              <leafNode name="cipher">
+                <properties>
+                  <help>Cipher suite used</help>
+                  <completionHelp>
+                    <list>gcm-aes-128</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>gcm-aes-128</format>
+                    <description>Galois/Counter Mode of AES cipher with 128-bit key (default)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(gcm-aes-128)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="encrypt">
+                <properties>
+                  <help>Enable optional MACsec encryption</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           #include <include/interface-description.xml.i>
           #include <include/interface-disable.xml.i>
           #include <include/interface-vrf.xml.i>
