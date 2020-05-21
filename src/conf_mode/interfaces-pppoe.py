@@ -238,7 +238,7 @@ def apply(pppoe):
 
     if pppoe['disable']:
         # Dial PPPoE connection
-        call(f'systemctl restart ppp@{intf}.service'.format(**pppoe))
+        call('systemctl restart ppp@{intf}.service'.format(**pppoe))
 
     return None
 
