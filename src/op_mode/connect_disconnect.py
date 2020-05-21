@@ -23,9 +23,6 @@ from time import strftime, localtime, time
 
 from vyos.util import call
 
-
-PPP_LOGFILE = '/var/log/vyatta/ppp_{}.log'
-
 def check_interface(interface):
     if not os.path.isfile('/etc/ppp/peers/{}'.format(interface)):
         print('Interface {}: invalid!'.format(interface))
@@ -55,12 +52,6 @@ def connect(interface):
         print('Interface {}: connection is beeing established!'.format(interface))
     else:
         print('Interface {}: connecting...'.format(interface))
-        user = os.environ['SUDO_USER']
-        tm = strftime("%a %d %b %Y %I:%M:%S %p %Z", localtime(time()))
-        with open(PPP_LOGFILE.format(interface), 'a') as f:
-            f.write('{}: user {} started PPP daemon for {} by connect command\n'.format(tm, user, interface))
-            call('umask 0; setsid sh -c "nohup /usr/sbin/pppd call {0} > /tmp/{0}.log 2>&1 &"'.format(interface))
-
 
 def disconnect(interface):
     """
@@ -73,11 +64,6 @@ def disconnect(interface):
         print('Interface {}: connection is already down'.format(interface))
     else:
         print('Interface {}: disconnecting...'.format(interface))
-        user = os.environ['SUDO_USER']
-        tm = strftime("%a %d %b %Y %I:%M:%S %p %Z", localtime(time()))
-        with open(PPP_LOGFILE.format(interface), 'a') as f:
-            f.write('{}: user {} stopped PPP daemon for {} by disconnect command\n'.format(tm, user, interface))
-            call('/usr/bin/poff "{}"'.format(interface))
 
 def main():
     parser = argparse.ArgumentParser()
