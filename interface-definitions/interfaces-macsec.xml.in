@@ -36,6 +36,12 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="encrypt">
+            <properties>
+              <help>Enable optional MACsec encryption</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/interface-description.xml.i>
           #include <include/interface-disable.xml.i>
           #include <include/interface-vrf.xml.i>

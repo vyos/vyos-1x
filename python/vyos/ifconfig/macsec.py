@@ -50,11 +50,16 @@ class MACsecIf(Interface):
         """
         # create tunnel interface
         cmd  = 'ip link add link {source_interface} {ifname} type {type}'
-        cmd += ' cipher {cipher} encrypt on'
+        cmd += ' cipher {cipher}'
         self._cmd(cmd.format(**self.config))
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
+
+    def set_encryption(self, on_off):
+        ifname = self.config['ifname']
+        cmd = f'ip link set {ifname} type macsec encrypt {on_off}'
+        return self._cmd(cmd)
 
     @staticmethod
     def get_config():

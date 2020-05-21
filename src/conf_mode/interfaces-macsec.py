@@ -33,6 +33,7 @@ default_config_data = {
     'deleted': False,
     'description': '',
     'disable': False,
+    'encrypt': 'off',
     'intf': '',
     'source_interface': '',
     'is_bridge_member': False,
@@ -75,6 +76,10 @@ def get_config():
     # Disable this interface
     if conf.exists('disable'):
         macsec['disable'] = True
+
+    # Enable optional MACsec encryption
+    if conf.exists('encrypt'):
+        macsec['encrypt'] = 'on'
 
     # Physical interface
     if conf.exists(['source-interface']):
@@ -143,6 +148,9 @@ def apply(macsec):
         # that the interface will only be create if its non existent
         i = MACsecIf(macsec['intf'], **conf)
 
+        # Configure optional encryption
+        i.set_encryption(macsec['encrypt'])
+
         # update interface description used e.g. within SNMP
         i.set_alias(macsec['description'])
 
@@ -159,10 +167,8 @@ def apply(macsec):
         if not macsec['is_bridge_member']:
             i.set_vrf(macsec['vrf'])
 
-        # disable interface on demand
-        if macsec['disable']:
-            i.set_admin_state('down')
-        else:
+        # Interface is administratively down by default, enable if desired
+        if not macsec['disable']:
             i.set_admin_state('up')
 
     return None
