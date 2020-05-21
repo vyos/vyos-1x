@@ -43,9 +43,9 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <node name="key">
+              <node name="mka">
                 <properties>
-                  <help>Encryption keys</help>
+                  <help>MACsec Key Agreement protocol (MKA)</help>
                 </properties>
                 <children>
                   <leafNode name="cak">

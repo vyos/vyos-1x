@@ -47,7 +47,15 @@ network={
     # 1: Integrity only
     macsec_integ_only={{ '0' if security_encrypt else '1' }}
 
-    mka_cak={{ security_key_cak }}
-    mka_ckn={{ security_key_ckn }}
+    # mka_cak, mka_ckn, and mka_priority: IEEE 802.1X/MACsec pre-shared key mode
+    # This allows to configure MACsec with a pre-shared key using a (CAK,CKN) pair.
+    # In this mode, instances of wpa_supplicant can act as MACsec peers. The peer
+    # with lower priority will become the key server and start distributing SAKs.
+    # mka_cak (CAK = Secure Connectivity Association Key) takes a 16-byte (128-bit)
+    # hex-string (32 hex-digits) or a 32-byte (256-bit) hex-string (64 hex-digits)
+    # mka_ckn (CKN = CAK Name) takes a 1..32-bytes (8..256 bit) hex-string
+    # (2..64 hex-digits)
+    mka_cak={{ security_mka_cak }}
+    mka_ckn={{ security_mka_ckn }}
 }
 

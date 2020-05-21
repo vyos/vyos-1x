@@ -2,18 +2,18 @@
 <interfaceDefinition>
   <node name="generate">
     <children>
-      <node name="macsec-key">
+      <node name="macsec">
         <properties>
-          <help>Generate MACsec secure channel key</help>
+          <help>Generate MACsec Key</help>
         </properties>
         <children>
-          <node name="cak">
+          <node name="mka-cak">
             <properties>
               <help>Generate MACsec connectivity association key (CAK)</help>
             </properties>
             <command>/usr/bin/hexdump -n 16 -e '4/4 "%08x" 1 "\n"' /dev/random</command>
           </node>
-          <node name="ckn">
+          <node name="mka-ckn">
             <properties>
               <help>Generate MACsec connectivity association name (CKN)</help>
             </properties>

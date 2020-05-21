@@ -36,8 +36,9 @@ default_config_data = {
     'disable': False,
     'security_cipher': '',
     'security_encrypt': False,
-    'security_key_cak': '',
-    'security_key_ckn': '',
+    'security_mka_cak': '',
+    'security_mka_ckn': '',
+    'security_mka_priority': '255',
     'intf': '',
     'source_interface': '',
     'is_bridge_member': False,
@@ -87,12 +88,12 @@ def get_config():
         macsec['security_encrypt'] = True
 
     # Secure Connectivity Association Key
-    if conf.exists(['security', 'key', 'cak']):
-        macsec['security_key_cak'] = conf.return_value(['security', 'key', 'cak'])
+    if conf.exists(['security', 'mka', 'cak']):
+        macsec['security_mka_cak'] = conf.return_value(['security', 'mka', 'cak'])
 
     # Secure Connectivity Association Name
-    if conf.exists(['security', 'key', 'ckn']):
-        macsec['security_key_ckn'] = conf.return_value(['security', 'key', 'ckn'])
+    if conf.exists(['security', 'mka', 'ckn']):
+        macsec['security_mka_ckn'] = conf.return_value(['security', 'mka', 'ckn'])
 
     # Physical interface
     if conf.exists(['source-interface']):
