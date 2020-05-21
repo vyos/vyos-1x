@@ -43,6 +43,29 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="key">
+                <properties>
+                  <help>Encryption keys</help>
+                </properties>
+                <children>
+                  <leafNode name="cak">
+                    <properties>
+                      <help>Secure Connectivity Association Key</help>
+                      <constraint>
+                        <regex>^[A-Fa-f0-9]{32}$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ckn">
+                    <properties>
+                      <help>Secure Connectivity Association Key Name</help>
+                      <constraint>
+                        <regex>^[A-Fa-f0-9]{64}$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           #include <include/interface-description.xml.i>

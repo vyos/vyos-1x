@@ -22,19 +22,22 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import list_diff
-from vyos.ifconfig import MACsecIf
+from vyos.ifconfig import MACsecIf, Interface
 from vyos.template import render
+from vyos.util import call
 from vyos.validate import is_member
 from vyos import ConfigError
 
 default_config_data = {
     'address': [],
     'address_remove': [],
-    'cipher': '',
     'deleted': False,
     'description': '',
     'disable': False,
-    'encrypt': 'off',
+    'security_cipher': '',
+    'security_encrypt': False,
+    'security_key_cak': '',
+    'security_key_ckn': '',
     'intf': '',
     'source_interface': '',
     'is_bridge_member': False,
@@ -77,11 +80,19 @@ def get_config():
 
     # retrieve interface cipher
     if conf.exists(['security', 'cipher']):
-        macsec['cipher'] = conf.return_value(['security', 'cipher'])
+        macsec['security_cipher'] = conf.return_value(['security', 'cipher'])
 
     # Enable optional MACsec encryption
     if conf.exists(['security', 'encrypt']):
-        macsec['encrypt'] = 'on'
+        macsec['security_encrypt'] = True
+
+    # Secure Connectivity Association Key
+    if conf.exists(['security', 'key', 'cak']):
+        macsec['security_key_cak'] = conf.return_value(['security', 'key', 'cak'])
+
+    # Secure Connectivity Association Name
+    if conf.exists(['security', 'key', 'ckn']):
+        macsec['security_key_ckn'] = conf.return_value(['security', 'key', 'ckn'])
 
     # Physical interface
     if conf.exists(['source-interface']):
@@ -112,7 +123,7 @@ def verify(macsec):
         raise ConfigError((
             f'Physical source interface must be set for MACsec "{macsec["intf"]}"'))
 
-    if not macsec['cipher']:
+    if not macsec['security_cipher']:
         raise ConfigError((
             f'Cipher suite is mandatory for MACsec "{macsec["intf"]}"'))
 
@@ -134,12 +145,18 @@ def verify(macsec):
     return None
 
 def generate(macsec):
+    # XXX: wpa_supplicant works on the source interface not the resulting
+    #      MACsec interface
+    conf = f'/run/wpa_supplicant/wpa_supplicant-{macsec["source_interface"]}.conf'
+    render(conf, 'macsec/wpa_supplicant.conf.tmpl', macsec, permission=0o640)
     return None
 
 def apply(macsec):
     # Remove macsec interface
     if macsec['deleted']:
+        call(f'systemctl stop wpa_supplicant-@{macsec["intf"]}.service')
         MACsecIf(macsec['intf']).remove()
+
     else:
         # MACsec interfaces require a configuration when they are added using
         # iproute2. This static method will provide the configuration
@@ -148,14 +165,11 @@ def apply(macsec):
 
         # Assign MACsec instance configuration parameters to config dict
         conf['source_interface'] = macsec['source_interface']
-        conf['cipher'] = macsec['cipher']
+        conf['security_cipher'] = macsec['security_cipher']
 
         # It is safe to "re-create" the interface always, there is a sanity check
         # that the interface will only be create if its non existent
         i = MACsecIf(macsec['intf'], **conf)
-
-        # Configure optional encryption
-        i.set_encryption(macsec['encrypt'])
 
         # update interface description used e.g. within SNMP
         i.set_alias(macsec['description'])
@@ -176,6 +190,8 @@ def apply(macsec):
         # Interface is administratively down by default, enable if desired
         if not macsec['disable']:
             i.set_admin_state('up')
+
+        call(f'systemctl restart wpa_supplicant-macsec@{macsec["source_interface"]}.service')
 
     return None
 
