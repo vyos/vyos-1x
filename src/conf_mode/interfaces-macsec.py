@@ -45,6 +45,9 @@ default_config_data = {
     'vrf': ''
 }
 
+# XXX: wpa_supplicant works on the source interface
+wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
+
 def get_config():
     macsec = deepcopy(default_config_data)
     conf = Config()
@@ -158,12 +161,7 @@ def verify(macsec):
     return None
 
 def generate(macsec):
-    # XXX: wpa_supplicant works on the source interface not the resulting
-    #      MACsec interface
-    wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
-    conf = wpa_suppl_conf.format(**macsec)
-
-    render(conf, 'macsec/wpa_supplicant.conf.tmpl', macsec, permission=0o640)
+    render(wpa_suppl_conf.format(**macsec), 'macsec/wpa_supplicant.conf.tmpl', macsec, permission=0o640)
     return None
 
 def apply(macsec):
@@ -171,6 +169,10 @@ def apply(macsec):
     if macsec['deleted']:
         call('systemctl stop wpa_supplicant-macsec@{source_interface}.service'.format(**macsec))
         MACsecIf(macsec['intf']).remove()
+
+        # delete configuration on interface removal
+        if os.path.isfile(wpa_suppl_conf.format(**macsec)):
+            os.unlink(wpa_suppl_conf.format(**macsec))
 
     else:
         # MACsec interfaces require a configuration when they are added using
