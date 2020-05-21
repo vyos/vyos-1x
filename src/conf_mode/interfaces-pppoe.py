@@ -205,30 +205,29 @@ def generate(pppoe):
             if os.path.exists(file):
                 os.unlink(file)
 
-    else:
-        # generated script must be executable
+        return None
 
-        # Create PPP configuration files
-        render(config_pppoe, 'pppoe/peer.tmpl',
-               pppoe, trim_blocks=True, permission=0o755)
-        # Create script for ip-pre-up.d
-        render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl',
-               pppoe, trim_blocks=True, permission=0o755)
-        # Create script for ip-up.d
-        render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl',
-               pppoe, trim_blocks=True, permission=0o755)
-        # Create script for ip-down.d
-        render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl',
-               pppoe, trim_blocks=True, permission=0o755)
-        # Create script for ipv6-up.d
-        render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
-               pppoe, trim_blocks=True, permission=0o755)
+    # Create PPP configuration files
+    render(config_pppoe, 'pppoe/peer.tmpl',
+           pppoe, trim_blocks=True, permission=0o755)
+    # Create script for ip-pre-up.d
+    render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl',
+           pppoe, trim_blocks=True, permission=0o755)
+    # Create script for ip-up.d
+    render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl',
+           pppoe, trim_blocks=True, permission=0o755)
+    # Create script for ip-down.d
+    render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl',
+           pppoe, trim_blocks=True, permission=0o755)
+    # Create script for ipv6-up.d
+    render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
+           pppoe, trim_blocks=True, permission=0o755)
 
-        if len(pppoe['dhcpv6_pd']) > 0:
-            # ipv6.tmpl relies on ifname - this should be made consitent in the
-            # future better then double key-ing the same value
-            pppoe['ifname'] = intf
-            render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
+    if len(pppoe['dhcpv6_pd']) > 0:
+        # ipv6.tmpl relies on ifname - this should be made consitent in the
+        # future better then double key-ing the same value
+        pppoe['ifname'] = intf
+        render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
 
     return None
 

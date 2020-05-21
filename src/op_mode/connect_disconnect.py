@@ -24,8 +24,8 @@ from time import strftime, localtime, time
 from vyos.util import call
 
 def check_interface(interface):
-    if not os.path.isfile('/etc/ppp/peers/{}'.format(interface)):
-        print('Interface {}: invalid!'.format(interface))
+    if not os.path.isfile(f'/etc/ppp/peers/{interface}'):
+        print(f'Interface {interface}: invalid!')
         exit(1)
 
 def check_ppp_running(interface):
@@ -46,12 +46,13 @@ def connect(interface):
     check_interface(interface)
 
     # Check if interface is already dialed
-    if os.path.isdir('/sys/class/net/{}'.format(interface)):
-        print('Interface {}: already connected!'.format(interface))
+    if os.path.isdir(f'/sys/class/net/{interface}'):
+        print(f'Interface {interface}: already connected!')
     elif check_ppp_running(interface):
-        print('Interface {}: connection is beeing established!'.format(interface))
+        print(f'Interface {interface}: connection is beeing established!')
     else:
-        print('Interface {}: connecting...'.format(interface))
+        print(f'Interface {interface}: connecting...')
+        call(f'systemctl restart ppp@{interface}.service')
 
 def disconnect(interface):
     """
@@ -61,9 +62,10 @@ def disconnect(interface):
 
     # Check if interface is already down
     if not check_ppp_running(interface):
-        print('Interface {}: connection is already down'.format(interface))
+        print(f'Interface {interface}: connection is already down')
     else:
-        print('Interface {}: disconnecting...'.format(interface))
+        print(f'Interface {interface}: disconnecting...')
+        call(f'systemctl stop ppp@{interface}.service')
 
 def main():
     parser = argparse.ArgumentParser()
