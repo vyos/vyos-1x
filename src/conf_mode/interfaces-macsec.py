@@ -118,34 +118,37 @@ def get_config():
 def verify(macsec):
     if macsec['deleted']:
         if macsec['is_bridge_member']:
-            raise ConfigError((
-                f'Interface "{macsec["intf"]}" cannot be deleted as it is a '
-                f'member of bridge "{macsec["is_bridge_member"]}"!'))
+            raise ConfigError(
+                f'Interface "{intf}" cannot be deleted as it is a '
+                f'member of bridge "{is_bridge_member}"!'.format(**macsec))
 
         return None
 
     if not macsec['source_interface']:
-        raise ConfigError((
-            f'Physical source interface must be set for MACsec "{macsec["intf"]}"'))
+        raise ConfigError(
+            'Physical source interface must be set for MACsec "{intf}"'.format(**macsec))
 
     if not macsec['security_cipher']:
-        raise ConfigError((
-            f'Cipher suite is mandatory for MACsec "{macsec["intf"]}"'))
+        raise ConfigError(
+            'Cipher suite must be set for MACsec "{intf}"'.format(**macsec))
+
+    if macsec['security_encrypt']:
+        if not (macsec['security_mka_cak'] and macsec['security_mka_ckn']):
+            raise ConfigError('MACsec security keys mandartory when encryption is enabled')
 
     if macsec['vrf']:
         if macsec['vrf'] not in interfaces():
-            raise ConfigError(f'VRF "{macsec["vrf"]}" does not exist')
+            raise ConfigError('VRF "{vrf}" does not exist'.format(**macsec))
 
         if macsec['is_bridge_member']:
-            raise ConfigError((
-                f'Interface "{macsec["intf"]}" cannot be member of VRF '
-                f'"{macsec["vrf"]}" and bridge "{macsec["is_bridge_member"]}" '
-                f'at the same time!'))
+            raise ConfigError(
+                'Interface "{intf}" cannot be member of VRF "{vrf}" and '
+                'bridge "{is_bridge_member}" at the same time!'.format(**macsec))
 
     if macsec['is_bridge_member'] and macsec['address']:
-        raise ConfigError((
-            f'Cannot assign address to interface "{macsec["intf"]}" '
-            f'as it is a member of bridge "{macsec["is_bridge_member"]}"!'))
+        raise ConfigError(
+            'Cannot assign address to interface "{intf}" as it is'
+            'a member of bridge "{is_bridge_member}"!'.format(**macsec))
 
     return None
 
