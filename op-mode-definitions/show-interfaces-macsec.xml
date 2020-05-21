@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <node name="macsec">
+            <properties>
+              <help>Show MACsec interface information</help>
+              <completionHelp>
+                <path>interfaces macsec</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/sbin/ip macsec show</command>
+          </node>
+          <tagNode name="macsec">
+            <properties>
+              <help>Show specified MACsec interface information</help>
+              <completionHelp>
+                <path>interfaces macsec</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/sbin/ip macsec show $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
