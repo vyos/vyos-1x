@@ -62,6 +62,11 @@ def get_config():
     # Check if interface has been removed
     if not conf.exists(base_path):
         macsec['deleted'] = True
+        # When stopping wpa_supplicant we need to stop it via the physical
+        # interface - thus we need to retrieve ir from the effective config
+        if conf.exists_effective(base_path + ['source-interface']):
+            macsec['source_interface'] = conf.return_effective_value(base_path + ['source-interface'])
+
         return macsec
 
     # set new configuration level
@@ -164,7 +169,7 @@ def generate(macsec):
 def apply(macsec):
     # Remove macsec interface
     if macsec['deleted']:
-        call('systemctl stop wpa_supplicant-macsec@{intf}.service'.format(**macsec))
+        call('systemctl stop wpa_supplicant-macsec@{source_interface}.service'.format(**macsec))
         MACsecIf(macsec['intf']).remove()
 
     else:
