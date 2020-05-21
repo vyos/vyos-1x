@@ -1,7 +1,7 @@
 [Unit]
 Description=WPA supplicant daemon (macsec-specific version)
 Requires=sys-subsystem-net-devices-%i.device
-ConditionPathExists=/run/wpa_supplicant/wpa_supplicant-%I.conf
+ConditionPathExists=/run/wpa_supplicant/%I.conf
 After=vyos-router.service
 RequiresMountsFor=/run
 
@@ -10,7 +10,8 @@ RequiresMountsFor=/run
 [Service]
 Type=simple
 WorkingDirectory=/run/wpa_supplicant
-ExecStart=/sbin/wpa_supplicant -c /run/wpa_supplicant/wpa_supplicant-%I.conf -Dmacsec_linux -i%I
+PIDFile=/run/wpa_supplicant/%I.pid
+ExecStart=/sbin/wpa_supplicant -c /run/wpa_supplicant/%I.conf -Dmacsec_linux -i%I
 
 [Install]
 WantedBy=multi-user.target

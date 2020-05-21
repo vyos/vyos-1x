@@ -155,14 +155,16 @@ def verify(macsec):
 def generate(macsec):
     # XXX: wpa_supplicant works on the source interface not the resulting
     #      MACsec interface
-    conf = f'/run/wpa_supplicant/wpa_supplicant-{macsec["source_interface"]}.conf'
+    wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
+    conf = wpa_suppl_conf.format(**macsec)
+
     render(conf, 'macsec/wpa_supplicant.conf.tmpl', macsec, permission=0o640)
     return None
 
 def apply(macsec):
     # Remove macsec interface
     if macsec['deleted']:
-        call(f'systemctl stop wpa_supplicant-@{macsec["intf"]}.service')
+        call('systemctl stop wpa_supplicant-macsec@{intf}.service'.format(**macsec))
         MACsecIf(macsec['intf']).remove()
 
     else:
@@ -199,7 +201,7 @@ def apply(macsec):
         if not macsec['disable']:
             i.set_admin_state('up')
 
-        call(f'systemctl restart wpa_supplicant-macsec@{macsec["source_interface"]}.service')
+        call('systemctl restart wpa_supplicant-macsec@{source_interface}.service'.format(**macsec))
 
     return None
 
