@@ -137,17 +137,13 @@ class Config(object):
         return (self._level + path)
 
     def _run(self, cmd):
-        if self.__session_env:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
-        else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
         out = p.stdout.read()
         p.wait()
         p.communicate()
         if p.returncode != 0:
             raise VyOSError()
-        else:
-            return out.decode('ascii')
+        return out.decode('ascii')
 
     def set_level(self, path):
         """
