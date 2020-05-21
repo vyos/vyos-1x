@@ -41,18 +41,7 @@
               #include <include/ipv6-dup-addr-detect-transmits.xml.i>
             </children>
           </node>
-          <leafNode name="source-interface">
-            <properties>
-              <help>Physical Interface used for this device</help>
-              <valueHelp>
-                <format>interface</format>
-                <description>Physical interface used for this pseudo device</description>
-              </valueHelp>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py -t ethernet</script>
-              </completionHelp>
-            </properties>
-          </leafNode>
+          #include <include/source-interface-ethernet.xml.i>
           #include <include/interface-mac.xml.i>
           <leafNode name="mode">
             <properties>
