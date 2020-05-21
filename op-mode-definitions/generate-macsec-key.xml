@@ -6,7 +6,20 @@
         <properties>
           <help>Generate MACsec secure channel key</help>
         </properties>
-        <command>/usr/bin/hexdump -n 16 -e '4/4 "%08x" 1 "\n"' /dev/random</command>
+        <children>
+          <node name="cak">
+            <properties>
+              <help>Generate MACsec connectivity association key (CAK)</help>
+            </properties>
+            <command>/usr/bin/hexdump -n 16 -e '4/4 "%08x" 1 "\n"' /dev/random</command>
+          </node>
+          <node name="ckn">
+            <properties>
+              <help>Generate MACsec connectivity association name (CKN)</help>
+            </properties>
+            <command>/usr/bin/hexdump -n 32 -e '8/4 "%08x" 1 "\n"' /dev/random</command>
+          </node>
+        </children>
       </node>
     </children>
   </node>
