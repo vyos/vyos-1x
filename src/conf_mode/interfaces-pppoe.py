@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.ifconfig import Interface
-from vyos.util import chown, chmod_755, cmd
+from vyos.util import chown, chmod_755, call
 from vyos import ConfigError
 from vyos.template import render
 
@@ -42,7 +42,6 @@ default_config_data = {
     'ipv6_autoconf': False,
     'ipv6_enable': False,
     'local_address': '',
-    'logfile': '',
     'mtu': '1492',
     'name_server': True,
     'remote_address': '',
@@ -61,7 +60,6 @@ def get_config():
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     pppoe['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    pppoe['logfile'] = f"/var/log/vyatta/ppp_{pppoe['intf']}.log"
 
     # Check if interface has been removed
     if not conf.exists(base_path + [pppoe['intf']]):
@@ -196,15 +194,12 @@ def generate(pppoe):
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
                     script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
 
-    # Shutdown DHCPv6 prefix delegation client
-    if not pppoe['dhcpv6_pd']:
-        cmd(f'systemctl stop dhcp6c@{intf}.service')
-
-
-    # Always hang-up PPPoE connection prior generating new configuration file
-    cmd(f'systemctl stop ppp@{intf}.service')
-
     if pppoe['deleted']:
+        # stop DHCPv6-PD client
+        call(f'systemctl stop dhcp6c@{intf}.service')
+        # Hang-up PPPoE connection
+        call(f'systemctl stop ppp@{intf}.service')
+
         # Delete PPP configuration files
         for file in config_files:
             if os.path.exists(file):
@@ -242,13 +237,9 @@ def apply(pppoe):
         # bail out early
         return None
 
-    if not pppoe['disable']:
-        # "dial" PPPoE connection
-        intf = pppoe['intf']
-        cmd(f'systemctl start ppp@{intf}.service')
-
-        # make logfile owned by root / vyattacfg
-        chown(pppoe['logfile'], 'root', 'vyattacfg')
+    if pppoe['disable']:
+        # Dial PPPoE connection
+        call(f'systemctl restart ppp@{intf}.service'.format(**pppoe))
 
     return None
 
