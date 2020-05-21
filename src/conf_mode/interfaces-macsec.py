@@ -29,7 +29,7 @@ from vyos import ConfigError
 default_config_data = {
     'address': [],
     'address_remove': [],
-    'cipher': 'gcm-aes-128',
+    'cipher': '',
     'deleted': False,
     'description': '',
     'disable': False,
@@ -110,6 +110,10 @@ def verify(macsec):
     if not macsec['source_interface']:
         raise ConfigError((
             f'Physical source interface must be set for MACsec "{macsec["intf"]}"'))
+
+    if not macsec['cipher']:
+        raise ConfigError((
+            f'Cipher suite is mandatory for MACsec "{macsec["intf"]}"'))
 
     if macsec['vrf']:
         if macsec['vrf'] not in interfaces():
