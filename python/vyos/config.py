@@ -91,10 +91,7 @@ class Config(object):
     def __init__(self, session_env=None):
         self._cli_shell_api = "/bin/cli-shell-api"
         self._level = []
-        if session_env:
-            self.__session_env = session_env
-        else:
-            self.__session_env = None
+        self.__session_env = session_env
 
         running_config_text = self.get_active()
         session_config_text = self.get_working() or running_config_text
