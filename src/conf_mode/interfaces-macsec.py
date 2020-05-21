@@ -95,6 +95,10 @@ def get_config():
     if conf.exists(['security', 'mka', 'ckn']):
         macsec['security_mka_ckn'] = conf.return_value(['security', 'mka', 'ckn'])
 
+    # MACsec Key Agreement protocol (MKA) actor priority
+    if conf.exists(['security', 'mka', 'priority']):
+        macsec['security_mka_priority'] = conf.return_value(['security', 'mka', 'priority'])
+
     # Physical interface
     if conf.exists(['source-interface']):
         macsec['source_interface'] = conf.return_value(['source-interface'])
