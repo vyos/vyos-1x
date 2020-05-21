@@ -49,36 +49,37 @@ def get_config():
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     macsec['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+    base_path = ['interfaces', 'macsec', macsec['intf']]
 
     # check if we are a member of any bridge
     macsec['is_bridge_member'] = is_member(conf, macsec['intf'], 'bridge')
 
     # Check if interface has been removed
-    if not conf.exists('interfaces macsec ' + macsec['intf']):
+    if not conf.exists(base_path):
         macsec['deleted'] = True
         return macsec
 
     # set new configuration level
-    conf.set_level('interfaces macsec ' + macsec['intf'])
+    conf.set_level(base_path)
 
     # retrieve configured interface addresses
-    if conf.exists('address'):
-        macsec['address'] = conf.return_values('address')
+    if conf.exists(['address']):
+        macsec['address'] = conf.return_values(['address'])
 
     # retrieve interface cipher
-    if conf.exists('cipher'):
-        macsec['cipher'] = conf.return_value('cipher')
+    if conf.exists(['cipher']):
+        macsec['cipher'] = conf.return_value(['cipher'])
 
     # retrieve interface description
-    if conf.exists('description'):
-        macsec['description'] = conf.return_value('description')
+    if conf.exists(['description']):
+        macsec['description'] = conf.return_value(['description'])
 
     # Disable this interface
-    if conf.exists('disable'):
+    if conf.exists(['disable']):
         macsec['disable'] = True
 
     # Enable optional MACsec encryption
-    if conf.exists('encrypt'):
+    if conf.exists(['encrypt']):
         macsec['encrypt'] = 'on'
 
     # Physical interface
@@ -87,13 +88,13 @@ def get_config():
 
     # Determine interface addresses (currently effective) - to determine which
     # address is no longer valid and needs to be removed from the interface
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
+    eff_addr = conf.return_effective_values(['address'])
+    act_addr = conf.return_values(['address'])
     macsec['address_remove'] = list_diff(eff_addr, act_addr)
 
     # retrieve VRF instance
-    if conf.exists('vrf'):
-        macsec['vrf'] = conf.return_value('vrf')
+    if conf.exists(['vrf']):
+        macsec['vrf'] = conf.return_value(['vrf'])
 
     return macsec
 
