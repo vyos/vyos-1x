@@ -88,8 +88,11 @@ class Config(object):
     the only state it keeps is relative *config path* for convenient access to config
     subtrees.
     """
+    _cli_shell_api = "/bin/cli-shell-api"
+    _show_active =  '/bin/cli-shell-api --show-active-only --show-show-defaults --show-ignore-edit showConfig'
+    _show_working = '/bin/cli-shell-api --show-working-only --show-show-defaults --show-ignore-edit showConfig'
+
     def __init__(self, session_env=None):
-        self._cli_shell_api = "/bin/cli-shell-api"
         self._level = []
         self.__session_env = session_env
 
@@ -108,14 +111,14 @@ class Config(object):
         # before initialization, set to empty string
         if not os.path.isfile('/tmp/vyos-config-status'):
             return ''
-        return self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
+        return self._run(self._show_active.split())
 
     def get_working(self):
         # Session config ("active") only exists in conf mode.
         # In op mode, we'll just use the same running config for both active and session configs.
         if not self.in_session():
             return ''
-        return self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
+        return self._run(self._show_working.split())
 
     def _make_command(self, op, path):
         args = path.split()
