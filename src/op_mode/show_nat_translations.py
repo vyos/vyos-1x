@@ -117,8 +117,12 @@ def process(data, stats, protocol, pipe, verbose, flowtype=''):
 
                 if 'layer4' in meta:
                     l4 = meta['layer4']
-                    sport[direction] = l4[SPORT]
-                    dport[direction] = l4[DPORT]
+                    sp = l4.get(SPORT, '')
+                    dp = l4.get(DPORT, '')
+                    if sp:
+                        sport[direction] = sp
+                    if dp:
+                        dport[direction] = dp
                     proto[direction] = l4.get('@protoname','')
 
                 if stats and 'counters' in meta:
