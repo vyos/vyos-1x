@@ -20,14 +20,12 @@ from crypt import crypt, METHOD_SHA512
 from netifaces import interfaces
 from psutil import users
 from pwd import getpwall, getpwnam
-from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
+from spwd import getspnam
 from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import cmd
-from vyos.util import call
-from vyos.util import DEVNULL
+from vyos.util import cmd, call, DEVNULL, chmod_600, chmod_755
 from vyos import ConfigError
 
 radius_config_file = "/etc/pam_radius_auth.conf"
@@ -248,7 +246,7 @@ def generate(login):
         uid = getpwnam('root').pw_uid
         gid = getpwnam('root').pw_gid
         os.chown(radius_config_file, uid, gid)
-        os.chmod(radius_config_file, S_IRUSR | S_IWUSR)
+        chmod_600(radius_config_file)
     else:
         if os.path.isfile(radius_config_file):
             os.unlink(radius_config_file)
@@ -298,7 +296,7 @@ def apply(login):
             if not os.path.isdir(ssh_key_dir):
                 os.mkdir(ssh_key_dir)
                 os.chown(ssh_key_dir, uid, gid)
-                os.chmod(ssh_key_dir, S_IRWXU | S_IRGRP | S_IXGRP)
+                chmod_755(ssh_key_dir)
 
             ssh_key_file = ssh_key_dir + '/authorized_keys'
             with open(ssh_key_file, 'w') as f:
@@ -315,7 +313,7 @@ def apply(login):
                     f.write(line)
 
             os.chown(ssh_key_file, uid, gid)
-            os.chmod(ssh_key_file, S_IRUSR | S_IWUSR)
+            chmod_600(ssh_key_file)
 
         except Exception as e:
             print(e)
