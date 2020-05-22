@@ -81,5 +81,14 @@ class PPPoEInterfaceTest(unittest.TestCase):
             self.assertTrue(cur_password == password)
             self.assertTrue(cur_ifname == interface)
 
+            # Check if ppp process is running in the interface in question
+            running = False
+            for p in process_iter():
+                if "pppd" in p.name():
+                    if interface in p.cmdline():
+                        running = True
+
+            self.assertTrue(running)
+
 if __name__ == '__main__':
     unittest.main()
