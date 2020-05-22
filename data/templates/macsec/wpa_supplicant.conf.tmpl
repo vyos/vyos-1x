@@ -47,6 +47,7 @@ network={
     # 1: Integrity only
     macsec_integ_only={{ '0' if security_encrypt else '1' }}
 
+{% if security_encrypt %}
     # mka_cak, mka_ckn, and mka_priority: IEEE 802.1X/MACsec pre-shared key mode
     # This allows to configure MACsec with a pre-shared key using a (CAK,CKN) pair.
     # In this mode, instances of wpa_supplicant can act as MACsec peers. The peer
@@ -61,5 +62,6 @@ network={
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
     mka_priority={{ security_mka_priority }}
+{% endif %}
 }
 
