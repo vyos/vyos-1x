@@ -71,7 +71,7 @@ def get_config():
         user = {
             'name': username,
             'password_plaintext': '',
-            'password_encrypted': '!',
+            'password_encred': '!',
             'public_keys': [],
             'full_name': '',
             'home_dir': '/home/' + username,
@@ -212,8 +212,7 @@ def generate(login):
             user['password_encrypted'] = crypt(user['password_plaintext'], METHOD_SHA512)
             user['password_plaintext'] = ''
 
-            # remove old plaintext password
-            # and set new encrypted password
+            # remove old plaintext password and set new encrypted password
             os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password '' >/dev/null".format(user['name']))
             os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}' >/dev/null".format(user['name'], user['password_encrypted']))
 
@@ -224,6 +223,10 @@ def generate(login):
             #     env=env)
             # call("/opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}'".format(user['name'], user['password_encrypted']),
             #     env=env)
+        elif user['password_encrypted']:
+            # unset encrypted password so we do not update it with the same
+            # value again and thus it will not appear in system logs
+            user['password_encrypted'] = ''
 
     if len(login['radius_server']) > 0:
         render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl', login, trim_blocks=True)
@@ -248,10 +251,13 @@ def apply(login):
             # update existing account
             command = "usermod"
 
+        # all accounts use /bin/vbash
+        command += " -s /bin/vbash"
         # we need to use '' quotes when passing formatted data to the shell
         # else it will not work as some data parts are lost in translation
-        command += " -p '{}'".format(user['password_encrypted'])
-        command += " -s /bin/vbash"
+        if user['password_encrypted']:
+            command += " -p '{}'".format(user['password_encrypted'])
+
         if user['full_name']:
             command += " -c '{}'".format(user['full_name'])
 
