@@ -230,14 +230,18 @@ def generate(login):
                  "authentication encrypted-password '{password_encrypted}'"
                  .format(**user), env=env)
 
-        elif getspnam(user['name']).sp_pwdp == user['password_encrypted']:
-            # If the current encrypted bassword matches the encrypted password
-            # from the config - do not update it. This will remove the encrypted
-            # value from the system logs.
-            #
-            # The encrypted password will be set only once during the first boot
-            # after an image upgrade.
-            user['password_encrypted'] = ''
+        else:
+            try:
+                if getspnam(user['name']).sp_pwdp == user['password_encrypted']:
+                    # If the current encrypted bassword matches the encrypted password
+                    # from the config - do not update it. This will remove the encrypted
+                    # value from the system logs.
+                    #
+                    # The encrypted password will be set only once during the first boot
+                    # after an image upgrade.
+                    user['password_encrypted'] = ''
+            except:
+                pass
 
     if len(login['radius_server']) > 0:
         render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl',
