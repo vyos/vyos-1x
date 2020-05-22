@@ -232,9 +232,13 @@ def generate(login):
                  "authentication encrypted-password '{password_encrypted}'"
                  .format(**user), env=env)
 
-        elif user['password_encrypted']:
-            # unset encrypted password so we do not update it with the same
-            # value again and thus it will not appear in system logs
+        elif getspnam(user['name']).sp_pwdp == user['password_encrypted']:
+            # If the current encrypted bassword matches the encrypted password
+            # from the config - do not update it. This will remove the encrypted
+            # value from the system logs.
+            #
+            # The encrypted password will be set only once during the first boot
+            # after an image upgrade.
             user['password_encrypted'] = ''
 
     if len(login['radius_server']) > 0:
