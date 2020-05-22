@@ -39,6 +39,7 @@ default_config_data = {
     'security_mka_cak': '',
     'security_mka_ckn': '',
     'security_mka_priority': '255',
+    'security_replay_window': '',
     'intf': '',
     'source_interface': '',
     'is_bridge_member': False,
@@ -111,6 +112,11 @@ def get_config():
     if conf.exists(['security', 'mka', 'priority']):
         macsec['security_mka_priority'] = conf.return_value(
             ['security', 'mka', 'priority'])
+
+    # IEEE 802.1X/MACsec replay protection
+    if conf.exists(['security', 'replay-window']):
+        macsec['security_replay_window'] = conf.return_value(
+            ['security', 'replay-window'])
 
     # Physical interface
     if conf.exists(['source-interface']):
