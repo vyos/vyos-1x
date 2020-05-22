@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -84,7 +84,7 @@ def pipe():
 def process(data, stats, protocol, pipe, verbose, flowtype=''):
     if not data:
         return
- 
+
     parsed = xmltodict.parse(data)
 
     print(headers(verbose, pipe))
@@ -104,7 +104,7 @@ def process(data, stats, protocol, pipe, verbose, flowtype=''):
         timeout, use = 0, 0
 
         rule_type = rule.get('type', '')
- 
+
         for meta in rule['meta']:
             # print(meta)
             direction = meta['@direction']

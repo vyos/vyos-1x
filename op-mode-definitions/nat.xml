@@ -36,16 +36,16 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=source --verbose --ipaddr="$6"</command>
+                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source --verbose --ipaddr="$6"</command>
                   </tagNode>
                   <node name="detail">
                     <properties>
                       <help>Show active source NAT translations detail</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=source --verbose</command>
+                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source --verbose</command>
                   </node>
                 </children>
-                <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=source</command>
+                <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source</command>
               </node>
             </children>
           </node>
@@ -78,16 +78,16 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=destination --verbose --ipaddr="$6"</command>
+                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination --verbose --ipaddr="$6"</command>
                   </tagNode>
                   <node name="detail">
                     <properties>
                       <help>Show active destination NAT translations detail</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=destination --verbose</command>
+                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination --verbose</command>
                   </node>
                 </children>
-                <command>${vyos_op_scripts_dir}/to_be_migrated/vyatta-nat-translations.pl --type=destination</command>
+                <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination</command>
               </node>
             </children>
           </node>
