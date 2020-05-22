@@ -127,8 +127,8 @@ def verify(macsec):
     if macsec['deleted']:
         if macsec['is_bridge_member']:
             raise ConfigError(
-                f'Interface "{intf}" cannot be deleted as it is a '
-                f'member of bridge "{is_bridge_member}"!'.format(**macsec))
+                'Interface "{intf}" cannot be deleted as it is a '
+                'member of bridge "{is_bridge_member}"!'.format(**macsec))
 
         return None
 
