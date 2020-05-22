@@ -24,13 +24,11 @@ from stat import S_IRUSR, S_IWUSR, S_IRWXU, S_IRGRP, S_IXGRP
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import list_diff
-from vyos import ConfigError
+from vyos.template import render
 from vyos.util import cmd
 from vyos.util import call
 from vyos.util import DEVNULL
-from vyos.template import render
-
+from vyos import ConfigError
 
 radius_config_file = "/etc/pam_radius_auth.conf"
 
@@ -43,8 +41,9 @@ default_config_data = {
     'radius_vrf': ''
 }
 
+
 def get_local_users():
-    """Returns list of dynamically allocated users (see Debian Policy Manual)"""
+    """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
     for p in getpwall():
         username = p[0]
@@ -54,6 +53,7 @@ def get_local_users():
                 local_users.append(username)
 
     return local_users
+
 
 def get_config():
     login = default_config_data
@@ -80,11 +80,13 @@ def get_config():
 
         # Plaintext password
         if conf.exists(['authentication', 'plaintext-password']):
-            user['password_plaintext'] = conf.return_value(['authentication', 'plaintext-password'])
+            user['password_plaintext'] = conf.return_value(
+                ['authentication', 'plaintext-password'])
 
         # Encrypted password
         if conf.exists(['authentication', 'encrypted-password']):
-            user['password_encrypted'] = conf.return_value(['authentication', 'encrypted-password'])
+            user['password_encrypted'] = conf.return_value(
+                ['authentication', 'encrypted-password'])
 
         # User real name
         if conf.exists(['full-name']):
@@ -102,7 +104,8 @@ def get_config():
                 'options': '',
                 'type': ''
             }
-            conf.set_level(base_level + ['user', username, 'authentication', 'public-keys', id])
+            conf.set_level(base_level + ['user', username, 'authentication',
+                                         'public-keys', id])
 
             # Public Key portion
             if conf.exists(['key']):
@@ -174,21 +177,24 @@ def get_config():
     # system is rebooted.
     login['del_users'] = [tmp for tmp in all_users if tmp not in cli_users]
 
-
     return login
+
 
 def verify(login):
     cur_user = os.environ['SUDO_USER']
     if cur_user in login['del_users']:
-        raise ConfigError('Attempting to delete current user: {}'.format(cur_user))
+        raise ConfigError(
+            'Attempting to delete current user: {}'.format(cur_user))
 
     for user in login['add_users']:
         for key in user['public_keys']:
             if not key['type']:
-                raise ConfigError('SSH public key type missing for "{}"!'.format(key['name']))
+                raise ConfigError(
+                    'SSH public key type missing for "{name}"!'.format(**key))
 
             if not key['key']:
-                raise ConfigError('SSH public key for id "{}" missing!'.format(key['name']))
+                raise ConfigError(
+                    'SSH public key for id "{name}" missing!'.format(**key))
 
     # At lease one RADIUS server must not be disabled
     if len(login['radius_server']) > 0:
@@ -205,31 +211,35 @@ def verify(login):
 
     return None
 
+
 def generate(login):
     # calculate users encrypted password
     for user in login['add_users']:
         if user['password_plaintext']:
-            user['password_encrypted'] = crypt(user['password_plaintext'], METHOD_SHA512)
+            user['password_encrypted'] = crypt(
+                user['password_plaintext'], METHOD_SHA512)
             user['password_plaintext'] = ''
 
             # remove old plaintext password and set new encrypted password
-            os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password '' >/dev/null".format(user['name']))
-            os.system("vyos_libexec_dir=/usr/libexec/vyos /opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}' >/dev/null".format(user['name'], user['password_encrypted']))
+            env = os.environ.copy()
+            env['vyos_libexec_dir'] = '/usr/libexec/vyos'
 
-            # env = os.environ.copy()
-            # env['vyos_libexec_dir'] = '/usr/libexec/vyos'
+            call("/opt/vyatta/sbin/my_set system login user '{name}' "
+                 "authentication plaintext-password '{password_plaintext}'"
+                 .format(**user), env=env)
 
-            # call("/opt/vyatta/sbin/my_set system login user '{}' authentication plaintext-password ''".format(user['name']),
-            #     env=env)
-            # call("/opt/vyatta/sbin/my_set system login user '{}' authentication encrypted-password '{}'".format(user['name'], user['password_encrypted']),
-            #     env=env)
+            call("/opt/vyatta/sbin/my_set system login user '{name}' "
+                 "authentication encrypted-password '{password_encrypted}'"
+                 .format(**user), env=env)
+
         elif user['password_encrypted']:
             # unset encrypted password so we do not update it with the same
             # value again and thus it will not appear in system logs
             user['password_encrypted'] = ''
 
     if len(login['radius_server']) > 0:
-        render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl', login, trim_blocks=True)
+        render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl',
+               login, trim_blocks=True)
 
         uid = getpwnam('root').pw_uid
         gid = getpwnam('root').pw_gid
@@ -240,6 +250,7 @@ def generate(login):
             os.unlink(radius_config_file)
 
     return None
+
 
 def apply(login):
     for user in login['add_users']:
@@ -273,10 +284,11 @@ def apply(login):
             uid = getpwnam(user['name']).pw_uid
             gid = getpwnam(user['name']).pw_gid
 
-            # we should not rely on the home dir value stored in user['home_dir']
-            # as if a crazy user will choose username root or any other system
-            # user this will fail. should be deny using root at all?
+            # we should not rely on the value stored in user['home_dir'], as a
+            # crazy user will choose username root or any other system user
+            # which will fail. Should we deny using root at all?
             home_dir = getpwnam(user['name']).pw_dir
+
             # install ssh keys
             ssh_key_dir = home_dir + '/.ssh'
             if not os.path.isdir(ssh_key_dir):
@@ -284,7 +296,7 @@ def apply(login):
                 os.chown(ssh_key_dir, uid, gid)
                 os.chmod(ssh_key_dir, S_IRWXU | S_IRGRP | S_IXGRP)
 
-            ssh_key_file = ssh_key_dir + '/authorized_keys';
+            ssh_key_file = ssh_key_dir + '/authorized_keys'
             with open(ssh_key_file, 'w') as f:
                 f.write("# Automatically generated by VyOS\n")
                 f.write("# Do not edit, all changes will be lost\n")
@@ -294,14 +306,17 @@ def apply(login):
                     if id['options']:
                         line = '{} '.format(id['options'])
 
-                    line += '{} {} {}\n'.format(id['type'], id['key'], id['name'])
+                    line += '{} {} {}\n'.format(id['type'],
+                                                id['key'], id['name'])
                     f.write(line)
 
             os.chown(ssh_key_file, uid, gid)
             os.chmod(ssh_key_file, S_IRUSR | S_IWUSR)
 
         except Exception as e:
-            raise ConfigError('Adding user "{}" raised an exception: {}'.format(user['name'], e))
+            print(e)
+            raise ConfigError('Adding user "{name}" raised exception'
+                              .format(**user))
 
     for user in login['del_users']:
         try:
@@ -314,7 +329,7 @@ def apply(login):
             call(f'userdel -r {user}', stderr=DEVNULL)
 
         except Exception as e:
-            raise ConfigError('Deleting user "{}" raised an exception: {}'.format(user, e))
+            raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
 
     #
     # RADIUS configuration
@@ -357,9 +372,11 @@ def apply(login):
             cmd(command)
 
         except Exception as e:
-            raise ConfigError('Removing RADIUS configuration failed.\n{}'.format(e))
+            raise ConfigError(
+                'Removing RADIUS configuration failed.\n{}'.format(e))
 
     return None
+
 
 if __name__ == '__main__':
     try:
