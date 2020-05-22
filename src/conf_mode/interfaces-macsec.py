@@ -48,6 +48,7 @@ default_config_data = {
 # XXX: wpa_supplicant works on the source interface
 wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
 
+
 def get_config():
     macsec = deepcopy(default_config_data)
     conf = Config()
@@ -68,7 +69,8 @@ def get_config():
         # When stopping wpa_supplicant we need to stop it via the physical
         # interface - thus we need to retrieve ir from the effective config
         if conf.exists_effective(base_path + ['source-interface']):
-            macsec['source_interface'] = conf.return_effective_value(base_path + ['source-interface'])
+            macsec['source_interface'] = conf.return_effective_value(
+                base_path + ['source-interface'])
 
         return macsec
 
@@ -97,15 +99,18 @@ def get_config():
 
     # Secure Connectivity Association Key
     if conf.exists(['security', 'mka', 'cak']):
-        macsec['security_mka_cak'] = conf.return_value(['security', 'mka', 'cak'])
+        macsec['security_mka_cak'] = conf.return_value(
+            ['security', 'mka', 'cak'])
 
     # Secure Connectivity Association Name
     if conf.exists(['security', 'mka', 'ckn']):
-        macsec['security_mka_ckn'] = conf.return_value(['security', 'mka', 'ckn'])
+        macsec['security_mka_ckn'] = conf.return_value(
+            ['security', 'mka', 'ckn'])
 
     # MACsec Key Agreement protocol (MKA) actor priority
     if conf.exists(['security', 'mka', 'priority']):
-        macsec['security_mka_priority'] = conf.return_value(['security', 'mka', 'priority'])
+        macsec['security_mka_priority'] = conf.return_value(
+            ['security', 'mka', 'priority'])
 
     # Physical interface
     if conf.exists(['source-interface']):
@@ -123,6 +128,7 @@ def get_config():
 
     return macsec
 
+
 def verify(macsec):
     if macsec['deleted']:
         if macsec['is_bridge_member']:
@@ -133,8 +139,8 @@ def verify(macsec):
         return None
 
     if not macsec['source_interface']:
-        raise ConfigError(
-            'Physical source interface must be set for MACsec "{intf}"'.format(**macsec))
+        raise ConfigError('Physical source interface must be set for '
+                          'MACsec "{intf}"'.format(**macsec))
 
     if not macsec['security_cipher']:
         raise ConfigError(
@@ -142,16 +148,17 @@ def verify(macsec):
 
     if macsec['security_encrypt']:
         if not (macsec['security_mka_cak'] and macsec['security_mka_ckn']):
-            raise ConfigError('MACsec security keys mandartory when encryption is enabled')
+            raise ConfigError(
+                'MACsec security keys mandartory when encryption is enabled')
 
     if macsec['vrf']:
         if macsec['vrf'] not in interfaces():
             raise ConfigError('VRF "{vrf}" does not exist'.format(**macsec))
 
         if macsec['is_bridge_member']:
-            raise ConfigError(
-                'Interface "{intf}" cannot be member of VRF "{vrf}" and '
-                'bridge "{is_bridge_member}" at the same time!'.format(**macsec))
+            raise ConfigError('Interface "{intf}" cannot be member of VRF '
+                              '"{vrf}" and bridge "{is_bridge_member}" at '
+                              'the same time!'.format(**macsec))
 
     if macsec['is_bridge_member'] and macsec['address']:
         raise ConfigError(
@@ -160,14 +167,18 @@ def verify(macsec):
 
     return None
 
+
 def generate(macsec):
-    render(wpa_suppl_conf.format(**macsec), 'macsec/wpa_supplicant.conf.tmpl', macsec, permission=0o640)
+    render(wpa_suppl_conf.format(**macsec),
+           'macsec/wpa_supplicant.conf.tmpl', macsec, permission=0o640)
     return None
+
 
 def apply(macsec):
     # Remove macsec interface
     if macsec['deleted']:
-        call('systemctl stop wpa_supplicant-macsec@{source_interface}.service'.format(**macsec))
+        call('systemctl stop wpa_supplicant-macsec@{source_interface}'
+             .format(**macsec))
         MACsecIf(macsec['intf']).remove()
 
         # delete configuration on interface removal
@@ -184,8 +195,8 @@ def apply(macsec):
         conf['source_interface'] = macsec['source_interface']
         conf['security_cipher'] = macsec['security_cipher']
 
-        # It is safe to "re-create" the interface always, there is a sanity check
-        # that the interface will only be create if its non existent
+        # It is safe to "re-create" the interface always, there is a sanity
+        # check that the interface will only be create if its non existent
         i = MACsecIf(macsec['intf'], **conf)
 
         # update interface description used e.g. within SNMP
@@ -208,9 +219,11 @@ def apply(macsec):
         if not macsec['disable']:
             i.set_admin_state('up')
 
-        call('systemctl restart wpa_supplicant-macsec@{source_interface}.service'.format(**macsec))
+        call('systemctl restart wpa_supplicant-macsec@{source_interface}'
+             .format(**macsec))
 
     return None
+
 
 if __name__ == '__main__':
     try:
