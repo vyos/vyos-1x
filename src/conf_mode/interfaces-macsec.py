@@ -22,7 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import list_diff
-from vyos.ifconfig import MACsecIf, Interface
+from vyos.ifconfig import MACsecIf
 from vyos.template import render
 from vyos.util import call
 from vyos.validate import is_member
