@@ -8,7 +8,7 @@
             <properties>
               <help>Show PPPoE interface information</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+                <path>interfaces pppoe</path>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
@@ -17,7 +17,7 @@
                 <properties>
                   <help>Show specified wirelessmodem interface statistics</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+                    <path>interfaces pppoe</path>
                   </completionHelp>
                 </properties>
                 <command>/usr/sbin/pppstats $4</command>

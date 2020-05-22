@@ -9,7 +9,7 @@
         <properties>
           <help>Bring up a connection-oriented network interface</help>
           <completionHelp>
-            <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+            <path>interfaces pppoe</path>
           </completionHelp>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
@@ -25,7 +25,7 @@
         <properties>
           <help>Take down a connection-oriented network interface</help>
           <completionHelp>
-            <script>${vyos_completion_dir}/list_pppoe_peers.sh</script>
+            <path>interfaces pppoe</path>
           </completionHelp>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --disconnect "$3"</command>
