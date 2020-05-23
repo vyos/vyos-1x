@@ -4,7 +4,6 @@ After=auditd.service systemd-user-sessions.service time-sync.target vyos-router.
 Requires=vyos-router.service
 
 [Service]
-ExecStartPre=/usr/libexec/vyos/init/vyos-config
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-http-api-server
 Type=notify
 KillMode=process
