@@ -400,4 +400,4 @@ if __name__ == '__main__':
         serve(app, host=server_config["listen_address"],
                    port=server_config["port"])
     except OSError as e:
-        print(f"OSError {e}")
+        sys.exit(f"OSError {e}")
