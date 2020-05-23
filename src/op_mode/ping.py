@@ -210,7 +210,7 @@ if __name__ == '__main__':
     try:
         ip = socket.gethostbyname(host)
     except socket.gaierror:
-        sys.exit(f'ping: Unknown host: {host}')
+        ip = host
 
     try:
         version = ipaddress.ip_address(ip).version
