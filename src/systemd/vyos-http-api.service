@@ -17,6 +17,4 @@ User=root
 Group=vyattacfg
 
 [Install]
-# Installing in a earlier target leaves ExecStartPre waiting
-WantedBy=getty.target
-
+WantedBy=vyos.target
