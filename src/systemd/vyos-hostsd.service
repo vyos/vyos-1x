@@ -14,7 +14,7 @@ WorkingDirectory=/run/vyos-hostsd
 RuntimeDirectory=vyos-hostsd
 RuntimeDirectoryPreserve=yes
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
-Type=idle
+Type=notify
 KillMode=process
 
 SyslogIdentifier=vyos-hostsd
