@@ -30,4 +30,4 @@ Group=hostsd
 # Note: After= doesn't actually create a dependency,
 # it just sets order for the case when both services are to start,
 # and without RequiredBy it *does not* set vyos-hostsd to start.
-RequiredBy=cloud-init-local.service vyos-router.service
+WantedBy=vyos.target
