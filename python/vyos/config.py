@@ -96,26 +96,29 @@ class Config(object):
         else:
             self.__session_env = None
 
+        running_config_text = self.get_active()
+        session_config_text = self.get_working() or running_config_text
+
+        self._session_config = vyos.configtree.ConfigTree(session_config_text)
+        if not running_config_text:
+            self._running_config = None
+            return
+        self._running_config = vyos.configtree.ConfigTree(running_config_text)
+
+    def get_active(self):
         # Running config can be obtained either from op or conf mode, it always succeeds
         # once the config system is initialized during boot;
         # before initialization, set to empty string
-        if os.path.isfile('/tmp/vyos-config-status'):
-            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
-        else:
-            running_config_text = ''
+        if not os.path.isfile('/tmp/vyos-config-status'):
+            return ''
+        return self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
 
+    def get_working(self):
         # Session config ("active") only exists in conf mode.
         # In op mode, we'll just use the same running config for both active and session configs.
-        if self.in_session():
-            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
-        else:
-            session_config_text = running_config_text
-
-        self._session_config = vyos.configtree.ConfigTree(session_config_text)
-        if running_config_text:
-            self._running_config = vyos.configtree.ConfigTree(running_config_text)
-        else:
-            self._running_config = None
+        if not self.in_session():
+            return ''
+        return self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
 
     def _make_command(self, op, path):
         args = path.split()
