@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="ser2net" owner="${vyos_conf_scripts_dir}/ser2net.py">
+        <properties>
+          <help>Serial to Network</help>
+        </properties>
+        <children>
+          <tagNode name="device">
+            <properties>
+              <help>System serial interface name (ttyS or ttyUSB)</help>
+              <completionHelp>
+                <script>find /dev -name ttyS* -exec basename {} \; | sort</script>
+                <script>find /dev -name ttyUSB* -exec basename {} \; | sort</script>
+              </completionHelp>
+              <valueHelp>
+                <format>ttySxxx</format>
+                <description>Regular serial interface</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ttyUSBxxx</format>
+                <description>USB based serial interface</description>
+              </valueHelp>
+              <constraint>
+                <regex>^tty(S|USB)[0-9]+$</regex>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/interface-description.xml.i>
+              #include <include/port-number.xml.i>
+              <leafNode name="speed">
+                <properties>
+                  <help>Serial port baud rate</help>
+                  <completionHelp>
+                    <list>300 1200 2400 4800 9600 19200 38400 57600 115200</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(300|1200|2400|4800|9600|19200|38400|57600|115200)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="data-bits">
+                <properties>
+                  <help>Serial port data bits</help>
+                  <completionHelp>
+                    <list>7 8</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(7|8)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="stop-bits">
+                <properties>
+                  <help>Serial port stop bits</help>
+                  <completionHelp>
+                    <list>1 2</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(1|2)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="parity">
+                <properties>
+                  <help>Parity setting</help>
+                  <completionHelp>
+                    <list>even odd none</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(even|odd|none)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
