@@ -15,7 +15,7 @@
             <children>
               <leafNode name="statistics">
                 <properties>
-                  <help>Show specified wirelessmodem interface statistics</help>
+                  <help>Show PPPoE interface statistics</help>
                   <completionHelp>
                     <path>interfaces pppoe</path>
                   </completionHelp>
