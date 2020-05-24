@@ -38,6 +38,7 @@ default_config_data = {
     'cache_size': 10000,
     'export_hosts_file': 'yes',
     'listen_on': [],
+    'lua_dns_script': '',
     'name_servers': [],
     'negative_ttl': 3600,
     'domains': [],
@@ -62,6 +63,9 @@ def get_config(arguments):
 
     if conf.exists(['allow-from']):
         dns['allow_from'] = conf.return_values(['allow-from'])
+
+    if conf.exists('lua-dns-script'):
+        dns['lua_dns_script'] = conf.return_value('lua-dns-script')
 
     if conf.exists(['cache-size']):
         cache_size = conf.return_value(['cache-size'])

@@ -132,6 +132,18 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="lua-dns-script">
+                <properties>
+                  <help>You must use a file suitable for the pdns-recursor lua-dns-script configuration. Any errors in the file will result in a service failure. Check the system log for errors after modifying.</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>Path to file in the /config directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="negative-ttl">
                 <properties>
                   <help>Maximum amount of time negative entries are cached</help>
