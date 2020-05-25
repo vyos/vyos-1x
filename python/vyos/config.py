@@ -70,6 +70,11 @@ import subprocess
 
 import vyos.configtree
 
+config_cache = True
+cached_running_config_text = '/var/cache/running_config_text'
+cached_session_config_text = '/var/cache/session_config_text'
+in_commit_file = '/var/tmp/in_commit'
+initial_in_commit_file = '/var/tmp/initial_in_commit'
 
 class VyOSError(Exception):
     """
@@ -96,26 +101,57 @@ class Config(object):
         else:
             self.__session_env = None
 
+        # read cached values if in commit, as indicated by file markers left
+        # by vyatta-cfg
+        if not config_cache or not os.path.isfile(in_commit_file):
+            self._read_live_config()
+        else:
+            if not os.path.isfile(initial_in_commit_file):
+                try:
+                    self._read_cached_config()
+                except:
+                    self._read_live_config()
+            else:
+                self._read_live_config()
+                self._write_cached_config()
+                os.remove(initial_in_commit_file)
+
+        self._session_config = vyos.configtree.ConfigTree(self._session_config_text)
+        if self._running_config_text:
+            self._running_config = vyos.configtree.ConfigTree(self._running_config_text)
+        else:
+            self._running_config = None
+
+    def _read_live_config(self):
         # Running config can be obtained either from op or conf mode, it always succeeds
         # once the config system is initialized during boot;
         # before initialization, set to empty string
         if os.path.isfile('/tmp/vyos-config-status'):
-            running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
+            self._running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
-            running_config_text = ''
+            self._running_config_text = ''
 
         # Session config ("active") only exists in conf mode.
         # In op mode, we'll just use the same running config for both active and session configs.
         if self.in_session():
-            session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
+            self._session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
         else:
-            session_config_text = running_config_text
+            self._session_config_text = self._running_config_text
 
-        self._session_config = vyos.configtree.ConfigTree(session_config_text)
-        if running_config_text:
-            self._running_config = vyos.configtree.ConfigTree(running_config_text)
-        else:
-            self._running_config = None
+    def _write_cached_config(self):
+        with open(cached_running_config_text, 'w') as f:
+            f.write(self._running_config_text)
+        with open(cached_session_config_text, 'w') as f:
+            f.write(self._session_config_text)
+
+    def _read_cached_config(self):
+        try:
+            with open(cached_running_config_text, 'r') as f:
+                self._running_config_text = f.read()
+            with open(cached_session_config_text, 'r') as f:
+                self._session_config_text = f.read()
+        except OSError:
+            raise
 
     def _make_command(self, op, path):
         args = path.split()
