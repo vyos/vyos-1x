@@ -21,13 +21,15 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.configdict import dhcpv6_pd_default_data
 from vyos.ifconfig import Interface
+from vyos.template import render
 from vyos.util import chown, chmod_755, call
 from vyos import ConfigError
-from vyos.template import render
 
 
 default_config_data = {
+    **dhcpv6_pd_default_data,
     'access_concentrator': '',
     'auth_username': '',
     'auth_password': '',
@@ -36,8 +38,6 @@ default_config_data = {
     'deleted': False,
     'description': '\0',
     'disable': False,
-    'dhcpv6_pd_length': '',
-    'dhcpv6_pd_interfaces': [],
     'intf': '',
     'idle_timeout': '',
     'ipv6_autoconf': False,
