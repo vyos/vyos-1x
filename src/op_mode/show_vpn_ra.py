@@ -24,8 +24,8 @@ from vyos.util import popen
 def get_sessions():
     absent_pptp = False
     absent_l2tp = False
-    pptp_cmd = ["accel-cmd", "-p 2003", "show sessions"]
-    l2tp_cmd = ["accel-cmd", "-p 2004", "show sessions"]
+    pptp_cmd = "accel-cmd -p 2003 show sessions"
+    l2tp_cmd = "accel-cmd -p 2004 show sessions"
     err_pattern = "^Connection.+failed$"
     # This value for chack only output header without sessions.
     len_def_header = 170
