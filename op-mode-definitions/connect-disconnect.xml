@@ -10,6 +10,7 @@
           <help>Bring up a connection-oriented network interface</help>
           <completionHelp>
             <path>interfaces pppoe</path>
+            <path>interfaces wirelessmodem</path>
           </completionHelp>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
@@ -26,6 +27,7 @@
           <help>Take down a connection-oriented network interface</help>
           <completionHelp>
             <path>interfaces pppoe</path>
+            <path>interfaces wirelessmodem</path>
           </completionHelp>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --disconnect "$3"</command>
