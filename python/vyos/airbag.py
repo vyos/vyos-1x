@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 from datetime import datetime
 
@@ -24,6 +25,7 @@ from vyos.version import get_full_version_data
 
 # we allow to disable the extra logging
 DISABLE = False
+STATUS_FILE = '/tmp/vyos-config-status'
 
 
 _noteworthy = []
@@ -122,12 +124,12 @@ def InterceptingException(excepthook,_singleton=[False]):
 
 
 # Do not attempt the extra logging for operational commands
-try:
-    # This fails during boot
+if not os.path.exists(STATUS_FILE):
+    insession = False
+else:
+    # carefull, This would fails during boot
+    # this is also very slow and may need a better way
     insession = Config().in_session()
-except:
-    # we save info on boot to help debugging
-    insession = True
 
 
 # Installing the interception, it currently does not work when
