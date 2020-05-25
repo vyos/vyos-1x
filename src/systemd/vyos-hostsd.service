@@ -1,5 +1,6 @@
 [Unit]
 Description=VyOS DNS configuration keeper
+Before=vyos-router.service
 
 # Without this option, lots of default dependencies are added,
 # among them network.target, which creates a dependency cycle
