@@ -36,6 +36,7 @@ default_config_data = {
     'deleted': False,
     'description': '\0',
     'disable': False,
+    'dhcpv6_pd_length': '',
     'dhcpv6_pd_interfaces': [],
     'intf': '',
     'idle_timeout': '',
@@ -141,6 +142,11 @@ def get_config():
         dhcpv6_pd_path = base_path + [pppoe['intf'],
                                       'dhcpv6-options', 'prefix-delegation']
         conf.set_level(dhcpv6_pd_path)
+
+        # retriebe DHCPv6-PD prefix helper length as some ISPs only hand out a
+        # /64 by default (https://phabricator.vyos.net/T2506)
+        if conf.exists(['length']):
+            pppoe['dhcpv6_pd_length'] = conf.return_value(['length'])
 
         for interface in conf.list_nodes(['interface']):
             conf.set_level(dhcpv6_pd_path + ['interface', interface])

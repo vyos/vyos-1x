@@ -171,6 +171,9 @@ def apply(peth):
     if peth['dhcpv6_temporary']:
         p.dhcp.v6.options['dhcpv6_temporary'] = True
 
+    if peth['dhcpv6_pd_length']:
+        p.dhcp.v6.options['dhcpv6_pd_length'] = peth['dhcpv6_pd_length']
+
     if peth['dhcpv6_pd_interfaces']:
         p.dhcp.v6.options['dhcpv6_pd_interfaces'] = peth['dhcpv6_pd_interfaces']
 

@@ -321,6 +321,9 @@ def apply(bridge):
         if bridge['dhcpv6_temporary']:
             br.dhcp.v6.options['dhcpv6_temporary'] = True
 
+        if bridge['dhcpv6_pd_length']:
+            br.dhcp.v6.options['dhcpv6_pd_length'] = br['dhcpv6_pd_length']
+
         if bridge['dhcpv6_pd_interfaces']:
             br.dhcp.v6.options['dhcpv6_pd_interfaces'] = br['dhcpv6_pd_interfaces']
 

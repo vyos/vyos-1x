@@ -591,6 +591,9 @@ def apply(wifi):
         if wifi['dhcpv6_temporary']:
             w.dhcp.v6.options['dhcpv6_temporary'] = True
 
+        if wifi['dhcpv6_pd_length']:
+            w.dhcp.v6.options['dhcpv6_pd_length'] = wifi['dhcpv6_pd_length']
+
         if wifi['dhcpv6_pd_interfaces']:
             w.dhcp.v6.options['dhcpv6_pd_interfaces'] = wifi['dhcpv6_pd_interfaces']
 

@@ -112,6 +112,7 @@ interface_default_data = {
     'dhcp_vendor_class_id': '',
     'dhcpv6_prm_only': False,
     'dhcpv6_temporary': False,
+    'dhcpv6_pd_length': '',
     'dhcpv6_pd_interfaces': [],
     'disable': False,
     'disable_link_detect': 1,

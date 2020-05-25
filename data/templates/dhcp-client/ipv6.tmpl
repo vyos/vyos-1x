@@ -23,6 +23,9 @@ id-assoc na 1 {
 
 {%  if dhcpv6_pd_interfaces %}
 id-assoc pd 2 {
+{%  if dhcpv6_pd_length %}
+    prefix ::/{{ dhcpv6_pd_length }} infinity;
+{%  endif %}
 {%  for intf in dhcpv6_pd_interfaces %}
     prefix-interface {{ intf.ifname }} {
 {%    if intf.sla_id %}

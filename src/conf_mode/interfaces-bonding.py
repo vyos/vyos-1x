@@ -299,6 +299,9 @@ def apply(bond):
         if bond['dhcpv6_temporary']:
             b.dhcp.v6.options['dhcpv6_temporary'] = True
 
+        if bond['dhcpv6_pd_length']:
+            b.dhcp.v6.options['dhcpv6_pd_length'] = bond['dhcpv6_pd_length']
+
         if bond['dhcpv6_pd_interfaces']:
             b.dhcp.v6.options['dhcpv6_pd_interfaces'] = bond['dhcpv6_pd_interfaces']
 
