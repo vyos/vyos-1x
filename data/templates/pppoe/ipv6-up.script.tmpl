@@ -40,7 +40,7 @@ echo 2 > /proc/sys/net/ipv6/conf/{{ intf }}/accept_ra
 echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconfigure
 {% endif %}
 
-{% if dhcpv6_pd %}
+{% if dhcpv6_pd_interfaces %}
 # Start wide dhcpv6 client
 systemctl start dhcp6c@{{ intf }}.service
 {% endif %}

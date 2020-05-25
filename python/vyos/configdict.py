@@ -112,7 +112,7 @@ interface_default_data = {
     'dhcp_vendor_class_id': '',
     'dhcpv6_prm_only': False,
     'dhcpv6_temporary': False,
-    'dhcpv6_pd': [],
+    'dhcpv6_pd_interfaces': [],
     'disable': False,
     'disable_link_detect': 1,
     'ip_disable_arp_filter': 1,
@@ -248,7 +248,7 @@ def intf_to_dict(conf, default):
             if conf.exists(['interface-id']):
                 pd['if_id'] = conf.return_value(['interface-id'])
 
-            intf['dhcpv6_pd'].append(pd)
+            intf['dhcpv6_pd_interfaces'].append(pd)
 
     # re-set config level
     conf.set_level(current_level)

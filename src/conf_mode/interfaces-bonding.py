@@ -299,8 +299,8 @@ def apply(bond):
         if bond['dhcpv6_temporary']:
             b.dhcp.v6.options['dhcpv6_temporary'] = True
 
-        if bond['dhcpv6_pd']:
-            b.dhcp.v6.options['dhcpv6_pd'] = bond['dhcpv6_pd']
+        if bond['dhcpv6_pd_interfaces']:
+            b.dhcp.v6.options['dhcpv6_pd_interfaces'] = bond['dhcpv6_pd_interfaces']
 
         # ignore link state changes
         b.set_link_detect(bond['disable_link_detect'])

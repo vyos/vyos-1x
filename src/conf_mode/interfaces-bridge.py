@@ -321,8 +321,8 @@ def apply(bridge):
         if bridge['dhcpv6_temporary']:
             br.dhcp.v6.options['dhcpv6_temporary'] = True
 
-        if bridge['dhcpv6_pd']:
-            br.dhcp.v6.options['dhcpv6_pd'] = br['dhcpv6_pd']
+        if bridge['dhcpv6_pd_interfaces']:
+            br.dhcp.v6.options['dhcpv6_pd_interfaces'] = br['dhcpv6_pd_interfaces']
 
         # assign/remove VRF
         br.set_vrf(bridge['vrf'])
