@@ -37,7 +37,7 @@ echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/forwarding
 echo 2 > /proc/sys/net/ipv6/conf/{{ intf }}/accept_ra
 
 # Autoconfigure addresses using Prefix Information in Router Advertisements.
-echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconfigure
+echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconf
 {% endif %}
 
 {% if dhcpv6_pd_interfaces %}
