@@ -1,0 +1,579 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 routing information</help>
+        </properties>
+        <children>
+          <node name="ospf">
+            <properties>
+              <help>Show IPv4 Open Shortest Path First (OSPF) routing information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip ospf"</command>
+            <children>
+              <leafNode name="border-routers">
+                <properties>
+                  <help>Show IPv4 OSPF border-routers information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf border-routers"</command>
+              </leafNode>
+              <node name="database">
+                <properties>
+                  <help>Show IPv4 OSPF database information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf database"</command>
+                <children>
+                  <node name="asbr-summary">
+                    <properties>
+                      <help>Show IPv4 OSPF ASBR summary database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF ASBR summary database for given address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF ASBR summary database for given address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="asbr-summary">
+                    <properties>
+                      <help>Show IPv4 OSPF ASBR summary database information of given address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF ASBR summary database of given address for given advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show summary of self-originate IPv4 OSPF ASBR database</help>
+                        </properties>
+                        <command>show ip ospf database asbr-summary $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <node name="external">
+                    <properties>
+                      <help>Show IPv4 OSPF external database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database external"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF external database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database external adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF external database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="external">
+                    <properties>
+                      <help>Show IPv4 OSPF external database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database external"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF external database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database external $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF external database</help>
+                        </properties>
+                        <command>show ip ospf database external $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <leafNode name="max-age">
+                    <properties>
+                      <help>Show IPv4 OSPF max-age database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database max-age"</command>
+                  </leafNode>
+                  <node name="network">
+                    <properties>
+                      <help>Show IPv4 OSPF network database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database network"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF network database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database network adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF network database for given address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="network">
+                    <properties>
+                      <help>Show IPv4 OSPF network database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database network"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF network database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database network $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF network database</help>
+                        </properties>
+                        <command>show ip ospf database network $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <node name="nssa-external">
+                    <properties>
+                      <help>Show IPv4 OSPF NSSA external database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database nssa-external"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF NSSA external database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database nssa-external adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF NSSA external database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="nssa-external">
+                    <properties>
+                      <help>Show IPv4 OSPF NSSA external database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database nssa-external"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF NSSA external database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database nssa-external $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF NSSA external database</help>
+                        </properties>
+                        <command>show ip ospf database nssa-external $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <node name="opaque-area">
+                    <properties>
+                      <help>Show IPv4 OSPF opaque-area database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-area"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-area database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database opaque-area adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-area database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="opaque-area">
+                    <properties>
+                      <help>Show IPv4 OSPF opaque-area database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-area"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-area database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database opaque-area $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF opaque-area database</help>
+                        </properties>
+                        <command>show ip ospf database opaque-area $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <node name="opaque-as">
+                    <properties>
+                      <help>Show IPv4 OSPF opaque-as database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-as"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-as database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database opaque-as adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-as database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="opaque-as">
+                    <properties>
+                      <help>Show IPv4 OSPF opaque-as database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-as"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-as database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database opaque-as $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF opaque-as database</help>
+                        </properties>
+                        <command>show ip ospf database opaque-as $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <node name="opaque-link">
+                    <properties>
+                      <help>Show IPv4 OSPF opaque-link database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-link"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-link database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database opaque-link adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-link database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="opaque-link">
+                    <properties>
+                      <help>Show IPv4 OSPF opaque-link database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-link"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF opaque-link database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database opaque-link $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF opaque-link database</help>
+                        </properties>
+                        <command>show ip ospf database opaque-link $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <node name="router">
+                    <properties>
+                      <help>Show IPv4 OSPF router database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database router"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF router database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database router adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF router database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="router">
+                    <properties>
+                      <help>Show IPv4 OSPF router database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database router"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF router database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database router $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF router database</help>
+                        </properties>
+                        <command>show ip ospf database router $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                  <leafNode name="self-originate">
+                    <properties>
+                      <help>Show IPv4 OSPF self-originate database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database self-originate"</command>
+                  </leafNode>
+                  <node name="summary">
+                    <properties>
+                      <help>Show summary of IPv4 OSPF database</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database summary"</command>
+                    <children>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF summary database for specified IP address of advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database summary adv-router $7"</command>
+                      </tagNode>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF summary database for specified IP address of advertised router</help>
+                        </properties>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="summary">
+                    <properties>
+                      <help>Show IPv4 OSPF summary database information of specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf database summary"</command>
+                    <children>
+                      <node name="adv-router">
+                        <properties>
+                          <help>Show advertising router link states</help>
+                        </properties>
+                      </node>
+                      <tagNode name="adv-router">
+                        <properties>
+                          <help>Show IPv4 OSPF summary database of specified IP address for specified advertised router</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show ip ospf database summary $6 adv-router $8"</command>
+                      </tagNode>
+                      <leafNode name="self-originate">
+                        <properties>
+                          <help>Show self-originate IPv4 OSPF summary database</help>
+                        </properties>
+                        <command>show ip ospf database summary $6 self-originate</command>
+                      </leafNode> 
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="interface">
+                <properties>
+                  <help>Show IPv4 OSPF interface information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf interface"</command>
+              </node>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show IPv4 OSPF information for specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf interface $5"</command>
+              </tagNode>
+              <node name="neighbor">
+                <properties>
+                  <help>Show IPv4 OSPF neighbor information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf neighbor"</command>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Show IPv4 OSPF neighbor information for specified IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf neighbor $6"</command>
+                  </tagNode>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed IPv4 OSPF neighbor information</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show ip ospf neighbor detail"</command>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="neighbor">
+                <properties>
+                  <help>Show IPv4 OSPF neighbor information for specified IP address or interface</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt;</list>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf neighbor $5"</command>
+              </tagNode>
+              <leafNode name="route">
+                <properties>
+                  <help>Show IPv4 OSPF route information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip ospf route"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

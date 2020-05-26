@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 routing information</help>
+        </properties>
+        <children>
+          <node name="rip">
+            <properties>
+              <help>Show Routing Information Protocol (RIP) information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip rip"</command>
+            <children>
+              <leafNode name="status">
+                <properties>
+                  <help>Show RIP protocol status</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip rip status"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
