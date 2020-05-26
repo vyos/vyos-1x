@@ -40,10 +40,10 @@ fi
 vtysh -c "show running-config" | sed -n "/${SED_OPT}/,/!/p" | grep 0.0.0.0/0 | while read route ; do
     vtysh -c "conf t" ${VTY_OPT} -c "no ${route} ${VRF_NAME}"
 done
-{%    endif %}
+{%     endif %}
 
 # Add default route to default or VRF routing table
 vtysh -c "conf t" ${VTY_OPT} -c "ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME}"
 logger -t pppd[$DIALER_PID] "added default route via {{ intf }} ${VRF_NAME}"
-{%  endif %}
+{%   endif %}
 {% endif %}
