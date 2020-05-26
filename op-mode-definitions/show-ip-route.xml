@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 routing information</help>
+        </properties>
+        <children>
+          <node name="route">
+            <properties>
+              <help>Show IP routes</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip route"</command>
+            <children>
+              <leafNode name="bgp">
+                <properties>
+                  <help>Show IP BGP routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route bgp"</command>
+              </leafNode>
+              <leafNode name="connected">
+                <properties>
+                  <help>Show IP connected routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route connected"</command>
+              </leafNode>
+              <leafNode name="kernel">
+                <properties>
+                  <help>Show IP kernel routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route kernel"</command>
+              </leafNode>
+              <leafNode name="ospf">
+                <properties>
+                  <help>Show IP OSPF routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route ospf"</command>
+              </leafNode>
+              <leafNode name="rip">
+                <properties>
+                  <help>Show IP RIP routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route rip"</command>
+              </leafNode>
+              <leafNode name="static">
+                <properties>
+                  <help>Show IP static routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route static"</command>
+              </leafNode>
+              <leafNode name="summary">
+                <properties>
+                  <help>Show IP routes summary</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route summary"</command>
+              </leafNode>
+              <leafNode name="supernets-only">
+                <properties>
+                  <help>Show IP supernet routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route supernets-only"</command>
+              </leafNode>
+              <node name="table">
+                <properties>
+                  <help>Show IP routes in policy table</help>
+                </properties>
+              </node>
+              <tagNode name="table">
+                <properties>
+                  <help>Show IP routes in policy table</help>
+                  <completionHelp>
+                    <list>&lt;1-200&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route table $5"</command>
+              </tagNode>
+              <node name="tag">
+                <properties>
+                  <help>Show only routes with tag</help>
+                </properties>
+              </node>
+              <tagNode name="tag">
+                <properties>
+                  <help>Tag value</help>
+                  <completionHelp>
+                    <list>&lt;1-4294967295&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route tag $5"</command>
+              </tagNode>
+              <node name="vrf">
+                <properties>
+                  <help>Show IP routes in VRF</help>
+                </properties>
+              </node>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Show IP routes in VRF</help>
+                  <completionHelp>
+                    <list>&lt;vrf&gt;</list>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route vrf $5"</command>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="route">
+            <properties>
+              <help>Show IP routes of specified IP address or prefix</help>
+              <completionHelp>
+                <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip route $4"</command>
+            <children>
+              <leafNode name="longer-prefixes">
+                <properties>
+                  <help>Show longer prefixes of routes for specified IP address or prefix</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route $4"</command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

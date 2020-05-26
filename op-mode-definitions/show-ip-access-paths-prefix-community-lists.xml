@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Show IPv4 routing information</help>
+        </properties>
+        <children>
+          <leafNode name="access-list">
+            <properties>
+              <help>Show all IP access-lists</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip access-list"</command>
+          </leafNode>
+          <tagNode name="access-list">
+            <properties>
+              <help>Show all IP access-lists</help>
+              <completionHelp>
+                <path>policy access-list</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip access-list $4"</command>
+          </tagNode>
+          <leafNode name="as-path-access-list">
+            <properties>
+              <help>Show all as-path-access-lists</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip as-path-access-list"</command>
+          </leafNode>
+          <tagNode name="as-path-access-list">
+            <properties>
+              <help>Show all as-path-access-lists</help>
+              <completionHelp>
+                <path>policy as-path-list</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip as-path-access-list $4"</command>
+          </tagNode>
+          <leafNode name="community-list">
+            <properties>
+              <help>Show IP community-lists</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp community-list"</command>
+          </leafNode>
+          <tagNode name="community-list">
+            <properties>
+              <help>Show IP community-lists</help>
+              <completionHelp>
+                <path>policy community-list</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp community-list $4 detail"</command>
+          </tagNode>
+          <leafNode name="extcommunity-list">
+            <properties>
+              <help>Show extended IP community-lists</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp extcommunity-list"</command>
+          </leafNode>
+          <tagNode name="extcommunity-list">
+            <properties>
+              <help>Show extended IP community-lists</help>
+              <completionHelp>
+                <path>policy extcommunity-list</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp extcommunity-list $4 detail"</command>
+          </tagNode>
+          <leafNode name="forwarding">
+            <properties>
+              <help>Show IP forwarding status</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip forwarding"</command>
+          </leafNode>
+          <leafNode name="large-community-list">
+            <properties>
+              <help>Show IP large-community-lists</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp large-community-list"</command>
+          </leafNode>
+          <tagNode name="large-community-list">
+            <properties>
+              <help>Show IP large-community-lists</help>
+              <completionHelp>
+                <path>policy large-community-list</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp large-community-list $4 detail"</command>
+          </tagNode>
+          <leafNode name="prefix-list">
+            <properties>
+              <help>Show all IP prefix-lists</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip prefix-list"</command>
+          </leafNode>
+          <tagNode name="prefix-list">
+            <properties>
+              <help>Show all IP prefix-lists</help>
+              <completionHelp>
+                <path>policy prefix-list</path>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip prefix-list $4"</command>
+          </tagNode>
+          <leafNode name="protocol">
+            <properties>
+              <help>Show IP route-maps per protocol</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show ip protocol"</command>
+          </leafNode>
+         </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
