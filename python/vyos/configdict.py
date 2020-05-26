@@ -103,16 +103,21 @@ def get_ethertype(ethertype_val):
     else:
         raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
 
+dhcpv6_pd_default_data = {
+    'dhcpv6_prm_only': False,
+    'dhcpv6_temporary': False,
+    'dhcpv6_pd_length': '',
+    'dhcpv6_pd_interfaces': []
+}
+
 interface_default_data = {
+    **dhcpv6_pd_default_data,
     'address': [],
     'address_remove': [],
     'description': '',
     'dhcp_client_id': '',
     'dhcp_hostname': '',
     'dhcp_vendor_class_id': '',
-    'dhcpv6_prm_only': False,
-    'dhcpv6_temporary': False,
-    'dhcpv6_pd': [],
     'disable': False,
     'disable_link_detect': 1,
     'ip_disable_arp_filter': 1,
@@ -245,10 +250,10 @@ def intf_to_dict(conf, default):
             if conf.exists(['sla-len']):
                 pd['sla_len'] = conf.return_value(['sla-len'])
 
-            if conf.exists(['interface-id']):
-                pd['if_id'] = conf.return_value(['interface-id'])
+            if conf.exists(['address']):
+                pd['if_id'] = conf.return_value(['address'])
 
-            intf['dhcpv6_pd'].append(pd)
+            intf['dhcpv6_pd_interfaces'].append(pd)
 
     # re-set config level
     conf.set_level(current_level)

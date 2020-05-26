@@ -21,13 +21,15 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.configdict import dhcpv6_pd_default_data
 from vyos.ifconfig import Interface
+from vyos.template import render
 from vyos.util import chown, chmod_755, call
 from vyos import ConfigError
-from vyos.template import render
 
 
 default_config_data = {
+    **dhcpv6_pd_default_data,
     'access_concentrator': '',
     'auth_username': '',
     'auth_password': '',
@@ -36,7 +38,6 @@ default_config_data = {
     'deleted': False,
     'description': '\0',
     'disable': False,
-    'dhcpv6_pd': [],
     'intf': '',
     'idle_timeout': '',
     'ipv6_autoconf': False,
@@ -137,15 +138,24 @@ def get_config():
     if conf.exists('vrf'):
         pppoe['vrf'] = conf.return_value(['vrf'])
 
-    if conf.exists(['dhcpv6-options', 'delegate']):
-        for interface in conf.list_nodes(['dhcpv6-options', 'delegate']):
+    if conf.exists(['dhcpv6-options', 'prefix-delegation']):
+        dhcpv6_pd_path = base_path + [pppoe['intf'],
+                                      'dhcpv6-options', 'prefix-delegation']
+        conf.set_level(dhcpv6_pd_path)
+
+        # retriebe DHCPv6-PD prefix helper length as some ISPs only hand out a
+        # /64 by default (https://phabricator.vyos.net/T2506)
+        if conf.exists(['length']):
+            pppoe['dhcpv6_pd_length'] = conf.return_value(['length'])
+
+        for interface in conf.list_nodes(['interface']):
+            conf.set_level(dhcpv6_pd_path + ['interface', interface])
             pd = {
                 'ifname': interface,
                 'sla_id': '',
                 'sla_len': '',
                 'if_id': ''
             }
-            conf.set_level(base_path + [pppoe['intf'], 'dhcpv6-options', 'delegate', interface])
 
             if conf.exists(['sla-id']):
                 pd['sla_id'] = conf.return_value(['sla-id'])
@@ -153,10 +163,10 @@ def get_config():
             if conf.exists(['sla-len']):
                 pd['sla_len'] = conf.return_value(['sla-len'])
 
-            if conf.exists(['interface-id']):
-                pd['if_id'] = conf.return_value(['interface-id'])
+            if conf.exists(['address']):
+                pd['if_id'] = conf.return_value(['address'])
 
-            pppoe['dhcpv6_pd'].append(pd)
+            pppoe['dhcpv6_pd_interfaces'].append(pd)
 
     return pppoe
 
@@ -223,7 +233,7 @@ def generate(pppoe):
     render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
            pppoe, trim_blocks=True, permission=0o755)
 
-    if len(pppoe['dhcpv6_pd']) > 0:
+    if len(pppoe['dhcpv6_pd_interfaces']) > 0:
         # ipv6.tmpl relies on ifname - this should be made consitent in the
         # future better then double key-ing the same value
         pppoe['ifname'] = intf

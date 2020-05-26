@@ -10,7 +10,7 @@ interface {{ ifname }} {
 {%  if not dhcpv6_temporary %}
     send ia-na 1; # non-temporary address
 {%  endif %}
-{%  if dhcpv6_pd %}
+{%  if dhcpv6_pd_interfaces %}
     send ia-pd 2; # prefix delegation
 {%  endif %}
 };
@@ -21,9 +21,12 @@ id-assoc na 1 {
 };
 {%  endif %}
 
-{%  if dhcpv6_pd %}
+{%  if dhcpv6_pd_interfaces %}
 id-assoc pd 2 {
-{%  for intf in dhcpv6_pd %}
+{%  if dhcpv6_pd_length %}
+    prefix ::/{{ dhcpv6_pd_length }} infinity;
+{%  endif %}
+{%  for intf in dhcpv6_pd_interfaces %}
     prefix-interface {{ intf.ifname }} {
 {%    if intf.sla_id %}
         sla-id {{ intf.sla_id }};

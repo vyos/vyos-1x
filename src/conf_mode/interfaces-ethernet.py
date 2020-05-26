@@ -201,8 +201,11 @@ def apply(eth):
         if eth['dhcpv6_temporary']:
             e.dhcp.v6.options['dhcpv6_temporary'] = True
 
-        if eth['dhcpv6_pd']:
-            e.dhcp.v6.options['dhcpv6_pd'] = eth['dhcpv6_pd']
+        if eth['dhcpv6_pd_length']:
+            e.dhcp.v6.options['dhcpv6_pd_length'] = eth['dhcpv6_pd_length']
+
+        if eth['dhcpv6_pd_interfaces']:
+            e.dhcp.v6.options['dhcpv6_pd_interfaces'] = eth['dhcpv6_pd_interfaces']
 
         # ignore link state changes
         e.set_link_detect(eth['disable_link_detect'])

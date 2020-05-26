@@ -87,8 +87,11 @@ def apply_vlan_config(vlan, config):
     if config['dhcpv6_temporary']:
         vlan.dhcp.v6.options['dhcpv6_temporary'] = True
 
-    if config['dhcpv6_pd']:
-        vlan.dhcp.v6.options['dhcpv6_pd'] = config['dhcpv6_pd']
+    if config['dhcpv6_pd_length']:
+        vlan.dhcp.v6.options['dhcpv6_pd_length'] = config['dhcpv6_pd_length']
+
+    if config['dhcpv6_pd_interfaces']:
+        vlan.dhcp.v6.options['dhcpv6_pd_interfaces'] = config['dhcpv6_pd_interfaces']
 
     # update interface description used e.g. within SNMP
     vlan.set_alias(config['description'])
