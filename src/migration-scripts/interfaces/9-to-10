@@ -48,7 +48,6 @@ if __name__ == '__main__':
 
                 # copy to new node
                 config.copy(base_path, new_path + ['interface'])
-                print(new_path + ['interface'])
 
                 # rename interface-id to address
                 for interface in config.list_nodes(new_path + ['interface']):
