@@ -16,44 +16,6 @@
             </properties>
             <command>netstat -gn4</command>
           </leafNode>
-
-          <node name="route">
-            <properties>
-              <help>Show IP routes</help>
-            </properties>
-            <children>
-              <node name="cache">
-                <properties>
-                  <help>Show kernel route cache</help>
-                </properties>
-                <command>ip -s route list cache</command>
-              </node>
-              <tagNode name="cache">
-                <properties>
-                  <help>Show kernel route cache for a given route</help>
-                  <completionHelp>
-                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>ip -s route list cache $5</command>
-              </tagNode>
-              <node name="forward">
-                <properties>
-                  <help>Show kernel route table</help>
-                </properties>
-                <command>ip route list</command>
-              </node>
-              <tagNode name="forward">
-                <properties>
-                  <help>Show kernel route table for a given route</help>
-                  <completionHelp>
-                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>ip -s route list $5</command>
-              </tagNode>
-            </children>
-          </node>
         </children>
       </node>
     </children>
