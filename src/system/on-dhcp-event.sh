@@ -20,7 +20,6 @@ client_ip=$3
 client_mac=$4
 domain=$5
 file=/etc/hosts
-changes=0
 
 if [ -z "$client_name" ]; then
     logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
@@ -44,13 +43,11 @@ case "$action" in
     fi
     # add host
     /usr/bin/vyos-hostsd-client --add-hosts --tag "DHCP-$client_ip" --host "$client_fqdn_name,$client_ip"
-    ((changes++))
     ;;
 
   release) # delete mapping for released address
     # delete host
     /usr/bin/vyos-hostsd-client --delete-hosts --tag "DHCP-$client_ip"
-    ((changes++))
     ;;
 
   *)
@@ -59,15 +56,6 @@ case "$action" in
     ;;
 esac
 
-if [ $changes -gt 0 ]; then
-  echo Success
-  pid=`pgrep pdns_recursor`
-  if [ -n "$pid" ]; then
-     sudo rec_control --socket-dir=/run/powerdns reload-zones
-  fi
-else
-  echo No changes made
-fi
 exit 0
 
 
