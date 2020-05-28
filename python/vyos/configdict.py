@@ -234,9 +234,9 @@ def intf_to_dict(conf, default):
 
     # DHCPv6 prefix delegation (RFC3633)
     current_level = conf.get_level()
-    if conf.exists(['dhcpv6-options', 'delegate']):
-        for interface in conf.list_nodes(['dhcpv6-options', 'delegate']):
-            conf.set_level(current_level + ['dhcpv6-options', 'delegate', interface])
+    if conf.exists(['dhcpv6-options', 'prefix-delegation']):
+        for interface in conf.list_nodes(['dhcpv6-options', 'prefix-delegation', 'interface']):
+            conf.set_level(current_level + ['dhcpv6-options', 'prefix-delegation', 'interface', interface])
             pd = {
                 'ifname': interface,
                 'sla_id': '',

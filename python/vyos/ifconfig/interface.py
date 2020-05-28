@@ -644,7 +644,7 @@ class Interface(Control):
               IPv4: add IPv4 address to interface
               IPv6: add IPv6 address to interface
               dhcp: start dhclient (IPv4) on interface
-              dhcpv6: start dhclient (IPv6) on interface
+              dhcpv6: start WIDE DHCPv6 (IPv6) on interface
 
         Returns False if address is already assigned and wasn't re-added.
         Example:
