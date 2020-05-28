@@ -294,6 +294,11 @@ def apply(eth):
         if eth['is_bridge_member']:
             e.add_to_bridge(eth['is_bridge_member'])
 
+        # If DHCPv6-PD is requested, and the IPv6 addresses are not being set
+        # via DHCPv6, then we still need to start dhcp6c.
+        if eth['dhcpv6_pd_interfaces'] and 'dhcpv6' not in eth['address']:
+            e.request_prefix_delegation()
+
         # apply all vlans to interface
         apply_all_vlans(e, eth)
 

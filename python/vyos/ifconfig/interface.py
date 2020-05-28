@@ -644,7 +644,7 @@ class Interface(Control):
               IPv4: add IPv4 address to interface
               IPv6: add IPv6 address to interface
               dhcp: start dhclient (IPv4) on interface
-              dhcpv6: start dhclient (IPv6) on interface
+              dhcpv6: start WIDE dhcp6c (IPv6) on interface
 
         Returns False if address is already assigned and wasn't re-added.
         Example:
@@ -757,3 +757,11 @@ class Interface(Control):
         # TODO: port config (STP)
 
         return True
+
+    def request_prefix_delegation(self):
+        """
+        Starts the DHCPv6 client in order to request a delegated IPv6 prefix.
+
+        Will raise an exception on failure.
+        """
+        self.dhcp.v6.set()
