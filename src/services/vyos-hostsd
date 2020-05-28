@@ -28,7 +28,7 @@ import zmq
 import collections
 
 import jinja2
-from vyos.util import popen
+from vyos.util import popen, process_named_running
 
 debug = True
 
@@ -264,8 +264,7 @@ def handle_message(msg_json):
         json.dump(STATE, f)
 
     if changes > 0:
-        (ret,return_code) = popen("pidof pdns_recursor");
-        if return_code == 0:
+        if process_named_running("pdns_recursor"):
             (ret,return_code) = popen("sudo rec_control --socket-dir=/run/powerdns reload-zones")
             if return_code > 0:
                 logger.exception("PowerDNS rec_control failed to reload")
