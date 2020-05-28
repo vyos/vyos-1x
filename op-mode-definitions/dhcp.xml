@@ -161,4 +161,40 @@
       </node>
     </children>
   </node>
+  <node name="renew">
+    <children>
+      <node name="dhcp">
+        <properties>
+          <help>Renew DHCP client lease</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Renew DHCP client lease for specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <command>sudo systemctl restart "dhclient@$4.service"</command>
+          </tagNode>
+        </children>
+      </node>
+      <node name="dhcpv6">
+        <properties>
+          <help>Renew DHCPv6 client lease</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Renew DHCPv6 client lease for specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <command>sudo systemctl restart "dhcp6c@$4.service"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
