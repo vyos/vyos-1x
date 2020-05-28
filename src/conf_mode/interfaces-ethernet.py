@@ -201,8 +201,11 @@ def apply(eth):
         if eth['dhcpv6_temporary']:
             e.dhcp.v6.options['dhcpv6_temporary'] = True
 
-        if eth['dhcpv6_pd']:
-            e.dhcp.v6.options['dhcpv6_pd'] = e['dhcpv6_pd']
+        if eth['dhcpv6_pd_length']:
+            e.dhcp.v6.options['dhcpv6_pd_length'] = eth['dhcpv6_pd_length']
+
+        if eth['dhcpv6_pd_interfaces']:
+            e.dhcp.v6.options['dhcpv6_pd_interfaces'] = eth['dhcpv6_pd_interfaces']
 
         # ignore link state changes
         e.set_link_detect(eth['disable_link_detect'])
@@ -236,11 +239,12 @@ def apply(eth):
             e.del_ipv6_eui64_address(addr)
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
-        # if custom mac is removed
-        if eth['mac']:
-            e.set_mac(eth['mac'])
-        elif eth['hw_id']:
-            e.set_mac(eth['hw_id'])
+        # if custom mac is removed. Skip if bond member.
+        if not eth['is_bond_member']:
+            if eth['mac']:
+                e.set_mac(eth['mac'])
+            elif eth['hw_id']:
+                e.set_mac(eth['hw_id'])
 
         # Add IPv6 EUI-based addresses
         for addr in eth['ipv6_eui64_prefix']:

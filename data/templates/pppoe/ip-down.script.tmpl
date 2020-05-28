@@ -25,9 +25,12 @@ fi
 
 # Always delete default route when interface goes down
 vtysh -c "conf t" ${VRF_NAME} -c "no ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME}"
+{%   if ipv6_enable %}
+vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ intf }} ${VRF_NAME}"
+{%   endif %}
 {% endif %}
 
-{% if dhcpv6_pd %}
+{% if dhcpv6_pd_interfaces %}
 # Start wide dhcpv6 client
 systemctl stop dhcp6c@{{ intf }}.service
 {% endif %}

@@ -171,8 +171,11 @@ def apply(peth):
     if peth['dhcpv6_temporary']:
         p.dhcp.v6.options['dhcpv6_temporary'] = True
 
-    if peth['dhcpv6_pd']:
-        p.dhcp.v6.options['dhcpv6_pd'] = peth['dhcpv6_pd']
+    if peth['dhcpv6_pd_length']:
+        p.dhcp.v6.options['dhcpv6_pd_length'] = peth['dhcpv6_pd_length']
+
+    if peth['dhcpv6_pd_interfaces']:
+        p.dhcp.v6.options['dhcpv6_pd_interfaces'] = peth['dhcpv6_pd_interfaces']
 
     # ignore link state changes
     p.set_link_detect(peth['disable_link_detect'])

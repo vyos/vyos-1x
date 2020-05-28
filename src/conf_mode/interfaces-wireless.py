@@ -95,16 +95,9 @@ default_config_data = {
     'vif_s_remove': []
 }
 
-def get_conf_file(conf_type, intf):
-    cfg_dir = '/run/' + conf_type
-
-    # create directory on demand
-    if not os.path.exists(cfg_dir):
-        os.makedirs(cfg_dir, 0o755)
-        chown(cfg_dir, 'root', 'vyattacfg')
-
-    cfg_file = cfg_dir + r'/{}.conf'.format(intf)
-    return cfg_file
+# XXX: wpa_supplicant works on the source interface
+wpa_suppl_conf = '/run/wpa_supplicant/{intf}.conf'
+hostapd_conf = '/run/hostapd/{intf}.conf'
 
 def get_config():
     # determine tagNode instance
@@ -518,11 +511,11 @@ def generate(wifi):
 
     # Delete config files if interface is removed
     if wifi['deleted']:
-        if os.path.isfile(get_conf_file('hostapd', interface)):
-            os.unlink(get_conf_file('hostapd', interface))
+        if os.path.isfile(hostapd_conf.format(**wifi)):
+            os.unlink(hostapd_conf.format(**wifi))
 
-        if os.path.isfile(get_conf_file('wpa_supplicant', interface)):
-            os.unlink(get_conf_file('wpa_supplicant', interface))
+        if os.path.isfile(wpa_suppl_conf.format(**wifi)):
+            os.unlink(wpa_suppl_conf.format(**wifi))
 
         return None
 
@@ -550,12 +543,10 @@ def generate(wifi):
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['op_mode'] == 'ap':
-        conf = get_conf_file('hostapd', interface)
-        render(conf, 'wifi/hostapd.conf.tmpl', wifi)
+        render(hostapd_conf.format(**wifi), 'wifi/hostapd.conf.tmpl', wifi)
 
     elif wifi['op_mode'] == 'station':
-        conf = get_conf_file('wpa_supplicant', interface)
-        render(conf, 'wifi/wpa_supplicant.conf.tmpl', wifi)
+        render(wpa_suppl_conf.format(**wifi), 'wifi/wpa_supplicant.conf.tmpl', wifi)
 
     return None
 
@@ -600,8 +591,11 @@ def apply(wifi):
         if wifi['dhcpv6_temporary']:
             w.dhcp.v6.options['dhcpv6_temporary'] = True
 
-        if wifi['dhcpv6_pd']:
-            w.dhcp.v6.options['dhcpv6_pd'] = wifi['dhcpv6_pd']
+        if wifi['dhcpv6_pd_length']:
+            w.dhcp.v6.options['dhcpv6_pd_length'] = wifi['dhcpv6_pd_length']
+
+        if wifi['dhcpv6_pd_interfaces']:
+            w.dhcp.v6.options['dhcpv6_pd_interfaces'] = wifi['dhcpv6_pd_interfaces']
 
         # ignore link state changes
         w.set_link_detect(wifi['disable_link_detect'])

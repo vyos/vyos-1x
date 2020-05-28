@@ -51,7 +51,7 @@ class Interface(Control):
     # WireGuard to modify their display behaviour
     OperationalClass = Operational
 
-    options = ['debug', 'create',]
+    options = ['debug', 'create']
     required = []
     default = {
         'type': '',
@@ -265,7 +265,7 @@ class Interface(Control):
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
-        cmd = 'ip link del dev {}'.format(self.config['ifname'])
+        cmd = 'ip link del dev {ifname}'.format(**self.config)
         return self._cmd(cmd)
 
     def get_mtu(self):

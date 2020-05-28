@@ -26,7 +26,7 @@ directories = {
 
 cfg_group = 'vyattacfg'
 
-cfg_vintage = 'vyatta'
+cfg_vintage = 'vyos'
 
 commit_lock = '/opt/vyatta/config/.lock'
 

@@ -86,7 +86,8 @@ class _DHCPv6 (Control):
             'ifname': ifname,
             'dhcpv6_prm_only': False,
             'dhcpv6_temporary': False,
-            'dhcpv6_pd': [],
+            'dhcpv6_pd_interfaces': [],
+            'dhcpv6_pd_length': ''
         })
         self._conf_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
 
