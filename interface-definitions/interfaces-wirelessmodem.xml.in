@@ -47,6 +47,9 @@
           <leafNode name="device">
             <properties>
               <help>System device name (default: ttyUSB0)</help>
+              <completionHelp>
+                <script>ls -1 /dev | grep ttyUSB</script>
+              </completionHelp>
               <valueHelp>
                 <format>ttyXXX</format>
                 <description>System TTY device name</description>
