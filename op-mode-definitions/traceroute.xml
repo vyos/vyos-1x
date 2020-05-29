@@ -10,6 +10,12 @@
     <command>/usr/bin/traceroute "$2"</command>
   </tagNode>
   <node name="traceroute">
+    <properties>
+      <help>Track network path to node</help>
+      <completionHelp>
+        <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+      </completionHelp>
+    </properties>
     <children>
       <tagNode name="ipv4">
         <properties>
