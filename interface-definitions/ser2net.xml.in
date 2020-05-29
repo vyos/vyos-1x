@@ -11,8 +11,8 @@
             <properties>
               <help>System serial interface name (ttyS or ttyUSB)</help>
               <completionHelp>
-                <script>find /dev -name ttyS* -exec basename {} \; | sort</script>
-                <script>find /dev -name ttyUSB* -exec basename {} \; | sort</script>
+                <script>ls -1 /dev | grep ttyS</script>
+                <script>ls -1 /dev/serial/by-bus</script>
               </completionHelp>
               <valueHelp>
                 <format>ttySxxx</format>
