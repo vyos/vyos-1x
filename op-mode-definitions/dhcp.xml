@@ -162,6 +162,9 @@
     </children>
   </node>
   <node name="renew">
+    <properties>
+      <help>Renew specified variable</help>
+    </properties>
     <children>
       <node name="dhcp">
         <properties>
