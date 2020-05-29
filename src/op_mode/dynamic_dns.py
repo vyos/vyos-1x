@@ -36,12 +36,6 @@ update-status: {{ entry.status }}
 """
 
 def show_status():
-    # Do nothing if service is not configured
-    c = Config()
-    if not c.exists_effective('service dns dynamic'):
-        print("Dynamic DNS not configured")
-        sys.exit(0)
-
     data = {
         'hosts': []
     }
@@ -86,22 +80,25 @@ def show_status():
 
 def update_ddns():
     call('systemctl stop ddclient.service')
-    os.remove(cache_file)
+    if os.path.exists(cache_file):
+        os.remove(cache_file)
     call('systemctl start ddclient.service')
 
 
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--status", help="Show DDNS status", action="store_true")
     group.add_argument("--update", help="Update DDNS on a given interface", action="store_true")
     args = parser.parse_args()
 
+    # Do nothing if service is not configured
+    c = Config()
+    if not c.exists_effective('service dns dynamic'):
+        print("Dynamic DNS not configured")
+        sys.exit(1)
+
     if args.status:
         show_status()
     elif args.update:
         update_ddns()
-
-
-if __name__ == '__main__':
-    main()
