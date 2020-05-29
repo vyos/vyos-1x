@@ -19,11 +19,11 @@
                 <description>Regular serial interface</description>
               </valueHelp>
               <valueHelp>
-                <format>ttyUSBxxx</format>
+                <format>usbxbxpx</format>
                 <description>USB based serial interface</description>
               </valueHelp>
               <constraint>
-                <regex>^tty(S|USB)[0-9]+$</regex>
+                <regex>^(ttyS\d+|usb\d+b.*p.*)$</regex>
               </constraint>
             </properties>
             <children>

@@ -46,7 +46,7 @@ def get_config():
             'data_bits': '',
             'parity': '',
             'port': '',
-            'serial_port': '/dev/' + serial_port,
+            'serial_port': '/dev/serial/by-bus/' + serial_port,
             'speed': '',
             'stop_bits': '',
             'timeout': '600'
