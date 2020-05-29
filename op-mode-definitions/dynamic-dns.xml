@@ -44,18 +44,4 @@
       </node>
     </children>
   </node>
-  <node name="restart">
-    <children>
-      <node name="dns">
-        <children>
-          <node name="dynamic">
-            <properties>
-              <help>Restart dynamic DNS service</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dns_dynamic_restart.sh</command>
-          </node>
-        </children>
-      </node>
-    </children>
-  </node>
 </interfaceDefinition>
