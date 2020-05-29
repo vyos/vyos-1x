@@ -28,6 +28,9 @@ from vyos.template import render
 from vyos.util import cmd, call, DEVNULL, chmod_600, chmod_755
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 radius_config_file = "/etc/pam_radius_auth.conf"
 
 default_config_data = {

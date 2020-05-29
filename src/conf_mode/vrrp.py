@@ -29,6 +29,8 @@ from vyos.template import render
 
 from vyos.ifconfig.vrrp import VRRP
 
+from vyos import airbag
+airbag.enable()
 
 def get_config():
     vrrp_groups = []

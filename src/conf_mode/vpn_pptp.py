@@ -26,6 +26,9 @@ from vyos.template import render
 from vyos.util import call, get_half_cpus
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 pptp_conf = '/run/accel-pppd/pptp.conf'
 pptp_chap_secrets = '/run/accel-pppd/pptp.chap-secrets'
 

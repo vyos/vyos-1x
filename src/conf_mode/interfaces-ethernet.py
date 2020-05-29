@@ -27,6 +27,9 @@ from vyos.validate import is_member
 from vyos.config import Config
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     **interface_default_data,
     'deleted': False,

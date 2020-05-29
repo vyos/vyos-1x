@@ -33,6 +33,9 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import cmd, call, run, process_named_running
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     'hostname': 'vyos',
     'domain_name': '',

@@ -28,6 +28,8 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 config_file = r'/etc/default/tftpd'
 

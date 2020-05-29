@@ -27,6 +27,9 @@ from vyos.util import call, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
 

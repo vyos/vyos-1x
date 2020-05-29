@@ -27,6 +27,8 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 config_file = "/etc/default/lldpd"
 vyos_config_file = "/etc/lldpd.d/01-vyos.conf"

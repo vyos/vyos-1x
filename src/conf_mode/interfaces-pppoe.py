@@ -27,6 +27,8 @@ from vyos.template import render
 from vyos.util import chown, chmod_755, call
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
 
 default_config_data = {
     **dhcpv6_pd_default_data,

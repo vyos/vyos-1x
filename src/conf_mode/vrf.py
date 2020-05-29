@@ -27,6 +27,8 @@ from vyos.util import read_file, cmd
 from vyos import ConfigError
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 

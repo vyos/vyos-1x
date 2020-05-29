@@ -28,6 +28,9 @@ from vyos.util import chown, chmod_750, call
 from vyos.validate import is_member, is_ipv6
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 kdir = r'/config/auth/wireguard'
 
 default_config_data = {

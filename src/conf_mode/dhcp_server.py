@@ -27,6 +27,9 @@ from vyos import ConfigError
 from vyos.template import render
 from vyos.util import call, chown
 
+from vyos import airbag
+airbag.enable()
+
 config_file = r'/run/dhcp-server/dhcpd.conf'
 
 default_config_data = {

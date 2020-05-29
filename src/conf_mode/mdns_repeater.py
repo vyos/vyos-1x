@@ -25,6 +25,9 @@ from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
+
 config_file = r'/etc/default/mdns-repeater'
 
 default_config_data = {

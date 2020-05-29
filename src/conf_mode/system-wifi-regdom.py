@@ -23,6 +23,8 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 config_80211_file='/etc/modprobe.d/cfg80211.conf'
 config_crda_file='/etc/default/crda'

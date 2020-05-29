@@ -27,6 +27,9 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import cmd
 
+from vyos import airbag
+airbag.enable()
+
 vyos_conf_scripts_dir = vyos.defaults.directories['conf_mode']
 
 # XXX: this model will need to be extended for tag nodes

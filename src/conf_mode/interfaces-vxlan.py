@@ -25,6 +25,9 @@ from vyos.ifconfig import VXLANIf, Interface
 from vyos.validate import is_member
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     'address': [],
     'deleted': False,

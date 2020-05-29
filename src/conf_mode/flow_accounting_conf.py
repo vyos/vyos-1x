@@ -29,6 +29,9 @@ from vyos import ConfigError
 from vyos.util import cmd
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
+
 # default values
 default_sflow_server_port = 6343
 default_netflow_server_port = 2055

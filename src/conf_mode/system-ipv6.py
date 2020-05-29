@@ -23,6 +23,8 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import call
 
+from vyos import airbag
+airbag.enable()
 
 ipv6_disable_file = '/etc/modprobe.d/vyos_disable_ipv6.conf'
 

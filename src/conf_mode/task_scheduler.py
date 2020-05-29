@@ -23,6 +23,8 @@ import sys
 from vyos.config import Config
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
 
 crontab_file = "/etc/cron.d/vyos-crontab"
 

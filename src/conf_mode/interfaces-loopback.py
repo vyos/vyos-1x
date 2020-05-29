@@ -24,6 +24,9 @@ from vyos.configdict import list_diff
 from vyos.config import Config
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     'address': [],
     'address_remove': [],

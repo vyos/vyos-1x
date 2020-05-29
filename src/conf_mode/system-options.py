@@ -22,6 +22,9 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import run
 
+from vyos import airbag
+airbag.enable()
+
 systemd_ctrl_alt_del = '/lib/systemd/system/ctrl-alt-del.target'
 
 default_config_data = {

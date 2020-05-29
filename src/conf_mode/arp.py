@@ -25,6 +25,9 @@ from vyos.config import Config
 from vyos.util import call
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 arp_cmd = '/usr/sbin/arp'
 
 def get_config():

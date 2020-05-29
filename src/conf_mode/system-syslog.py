@@ -24,6 +24,8 @@ from vyos import ConfigError
 from vyos.util import run
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 def get_config():
     c = Config()

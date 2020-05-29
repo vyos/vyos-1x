@@ -28,6 +28,9 @@ from vyos.util import call, cmd
 from vyos.validate import is_member, has_address_configured
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     **interface_default_data,
     'arp_mon_intvl': 0,
