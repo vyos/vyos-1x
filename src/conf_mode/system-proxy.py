@@ -23,6 +23,9 @@ import re
 from vyos import ConfigError
 from vyos.config import Config
 
+from vyos import airbag
+airbag.enable()
+
 proxy_def = r'/etc/profile.d/vyos-system-proxy.sh'
 
 

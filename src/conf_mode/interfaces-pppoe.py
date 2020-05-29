@@ -26,6 +26,8 @@ from vyos.util import chown, chmod_755, call
 from vyos import ConfigError
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 default_config_data = {
     'access_concentrator': '',

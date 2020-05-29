@@ -24,6 +24,8 @@ from vyos.config import Config
 from vyos.util import call
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 config_file = r'/tmp/igmp.frr'
 

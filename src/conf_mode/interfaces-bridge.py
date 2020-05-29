@@ -28,6 +28,9 @@ from vyos.config import Config
 from vyos.util import cmd, get_bridge_member_config
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     **interface_default_data,
     'aging': 300,

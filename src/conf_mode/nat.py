@@ -28,6 +28,9 @@ from vyos.util import call, cmd
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     'deleted': False,
     'destination': [],

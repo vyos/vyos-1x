@@ -26,6 +26,9 @@ from vyos.ifconfig import MACVLANIf, Section
 from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     **interface_default_data,
     'deleted': False,

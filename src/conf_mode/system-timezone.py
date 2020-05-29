@@ -22,6 +22,8 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import call
 
+from vyos import airbag
+airbag.enable()
 
 default_config_data = {
     'name': 'UTC'

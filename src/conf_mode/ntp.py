@@ -25,6 +25,9 @@ from vyos.util import call
 from vyos.template import render
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 config_file = r'/etc/ntp.conf'
 
 default_config_data = {

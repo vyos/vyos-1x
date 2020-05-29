@@ -27,6 +27,9 @@ from vyos.util import call, run, get_half_cpus
 from vyos.validate import is_ipv4
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 sstp_conf = '/run/accel-pppd/sstp.conf'
 sstp_chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
 

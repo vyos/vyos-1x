@@ -24,6 +24,9 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import popen, run
 
+from vyos import airbag
+airbag.enable()
+
 # Define for recovering
 gl_ipsec_conf = None
 

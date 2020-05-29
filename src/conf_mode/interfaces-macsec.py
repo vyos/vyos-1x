@@ -28,6 +28,9 @@ from vyos.util import call
 from vyos.validate import is_member
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     'address': [],
     'address_remove': [],

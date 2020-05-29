@@ -32,6 +32,9 @@ from vyos.util import call, chown, chmod_600, chmod_755
 from vyos.validate import is_addr_assigned, is_member, is_ipv4
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 user = 'openvpn'
 group = 'openvpn'
 

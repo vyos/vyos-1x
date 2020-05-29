@@ -26,6 +26,9 @@ from vyos.util import call
 from vyos.validate import is_subnet_connected, is_ipv6
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 config_file = r'/run/dhcp-server/dhcpdv6.conf'
 
 default_config_data = {

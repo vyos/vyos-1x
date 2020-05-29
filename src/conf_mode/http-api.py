@@ -27,6 +27,9 @@ from vyos import ConfigError
 from vyos.util import cmd
 from vyos.util import call
 
+from vyos import airbag
+airbag.enable()
+
 config_file = '/etc/vyos/http-api.conf'
 
 vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']

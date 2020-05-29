@@ -30,6 +30,8 @@ from vyos.validate import is_ipv4
 from vyos import ConfigError
 from vyos.template import render
 
+from vyos import airbag
+airbag.enable()
 
 l2tp_conf = '/run/accel-pppd/l2tp.conf'
 l2tp_chap_secrets = '/run/accel-pppd/l2tp.chap-secrets'

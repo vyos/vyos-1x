@@ -32,6 +32,9 @@ from vyos.util import chown, call
 from vyos.validate import is_member
 from vyos import ConfigError
 
+from vyos import airbag
+airbag.enable()
+
 default_config_data = {
     **interface_default_data,
     'cap_ht' : False,

@@ -17,16 +17,19 @@ import sys
 from datetime import datetime
 
 from vyos import debug
-from vyos.config import Config
 from vyos.logger import syslog
 from vyos.version import get_version
 from vyos.version import get_full_version_data
 
-# we allow to disable the extra logging
-DISABLE = False
+
+def enable(log=True):
+    if log:
+        _intercepting_logger()
+    _intercepting_exceptions()
 
 
 _noteworthy = []
+
 
 def noteworthy(msg):
     """
@@ -45,8 +48,6 @@ class _IO(object):
 
     def write(self, message):
         self.std.write(message)
-        if DISABLE:
-            return
         for line in message.split('\n'):
             s = line.rstrip()
             if s:
@@ -90,14 +91,14 @@ def bug_report(dtype, value, trace):
 
 # define an exception handler to be run when an exception
 # reach the end of __main__ and was not intercepted
-def intercepter(dtype, value, trace):
+def _intercepter(dtype, value, trace):
     bug_report(dtype, value, trace)
     if debug.enabled('developer'):
         import pdb
         pdb.pm()
 
 
-def InterceptingLogger(_singleton=[False]):
+def _intercepting_logger(_singleton=[False]):
     skip = _singleton.pop()
     _singleton.append(True)
     if skip:
@@ -110,7 +111,7 @@ def InterceptingLogger(_singleton=[False]):
 # lists as default arguments in function is normally dangerous
 # as they will keep any modification performed, unless this is
 # what you want to do (in that case to only run the code once)
-def InterceptingException(excepthook,_singleton=[False]):
+def _intercepting_exceptions(_singleton=[False]):
     skip = _singleton.pop()
     _singleton.append(True)
     if skip:
@@ -118,24 +119,7 @@ def InterceptingException(excepthook,_singleton=[False]):
 
     # install the handler to replace the default behaviour
     # which just prints the exception trace on screen
-    sys.excepthook = excepthook
-
-
-# Do not attempt the extra logging for operational commands
-try:
-    # This fails during boot
-    insession = Config().in_session()
-except:
-    # we save info on boot to help debugging
-    insession = True
-
-
-# Installing the interception, it currently does not work when
-# running testing so we are checking that we are on the router
-# as otherwise it prevents dpkg-buildpackage to work
-if get_version() and insession:
-    InterceptingLogger()
-    InterceptingException(intercepter)
+    sys.excepthook = _intercepter
 
 
 # Messages to print
