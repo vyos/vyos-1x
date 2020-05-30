@@ -14,30 +14,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import re
-import sys
-
+from sys import argv, exit
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        sys.exit(1)
+    if len(argv) != 2:
+        exit(1)
 
-    vrf = sys.argv[1]
+    vrf = argv[1]
     length = len(vrf)
 
-    if length not in range(1, 17):
-        sys.exit('VRF instance name must be 16 characters or less')
+    if length not in range(1, 16):
+        exit(1)
 
     # Treat loopback interface "lo" explicitly. Adding "lo" explicitly to the
     # following regex pattern would deny any VRF name starting with lo - thuse
     # local-vrf would be illegal - and that we do not want.
     if vrf == "lo":
-        exit(f'"{vrf}" is invalid as VRF name as it is an interface name')
+        exit(1)
 
     pattern = "^(?!(bond|br|dum|eth|lan|eno|ens|enp|enx|gnv|ipoe|l2tp|l2tpeth|" \
               "vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wlm)\d+(\.\d+(v.+)?)?$).*$"
     if not re.match(pattern, vrf):
-        sys.exit(f'"{vrf}" is invalid as VRF name as it is an interface name')
+        exit(1)
 
-    sys.exit(0)
+    exit(0)

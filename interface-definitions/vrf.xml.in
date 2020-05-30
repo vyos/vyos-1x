@@ -19,7 +19,7 @@
           <constraint>
             <validator name="vrf-name"/>
           </constraint>
-          <constraintErrorMessage>VRF instance name must be 16 characters or less and can not\nbe named as regular network interfaces</constraintErrorMessage>
+          <constraintErrorMessage>VRF instance name must be 15 characters or less and can not\nbe named as regular network interfaces.\n</constraintErrorMessage>
           <valueHelp>
             <format>name</format>
             <description>Instance name</description>
