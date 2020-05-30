@@ -59,7 +59,7 @@ def vpn_control(action):
 
 def verify(c):
   # Check if QAT service installed
-  if not os.path.exists('/etc/init.d/vyos-qat-utilities'):
+  if not os.path.exists('/etc/init.d/qat_service'):
     raise ConfigError("Warning: QAT init file not found")
 
   if c['qat_conf'] == None:
@@ -81,13 +81,13 @@ def apply(c):
 
   # Disable QAT service
   if c['qat_conf'] == None:
-    run('sudo /etc/init.d/vyos-qat-utilities stop')
+    run('sudo /etc/init.d/qat_service stop')
     if c['ipsec_conf']:
       vpn_control('start')
     return
 
   # Run qat init.d script
-  run('sudo /etc/init.d/vyos-qat-utilities start')
+  run('sudo /etc/init.d/qat_service start')
   if c['ipsec_conf']:
     # Recovery VPN service
     vpn_control('start')

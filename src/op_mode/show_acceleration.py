@@ -39,16 +39,16 @@ def show_qat_status():
     detect_qat_dev()
 
     # Check QAT service
-    if not os.path.exists('/etc/init.d/vyos-qat-utilities'):
+    if not os.path.exists('/etc/init.d/qat_service'):
         print("\t QAT service not installed")
         sys.exit(1)
 
     # Show QAT service
-    call('sudo /etc/init.d/vyos-qat-utilities status')
+    call('sudo /etc/init.d/qat_service status')
 
 # Return QAT devices
 def get_qat_devices():
-    data_st, err = popen('sudo /etc/init.d/vyos-qat-utilities status', decode='utf-8')
+    data_st, err = popen('sudo /etc/init.d/qat_service status', decode='utf-8')
     if not err:
         elm_lst = re.findall('qat_dev\d', data_st)
         print('\n'.join(elm_lst))
@@ -57,7 +57,7 @@ def get_qat_devices():
 def get_qat_proc_path(qat_dev):
     q_type = ""
     q_bsf  = ""
-    output, err = popen('sudo /etc/init.d/vyos-qat-utilities status', decode='utf-8')
+    output, err = popen('sudo /etc/init.d/qat_service status', decode='utf-8')
     if not err:
         # Parse QAT service output
         data_st = output.split("\n")
