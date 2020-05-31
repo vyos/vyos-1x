@@ -112,6 +112,7 @@ default_config_data = {
     'type': 'tun',
     'uid': user,
     'gid': group,
+    'vrf': ''
 }
 
 
@@ -633,6 +634,10 @@ def get_config():
         if openvpn['redirect_gateway']:
             openvpn['redirect_gateway'] += ' ipv6'
 
+    # retrieve VRF instance
+    if conf.exists('vrf'):
+        openvpn['vrf'] = conf.return_value('vrf')
+
     return openvpn
 
 def verify(openvpn):
@@ -944,6 +949,16 @@ def verify(openvpn):
         if not openvpn['auth_pass']:
             raise ConfigError('Password for authentication is missing')
 
+    if openvpn['vrf']:
+        if openvpn['vrf'] not in interfaces():
+            raise ConfigError(f'VRF "{openvpn["vrf"]}" does not exist')
+
+        if openvpn['is_bridge_member']:
+            raise ConfigError((
+                f'Interface "{openvpn["intf"]}" cannot be member of VRF '
+                f'"{openvpn["vrf"]}" and bridge "{openvpn["is_bridge_member"]}" '
+                f'at the same time!'))
+
     return None
 
 def generate(openvpn):
@@ -1072,6 +1087,11 @@ def apply(openvpn):
                 o.del_ipv6_eui64_address(addr)
             for addr in openvpn['ipv6_eui64_prefix']:
                 o.add_ipv6_eui64_address(addr)
+
+        # assign/remove VRF (ONLY when not a member of a bridge,
+        # otherwise 'nomaster' removes it from it)
+        if not openvpn['is_bridge_member']:
+            o.set_vrf(openvpn['vrf'])
 
     except:
         pass
