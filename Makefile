@@ -96,11 +96,11 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/restart/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
-	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
+	rm -f $(OP_TMPL_DIR)/show/log/node.def
+	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
-	rm -f $(OP_TMPL_DIR)/show/system/node.def
 
 .PHONY: component_versions
 .ONESHELL:
