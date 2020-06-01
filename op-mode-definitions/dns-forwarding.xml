@@ -2,6 +2,23 @@
 <interfaceDefinition>
   <node name="show">
     <children>
+      <node name="log">
+        <children>
+          <node name="dns">
+            <properties>
+              <help>Show log for Domain Name Service (DNS)</help>
+            </properties>
+            <children>
+              <node name="forwarding">
+                <properties>
+                  <help>Show log for DNS Forwarding</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "pdns_recursor"</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
       <node name="dns">
         <properties>
           <help>Show DNS information</help>
