@@ -8,7 +8,7 @@
           <priority>990</priority>
         </properties>
         <children>
-          <tagNode name="interface" owner="sudo ${vyos_conf_scripts_dir}/firewall_options.py">
+          <tagNode name="interface" owner="${vyos_conf_scripts_dir}/firewall_options.py">
             <properties>
               <help>Interface clamping options</help>
               <completionHelp>
