@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="nat" owner="sudo ${vyos_conf_scripts_dir}/nat.py">
+  <node name="nat" owner="${vyos_conf_scripts_dir}/nat.py">
     <properties>
       <help>Network Address Translation (NAT) parameters</help>
       <priority>220</priority>
