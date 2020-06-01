@@ -2,6 +2,20 @@
 <interfaceDefinition>
   <node name="show">
     <children>
+      <node name="log">
+        <children>
+          <node name="dns">
+            <children>
+              <node name="dynamic">
+                <properties>
+                  <help>Show log for dynamic DNS</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "ddclient"</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
       <node name="dns">
         <properties>
           <help>Show DNS information</help>
