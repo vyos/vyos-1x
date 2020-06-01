@@ -38,6 +38,20 @@
       </node>
     </children>
   </node>
+  <node name="restart">
+    <children>
+      <node name="dns">
+        <children>
+          <node name="dynamic">
+            <properties>
+              <help>Restart Dynamic DNS service</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/dynamic_dns.py --update</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="update">
     <properties>
       <help>Update data for a service</help>
