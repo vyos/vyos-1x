@@ -38,18 +38,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      <leafNode name="as-set">
-                        <properties>
-                          <help>Generate AS-set path information for this aggregate address</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="summary-only">
-                        <properties>
-                          <help>Announce the aggregate summary network only</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
+                      #include <include/bgp-afi-aggregate-address.xml.i>
                     </children>
                   </tagNode>
                   <tagNode name="network">
@@ -151,18 +140,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      <leafNode name="as-set">
-                        <properties>
-                          <help>Generate AS-set path information for this aggregate address</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="summary-only">
-                        <properties>
-                          <help>Announce the aggregate summary network only</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
+                      #include <include/bgp-afi-aggregate-address.xml.i>
                     </children>
                   </tagNode>
                   <tagNode name="network">
