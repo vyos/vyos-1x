@@ -30,4 +30,12 @@ class PPPoEIf(Interface):
         },
     }
 
-    # The _create and _delete need to be moved from interface-ppoe to here
+    # stub this interface is created in the configure script
+
+    def _create(self):
+        # we can not create this interface as it is managed outside
+        pass
+
+    def _delete(self):
+        # we can not create this interface as it is managed outside
+        pass
