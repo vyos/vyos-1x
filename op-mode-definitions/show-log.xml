@@ -112,6 +112,12 @@
                 </properties>
                 <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e accel-pptp -e ppp</command>
               </leafNode>
+              <leafNode name="sstp">
+                <properties>
+                  <help>Show log for SSTP</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e accel-sstp -e ppp</command>
+              </leafNode>
             </children>
           </node>
           <leafNode name="vrrp">
