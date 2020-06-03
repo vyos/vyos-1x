@@ -92,7 +92,7 @@
                 <properties>
                   <help>Show log for ALL</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e charon -e xl2tpd -e pptpd -e ppp</command>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e charon -e accel -e pptpd -e ppp</command>
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
@@ -104,13 +104,13 @@
                 <properties>
                   <help>Show log for L2TP</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e remote-access-aaa-win -e remote-access-zzz-mac -e xl2tpd -e ppp</command>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e remote-access-aaa-win -e remote-access-zzz-mac -e accel-l2tp -e ppp</command>
               </leafNode>
               <leafNode name="pptp">
                 <properties>
                   <help>Show log for PPTP</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e pptpd -e ppp</command>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e accel-pptp -e ppp</command>
               </leafNode>
             </children>
           </node>
