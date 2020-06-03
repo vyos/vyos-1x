@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="log">
+        <properties>
+          <help>Show contents of current master log file</help>
+        </properties>
+        <command>/bin/journalctl</command>
+        <children>
+          <leafNode name="all">
+            <properties>
+              <help>Show contents of all master log files</help>
+            </properties>
+            <command>eval $(lesspipe); less $_vyatta_less_options --prompt=".log?m, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`</command>
+          </leafNode>
+          <leafNode name="authorization">
+            <properties>
+              <help>Show listing of authorization attempts</help>
+            </properties>
+            <command>/bin/journalctl -q SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
+          </leafNode>
+          <leafNode name="cluster">
+            <properties>
+              <help>Show log for Cluster</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e heartbeat -e cl_status -e mach_down -e ha_log</command>
+          </leafNode>
+          <leafNode name="conntrack-sync">
+            <properties>
+              <help>Show log for Conntrack-sync</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | grep -e conntrackd</command>
+          </leafNode>
+          <leafNode name="dhcp">
+            <properties>
+              <help>Show log for Dynamic Host Control Protocol (DHCP)</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep dhcpd</command>
+          </leafNode>
+          <leafNode name="https">
+            <properties>
+              <help>Show log for HTTPs</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e nginx</command>
+          </leafNode>
+          <leafNode name="lldp">
+            <properties>
+              <help>Show log for LLDP</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e lldpd</command>
+          </leafNode>
+          <leafNode name="nat">
+            <properties>
+              <help>Show log for Network Address Translation (NAT)</help>
+            </properties>
+            <command>egrep -i "kernel:.*\[NAT-[A-Z]{3,}-[0-9]+(-MASQ)?\]" $(find /var/log -maxdepth 1 -type f -name messages\* | sort -t. -k2nr)</command>
+          </leafNode>
+          <leafNode name="nat">
+            <properties>
+              <help>Show log for OpenVPN</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e openvpn</command>
+          </leafNode>
+          <leafNode name="snmp">
+            <properties>
+              <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e snmpd</command>
+          </leafNode>
+          <tagNode name="tail">
+            <properties>
+              <help>Show last n changes to messages</help>
+              <completionHelp>
+                <list>&lt;NUMBER&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>tail -n "$4" /var/log/messages | ${VYATTA_PAGER:-cat}</command>
+          </tagNode>
+          <node name="tail">
+            <properties>
+              <help>Show last 10 lines of /var/log/messages file</help>
+            </properties>
+            <command>tail -n 10 /var/log/messages</command>
+          </node>
+          <node name="vpn">
+            <properties>
+              <help>Show log for Virtual Private Network (VPN)</help>
+            </properties>
+            <children>
+              <leafNode name="all">
+                <properties>
+                  <help>Show log for ALL</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e charon -e xl2tpd -e pptpd -e ppp</command>
+              </leafNode>
+              <leafNode name="ipsec">
+                <properties>
+                  <help>Show log for IPSec</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e charon</command>
+              </leafNode>
+              <leafNode name="l2tp">
+                <properties>
+                  <help>Show log for L2TP</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e remote-access-aaa-win -e remote-access-zzz-mac -e xl2tpd -e ppp</command>
+              </leafNode>
+              <leafNode name="pptp">
+                <properties>
+                  <help>Show log for PPTP</help>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e pptpd -e ppp</command>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="vrrp">
+            <properties>
+              <help>Show log for Virtual Router Redundancy Protocol (VRRP)</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e Keepalived_vrrp</command>
+          </leafNode>
+          <leafNode name="webproxy">
+            <properties>
+              <help>Show log for Webproxy</help>
+            </properties>
+            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "squid"</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
