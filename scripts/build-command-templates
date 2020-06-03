@@ -249,7 +249,8 @@ def process_node(n, tmpl_dir):
 
     my_tmpl_dir.append(name)
 
-    print("Name of the node: {0}. Created directory: {1}\n".format(name, "/".join(my_tmpl_dir)), end="")
+    if debug:
+        print("Name of the node: {0}. Created directory: {1}\n".format(name, "/".join(my_tmpl_dir)), end="")
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
     props = get_properties(props_elem)
