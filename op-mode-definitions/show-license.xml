@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <leafNode name="license">
+        <properties>
+          <help>Show VyOS license information</help>
+        </properties>
+        <command>less $_vyatta_less_options --prompt=".license, page %dt of %D" -- ${vyatta_sysconfdir}/LICENSE</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
