@@ -578,10 +578,9 @@ def get_config():
 
     # Convert protocol to real protocol used by openvpn.
     # To make openvpn listen on both IPv4 and IPv6 we must use *6 protocols
-    # (https://community.openvpn.net/openvpn/ticket/360), unless local is IPv4
+    # (https://community.openvpn.net/openvpn/ticket/360), unless the local-host
+    # or each of the remote-host in client mode is IPv4
     # in which case it must use the standard protocols.
-    # Note: this will break openvpn if IPv6 is disabled on the system.
-    # This currently isn't supported, a check can be added in the future.
     if openvpn['protocol'] == 'tcp-active':
         openvpn['protocol_real'] = 'tcp6-client'
     elif openvpn['protocol'] == 'tcp-passive':
@@ -589,7 +588,9 @@ def get_config():
     else:
         openvpn['protocol_real'] = 'udp6'
 
-    if is_ipv4(openvpn['local_host']):
+    if ( is_ipv4(openvpn['local_host']) or
+            # in client mode test all the remotes instead
+            (openvpn['mode'] == 'client' and all([is_ipv4(h) for h in openvpn['remote_host']])) ):
         # takes out the '6'
         openvpn['protocol_real'] = openvpn['protocol_real'][:3] + openvpn['protocol_real'][4:]
 
