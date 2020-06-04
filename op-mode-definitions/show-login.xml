@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="login">
+        <properties>
+          <help>Show current login credentials</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/show_current_user.sh</command>
+        <children>
+          <leafNode name="groups">
+            <properties>
+              <help>Show current login group information</help>
+            </properties>
+            <command>/usr/bin/id -Gn</command>
+          </leafNode>
+          <leafNode name="level">
+            <properties>
+              <help>Show current login level</help>
+            </properties>
+            <command>if [ -n "$VYATTA_USER_LEVEL_DIR" ]; then basename $VYATTA_USER_LEVEL_DIR; fi</command>
+          </leafNode>
+          <leafNode name="user">
+            <properties>
+              <help>Show current login user id</help>
+            </properties>
+            <command>/usr/bin/id -un</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
