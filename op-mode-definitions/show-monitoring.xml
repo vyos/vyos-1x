@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <leafNode name="monitoring">
+        <properties>
+          <help>Show currently monitored services</help>
+        </properties>
+        <command>vtysh -c "show debugging"</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
