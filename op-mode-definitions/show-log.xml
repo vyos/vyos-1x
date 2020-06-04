@@ -38,12 +38,91 @@
             </properties>
             <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep dhcpd</command>
           </leafNode>
+          <node name="firewall">
+            <properties>
+              <help>Show log for Firewall</help>
+            </properties>
+            <children>
+              <tagNode name="ipv6-name">
+                <properties>
+                  <help>Show log for a specified firewall (IPv6)</help>
+                  <completionHelp>
+                    <path>firewall ipv6-name</path>
+                  </completionHelp>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | egrep "\[$5-([0-9]+|default)-[ADR]\]"</command>
+                <children>
+                  <tagNode name="rule">
+                    <properties>
+                      <help>Show log for a rule in the specified firewall</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name ${COMP_WORDS[4]} rule</path>
+                      </completionHelp>
+                    </properties>
+                    <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "\[$5-$7-[ADR]\]"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <tagNode name="name">
+                <properties>
+                  <help>Show log for a specified firewall (IPv4)</help>
+                  <completionHelp>
+                    <path>firewall name</path>
+                  </completionHelp>
+                </properties>
+                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | egrep "\[$5-([0-9]+|default)-[ADR]\]"</command>
+                <children>
+                  <tagNode name="rule">
+                    <properties>
+                      <help>Show log for a rule in the specified firewall</help>
+                      <completionHelp>
+                        <path>firewall name ${COMP_WORDS[4]} rule</path>
+                      </completionHelp>
+                    </properties>
+                    <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | egrep "\[$5-$7-[ADR]\]"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           <leafNode name="https">
             <properties>
               <help>Show log for HTTPs</help>
             </properties>
             <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e nginx</command>
           </leafNode>
+          <tagNode name="image">
+            <properties>
+              <help>Show contents of master log file for image</help>
+              <completionHelp>
+                <script>compgen -f /lib/live/mount/persistence/boot/ | grep -v grub | sed -e s@/lib/live/mount/persistence/boot/@@</script>
+              </completionHelp>
+            </properties>
+            <command>less $_vyatta_less_options --prompt=".log, page %dt of %D" -- /lib/live/mount/persistence/boot/$4/rw/var/log/messages</command>
+            <children>
+              <leafNode name="all">
+                <properties>
+                  <help>Show contents of all master log files for image</help>
+                </properties>
+                <command>eval $(lesspipe); less $_vyatta_less_options --prompt=".log?m, file %i of %m., page %dt of %D" -- `printf "%s\n" /lib/live/mount/persistence/boot/$4/rw/var/log/messages* | sort -nr`</command>
+              </leafNode>
+              <leafNode name="authorization">
+                <properties>
+                  <help>Show listing of authorization attempts for image</help>
+                </properties>
+                <command>less $_vyatta_less_options --prompt=".log, page %dt of %D" -- /lib/live/mount/persistence/boot/$4/rw/var/log/auth.log</command>
+              </leafNode>
+              <tagNode name="tail">
+                <properties>
+                  <help>Show last changes to messages</help>
+                  <completionHelp>
+                    <list>&lt;NUMBER&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>tail -n "$6"  /lib/live/mount/persistence/boot/$4/rw/var/log/messages | ${VYATTA_PAGER:-cat}</command>
+              </tagNode>
+            </children>
+          </tagNode>
           <leafNode name="lldp">
             <properties>
               <help>Show log for LLDP</help>
