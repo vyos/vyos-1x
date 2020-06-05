@@ -11,6 +11,7 @@
                 <path>interfaces ethernet</path>
               </completionHelp>
             </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
             <children>
               <leafNode name="brief">
                 <properties>
