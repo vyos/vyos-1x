@@ -323,7 +323,7 @@
               </completionHelp>
               <valueHelp>
                 <format>udp</format>
-                <description>Site-to-site mode</description>
+                <description>UDP</description>
               </valueHelp>
               <valueHelp>
                 <format>tcp-passive</format>
