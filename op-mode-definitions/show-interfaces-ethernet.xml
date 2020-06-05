@@ -12,6 +12,12 @@
               </completionHelp>
             </properties>
             <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of the specified ethernet interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+              </leafNode>
               <node name="physical">
                 <properties>
                   <help>Show physical device information for specified ethernet interface</help>
@@ -38,8 +44,38 @@
                 </properties>
                 <command>/sbin/ethtool -m "$4"</command>
               </leafNode>
+              <tagNode name="vif">
+                <properties>
+                  <help>Show specified virtual network interface (vif) information</help>
+                  <completionHelp>
+                    <path>interfaces ethernet ${COMP_WORDS[3]} vif</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6"</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of specified virtual network interface (vif) information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6" --action=show-brief</command>
+                  </leafNode>
+                </children>
+              </tagNode>
             </children>
           </tagNode>
+          <node name="ethernet">
+            <properties>
+              <help>Show ethernet interface information</help>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed ethernet interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=ethernet --action=show</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
