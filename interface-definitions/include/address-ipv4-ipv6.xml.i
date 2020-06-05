@@ -10,7 +10,7 @@
       <description>IPv6 address and prefix length</description>
     </valueHelp>
     <constraint>
-      <validator name="ip-cidr"/>
+      <validator name="ip-host"/>
     </constraint>
     <multi/>
   </properties>
