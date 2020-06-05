@@ -19,6 +19,12 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
               </leafNode>
+              <leafNode name="identify">
+                <properties>
+                  <help>Visually identify specified ethernet interface</help>
+                </properties>
+                <command>echo "Blinking interface $4 for 30 seconds."; /sbin/ethtool --identify "$4" 30</command>
+              </leafNode>
               <node name="physical">
                 <properties>
                   <help>Show physical device information for specified ethernet interface</help>
