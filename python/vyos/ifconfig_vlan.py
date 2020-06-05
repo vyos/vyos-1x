@@ -34,7 +34,7 @@ def apply_all_vlans(intf, intfconfig):
 
         # remove no longer required client VLAN interfaces (vif-c)
         # on lower service VLAN interface
-        for vif_c in intfconfig['vif_c_remove']:
+        for vif_c in vif_s['vif_c_remove']:
             s_vlan.del_vlan(vif_c)
 
         # create client VLAN interfaces (vif-c)
