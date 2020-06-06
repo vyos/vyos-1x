@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="pseudo-ethernet">
+            <properties>
+              <help>Show pseudo-ethernet/MACvlan interface information</help>
+              <completionHelp>
+                <path>interfaces pseudo-ethernet</path>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of the specified pseudo-ethernet/MACvlan interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="pseudo-ethernet">
+            <properties>
+              <help>Show pseudo-ethernet/MACvlan interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=pseudo-ethernet --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed pseudo-ethernet/MACvlan interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=pseudo-ethernet --action=show</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="bonding">
+            <properties>
+              <help>Show bonding interface information</help>
+              <completionHelp>
+                <path>interfaces bonding</path>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of the specified bonding interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+              </leafNode>
+              <tagNode name="vif">
+                <properties>
+                  <help>Show specified virtual network interface (vif) information</help>
+                  <completionHelp>
+                    <path>interfaces bonding ${COMP_WORDS[3]} vif</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6"</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of specified virtual network interface (vif) information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6" --action=show-brief</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <node name="bonding">
+            <properties>
+              <help>Show bonding interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=bonding --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed bonding interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=bonding --action=show</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

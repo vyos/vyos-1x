@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="l2tpv3">
+            <properties>
+              <help>Show L2TPv3 interface information</help>
+              <completionHelp>
+                <path>interfaces l2tpv3</path>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of the specified L2TPv3 interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="l2tpv3">
+            <properties>
+              <help>Show L2TPv3 interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=l2tpv3 --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed L2TPv3 interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=l2tpv3 --action=show</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
