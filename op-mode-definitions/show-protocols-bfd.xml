@@ -3,6 +3,9 @@
   <node name="show">
     <children>
       <node name="protocols">
+        <properties>
+          <help>Show protocol specific information</help>
+        </properties>
         <children>
           <node name="bfd">
             <children>
