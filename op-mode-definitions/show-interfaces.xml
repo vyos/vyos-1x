@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <properties>
+          <help>Show network interface information</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/show_interfaces.py --action=show-brief</command>
+        <children>
+          <leafNode name="counters">
+            <properties>
+              <help>Show network interface counters</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --action=show-count</command>
+          </leafNode>
+          <leafNode name="detail">
+            <properties>
+              <help>Show detailed information of all interfaces</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --action=show</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

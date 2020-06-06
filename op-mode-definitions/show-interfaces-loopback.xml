@@ -4,11 +4,11 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="dummy">
+          <tagNode name="loopback">
             <properties>
-              <help>Show dummy interface information</help>
+              <help>Show loopback interface information</help>
               <completionHelp>
-                <path>interfaces dummy</path>
+                <path>interfaces loopback</path>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
@@ -21,11 +21,11 @@
               </leafNode>
             </children>
           </tagNode>
-          <node name="dummy">
+          <node name="loopback">
             <properties>
-              <help>Show dummy interface information</help>
+              <help>Show loopback interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=dummy --action=show-brief</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=loopback --action=show-brief</command>
             <children>
               <leafNode name="detail">
                 <properties>
