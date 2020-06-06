@@ -244,7 +244,7 @@ def intf_to_dict(conf, default):
             intf['dhcpv6_pd_length'] = conf.return_value(['length'])
 
         for interface in conf.list_nodes(['interface']):
-            conf.set_level(current_level + ['interface', interface])
+            conf.set_level(dhcpv6_pd_path + ['interface', interface])
             pd = {
                 'ifname': interface,
                 'sla_id': '',
