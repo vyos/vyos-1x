@@ -3,6 +3,9 @@
   <node name="show">
     <children>
       <node name="mpls">
+        <properties>
+          <help>Show Multiprotocol Label Switching (MPLS)</help>
+        </properties>
         <children>
           <node name="ldp">
             <properties>
