@@ -16,14 +16,15 @@
 
 import os
 
-from sys import exit
 from copy import deepcopy
+from fnmatch import fnmatch
 from netifaces import interfaces
+from sys import exit
 
 from vyos.config import Config
 from vyos.ifconfig import BridgeIf, Section
 from vyos.template import render
-from vyos.util import chown, chmod_755, cmd, call
+from vyos.util import call
 from vyos.validate import is_member
 from vyos import ConfigError
 
@@ -31,16 +32,14 @@ from vyos import airbag
 airbag.enable()
 
 default_config_data = {
-    'address': [],
     'apn': '',
     'chat_script': '',
     'deleted': False,
     'description': '',
-    'device': 'ttyUSB0',
+    'device': '',
     'disable': False,
     'disable_link_detect': 1,
     'on_demand': False,
-    'logfile': '',
     'metric': '10',
     'mtu': '1500',
     'name_server': True,
@@ -56,6 +55,16 @@ def check_kmod():
             if call(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
 
+def find_device_file(device):
+    """ Recurively search /dev for the given device file and return its full path.
+        If no device file was found 'None' is returned """
+    for root, dirs, files in os.walk('/dev'):
+        for basename in files:
+            if fnmatch(basename, device):
+                return os.path.join(root, basename)
+
+    return None
+
 def get_config():
     wwan = deepcopy(default_config_data)
     conf = Config()
@@ -65,11 +74,7 @@ def get_config():
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     wwan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    wwan['logfile'] = f"/var/log/vyatta/ppp_{wwan['intf']}.log"
     wwan['chat_script'] = f"/etc/ppp/peers/chat.{wwan['intf']}"
-
-    # check if interface is member if a bridge
-    wwan['is_bridge_member'] = is_member(conf, wwan['intf'], 'bridge')
 
     # Check if interface has been removed
     if not conf.exists('interfaces wirelessmodem ' + wwan['intf']):
@@ -93,7 +98,13 @@ def get_config():
 
     # System device name
     if conf.exists(['device']):
-        wwan['device'] = conf.return_value(['device'])
+        tmp = conf.return_value(['device'])
+        wwan['device'] = find_device_file(tmp)
+        # If device file was not found in /dev we will just re-use
+        # the plain device name, thus we can trigger the exception
+        # in verify() as it's a non existent file
+        if wwan['device'] == None:
+            wwan['device'] = tmp
 
     # disable interface
     if conf.exists('disable'):
@@ -123,35 +134,21 @@ def get_config():
 
 def verify(wwan):
     if wwan['deleted']:
-        if wwan['is_bridge_member']:
-            raise ConfigError((
-                f'Cannot delete interface "{wwan["intf"]}" as it is a '
-                f'member of bridge "{wwan["is_bridge_member"]}"!'))
-
         return None
 
     if not wwan['apn']:
-        raise ConfigError(f"APN for {wwan['intf']} not configured")
+        raise ConfigError('No APN configured for "{intf}"'.format(**wwan))
+
+    if not wwan['device']:
+        raise ConfigError('Physical "device" must be configured')
 
     # we can not use isfile() here as Linux device files are no regular files
     # thus the check will return False
-    if not os.path.exists(f"/dev/{wwan['device']}"):
-        raise ConfigError(f"Device {wwan['device']} does not exist")
+    if not os.path.exists('{device}'.format(**wwan)):
+        raise ConfigError('Device "{device}" does not exist'.format(**wwan))
 
-    if wwan['is_bridge_member'] and wwan['address']:
-        raise ConfigError((
-            f'Cannot assign address to interface "{wwan["intf"]}" '
-            f'as it is a member of bridge "{wwan["is_bridge_member"]}"!'))
-
-    if wwan['vrf']:
-        if wwan['vrf'] not in interfaces():
-            raise ConfigError(f'VRF "{wwan["vrf"]}" does not exist')
-
-        if wwan['is_bridge_member']:
-            raise ConfigError((
-                f'Interface "{wwan["intf"]}" cannot be member of VRF '
-                f'"{wwan["vrf"]}" and bridge {wwan["is_bridge_member"]} '
-                f'at the same time!'))
+    if wwan['vrf'] not in interfaces():
+        raise ConfigError('VRF "{vrf}" does not exist'.format(**wwan))
 
     return None
 
@@ -169,7 +166,7 @@ def generate(wwan):
                     script_wwan_ip_up, script_wwan_ip_down]
 
     # Always hang-up WWAN connection prior generating new configuration file
-    cmd(f'systemctl stop ppp@{intf}.service')
+    call(f'systemctl stop ppp@{intf}.service')
 
     if wwan['deleted']:
         # Delete PPP configuration files
@@ -205,9 +202,7 @@ def apply(wwan):
     if not wwan['disable']:
         # "dial" WWAN connection
         intf = wwan['intf']
-        cmd(f'systemctl start ppp@{intf}.service')
-        # make logfile owned by root / vyattacfg
-        chown(wwan['logfile'], 'root', 'vyattacfg')
+        call(f'systemctl start ppp@{intf}.service')
 
         # re-add ourselves to any bridge we might have fallen out of
         # FIXME: wwan isn't under vyos.ifconfig so we can't call

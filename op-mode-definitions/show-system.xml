@@ -7,7 +7,6 @@
           <help>Show system information</help>
         </properties>
         <children>
-
           <node name="connections">
             <properties>
               <help>Show active network connections on the system</help>
@@ -50,21 +49,18 @@
               </node>
             </children>
           </node>
-
           <leafNode name= "integrity">
             <properties>
               <help>Checks overall system integrity</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/system_integrity.py</command>
           </leafNode>
-
           <leafNode name="kernel-messages">
             <properties>
               <help>Show messages in kernel ring buffer</help>
             </properties>
             <command>sudo dmesg</command>
           </leafNode>
-
           <node name="login">
             <properties>
               <help>Show user accounts</help>
@@ -104,7 +100,6 @@
               </node>
             </children>
           </node>
-
           <node name="memory">
             <properties>
               <help>Show system memory usage</help>
@@ -125,7 +120,6 @@
               </leafNode>
             </children>
           </node>
-
           <node name="processes">
             <properties>
               <help>Show system processes</help>
@@ -152,21 +146,32 @@
               </leafNode>
             </children>
           </node>
-
           <leafNode name="storage">
             <properties>
               <help>Show filesystem usage</help>
             </properties>
             <command>df -h -x squashfs</command>
           </leafNode>
-
           <leafNode name="uptime">
             <properties>
               <help>Show how long the system has been up</help>
             </properties>
             <command>uptime</command>
           </leafNode>
-
+          <node name="usb">
+            <properties>
+              <help>Show information about Universal Serial Bus (USB)</help>
+            </properties>
+            <command>/usr/bin/lsusb -t</command>
+            <children>
+              <leafNode name="serial">
+                <properties>
+                  <help>Show information about connected USB serial ports</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_usb_serial.py</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
