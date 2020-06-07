@@ -1,0 +1,11 @@
+!
+{% if rip_conf -%}
+router rip
+{% for network in old_rip.networks -%}
+no network {{network}}
+{% endfor -%}
+{% for network in rip.networks -%}
+network {{network}}
+{% endfor -%}
+{% endif -%}
+!
