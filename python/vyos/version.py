@@ -31,6 +31,7 @@ Example of the version data dict::
 
 import os
 import json
+import logging
 
 import vyos.defaults
 
@@ -76,13 +77,34 @@ def get_full_version_data(fname=version_file):
     # Get system architecture (well, kernel architecture rather)
     version_data['system_arch'], _ = popen('uname -m', stderr=DEVNULL)
 
-    # Get hypervisor name, if any
-    try:
-        hypervisor, _ = popen('hvinfo', stderr=DEVNULL)
+    cpu_json,code = popen('lscpu -J',stderr=DEVNULL)
+
+    cpu = {}
+    if code == 0:
+        cpu_info = json.loads(cpu_json)
+        if len(cpu_info) > 0 and 'lscpu' in cpu_info:
+            for prop in cpu_info['lscpu']:
+                if (prop['field'].find('Thread(s)') > -1): cpu['threads'] = prop['data'] 
+                if (prop['field'].find('Core(s)')) > -1: cpu['cores'] = prop['data'] 
+                if (prop['field'].find('Socket(s)')) > -1: cpu['sockets'] = prop['data'] 
+                if (prop['field'].find('CPU(s):')) > -1: cpu['cpus'] = prop['data'] 
+                if (prop['field'].find('CPU MHz')) > -1: cpu['mhz'] = prop['data'] 
+                if (prop['field'].find('CPU min MHz')) > -1: cpu['mhz_min'] = prop['data'] 
+                if (prop['field'].find('CPU max MHz')) > -1: cpu['mhz_max'] = prop['data'] 
+                if (prop['field'].find('Vendor ID')) > -1: cpu['vendor'] = prop['data'] 
+                if (prop['field'].find('Model name')) > -1: cpu['model'] = prop['data'] 
+
+    if len(cpu) > 0:
+        version_data['cpu'] = cpu
+
+
+
+    hypervisor,code = popen('hvinfo', stderr=DEVNULL)
+    if code == 1:
+         # hvinfo returns 1 if it cannot detect any hypervisor
+         version_data['system_type'] = 'bare metal'
+    else:
         version_data['system_type'] = f"{hypervisor} guest"
-    except OSError:
-        # hvinfo returns 1 if it cannot detect any hypervisor
-        version_data['system_type'] = 'bare metal'
 
     # Get boot type, it can be livecd, installed image, or, possible, a system installed
     # via legacy "install system" mechanism
