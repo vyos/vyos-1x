@@ -13,9 +13,15 @@
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
             <children>
+              <leafNode name="log">
+                <properties>
+                  <help>Show specified WWAN interface log</help>
+                </properties>
+                <command>/usr/bin/journalctl -u "ppp@$4".service</command>
+              </leafNode>
               <leafNode name="statistics">
                 <properties>
-                  <help>Show specified wirelessmodem interface statistics</help>
+                  <help>Show specified WWAN interface statistics</help>
                   <completionHelp>
                     <path>interfaces wirelessmodem</path>
                   </completionHelp>
