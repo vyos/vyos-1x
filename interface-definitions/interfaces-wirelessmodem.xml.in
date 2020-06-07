@@ -46,12 +46,16 @@
           #include <include/interface-vrf.xml.i>
           <leafNode name="device">
             <properties>
-              <help>System device name (default: ttyUSB0)</help>
+              <help>Serial device </help>
               <completionHelp>
-                <script>ls -1 /dev | grep ttyUSB</script>
+                <script>ls -1 /dev /dev/serial/by-bus | grep -e ttyS[0-9]* -e usb[0-9]*</script>
               </completionHelp>
               <valueHelp>
-                <format>ttyXXX</format>
+                <format>ttySXX</format>
+                <description>System TTY device name</description>
+              </valueHelp>
+              <valueHelp>
+                <format>usbXbY.YpZ.Z</format>
                 <description>System TTY device name</description>
               </valueHelp>
             </properties>
