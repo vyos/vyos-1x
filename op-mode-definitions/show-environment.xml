@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="environment">
+        <properties>
+          <help>Show current system environmental conditions</help>
+        </properties>
+        <children>
+          <leafNode name="sensors">
+            <properties>
+              <help>Show hardware monitoring results</help>
+            </properties>
+            <!-- Linux always adds "hypervisor" to CPU flags -->
+            <command>if ! grep -q hypervisor /proc/cpuinfo; then /usr/bin/sensors --no-adapter; else echo "VyOS running under hypervisor, no sensors available"; fi</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
