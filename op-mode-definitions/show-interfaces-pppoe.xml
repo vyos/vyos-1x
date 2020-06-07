@@ -13,9 +13,15 @@
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
             <children>
+              <leafNode name="log">
+                <properties>
+                  <help>Show specified PPPoE interface log</help>
+                </properties>
+                <command>/usr/bin/journalctl -u "ppp@$4".service</command>
+              </leafNode>
               <leafNode name="statistics">
                 <properties>
-                  <help>Show PPPoE interface statistics</help>
+                  <help>Show specified PPPoE interface statistics</help>
                   <completionHelp>
                     <path>interfaces pppoe</path>
                   </completionHelp>
