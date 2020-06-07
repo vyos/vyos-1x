@@ -32,7 +32,6 @@ from vyos import airbag
 airbag.enable()
 
 default_config_data = {
-    'address': [],
     'apn': '',
     'chat_script': '',
     'deleted': False,
@@ -76,9 +75,6 @@ def get_config():
 
     wwan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
     wwan['chat_script'] = f"/etc/ppp/peers/chat.{wwan['intf']}"
-
-    # check if interface is member if a bridge
-    wwan['is_bridge_member'] = is_member(conf, wwan['intf'], 'bridge')
 
     # Check if interface has been removed
     if not conf.exists('interfaces wirelessmodem ' + wwan['intf']):
@@ -138,11 +134,6 @@ def get_config():
 
 def verify(wwan):
     if wwan['deleted']:
-        if wwan['is_bridge_member']:
-            raise ConfigError((
-                f'Cannot delete interface "{wwan["intf"]}" as it is a '
-                f'member of bridge "{wwan["is_bridge_member"]}"!'))
-
         return None
 
     if not wwan['apn']:
@@ -153,23 +144,11 @@ def verify(wwan):
 
     # we can not use isfile() here as Linux device files are no regular files
     # thus the check will return False
-    if not os.path.exists(f"/dev/{wwan['device']}"):
-        raise ConfigError(f"Device {wwan['device']} does not exist")
+    if not os.path.exists('{device}'.format(**wwan)):
+        raise ConfigError('Device "{device}" does not exist'.format(**wwan))
 
-    if wwan['is_bridge_member'] and wwan['address']:
-        raise ConfigError((
-            f'Cannot assign address to interface "{wwan["intf"]}" '
-            f'as it is a member of bridge "{wwan["is_bridge_member"]}"!'))
-
-    if wwan['vrf']:
-        if wwan['vrf'] not in interfaces():
-            raise ConfigError(f'VRF "{wwan["vrf"]}" does not exist')
-
-        if wwan['is_bridge_member']:
-            raise ConfigError((
-                f'Interface "{wwan["intf"]}" cannot be member of VRF '
-                f'"{wwan["vrf"]}" and bridge {wwan["is_bridge_member"]} '
-                f'at the same time!'))
+    if wwan['vrf'] not in interfaces():
+        raise ConfigError('VRF "{vrf}" does not exist'.format(**wwan))
 
     return None
 
