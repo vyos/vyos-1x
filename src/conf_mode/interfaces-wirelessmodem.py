@@ -24,7 +24,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.ifconfig import BridgeIf, Section
 from vyos.template import render
-from vyos.util import chown, chmod_755, cmd, call
+from vyos.util import call
 from vyos.validate import is_member
 from vyos import ConfigError
 
@@ -41,7 +41,6 @@ default_config_data = {
     'disable': False,
     'disable_link_detect': 1,
     'on_demand': False,
-    'logfile': '',
     'metric': '10',
     'mtu': '1500',
     'name_server': True,
@@ -76,7 +75,6 @@ def get_config():
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     wwan['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-    wwan['logfile'] = f"/var/log/vyatta/ppp_{wwan['intf']}.log"
     wwan['chat_script'] = f"/etc/ppp/peers/chat.{wwan['intf']}"
 
     # check if interface is member if a bridge
@@ -225,8 +223,6 @@ def apply(wwan):
     if not wwan['disable']:
         # "dial" WWAN connection
         intf = wwan['intf']
-        # make logfile owned by root / vyattacfg
-        chown(wwan['logfile'], 'root', 'vyattacfg')
         call(f'systemctl start ppp@{intf}.service')
 
         # re-add ourselves to any bridge we might have fallen out of
