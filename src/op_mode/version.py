@@ -21,6 +21,7 @@
 import sys
 import argparse
 import json
+import jinja2
 
 import vyos.version
 import vyos.limericks
@@ -33,22 +34,34 @@ parser.add_argument("-f", "--funny", action="store_true", help="Add something fu
 parser.add_argument("-j", "--json", action="store_true", help="Produce JSON output")
 
 version_output_tmpl = """
-Version:          VyOS {version}
-Release Train:    {release_train}
+Version:          VyOS {{version}}
+Release Train:    {{release_train}}
 
-Built by:         {built_by}
-Built on:         {built_on}
-Build UUID:       {build_uuid}
-Build Commit ID:  {build_git}
+Built by:         {{built_by}}
+Built on:         {{built_on}}
+Build UUID:       {{build_uuid}}
+Build Commit ID:  {{build_git}}
 
-Architecture:     {system_arch}
-Boot via:         {boot_via}
-System type:      {system_type}
+Architecture:     {{system_arch}}
+Boot via:         {{boot_via}}
+System type:      {{system_type}}
+{% if cpu %}
 
-Hardware vendor:  {hardware_vendor}
-Hardware model:   {hardware_model}
-Hardware S/N:     {hardware_serial}
-Hardware UUID:    {hardware_uuid}
+{% if 'vendor' in cpu %}CPU Vendor:       {{cpu.vendor}}{% endif %}
+{% if 'model' in cpu %}Model:            {{cpu.model}}{% endif %}
+{% if 'cpus' in cpu %}Total CPUs:       {{cpu.cpus}}{% endif %}
+{% if 'sockets' in cpu %}Sockets:          {{cpu.sockets}}{% endif %}
+{% if 'cores' in cpu %}Cores:            {{cpu.cores}}{% endif %}
+{% if 'threads' in cpu %}Threads:          {{cpu.threads}}{% endif %}
+{% if 'mhz' in cpu %}Current MHz:      {{cpu.mhz}}{% endif %}
+{% if 'mhz_min' in cpu %}Minimum MHz:      {{cpu.mhz_min}}{% endif %}
+{% if 'mhz_max' in cpu %}Maximum MHz:      {{cpu.mhz_max}}{% endif %}
+{% endif %}
+
+Hardware vendor:  {{hardware_vendor}}
+Hardware model:   {{hardware_model}}
+Hardware S/N:     {{hardware_serial}}
+Hardware UUID:    {{hardware_uuid}}
 
 Copyright:        VyOS maintainers and contributors
 """
@@ -62,7 +75,10 @@ if __name__ == '__main__':
         print(json.dumps(version_data))
         sys.exit(0)
 
-    print(version_output_tmpl.format(**version_data).strip())
+    tmpl = jinja2.Template(version_output_tmpl)
+    print(tmpl.render(version_data))
+
+    #print(version_output_tmpl.format(**version_data).strip())
 
     if args.all:
         print("Package versions:")
