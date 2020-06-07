@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2016 VyOS maintainers and contributors
+# Copyright (C) 2016-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,13 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# File: vyos-show-version
 # Purpose:
 #    Displays image version and system information.
 #    Used by the "run show version" command.
 
-
-import os
 import sys
 import argparse
 import json
@@ -28,18 +25,12 @@ import json
 import vyos.version
 import vyos.limericks
 
-from vyos.util import cmd
 from vyos.util import call
-from vyos.util import run
-from vyos.util import read_file
-from vyos.util import DEVNULL
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Include individual package versions")
 parser.add_argument("-f", "--funny", action="store_true", help="Add something funny to the output")
 parser.add_argument("-j", "--json", action="store_true", help="Produce JSON output")
-
 
 version_output_tmpl = """
 Version:          VyOS {version}
