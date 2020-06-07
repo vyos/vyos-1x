@@ -35,7 +35,7 @@
                     <properties>
                       <help>Show physical device offloading capabilities</help>
                     </properties>
-                    <command>/sbin/ethtool -k "$4" | sed -e '/fixed/d'</command>
+                    <command>/sbin/ethtool -k "$4" | sed -e 1d -e '/fixed/d' -e 's/^\t*//g' -e 's/://' | column -t -s' '</command>
                   </leafNode>
                 </children>
               </node>
