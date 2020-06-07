@@ -48,15 +48,16 @@
             <properties>
               <help>Serial device </help>
               <completionHelp>
-                <script>ls -1 /dev /dev/serial/by-bus | grep -e ttyS[0-9]* -e usb[0-9]*</script>
+                <script>ls -1 /dev | grep ttyS</script>
+                <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
               </completionHelp>
               <valueHelp>
                 <format>ttySXX</format>
-                <description>System TTY device name</description>
+                <description>TTY device name, regular serial port</description>
               </valueHelp>
               <valueHelp>
                 <format>usbXbY.YpZ.Z</format>
-                <description>System TTY device name</description>
+                <description>TTY device name, USB based</description>
               </valueHelp>
             </properties>
           </leafNode>
