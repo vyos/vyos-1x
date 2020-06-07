@@ -18,14 +18,12 @@
 #    Displays image version and system information.
 #    Used by the "run show version" command.
 
-import sys
 import argparse
-import json
-import jinja2
-
 import vyos.version
 import vyos.limericks
 
+from jinja2 import Template
+from sys import exit
 from vyos.util import call
 
 parser = argparse.ArgumentParser()
@@ -45,18 +43,6 @@ Build Commit ID:  {{build_git}}
 Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
 System type:      {{system_type}}
-{% if cpu %}
-
-{% if 'vendor' in cpu %}CPU Vendor:       {{cpu.vendor}}{% endif %}
-{% if 'model' in cpu %}Model:            {{cpu.model}}{% endif %}
-{% if 'cpus' in cpu %}Total CPUs:       {{cpu.cpus}}{% endif %}
-{% if 'sockets' in cpu %}Sockets:          {{cpu.sockets}}{% endif %}
-{% if 'cores' in cpu %}Cores:            {{cpu.cores}}{% endif %}
-{% if 'threads' in cpu %}Threads:          {{cpu.threads}}{% endif %}
-{% if 'mhz' in cpu %}Current MHz:      {{cpu.mhz}}{% endif %}
-{% if 'mhz_min' in cpu %}Minimum MHz:      {{cpu.mhz_min}}{% endif %}
-{% if 'mhz_max' in cpu %}Maximum MHz:      {{cpu.mhz_max}}{% endif %}
-{% endif %}
 
 Hardware vendor:  {{hardware_vendor}}
 Hardware model:   {{hardware_model}}
@@ -72,13 +58,12 @@ if __name__ == '__main__':
     version_data = vyos.version.get_full_version_data()
 
     if args.json:
+        import json
         print(json.dumps(version_data))
-        sys.exit(0)
+        exit(0)
 
-    tmpl = jinja2.Template(version_output_tmpl)
+    tmpl = Template(version_output_tmpl)
     print(tmpl.render(version_data))
-
-    #print(version_output_tmpl.format(**version_data).strip())
 
     if args.all:
         print("Package versions:")

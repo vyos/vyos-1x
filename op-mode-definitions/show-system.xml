@@ -49,6 +49,12 @@
               </node>
             </children>
           </node>
+          <leafNode name="cpu">
+            <properties>
+              <help>Show CPU information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_cpu.py</command>
+          </leafNode>
           <leafNode name= "integrity">
             <properties>
               <help>Checks overall system integrity</help>
