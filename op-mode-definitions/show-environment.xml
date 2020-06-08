@@ -12,7 +12,7 @@
               <help>Show hardware monitoring results</help>
             </properties>
             <!-- Linux always adds "hypervisor" to CPU flags -->
-            <command>if ! grep -q hypervisor /proc/cpuinfo; then /usr/bin/sensors --no-adapter; else echo "VyOS running under hypervisor, no sensors available"; fi</command>
+	    <command>if ! grep -q hypervisor /proc/cpuinfo; then ${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_sensors.py; else echo "VyOS running under hypervisor, no sensors available"; fi</command>
           </leafNode>
         </children>
       </node>
