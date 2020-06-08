@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # remove "system console netconsole"
+# remove "system console device <device> modem"
 
 import os
 import sys
@@ -39,6 +40,12 @@ else:
     # remove "system console netconsole" (T2561)
     if config.exists(base + ['netconsole']):
         config.delete(base + ['netconsole'])
+
+    for device in config.list_nodes(base + ['device']):
+        dev_path = base + ['device', device]
+        # remove "system console device <device> modem" (T2570)
+        if config.exists(dev_path + ['modem']):
+            config.delete(dev_path + ['modem'])
 
     try:
         with open(file_name, 'w') as f:
