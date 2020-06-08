@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="console" owner="${vyos_conf_scripts_dir}/system_console.py">
+        <properties>
+          <help>Serial console configuration</help>
+          <priority>100</priority>
+        </properties>
+        <children>
+          <tagNode name="device">
+            <properties>
+              <help>Serial console device name</help>
+              <valueHelp>
+                <format>ttySN</format>
+                <description>Serial device name</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ttyUSBX</format>
+                <description>USB Serial device name</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hvc0</format>
+                <description>Xen console</description>
+              </valueHelp>
+              <constraint>
+                  <regex>^(ttyS|ttyUSB|hvc)[0-9]+$</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="speed">
+                <properties>
+                  <help>Console baud rate</help>
+                  <completionHelp>
+                    <list>1200 2400 4800 9600 19200 38400 57600 115200</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>1200</format>
+                    <description>1200 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>2400</format>
+                    <description>2400 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>4800</format>
+                    <description>4800 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>9600</format>
+                    <description>9600 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>19200</format>
+                    <description>19200 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>38400</format>
+                    <description>38400 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>57600</format>
+                    <description>57600 bps</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>115200</format>
+                    <description>115200 bps</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(1200|2400|4800|9600|19200|38400|57600|115200)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="powersave">
+            <properties>
+              <help>Enable screen blank powersaving on VGA console</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
