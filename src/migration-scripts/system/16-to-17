@@ -47,6 +47,26 @@ else:
         if config.exists(dev_path + ['modem']):
             config.delete(dev_path + ['modem'])
 
+        # Only continue on USB based serial consoles
+        if not 'ttyUSB' in device:
+            continue
+
+        # A serial console has been configured but it does no longer
+        # exist on the system - cleanup
+        if not os.path.exists(f'/dev/{device}'):
+            config.delete(dev_path)
+            continue
+
+        # migrate from ttyUSB device to new device in /dev/serial/by-bus
+        for root, dirs, files in os.walk('/dev/serial/by-bus'):
+            for usb_device in files:
+                device_file = os.path.realpath(os.path.join(root, usb_device))
+                # migrate to new USB device names (T2529)
+                if os.path.basename(device_file) == device:
+                    config.copy(dev_path, base + ['device', usb_device])
+                    # Delete old USB node from config
+                    config.delete(dev_path)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

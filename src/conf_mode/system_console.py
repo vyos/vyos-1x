@@ -18,40 +18,46 @@ import os
 
 from vyos.config import Config
 from vyos.util import call
+from vyos.template import render
 from vyos import ConfigError, airbag
 airbag.enable()
-
-serial_getty_file = '/lib/systemd/system/serial-getty@.service'
 
 def get_config():
     conf = Config()
     base = ['system', 'console']
 
-    if not conf.exists(base):
-        return None
-
     # retrieve configuration at once
     console = conf.get_config_dict(base)
 
-    # set default values
-    if 'device' in console.keys():
-        for device in console['device'].keys():
-            # no speed setting has been configured - use default value
-            if not 'speed' in console['device'][device].keys():
-                tmp = { 'speed': '' }
-                if device.startswith('hvc'):
-                    tmp['speed'] = 38400
-                else:
-                    tmp['speed'] = 115200
+    # bail out early if no serial console is configured
+    if 'device' not in console.keys():
+        return console
 
-                console['device'][device].update(tmp)
+    # convert CLI values to system values
+    for device in console['device'].keys():
+        # no speed setting has been configured - use default value
+        if not 'speed' in console['device'][device].keys():
+            tmp = { 'speed': '' }
+            if device.startswith('hvc'):
+                tmp['speed'] = 38400
+            else:
+                tmp['speed'] = 115200
+
+            console['device'][device].update(tmp)
+
+        if device.startswith('usb'):
+            # It is much easiert to work with the native ttyUSBn name when using
+            # getty, but that name may change across reboots - depending on the
+            # amount of connected devices. We will resolve the fixed device name
+            # to its dynamic device file - and create a new dict entry for it.
+            #
+            # updating the dict must come as last step in the loop!
+            tmp = os.path.basename(os.readlink('/dev/serial/by-bus/usb0b1p1.0'))
+            console['device'][tmp] = console['device'].pop(device)
 
     return console
 
 def verify(console):
-    if not os.path.isfile(serial_getty_file):
-        raise ConfigError(f'Could not open: {serial_getty_file}')
-
     return None
 
 def generate(console):
@@ -63,20 +69,9 @@ def generate(console):
                 call(f'systemctl stop {basename}')
                 os.unlink(os.path.join(root, basename))
 
-    # bail out early if serial device is not configured
-    if not console or 'device' not in console.keys():
-        return None
-
     for device in console['device'].keys():
-        serial_getty_device_file = f'{base_dir}/serial-getty@{device}.service'
-        serial_getty_wants_file = f'{base_dir}/getty.target.wants/serial-getty@{device}.service'
-
-        with open(serial_getty_file, 'r') as f:
-            tmp = f.read()
-        tmp = tmp.replace('115200,38400,9600', str(console['device'][device]['speed']))
-
-        with open(serial_getty_device_file, 'w') as f:
-            f.write(tmp)
+        config_file = base_dir + f'/serial-getty@{device}.service'
+        render(config_file, 'getty/serial-getty.service.tmpl', console['device'][device])
 
     # Reload systemd manager configuration
     call('systemctl daemon-reload')

@@ -11,20 +11,24 @@
           <tagNode name="device">
             <properties>
               <help>Serial console device name</help>
+              <completionHelp>
+                <script>ls -1 /dev | grep -e ttyS -e hvc</script>
+                <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
+              </completionHelp>
               <valueHelp>
                 <format>ttySN</format>
-                <description>Serial device name</description>
+                <description>TTY device name, regular serial port</description>
               </valueHelp>
               <valueHelp>
-                <format>ttyUSBX</format>
-                <description>USB Serial device name</description>
+                <format>usbNbXpY</format>
+                <description>TTY device name, USB based</description>
               </valueHelp>
               <valueHelp>
-                <format>hvc0</format>
+                <format>hvcN</format>
                 <description>Xen console</description>
               </valueHelp>
               <constraint>
-                  <regex>^(ttyS|ttyUSB|hvc)[0-9]+$</regex>
+                  <regex>^(ttyS[0-9]+|hvc[0-9]+|usb[0-9]+b.*)$</regex>
               </constraint>
             </properties>
             <children>
