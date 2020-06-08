@@ -100,6 +100,9 @@ nas-ip-address={{ radius_nas_ip }}
 bind={{ radius_source_address }}
 {% endif -%}
 {% endif %}
+{% if gateway_address %}
+gw-ip-address={{ gateway_address }}
+{% endif %}
 
 [ppp]
 verbose=1
