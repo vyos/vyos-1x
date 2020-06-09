@@ -88,7 +88,6 @@ wins{{ loop.index }}={{ server }}
 
 {% if auth_mode == 'local' %}
 [chap-secrets]
-gw-ip-address={{ ppp_gw }}
 chap-secrets={{ chap_secrets_file }}
 {% elif auth_mode == 'radius' %}
 [radius]
@@ -115,6 +114,9 @@ bind={{ radius_source_address }}
 {% if radius_dynamic_author %}
 dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {% endif -%}
+{% endif %}
+{% if ppp_gw %}
+gw-ip-address={{ ppp_gw }}
 {% endif %}
 
 {% if sesscrtl != 'disable' %}
