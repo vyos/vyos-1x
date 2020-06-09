@@ -355,6 +355,10 @@ def apply(bond):
 
         # Some parameters can not be changed when the bond is up.
         if bond['shutdown_required']:
+            # Collect "old" and "new" bond members
+            slaves_old = list()
+            slaves_new = list()
+
             # Disable bond prior changing of certain properties
             b.set_admin_state('down')
 
@@ -362,6 +366,7 @@ def apply(bond):
             # to this bond, thus we will free all interfaces from the bond first!
             for intf in b.get_slaves():
                 b.del_port(intf)
+                slaves_old.append(intf)
 
             # Bonding policy/mode
             b.set_mode(bond['mode'])
@@ -372,6 +377,16 @@ def apply(bond):
                 # have addresses configured so just flush any remaining ones
                 cmd(f'ip addr flush dev "{intf}"')
                 b.add_port(intf)
+                slaves_new.append(intf)
+
+            # https://phabricator.vyos.net/T2515
+            # Call 'interfaces-ethernet.py' for each interface that leaves bond
+            for slave in slaves_old:
+                if slave not in slaves_new:
+                    tagnode_old = os.environ['VYOS_TAGNODE_VALUE']
+                    os.environ['VYOS_TAGNODE_VALUE'] = slave
+                    os.system('/usr/libexec/vyos/conf_mode/interfaces-ethernet.py')
+                    os.environ['VYOS_TAGNODE_VALUE'] = tagnode_old
 
         # As the bond interface is always disabled first when changing
         # parameters we will only re-enable the interface if it is not
