@@ -56,9 +56,12 @@
                 <description>TTY device name, regular serial port</description>
               </valueHelp>
               <valueHelp>
-                <format>usbXbY.YpZ.Z</format>
+                <format>usbNbXpY</format>
                 <description>TTY device name, USB based</description>
               </valueHelp>
+              <constraint>
+                <regex>^(ttyS[0-9]+|usb[0-9]+b.*)$</regex>
+              </constraint>
             </properties>
           </leafNode>
           #include <include/interface-disable-link-detect.xml.i>
