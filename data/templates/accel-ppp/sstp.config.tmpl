@@ -91,6 +91,9 @@ bind={{ radius_source_address }}
 dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {% endif -%}
 {% endif %}
+{% if client_gateway %}
+gw-ip-address={{ client_gateway }}
+{% endif %}
 
 [ppp]
 verbose=1
