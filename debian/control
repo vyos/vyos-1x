@@ -98,17 +98,13 @@ Depends: python3,
   salt-minion,
   vyos-utils,
   nftables (>= 0.9.3),
-  conntrack,
-  ${shlibs:Depends},
-  ${misc:Depends}
+  conntrack
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
 Package: vyos-1x-vmware
 Architecture: amd64 i386
 Depends:
- ${misc:Depends},
- ${shlibs:Depends},
  vyos-1x,
  open-vm-tools
 Description: VyOS configuration scripts and data for VMware
