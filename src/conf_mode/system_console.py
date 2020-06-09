@@ -22,6 +22,8 @@ from vyos.template import render
 from vyos import ConfigError, airbag
 airbag.enable()
 
+by_bus_dir = '/dev/serial/by-bus'
+
 def get_config():
     conf = Config()
     base = ['system', 'console']
@@ -50,10 +52,11 @@ def get_config():
             # getty, but that name may change across reboots - depending on the
             # amount of connected devices. We will resolve the fixed device name
             # to its dynamic device file - and create a new dict entry for it.
-            #
-            # updating the dict must come as last step in the loop!
-            tmp = os.path.basename(os.readlink('/dev/serial/by-bus/usb0b1p1.0'))
-            console['device'][tmp] = console['device'].pop(device)
+            by_bus_device = f'{by_bus_dir}/{device}'
+            if os.path.isdir(by_bus_dir) and os.path.exists(by_bus_device):
+                tmp = os.path.basename(os.readlink(by_bus_device))
+                # updating the dict must come as last step in the loop!
+                console['device'][tmp] = console['device'].pop(device)
 
     return console
 
@@ -91,7 +94,10 @@ def apply(console):
 
     # Start getty process on configured serial interfaces
     for device in console['device'].keys():
-        call(f'systemctl start serial-getty@{device}.service')
+        # Only start console if it exists on the running system. If a user
+        # detaches a USB serial console and reboots - it should not fail!
+        if os.path.exists(f'/dev/{device}'):
+            call(f'systemctl start serial-getty@{device}.service')
 
     return None
 
