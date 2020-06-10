@@ -30,13 +30,13 @@
                     <script>/usr/bin/vtysh -c "show bfd peers" | awk '/[:blank:]*peer/ { printf "%s\n", $2 }'</script>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "show bfd peers" | awk -v BFD_PEER=$5 '($0 ~ peer BFD_PEER) { system("/usr/bin/vtysh -c \"show bfd " $0 "\"") }'</command>
+                <command>/usr/bin/vtysh -c "show bfd peers" | awk -v BFD_PEER=$5 'BEGIN { regex = sprintf("(peer %s.*)vrf", BFD_PEER) } { if (match($0, regex, bfd_peer_value)) peer=bfd_peer_value[1] } END { if (peer) system("/usr/bin/vtysh -c \"show bfd " peer "\"") }'</command>
                 <children>
                   <leafNode name="counters">
                     <properties>
                       <help>Show Bidirectional Forwarding Detection (BFD) peer counters</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show bfd peers" | awk -v BFD_PEER=$5 '($0 ~ peer BFD_PEER) { system("/usr/bin/vtysh -c \"show bfd " $0 " counters\"") }'</command>
+                    <command>/usr/bin/vtysh -c "show bfd peers" | awk -v BFD_PEER=$5 'BEGIN { regex = sprintf("(peer %s.*)vrf", BFD_PEER) } { if (match($0, regex, bfd_peer_value)) peer=bfd_peer_value[1] } END { if (peer) system("/usr/bin/vtysh -c \"show bfd " peer " counters\"") }'</command>
                   </leafNode>
                 </children>
               </tagNode>
