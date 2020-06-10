@@ -22,8 +22,8 @@ max-negative-ttl={{ negative_ttl }}
 # ignore-hosts-file
 export-etc-hosts={{ export_hosts_file }}
 
-# listen-on
-local-address={{ listen_on | join(',') }}
+# listen-address
+local-address={{ listen_address | join(',') }}
 
 # dnssec
 dnssec={{ dnssec }}

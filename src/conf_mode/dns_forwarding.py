@@ -40,7 +40,7 @@ default_config_data = {
     'allow_from': [],
     'cache_size': 10000,
     'export_hosts_file': 'yes',
-    'listen_on': [],
+    'listen_address': [],
     'name_servers': [],
     'negative_ttl': 3600,
     'domains': [],
@@ -103,7 +103,7 @@ def get_config(arguments):
     dns['name_servers'] = bracketize_ipv6_addrs(dns['name_servers'])
 
     if conf.exists(['listen-address']):
-        dns['listen_on'] = conf.return_values(['listen-address'])
+        dns['listen_address'] = conf.return_values(['listen-address'])
 
     if conf.exists(['dnssec']):
         dns['dnssec'] = conf.return_value(['dnssec'])
@@ -134,9 +134,9 @@ def verify(dns):
     if dns is None:
         return None
 
-    if not dns['listen_on']:
+    if not dns['listen_address']:
         raise ConfigError(
-            "Error: DNS forwarding requires either a listen-address (preferred) or a listen-on option")
+            "Error: DNS forwarding requires a listen-address")
 
     if not dns['allow_from']:
         raise ConfigError(
