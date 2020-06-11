@@ -135,3 +135,8 @@ docs:
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b
+
+.PHONY: schema
+schema:
+	trang -I rnc -O rng schema/interface_definition.rnc schema/interface_definition.rng
+	trang -I rnc -O rng schema/op-mode-definition.rnc schema/op-mode-definition.rng
