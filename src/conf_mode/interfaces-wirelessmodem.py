@@ -147,7 +147,7 @@ def verify(wwan):
     if not os.path.exists('{device}'.format(**wwan)):
         raise ConfigError('Device "{device}" does not exist'.format(**wwan))
 
-    if wwan['vrf'] not in interfaces():
+    if wwan['vrf'] and wwan['vrf'] not in interfaces():
         raise ConfigError('VRF "{vrf}" does not exist'.format(**wwan))
 
     return None
