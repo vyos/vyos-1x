@@ -46,9 +46,8 @@ default_config_data = {
 }
 
 
-def get_config():
+def get_config(conf):
     dns = deepcopy(default_config_data)
-    conf = Config()
     base = ['service', 'dns', 'forwarding']
 
     if not conf.exists(base):
@@ -122,7 +121,7 @@ def bracketize_ipv6_addrs(addrs):
     """Wraps each IPv6 addr in addrs in [], leaving IPv4 addrs untouched."""
     return ['[{0}]'.format(a) if a.count(':') > 1 else a for a in addrs]
 
-def verify(dns):
+def verify(conf, dns):
     # bail out early - looks like removal from running config
     if dns is None:
         return None
@@ -164,8 +163,9 @@ if __name__ == '__main__':
 
 
     try:
-        c = get_config()
-        verify(c)
+        conf = Config()
+        c = get_config(conf)
+        verify(conf, c)
         generate(c)
         apply(c)
     except ConfigError as e:
