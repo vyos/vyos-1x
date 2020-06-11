@@ -10,6 +10,9 @@ DefaultDependencies=no
 After=systemd-remount-fs.service
 
 [Service]
+WorkingDirectory=/run/vyos-hostsd
+RuntimeDirectory=vyos-hostsd
+RuntimeDirectoryPreserve=yes
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
 Type=idle
 KillMode=process
