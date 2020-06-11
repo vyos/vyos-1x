@@ -105,16 +105,14 @@ def generate(console):
     return None
 
 def apply(console):
-    # bail out early
+    # reset screen blanking
+    call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
     if not console:
-        call( '/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/console >/dev/console 2>&1')
         return None
 
-    # Configure screen blank powersaving on VGA console
     if 'powersave' in console.keys():
-        call('/usr/bin/setterm -blank 15 -powersave powerdown -powerdown 60 -term linux </dev/console >/dev/console 2>&1')
-    else:
-        call( '/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/console >/dev/console 2>&1')
+        # Configure screen blank powersaving on VGA console
+        call('/usr/bin/setterm -blank 15 -powersave powerdown -powerdown 60 -term linux </dev/tty1 >/dev/tty1 2>&1')
 
     # Start getty process on configured serial interfaces
     for device in console['device'].keys():
