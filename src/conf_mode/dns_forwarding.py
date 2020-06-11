@@ -48,6 +48,7 @@ default_config_data = {
     'dhcp_interfaces': []
 }
 
+hostsd_tag = 'static'
 
 def get_config(conf):
     dns = deepcopy(default_config_data)
@@ -166,11 +167,44 @@ def apply(dns):
         if os.path.isfile(pdns_rec_config_file):
             os.unlink(pdns_rec_config_file)
     else:
+        ### first apply vyos-hostsd config
+        hc = hostsd_client()
+
+        # add static nameservers to hostsd so they can be joined with other
+        # sources
+        hc.delete_name_servers([hostsd_tag])
+        if dns['name_servers']:
+            hc.add_name_servers({hostsd_tag: dns['name_servers']})
+
+        # delete all nameserver tags
+        hc.delete_name_server_tags_recursor(hc.get_name_server_tags_recursor())
+
+        ## add nameserver tags - the order determines the nameserver order!
+        # our own tag (static)
+        hc.add_name_server_tags_recursor([hostsd_tag])
+
+        if dns['system']:
+            hc.add_name_server_tags_recursor(['system'])
+        else:
+            hc.delete_name_server_tags_recursor(['system'])
+
+        # add dhcp nameserver tags for configured interfaces
+        for intf in dns['dhcp_interfaces']:
+            hc.add_name_server_tags_recursor(['dhcp-' + intf, 'dhcpv6-' + intf ])
+
+        # hostsd will generate the forward-zones file
+        # the list and keys() are required as get returns a dict, not list
+        hc.delete_forward_zones(list(hc.get_forward_zones().keys()))
+        if dns['domains']:
+            hc.add_forward_zones(dns['domains'])
+
+        # call hostsd to generate forward-zones and its lua-config-file
+        hc.apply()
+
+        ### finally (re)start pdns-recursor
         call("systemctl restart pdns-recursor.service")
 
 if __name__ == '__main__':
-
-
     try:
         conf = Config()
         c = get_config(conf)
