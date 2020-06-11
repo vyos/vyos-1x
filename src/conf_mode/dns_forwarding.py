@@ -22,12 +22,13 @@ from copy import deepcopy
 from vyos.config import Config
 from vyos.hostsd_client import Client as hostsd_client
 from vyos import ConfigError
-from vyos.util import call
+from vyos.util import call, chown
 from vyos.template import render
 
 from vyos import airbag
 airbag.enable()
 
+pdns_rec_user = pdns_rec_group = 'pdns'
 pdns_rec_run_dir = '/run/powerdns'
 pdns_rec_lua_conf_file = f'{pdns_rec_run_dir}/recursor.conf.lua'
 pdns_rec_hostsd_lua_conf_file = f'{pdns_rec_run_dir}/recursor.vyos-hostsd.conf.lua'
@@ -144,7 +145,18 @@ def generate(dns):
     if dns is None:
         return None
 
-    render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True, user='pdns', group='pdns')
+    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.tmpl',
+            dns, user=pdns_rec_user, group=pdns_rec_group)
+
+    render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.tmpl',
+            dns, user=pdns_rec_user, group=pdns_rec_group)
+
+    # if vyos-hostsd didn't create its files yet, create them (empty)
+    for f in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:
+        with open(f, 'a'):
+            pass
+        chown(f, user=pdns_rec_user, group=pdns_rec_group)
+
     return None
 
 def apply(dns):
