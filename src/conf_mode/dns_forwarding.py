@@ -82,8 +82,8 @@ def get_config(conf):
         dns['export_hosts_file'] = "no"
 
     if conf.exists(['name-server']):
-        name_servers = conf.return_values(['name-server'])
-        dns['name_servers'] = dns['name_servers'] + name_servers
+        dns['name_servers'] = bracketize_ipv6_addrs(
+                conf.return_values(['name-server']))
 
     if conf.exists(['system']):
         conf.set_level(['system'])
