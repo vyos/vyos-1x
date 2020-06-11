@@ -167,18 +167,6 @@ def apply(config):
     if process_named_running('snmpd'):
         call('systemctl restart snmpd.service')
 
-    # restart pdns if it is used - we check for the control dir to not raise
-    # an exception on system startup
-    #
-    #   File "/usr/lib/python3/dist-packages/vyos/configsession.py", line 128, in __run_command
-    #     raise ConfigSessionError(output)
-    # vyos.configsession.ConfigSessionError: [ system domain-name vyos.io ]
-    # Fatal: Unable to generate local temporary file in directory '/run/powerdns': No such file or directory
-    if os.path.isdir('/run/powerdns'):
-        ret = run('/usr/bin/rec_control --socket-dir=/run/powerdns ping')
-        if ret == 0:
-            call('systemctl restart pdns-recursor.service')
-
     return None
 
 
