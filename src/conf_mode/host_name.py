@@ -48,12 +48,12 @@ default_config_data = {
 def get_config(conf):
     hosts = copy.deepcopy(default_config_data)
 
-    if conf.exists("system host-name"):
-        hosts['hostname'] = conf.return_value("system host-name")
-        # This may happen if the config is not loaded yet,
-        # e.g. if run by cloud-init
-        if not hosts['hostname']:
-            hosts['hostname'] = default_config_data['hostname']
+    hosts['hostname'] = conf.return_value("system host-name")
+
+    # This may happen if the config is not loaded yet,
+    # e.g. if run by cloud-init
+    if not hosts['hostname']:
+        hosts['hostname'] = default_config_data['hostname']
 
     if conf.exists("system domain-name"):
         hosts['domain_name'] = conf.return_value("system domain-name")
@@ -62,8 +62,7 @@ def get_config(conf):
     for search in conf.return_values("system domain-search domain"):
         hosts['domain_search'].append(search)
 
-    if conf.exists("system name-server"):
-        hosts['nameserver'] = conf.return_values("system name-server")
+    hosts['nameserver'] = conf.return_values("system name-server")
 
     hosts['nameservers_dhcp_interfaces'] = conf.return_values("system name-servers-dhcp")
 
