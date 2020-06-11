@@ -45,6 +45,8 @@ default_config_data = {
     'static_host_mapping': {}
 }
 
+hostsd_tag = 'system'
+
 def get_config(conf):
     hosts = copy.deepcopy(default_config_data)
 
@@ -118,24 +120,32 @@ def apply(config):
         return None
 
     ## Send the updated data to vyos-hostsd
-
-    # vyos-hostsd uses "tags" to identify data sources
-    tag = "static"
-
     try:
-        client = vyos.hostsd_client.Client()
+        hc = vyos.hostsd_client.Client()
 
-        # Check if disable-dhcp-nameservers is configured, and if yes - delete DNS servers added by DHCP
-        if config['no_dhcp_ns']:
-            client.delete_name_servers('dhcp-.+')
+        hc.set_host_name(config['hostname'], config['domain_name'])
 
-        client.set_host_name(config['hostname'], config['domain_name'], config['domain_search'])
+        hc.delete_search_domains([hostsd_tag])
+        if config['domain_search']:
+            hc.add_search_domains({hostsd_tag: config['domain_search']})
 
-        client.delete_name_servers(tag)
-        client.add_name_servers(tag, config['nameserver'])
+        hc.delete_name_servers([hostsd_tag])
+        if config['nameserver']:
+            hc.add_name_servers({hostsd_tag: config['nameserver']})
 
-        client.delete_hosts(tag)
-        client.add_hosts(tag, config['static_host_mapping'])
+        # add our own tag's (system) nameservers and search to resolv.conf
+        hc.delete_name_server_tags_system(hc.get_name_server_tags_system())
+        hc.add_name_server_tags_system([hostsd_tag])
+
+        # this will add the dhcp client nameservers to resolv.conf
+        for intf in config['nameservers_dhcp_interfaces']:
+            hc.add_name_server_tags_system([f'dhcp-{intf}', f'dhcpv6-{intf}'])
+
+        hc.delete_hosts([hostsd_tag])
+        if config['static_host_mapping']:
+            hc.add_hosts({hostsd_tag: config['static_host_mapping']})
+
+        hc.apply()
     except vyos.hostsd_client.VyOSHostsdError as e:
         raise ConfigError(str(e))
 
