@@ -29,9 +29,9 @@ add rule ip raw NAT_CONNTRACK counter accept
 
 {% macro nat_rule(rule, chain) %}
 {%   set src_addr  = "ip saddr " + rule.source_address if rule.source_address %}
-{%   set src_port  = "sport " + rule.source_port if rule.source_port %}
+{%   set src_port  = "sport { " + rule.source_port +" }" if rule.source_port %}
 {%   set dst_addr  = "ip daddr " + rule.dest_address if rule.dest_address %}
-{%   set dst_port  = "dport " + rule.dest_port if rule.dest_port %}
+{%   set dst_port  = "dport { " + rule.dest_port +" }" if rule.dest_port %}
 {%   set comment   = "DST-NAT-" + rule.number %}
 
 {%   if chain == "PREROUTING" %}
