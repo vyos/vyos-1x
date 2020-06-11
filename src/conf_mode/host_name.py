@@ -78,31 +78,20 @@ def get_config():
     return hosts
 
 
-def verify(config):
-    if config is None:
+def verify(conf, hosts):
+    if hosts is None:
         return None
 
     # pattern $VAR(@) "^[[:alnum:]][-.[:alnum:]]*[[:alnum:]]$" ; "invalid host name $VAR(@)"
     hostname_regex = re.compile("^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$")
-    if not hostname_regex.match(config['hostname']):
-        raise ConfigError('Invalid host name ' + config["hostname"])
+    if not hostname_regex.match(hosts['hostname']):
+        raise ConfigError('Invalid host name ' + hosts["hostname"])
 
     # pattern $VAR(@) "^.{1,63}$" ; "invalid host-name length"
-    length = len(config['hostname'])
+    length = len(hosts['hostname'])
     if length < 1 or length > 63:
         raise ConfigError(
             'Invalid host-name length, must be less than 63 characters')
-
-    # The search list is currently limited to six domains with a total of 256 characters.
-    # https://linux.die.net/man/5/resolv.conf
-    if len(config['domain_search']) > 6:
-        raise ConfigError(
-            'The search list is currently limited to six domains')
-
-    tmp = ' '.join(config['domain_search'])
-    if len(tmp) > 256:
-        raise ConfigError(
-            'The search list is currently limited to 256 characters')
 
     all_static_host_mapping_addresses = []
     # static mappings alias hostname
