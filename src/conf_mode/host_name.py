@@ -42,6 +42,7 @@ default_config_data = {
     'domain_search': [],
     'nameserver': [],
     'no_dhcp_ns': False
+    'static_host_mapping': {}
 }
 
 def get_config():
@@ -69,15 +70,10 @@ def get_config():
         hosts['no_dhcp_ns'] = True
 
     # system static-host-mapping
-    hosts['static_host_mapping'] = []
-
-    if conf.exists('system static-host-mapping host-name'):
-        for hn in conf.list_nodes('system static-host-mapping host-name'):
-            mapping = {}
-            mapping['host'] = hn
-            mapping['address'] = conf.return_value('system static-host-mapping host-name {0} inet'.format(hn))
-            mapping['aliases'] = conf.return_values('system static-host-mapping host-name {0} alias'.format(hn))
-            hosts['static_host_mapping'].append(mapping)
+    for hn in conf.list_nodes('system static-host-mapping host-name'):
+        hosts['static_host_mapping'][hn] = {}
+        hosts['static_host_mapping'][hn]['address'] = conf.return_value(f'system static-host-mapping host-name {hn} inet')
+        hosts['static_host_mapping'][hn]['aliases'] = conf.return_values(f'system static-host-mapping host-name {hn} alias')
 
     return hosts
 
@@ -108,14 +104,22 @@ def verify(config):
         raise ConfigError(
             'The search list is currently limited to 256 characters')
 
+    all_static_host_mapping_addresses = []
     # static mappings alias hostname
-    if config['static_host_mapping']:
-        for m in config['static_host_mapping']:
-            if not m['address']:
-                raise ConfigError('IP address required for ' + m['host'])
-            for a in m['aliases']:
-                if not hostname_regex.match(a) and len(a) != 0:
-                    raise ConfigError('Invalid alias \'{0}\' in mapping {1}'.format(a, m['host']))
+    for host, hostprops in hosts['static_host_mapping'].items():
+        if not hostprops['address']:
+            raise ConfigError(f'IP address required for static-host-mapping "{host}"')
+        if hostprops['address'] in all_static_host_mapping_addresses:
+            raise ConfigError((
+                f'static-host-mapping "{host}" address "{hostprops["address"]}"'
+                f'already used in another static-host-mapping'))
+        all_static_host_mapping_addresses.append(hostprops['address'])
+        for a in hostprops['aliases']:
+            if not hostname_regex.match(a) and len(a) != 0:
+                raise ConfigError(f'Invalid alias "{a}" in static-host-mapping "{host}"')
+
+    # TODO: add warnings for nameservers_dhcp_interfaces if interface doesn't
+    # exist or doesn't have address dhcp(v6)
 
     return None
 
