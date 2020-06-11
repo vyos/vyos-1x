@@ -41,7 +41,7 @@ default_config_data = {
     'domain_name': '',
     'domain_search': [],
     'nameserver': [],
-    'no_dhcp_ns': False
+    'nameservers_dhcp_interfaces': [],
     'static_host_mapping': {}
 }
 
@@ -66,8 +66,7 @@ def get_config():
     if conf.exists("system name-server"):
         hosts['nameserver'] = conf.return_values("system name-server")
 
-    if conf.exists("system disable-dhcp-nameservers"):
-        hosts['no_dhcp_ns'] = True
+    hosts['nameservers_dhcp_interfaces'] = conf.return_values("system name-servers-dhcp")
 
     # system static-host-mapping
     for hn in conf.list_nodes('system static-host-mapping host-name'):
