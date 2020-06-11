@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# remove "system console netconsole"
+# remove "system console device <device> modem"
+
+import os
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['system', 'console']
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # remove "system console netconsole" (T2561)
+    if config.exists(base + ['netconsole']):
+        config.delete(base + ['netconsole'])
+
+    for device in config.list_nodes(base + ['device']):
+        dev_path = base + ['device', device]
+        # remove "system console device <device> modem" (T2570)
+        if config.exists(dev_path + ['modem']):
+            config.delete(dev_path + ['modem'])
+
+        # Only continue on USB based serial consoles
+        if not 'ttyUSB' in device:
+            continue
+
+        # A serial console has been configured but it does no longer
+        # exist on the system - cleanup
+        if not os.path.exists(f'/dev/{device}'):
+            config.delete(dev_path)
+            continue
+
+        # migrate from ttyUSB device to new device in /dev/serial/by-bus
+        for root, dirs, files in os.walk('/dev/serial/by-bus'):
+            for usb_device in files:
+                device_file = os.path.realpath(os.path.join(root, usb_device))
+                # migrate to new USB device names (T2529)
+                if os.path.basename(device_file) == device:
+                    config.copy(dev_path, base + ['device', usb_device])
+                    # Delete old USB node from config
+                    config.delete(dev_path)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
