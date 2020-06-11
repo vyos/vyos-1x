@@ -1,25 +1,25 @@
 #!/bin/sh
 
-tty=$2
+# Script parameters will be like:
+# wlm0 /dev/serial/by-bus/usb0b1.3p1.3 115200 10.100.118.91 10.64.64.64 wlm0
 
 # Only applicable for Wireless Modems (WWAN)
-if [ -z "$(echo $tty |  egrep "tty(USB|ACM)")" ]; then
+if [ -z $(echo $2 | egrep "(ttyS[0-9]+|usb[0-9]+b.*)$") ]; then
     exit 0
 fi
 
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
-
-# Determine if we are enslaved to a VRF, this is needed to properly insert
-# the default route
-VRF_NAME=""
+# Determine if we are running inside a VRF or not, required for proper routing table
 if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
     # Determine upper (VRF) interface
     VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
     # Remove upper_ prefix from result string
-    VRF=${VRF#"upper_"}
-    VRF_NAME="vrf ${VRF}"
+    VRF_NAME=${VRF#"upper_"}
+    # Remove default route from VRF routing table
+    vtysh -c "conf t" -c "vrf ${VRF_NAME}" -c "ip route 0.0.0.0/0 {{ intf }} {{ metric }}"
+else
+    # Remove default route from GRT (global routing table)
+    vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }} {{ metric }}"
 fi
 
-# Apply default route to either default or VRF routing table
-vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME} {{ metric }}"
+DIALER_PID=$(cat /var/run/{{ intf }}.pid)
 logger -t pppd[$DIALER_PID] "added default route via {{ intf }} metric {{ metric }} ${VRF_NAME}"
