@@ -83,9 +83,9 @@ def verify_rule(rule, err_msg):
         raise ConfigError(f'{err_msg} translation address not specified')
 
 
-def parse_source_destination(conf, source_dest):
+def parse_configuration(conf, source_dest):
     """ Common wrapper to read in both NAT source and destination CLI """
-    tmp = []
+    ruleset = []
     base_level = ['nat', source_dest]
     conf.set_level(base_level)
     for number in conf.list_nodes(['rule']):
@@ -113,10 +113,16 @@ def parse_source_destination(conf, source_dest):
             rule['description'] = conf.return_value(['description'])
 
         if conf.exists(['destination', 'address']):
-            rule['dest_address'] = conf.return_value(['destination', 'address'])
+            tmp = conf.return_value(['destination', 'address'])
+            if tmp.startswith('!'):
+                tmp = tmp.replace('!', '!=')
+            rule['dest_address'] = tmp
 
         if conf.exists(['destination', 'port']):
-            rule['dest_port'] = conf.return_value(['destination', 'port'])
+            tmp = conf.return_value(['destination', 'port'])
+            if tmp.startswith('!'):
+                tmp = tmp.replace('!', '!=')
+            rule['dest_port'] = tmp
 
         if conf.exists(['disable']):
             rule['disabled'] = True
@@ -137,13 +143,19 @@ def parse_source_destination(conf, source_dest):
             rule['protocol'] = conf.return_value(['protocol'])
 
         if conf.exists(['source', 'address']):
-            rule['source_address'] = conf.return_value(['source', 'address'])
+            tmp = conf.return_value(['source', 'address'])
+            if tmp.startswith('!'):
+                tmp = tmp.replace('!', '!=')
+            rule['source_address'] = tmp
 
         if conf.exists(['source', 'prefix']):
             rule['source_prefix'] = conf.return_value(['source', 'prefix'])
 
         if conf.exists(['source', 'port']):
-            rule['source_port'] = conf.return_value(['source', 'port'])
+            tmp = conf.return_value(['source', 'port'])
+            if tmp.startswith('!'):
+                tmp = tmp.replace('!', '!=')
+            rule['source_port'] = tmp
 
         if conf.exists(['translation', 'address']):
             rule['translation_address'] = conf.return_value(['translation', 'address'])
@@ -154,9 +166,9 @@ def parse_source_destination(conf, source_dest):
         if conf.exists(['translation', 'port']):
             rule['translation_port'] = conf.return_value(['translation', 'port'])
 
-        tmp.append(rule)
+        ruleset.append(rule)
 
-    return tmp
+    return ruleset
 
 def get_config():
     nat = deepcopy(default_config_data)
@@ -201,7 +213,7 @@ def get_config():
     # tree from the config - thus we do not need to replicate almost the
     # same code :-)
     for tgt in ['source', 'destination', 'nptv6']:
-        nat[tgt] = parse_source_destination(conf, tgt)
+        nat[tgt] = parse_configuration(conf, tgt)
 
     return nat
 
