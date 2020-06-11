@@ -28,15 +28,11 @@ UsePAM yes
 # address maps back to the very same IP address.
 UseDNS {{ host_validation }}
 
-# Specifies the port number that sshd listens on.  The default is 22.
+# Specifies the port number that sshd listens on. The default is 22.
 # Multiple options of this type are permitted.
-{% if mport|length != 0 %}
-{% for p in mport %}
+{% for p in port %}
 Port {{ p }}
 {% endfor %}
-{% else %}
-Port {{ port }}
-{% endif %}
 
 # Gives the verbosity level that is used when logging messages from sshd
 LogLevel {{ log_level }}

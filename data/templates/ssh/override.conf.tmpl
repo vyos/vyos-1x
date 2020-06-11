@@ -1,0 +1,8 @@
+[Service]
+ExecStart=
+{% if vrf %}
+ExecStart=/sbin/ip vrf exec {{ vrf }} /usr/sbin/sshd -D $SSHD_OPTS
+{% else %}
+ExecStart=/usr/sbin/sshd -D $SSHD_OPTS
+{% endif %}
+

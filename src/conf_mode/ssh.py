@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+
+from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
@@ -26,12 +28,14 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/ssh/sshd_config'
+systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
 default_config_data = {
     'port' : '22',
     'log_level': 'INFO',
     'password_authentication': 'yes',
-    'host_validation': 'yes'
+    'host_validation': 'yes',
+    'vrf': ''
 }
 
 def get_config():
@@ -96,6 +100,9 @@ def get_config():
     if conf.exists(tmp):
         ssh['client_keepalive'] = conf.return_value(tmp)
 
+    tmp = ['vrf']
+    if conf.exists(tmp):
+        ssh['vrf'] = conf.return_value(tmp)
 
     return ssh
 
@@ -108,6 +115,9 @@ def verify(ssh):
         if not ssh['loglevel'] in allowed_loglevel:
             raise ConfigError('loglevel must be one of "{0}"\n'.format(allowed_loglevel))
 
+    if ssh['vrf'] and ssh['vrf'] not in interfaces():
+        raise ConfigError('VRF "{vrf}" does not exist'.format(**ssh))
+
     return None
 
 def generate(ssh):
@@ -115,6 +125,8 @@ def generate(ssh):
         return None
 
     render(config_file, 'ssh/sshd_config.tmpl', ssh, trim_blocks=True)
+    render(systemd_override, 'ssh/override.conf.tmpl', ssh, trim_blocks=True)
+
     return None
 
 def apply(ssh):
@@ -123,7 +135,11 @@ def apply(ssh):
         call('systemctl stop ssh.service')
         if os.path.isfile(config_file):
             os.unlink(config_file)
+        if os.path.isfile(systemd_override):
+            os.unlink(systemd_override)
     else:
+        # Reload systemd manager configuration
+        call('systemctl daemon-reload')
         call('systemctl restart ssh.service')
 
     return None
