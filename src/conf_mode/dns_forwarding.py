@@ -34,7 +34,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dhclient", action="store_true",
                     help="Started from dhclient-script")
 
-config_file = r'/run/powerdns/recursor.conf'
+pdns_rec_run_dir = '/run/powerdns'
+pdns_rec_lua_conf_file = f'{pdns_rec_run_dir}/recursor.conf.lua'
+pdns_rec_hostsd_lua_conf_file = f'{pdns_rec_run_dir}/recursor.vyos-hostsd.conf.lua'
+pdns_rec_hostsd_zones_file = f'{pdns_rec_run_dir}/recursor.forward-zones.conf'
+pdns_rec_config_file = f'{pdns_rec_run_dir}/recursor.conf'
 
 default_config_data = {
     'allow_from': [],
@@ -162,8 +166,8 @@ def apply(dns):
     if dns is None:
         # DNS forwarding is removed in the commit
         call("systemctl stop pdns-recursor.service")
-        if os.path.isfile(config_file):
-            os.unlink(config_file)
+        if os.path.isfile(pdns_rec_config_file):
+            os.unlink(pdns_rec_config_file)
     else:
         call("systemctl restart pdns-recursor.service")
 
