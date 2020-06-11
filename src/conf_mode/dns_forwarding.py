@@ -43,7 +43,8 @@ default_config_data = {
     'negative_ttl': 3600,
     'system': False,
     'domains': {},
-    'dnssec': 'process-no-validate'
+    'dnssec': 'process-no-validate',
+    'dhcp_interfaces': []
 }
 
 
@@ -95,20 +96,8 @@ def get_config(conf):
     if conf.exists(['dnssec']):
         dns['dnssec'] = conf.return_value(['dnssec'])
 
-    # Add name servers received from DHCP
     if conf.exists(['dhcp']):
-        interfaces = []
-        interfaces = conf.return_values(['dhcp'])
-        hc = hostsd_client()
-
-        for interface in interfaces:
-            dhcp_resolvers = hc.get_name_servers(f'dhcp-{interface}')
-            dhcpv6_resolvers = hc.get_name_servers(f'dhcpv6-{interface}')
-
-            if dhcp_resolvers:
-                dns['name_servers'] = dns['name_servers'] + dhcp_resolvers
-            if dhcpv6_resolvers:
-                dns['name_servers'] = dns['name_servers'] + dhcpv6_resolvers
+        dns['dhcp_interfaces'] = conf.return_values(['dhcp'])
 
     return dns
 
