@@ -21,56 +21,139 @@ import argparse
 
 import vyos.hostsd_client
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(allow_abbrev=False)
 group = parser.add_mutually_exclusive_group()
-group.add_argument('--add-hosts', action="store_true")
-group.add_argument('--delete-hosts', action="store_true")
-group.add_argument('--add-name-servers', action="store_true")
-group.add_argument('--delete-name-servers', action="store_true")
-group.add_argument('--set-host-name', action="store_true")
 
-parser.add_argument('--host', type=str, action="append")
-parser.add_argument('--name-server', type=str, action="append")
-parser.add_argument('--host-name', type=str)
+group.add_argument('--add-name-servers', type=str, nargs='*')
+group.add_argument('--delete-name-servers', action='store_true')
+group.add_argument('--get-name-servers', type=str, const='.*', nargs='?')
+
+group.add_argument('--add-name-server-tags-recursor', type=str, nargs='*')
+group.add_argument('--delete-name-server-tags-recursor', type=str, nargs='*')
+group.add_argument('--get-name-server-tags-recursor', action='store_true')
+
+group.add_argument('--add-name-server-tags-system', type=str, nargs='*')
+group.add_argument('--delete-name-server-tags-system', type=str, nargs='*')
+group.add_argument('--get-name-server-tags-system', action='store_true')
+
+group.add_argument('--add-forward-zone', type=str, nargs='?')
+group.add_argument('--delete-forward-zones', type=str, nargs='*')
+group.add_argument('--get-forward-zones', action='store_true')
+
+group.add_argument('--add-search-domains', type=str, nargs='*')
+group.add_argument('--delete-search-domains', action='store_true')
+group.add_argument('--get-search-domains', type=str, const='.*', nargs='?')
+
+group.add_argument('--add-hosts', type=str, nargs='*')
+group.add_argument('--delete-hosts', action='store_true')
+group.add_argument('--get-hosts', type=str, const='.*', nargs='?')
+
+group.add_argument('--set-host-name', type=str)
+
+# for --set-host-name
 parser.add_argument('--domain-name', type=str)
-parser.add_argument('--search-domain', type=str, action="append")
+
+# for forward zones
+parser.add_argument('--nameservers', type=str, nargs='*')
+parser.add_argument('--addnta', action='store_true')
+parser.add_argument('--recursion-desired', action='store_true')
 
 parser.add_argument('--tag', type=str)
+
+# users must call --apply either in the same command or after they're done
+parser.add_argument('--apply', action="store_true")
 
 args = parser.parse_args()
 
 try:
     client = vyos.hostsd_client.Client()
+    ops = 1
 
-    if args.add_hosts:
+    if args.add_name_servers:
         if not args.tag:
-            raise ValueError("Tag is required for this operation")
-        data = []
-        for h in args.host:
+            raise ValueError("--tag is required for this operation")
+        client.add_name_servers({args.tag: args.add_name_servers})
+    elif args.delete_name_servers:
+        if not args.tag:
+            raise ValueError("--tag is required for this operation")
+        client.delete_name_servers([args.tag])
+    elif args.get_name_servers:
+        print(client.get_name_servers(args.get_name_servers))
+
+    elif args.add_name_server_tags_recursor:
+        client.add_name_server_tags_recursor(args.add_name_server_tags_recursor)
+    elif args.delete_name_server_tags_recursor:
+        client.delete_name_server_tags_recursor(args.delete_name_server_tags_recursor)
+    elif args.get_name_server_tags_recursor:
+        print(client.get_name_server_tags_recursor())
+
+    elif args.add_name_server_tags_system:
+        client.add_name_server_tags_system(args.add_name_server_tags_system)
+    elif args.delete_name_server_tags_system:
+        client.delete_name_server_tags_system(args.delete_name_server_tags_system)
+    elif args.get_name_server_tags_system:
+        print(client.get_name_server_tags_system())
+
+    elif args.add_forward_zone:
+        if not args.nameservers:
+            raise ValueError("--nameservers is required for this operation")
+        client.add_forward_zones(
+                { args.add_forward_zone: {
+                    'nslist': args.nameservers,
+                    'addNTA': args.addnta,
+                    'recursion-desired': args.recursion_desired
+                    }
+                })
+    elif args.delete_forward_zones:
+        client.delete_forward_zones(args.delete_forward_zones)
+    elif args.get_forward_zones:
+        print(client.get_forward_zones())
+
+    elif args.add_search_domains:
+        if not args.tag:
+            raise ValueError("--tag is required for this operation")
+        client.add_search_domains({args.tag: args.add_search_domains})
+    elif args.delete_search_domains:
+        if not args.tag:
+            raise ValueError("--tag is required for this operation")
+        client.delete_search_domains([args.tag])
+    elif args.get_search_domains:
+        print(client.get_search_domains(args.get_search_domains))
+
+    elif args.add_hosts:
+        if not args.tag:
+            raise ValueError("--tag is required for this operation")
+        data = {}
+        for h in args.add_hosts:
             entry = {}
             params = h.split(",")
             if len(params) < 2:
                 raise ValueError("Malformed host entry")
-            entry['host'] = params[0]
             entry['address'] = params[1]
             entry['aliases'] = params[2:]
-            data.append(entry)
-        client.add_hosts(args.tag, data)
+            data[params[0]] = entry
+        client.add_hosts({args.tag: data})
     elif args.delete_hosts:
         if not args.tag:
-            raise ValueError("Tag is required for this operation")
-        client.delete_hosts(args.tag)
-    elif args.add_name_servers:
-        if not args.tag:
-            raise ValueError("Tag is required for this operation")
-        client.add_name_servers(args.tag, args.name_server)
-    elif args.delete_name_servers:
-        if not args.tag:
-            raise ValueError("Tag is required for this operation")
-        client.delete_name_servers(args.tag)
+            raise ValueError("--tag is required for this operation")
+        client.delete_hosts([args.tag])
+    elif args.get_hosts:
+        print(client.get_hosts(args.get_hosts))
+
     elif args.set_host_name:
-        client.set_host_name(args.host_name, args.domain_name, args.search_domain)
+        if not args.domain_name:
+            raise ValueError('--domain-name is required for this operation')
+        client.set_host_name({'host_name': args.set_host_name, 'domain_name': args.domain_name})
+
+    elif args.apply:
+        pass
     else:
+        ops = 0
+
+    if args.apply:
+        client.apply()
+
+    if ops == 0:
         raise ValueError("Operation required")
 
 except ValueError as e:
