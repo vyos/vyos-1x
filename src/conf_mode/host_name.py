@@ -45,8 +45,7 @@ default_config_data = {
     'static_host_mapping': {}
 }
 
-def get_config():
-    conf = Config()
+def get_config(conf):
     hosts = copy.deepcopy(default_config_data)
 
     if conf.exists("system host-name"):
@@ -176,8 +175,9 @@ def apply(config):
 
 if __name__ == '__main__':
     try:
-        c = get_config()
-        verify(c)
+        conf = Config()
+        c = get_config(conf)
+        verify(conf, c)
         generate(c)
         apply(c)
     except ConfigError as e:
