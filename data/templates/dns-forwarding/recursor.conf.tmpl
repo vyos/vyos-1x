@@ -29,17 +29,5 @@ local-address={{ listen_address | join(',') }}
 # dnssec
 dnssec={{ dnssec }}
 
-# forward-zones / recursion
-#
-# statement is only inserted if either one forwarding domain or nameserver is configured
-# if nothing is given at all, powerdns will act as a real recursor and resolve all requests by its own
-#
-{% if name_servers or domains %}forward-zones-recurse=
-{%- for d in domains %}
-{{ d.name }}={{ d.servers | join(";") }}
-{{- ", " if not loop.last -}}
-{%- endfor -%}
-{%- if name_servers -%}
-{%- if domains -%}, {% endif -%}.={{ name_servers | join(';') }}
-{% endif %}
-{% endif %}
+forward-zones-file=recursor.forward-zones.conf
+
