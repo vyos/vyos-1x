@@ -15,7 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
+from fileinput import input as replace_in_file
 from vyos.config import Config
 from vyos.util import call
 from vyos.template import render
@@ -78,6 +80,28 @@ def generate(console):
 
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
+
+    # GRUB
+    # For existing serial line change speed (if necessary)
+    # Only applys to ttyS0
+    if 'ttyS0' not in console['device'].keys():
+        return None
+
+    speed = console['device']['ttyS0']['speed']
+    grub_config = '/boot/grub/grub.cfg'
+    if not os.path.isfile(grub_config):
+        return None
+
+    # stdin/stdout are redirected in replace_in_file(), thus print() is fine
+    p = re.compile(r'^(.* console=ttyS0),[0-9]+(.*)$')
+    for line in replace_in_file(grub_config, inplace=True):
+        if line.startswith('serial --unit'):
+            line = f'serial --unit=0 --speed={speed}\n'
+        elif p.match(line):
+            line = '{},{}{}\n'.format(p.search(line)[1], speed, p.search(line)[2])
+
+        print(line, end='')
+
     return None
 
 def apply(console):
