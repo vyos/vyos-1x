@@ -124,6 +124,19 @@ def verify(conf, dns):
                 raise ConfigError((
                     f'Error: No server configured for domain {domain}'))
 
+    no_system_nameservers = False
+    if dns['system'] and not (
+            conf.exists(['system', 'name-server']) or
+            conf.exists(['system', 'name-servers-dhcp']) ):
+        no_system_nameservers = True
+        print(("DNS forwarding warning: No 'system name-server' or "
+                "'system name-servers-dhcp' set\n"))
+
+    if (no_system_nameservers or not dns['system']) and not (
+            dns['name_servers'] or dns['dhcp_interfaces']):
+        print(("DNS forwarding warning: No 'dhcp', 'name-server' or 'system' "
+            "nameservers set. Forwarding will operate as a recursor.\n"))
+
     return None
 
 def generate(dns):
