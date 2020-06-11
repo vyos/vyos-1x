@@ -41,6 +41,7 @@ default_config_data = {
     'listen_address': [],
     'name_servers': [],
     'negative_ttl': 3600,
+    'system': False,
     'domains': {},
     'dnssec': 'process-no-validate'
 }
@@ -86,16 +87,7 @@ def get_config(conf):
                 conf.return_values(['name-server']))
 
     if conf.exists(['system']):
-        conf.set_level(['system'])
-        system_name_servers = []
-        system_name_servers = conf.return_values(['name-server'])
-        if not system_name_servers:
-            print("DNS forwarding warning: No name-servers set under 'system name-server'\n")
-        else:
-            dns['name_servers'] = dns['name_servers'] + system_name_servers
-        conf.set_level(base)
-
-    dns['name_servers'] = bracketize_ipv6_addrs(dns['name_servers'])
+        dns['system'] = True
 
     if conf.exists(['listen-address']):
         dns['listen_address'] = conf.return_values(['listen-address'])
