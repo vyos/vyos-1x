@@ -15,24 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import argparse
 
 from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
 from vyos.hostsd_client import Client as hostsd_client
-from vyos.util import wait_for_commit_lock
 from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
 
 from vyos import airbag
 airbag.enable()
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--dhclient", action="store_true",
-                    help="Started from dhclient-script")
 
 pdns_rec_run_dir = '/run/powerdns'
 pdns_rec_lua_conf_file = f'{pdns_rec_run_dir}/recursor.conf.lua'
@@ -52,15 +46,10 @@ default_config_data = {
 }
 
 
-def get_config(arguments):
+def get_config():
     dns = deepcopy(default_config_data)
     conf = Config()
     base = ['service', 'dns', 'forwarding']
-
-    if arguments.dhclient:
-        conf.exists = conf.exists_effective
-        conf.return_value = conf.return_effective_value
-        conf.return_values = conf.return_effective_values
 
     if not conf.exists(base):
         return None
@@ -172,15 +161,10 @@ def apply(dns):
         call("systemctl restart pdns-recursor.service")
 
 if __name__ == '__main__':
-    args = parser.parse_args()
 
-    if args.dhclient:
-        # There's a big chance it was triggered by a commit still in progress
-        # so we need to wait until the new values are in the running config
-        wait_for_commit_lock()
 
     try:
-        c = get_config(args)
+        c = get_config()
         verify(c)
         generate(c)
         apply(c)
