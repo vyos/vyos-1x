@@ -24,3 +24,9 @@ fi
 if ! grep -q '^hostsd' /etc/group; then
     addgroup --quiet --system hostsd
 fi
+
+# add dhcpd user for dhcp-server
+if ! grep -q '^dhcpd' /etc/passwd; then
+    adduser --quiet --system --disabled-login --no-create-home --home /run/dhcp-server dhcpd
+    adduser --quiet dhcpd hostsd
+fi

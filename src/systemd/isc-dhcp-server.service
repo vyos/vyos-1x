@@ -14,10 +14,10 @@ Environment=PID_FILE=/run/dhcp-server/dhcpd.pid CONFIG_FILE=/run/dhcp-server/dhc
 PIDFile=/run/dhcp-server/dhcpd.pid
 ExecStartPre=/bin/sh -ec '\
 touch ${LEASE_FILE}; \
-chown nobody:nogroup ${LEASE_FILE}* ; \
+chown dhcpd:nogroup ${LEASE_FILE}* ; \
 chmod 664 ${LEASE_FILE}* ; \
-/usr/sbin/dhcpd -4 -t -T -q -user nobody -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE} '
-ExecStart=/usr/sbin/dhcpd -4 -q -user nobody -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE}
+/usr/sbin/dhcpd -4 -t -T -q -user dhcpd -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE} '
+ExecStart=/usr/sbin/dhcpd -4 -q -user dhcpd -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE}
 Restart=always
 
 [Install]

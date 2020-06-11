@@ -16,8 +16,8 @@ ExecStartPre=/bin/sh -ec '\
 touch ${LEASE_FILE}; \
 chown nobody:nogroup ${LEASE_FILE}* ; \
 chmod 664 ${LEASE_FILE}* ; \
-/usr/sbin/dhcpd -6 -t -T -q -user nobody -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE} '
-ExecStart=/usr/sbin/dhcpd -6 -q -user nobody -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE}
+/usr/sbin/dhcpd -6 -t -T -q -user dhcpd -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE} '
+ExecStart=/usr/sbin/dhcpd -6 -q -user dhcpd -group nogroup -pf ${PID_FILE} -cf ${CONFIG_FILE} -lf ${LEASE_FILE}
 Restart=always
 
 [Install]
