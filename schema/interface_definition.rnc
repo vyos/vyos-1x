@@ -57,13 +57,17 @@ tagNode = element tagNode
 # but can have values.
 # Leaf node may contain one or more valueConstraint tags
 # If multiple valueConstraint tags are used, they work a logical OR
-# Leaf nodes can have "multi" attribute that indicated that it can have
-# more than one value
+# Leaf nodes can have "multi" attribute that indicated that it can have more than one value
+# It can also have a default value
 leafNode = element leafNode
 {
     (ownerAttr? & nodeNameAttr),
-    properties
+    (defaultValue? & properties)
 }
+
+# Default value for leaf node, if applicable
+# It is used to generate default node state representation
+defaultValue = element defaultValue { text }
 
 # Normal and tag nodes may have children
 children = element children
