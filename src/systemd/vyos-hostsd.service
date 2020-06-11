@@ -24,7 +24,7 @@ Restart=on-failure
 
 # Does't work in Jessie but leave it here
 User=root
-Group=vyattacfg
+Group=hostsd
 
 [Install]
 
