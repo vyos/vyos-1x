@@ -41,7 +41,7 @@ default_config_data = {
     'listen_address': [],
     'name_servers': [],
     'negative_ttl': 3600,
-    'domains': [],
+    'domains': {},
     'dnssec': 'process-no-validate'
 }
 
@@ -67,13 +67,16 @@ def get_config(conf):
         dns['negative_ttl'] = negative_ttl
 
     if conf.exists(['domain']):
-        for node in conf.list_nodes(['domain']):
-            servers = conf.return_values(['domain', node, 'server'])
-            domain = {
-                "name": node,
-                "servers": bracketize_ipv6_addrs(servers)
+        for domain in conf.list_nodes(['domain']):
+            conf.set_level(base + ['domain', domain])
+            entry = {
+                'nslist': bracketize_ipv6_addrs(conf.return_values(['server'])),
+                'addNTA': conf.exists(['addnta']),
+                'recursion-desired': conf.exists(['recursion-desired'])
             }
-            dns['domains'].append(domain)
+            dns['domains'][domain] = entry
+
+        conf.set_level(base)
 
     if conf.exists(['ignore-hosts-file']):
         dns['export_hosts_file'] = "no"
@@ -136,9 +139,9 @@ def verify(conf, dns):
 
     if dns['domains']:
         for domain in dns['domains']:
-            if not domain['servers']:
-                raise ConfigError(
-                    'Error: No server configured for domain {0}'.format(domain['name']))
+            if not dns['domains'][domain]['nslist']:
+                raise ConfigError((
+                    f'Error: No server configured for domain {domain}'))
 
     return None
 
