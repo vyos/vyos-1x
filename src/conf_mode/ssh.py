@@ -37,77 +37,70 @@ default_config_data = {
 def get_config():
     ssh = default_config_data
     conf = Config()
-    if not conf.exists('service ssh'):
+    base = ['service', 'ssh']
+    if not conf.exists(base):
         return None
     else:
-        conf.set_level('service ssh')
+        conf.set_level(base)
 
-    if conf.exists('access-control allow user'):
-        allow_users = conf.return_values('access-control allow user')
-        ssh['allow_users'] = allow_users
+    tmp = ['access-control', 'allow', 'user']
+    if conf.exists(tmp):
+        ssh['allow_users'] = conf.return_values(tmp)
 
-    if conf.exists('access-control allow group'):
-        allow_groups = conf.return_values('access-control allow group')
-        ssh['allow_groups'] = allow_groups
+    tmp = ['access-control', 'allow', 'group']
+    if conf.exists(tmp):
+        ssh['allow_groups'] = conf.return_values(tmp)
 
-    if conf.exists('access-control deny user'):
-        deny_users = conf.return_values('access-control deny user')
-        ssh['deny_users'] = deny_users
+    tmp = ['access-control', 'deny' 'user']
+    if conf.exists(tmp):
+        ssh['deny_users'] = conf.return_values(tmp)
 
-    if conf.exists('access-control deny group'):
-        deny_groups = conf.return_values('access-control deny group')
-        ssh['deny_groups'] =  deny_groups
+    tmp = ['access-control', 'deny', 'group']
+    if conf.exists(tmp):
+        ssh['deny_groups'] = conf.return_values(tmp)
 
-    if conf.exists('ciphers'):
-        ciphers = conf.return_values('ciphers')
-        ssh['ciphers'] =  ciphers
+    tmp = ['ciphers']
+    if conf.exists(tmp):
+        ssh['ciphers'] = conf.return_values(tmp)
 
-    if conf.exists('disable-host-validation'):
+    tmp = ['key-exchange']
+    if conf.exists(tmp):
+        ssh['key_exchange'] = conf.return_values(tmp)
+
+    if conf.exists(['disable-host-validation']):
         ssh['host_validation'] = 'no'
 
-    if conf.exists('disable-password-authentication'):
+    if conf.exists(['disable-password-authentication']):
         ssh['password_authentication'] = 'no'
 
-    if conf.exists('key-exchange'):
-        kex = conf.return_values('key-exchange')
-        ssh['key_exchange'] = kex
-
-    if conf.exists('listen-address'):
+    tmp = ['listen-address']
+    if conf.exists(tmp):
         # We can listen on both IPv4 and IPv6 addresses
         # Maybe there could be a check in the future if the configured IP address
         # is configured on this system at all?
-        addresses = conf.return_values('listen-address')
-        listen = []
+        ssh['listen_on'] = conf.return_values(tmp)
 
-        for addr in addresses:
-            listen.append(addr)
+    tmp = ['loglevel']
+    if conf.exists(tmp):
+        ssh['log_level'] = conf.return_value(tmp)
 
-        ssh['listen_on'] = listen
+    tmp = ['mac']
+    if conf.exists(tmp):
+        ssh['mac'] = conf.return_values(tmp)
 
-    if conf.exists('loglevel'):
-        ssh['log_level'] = conf.return_value('loglevel')
+    tmp = ['port']
+    if conf.exists(tmp):
+        ssh['port'] = conf.return_values(tmp)
 
-    if conf.exists('mac'):
-        mac = conf.return_values('mac')
-        ssh['mac'] = mac
+    tmp = ['client-keepalive-interval']
+    if conf.exists(tmp):
+        ssh['client_keepalive'] = conf.return_value(tmp)
 
-    if conf.exists('port'):
-        ports = conf.return_values('port')
-        mport = []
-
-        for prt in ports:
-            mport.append(prt)
-
-        ssh['mport'] = mport
-
-    if conf.exists('client-keepalive-interval'):
-        client_keepalive = conf.return_value('client-keepalive-interval')
-        ssh['client_keepalive'] = client_keepalive
 
     return ssh
 
 def verify(ssh):
-    if ssh is None:
+    if not ssh:
         return None
 
     if 'loglevel' in ssh.keys():
@@ -118,20 +111,20 @@ def verify(ssh):
     return None
 
 def generate(ssh):
-    if ssh is None:
+    if not ssh:
         return None
 
     render(config_file, 'ssh/sshd_config.tmpl', ssh, trim_blocks=True)
     return None
 
 def apply(ssh):
-    if ssh is not None and 'port' in ssh.keys():
-        call("systemctl restart ssh.service")
-    else:
+    if not ssh:
         # SSH access is removed in the commit
-        call("systemctl stop ssh.service")
+        call('systemctl stop ssh.service')
         if os.path.isfile(config_file):
             os.unlink(config_file)
+    else:
+        call('systemctl restart ssh.service')
 
     return None
 
