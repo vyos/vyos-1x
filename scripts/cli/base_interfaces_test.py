@@ -78,7 +78,7 @@ class BasicInterfaceTest:
                     for option in self._options.get(intf, []):
                         self.session.set(self._base_path + [intf] + option.split())
 
-                self.session.commit()
+            self.session.commit()
 
             # Validate address
             for intf in self._interfaces:
