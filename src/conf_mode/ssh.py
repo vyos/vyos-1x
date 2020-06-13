@@ -31,7 +31,7 @@ config_file = r'/etc/ssh/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
 default_config_data = {
-    'port' : '22',
+    'port' : ['22'],
     'log_level': 'INFO',
     'password_authentication': 'yes',
     'host_validation': 'yes',
