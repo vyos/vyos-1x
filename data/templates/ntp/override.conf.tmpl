@@ -1,0 +1,8 @@
+[Service]
+ExecStart=
+{% if vrf %}
+ExecStart=/sbin/ip vrf exec {{ vrf }} /usr/lib/ntp/ntp-systemd-wrapper
+{% else %}
+ExecStart=/usr/lib/ntp/ntp-systemd-wrapper
+{% endif %}
+
