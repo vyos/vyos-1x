@@ -91,14 +91,6 @@ def verify(ntp):
     if len(ntp['allowed_networks']) and not len(ntp['servers']):
         raise ConfigError('NTP server not configured')
 
-    for n in ntp['allowed_networks']:
-        try:
-            addr = ip_network( n['network'] )
-            break
-        except ValueError:
-            raise ConfigError('{network} does not appear to be a valid IPv4 or IPv6 network, '
-                              'check host bits!'.format(**n))
-
     return None
 
 def generate(ntp):
