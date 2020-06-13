@@ -137,9 +137,11 @@ def apply(ssh):
             os.unlink(config_file)
         if os.path.isfile(systemd_override):
             os.unlink(systemd_override)
-    else:
-        # Reload systemd manager configuration
-        call('systemctl daemon-reload')
+
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
+    if ssh:
         call('systemctl restart ssh.service')
 
     return None
