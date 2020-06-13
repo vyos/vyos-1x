@@ -1,0 +1,143 @@
+!
+{% if rip_conf -%}
+router rip
+{% if old_default_distance -%}
+no distance {{old_default_distance}}
+{% endif -%}
+{% if default_distance -%}
+distance {{default_distance}}
+{% endif -%}
+{% if old_default_originate -%}
+no default-information originate
+{% endif -%}
+{% if default_originate -%}
+default-information originate
+{% endif -%}
+{% if old_rip.default_metric -%}
+no default-metric {{old_rip.default_metric}}
+{% endif -%}
+{% if rip.default_metric -%}
+default-metric {{rip.default_metric}}
+{% endif -%}
+{% for protocol in old_rip.redist -%}
+{% if old_rip.redist[protocol]['metric'] and old_rip.redist[protocol]['route_map'] -%}
+no redistribute {{protocol}} metric {{rip.redist[protocol]['metric']}} route-map {{rip.redist[protocol]['route_map']}}
+{% elif old_rip.redist[protocol]['metric'] -%}
+no redistribute {{protocol}} metric {{old_rip.redist[protocol]['metric']}}
+{% elif old_rip.redist[protocol]['route_map'] -%}
+no redistribute {{protocol}} route-map {{old_rip.redist[protocol]['route_map']}}
+{% else -%}
+no redistribute {{protocol}}
+{% endif -%}
+{% endfor -%}
+{% for protocol in rip.redist -%}
+{% if rip.redist[protocol]['metric'] and rip.redist[protocol]['route_map'] -%}
+redistribute {{protocol}} metric {{rip.redist[protocol]['metric']}} route-map {{rip.redist[protocol]['route_map']}}
+{% elif rip.redist[protocol]['metric'] -%}
+redistribute {{protocol}} metric {{rip.redist[protocol]['metric']}}
+{% elif rip.redist[protocol]['route_map'] -%}
+redistribute {{protocol}} route-map {{rip.redist[protocol]['route_map']}}
+{% else -%}
+redistribute {{protocol}}
+{% endif -%}
+{% endfor -%}
+{% for iface in old_rip.distribute -%}
+{% if old_rip.distribute[iface].iface_access_list_in -%}
+no distribute-list {{old_rip.distribute[iface].iface_access_list_in}} in {{iface}}
+{% endif -%}
+{% if old_rip.distribute[iface].iface_access_list_out -%}
+no distribute-list {{old_rip.distribute[iface].iface_access_list_out}} out {{iface}}
+{% endif -%}
+{% if old_rip.distribute[iface].iface_prefix_list_in -%}
+no distribute-list prefix {{old_rip.distribute[iface].iface_prefix_list_in}} in {{iface}}
+{% endif -%}
+{% if old_rip.distribute[iface].iface_prefix_list_out -%}
+no distribute-list prefix {{old_rip.distribute[iface].iface_prefix_list_out}} out {{iface}}
+{% endif -%}
+{% endfor -%}
+{% for iface in rip.distribute -%}
+{% if rip.distribute[iface].iface_access_list_in -%}
+distribute-list {{rip.distribute[iface].iface_access_list_in}} in {{iface}}
+{% endif -%}
+{% if rip.distribute[iface].iface_access_list_out -%}
+distribute-list {{rip.distribute[iface].iface_access_list_out}} out {{iface}}
+{% endif -%}
+{% if rip.distribute[iface].iface_prefix_list_in -%}
+distribute-list prefix {{rip.distribute[iface].iface_prefix_list_in}} in {{iface}}
+{% endif -%}
+{% if rip.distribute[iface].iface_prefix_list_out -%}
+distribute-list prefix {{rip.distribute[iface].iface_prefix_list_out}} out {{iface}}
+{% endif -%}
+{% endfor -%}
+{% if old_rip.dist_acl_in -%}
+no distribute-list {{old_rip.dist_acl_in}} in
+{% endif -%}
+{% if rip.dist_acl_in -%}
+distribute-list {{rip.dist_acl_in}} in
+{% endif -%}
+{% if old_rip.dist_acl_out -%}
+no distribute-list {{old_rip.dist_acl_out}} out
+{% endif -%}
+{% if rip.dist_acl_out -%}
+distribute-list {{rip.dist_acl_out}} out
+{% endif -%}
+{% if old_rip.dist_prfx_in -%}
+no distribute-list prefix {{old_rip.dist_prfx_in}} in
+{% endif -%}
+{% if rip.dist_prfx_in -%}
+distribute-list prefix {{rip.dist_prfx_in}} in
+{% endif -%}
+{% if old_rip.dist_prfx_out -%}
+no distribute-list prefix {{old_rip.dist_prfx_out}} out
+{% endif -%}
+{% if rip.dist_prfx_out -%}
+distribute-list prefix {{rip.dist_prfx_out}} out
+{% endif -%}
+{% for network in old_rip.networks -%}
+no network {{network}}
+{% endfor -%}
+{% for network in rip.networks -%}
+network {{network}}
+{% endfor -%}
+{% for iface in old_rip.ifaces -%}
+no network {{iface}}
+{% endfor -%}
+{% for iface in rip.ifaces -%}
+network {{iface}}
+{% endfor -%}
+{% for neighbor in old_rip.neighbors -%}
+no neighbor {{neighbor}}
+{% endfor -%}
+{% for neighbor in rip.neighbors -%}
+neighbor {{neighbor}}
+{% endfor -%}
+{% for net in rip.net_distance -%}
+{% if rip.net_distance[net].access_list and rip.net_distance[net].distance -%}
+distance {{rip.net_distance[net].distance}} {{net}} {{rip.net_distance[net].access_list}} 
+{% else -%}
+distance {{rip.net_distance[net].distance}} {{net}} 
+{% endif -%}
+{% endfor -%}
+{% for passive_iface in old_rip.passive_iface -%}
+no passive-interface {{passive_iface}}
+{% endfor -%}
+{% for passive_iface in rip.passive_iface -%}
+passive-interface {{passive_iface}}
+{% endfor -%}
+{% for route in old_rip.route -%}
+no route {{route}}
+{% endfor -%}
+{% for route in rip.route -%}
+route {{route}}
+{% endfor -%}
+{% if old_rip.timer_update or old_rip.timer_timeout or old_rip.timer_garbage -%}
+no timers basic
+{% endif -%}
+{% if rip.timer_update or rip.timer_timeout or rip.timer_garbage -%}
+timers basic {{rip.timer_update}} {{rip.timer_timeout}} {{rip.timer_garbage}}
+{% endif -%}
+!
+{% else -%}
+no router rip
+!
+{% endif -%}
