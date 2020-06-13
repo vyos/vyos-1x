@@ -16,6 +16,14 @@
             </completionHelp>
         </properties>
         <command>${vyos_op_scripts_dir}/show_vrf.py -e "$3"</command>
+        <children>
+          <leafNode name="processes">
+            <properties>
+              <help>Shows all process ids associated with VRF</help>
+            </properties>
+            <command>/usr/sbin/ip vrf pids "$3"</command>
+          </leafNode>
+        </children>
       </tagNode>
     </children>
   </node>
