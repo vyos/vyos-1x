@@ -39,13 +39,15 @@ default_config_data = {
 def get_config():
     ntp = deepcopy(default_config_data)
     conf = Config()
-    if not conf.exists('system ntp'):
+    base = ['system', 'ntp']
+    if not conf.exists(base):
         return None
     else:
-        conf.set_level('system ntp')
+        conf.set_level(base)
 
-    if conf.exists('allow-clients address'):
-        networks = conf.return_values('allow-clients address')
+    node = ['allow-clients', 'address']
+    if conf.exists(node):
+        networks = conf.return_values(node)
         for n in networks:
             addr = ip_network(n)
             net = {
@@ -56,11 +58,13 @@ def get_config():
 
             ntp['allowed_networks'].append(net)
 
-    if conf.exists('listen-address'):
-        ntp['listen_address'] = conf.return_values('listen-address')
+    node = ['listen-address']
+    if conf.exists(node):
+        ntp['listen_address'] = conf.return_values(node)
 
-    if conf.exists('server'):
-        for node in conf.list_nodes('server'):
+    node = ['server']
+    if conf.exists(node):
+        for node in conf.list_nodes(node):
             options = []
             server = {
                 "name": node,
@@ -80,7 +84,7 @@ def get_config():
 
 def verify(ntp):
     # bail out early - looks like removal from running config
-    if ntp is None:
+    if not ntp:
         return None
 
     # Configuring allowed clients without a server makes no sense
@@ -92,25 +96,27 @@ def verify(ntp):
             addr = ip_network( n['network'] )
             break
         except ValueError:
-            raise ConfigError("{0} does not appear to be a valid IPv4 or IPv6 network, check host bits!".format(n['network']))
+            raise ConfigError('{network} does not appear to be a valid IPv4 or IPv6 network, '
+                              'check host bits!'.format(**n))
 
     return None
 
 def generate(ntp):
     # bail out early - looks like removal from running config
-    if ntp is None:
+    if not ntp:
         return None
 
     render(config_file, 'ntp/ntp.conf.tmpl', ntp)
     return None
 
 def apply(ntp):
-    if ntp is not None:
-        call('systemctl restart ntp.service')
-    else:
+    if not ntp:
         # NTP support is removed in the commit
         call('systemctl stop ntp.service')
-        os.unlink(config_file)
+        if os.path.exists(config_file):
+            os.unlink(config_file)
+    else:
+        call('systemctl restart ntp.service')
 
     return None
 
