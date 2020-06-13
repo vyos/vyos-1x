@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="protocols">
     <children>
-      <node name="nrip" owner="${vyos_conf_scripts_dir}/protocols_rip.py">
+      <node name="rip" owner="${vyos_conf_scripts_dir}/protocols_rip.py">
         <properties>
           <help>Routing Information Protocol (RIP) parameters</help>
         </properties>
