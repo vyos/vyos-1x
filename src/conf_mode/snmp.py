@@ -17,8 +17,8 @@
 import os
 
 from binascii import hexlify
+from netifaces import interfaces
 from time import sleep
-from stat import S_IRWXU, S_IXGRP, S_IXOTH, S_IROTH, S_IRGRP
 from sys import exit
 
 from vyos.config import Config
@@ -36,6 +36,7 @@ config_file_daemon  = r'/etc/snmp/snmpd.conf'
 config_file_access  = r'/usr/share/snmp/snmpd.conf'
 config_file_user    = r'/var/lib/snmp/snmpd.conf'
 default_script_dir  = r'/config/user-data/'
+systemd_override    = r'/etc/systemd/system/snmpd.service.d/override.conf'
 
 # SNMP OIDs used to mark auth/priv type
 OIDs = {
@@ -66,7 +67,8 @@ default_config_data = {
     'v3_traps': [],
     'v3_users': [],
     'v3_views': [],
-    'script_ext': []
+    'script_ext': [],
+    'vrf': ''
 }
 
 def rmfile(file):
@@ -174,9 +176,6 @@ def get_config():
 
             snmp['trap_targets'].append(trap_tgt)
 
-    #
-    # 'set service snmp script-extensions'
-    #
     if conf.exists('script-extensions'):
         for extname in conf.list_nodes('script-extensions extension-name'):
             conf_script = conf.return_value('script-extensions extension-name {} script'.format(extname))
@@ -190,6 +189,10 @@ def get_config():
             }
 
             snmp['script_ext'].append(extension)
+
+    if conf.exists('vrf'):
+        snmp['vrf'] = conf.return_value('vrf')
+
 
     #########################################################################
     #                ____  _   _ __  __ ____          _____                 #
@@ -393,7 +396,7 @@ def verify(snmp):
             if not os.path.isfile(ext['script']):
                 print ("WARNING: script: {} doesn't exist".format(ext['script']))
             else:
-                os.chmod(ext['script'], S_IRWXU | S_IXGRP | S_IXOTH | S_IROTH | S_IRGRP)
+                chmod_755(ext['script'])
 
     for listen in snmp['listen_address']:
         addr = listen[0]
@@ -412,6 +415,9 @@ def verify(snmp):
             snmp['listen_on'].append(listen)
         else:
             print('WARNING: SNMP listen address {0} not configured!'.format(addr))
+
+    if snmp['vrf'] and snmp['vrf'] not in interfaces():
+        raise ConfigError('VRF "{vrf}" does not exist'.format(**snmp))
 
     # bail out early if SNMP v3 is not configured
     if not snmp['v3_enabled']:
@@ -512,11 +518,14 @@ def generate(snmp):
     # This is even save if service is going to be removed
     call('systemctl stop snmpd.service')
     config_files = [config_file_client, config_file_daemon, config_file_access,
-                    config_file_user]
+                    config_file_user, systemd_override]
     for file in config_files:
         rmfile(file)
 
-    if snmp is None:
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
+    if not snmp:
         return None
 
     # Write client config file
@@ -527,15 +536,19 @@ def generate(snmp):
     render(config_file_access, 'snmp/usr.snmpd.conf.tmpl', snmp)
     # Write access rights config file
     render(config_file_user, 'snmp/var.snmpd.conf.tmpl', snmp)
+    # Write daemon configuration file
+    render(systemd_override, 'snmp/override.conf.tmpl', snmp)
 
     return None
 
 def apply(snmp):
-    if snmp is None:
+    if not snmp:
         return None
 
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
     # start SNMP daemon
-    call("systemctl restart snmpd.service")
+    call("systemctl start snmpd.service")
 
     while (call('systemctl -q is-active snmpd.service') != 0):
         print("service not yet started")

@@ -2,5 +2,8 @@
 Environment=
 Environment="MIBSDIR=/usr/share/snmp/mibs:/usr/share/snmp/mibs/iana:/usr/share/snmp/mibs/ietf:/usr/share/mibs/site:/usr/share/snmp/mibs:/usr/share/mibs/iana:/usr/share/mibs/ietf:/usr/share/mibs/netsnmp"
 ExecStart=
+{% if vrf %}
+ExecStart=/sbin/ip vrf exec {{ vrf }} /usr/sbin/snmpd -LS0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
+{% else %}
 ExecStart=/usr/sbin/snmpd -LS0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
-
+{% endif %}
