@@ -16,6 +16,7 @@ interface_definitions:
 	rm -f $(TMPL_DIR)/system/options/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
+	rm -f $(TMPL_DIR)/protocols/static/node.def
 
 .PHONY: op_mode_definitions
 .ONESHELL:
@@ -35,6 +36,7 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
+	rm -f $(OP_TMPL_DIR)/reset/ip/node.def
 
 .PHONY: all
 all: clean interface_definitions op_mode_definitions
