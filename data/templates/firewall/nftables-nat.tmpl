@@ -52,9 +52,13 @@ add rule ip raw NAT_CONNTRACK counter accept
 {%     set trns_addr = "dnat to " + rule.translation_address %}
 {%   elif chain == "POSTROUTING" %}
 {%     set interface = " oifname \"" + rule.interface_out + "\"" %}
-{%     set trns_addr = rule.translation_address %}
-{%     if rule.translation_address != 'masquerade' %}
-{%       set trns_addr = "snat to " + trns_addr %}
+{%     if rule.translation_address == 'masquerade' %}
+{%       set trns_addr = rule.translation_address %}
+{%       if rule.translation_port %}
+{%         set trns_addr = trns_addr + " to " %}
+{%       endif %}
+{%     else %}
+{%       set trns_addr = "snat to " + rule.translation_address %}
 {%     endif %}
 {%   endif %}
 {%   set trns_port = ":" + rule.translation_port if rule.translation_port %}
