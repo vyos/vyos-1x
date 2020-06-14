@@ -43,12 +43,12 @@ def get_config():
     for serial_port in conf.list_nodes(['device']):
         conf.set_level(base + ['device', serial_port])
         serial = {
-            'data_bits': '',
-            'parity': '',
+            'data_bits': '8',
+            'parity': 'none',
             'port': '',
             'serial_port': '/dev/serial/by-bus/' + serial_port,
             'speed': '',
-            'stop_bits': '',
+            'stop_bits': '1',
             'timeout': '600'
         }
 
@@ -80,10 +80,11 @@ def verify(proxy):
             raise ConfigError('Serial interface "{serial_port} does not exist"'
                               .format(**device))
 
-        for key in ['data_bits', 'parity', 'port', 'speed', 'stop_bits']:
-            if not device[key]:
-                value = key.replace('_','-')
-                raise ConfigError(f'{value} option must be defined!')
+        if not device['port']:
+            raise ConfigError(f'Port must be defined!')
+
+        if not device['speed']:
+            raise ConfigError(f'Speed must be defined!')
 
     return None
 
