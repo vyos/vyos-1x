@@ -74,12 +74,15 @@ def generate(console):
                 call(f'systemctl stop {basename}')
                 os.unlink(os.path.join(root, basename))
 
+    if not console:
+        return None
+
     for device in console['device'].keys():
         config_file = base_dir + f'/serial-getty@{device}.service'
-        render(config_file, 'getty/serial-getty.service.tmpl', console['device'][device])
+        getty_wants_symlink = base_dir + f'/getty.target.wants/serial-getty@{device}.service'
 
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
+        render(config_file, 'getty/serial-getty.service.tmpl', console['device'][device])
+        os.symlink(config_file, getty_wants_symlink)
 
     # GRUB
     # For existing serial line change speed (if necessary)
@@ -107,6 +110,10 @@ def generate(console):
 def apply(console):
     # reset screen blanking
     call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
+
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
     if not console:
         return None
 
