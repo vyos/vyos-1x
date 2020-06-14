@@ -15,6 +15,15 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
       </tagNode>
+      <tagNode name="serial-proxy">
+        <properties>
+          <help>Connect to serial proxy port</help>
+          <completionHelp>
+            <path>service serial-proxy device</path>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/telnet localhost $(cli-shell-api returnActiveValue service serial-proxy device "$3" port)</command>
+      </tagNode>
     </children>
   </node>
   <node name="disconnect">
