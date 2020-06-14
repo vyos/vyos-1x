@@ -561,6 +561,9 @@
               <completionHelp>
                 <script>${vyos_completion_dir}/list_wireless_phys.sh</script>
               </completionHelp>
+              <constraint>
+                <validator name="wireless-phy"/>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="reduce-transmit-power">
