@@ -69,9 +69,7 @@
 # The original config file shipped with the upstream sources can be
 # found in /usr/share/doc/ser2net/examples
 
-BANNER:banner:\r\nser2net port \p device \d [\s] (VyOS)\r\n\r\n
-
-#3001:telnet:600:/dev/ttyS1:19200 8DATABITS NONE 1STOPBIT banner
+BANNER:banner:\r\nConnected to serial proxy device \d [\s]\r\n\r\n
 
 {% for d in devices %}
 localhost,{{ d.port }}:telnet:{{ d.timeout }}:{{ d.serial_port }}:{{ d.speed }} {{ d.data_bits}}DATABITS {{ d.parity | upper }} {{ d.stop_bits}}STOPBIT banner

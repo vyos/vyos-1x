@@ -31,9 +31,9 @@ default_config_data = {
 }
 
 def get_config():
-    ser2net = deepcopy(default_config_data)
+    proxy = deepcopy(default_config_data)
     conf = Config()
-    base = ['service', 'ser2net']
+    base = ['service', 'serial-proxy']
 
     if not conf.exists(base):
         return None
@@ -67,15 +67,15 @@ def get_config():
         if conf.exists(['speed']):
             serial['speed'] = conf.return_value(['speed'])
 
-        ser2net['devices'].append(serial)
+        proxy['devices'].append(serial)
 
-    return ser2net
+    return proxy
 
-def verify(ser2net):
-    if not ser2net:
+def verify(proxy):
+    if not proxy:
         return None
 
-    for device in ser2net['devices']:
+    for device in proxy['devices']:
         if not os.path.exists('{serial_port}'.format(**device)):
             raise ConfigError('Serial interface "{serial_port} does not exist"'
                               .format(**device))
@@ -87,22 +87,22 @@ def verify(ser2net):
 
     return None
 
-def generate(ser2net):
-    if not ser2net:
+def generate(proxy):
+    if not proxy:
         return None
 
-    render(config_file, 'ser2net/ser2net.conf.tmpl', ser2net)
+    render(config_file, 'ser2net/ser2net.conf.tmpl', proxy)
     return None
 
-def apply(ser2net):
-    if not ser2net:
+def apply(proxy):
+    if not proxy:
         call('systemctl stop ser2net.service')
         if os.path.isfile(config_file):
             os.unlink(config_file)
 
         return None
 
-    call('systemctl restart ser2net.service')
+    call('systemctl start ser2net.service')
     return None
 
 if __name__ == '__main__':
