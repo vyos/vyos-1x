@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import netifaces
 
 
@@ -103,12 +104,44 @@ class Section:
             yield ifname
 
     @classmethod
+    def _sort_interfaces(cls, generator):
+        """
+        return a list of the sorted interface by number, vlan, qinq
+        """
+        def key(ifname):
+            value = 0
+            parts = re.split(r'(\w+)([0-9])[.]?([0-9]+)?[.]?([0-9]+)?', ifname)
+            length = len(parts)
+            name = parts[1] if length >= 3 else parts[0]
+            number = int(parts[2]) if length >= 4 and parts[2] is not None else 0
+            vlan = int(parts[3]) if length >= 5 and parts[3] is not None else 0
+            qinq = int(parts[4])  if length >= 6 and parts[4] is not None else 0
+
+            # so that "lo" (or short names) are handled (as "loa")
+            for n in (name + 'aaa')[:3]:
+                value *= 100
+                value += (ord(n) - ord('a'))
+
+            for n in (number, vlan, qinq):
+                # if the interface number is big enough it could cause the order to not be right
+                # but there is no real alternative with only one pass over the data 
+                value *= 100000
+                # the +1 makes sure eth0.0.0 after eth0.0
+                value += (n+1)
+            return value
+
+        l = list(generator)
+        l.sort(key=key)
+        return l
+
+    @classmethod
     def interfaces(cls, section=''):
         """
         return a list of the name of the configured interface which are under a section
         if no section is provided, then it returns all configured interfaces
         """
-        return list(cls._intf_under_section(section))
+
+        return cls._sort_interfaces(cls._intf_under_section(section))
 
     @classmethod
     def _intf_with_feature(cls, feature=''):

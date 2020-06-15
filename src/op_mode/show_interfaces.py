@@ -55,7 +55,6 @@ def filtered_interfaces(ifnames, iftypes, vif, vrrp):
     return an instance of the interface class
     """
     allnames = Section.interfaces()
-    allnames.sort()
 
     vrrp_interfaces = VRRP.active_interfaces() if vrrp else []
 
