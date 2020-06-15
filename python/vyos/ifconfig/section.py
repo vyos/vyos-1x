@@ -110,24 +110,22 @@ class Section:
         """
         def key(ifname):
             value = 0
-            parts = re.split(r'(\w+)([0-9])[.]?([0-9]+)?[.]?([0-9]+)?', ifname)
+            parts = re.split(r'([^0-9]+)([0-9]+)[.]?([0-9]+)?[.]?([0-9]+)?', ifname)
             length = len(parts)
             name = parts[1] if length >= 3 else parts[0]
-            number = int(parts[2]) if length >= 4 and parts[2] is not None else 0
-            vlan = int(parts[3]) if length >= 5 and parts[3] is not None else 0
-            qinq = int(parts[4])  if length >= 6 and parts[4] is not None else 0
+            # the +1 makes sure eth0.0.0 after eth0.0
+            number = int(parts[2]) + 1 if length >= 4 and parts[2] is not None else 0
+            vlan = int(parts[3]) + 1 if length >= 5 and parts[3] is not None else 0
+            qinq = int(parts[4]) + 1 if length >= 6 and parts[4] is not None else 0
 
             # so that "lo" (or short names) are handled (as "loa")
             for n in (name + 'aaa')[:3]:
                 value *= 100
                 value += (ord(n) - ord('a'))
-
-            for n in (number, vlan, qinq):
-                # if the interface number is big enough it could cause the order to not be right
-                # but there is no real alternative with only one pass over the data 
-                value *= 100000
-                # the +1 makes sure eth0.0.0 after eth0.0
-                value += (n+1)
+            value += number
+            # vlan are 16 bits, so this can not overflow
+            value = (value << 16) + vlan
+            value = (value << 16) + qinq
             return value
 
         l = list(generator)
