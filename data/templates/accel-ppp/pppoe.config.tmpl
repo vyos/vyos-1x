@@ -129,6 +129,8 @@ verbose=1
 check-ip=1
 {% if ppp_ccp %}
 ccp=1
+{% else %}
+ccp=0
 {% endif %}
 {% if ppp_min_mtu %}
 min-mtu={{ ppp_min_mtu }}
