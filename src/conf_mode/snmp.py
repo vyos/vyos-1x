@@ -548,7 +548,7 @@ def apply(snmp):
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
     # start SNMP daemon
-    call("systemctl start snmpd.service")
+    call("systemctl restart snmpd.service")
 
     while (call('systemctl -q is-active snmpd.service') != 0):
         print("service not yet started")
