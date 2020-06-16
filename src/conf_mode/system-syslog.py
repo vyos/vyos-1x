@@ -162,32 +162,31 @@ def generate_selectors(c, config_node):
 # protocols and security are being mapped here
 # for backward compatibility with old configs
 # security and protocol mappings can be removed later
-    if c.is_tag(config_node):
-        nodes = c.list_nodes(config_node)
-        selectors = ""
-        for node in nodes:
-            lvl = c.return_value(config_node + ' ' + node + ' level')
-            if lvl == None:
-                lvl = "err"
-            if lvl == 'all':
-                lvl = '*'
-            if node == 'all' and node != nodes[-1]:
-                selectors += "*." + lvl + ";"
-            elif node == 'all':
-                selectors += "*." + lvl
-            elif node != nodes[-1]:
-                if node == 'protocols':
-                    node = 'local7'
-                if node == 'security':
-                    node = 'auth'
-                selectors += node + "." + lvl + ";"
-            else:
-                if node == 'protocols':
-                    node = 'local7'
-                if node == 'security':
-                    node = 'auth'
-                selectors += node + "." + lvl
-        return selectors
+    nodes = c.list_nodes(config_node)
+    selectors = ""
+    for node in nodes:
+        lvl = c.return_value(config_node + ' ' + node + ' level')
+        if lvl == None:
+            lvl = "err"
+        if lvl == 'all':
+            lvl = '*'
+        if node == 'all' and node != nodes[-1]:
+            selectors += "*." + lvl + ";"
+        elif node == 'all':
+            selectors += "*." + lvl
+        elif node != nodes[-1]:
+            if node == 'protocols':
+                node = 'local7'
+            if node == 'security':
+                node = 'auth'
+            selectors += node + "." + lvl + ";"
+        else:
+            if node == 'protocols':
+                node = 'local7'
+            if node == 'security':
+                node = 'auth'
+            selectors += node + "." + lvl
+    return selectors
 
 
 def generate(c):
