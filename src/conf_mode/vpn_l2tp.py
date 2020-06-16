@@ -278,7 +278,7 @@ def get_config():
         l2tp['lns_shared_secret'] = conf.return_value(['lns', 'shared-secret'])
 
     if conf.exists(['ccp-disable']):
-        l2tp[['ccp_disable']] = True
+        l2tp['ccp_disable'] = True
 
     # PPP options
     if conf.exists(['idle']):
