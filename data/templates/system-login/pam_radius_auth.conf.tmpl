@@ -2,7 +2,7 @@
 # RADIUS configuration file
 {% if radius_server %}
 # server[:port]        shared_secret             timeout    source_ip
-{% for s in radius_server if not s.disabled %}
+{% for s in radius_server|sort(attribute='priority') if not s.disabled %}
 {%   set addr_port = s.address + ":" + s.port %}
 {{ "%-22s" | format(addr_port) }} {{ "%-25s" | format(s.key) }} {{ "%-10s" | format(s.timeout) }} {{ radius_source_address if radius_source_address }}
 {% endfor %}

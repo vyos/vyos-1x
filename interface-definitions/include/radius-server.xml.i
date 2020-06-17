@@ -50,6 +50,18 @@
             </constraint>
           </properties>
         </leafNode>
+        <leafNode name="priority">
+          <properties>
+            <help>Server priority</help>
+            <valueHelp>
+              <format>1-255</format>
+              <description>Server priority (default: 255)</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-255"/>
+            </constraint>
+          </properties>
+        </leafNode>
       </children>
     </tagNode>
   </children>
