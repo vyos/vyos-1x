@@ -136,8 +136,6 @@ def get_config():
 def verify(rtradv):
     for interface in rtradv['interfaces']:
         for prefix in interface['prefixes']:
-            import pprint
-            pprint.pprint(prefix)
             if not (prefix['valid_lifetime'] > prefix['preferred_lifetime']):
                 raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
 
