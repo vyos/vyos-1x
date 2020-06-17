@@ -27,7 +27,7 @@ from vyos.template import render
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/radvd.conf'
+config_file = r'/run/radvd/radvd.conf'
 
 default_config_data = {
     'interfaces': []
