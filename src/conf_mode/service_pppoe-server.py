@@ -242,16 +242,20 @@ def get_config():
                 'server' : server,
                 'key' : '',
                 'fail_time' : 0,
-                'port' : '1812'
+                'port' : '1812',
+                'acct_port' : '1813'
             }
 
             conf.set_level(base_path + ['authentication', 'radius', 'server', server])
 
             if conf.exists(['fail-time']):
-                radius['fail-time'] = conf.return_value(['fail-time'])
+                radius['fail_time'] = conf.return_value(['fail-time'])
 
             if conf.exists(['port']):
                 radius['port'] = conf.return_value(['port'])
+            
+            if conf.exists(['acct-port']):
+                radius['acct_port'] = conf.return_value(['acct-port'])
 
             if conf.exists(['key']):
                 radius['key'] = conf.return_value(['key'])

@@ -50,6 +50,18 @@
             </constraint>
           </properties>
         </leafNode>
+        <leafNode name="acct-port">
+          <properties>
+            <help>Accounting port</help>
+            <valueHelp>
+              <format>1-65535</format>
+              <description>Numeric IP port (default: 1813)</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-65535"/>
+            </constraint>
+          </properties>
+        </leafNode>
       </children>
     </tagNode>
   </children>
