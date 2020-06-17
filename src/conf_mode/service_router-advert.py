@@ -66,8 +66,8 @@ def get_config():
         if conf.exists(['hop-limit']):
             intf['hop_limit'] = conf.return_value(['hop-limit'])
 
-        if conf.exists(['default-lifetim']):
-            intf['default_lifetime'] = conf.return_value(['default-lifetim'])
+        if conf.exists(['default-lifetime']):
+            intf['default_lifetime'] = conf.return_value(['default-lifetime'])
 
         if conf.exists(['default-preference']):
             intf['default_preference'] = conf.return_value(['default-preference'])
