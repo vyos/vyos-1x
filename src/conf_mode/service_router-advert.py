@@ -107,8 +107,8 @@ def get_config():
                 'prefix' : prefix,
                 'autonomous_flag' : 'on',
                 'on_link' : 'on',
-                'preferred_lifetime': '14400',
-                'valid_lifetime' : '2592000'
+                'preferred_lifetime': 14400,
+                'valid_lifetime' : 2592000
 
             }
 
@@ -122,10 +122,10 @@ def get_config():
                 tmp['on_link'] = 'off'
 
             if conf.exists(['preferred-lifetime']):
-                tmp['preferred_lifetime'] = conf.return_value(['preferred-lifetime'])
+                tmp['preferred_lifetime'] = int(conf.return_value(['preferred-lifetime']))
 
             if conf.exists(['valid-lifetime']):
-                tmp['valid_lifetime'] = conf.return_value(['valid-lifetime'])
+                tmp['valid_lifetime'] = int(conf.return_value(['valid-lifetime']))
 
             intf['prefixes'].append(tmp)
 
@@ -134,6 +134,13 @@ def get_config():
     return rtradv
 
 def verify(rtradv):
+    for interface in rtradv['interfaces']:
+        for prefix in interface['prefixes']:
+            import pprint
+            pprint.pprint(prefix)
+            if not (prefix['valid_lifetime'] > prefix['preferred_lifetime']):
+                raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
+
     return None
 
 def generate(rtradv):
