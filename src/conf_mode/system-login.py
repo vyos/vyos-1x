@@ -144,7 +144,8 @@ def get_config():
             'disabled': False,
             'key': '',
             'port': '1812',
-            'timeout': '2'
+            'timeout': '2',
+            'priority': 255
         }
         conf.set_level(base_level + ['radius', 'server', server])
 
@@ -163,6 +164,10 @@ def get_config():
         # RADIUS session timeout
         if conf.exists(['timeout']):
             server_cfg['timeout'] = conf.return_value(['timeout'])
+
+        # Check if RADIUS server has priority
+        if conf.exists(['priority']):
+            server_cfg['priority'] = int(conf.return_value(['priority']))
 
         # Append individual RADIUS server configuration to global server list
         login['radius_server'].append(server_cfg)
