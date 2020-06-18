@@ -73,6 +73,14 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <node name="ssh">
+                <properties>
+                  <help>SSH remote access to this console</help>
+                </properties>
+                <children>
+                  #include <include/port-number.xml.i>
+                </children>
+              </node>
             </children>
           </tagNode>
         </children>
