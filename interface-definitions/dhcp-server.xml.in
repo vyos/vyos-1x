@@ -62,6 +62,15 @@
                   <help>Shared-network-name description</help>
                 </properties>
               </leafNode>
+              <leafNode name="relay-networks">
+                <properties>
+                  <help>Locally attached network prefix(es) facing a DHCP relay.</help>
+	          <constraint>
+                    <validator name="ipv4-prefix"/>
+	          </constraint>
+		  <multi/>
+                </properties>
+	      </leafNode>
               <leafNode name="disable">
                 <properties>
                   <help>Option to disable DHCP configuration for shared-network</help>

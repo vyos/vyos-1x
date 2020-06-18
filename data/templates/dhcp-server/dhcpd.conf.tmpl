@@ -75,6 +75,11 @@ shared-network {{ network.name }} {
     {%- if network.authoritative %}
     authoritative;
     {%- endif %}
+    {%- if network.relay_networks %}
+    {%- for relay_network in network.relay_networks %}
+    subnet {{ relay_network.network_address }} netmask {{ relay_network.netmask }} {}
+    {%- endfor %}
+    {%- endif %}
     {%- if network.network_parameters %}
     # The following {{ network.network_parameters | length }} line(s) were added as shared-network-parameters in the CLI and have not been validated
     {%- for param in network.network_parameters %}

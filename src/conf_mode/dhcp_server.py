@@ -16,7 +16,7 @@
 
 import os
 
-from ipaddress import ip_address, ip_network
+from ipaddress import ip_address, ip_network, IPv4Network
 from socket import inet_ntoa
 from struct import pack
 from sys import exit
@@ -168,7 +168,8 @@ def get_config():
                 'description': '',
                 'disabled': False,
                 'network_parameters': [],
-                'subnet': []
+                'subnet': [],
+                'relay_networks': []
             }
             # check if DHCP server should be authoritative on this network
             if conf.exists('authoritative'):
@@ -192,6 +193,10 @@ def get_config():
             # deprecate this and issue a warning like we do for DNS forwarding?
             if conf.exists('shared-network-parameters'):
                 config['network_parameters'] = conf.return_values('shared-network-parameters')
+
+            if conf.exists('relay-networks'):
+                for relay_net in conf.return_values('relay-networks'):
+                    config['relay_networks'].append({'network_address':str(ip_network(relay_net).network_address), 'netmask':str(ip_network(relay_net).netmask)})
 
             # check for multiple subnet configurations in a shared network
             # config segment
@@ -459,6 +464,8 @@ def verify(dhcp):
     # Inspect shared-network/subnet
     failover_names = []
     listen_ok = False
+    relay_network = False
+
     subnets = []
 
     # A shared-network requires a subnet definition
@@ -466,6 +473,9 @@ def verify(dhcp):
         if len(network['subnet']) == 0:
             raise ConfigError('No DHCP lease subnets configured for {0}. At least one\n' \
                               'lease subnet must be configured for each shared network.'.format(network['name']))
+
+        if (len(network['relay_networks'])):
+            relay_network = True
 
         for subnet in network['subnet']:
             # Subnet static route declaration requires destination and router
@@ -586,10 +596,10 @@ def verify(dhcp):
                     if net.overlaps(net2):
                         raise ConfigError('DHCP conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
 
-    if not listen_ok:
+    if not listen_ok and not relay_network:
         raise ConfigError('DHCP server configuration error!\n' \
                           'None of configured DHCP subnets does not have appropriate\n' \
-                          'primary IP address on any broadcast interface.')
+                          'primary IP address on any broadcast interface or a relay subnet is not set.')
 
     return None
 
