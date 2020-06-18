@@ -24,7 +24,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos import ConfigError
 
-config_file = r'/etc/conserver/conserver.cf'
+config_file = r'/run/conserver/conserver.cf'
 
 # Default values are necessary until the implementation of T2588 is completed
 default_values = {

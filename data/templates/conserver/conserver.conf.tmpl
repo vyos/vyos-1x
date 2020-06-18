@@ -3,13 +3,12 @@
 # See https://www.conserver.com/docs/conserver.cf.man.html for additional options
 
 config * {
+    primaryport 3109;
+    daemonmode false;
 }
 
 default * {
-    motd "VyOS Console Server"
-    # The character '&' in logfile names are substituted with the console name.
-    logfile /var/log/conserver/&.log;
-    timestamp "30m";
+    motd "VyOS Console Server";
     rw *;
 }
 
