@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="multicast">
+            <properties>
+              <help>IP multicast routing table</help>
+            </properties>
+            <children>
+              <leafNode name="route">
+                <properties>
+                  <help>Clear multicast routing table</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "clear ip mroute"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

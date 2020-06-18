@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!-- Internet Group Management Protocol (IGMP) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="igmp" owner="${vyos_conf_scripts_dir}/protocols_igmp.py">
+        <properties>
+          <help>Internet Group Management Protocol (IGMP)</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>IGMP interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="join">
+                <properties>
+                  <help>IGMP join multicast group</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Multicast group address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="source">
+                    <properties>
+                      <help>Source address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Source address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="version">
+                <properties>
+                  <help>IGMP version</help>
+                  <valueHelp>
+                    <format>2-3</format>
+                    <description>IGMP version</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 2-3"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="query-interval">
+                <properties>
+                  <help>IGMP host query interval</help>
+                  <valueHelp>
+                    <format>1-1800</format>
+                    <description>Query interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-1800"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="query-max-response-time">
+                <properties>
+                  <help>IGMP max query response time</help>
+                  <valueHelp>
+                    <format>10-250</format>
+                    <description>Query response value in deci-seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-250"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
