@@ -35,7 +35,7 @@ default_values = {
 
 def get_config():
     conf = Config()
-    base = ['service', 'serial-proxy']
+    base = ['service', 'console-server']
 
     if not conf.exists(base):
         return None
