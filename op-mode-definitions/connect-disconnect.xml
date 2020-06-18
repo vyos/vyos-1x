@@ -22,7 +22,7 @@
             <path>service serial-proxy device</path>
           </completionHelp>
         </properties>
-        <command>/usr/bin/telnet localhost $(cli-shell-api returnActiveValue service serial-proxy device "$3" port)</command>
+        <command>/usr/bin/console "$3"</command>
       </tagNode>
     </children>
   </node>

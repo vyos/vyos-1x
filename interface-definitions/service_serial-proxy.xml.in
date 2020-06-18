@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="serial-proxy" owner="${vyos_conf_scripts_dir}/system_serial-proxy.py">
+      <node name="serial-proxy" owner="${vyos_conf_scripts_dir}/service_serial-proxy.py">
         <properties>
           <help>Serial to Network</help>
         </properties>
