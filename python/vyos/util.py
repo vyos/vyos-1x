@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import sys
 
 #
@@ -340,6 +341,28 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
 
     return data
 
+def mangle_dict_keys(data, regex, replacement):
+    """ Mangles dict keys according to a regex and replacement character.
+    Some libraries like Jinja2 do not like certain characters in dict keys.
+    This function can be used for replacing all offending characters
+    with something acceptable.
+
+    Args:
+        data (dict): Original dict to mangle
+
+    Returns: dict
+    """
+    new_dict = {}
+    for key in data.keys():
+        new_key = re.sub(regex, replacement, key)
+
+        value = data[key]
+        if isinstance(value, dict):
+            new_dict[new_key] = mangle_dict_keys(value, regex, replacement)
+        else:
+            new_dict[new_key] = value
+
+    return new_dict
 
 def process_running(pid_file):
     """ Checks if a process with PID in pid_file is running """
