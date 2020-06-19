@@ -28,7 +28,6 @@
             </properties>
             <children>
               #include <include/interface-description.xml.i>
-              #include <include/port-number.xml.i>
               <leafNode name="speed">
                 <properties>
                   <help>Serial port baud rate</help>
