@@ -32,12 +32,6 @@
             </properties>
             <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | grep -e conntrackd</command>
           </leafNode>
-          <leafNode name="console-server">
-            <properties>
-              <help>Show log for serial console server</help>
-            </properties>
-            <command>/usr/bin/journalctl -u conserver-server.service</command>
-          </leafNode>
           <leafNode name="dhcp">
             <properties>
               <help>Show log for Dynamic Host Control Protocol (DHCP)</help>

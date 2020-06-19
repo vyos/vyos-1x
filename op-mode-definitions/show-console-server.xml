@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="log">
+        <children>
+          <leafNode name="console-server">
+            <properties>
+              <help>Show log for serial console server</help>
+            </properties>
+            <command>/usr/bin/journalctl -u conserver-server.service</command>
+          </leafNode>
+        </children>
+      </node>
+      <node name="console-server">
+        <properties>
+          <help>Show Console-Server information</help>
+        </properties>
+        <children>
+          <leafNode name="ports">
+            <properties>
+              <help>Examine console ports and configured baud rates</help>
+            </properties>
+            <command>/usr/bin/console -x</command>
+          </leafNode>
+          <leafNode name="user">
+            <properties>
+              <help>Show users on various consoles</help>
+            </properties>
+            <command>/usr/bin/console -u</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
