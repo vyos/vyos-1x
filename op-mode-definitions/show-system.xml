@@ -124,6 +124,12 @@
                 </properties>
                 <command>cat /proc/meminfo</command>
               </leafNode>
+              <leafNode name="routing-daemons">
+                <properties>
+                  <help>Show memory usage of all routing protocols</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show memory"</command>
+              </leafNode>
             </children>
           </node>
           <node name="processes">
@@ -152,6 +158,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="routing-daemons">
+            <properties>
+              <help>Show Quagga routing daemons</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show daemons"</command>
+          </leafNode>
           <leafNode name="storage">
             <properties>
               <help>Show filesystem usage</help>

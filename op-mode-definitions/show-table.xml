@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <leafNode name="table">
+        <properties>
+          <help>Show routing tables</help>
+        </properties>
+        <command>/usr/bin/vtysh -c "show zebra router table summary"</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
