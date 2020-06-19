@@ -62,13 +62,14 @@ def verify(proxy):
     if not proxy:
         return None
 
-    for tmp in proxy['device']:
-        device = proxy['device'][tmp]
-        if not device['speed']:
+    for device in proxy['device']:
+        keys = proxy['device'][device].keys()
+        if 'speed' not in keys:
             raise ConfigError(f'Serial port speed must be defined for "{tmp}"!')
 
-        if 'ssh' in device.keys():
-            if 'port' not in device['ssh'].keys():
+        if 'ssh' in keys:
+            ssh_keys = proxy['device'][device]['ssh'].keys()
+            if 'port' not in ssh_keys:
                 raise ConfigError(f'SSH port must be defined for "{tmp}"!')
 
     return None
@@ -81,8 +82,7 @@ def generate(proxy):
     return None
 
 def apply(proxy):
-    call('systemctl stop conserver-server.service')
-    call('systemctl stop dropbear@*.service')
+    call('systemctl stop dropbear@*.service conserver-server.service')
 
     if not proxy:
         if os.path.isfile(config_file):
@@ -93,7 +93,8 @@ def apply(proxy):
 
     for device in proxy['device']:
         if 'ssh' in proxy['device'][device].keys():
-            call('systemctl restart dropbear@{device}.service')
+            port = proxy['device'][device]['ssh']['port']
+            call(f'systemctl restart dropbear@{device}.service')
 
     return None
 

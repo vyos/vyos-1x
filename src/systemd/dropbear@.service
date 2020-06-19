@@ -2,13 +2,13 @@
 Description=Dropbear SSH per-connection server
 Requires=dropbearkey.service
 Wants=conserver-server.service
-After=mongodb.service
+ConditionPathExists=/run/conserver/conserver.cf
 After=dropbearkey.service vyos-router.service conserver-server.service
 
 [Service]
 Type=forking
-ExecStartPre=/usr/bin/bash -c '/usr/bin/systemctl set-environment PORT=$(cli-shell-api returnValue service console-server device "%I" ssh port)'
+ExecStartPre=/usr/bin/bash -c '/usr/bin/systemctl set-environment PORT=$(cli-shell-api returnActiveValue service console-server device "%I" ssh port)'
 ExecStart=-/usr/sbin/dropbear -w -j -k -r /etc/dropbear/dropbear_rsa_host_key -c "/usr/bin/console %I" -P /run/conserver/dropbear.%I.pid -p ${PORT}
 PIDFile=/run/conserver/dropbear.%I.pid
 KillMode=process
-
+Restart=on-failure
