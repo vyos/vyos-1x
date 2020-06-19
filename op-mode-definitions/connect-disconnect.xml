@@ -15,15 +15,6 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
       </tagNode>
-      <tagNode name="console-server">
-        <properties>
-          <help>Connect to port of serial console server</help>
-          <completionHelp>
-            <path>service console-server device</path>
-          </completionHelp>
-        </properties>
-        <command>/usr/bin/console "$3"</command>
-      </tagNode>
     </children>
   </node>
   <node name="disconnect">
