@@ -20,6 +20,12 @@
              </properties>
              <command>${vyos_op_scripts_dir}/show_version.py --all</command>
           </leafNode>
+          <leafNode name="quagga">
+             <properties>
+               <help>Show Quagga version information</help>
+             </properties>
+             <command>/usr/bin/vtysh -c "show version"</command>
+          </leafNode>
         </children>
       </node>
     </children>
