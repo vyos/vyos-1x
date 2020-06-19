@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <children>
+          <leafNode name="ports">
+            <properties>
+              <help>Show IP ports in use by various system services</help>
+            </properties>
+            <command>sudo /usr/bin/netstat -tulnp</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
