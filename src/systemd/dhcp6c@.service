@@ -3,15 +3,14 @@ Description=WIDE DHCPv6 client on %i
 Documentation=man:dhcp6c(8) man:dhcp6c.conf(5)
 ConditionPathExists=/run/dhcp6c/dhcp6c.%i.conf
 After=vyos-router.service
+StartLimitIntervalSec=0
 
 [Service]
 WorkingDirectory=/run/dhcp6c
 Type=forking
 PIDFile=/run/dhcp6c/dhcp6c.%i.pid
 ExecStart=/usr/sbin/dhcp6c -D -k /run/dhcp6c/dhcp6c.%i.sock -c /run/dhcp6c/dhcp6c.%i.conf -p /run/dhcp6c/dhcp6c.%i.pid %i
-
 Restart=on-failure
-StartLimitIntervalSec=0
 RestartSec=20
 
 [Install]
