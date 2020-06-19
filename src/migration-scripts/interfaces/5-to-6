@@ -59,13 +59,17 @@ def copy_rtradv(c, old_base, interface):
         prefix_base = new_base + ['prefix']
         if c.exists(prefix_base):
             for prefix in config.list_nodes(prefix_base):
-                bool_cleanup = ['autonomous-flag', 'on-link-flag']
-                for bool in bool_cleanup:
-                    if c.exists(prefix_base + [prefix, bool]):
-                        tmp = c.return_value(prefix_base + [prefix, bool])
-                        c.delete(prefix_base + [prefix, bool])
-                        if tmp == 'true':
-                            c.set(prefix_base + [prefix, bool])
+                if c.exists(prefix_base + [prefix, 'autonomous-flag']):
+                    tmp = c.return_value(prefix_base + [prefix, 'autonomous-flag'])
+                    c.delete(prefix_base + [prefix, 'autonomous-flag'])
+                    if tmp == 'false':
+                        c.set(prefix_base + [prefix, 'no-autonomous-flag'])
+
+                if c.exists(prefix_base + [prefix, 'on-link-flag']):
+                    tmp = c.return_value(prefix_base + [prefix, 'on-link-flag'])
+                    c.delete(prefix_base + [prefix, 'on-link-flag'])
+                    if tmp == 'true':
+                        c.set(prefix_base + [prefix, 'on-link-flag'])
 
         # router advertisement can be individually disabled per interface
         # the node has been renamed from send-advert {true | false} to no-send-advert
