@@ -46,17 +46,18 @@ default_config_data = {
 }
 
 def get_config():
+    peth = deepcopy(default_config_data)
+    conf = Config()
+
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    conf = Config()
+    peth['intf'] = os.environ['VYOS_TAGNODE_VALUE']
 
     # Check if interface has been removed
-    cfg_base = ['interfaces', 'pseudo-ethernet', ifname]
+    cfg_base = ['interfaces', 'pseudo-ethernet', peth['intf']]
     if not conf.exists(cfg_base):
-        peth = deepcopy(default_config_data)
         peth['deleted'] = True
         return peth
 
