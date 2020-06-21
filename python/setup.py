@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name = "vyos",
-    version = "1.2.0",
+    version = "1.3.0",
     author = "VyOS maintainers and contributors",
     author_email = "maintainers@vyos.net",
     description = ("VyOS configuration libraries."),
