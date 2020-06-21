@@ -196,7 +196,8 @@ def get_config():
 
             if conf.exists('relay-networks'):
                 for relay_net in conf.return_values('relay-networks'):
-                    config['relay_networks'].append({'network_address':str(ip_network(relay_net).network_address), 'netmask':str(ip_network(relay_net).netmask)})
+                    temp_net = ip_network(relay_net)
+                    config['relay_networks'].append({'network_address':str(temp_net.network_address), 'netmask':str(temp_net.netmask)})
 
             # check for multiple subnet configurations in a shared network
             # config segment
