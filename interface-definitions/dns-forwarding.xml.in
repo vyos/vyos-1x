@@ -91,7 +91,7 @@
                   </leafNode>
                   <leafNode name="addnta">
                     <properties>
-                      <help>Add NTA (negative trust anchor) for this domain (must be set if the domain doesn't support DNSSEC)</help>
+                      <help>Add NTA (negative trust anchor) for this domain (must be set if the domain does not support DNSSEC)</help>
                       <valueless/>
                     </properties>
                   </leafNode>
