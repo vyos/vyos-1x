@@ -124,7 +124,7 @@ def get_config():
             conf.set_level(base_path + ['authentication', 'radius', 'server', server])
 
             if conf.exists(['fail-time']):
-                radius['fail-time'] = conf.return_value(['fail-time'])
+                radius['fail_time'] = conf.return_value(['fail-time'])
 
             if conf.exists(['port']):
                 radius['port'] = conf.return_value(['port'])
