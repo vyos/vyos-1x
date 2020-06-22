@@ -66,24 +66,26 @@ class VXLANIf(Interface):
         'ifname': 'add',
         'vni':    'id',
         'port':   'dstport',
-        'src_address': 'nolearning local',
+        'src_address': 'local',
+        'src_interface': 'dev',
     }
 
     def _create(self):
-        cmdline = set()
+        cmdline = ['ifname', 'type', 'vni', 'port'] 
+
+        if self.config['src_address']:
+            cmdline.append('src_address')
+
         if self.config['remote']:
-            cmdline = ('ifname', 'type', 'remote', 'src_interface', 'vni', 'port')
+            cmdline.append('remote')
 
-        elif self.config['src_address']:
-            cmdline = ('ifname', 'type', 'src_address', 'vni', 'port')
-
-        elif self.config['group'] and self.config['src_interface']:
-            cmdline = ('ifname', 'type', 'group', 'src_interface', 'vni', 'port')
-
-        else:
-            ifname = self.config['ifname']
-            raise ConfigError(
-                f'VXLAN "{ifname}" is missing mandatory underlay interface for a multicast network.')
+        if self.config['group'] or self.config['src_interface']:
+            if self.config['group'] and self.config['src_interface']:
+                cmdline.append('group', 'src_interface')
+            else:
+                ifname = self.config['ifname']
+                raise ConfigError(
+                    f'VXLAN "{ifname}" is missing mandatory underlay multicast group or source interface for a multicast network.') 
 
         cmd = 'ip link'
         for key in cmdline:
