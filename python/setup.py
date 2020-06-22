@@ -1,6 +1,13 @@
 import os
 from setuptools import setup
 
+def packages(directory):
+    return [
+        _[0].replace('/','.')
+        for _ in os.walk(directory)
+        if os.path.isfile(os.path.join(_[0], '__init__.py'))
+    ]
+
 setup(
     name = "vyos",
     version = "1.2.0",
@@ -10,7 +17,7 @@ setup(
     license = "LGPLv2+",
     keywords = "vyos",
     url = "http://www.vyos.io",
-    packages=["vyos","vyos.ifconfig"],
+    packages = packages('vyos'),
     long_description="VyOS configuration libraries",
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -18,4 +25,3 @@ setup(
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
     ],
 )
-
