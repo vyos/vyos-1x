@@ -5,7 +5,7 @@
     <children>
       <node name="ssh" owner="${vyos_conf_scripts_dir}/ssh.py">
         <properties>
-          <help>Secure SHell (SSH) protocol</help>
+          <help>Secure Shell (SSH)</help>
           <priority>500</priority>
         </properties>
         <children>
