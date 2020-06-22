@@ -22,16 +22,10 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
+from vyos.xml import defaults
 from vyos import ConfigError
 
 config_file = r'/run/conserver/conserver.cf'
-
-# Default values are necessary until the implementation of T2588 is completed
-default_values = {
-    'data_bits': '8',
-    'parity': 'none',
-    'stop_bits': '1'
-}
 
 def get_config():
     conf = Config()
@@ -52,6 +46,7 @@ def get_config():
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
+    default_values = defaults(base + ['device'])
     for device in proxy['device'].keys():
         tmp = dict_merge(default_values, proxy['device'][device])
         proxy['device'][device] = tmp

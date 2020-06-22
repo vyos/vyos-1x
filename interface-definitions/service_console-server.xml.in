@@ -50,6 +50,7 @@
                     <regex>(7|8)</regex>
                   </constraint>
                 </properties>
+                <defaultValue>8</defaultValue>
               </leafNode>
               <leafNode name="stop-bits">
                 <properties>
@@ -61,6 +62,7 @@
                     <regex>(1|2)</regex>
                   </constraint>
                 </properties>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <leafNode name="parity">
                 <properties>
@@ -72,6 +74,7 @@
                     <regex>(even|odd|none)</regex>
                   </constraint>
                 </properties>
+                <defaultValue>none</defaultValue>
               </leafNode>
               <node name="ssh">
                 <properties>
