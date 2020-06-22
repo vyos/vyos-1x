@@ -28,7 +28,7 @@
               </leafNode>
               <leafNode name="dhcp">
                 <properties>
-                  <help>Use DNS servers received from DHCP server for specified interface</help>
+                  <help>Interfaces whose DHCP client nameservers to forward requests to</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
@@ -87,6 +87,18 @@
                         <validator name="ipv4-address"/>
                         <validator name="ipv6-address"/>
                       </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="addnta">
+                    <properties>
+                      <help>Add NTA (negative trust anchor) for this domain (must be set if the domain doesn't support DNSSEC)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="recursion-desired">
+                    <properties>
+                      <help>Set the "recursion desired" bit in requests to the upstream nameserver</help>
+                      <valueless/>
                     </properties>
                   </leafNode>
                 </children>

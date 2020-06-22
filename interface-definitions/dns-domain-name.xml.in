@@ -5,7 +5,7 @@
     <children>
       <leafNode name="name-server" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
-          <help>Domain Name Server (DNS)</help>
+          <help>Domain Name Servers (DNS) used by the system (resolv.conf)</help>
           <priority>400</priority>
           <valueHelp>
             <format>ipv4</format>
@@ -20,6 +20,16 @@
             <validator name="ipv4-address"/>
             <validator name="ipv6-address"/>
           </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="name-servers-dhcp" owner="${vyos_conf_scripts_dir}/host_name.py">
+        <properties>
+          <help>Interfaces whose DHCP client nameservers will be used by the system (resolv.conf)</help>
+          <priority>400</priority>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          </completionHelp>
+          <multi/>
         </properties>
       </leafNode>
       <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/host_name.py">
@@ -56,20 +66,12 @@
           </leafNode>
         </children>
       </node>
-      <leafNode name="disable-dhcp-nameservers" owner="${vyos_conf_scripts_dir}/host_name.py">
-        <properties>
-          <help>Disable DHCP updates of DNS settings</help>
-          <priority>300</priority>
-          <valueless/>
-        </properties>
-      </leafNode>
       <node name="static-host-mapping" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
           <help>Map host names to addresses</help>
           <priority>400</priority>
         </properties>
         <children>
-
           <tagNode name="host-name">
             <properties>
               <help>Host name for static address mapping</help>

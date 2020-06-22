@@ -1,39 +1,44 @@
-# modified make_resolv_conf () for Vyatta system below
+# modified make_resolv_conf () for VyOS
 make_resolv_conf() {
+    hostsd_client="/usr/bin/vyos-hostsd-client"
+    hostsd_changes=
+
     if [ -n "$new_domain_name" ]; then
-        logmsg info "Adding search-domain \"$new_domain_name\" via vyos-hostsd-client"
-        /usr/bin/vyos-hostsd-client --set-host-name --search-domain $new_domain_name
+        logmsg info "Deleting search domains with tag \"dhcp-$interface\" via vyos-hostsd-client"
+        $hostsd_client --delete-search-domains --tag "dhcp-$interface"
+        logmsg info "Adding domain name \"$new_domain_name\" as search domain with tag \"dhcp-$interface\" via vyos-hostsd-client"
+        $hostsd_client --add-search-domains "$new_domain_name" --tag "dhcp-$interface"
+        hostsd_changes=y
     fi
 
     if [ -n "$new_dhcp6_domain_search" ]; then
-        logmsg info "Adding search-domain \"$new_dhcp6_domain_search\" via vyos-hostsd-client"
-        /usr/bin/vyos-hostsd-client --set-host-name --search-domain $new_dhcp6_domain_search
+        logmsg info "Deleting search domains with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
+        $hostsd_client --delete-search-domains --tag "dhcpv6-$interface"
+        logmsg info "Adding search domain \"$new_dhcp6_domain_search\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
+        $hostsd_client --add-search-domains "$new_dhcp6_domain_search" --tag "dhcpv6-$interface"
+        hostsd_changes=y
     fi
 
-    if [ -n "$new_domain_name_servers" ] && ! cli-shell-api existsEffective system disable-dhcp-nameservers && [ "$new_domain_name_servers" != "$old_domain_name_servers" ] ; then
+    if [ -n "$new_domain_name_servers" ]; then
         logmsg info "Deleting nameservers with tag \"dhcp-$interface\" via vyos-hostsd-client"
-        vyos-hostsd-client --delete-name-servers --tag dhcp-$interface
-        NEW_SERVERS=""
-        for nameserver in $new_domain_name_servers; do
-            NEW_SERVERS="$NEW_SERVERS --name-server $nameserver"
-        done
-        logmsg info "Adding nameservers \"$NEW_SERVERS\" with tag \"dhcp-$interface\" via vyos-hostsd-client"
-        /usr/bin/vyos-hostsd-client --add-name-servers $NEW_SERVERS --tag dhcp-$interface
+        $hostsd_client --delete-name-servers --tag "dhcp-$interface"
+        logmsg info "Adding nameservers \"$new_domain_name_servers\" with tag \"dhcp-$interface\" via vyos-hostsd-client"
+        $hostsd_client --add-name-servers $new_domain_name_servers --tag "dhcp-$interface"
+        hostsd_changes=y
     fi
 
-    if [ -n "$new_dhcp6_name_servers" ] && ! cli-shell-api existsEffective system disable-dhcp-nameservers && [ "$new_dhcp6_name_servers" != "$old_dhcp6_name_servers" ] ; then
+    if [ -n "$new_dhcp6_name_servers" ]; then
         logmsg info "Deleting nameservers with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-        vyos-hostsd-client --delete-name-servers --tag dhcpv6-$interface
-        NEW_SERVERS=""
-        for nameserver in $new_dhcp6_name_servers; do
-            NEW_SERVERS="$NEW_SERVERS --name-server $nameserver"
-        done
-        logmsg info "Adding nameservers \"$NEW_SERVERS\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-        /usr/bin/vyos-hostsd-client --add-name-servers $NEW_SERVERS --tag dhcpv6-$interface
+        $hostsd_client --delete-name-servers --tag "dhcpv6-$interface"
+        logmsg info "Adding nameservers \"$new_dhcpv6_name_servers\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
+        $hostsd_client --add-name-servers $new_dhcpv6_name_servers --tag "dhcpv6-$interface"
+        hostsd_changes=y
     fi
 
-    if cli-shell-api existsEffective service dns forwarding; then
-        logmsg info "Enabling DNS forwarding"
-        /usr/libexec/vyos/conf_mode/dns_forwarding.py --dhclient
+    if [ $hostsd_changes ]; then
+        logmsg info "Applying changes via vyos-hostsd-client"
+        $hostsd_client --apply
+    else
+        logmsg info "No changes to apply via vyos-hostsd-client"
     fi
 }

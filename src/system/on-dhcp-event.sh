@@ -19,7 +19,7 @@ client_name=$2
 client_ip=$3
 client_mac=$4
 domain=$5
-file=/etc/hosts
+hostsd_client="/usr/bin/vyos-hostsd-client"
 
 if [ -z "$client_name" ]; then
     logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
@@ -36,26 +36,19 @@ fi
 
 case "$action" in
   commit) # add mapping for new lease
-    grep -q "   $client_search_expr     " $file
-    if [ $? == 0 ]; then
-       echo host $client_fqdn_name already exists, exiting
-       exit 1
-    fi
-    # add host
-    /usr/bin/vyos-hostsd-client --add-hosts --tag "DHCP-$client_ip" --host "$client_fqdn_name,$client_ip"
+    $hostsd_client --add-hosts "$client_fqdn_name,$client_ip" --tag "dhcp-server-$client_ip" --apply
+    exit 0
     ;;
 
   release) # delete mapping for released address
-    # delete host
-    /usr/bin/vyos-hostsd-client --delete-hosts --tag "DHCP-$client_ip"
+    $hostsd_client --delete-hosts --tag "dhcp-server-$client_ip" --apply
+    exit 0
     ;;
 
   *)
     logger -s -t on-dhcp-event "Invalid command \"$1\""
-    exit 1;
+    exit 1
     ;;
 esac
 
 exit 0
-
-

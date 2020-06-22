@@ -41,19 +41,21 @@ default_config_data = {
     'domain_name': '',
     'domain_search': [],
     'nameserver': [],
-    'no_dhcp_ns': False
+    'nameservers_dhcp_interfaces': [],
+    'static_host_mapping': {}
 }
 
-def get_config():
-    conf = Config()
+hostsd_tag = 'system'
+
+def get_config(conf):
     hosts = copy.deepcopy(default_config_data)
 
-    if conf.exists("system host-name"):
-        hosts['hostname'] = conf.return_value("system host-name")
-        # This may happen if the config is not loaded yet,
-        # e.g. if run by cloud-init
-        if not hosts['hostname']:
-            hosts['hostname'] = default_config_data['hostname']
+    hosts['hostname'] = conf.return_value("system host-name")
+
+    # This may happen if the config is not loaded yet,
+    # e.g. if run by cloud-init
+    if not hosts['hostname']:
+        hosts['hostname'] = default_config_data['hostname']
 
     if conf.exists("system domain-name"):
         hosts['domain_name'] = conf.return_value("system domain-name")
@@ -62,60 +64,50 @@ def get_config():
     for search in conf.return_values("system domain-search domain"):
         hosts['domain_search'].append(search)
 
-    if conf.exists("system name-server"):
-        hosts['nameserver'] = conf.return_values("system name-server")
+    hosts['nameserver'] = conf.return_values("system name-server")
 
-    if conf.exists("system disable-dhcp-nameservers"):
-        hosts['no_dhcp_ns'] = True
+    hosts['nameservers_dhcp_interfaces'] = conf.return_values("system name-servers-dhcp")
 
     # system static-host-mapping
-    hosts['static_host_mapping'] = []
-
-    if conf.exists('system static-host-mapping host-name'):
-        for hn in conf.list_nodes('system static-host-mapping host-name'):
-            mapping = {}
-            mapping['host'] = hn
-            mapping['address'] = conf.return_value('system static-host-mapping host-name {0} inet'.format(hn))
-            mapping['aliases'] = conf.return_values('system static-host-mapping host-name {0} alias'.format(hn))
-            hosts['static_host_mapping'].append(mapping)
+    for hn in conf.list_nodes('system static-host-mapping host-name'):
+        hosts['static_host_mapping'][hn] = {}
+        hosts['static_host_mapping'][hn]['address'] = conf.return_value(f'system static-host-mapping host-name {hn} inet')
+        hosts['static_host_mapping'][hn]['aliases'] = conf.return_values(f'system static-host-mapping host-name {hn} alias')
 
     return hosts
 
 
-def verify(config):
-    if config is None:
+def verify(conf, hosts):
+    if hosts is None:
         return None
 
     # pattern $VAR(@) "^[[:alnum:]][-.[:alnum:]]*[[:alnum:]]$" ; "invalid host name $VAR(@)"
     hostname_regex = re.compile("^[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]$")
-    if not hostname_regex.match(config['hostname']):
-        raise ConfigError('Invalid host name ' + config["hostname"])
+    if not hostname_regex.match(hosts['hostname']):
+        raise ConfigError('Invalid host name ' + hosts["hostname"])
 
     # pattern $VAR(@) "^.{1,63}$" ; "invalid host-name length"
-    length = len(config['hostname'])
+    length = len(hosts['hostname'])
     if length < 1 or length > 63:
         raise ConfigError(
             'Invalid host-name length, must be less than 63 characters')
 
-    # The search list is currently limited to six domains with a total of 256 characters.
-    # https://linux.die.net/man/5/resolv.conf
-    if len(config['domain_search']) > 6:
-        raise ConfigError(
-            'The search list is currently limited to six domains')
-
-    tmp = ' '.join(config['domain_search'])
-    if len(tmp) > 256:
-        raise ConfigError(
-            'The search list is currently limited to 256 characters')
-
+    all_static_host_mapping_addresses = []
     # static mappings alias hostname
-    if config['static_host_mapping']:
-        for m in config['static_host_mapping']:
-            if not m['address']:
-                raise ConfigError('IP address required for ' + m['host'])
-            for a in m['aliases']:
-                if not hostname_regex.match(a) and len(a) != 0:
-                    raise ConfigError('Invalid alias \'{0}\' in mapping {1}'.format(a, m['host']))
+    for host, hostprops in hosts['static_host_mapping'].items():
+        if not hostprops['address']:
+            raise ConfigError(f'IP address required for static-host-mapping "{host}"')
+        if hostprops['address'] in all_static_host_mapping_addresses:
+            raise ConfigError((
+                f'static-host-mapping "{host}" address "{hostprops["address"]}"'
+                f'already used in another static-host-mapping'))
+        all_static_host_mapping_addresses.append(hostprops['address'])
+        for a in hostprops['aliases']:
+            if not hostname_regex.match(a) and len(a) != 0:
+                raise ConfigError(f'Invalid alias "{a}" in static-host-mapping "{host}"')
+
+    # TODO: add warnings for nameservers_dhcp_interfaces if interface doesn't
+    # exist or doesn't have address dhcp(v6)
 
     return None
 
@@ -128,24 +120,32 @@ def apply(config):
         return None
 
     ## Send the updated data to vyos-hostsd
-
-    # vyos-hostsd uses "tags" to identify data sources
-    tag = "static"
-
     try:
-        client = vyos.hostsd_client.Client()
+        hc = vyos.hostsd_client.Client()
 
-        # Check if disable-dhcp-nameservers is configured, and if yes - delete DNS servers added by DHCP
-        if config['no_dhcp_ns']:
-            client.delete_name_servers('dhcp-.+')
+        hc.set_host_name(config['hostname'], config['domain_name'])
 
-        client.set_host_name(config['hostname'], config['domain_name'], config['domain_search'])
+        hc.delete_search_domains([hostsd_tag])
+        if config['domain_search']:
+            hc.add_search_domains({hostsd_tag: config['domain_search']})
 
-        client.delete_name_servers(tag)
-        client.add_name_servers(tag, config['nameserver'])
+        hc.delete_name_servers([hostsd_tag])
+        if config['nameserver']:
+            hc.add_name_servers({hostsd_tag: config['nameserver']})
 
-        client.delete_hosts(tag)
-        client.add_hosts(tag, config['static_host_mapping'])
+        # add our own tag's (system) nameservers and search to resolv.conf
+        hc.delete_name_server_tags_system(hc.get_name_server_tags_system())
+        hc.add_name_server_tags_system([hostsd_tag])
+
+        # this will add the dhcp client nameservers to resolv.conf
+        for intf in config['nameservers_dhcp_interfaces']:
+            hc.add_name_server_tags_system([f'dhcp-{intf}', f'dhcpv6-{intf}'])
+
+        hc.delete_hosts([hostsd_tag])
+        if config['static_host_mapping']:
+            hc.add_hosts({hostsd_tag: config['static_host_mapping']})
+
+        hc.apply()
     except vyos.hostsd_client.VyOSHostsdError as e:
         raise ConfigError(str(e))
 
@@ -167,25 +167,14 @@ def apply(config):
     if process_named_running('snmpd'):
         call('systemctl restart snmpd.service')
 
-    # restart pdns if it is used - we check for the control dir to not raise
-    # an exception on system startup
-    #
-    #   File "/usr/lib/python3/dist-packages/vyos/configsession.py", line 128, in __run_command
-    #     raise ConfigSessionError(output)
-    # vyos.configsession.ConfigSessionError: [ system domain-name vyos.io ]
-    # Fatal: Unable to generate local temporary file in directory '/run/powerdns': No such file or directory
-    if os.path.isdir('/run/powerdns'):
-        ret = run('/usr/bin/rec_control --socket-dir=/run/powerdns ping')
-        if ret == 0:
-            call('systemctl restart pdns-recursor.service')
-
     return None
 
 
 if __name__ == '__main__':
     try:
-        c = get_config()
-        verify(c)
+        conf = Config()
+        c = get_config(conf)
+        verify(conf, c)
         generate(c)
         apply(c)
     except ConfigError as e:

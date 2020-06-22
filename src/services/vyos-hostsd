@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,7 +14,201 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+#########
+# USAGE #
+#########
+# This daemon listens on its socket for JSON messages.
+# The received message format is:
 #
+# { 'type': '<message type>',
+#   'op': '<message operation>',
+#   'data': <data list or dict>
+# }
+#
+# For supported message types, see below.
+# 'op' can be 'add', delete', 'get', 'set' or 'apply'.
+# Different message types support different sets of operations and different
+# data formats.
+#
+# Changes to configuration made via add or delete don't take effect immediately,
+# they are remembered in a state variable and saved to disk to a state file.
+# State is remembered across daemon restarts but not across system reboots
+# as it's saved in a temporary filesystem (/run).
+#
+# 'apply' is a special operation that applies the configuration from the cached
+# state, rendering all config files and reloading relevant daemons (currently
+# just pdns-recursor via rec-control).
+#
+# note: 'add' operation also acts as 'update' as it uses dict.update, if the
+# 'data' dict item value is a dict. If it is a list, it uses list.append.
+#
+### tags
+# Tags can be arbitrary, but they are generally in this format:
+# 'static', 'system', 'dhcp(v6)-<intf>' or 'dhcp-server-<client ip>'
+# They are used to distinguish entries created by different scripts so they can
+# be removed and recreated without having to track what needs to be changed.
+# They are also used as a way to control which tags settings (e.g. nameservers)
+# get added to various config files via name_server_tags_(recursor|system)
+#
+### name_server_tags_(recursor|system)
+# A list of tags whose nameservers and search domains is used to generate
+# /etc/resolv.conf and pdns-recursor config.
+# system list is used to generate resolv.conf.
+# recursor list is used to generate pdns-rec forward-zones.
+# When generating each file, the order of nameservers is as per the order of
+# name_server_tags (the order in which tags were added), then the order in
+# which the name servers for each tag were added.
+#
+#### Message types
+#
+### name_servers
+#
+# { 'type': 'name_servers',
+#   'op': 'add',
+#   'data': {
+#       '<str tag>': ['<str nameserver>', ...],
+#       ...
+#     }
+# }
+#
+# { 'type': 'name_servers',
+#   'op': 'delete',
+#   'data': ['<str tag>', ...]
+# }
+#
+# { 'type': 'name_servers',
+#   'op': 'get',
+#   'tag_regex': '<str regex>'
+# }
+# response:
+# { 'data': {
+#       '<str tag>': ['<str nameserver>', ...],
+#       ...
+#     }
+# }
+#
+### name_server_tags
+#
+# { 'type': 'name_server_tags',
+#   'op': 'add',
+#   'data':  ['<str tag>', ...]
+# }
+#
+# { 'type': 'name_server_tags',
+#   'op': 'delete',
+#   'data': ['<str tag>', ...]
+# }
+#
+# { 'type': 'name_server_tags',
+#   'op': 'get',
+# }
+# response:
+# { 'data': ['<str tag>', ...] }
+#
+### forward_zones
+## Additional zones added to pdns-recursor forward-zones-file.
+## If recursion-desired is true, '+' will be prepended to the zone line.
+## If addNTA is true, a NTA will be added via lua-config-file.
+#
+# { 'type': 'forward_zones',
+#   'op': 'add',
+#   'data': {
+#       '<str zone>': {
+#           'nslist': ['<str nameserver>', ...],
+#           'addNTA': <bool>,
+#           'recursion-desired': <bool>
+#         }
+#       ...
+#     }
+# }
+#
+# { 'type': 'forward_zones',
+#   'op': 'delete',
+#   'data': ['<str zone>', ...]
+# }
+#
+# { 'type': 'forward_zones',
+#   'op': 'get',
+# }
+# response:
+# { 'data': {
+#       '<str zone>': { ... },
+#       ...
+#     }
+# }
+#
+#
+### search_domains
+#
+# { 'type': 'search_domains',
+#   'op': 'add',
+#   'data': {
+#       '<str tag>': ['<str domain>', ...],
+#       ...
+#     }
+# }
+#
+# { 'type': 'search_domains',
+#   'op': 'delete',
+#   'data': ['<str tag>', ...]
+# }
+#
+# { 'type': 'search_domains',
+#   'op': 'get',
+# }
+# response:
+# { 'data': {
+#       '<str tag>': ['<str domain>', ...],
+#       ...
+#     }
+# }
+#
+### hosts
+#
+# { 'type': 'hosts',
+#   'op': 'add',
+#   'data': {
+#       '<str tag>': {
+#           '<str host>': {
+#               'address': '<str address>',
+#               'aliases': ['<str alias>, ...]
+#             },
+#           ...
+#         },
+#       ...
+#     }
+# }
+#
+# { 'type': 'hosts',
+#   'op': 'delete',
+#   'data': ['<str tag>', ...]
+# }
+#
+# { 'type': 'hosts',
+#   'op': 'get'
+#   'tag_regex': '<str regex>'
+# }
+# response:
+# { 'data': {
+#       '<str tag>': {
+#           '<str host>': {
+#               'address': '<str address>',
+#               'aliases': ['<str alias>, ...]
+#             },
+#           ...
+#         },
+#       ...
+#     }
+# }
+### host_name
+#
+# { 'type': 'host_name',
+#   'op': 'set',
+#   'data': {
+#       'host_name': '<str hostname>'
+#       'domain_name': '<str domainname>'
+#     }
+# }
 
 import os
 import sys
@@ -25,10 +219,10 @@ import traceback
 import re
 import logging
 import zmq
-import collections
-
-import jinja2
-from vyos.util import popen, process_named_running
+from voluptuous import Schema, MultipleInvalid, Required, Any
+from collections import OrderedDict
+from vyos.util import popen, chown, chmod_755, makedir, process_named_running
+from vyos.template import render
 
 debug = True
 
@@ -43,163 +237,271 @@ if debug:
 else:
     logger.setLevel(logging.INFO)
 
-
-DATA_DIR = "/var/lib/vyos/"
-STATE_FILE = os.path.join(DATA_DIR, "hostsd.state")
-
-SOCKET_PATH = "ipc:///run/vyos-hostsd.sock"
+RUN_DIR = "/run/vyos-hostsd"
+STATE_FILE = os.path.join(RUN_DIR, "vyos-hostsd.state")
+SOCKET_PATH = "ipc://" + os.path.join(RUN_DIR, 'vyos-hostsd.sock')
 
 RESOLV_CONF_FILE = '/etc/resolv.conf'
 HOSTS_FILE = '/etc/hosts'
 
-hosts_tmpl_source = """
-### Autogenerated by VyOS ###
-### Do not edit, your changes will get overwritten ###
+PDNS_REC_USER = PDNS_REC_GROUP = 'pdns'
+PDNS_REC_RUN_DIR = '/run/powerdns'
+PDNS_REC_LUA_CONF_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
+PDNS_REC_ZONES_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
 
-# Local host
-127.0.0.1       localhost
-127.0.1.1       {{ host_name }}{% if domain_name %}.{{ domain_name }} {{ host_name }}{% endif %}
-
-# The following lines are desirable for IPv6 capable hosts
-::1             localhost ip6-localhost ip6-loopback
-fe00::0         ip6-localnet
-ff00::0         ip6-mcastprefix
-ff02::1         ip6-allnodes
-ff02::2         ip6-allrouters
-
-# From DHCP and "system static host-mapping"
-{%- if hosts %}
-{% for h in hosts -%}
-{{hosts[h]['address']}}\t{{h}}\t{% for a in hosts[h]['aliases'] %} {{a}} {% endfor %}
-{% endfor %}
-{%- endif %}
-"""
-
-hosts_tmpl = jinja2.Template(hosts_tmpl_source)
-
-resolv_tmpl_source = """
-### Autogenerated by VyOS ###
-### Do not edit, your changes will get overwritten ###
-
-# name server from static configuration
-{% for ns in name_servers -%}
-{%- if name_servers[ns]['tag'] == "static" %}
-nameserver {{ns}}
-{%- endif %}
-{% endfor -%}
-
-{% for ns in name_servers -%}
-{%- if name_servers[ns]['tag'] != "static" %}
-# name server from {{name_servers[ns]['tag']}}
-nameserver {{ns}}
-{%- endif %}
-{% endfor -%}
-
-{%- if domain_name %}
-domain {{ domain_name }}
-{%- endif %}
-
-{%- if search_domains %}
-search {{ search_domains | join(" ") }}
-{%- endif %}
-
-"""
-
-resolv_tmpl = jinja2.Template(resolv_tmpl_source)
-
-# The state data includes a list of name servers
-# and a list of hosts entries.
-#
-# Name servers have the following structure:
-# {"server": {"tag": <str>}}
-#
-# Hosts entries are similar:
-# {"host": {"tag": <str>, "address": <str>, "aliases": <str list>}}
-#
-# The tag is either "static" or "dhcp-<intf>"
-# It's used to distinguish entries created
-# by different scripts so that they can be removed
-# and re-created without having to track what needs
-# to be changed
 STATE = {
-    "name_servers": collections.OrderedDict({}),
+    "name_servers": {},
+    "name_server_tags_recursor": [],
+    "name_server_tags_system": [],
+    "forward_zones": {},
     "hosts": {},
     "host_name": "vyos",
     "domain_name": "",
-    "search_domains": []}
+    "search_domains": {},
+    "changes": 0
+    }
+
+# the base schema that every received message must be in
+base_schema = Schema({
+    Required('op'): Any('add', 'delete', 'set', 'get', 'apply'),
+    'type': Any('name_servers',
+        'name_server_tags_recursor', 'name_server_tags_system',
+        'forward_zones', 'search_domains', 'hosts', 'host_name'),
+    'data': Any(list, dict),
+    'tag': str,
+    'tag_regex': str
+    })
+
+# more specific schemas
+op_schema = Schema({
+    'op': str,
+    }, required=True)
+
+op_type_schema = op_schema.extend({
+    'type': str,
+    }, required=True)
+
+host_name_add_schema = op_type_schema.extend({
+    'data': {
+        'host_name': str,
+        'domain_name': Any(str, None)
+        }
+    }, required=True)
+
+data_dict_list_schema = op_type_schema.extend({
+    'data': {
+        str: [str]
+        }
+    }, required=True)
+
+data_list_schema = op_type_schema.extend({
+    'data': [str]
+    }, required=True)
+
+tag_regex_schema = op_type_schema.extend({
+    'tag_regex': str
+    }, required=True)
+
+forward_zone_add_schema = op_type_schema.extend({
+    'data': {
+        str: {
+            'nslist': [str],
+            'addNTA': bool,
+            'recursion-desired': bool
+            }
+        }
+    }, required=True)
+
+hosts_add_schema = op_type_schema.extend({
+    'data': {
+        str: {
+            str: {
+            'address': str,
+            'aliases': [str]
+                }
+            }
+        }
+    }, required=True)
 
 
-def make_resolv_conf(data):
-    resolv_conf = resolv_tmpl.render(data)
-    logger.info("Writing /etc/resolv.conf")
-    with open(RESOLV_CONF_FILE, 'w') as f:
-        f.write(resolv_conf)
+# op and type to schema mapping
+msg_schema_map = {
+    'name_servers': {
+        'add': data_dict_list_schema,
+        'delete': data_list_schema,
+        'get': tag_regex_schema
+        },
+    'name_server_tags_recursor': {
+        'add': data_list_schema,
+        'delete': data_list_schema,
+        'get': op_type_schema
+        },
+    'name_server_tags_system': {
+        'add': data_list_schema,
+        'delete': data_list_schema,
+        'get': op_type_schema
+        },
+    'forward_zones': {
+        'add': forward_zone_add_schema,
+        'delete': data_list_schema,
+        'get': op_type_schema
+        },
+    'search_domains': {
+        'add': data_dict_list_schema,
+        'delete': data_list_schema,
+        'get': tag_regex_schema
+        },
+    'hosts': {
+        'add': hosts_add_schema,
+        'delete': data_list_schema,
+        'get': tag_regex_schema
+        },
+    'host_name': {
+        'set': host_name_add_schema
+        },
+    None: {
+        'apply': op_schema
+        }
+    }
 
-def make_hosts_file(state):
-    logger.info("Writing /etc/hosts")
-    hosts = hosts_tmpl.render(state)
-    with open(HOSTS_FILE, 'w') as f:
-        f.write(hosts)
+def validate_schema(data):
+    base_schema(data)
 
-def add_hosts(data, entries, tag):
-    hosts = data['hosts']
+    try:
+        schema = msg_schema_map[data['type'] if 'type' in data else None][data['op']]
+        schema(data)
+    except KeyError:
+        raise ValueError((
+            'Invalid or unknown combination: '
+            f'op: "{data["op"]}", type: "{data["type"]}"'))
 
-    if not entries:
+
+def pdns_rec_control(command):
+    # pdns-r process name is NOT equal to the name shown in ps
+    if not process_named_running('pdns-r/worker'):
+        logger.info(f'pdns_recursor not running, not sending "{command}"')
         return
 
-    for e in entries:
-        host = e['host']
-        hosts[host] = {}
-        hosts[host]['tag'] = tag
-        hosts[host]['address'] = e['address']
-        hosts[host]['aliases'] = e['aliases']
+    logger.info(f'Running "rec_control {command}"')
+    (ret,ret_code) = popen((
+            f"rec_control --socket-dir={PDNS_REC_RUN_DIR} {command}"))
+    if ret_code > 0:
+        logger.exception((
+            f'"rec_control {command}" failed with exit status {ret_code}, '
+            f'output: "{ret}"'))
 
-def delete_hosts(data, tag):
-    hosts = data['hosts']
-    keys_for_deletion = []
+def make_resolv_conf(state):
+    logger.info(f"Writing {RESOLV_CONF_FILE}")
+    render(RESOLV_CONF_FILE, 'vyos-hostsd/resolv.conf.tmpl', state,
+            user='root', group='root')
 
-    # You can't delete items from a dict while iterating over it,
-    # so we build a list of doomed items first
-    for h in hosts:
-        if hosts[h]['tag'] == tag:
-            keys_for_deletion.append(h)
+def make_hosts(state):
+    logger.info(f"Writing {HOSTS_FILE}")
+    render(HOSTS_FILE, 'vyos-hostsd/hosts.tmpl', state,
+            user='root', group='root')
 
-    for k in keys_for_deletion:
-        del hosts[k]
+def make_pdns_rec_conf(state):
+    logger.info(f"Writing {PDNS_REC_LUA_CONF_FILE}")
 
-def add_name_servers(data, entries, tag):
-    name_servers = data['name_servers']
+    # on boot, /run/powerdns does not exist, so create it
+    makedir(PDNS_REC_RUN_DIR, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
+    chmod_755(PDNS_REC_RUN_DIR)
 
-    if not entries:
-        return
+    render(PDNS_REC_LUA_CONF_FILE,
+            'dns-forwarding/recursor.vyos-hostsd.conf.lua.tmpl',
+            state, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
 
-    for e in entries:
-        name_servers[e] = {}
-        name_servers[e]['tag'] = tag
-
-def delete_name_servers(data, tag):
-    name_servers = data['name_servers']
-    regex_filter = re.compile(tag)
-    for ns in list(name_servers.keys()):
-        if regex_filter.match(name_servers[ns]['tag']):
-            del name_servers[ns]
+    logger.info(f"Writing {PDNS_REC_ZONES_FILE}")
+    render(PDNS_REC_ZONES_FILE,
+            'dns-forwarding/recursor.forward-zones.conf.tmpl',
+            state, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
 
 def set_host_name(state, data):
     if data['host_name']:
         state['host_name'] = data['host_name']
     if 'domain_name' in data:
         state['domain_name'] = data['domain_name']
-    if 'search_domains' in data:
-        state['search_domains'] = data['search_domains']
 
-def get_name_servers(state, tag):
-    ns = []
-    data = state['name_servers']
-    regex_filter = re.compile(tag)
-    for n in data:
-        if regex_filter.match(data[n]['tag']):
-            ns.append(n)
-    return ns
+def add_items_to_dict(_dict, items):
+    """
+    Dedupes and preserves sort order.
+    """
+    assert isinstance(_dict, dict)
+    assert isinstance(items, dict)
+
+    if not items:
+        return
+
+    _dict.update(items)
+
+def add_items_to_dict_as_keys(_dict, items):
+    """
+    Added item values are converted to OrderedDict with the value as keys
+    and null values. This is to emulate a list but with inherent deduplication.
+    Dedupes and preserves sort order.
+    """
+    assert isinstance(_dict, dict)
+    assert isinstance(items, dict)
+
+    if not items:
+        return
+
+    for item, item_val in items.items():
+        if item not in _dict:
+            _dict[item] = OrderedDict({})
+        _dict[item].update(OrderedDict.fromkeys(item_val))
+
+def add_items_to_list(_list, items):
+    """
+    Dedupes and preserves sort order.
+    """
+    assert isinstance(_list, list)
+    assert isinstance(items, list)
+
+    if not items:
+        return
+
+    for item in items:
+        if item not in _list:
+            _list.append(item)
+
+def delete_items_from_dict(_dict, items):
+    """
+    items is a list of keys to delete.
+    Doesn't error if the key doesn't exist.
+    """
+    assert isinstance(_dict, dict)
+    assert isinstance(items, list)
+
+    for item in items:
+        if item in _dict:
+            del _dict[item]
+
+def delete_items_from_list(_list, items):
+    """
+    items is a list of items to remove.
+    Doesn't error if the key doesn't exist.
+    """
+    assert isinstance(_list, list)
+    assert isinstance(items, list)
+
+    for item in items:
+        if item in _list:
+            _list.remove(item)
+
+def get_items_from_dict_regex(_dict, item_regex_string):
+    """
+    Returns the items whose keys match item_regex_string.
+    """
+    assert isinstance(_dict, dict)
+    assert isinstance(item_regex_string, str)
+
+    tmp = {}
+    regex = re.compile(item_regex_string)
+    for item in _dict:
+        if regex.match(item):
+            tmp[item] = _dict[item]
+    return tmp
 
 def get_option(msg, key):
     if key in msg:
@@ -207,85 +509,77 @@ def get_option(msg, key):
     else:
         raise ValueError("Missing required option \"{0}\"".format(key))
 
-def handle_message(msg_json):
-    msg = json.loads(msg_json)
-
+def handle_message(msg):
+    result = None
     op = get_option(msg, 'op')
-    _type = get_option(msg, 'type')
 
-    changes = 0
+    if op in ['add', 'delete', 'set']:
+        STATE['changes'] += 1
 
     if op == 'delete':
-        tag = get_option(msg, 'tag')
-
-        if _type == 'name_servers':
-            delete_name_servers(STATE, tag)
-            changes += 1
-        elif _type == 'hosts':
-            delete_hosts(STATE, tag)
-            changes += 1
+        _type = get_option(msg, 'type')
+        data = get_option(msg, 'data')
+        if _type in ['name_servers', 'forward_zones', 'search_domains', 'hosts']:
+            delete_items_from_dict(STATE[_type], data)
+        elif _type in ['name_server_tags_recursor', 'name_server_tags_system']:
+            delete_items_from_list(STATE[_type], data)
         else:
-            raise ValueError("Unknown message type {0}".format(_type))
+            raise ValueError(f'Operation "{op}" unknown data type "{_type}"')
     elif op == 'add':
-        tag = get_option(msg, 'tag')
-        entries = get_option(msg, 'data')
-        if _type == 'name_servers':
-            add_name_servers(STATE, entries, tag)
-            changes += 1
-        elif _type == 'hosts':
-            add_hosts(STATE, entries, tag)
-            changes += 1
+        _type = get_option(msg, 'type')
+        data = get_option(msg, 'data')
+        if _type in ['name_servers', 'search_domains']:
+            add_items_to_dict_as_keys(STATE[_type], data)
+        elif _type in ['forward_zones', 'hosts']:
+            add_items_to_dict(STATE[_type], data)
+            # maybe we need to rec_control clear-nta each domain that was removed here?
+        elif _type in ['name_server_tags_recursor', 'name_server_tags_system']:
+            add_items_to_list(STATE[_type], data)
         else:
-            raise ValueError("Unknown message type {0}".format(_type))
+            raise ValueError(f'Operation "{op}" unknown data type "{_type}"')
     elif op == 'set':
-        # Host name/domain name/search domain are set without a tag,
-        # there can be only one anyway
+        _type = get_option(msg, 'type')
         data = get_option(msg, 'data')
         if _type == 'host_name':
             set_host_name(STATE, data)
-            changes += 1
         else:
-            raise ValueError("Unknown message type {0}".format(_type))
+            raise ValueError(f'Operation "{op}" unknown data type "{_type}"')
     elif op == 'get':
-        tag = get_option(msg, 'tag')
-        if _type == 'name_servers':
-            result = get_name_servers(STATE, tag)
+        _type = get_option(msg, 'type')
+        if _type in ['name_servers', 'search_domains', 'hosts']:
+            tag_regex = get_option(msg, 'tag_regex')
+            result = get_items_from_dict_regex(STATE[_type], tag_regex)
+        elif _type in ['name_server_tags_recursor', 'name_server_tags_system', 'forward_zones']:
+            result = STATE[_type]
         else:
-            raise ValueError("Unimplemented")
-        return result
+            raise ValueError(f'Operation "{op}" unknown data type "{_type}"')
+    elif op == 'apply':
+        logger.info(f"Applying {STATE['changes']} changes")
+        make_resolv_conf(STATE)
+        make_hosts(STATE)
+        make_pdns_rec_conf(STATE)
+        pdns_rec_control('reload-lua-config')
+        pdns_rec_control('reload-zones')
+        logger.info("Success")
+        result = {'message': f'Applied {STATE["changes"]} changes'}
+        STATE['changes'] = 0
+
     else:
-        raise ValueError("Unknown operation {0}".format(op))
+        raise ValueError(f"Unknown operation {op}")
 
-    make_resolv_conf(STATE)
-    make_hosts_file(STATE)
-
-    logger.info("Saving state to {0}".format(STATE_FILE))
+    logger.debug(f"Saving state to {STATE_FILE}")
     with open(STATE_FILE, 'w') as f:
         json.dump(STATE, f)
 
-    if changes > 0:
-        if process_named_running("pdns_recursor"):
-            (ret,return_code) = popen("sudo rec_control --socket-dir=/run/powerdns reload-zones")
-            if return_code > 0:
-                logger.exception("PowerDNS rec_control failed to reload")
-
-def exit_handler(sig, frame):
-    """ Clean up the state when shutdown correctly """
-    logger.info("Cleaning up state")
-    os.unlink(STATE_FILE)
-    sys.exit(0)
-
+    return result
 
 if __name__ == '__main__':
-    signal.signal(signal.SIGTERM, exit_handler)
-
     # Create a directory for state checkpoints
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(RUN_DIR, exist_ok=True)
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, 'r') as f:
             try:
-                data = json.load(f)
-                STATE = data
+                STATE = json.load(f)
             except:
                 logger.exception(traceback.format_exc())
                 logger.exception("Failed to load the state file, using default")
@@ -294,28 +588,31 @@ if __name__ == '__main__':
     socket = context.socket(zmq.REP)
     
     # Set the right permissions on the socket, then change it back
-    o_mask = os.umask(0)
+    o_mask = os.umask(0o007)
     socket.bind(SOCKET_PATH)
     os.umask(o_mask)
 
     while True:
         #  Wait for next request from client
-        message = socket.recv().decode()
-        logger.info("Received a configuration change request")
-        logger.debug("Request data: {0}".format(message))
-
-        resp = {}
+        msg_json = socket.recv().decode()
+        logger.debug(f"Request data: {msg_json}")
 
         try:
-            result = handle_message(message)
-            resp['data'] = result
+            msg = json.loads(msg_json)
+            validate_schema(msg)
+
+            resp = {}
+            resp['data'] = handle_message(msg)
         except ValueError as e:
             resp['error'] = str(e)
+        except MultipleInvalid as e:
+            # raised by schema
+            resp['error'] = f'Invalid message: {str(e)}'
+            logger.exception(resp['error'])
         except:
             logger.exception(traceback.format_exc())
             resp['error'] = "Internal error"
 
-        logger.debug("Sent response: {0}".format(resp))
-
         #  Send reply back to client
         socket.send(json.dumps(resp).encode())
+        logger.debug(f"Sent response: {resp}")

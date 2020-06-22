@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# migrate disable-dhcp-nameservers (boolean) to name-servers-dhcp <interface>
+# if disable-dhcp-nameservers is set, just remove it
+# else retrieve all interface names that have configured dhcp(v6) address and
+# add them to the new name-servers-dhcp node
+
+from sys import argv, exit
+from vyos.ifconfig import Interface
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+base = ['system']
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+if config.exists(base + ['disable-dhcp-nameservers']):
+    config.delete(base + ['disable-dhcp-nameservers'])
+else:
+    dhcp_interfaces = []
+
+    # go through all interfaces searching for 'address dhcp(v6)?'
+    for sect in Interface.sections():
+        sect_base = ['interfaces', sect]
+
+        if not config.exists(sect_base):
+            continue
+
+        for intf in config.list_nodes(sect_base):
+            intf_base = sect_base + [intf]
+
+            # try without vlans
+            if config.exists(intf_base + ['address']):
+                for addr in config.return_values(intf_base + ['address']):
+                    if addr in ['dhcp', 'dhcpv6']:
+                        dhcp_interfaces.append(intf)
+
+            # try vif
+            if config.exists(intf_base + ['vif']):
+                for vif in config.list_nodes(intf_base + ['vif']):
+                    vif_base = intf_base + ['vif', vif]
+                    if config.exists(vif_base + ['address']):
+                        for addr in config.return_values(vif_base + ['address']):
+                            if addr in ['dhcp', 'dhcpv6']:
+                                dhcp_interfaces.append(f'{intf}.{vif}')
+
+            # try vif-s
+            if config.exists(intf_base + ['vif-s']):
+                for vif_s in config.list_nodes(intf_base + ['vif-s']):
+                    vif_s_base = intf_base + ['vif-s', vif_s]
+                    if config.exists(vif_s_base + ['address']):
+                        for addr in config.return_values(vif_s_base + ['address']):
+                            if addr in ['dhcp', 'dhcpv6']:
+                                dhcp_interfaces.append(f'{intf}.{vif_s}')
+
+                # try vif-c
+                if config.exists(intf_base + ['vif-c', vif_c]):
+                    for vif_c in config.list_nodes(vif_s_base + ['vif-c', vif_c]):
+                        vif_c_base = vif_s_base + ['vif-c', vif_c]
+                        if config.exists(vif_c_base + ['address']):
+                            for addr in config.return_values(vif_c_base + ['address']):
+                                if addr in ['dhcp', 'dhcpv6']:
+                                    dhcp_interfaces.append(f'{intf}.{vif_s}.{vif_c}')
+
+    # set new config nodes
+    for intf in dhcp_interfaces:
+        config.set(base + ['name-servers-dhcp'], value=intf, replace=False)
+
+    # delete old node
+    config.delete(base + ['disable-dhcp-nameservers'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
+
+exit(0)

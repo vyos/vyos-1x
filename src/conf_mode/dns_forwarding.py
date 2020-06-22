@@ -15,48 +15,44 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import argparse
 
 from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
 from vyos.hostsd_client import Client as hostsd_client
-from vyos.util import wait_for_commit_lock
 from vyos import ConfigError
-from vyos.util import call
+from vyos.util import call, chown
 from vyos.template import render
 
 from vyos import airbag
 airbag.enable()
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--dhclient", action="store_true",
-                    help="Started from dhclient-script")
-
-config_file = r'/run/powerdns/recursor.conf'
+pdns_rec_user = pdns_rec_group = 'pdns'
+pdns_rec_run_dir = '/run/powerdns'
+pdns_rec_lua_conf_file = f'{pdns_rec_run_dir}/recursor.conf.lua'
+pdns_rec_hostsd_lua_conf_file = f'{pdns_rec_run_dir}/recursor.vyos-hostsd.conf.lua'
+pdns_rec_hostsd_zones_file = f'{pdns_rec_run_dir}/recursor.forward-zones.conf'
+pdns_rec_config_file = f'{pdns_rec_run_dir}/recursor.conf'
 
 default_config_data = {
     'allow_from': [],
     'cache_size': 10000,
     'export_hosts_file': 'yes',
-    'listen_on': [],
+    'listen_address': [],
     'name_servers': [],
     'negative_ttl': 3600,
-    'domains': [],
-    'dnssec': 'process-no-validate'
+    'system': False,
+    'domains': {},
+    'dnssec': 'process-no-validate',
+    'dhcp_interfaces': []
 }
 
+hostsd_tag = 'static'
 
-def get_config(arguments):
+def get_config(conf):
     dns = deepcopy(default_config_data)
-    conf = Config()
     base = ['service', 'dns', 'forwarding']
-
-    if arguments.dhclient:
-        conf.exists = conf.exists_effective
-        conf.return_value = conf.return_effective_value
-        conf.return_values = conf.return_effective_values
 
     if not conf.exists(base):
         return None
@@ -75,53 +71,35 @@ def get_config(arguments):
         dns['negative_ttl'] = negative_ttl
 
     if conf.exists(['domain']):
-        for node in conf.list_nodes(['domain']):
-            servers = conf.return_values(['domain', node, 'server'])
-            domain = {
-                "name": node,
-                "servers": bracketize_ipv6_addrs(servers)
+        for domain in conf.list_nodes(['domain']):
+            conf.set_level(base + ['domain', domain])
+            entry = {
+                'nslist': bracketize_ipv6_addrs(conf.return_values(['server'])),
+                'addNTA': conf.exists(['addnta']),
+                'recursion-desired': conf.exists(['recursion-desired'])
             }
-            dns['domains'].append(domain)
+            dns['domains'][domain] = entry
+
+        conf.set_level(base)
 
     if conf.exists(['ignore-hosts-file']):
         dns['export_hosts_file'] = "no"
 
     if conf.exists(['name-server']):
-        name_servers = conf.return_values(['name-server'])
-        dns['name_servers'] = dns['name_servers'] + name_servers
+        dns['name_servers'] = bracketize_ipv6_addrs(
+                conf.return_values(['name-server']))
 
     if conf.exists(['system']):
-        conf.set_level(['system'])
-        system_name_servers = []
-        system_name_servers = conf.return_values(['name-server'])
-        if not system_name_servers:
-            print("DNS forwarding warning: No name-servers set under 'system name-server'\n")
-        else:
-            dns['name_servers'] = dns['name_servers'] + system_name_servers
-        conf.set_level(base)
-
-    dns['name_servers'] = bracketize_ipv6_addrs(dns['name_servers'])
+        dns['system'] = True
 
     if conf.exists(['listen-address']):
-        dns['listen_on'] = conf.return_values(['listen-address'])
+        dns['listen_address'] = conf.return_values(['listen-address'])
 
     if conf.exists(['dnssec']):
         dns['dnssec'] = conf.return_value(['dnssec'])
 
-    # Add name servers received from DHCP
     if conf.exists(['dhcp']):
-        interfaces = []
-        interfaces = conf.return_values(['dhcp'])
-        hc = hostsd_client()
-
-        for interface in interfaces:
-            dhcp_resolvers = hc.get_name_servers(f'dhcp-{interface}')
-            dhcpv6_resolvers = hc.get_name_servers(f'dhcpv6-{interface}')
-
-            if dhcp_resolvers:
-                dns['name_servers'] = dns['name_servers'] + dhcp_resolvers
-            if dhcpv6_resolvers:
-                dns['name_servers'] = dns['name_servers'] + dhcpv6_resolvers
+        dns['dhcp_interfaces'] = conf.return_values(['dhcp'])
 
     return dns
 
@@ -129,14 +107,14 @@ def bracketize_ipv6_addrs(addrs):
     """Wraps each IPv6 addr in addrs in [], leaving IPv4 addrs untouched."""
     return ['[{0}]'.format(a) if a.count(':') > 1 else a for a in addrs]
 
-def verify(dns):
+def verify(conf, dns):
     # bail out early - looks like removal from running config
     if dns is None:
         return None
 
-    if not dns['listen_on']:
+    if not dns['listen_address']:
         raise ConfigError(
-            "Error: DNS forwarding requires either a listen-address (preferred) or a listen-on option")
+            "Error: DNS forwarding requires a listen-address")
 
     if not dns['allow_from']:
         raise ConfigError(
@@ -144,9 +122,22 @@ def verify(dns):
 
     if dns['domains']:
         for domain in dns['domains']:
-            if not domain['servers']:
-                raise ConfigError(
-                    'Error: No server configured for domain {0}'.format(domain['name']))
+            if not dns['domains'][domain]['nslist']:
+                raise ConfigError((
+                    f'Error: No server configured for domain {domain}'))
+
+    no_system_nameservers = False
+    if dns['system'] and not (
+            conf.exists(['system', 'name-server']) or
+            conf.exists(['system', 'name-servers-dhcp']) ):
+        no_system_nameservers = True
+        print(("DNS forwarding warning: No 'system name-server' or "
+                "'system name-servers-dhcp' set\n"))
+
+    if (no_system_nameservers or not dns['system']) and not (
+            dns['name_servers'] or dns['dhcp_interfaces']):
+        print(("DNS forwarding warning: No 'dhcp', 'name-server' or 'system' "
+            "nameservers set. Forwarding will operate as a recursor.\n"))
 
     return None
 
@@ -155,29 +146,69 @@ def generate(dns):
     if dns is None:
         return None
 
-    render(config_file, 'dns-forwarding/recursor.conf.tmpl', dns, trim_blocks=True, user='pdns', group='pdns')
+    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.tmpl',
+            dns, user=pdns_rec_user, group=pdns_rec_group)
+
+    render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.tmpl',
+            dns, user=pdns_rec_user, group=pdns_rec_group)
+
+    # if vyos-hostsd didn't create its files yet, create them (empty)
+    for f in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:
+        with open(f, 'a'):
+            pass
+        chown(f, user=pdns_rec_user, group=pdns_rec_group)
+
     return None
 
 def apply(dns):
     if dns is None:
         # DNS forwarding is removed in the commit
         call("systemctl stop pdns-recursor.service")
-        if os.path.isfile(config_file):
-            os.unlink(config_file)
+        if os.path.isfile(pdns_rec_config_file):
+            os.unlink(pdns_rec_config_file)
     else:
+        ### first apply vyos-hostsd config
+        hc = hostsd_client()
+
+        # add static nameservers to hostsd so they can be joined with other
+        # sources
+        hc.delete_name_servers([hostsd_tag])
+        if dns['name_servers']:
+            hc.add_name_servers({hostsd_tag: dns['name_servers']})
+
+        # delete all nameserver tags
+        hc.delete_name_server_tags_recursor(hc.get_name_server_tags_recursor())
+
+        ## add nameserver tags - the order determines the nameserver order!
+        # our own tag (static)
+        hc.add_name_server_tags_recursor([hostsd_tag])
+
+        if dns['system']:
+            hc.add_name_server_tags_recursor(['system'])
+        else:
+            hc.delete_name_server_tags_recursor(['system'])
+
+        # add dhcp nameserver tags for configured interfaces
+        for intf in dns['dhcp_interfaces']:
+            hc.add_name_server_tags_recursor(['dhcp-' + intf, 'dhcpv6-' + intf ])
+
+        # hostsd will generate the forward-zones file
+        # the list and keys() are required as get returns a dict, not list
+        hc.delete_forward_zones(list(hc.get_forward_zones().keys()))
+        if dns['domains']:
+            hc.add_forward_zones(dns['domains'])
+
+        # call hostsd to generate forward-zones and its lua-config-file
+        hc.apply()
+
+        ### finally (re)start pdns-recursor
         call("systemctl restart pdns-recursor.service")
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-
-    if args.dhclient:
-        # There's a big chance it was triggered by a commit still in progress
-        # so we need to wait until the new values are in the running config
-        wait_for_commit_lock()
-
     try:
-        c = get_config(args)
-        verify(c)
+        conf = Config()
+        c = get_config(conf)
+        verify(conf, c)
         generate(c)
         apply(c)
     except ConfigError as e:

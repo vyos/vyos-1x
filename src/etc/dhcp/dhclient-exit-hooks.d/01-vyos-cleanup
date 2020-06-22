@@ -1,14 +1,24 @@
+##
+## VyOS cleanup
+##
 # NOTE: here we use 'ip' wrapper, therefore a route will be actually deleted via /usr/sbin/ip or vtysh, according to the system state
+hostsd_client="/usr/bin/vyos-hostsd-client"
+hostsd_changes=
 
 if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
-    # delete dynamic nameservers from a configuration if lease was deleted
+    # delete search domains and nameservers via vyos-hostsd
+    logmsg info "Deleting search domains with tag \"dhcp-$interface\" via vyos-hostsd-client"
+    $hostsd_client --delete-search-domains --tag "dhcp-$interface"
     logmsg info "Deleting nameservers with tag \"dhcp-${interface}\" via vyos-hostsd-client"
-    vyos-hostsd-client --delete-name-servers --tag dhcp-${interface}
+    $hostsd_client --delete-name-servers --tag "dhcp-${interface}"
+    hostsd_changes=y
+
     # try to delete default ip route 
     for router in $old_routers; do
         logmsg info "Deleting default route: via $router dev ${interface}"
         ip -4 route del default via $router dev ${interface}
     done
+
     # delete rfc3442 routes
     if [ -n "$old_rfc3442_classless_static_routes" ]; then
         set -- $old_rfc3442_classless_static_routes
@@ -72,7 +82,17 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
 fi
 
 if [[ $reason =~ (EXPIRE6|RELEASE6|STOP6) ]]; then
-    # delete dynamic nameservers from a configuration if lease was deleted
+    # delete search domains and nameservers via vyos-hostsd
+    logmsg info "Deleting search domains with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
+    $hostsd_client --delete-search-domains --tag "dhcpv6-$interface"
     logmsg info "Deleting nameservers with tag \"dhcpv6-${interface}\" via vyos-hostsd-client"
-    vyos-hostsd-client --delete-name-servers --tag dhcpv6-${interface}
+    $hostsd_client --delete-name-servers --tag "dhcpv6-${interface}"
+    hostsd_changes=y
+fi
+
+if [ $hostsd_changes ]; then
+    logmsg info "Applying changes via vyos-hostsd-client"
+    $hostsd_client --apply
+else
+    logmsg info "No changes to apply via vyos-hostsd-client"
 fi

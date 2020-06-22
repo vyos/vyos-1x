@@ -1,14 +1,10 @@
 import json
-
 import zmq
 
-
-SOCKET_PATH = "ipc:///run/vyos-hostsd.sock"
-
+SOCKET_PATH = "ipc:///run/vyos-hostsd/vyos-hostsd.sock"
 
 class VyOSHostsdError(Exception):
     pass
-
 
 class Client(object):
     def __init__(self):
@@ -35,35 +31,89 @@ class Client(object):
         except zmq.error.Again:
             raise VyOSHostsdError("Could not connect to vyos-hostsd")
 
-    def set_host_name(self, host_name, domain_name, search_domains):
+    def add_name_servers(self, data):
+        msg = {'type': 'name_servers', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_name_servers(self, data):
+        msg = {'type': 'name_servers', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_name_servers(self, tag_regex):
+        msg = {'type': 'name_servers', 'op': 'get', 'tag_regex': tag_regex}
+        return self._communicate(msg)
+
+    def add_name_server_tags_recursor(self, data):
+        msg = {'type': 'name_server_tags_recursor', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_name_server_tags_recursor(self, data):
+        msg = {'type': 'name_server_tags_recursor', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_name_server_tags_recursor(self):
+        msg = {'type': 'name_server_tags_recursor', 'op': 'get'}
+        return self._communicate(msg)
+
+    def add_name_server_tags_system(self, data):
+        msg = {'type': 'name_server_tags_system', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_name_server_tags_system(self, data):
+        msg = {'type': 'name_server_tags_system', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_name_server_tags_system(self):
+        msg = {'type': 'name_server_tags_system', 'op': 'get'}
+        return self._communicate(msg)
+
+    def add_forward_zones(self, data):
+        msg = {'type': 'forward_zones', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_forward_zones(self, data):
+        msg = {'type': 'forward_zones', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_forward_zones(self):
+        msg = {'type': 'forward_zones', 'op': 'get'}
+        return self._communicate(msg)
+
+    def add_search_domains(self, data):
+        msg = {'type': 'search_domains', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_search_domains(self, data):
+        msg = {'type': 'search_domains', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_search_domains(self, tag_regex):
+        msg = {'type': 'search_domains', 'op': 'get', 'tag_regex': tag_regex}
+        return self._communicate(msg)
+
+    def add_hosts(self, data):
+        msg = {'type': 'hosts', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_hosts(self, data):
+        msg = {'type': 'hosts', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_hosts(self, tag_regex):
+        msg = {'type': 'hosts', 'op': 'get', 'tag_regex': tag_regex}
+        return self._communicate(msg)
+
+    def set_host_name(self, host_name, domain_name):
         msg = {
             'type': 'host_name',
             'op': 'set',
             'data': {
                 'host_name': host_name,
                 'domain_name': domain_name,
-                'search_domains': search_domains
             }
         }
         self._communicate(msg)
 
-    def add_hosts(self, tag, hosts):
-        msg = {'type': 'hosts', 'op': 'add',  'tag': tag, 'data': hosts}
-        self._communicate(msg)
-
-    def delete_hosts(self, tag):
-        msg = {'type': 'hosts', 'op': 'delete', 'tag': tag}
-        self._communicate(msg)
-
-    def add_name_servers(self, tag, servers):
-        msg = {'type': 'name_servers', 'op': 'add', 'tag': tag, 'data': servers}
-        self._communicate(msg)
-
-    def delete_name_servers(self, tag):
-        msg = {'type': 'name_servers', 'op': 'delete', 'tag': tag}
-        self._communicate(msg)
-
-    def get_name_servers(self, tag):
-        msg = {'type': 'name_servers', 'op': 'get', 'tag': tag}
+    def apply(self):
+        msg = {'op': 'apply'}
         return self._communicate(msg)
-

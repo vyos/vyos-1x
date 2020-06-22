@@ -10,6 +10,9 @@ DefaultDependencies=no
 After=systemd-remount-fs.service
 
 [Service]
+WorkingDirectory=/run/vyos-hostsd
+RuntimeDirectory=vyos-hostsd
+RuntimeDirectoryPreserve=yes
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
 Type=idle
 KillMode=process
@@ -21,7 +24,7 @@ Restart=on-failure
 
 # Does't work in Jessie but leave it here
 User=root
-Group=vyattacfg
+Group=hostsd
 
 [Install]
 
