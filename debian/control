@@ -16,7 +16,6 @@ Package: vyos-smoketest
 Architecture: all
 Depends: python3,
   ${python3:Depends},
-  ${shlibs:Depends},
   ${misc:Depends},
   vyos-1x
 Description: VyOS build sanity checking toolkit
