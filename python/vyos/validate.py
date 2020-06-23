@@ -13,9 +13,22 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import socket
 import netifaces
 import ipaddress
+
+from vyos.util import cmd
+
+# Important note when you are adding new validation functions:
+#
+# The Control class will analyse the signature of the function in this file
+# and will build the parameters to be passed to it.
+#
+# The parameter names "ifname" and "self" will get the Interface name and class
+# parameters with default will be left unset
+# all other paramters will receive the value to check
+
 
 def is_ip(addr):
     """
@@ -208,10 +221,21 @@ def assert_positive(n, smaller=0):
         raise ValueError(f'{n} is smaller than {smaller}')
 
 
-def assert_mtu(mtu, min=68, max=9000):
+def assert_mtu(mtu, ifname):
     assert_number(mtu)
-    if int(mtu) < min or int(mtu) > max:
-        raise ValueError(f'Invalid MTU size: "{mtu}"')
+
+    out = cmd(f'ip -j -d link show dev {ifname}')
+    # [{"ifindex":2,"ifname":"eth0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"mtu":1500,"qdisc":"pfifo_fast","operstate":"UP","linkmode":"DEFAULT","group":"default","txqlen":1000,"link_type":"ether","address":"08:00:27:d9:5b:04","broadcast":"ff:ff:ff:ff:ff:ff","promiscuity":0,"min_mtu":46,"max_mtu":16110,"inet6_addr_gen_mode":"none","num_tx_queues":1,"num_rx_queues":1,"gso_max_size":65536,"gso_max_segs":65535}]
+    parsed = json.loads(out)[0]
+    min_mtu = int(parsed.get('min_mtu', '0'))
+    # cur_mtu = parsed.get('mtu',0),
+    max_mtu = int(parsed.get('max_mtu', '0'))
+    cur_mtu = int(mtu)
+
+    if (min_mtu and cur_mtu < min_mtu) or cur_mtu < 68:
+        raise ValueError(f'MTU is too small for interface "{ifname}": {mtu} < {min_mtu}')
+    if (max_mtu and cur_mtu > max_mtu) or cur_mtu > 65536:
+        raise ValueError(f'MTU is too small for interface "{ifname}": {mtu} > {max_mtu}')
 
 
 def assert_mac(m):
@@ -240,6 +264,7 @@ def assert_mac(m):
 
     if octets[:5] == (0, 0, 94, 0, 1):
         raise ValueError(f'{m} is a VRRP MAC address')
+
 
 def is_member(conf, interface, intftype=None):
     """

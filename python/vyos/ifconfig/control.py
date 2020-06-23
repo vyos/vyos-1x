@@ -15,6 +15,8 @@
 
 
 import os
+from inspect import signature
+from inspect import _empty
 
 from vyos import debug
 from vyos.util import popen
@@ -25,6 +27,7 @@ from vyos.ifconfig.section import Section
 class Control(Section):
     _command_get = {}
     _command_set = {}
+    _signature = {}
 
     def __init__(self, **kargs):
         # some commands (such as operation comands - show interfaces, etc.) 
@@ -54,6 +57,30 @@ class Control(Section):
         cmd = self._command_get[name]['shellcmd'].format(**config)
         return self._command_get[name].get('format', lambda _: _)(self._cmd(cmd))
 
+    def _values(self, name, validate, value):
+        """
+        looks at the validation function "validate"
+        for the interface sysfs or command and
+        returns a dict with the right options to call it
+        """
+        if name not in self._signature:
+            self._signature[name] = signature(validate)
+
+        values = {}
+
+        for k in self._signature[name].parameters:
+            default = self._signature[name].parameters[k].default
+            if default is not _empty:
+                continue
+            if k == 'self':
+                values[k] = self
+            elif k == 'ifname':
+                values[k] = self.ifname
+            else:
+                values[k] = value
+
+        return values
+
     def _set_command(self, config, name, value):
         """
         Using the defined names, set data write to sysfs.
@@ -64,7 +91,7 @@ class Control(Section):
         validate = self._command_set[name].get('validate', None)
         if validate:
             try:
-                validate(value)
+                validate(**self._values(name, validate, value))
             except Exception as e:
                 raise e.__class__(f'Could not set {name}. {e}')
 
@@ -124,7 +151,10 @@ class Control(Section):
 
         validate = self._sysfs_set[name].get('validate', None)
         if validate:
-            validate(value)
+            try:
+                validate(**self._values(name, validate, value))
+            except Exception as e:
+                raise e.__class__(f'Could not set {name}. {e}')
 
         config = {**config, **{'value': value}}
 
