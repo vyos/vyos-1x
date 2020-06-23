@@ -46,6 +46,9 @@ class TestServiceSSH(unittest.TestCase):
         self.session.set(base_path + ['port', '2222'])
         self.session.set(base_path + ['disable-host-validation'])
         self.session.set(base_path + ['disable-password-authentication'])
+        self.session.set(base_path + ['loglevel', 'VERBOSE'])
+        self.session.set(base_path + ['listen-address', '127.0.0.1'])
+        self.session.set(base_path + ['client-keepalive-interval', '100'])
 
         # commit changes
         self.session.commit()
@@ -61,6 +64,18 @@ class TestServiceSSH(unittest.TestCase):
         # Check PasswordAuthentication
         pwd = get_config_value('PasswordAuthentication')
         self.assertTrue("no" in pwd)
+
+        # Check loglevel
+        loglevel = get_config_value('LogLevel')
+        self.assertTrue("VERBOSE" in loglevel)
+
+        # Check listen address
+        address = get_config_value('ListenAddress')
+        self.assertTrue("127.0.0.1" in address)
+
+        # Check keepalive
+        keepalive = get_config_value('ClientAliveInterval')
+        self.assertTrue("100" in keepalive)
 
         # Check for running process
         self.assertTrue("sshd" in (p.name() for p in process_iter()))
