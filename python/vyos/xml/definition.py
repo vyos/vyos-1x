@@ -251,20 +251,21 @@ class XML(dict):
             d = d[k]
         r = {}
 
-        def _flatten(inside, d, r):
-            prefix = '_'.join(_.replace('-','_') for _ in inside) + '_' if inside else ''
+        def _flatten(inside, index, d, r):
+            local = inside[index:]
+            prefix = '_'.join(_.replace('-','_') for _ in local) + '_' if local else ''
             for k in d:
                 under = prefix + k.replace('-','_')
                 level = inside + [k]
                 if isinstance(d[k],dict):
-                    _flatten(level, d[k], r)
+                    _flatten(level, index, d[k], r)
                     continue
                 if self.is_multi(level):
                     r[under] = [_.strip() for _ in d[k].split(',')]
                     continue
                 r[under] = d[k]
 
-        _flatten([], d, r)
+        _flatten(lpath, len(lpath), d, r)
         return r
 
     # from functools import lru_cache
