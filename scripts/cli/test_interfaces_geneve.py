@@ -25,7 +25,6 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         super().setUp()
 
-        self._test_mtu = True
         self._base_path = ['interfaces', 'geneve']
         self._options = {
             'gnv0': ['vni 10', 'remote 127.0.1.1'],
