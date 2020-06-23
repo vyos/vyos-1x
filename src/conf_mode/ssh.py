@@ -20,89 +20,28 @@ from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
-
+from vyos.xml import defaults
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/ssh/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
-default_config_data = {
-    'port' : ['22'],
-    'log_level': 'INFO',
-    'password_authentication': 'yes',
-    'host_validation': 'yes',
-    'vrf': ''
-}
-
 def get_config():
-    ssh = default_config_data
     conf = Config()
     base = ['service', 'ssh']
     if not conf.exists(base):
         return None
-    else:
-        conf.set_level(base)
 
-    tmp = ['access-control', 'allow', 'user']
-    if conf.exists(tmp):
-        ssh['allow_users'] = conf.return_values(tmp)
-
-    tmp = ['access-control', 'allow', 'group']
-    if conf.exists(tmp):
-        ssh['allow_groups'] = conf.return_values(tmp)
-
-    tmp = ['access-control', 'deny' 'user']
-    if conf.exists(tmp):
-        ssh['deny_users'] = conf.return_values(tmp)
-
-    tmp = ['access-control', 'deny', 'group']
-    if conf.exists(tmp):
-        ssh['deny_groups'] = conf.return_values(tmp)
-
-    tmp = ['ciphers']
-    if conf.exists(tmp):
-        ssh['ciphers'] = conf.return_values(tmp)
-
-    tmp = ['key-exchange']
-    if conf.exists(tmp):
-        ssh['key_exchange'] = conf.return_values(tmp)
-
-    if conf.exists(['disable-host-validation']):
-        ssh['host_validation'] = 'no'
-
-    if conf.exists(['disable-password-authentication']):
-        ssh['password_authentication'] = 'no'
-
-    tmp = ['listen-address']
-    if conf.exists(tmp):
-        # We can listen on both IPv4 and IPv6 addresses
-        # Maybe there could be a check in the future if the configured IP address
-        # is configured on this system at all?
-        ssh['listen_on'] = conf.return_values(tmp)
-
-    tmp = ['loglevel']
-    if conf.exists(tmp):
-        ssh['log_level'] = conf.return_value(tmp)
-
-    tmp = ['mac']
-    if conf.exists(tmp):
-        ssh['mac'] = conf.return_values(tmp)
-
-    tmp = ['port']
-    if conf.exists(tmp):
-        ssh['port'] = conf.return_values(tmp)
-
-    tmp = ['client-keepalive-interval']
-    if conf.exists(tmp):
-        ssh['client_keepalive'] = conf.return_value(tmp)
-
-    tmp = ['vrf']
-    if conf.exists(tmp):
-        ssh['vrf'] = conf.return_value(tmp)
+    ssh = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    ssh = dict_merge(default_values, ssh)
 
     return ssh
 
@@ -110,18 +49,18 @@ def verify(ssh):
     if not ssh:
         return None
 
-    if 'loglevel' in ssh.keys():
-        allowed_loglevel = 'QUIET, FATAL, ERROR, INFO, VERBOSE'
-        if not ssh['loglevel'] in allowed_loglevel:
-            raise ConfigError('loglevel must be one of "{0}"\n'.format(allowed_loglevel))
-
-    if ssh['vrf'] and ssh['vrf'] not in interfaces():
+    if 'vrf' in ssh.keys() and ssh['vrf'] not in interfaces():
         raise ConfigError('VRF "{vrf}" does not exist'.format(**ssh))
 
     return None
 
 def generate(ssh):
     if not ssh:
+        if os.path.isfile(config_file):
+            os.unlink(config_file)
+        if os.path.isfile(systemd_override):
+            os.unlink(systemd_override)
+
         return None
 
     render(config_file, 'ssh/sshd_config.tmpl', ssh, trim_blocks=True)
@@ -133,10 +72,6 @@ def apply(ssh):
     if not ssh:
         # SSH access is removed in the commit
         call('systemctl stop ssh.service')
-        if os.path.isfile(config_file):
-            os.unlink(config_file)
-        if os.path.isfile(systemd_override):
-            os.unlink(systemd_override)
 
     # Reload systemd manager configuration
     call('systemctl daemon-reload')

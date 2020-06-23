@@ -131,6 +131,9 @@
           <leafNode name="loglevel">
             <properties>
               <help>Log level</help>
+              <completionHelp>
+                <list>QUIET FATAL ERROR INFO VERBOSE</list>
+              </completionHelp>
               <valueHelp>
                 <format>QUIET</format>
                 <description>stay silent</description>
@@ -151,6 +154,9 @@
                 <format>VERBOSE</format>
                 <description>enable logging of failed login attempts</description>
               </valueHelp>
+              <constraint>
+                <regex>^(QUIET|FATAL|ERROR|INFO|VERBOSE)$</regex>
+              </constraint>
             </properties>
             <defaultValue>INFO</defaultValue>
           </leafNode>
@@ -179,10 +185,15 @@
                 <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
             </properties>
+            <defaultValue>22</defaultValue>
           </leafNode>
           <leafNode name="client-keepalive-interval">
             <properties>
-              <help>how often send keep alives in seconds</help>
+              <help>Enable transmission of keepalives from server to client</help>
+              <valueHelp>
+                <format>1-65535</format>
+                <description>Time interval in seconds for keepalive message</description>
+              </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
