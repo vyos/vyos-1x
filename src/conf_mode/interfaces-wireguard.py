@@ -275,7 +275,7 @@ def apply(wg):
 
     # peer pubkey
     # setting up the wg interface
-    w.config['private-key'] = c['pk']
+    w.config['private_key'] = c['pk']
 
     for peer in wg['peer']:
         # peer pubkey
@@ -300,13 +300,8 @@ def apply(wg):
         if peer['persistent_keepalive']:
             w.config['keepalive'] = peer['persistent_keepalive']
 
-        # maybe move it into ifconfig.py
-        # preshared-key - needs to be read from a file
         if peer['psk']:
-            psk_file = '/config/auth/wireguard/psk'
-            with open(psk_file, 'w') as f:
-                f.write(peer['psk'])
-            w.config['psk'] = psk_file
+            w.config['psk'] = peer['psk']
 
         w.update()
 

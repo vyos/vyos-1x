@@ -149,10 +149,10 @@ class WireGuardIf(Interface):
     default = {
         'type': 'wireguard',
         'port': 0,
-        'private-key': None,
+        'private_key': None,
         'pubkey': None,
-        'psk': '/dev/null',
-        'allowed-ips': [],
+        'psk': '',
+        'allowed_ips': [],
         'fwmark': 0x00,
         'endpoint': None,
         'keepalive': 0
@@ -166,8 +166,8 @@ class WireGuardIf(Interface):
         }
     }
     options = Interface.options + \
-        ['port', 'private-key', 'pubkey', 'psk',
-         'allowed-ips', 'fwmark', 'endpoint', 'keepalive']
+        ['port', 'private_key', 'pubkey', 'psk',
+         'allowed_ips', 'fwmark', 'endpoint', 'keepalive']
 
     """
     Wireguard interface class, contains a comnfig dictionary since
@@ -180,44 +180,44 @@ class WireGuardIf(Interface):
     >>> from vyos.ifconfig import WireGuardIf as wg_if
     >>> wg_intfc = wg_if("wg01")
     >>> print (wg_intfc.wg_config)
-    {'private-key': None, 'keepalive': 0, 'endpoint': None, 'port': 0,
-    'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
+    {'private_key': None, 'keepalive': 0, 'endpoint': None, 'port': 0,
+    'allowed_ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     >>> wg_intfc.wg_config['keepalive'] = 100
     >>> print (wg_intfc.wg_config)
-    {'private-key': None, 'keepalive': 100, 'endpoint': None, 'port': 0,
-    'allowed-ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
+    {'private_key': None, 'keepalive': 100, 'endpoint': None, 'port': 0,
+    'allowed_ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
     """
 
     def update(self):
-        if not self.config['private-key']:
+        if not self.config['private_key']:
             raise ValueError("private key required")
         else:
             # fmask permission check?
             pass
 
-        cmd = "wg set {} ".format(self.config['ifname'])
-        cmd += "listen-port {} ".format(self.config['port'])
-        cmd += "fwmark {} ".format(str(self.config['fwmark']))
-        cmd += "private-key {} ".format(self.config['private-key'])
-        cmd += "peer {} ".format(self.config['pubkey'])
-        cmd += " preshared-key {} ".format(self.config['psk'])
-        cmd += " allowed-ips "
-        for aip in self.config['allowed-ips']:
-            if aip != self.config['allowed-ips'][-1]:
-                cmd += aip + ","
-            else:
-                cmd += aip
+        cmd  = 'wg set {ifname}'.format(**self.config)
+        cmd += ' listen-port {port}'.format(**self.config)
+        cmd += ' fwmark "{fwmark}" '.format(**self.config)
+        cmd += ' private-key {private_key}'.format(**self.config)
+        cmd += ' peer {pubkey}'.format(**self.config)
+        cmd += ' persistent-keepalive {keepalive}'.format(**self.config)
+        cmd += ' allowed-ips {}'.format(', '.join(self.config['allowed-ips']))
+
         if self.config['endpoint']:
-            cmd += " endpoint '{}'".format(self.config['endpoint'])
-        cmd += " persistent-keepalive {}".format(self.config['keepalive'])
+            cmd += ' endpoint "{endpoint}"'.format(**self.config)
+
+        psk_file = ''
+        if self.config['psk']:
+            psk_file = '/tmp/{ifname}.psk'.format(**self.config)
+            with open(psk_file, 'w') as f:
+                f.write(self.config['psk'])
+            cmd += f' preshared-key {psk_file}'
 
         self._cmd(cmd)
 
-        # remove psk since it isn't required anymore and is saved in the cli
-        # config only !!
-        if self.config['psk'] != '/dev/null':
-            if os.path.exists(self.config['psk']):
-                os.remove(self.config['psk'])
+        # PSK key file is not required to be stored persistently as its backed by CLI
+        if os.path.exists(psk_file):
+            os.remove(psk_file)
 
     def remove_peer(self, peerkey):
         """
