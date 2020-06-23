@@ -22,13 +22,8 @@
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-vrf.xml.i>
           #include <include/interface-mtu-64-8024.xml.i>
-          <node name="ipv6">
-            <children>
-              #include <include/ipv6-address.xml.i>
-              #include <include/ipv6-disable-forwarding.xml.i>
-              #include <include/ipv6-dup-addr-detect-transmits.xml.i>
-            </children>
-          </node>
+          #include <include/interface-ipv4.xml.i>
+          #include <include/interface-ipv6.xml.i>
           <leafNode name="local-ip">
             <properties>
               <help>Local IP address for this tunnel</help>
