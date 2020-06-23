@@ -254,6 +254,10 @@ default_config_data = {
     'ip': False,
     'ipv6': False,
     'nhrp': [],
+    'arp_filter': 1,
+    'arp_accept': 0,
+    'arp_announce': 0,
+    'arp_ignore': 0,
     'ipv6_accept_ra': 1,
     'ipv6_autoconf': 0,
     'ipv6_forwarding': 1,
@@ -307,6 +311,10 @@ mapping = {
     'link_detect':         ('disable-link-detect', False, 2),
     'vrf':                 ('vrf', False, None),
     'addresses-add':       ('address', True, None),
+    'arp_filter':          ('ip disable-arp-filter', False, 0),
+    'arp_accept':          ('ip enable-arp-accept', False, 1),
+    'arp_announce':        ('ip enable-arp-announce', False, 1),
+    'arp_ignore':          ('ip enable-arp-ignore', False, 1),
     'ipv6_autoconf':       ('ipv6 address autoconf', False, 1),
     'ipv6_forwarding':     ('ipv6 disable-forwarding', False, 0),
     'ipv6_dad_transmits:': ('ipv6 dup-addr-detect-transmits', False, None)
@@ -474,6 +482,8 @@ def verify(conf):
 
     kls = get_class(options)
     valid = kls.updates + ['alias', 'addresses-add', 'addresses-del', 'vrf', 'state']
+    valid += ['arp_filter', 'arp_accept', 'arp_announce', 'arp_ignore']
+    valid += ['ipv6_accept_ra', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits']
 
     if changes['section'] == 'create':
         valid.extend(['type',])
@@ -645,6 +655,7 @@ def apply(conf):
 
     # set other interface properties
     for option in ('alias', 'mtu', 'link_detect', 'multicast', 'allmulticast',
+                   'arp_accept', 'arp_filter', 'arp_announce', 'arp_ignore',
                    'ipv6_accept_ra', 'ipv6_autoconf', 'ipv6_forwarding', 'ipv6_dad_transmits'):
         if not options[option]:
             # should never happen but better safe
