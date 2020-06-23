@@ -251,23 +251,30 @@ class XML(dict):
             d = d[k]
         r = {}
 
-        def _flatten(prefix, d, r):
+        def _flatten(inside, d, r):
+            prefix = '_'.join(_.replace('-','_') for _ in inside) + '_' if inside else ''
             for k in d:
+                under = prefix + k.replace('-','_')
+                level = inside + [k]
                 if isinstance(d[k],dict):
-                    key = f'{k}_' if not prefix else f'{prefix}{k}_'
-                    _flatten(key, d[k], r)
+                    _flatten(level, d[k], r)
                     continue
-                key = prefix + k
-                r[key.replace('-','_')] = d[k]
+                if self.is_multi(level):
+                    r[under] = [_.strip() for _ in d[k].split(',')]
+                    continue
+                r[under] = d[k]
 
-        _flatten('', d, r)
+        _flatten([], d, r)
         return r
 
     # from functools import lru_cache
     # @lru_cache(maxsize=100)
     # XXX: need to use cachetool instead - for later
 
-    def _get(self, lpath, tag):
+    def _tree(self, lpath):
+        """
+        returns the part of the tree searched or None if it does not exists
+        """
         tree = self[kw.tree]
         spath = lpath.copy()
         while spath:
@@ -275,11 +282,10 @@ class XML(dict):
             if p not in tree:
                 return None
             tree = tree[p]
-            if tree[kw.node] == kw.tagNode and spath:
-                spath.pop(0)
-        if tag not in tree:
-            print(f'not in tree {lpath} {tag}')
-        return tree.get(tag, None)
+        return tree
+
+    def _get(self, lpath, tag):
+        return self._tree(lpath + [tag])
 
     def is_multi(self, lpath):
         return self._get(lpath, kw.multi) is True
