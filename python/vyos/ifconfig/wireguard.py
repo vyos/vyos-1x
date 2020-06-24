@@ -201,7 +201,10 @@ class WireGuardIf(Interface):
         cmd += ' private-key {private_key}'.format(**self.config)
         cmd += ' peer {pubkey}'.format(**self.config)
         cmd += ' persistent-keepalive {keepalive}'.format(**self.config)
-        cmd += ' allowed-ips {}'.format(', '.join(self.config['allowed-ips']))
+        # allowed-ips must be properly quoted else the interface can't be properly
+        # created as the wg utility will tread multiple IP addresses as command
+        # parameters
+        cmd += ' allowed-ips "{}"'.format(','.join(self.config['allowed-ips']))
 
         if self.config['endpoint']:
             cmd += ' endpoint "{endpoint}"'.format(**self.config)
