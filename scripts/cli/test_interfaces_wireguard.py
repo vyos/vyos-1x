@@ -22,7 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 
 # Generate WireGuard default keypair
 if not os.path.isdir('/config/auth/wireguard/default'):
-    os.system('/usr/libexec/vyos/op_mode/wireguard.py --genkey')
+    os.system('sudo /usr/libexec/vyos/op_mode/wireguard.py --genkey')
 
 base_path = ['interfaces', 'wireguard']
 
@@ -54,13 +54,15 @@ class WireGuardInterfaceTest(unittest.TestCase):
             self.session.set(base_path + [intf, 'peer', peer, 'port', '1337'])
 
             # Allow different prefixes to traverse the tunnel
-            allowed_ips = ['0.0.0.0/0']
+            allowed_ips = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
             for ip in allowed_ips:
                 self.session.set(base_path + [intf, 'peer', peer, 'allowed-ips', ip])
 
             self.session.set(base_path + [intf, 'peer', peer, 'preshared-key', psk])
             self.session.set(base_path + [intf, 'peer', peer, 'pubkey', pubkey])
             self.session.commit()
+
+            self.assertTrue(os.path.isdir(f'/sys/class/net/{intf}'))
 
 if __name__ == '__main__':
     unittest.main()
