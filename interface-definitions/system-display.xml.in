@@ -1,0 +1,245 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <!--
+    system display model (SDEC|EZIO)
+    system display config (enabled|disabled)
+    system display show host (cpu|cpu-all|cpu-hist|disk|load-hist|memory|proc|uptime)
+                        network interface <intName> alias <alias>
+                                units (bps|Bps|pps)
+                        clock (big|mini|date-time)
+                        title <name>
+
+    system display duration <s>
+    system display hello <string>
+    system display bye <string>
+    -->
+  <node name="system">
+    <children>
+      <node name="display" owner="${vyos_conf_scripts_dir}/system-display.py">
+        <properties>
+          <help>System display LCD/VFD/LED</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <!-- system display model (SDEC|EZIO) -->
+          <leafNode name="model">
+            <properties>
+              <help>Model of the display attached to this system [REQUIRED]</help>
+              <completionHelp>
+                <list>SDEC EZIO</list>
+              </completionHelp>
+              <constraint>
+                <regex>(SDEC|EZIO)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid system display model</constraintErrorMessage>
+              <valueHelp>
+                <format>SDEC</format>
+                <description>Display model for Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances with built-in SDEC LCD</description>
+              </valueHelp>
+              <valueHelp>
+                <format>EZIO</format>
+                <description>Display model for Portwell, Caswell appliances with built-in EZIO-100 or EZIO-300 LCD</description>
+              </valueHelp>
+            </properties>
+          </leafNode><!--system display model-->
+          <!-- system display config (enabled|disabled) -->
+          <leafNode name="config">
+            <properties>
+              <help>Configuration status</help>
+              <completionHelp>
+                <list>enabled disabled</list>
+              </completionHelp>
+              <constraint>
+                <regex>(enabled|disabled)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid system display config status</constraintErrorMessage>
+              <valueHelp>
+                <format>enabled</format>
+                <description>Turn system display configuration ON</description>
+              </valueHelp>
+              <valueHelp>
+                <format>disabled</format>
+                <description>Turn system display configuration OFF</description>
+              </valueHelp>
+            </properties>
+          </leafNode><!--system display config-->
+          <node name="show">
+            <properties>
+              <help>Select the screens for the system display [REQUIRED]</help>
+            </properties>
+            <children>
+              <!-- system display show host (cpu|cpu-all|cpu-hist|disk|load-hist|memory|proc|uptime) -->
+              <leafNode name="host">
+                <properties>
+                  <multi/>
+                  <help>Select host screens for the system display</help>
+                  <completionHelp>
+                    <list>cpu cpu-all cpu-hist disk load-hist memory proc uptime</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(cpu|cpu-all|cpu-hist|disk|load-hist|memory|proc|uptime)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid host screen</constraintErrorMessage>
+                  <valueHelp>
+                    <format>cpu</format>
+                    <description>Detailed CPU usage</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>cpu-all</format>
+                    <description>CPU usage overview (one line per CPU)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>cpu-hist</format>
+                    <description>CPU usage histogram</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disk</format>
+                    <description>File systems fill level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>load-hist</format>
+                    <description>Load histogram</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>memory</format>
+                    <description>Memory and swap usage</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>proc</format>
+                    <description>Top processes by size</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>uptime</format>
+                    <description>System uptime</description>
+                  </valueHelp>
+                </properties>
+              </leafNode><!--system display show host-->
+              <!-- system display show network -->
+              <node name="network">
+                <properties>
+                  <help>Network settings for system display</help>
+                </properties>
+                <children>
+                  <!-- system display show network interface <interface name> -->
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show network traffic on the system display [Max 3 interfaces]</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py -b</script>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="alias">
+                        <properties>
+                          <help>Interface alias</help>
+                          <constraint>
+                            <regex>[A-Za-z0-9]{1,10}</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid alias, must be 1 to 10 char or digit</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode><!--system display show network interface-->
+                  <!-- system display show network units -->
+                  <leafNode name="units">
+                    <properties>
+                      <help>Unit for network details</help>
+                      <completionHelp>
+                        <list>bps Bps pps</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(bps|Bps|pps)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid network detail unit</constraintErrorMessage>
+                      <valueHelp>
+                        <format>bps</format>
+                        <description>Bit(s) per second</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>Bps</format>
+                        <description>Byte(s) per second</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>pps</format>
+                        <description>Packet(s) per second</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode><!--system display show network units-->
+                </children>
+              </node><!--system display show network-->
+              <!-- system display show clock (Big|Mini|Date-Time) -->
+              <leafNode name="clock">
+                <properties>
+                  <!--multi-->
+                  <help>Show a clock on the system display</help>
+                  <completionHelp>
+                    <list>big mini date-time</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(big|mini|date-time)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid clock format</constraintErrorMessage>
+                  <valueHelp>
+                    <format>big</format>
+                    <description>Multi-line clock</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mini</format>
+                    <description>Minimal clock</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>date-time</format>
+                    <description>Clock with Date and Time </description>
+                  </valueHelp>
+                </properties>
+              </leafNode><!--system display show clock-->
+              <!-- system display show title  -->
+              <leafNode name="title">
+                <properties>
+                  <help>Screen title to show on the system display</help>
+                    <constraint>
+                      <regex>[A-Za-z0-9]{1,16}</regex>
+                    </constraint>
+                    <constraintErrorMessage>Invalid title, must be 1 to 16 char or digit</constraintErrorMessage>
+                </properties>
+              </leafNode><!--system display show title-->
+            </children>
+          </node><!--system display show-->
+          <!-- system display duration -->
+          <leafNode name="duration">
+            <properties>
+              <help>Time in sec to show each screen on the system display</help>
+              <valueHelp>
+                <format>1-30</format>
+                <description>Numer of seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-30"/>
+              </constraint>
+            </properties>
+          </leafNode><!--system display duration-->
+          <!-- system display hello  -->
+          <leafNode name="hello">
+            <properties>
+              <help>Message to show when system display first starts</help>
+                <constraint>
+                  <regex>.{1,16}</regex>
+                </constraint>
+                <constraintErrorMessage>Hello message must be 1 to 16 char</constraintErrorMessage>
+            </properties>
+          </leafNode><!--system display hello-->
+          <!-- system display bye  -->
+          <leafNode name="bye">
+            <properties>
+              <help>Message to show when system display stops</help>
+                <constraint>
+                  <regex>.{1,16}</regex>
+                </constraint>
+                <constraintErrorMessage>Bye  message must be 1 to 16 char</constraintErrorMessage>
+            </properties>
+          </leafNode><!--system display bye-->
+        </children>
+      </node><!--system display-->
+    </children>
+  </node><!--system-->
+</interfaceDefinition>

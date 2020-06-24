@@ -1,0 +1,10 @@
+[Unit]
+Description=LCDproc system status information viewer
+Documentation=man:lcdproc(8) http://www.lcdproc.org/
+
+[Service]
+User=root
+ExecStart=/usr/bin/lcdproc -f -c /etc/lcdproc.conf
+
+[Install]
+WantedBy=multi-user.target
