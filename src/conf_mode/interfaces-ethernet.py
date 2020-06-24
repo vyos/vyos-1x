@@ -187,6 +187,9 @@ def generate(eth):
 def apply(eth):
     e = EthernetIf(eth['intf'])
     if eth['deleted']:
+        # apply all vlans to interface (they need removing too)
+        apply_all_vlans(e, eth)
+
         # delete interface
         e.remove()
     else:
@@ -304,7 +307,6 @@ def apply(eth):
         # apply all vlans to interface
         apply_all_vlans(e, eth)
 
-    return None
 
 if __name__ == '__main__':
     try:

@@ -224,6 +224,14 @@ def intf_to_dict(conf, default):
     intf = deepcopy(default)
     intf['intf'] = ifname_from_config(conf)
 
+    current_vif_list = conf.list_nodes(['vif'])
+    previous_vif_list = conf.list_effective_nodes(['vif'])
+
+    # set the vif to be deleted
+    for vif in previous_vif_list:
+        if vif not in current_vif_list:
+            intf['vif_remove'].append(vif)
+
     # retrieve interface description
     if conf.exists(['description']):
         intf['description'] = conf.return_value(['description'])
