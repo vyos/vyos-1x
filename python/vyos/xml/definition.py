@@ -228,8 +228,9 @@ class XML(dict):
             inner = self.tree[option]
             prefix = '+> ' if inner.get(kw.node, '') != kw.leafNode else '   '
             if kw.help in inner:
-                h = inner[kw.help]
-                yield (prefix + option, h.get(kw.summary), '')
+                yield (prefix + option, inner[kw.help].get(kw.summary), '')
+            else:
+                yield (prefix + option, '(no help available)', '')
 
     def debug(self):
         print('------')
@@ -260,7 +261,7 @@ class XML(dict):
                 if isinstance(d[k],dict):
                     _flatten(level, index, d[k], r)
                     continue
-                if self.is_multi(level):
+                if self.is_multi(level, with_tag=False):
                     r[under] = [_.strip() for _ in d[k].split(',')]
                     continue
                 r[under] = d[k]
@@ -272,9 +273,11 @@ class XML(dict):
     # @lru_cache(maxsize=100)
     # XXX: need to use cachetool instead - for later
 
-    def _tree(self, lpath):
+    def _tree(self, lpath, with_tag=True):
         """
         returns the part of the tree searched or None if it does not exists
+        if with_tag is set, this is a configuration path (with tagNode names)
+        and tag name will be removed from the path when traversing the tree
         """
         tree = self[kw.tree]
         spath = lpath.copy()
@@ -283,6 +286,8 @@ class XML(dict):
             if p not in tree:
                 return None
             tree = tree[p]
+            if with_tag and spath and tree[kw.node] == kw.tagNode:
+                spath.pop(0)
         return tree
 
     def _get(self, lpath, tag):
