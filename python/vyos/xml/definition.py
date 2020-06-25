@@ -290,17 +290,17 @@ class XML(dict):
                 spath.pop(0)
         return tree
 
-    def _get(self, lpath, tag):
-        return self._tree(lpath + [tag])
+    def _get(self, lpath, tag, with_tag=True):
+        return self._tree(lpath + [tag], with_tag)
 
-    def is_multi(self, lpath):
-        return self._get(lpath, kw.multi) is True
+    def is_multi(self, lpath, with_tag=True):
+        return self._get(lpath, kw.multi, with_tag) is True
 
-    def is_tag(self, lpath):
-        return self._get(lpath, kw.node) == kw.tagNode
+    def is_tag(self, lpath, with_tag=True):
+        return self._get(lpath, kw.node, with_tag) == kw.tagNode
 
-    def is_leaf(self, lpath):
-        return self._get(lpath, kw.node) == kw.leafNode
+    def is_leaf(self, lpath, with_tag=True):
+        return self._get(lpath, kw.node, with_tag) == kw.leafNode
 
-    def exists(self, lpath):
-        return self._get(lpath, kw.node) is not None
+    def exists(self, lpath, with_tag=True):
+        return self._get(lpath, kw.node, with_tag) is not None
