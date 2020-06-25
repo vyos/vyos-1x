@@ -24,7 +24,7 @@ import tabulate
 import vyos.util
 
 from vyos.ifconfig.vrrp import VRRP
-from vyos.ifconfig.vrrp import VRRPError
+from vyos.ifconfig.vrrp import VRRPError, VRRPNoData
 
 
 parser = argparse.ArgumentParser()
@@ -40,12 +40,16 @@ if not VRRP.is_running():
     print('VRRP is not running')
     sys.exit(0)
 
-if args.summary:
-    print(VRRP.format(VRRP.collect('json')))
-elif args.statistics:
-    print(VRRP.collect('stats'))
-elif args.data:
-    print(VRRP.collect('state'))
-else:
-    parser.print_help()
+try:
+    if args.summary:
+        print(VRRP.format(VRRP.collect('json')))
+    elif args.statistics:
+        print(VRRP.collect('stats'))
+    elif args.data:
+        print(VRRP.collect('state'))
+    else:
+        parser.print_help()
+        sys.exit(1)
+except VRRPNoData as e:
+    print(e)
     sys.exit(1)

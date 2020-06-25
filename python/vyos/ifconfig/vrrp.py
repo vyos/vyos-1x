@@ -28,6 +28,9 @@ from vyos import util
 class VRRPError(Exception):
     pass
 
+class VRRPNoData(VRRPError):
+    pass
+
 class VRRP(object):
     _vrrp_prefix = '00:00:5E:00:01:'
     location = {
@@ -96,6 +99,8 @@ class VRRP(object):
             # shoud look for file size change ?
             sleep(0.2)
             return util.read_file(fname)
+        except FileNotFoundError:
+            raise VRRPNoData("VRRP data is not available (process not running or no active groups)")
         except Exception:
             name = cls._name[what]
             raise VRRPError(f'VRRP {name} is not available')
