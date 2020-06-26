@@ -16,7 +16,7 @@
 
 # Rename link nodes to source-interface for the following interface types:
 # - vxlan
-# - pseudo ethernet
+# - pseudo-ethernet
 
 from sys import exit, argv
 from vyos.configtree import ConfigTree
@@ -36,7 +36,7 @@ if __name__ == '__main__':
         base = ['interfaces', if_type]
         if not config.exists(base):
             # Nothing to do
-            exit(0)
+            continue
 
         # list all individual interface isntance
         for i in config.list_nodes(base):
