@@ -73,6 +73,8 @@ class BasicInterfaceTest:
             addr = '192.0.2.0/31'
             for intf in self._interfaces:
                 self.session.set(self._base_path + [intf, 'address', addr])
+                for option in self._options.get(intf, []):
+                    self.session.set(self._base_path + [intf] + option.split())
 
             self.session.commit()
 
