@@ -16,13 +16,16 @@
 
 import os
 
-from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
+from vyos.configverify import verify_bridge_vrf
+from vyos.configverify import verify_bridge_address
+from vyos.configverify import verify_bridge_delete
 from vyos.ifconfig import DummyIf
 from vyos.validate import is_member
-from vyos import ConfigError, airbag
+from vyos import ConfigError
+from vyos import airbag
 airbag.enable()
 
 def get_config():
@@ -55,27 +58,11 @@ def get_config():
 
 def verify(dummy):
     if dummy['deleted']:
-        if 'is_bridge_member' in dummy.keys():
-            raise ConfigError(
-                'Interface "{ifname}" cannot be deleted as it is a '
-                'member of bridge "{is_bridge_member}"!'.format(**dummy))
-
+        verify_bridge_delete(dummy)
         return None
 
-    if 'vrf' in dummy.keys():
-        if dummy['vrf'] not in interfaces():
-            raise ConfigError('VRF "{vrf}" does not exist'.format(**dummy))
-
-        if 'is_bridge_member' in dummy.keys():
-            raise ConfigError(
-                'Interface "{ifname}" cannot be both a member of VRF "{vrf}" '
-                'and bridge "{is_bridge_member}"!'.format(**dummy))
-
-    # check if both keys are part of the dictionary
-    if {'is_bridge_member', 'address'} <= set(dummy):
-        raise ConfigError(
-            f'Cannot assign address to interface "{ifname}" as it is a '
-            f'member of bridge "{is_bridge_member}"!'.format(**dummy))
+    verify_bridge_vrf(dummy)
+    verify_bridge_address(dummy)
 
     return None
 
