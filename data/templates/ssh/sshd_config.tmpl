@@ -57,7 +57,7 @@ PasswordAuthentication {{ "no" if disable_password_authentication is defined els
 ListenAddress {{ listen_address }}
 {%   else %}
 {%     for address in listen_address %}
-ListenAddress {{ value }}
+ListenAddress {{ address }}
 {%     endfor %}
 {%   endif %}
 {% endif %}
