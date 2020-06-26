@@ -23,9 +23,14 @@ class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
          super().setUp()
          self._base_path = ['interfaces', 'pseudo-ethernet']
+         options = ['source-interface eth0', 'ip arp-cache-timeout 10',
+                    'ip disable-arp-filter', 'ip enable-arp-accept',
+                    'ip enable-arp-announce', 'ip enable-arp-ignore',
+                    'ip enable-proxy-arp', 'ip proxy-arp-pvlan']
+
          self._options = {
-             'peth0': ['source-interface eth0', 'ip arp-cache-timeout 10'],
-             'peth1': ['source-interface eth0', 'ip arp-cache-timeout 10'],
+             'peth0': options,
+             'peth1': options,
          }
          self._interfaces = list(self._options)
 
