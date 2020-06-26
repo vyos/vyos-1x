@@ -28,8 +28,7 @@ base_path = ['service', 'ssh']
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
     tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
-    return tmp[0]
-
+    return tmp
 
 class TestServiceSSH(unittest.TestCase):
     def setUp(self):
@@ -39,43 +38,76 @@ class TestServiceSSH(unittest.TestCase):
         self.session.delete(base_path)
 
     def tearDown(self):
+        # delete testing SSH config
+        self.session.delete(base_path)
+        # restore "plain" SSH access
+        self.session.set(base_path)
+
+        self.session.commit()
         del self.session
 
-    def test_ssh(self):
+    def test_ssh_single(self):
         """ Check if SSH service can be configured and runs """
-        self.session.set(base_path + ['port', '2222'])
+        self.session.set(base_path + ['port', '1234'])
         self.session.set(base_path + ['disable-host-validation'])
         self.session.set(base_path + ['disable-password-authentication'])
         self.session.set(base_path + ['loglevel', 'VERBOSE'])
-        self.session.set(base_path + ['listen-address', '127.0.0.1'])
         self.session.set(base_path + ['client-keepalive-interval', '100'])
+        self.session.set(base_path + ['listen-address', '127.0.0.1'])
 
         # commit changes
         self.session.commit()
 
         # Check configured port
-        port = get_config_value('Port')
-        self.assertTrue("2222" in port)
+        port = get_config_value('Port')[0]
+        self.assertTrue("1234" in port)
 
         # Check DNS usage
-        dns = get_config_value('UseDNS')
+        dns = get_config_value('UseDNS')[0]
         self.assertTrue("no" in dns)
 
         # Check PasswordAuthentication
-        pwd = get_config_value('PasswordAuthentication')
+        pwd = get_config_value('PasswordAuthentication')[0]
         self.assertTrue("no" in pwd)
 
         # Check loglevel
-        loglevel = get_config_value('LogLevel')
+        loglevel = get_config_value('LogLevel')[0]
         self.assertTrue("VERBOSE" in loglevel)
 
         # Check listen address
-        address = get_config_value('ListenAddress')
+        address = get_config_value('ListenAddress')[0]
         self.assertTrue("127.0.0.1" in address)
 
         # Check keepalive
-        keepalive = get_config_value('ClientAliveInterval')
+        keepalive = get_config_value('ClientAliveInterval')[0]
         self.assertTrue("100" in keepalive)
+
+        # Check for running process
+        self.assertTrue("sshd" in (p.name() for p in process_iter()))
+
+    def test_ssh_multi(self):
+        """ Check if SSH service can be configured and runs with multiple
+            listen ports and listen-addresses """
+        ports = ['22', '2222']
+        for port in ports:
+            self.session.set(base_path + ['port', port])
+
+        addresses = ['127.0.0.1', '::1']
+        for address in addresses:
+            self.session.set(base_path + ['listen-address', address])
+
+        # commit changes
+        self.session.commit()
+
+        # Check configured port
+        tmp = get_config_value('Port')
+        for port in ports:
+            self.assertIn(port, tmp)
+
+        # Check listen address
+        tmp = get_config_value('ListenAddress')
+        for address in addresses:
+            self.assertIn(address, tmp)
 
         # Check for running process
         self.assertTrue("sshd" in (p.name() for p in process_iter()))
