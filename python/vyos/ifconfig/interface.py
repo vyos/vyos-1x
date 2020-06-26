@@ -760,7 +760,7 @@ class Interface(Control):
         return True
 
     def update(self, config):
-        """ A general helper function which works on a dictionary retrived by
+        """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
         on any interface. """
@@ -794,5 +794,8 @@ class Interface(Control):
             self.set_vrf(config.get('vrf', ''))
 
         # Interface administrative state
-        state = 'down' if 'disable' in config.items() else 'up'
+        state = 'down' if 'disable' in config.keys() else 'up'
         self.set_admin_state(state)
+
+        import pprint
+        pprint.pprint(config)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,54 +17,31 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 
 from vyos.ifconfig import LoopbackIf
-from vyos.configdict import list_diff
 from vyos.config import Config
-from vyos import ConfigError
-
-from vyos import airbag
+from vyos import ConfigError, airbag
 airbag.enable()
 
-default_config_data = {
-    'address': [],
-    'address_remove': [],
-    'deleted': False,
-    'description': '',
-}
-
-
 def get_config():
-    loopback = deepcopy(default_config_data)
+    """ Retrive CLI config as dictionary. Dictionary can never be empty,
+        as at least the interface name will be added or a deleted flag """
     conf = Config()
 
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    loopback['intf'] = os.environ['VYOS_TAGNODE_VALUE']
+    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    base = ['interfaces', 'loopback', ifname]
+
+    loopback = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # store interface instance name in dictionary
+    loopback.update({'ifname': ifname})
 
     # Check if interface has been removed
-    if not conf.exists('interfaces loopback ' + loopback['intf']):
-        loopback['deleted'] = True
-
-    # set new configuration level
-    conf.set_level('interfaces loopback ' + loopback['intf'])
-
-    # retrieve configured interface addresses
-    if conf.exists('address'):
-        loopback['address'] = conf.return_values('address')
-
-    # retrieve interface description
-    if conf.exists('description'):
-        loopback['description'] = conf.return_value('description')
-
-    # Determine interface addresses (currently effective) - to determine which
-    # address is no longer valid and needs to be removed from the interface
-    eff_addr = conf.return_effective_values('address')
-    act_addr = conf.return_values('address')
-    loopback['address_remove'] = list_diff(eff_addr, act_addr)
+    tmp = {'deleted' : not conf.exists(base)}
+    loopback.update(tmp)
 
     return loopback
 
@@ -75,20 +52,11 @@ def generate(loopback):
     return None
 
 def apply(loopback):
-    l = LoopbackIf(loopback['intf'])
+    l = LoopbackIf(loopback['ifname'])
     if loopback['deleted']:
         l.remove()
     else:
-        # update interface description used e.g. within SNMP
-        l.set_alias(loopback['description'])
-
-        # Configure interface address(es)
-        # - not longer required addresses get removed first
-        # - newly addresses will be added second
-        for addr in loopback['address_remove']:
-            l.del_addr(addr)
-        for addr in loopback['address']:
-            l.add_addr(addr)
+        l.update(loopback)
 
     return None
 

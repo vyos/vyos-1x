@@ -23,7 +23,7 @@ class LoopbackIf(Interface):
     The loopback device is a special, virtual network interface that your router
     uses to communicate with itself.
     """
-
+    _persistent_addresses = ['127.0.0.1/8', '::1/128']
     default = {
         'type': 'loopback',
     }
@@ -49,10 +49,31 @@ class LoopbackIf(Interface):
         """
         # remove all assigned IP addresses from interface
         for addr in self.get_addr():
-            if addr in ["127.0.0.1/8", "::1/128"]:
+            if addr in self._persistent_addresses:
                 # Do not allow deletion of the default loopback addresses as
                 # this will cause weird system behavior like snmp/ssh no longer
                 # operating as expected, see https://phabricator.vyos.net/T2034.
                 continue
 
             self.del_addr(addr)
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        addr = config.get('address', [])
+        # XXX workaround for T2636, convert IP address string to a list
+        # with one element
+        if isinstance(addr, str):
+            addr = [addr]
+
+        # We must ensure that the loopback addresses are never deleted from the system
+        addr += self._persistent_addresses
+
+        # Update IP address entry in our dictionary
+        config.update({'address' : addr})
+
+        # now call the regular function from within our base class
+        super().update(config)
