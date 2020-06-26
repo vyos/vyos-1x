@@ -27,6 +27,7 @@ from netifaces import AF_INET
 from netifaces import AF_INET6
 
 from vyos import ConfigError
+from vyos.configdict import list_diff
 from vyos.util import mac2eui64
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
@@ -757,3 +758,41 @@ class Interface(Control):
         # TODO: port config (STP)
 
         return True
+
+    def update(self, config):
+        """ A general helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # Update interface description
+        self.set_alias(config.get('description', None))
+
+        # Configure assigned interface IP addresses. No longer
+        # configured addresses will be removed first
+        new_addr = config.get('address', [])
+
+        # XXX workaround for T2636, convert IP address string to a list
+        # with one element
+        if isinstance(new_addr, str):
+            new_addr = [new_addr]
+
+        # determine IP addresses which are assigned to the interface and build a
+        # list of addresses which are no longer in the dict so they can be removed
+        cur_addr = self.get_addr()
+        for addr in list_diff(cur_addr, new_addr):
+            self.del_addr(addr)
+
+        for addr in new_addr:
+            self.add_addr(addr)
+
+        # There are some items in the configuration which can only be applied
+        # if this instance is not bound to a bridge. This should be checked
+        # by the caller but better save then sorry!
+        if not config.get('is_bridge_member', False):
+            # Bind interface instance into VRF
+            self.set_vrf(config.get('vrf', ''))
+
+        # Interface administrative state
+        state = 'down' if 'disable' in config.items() else 'up'
+        self.set_admin_state(state)
