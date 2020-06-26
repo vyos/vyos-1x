@@ -66,7 +66,20 @@ class BasicInterfaceTest:
                     tmp = f.read().rstrip()
                     self.assertTrue(tmp, test_string)
 
-        def test_add_address(self):
+        def test_add_address_single(self):
+            """
+            Check if a single address can be added to interface.
+            """
+            addr = '192.0.2.0/31'
+            for intf in self._interfaces:
+                self.session.set(self._base_path + [intf, 'address', addr])
+
+            self.session.commit()
+
+            for intf in self._interfaces:
+                self.assertTrue(is_intf_addr_assigned(intf, addr))
+
+        def test_add_address_multi(self):
             """
             Check if IPv4/IPv6 addresses can be added to interface.
             """
