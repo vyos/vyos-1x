@@ -22,7 +22,6 @@ from enum import Enum
 from copy import deepcopy
 
 from vyos import ConfigError
-from vyos.ifconfig import Interface
 from vyos.validate import is_member
 from vyos.util import ifname_from_config
 
@@ -214,6 +213,8 @@ def disable_state(conf, check=[3,5,7]):
 
 
 def intf_to_dict(conf, default):
+    from vyos.ifconfig import Interface
+
     """
     Common used function which will extract VLAN related information from config
     and represent the result as Python dictionary.
