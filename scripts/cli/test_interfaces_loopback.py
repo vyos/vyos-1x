@@ -17,12 +17,25 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from vyos.validate import is_intf_addr_assigned
 
 class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
          super().setUp()
+         # these addresses are never allowed to be removed from the system
+         self._loopback_addresses = ['127.0.0.1', '::1']
          self._base_path = ['interfaces', 'loopback']
          self._interfaces = ['lo']
+
+    def test_add_address_single(self):
+        super().test_add_address_single()
+        for addr in self._loopback_addresses:
+            self.assertTrue(is_intf_addr_assigned('lo', addr))
+
+    def test_add_address_multi(self):
+        super().test_add_address_multi()
+        for addr in self._loopback_addresses:
+            self.assertTrue(is_intf_addr_assigned('lo', addr))
 
 if __name__ == '__main__':
     unittest.main()
