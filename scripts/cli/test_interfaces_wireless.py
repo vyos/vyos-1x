@@ -50,5 +50,5 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
 
 if __name__ == '__main__':
-    os.system("modprobe mac80211_hwsim")
+    os.system('sudo modprobe mac80211_hwsim')
     unittest.main()
