@@ -34,9 +34,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-# XXX: workaround for https://phabricator.vyos.net/T2656
-default = {'security' : {'mka' : {'priority' : '255'}}}
-
 # XXX: wpa_supplicant works on the source interface
 wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
 
@@ -51,7 +48,7 @@ def get_config():
 
     # retrieve interface default values
     base = ['interfaces', 'macsec']
-    #default_values = defaults(base)
+    default_values = defaults(base, flat=False)
 
     ifname = os.environ['VYOS_TAGNODE_VALUE']
     base = base + [ifname]
@@ -69,7 +66,7 @@ def get_config():
     # We have gathered the dict representation of the CLI, but there are
     # default options which we need to update into the dictionary
     # retrived.
-    macsec = dict_merge(default, macsec)
+    macsec = dict_merge(default_values, macsec)
 
     # Add interface instance name into dictionary
     macsec.update({'ifname': ifname})
