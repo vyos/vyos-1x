@@ -11,8 +11,6 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
 
-from copy import deepcopy
-
 from vyos.xml import kw
 
 # As we index by key, the name is first and then the data:
@@ -253,7 +251,14 @@ class XML(dict):
             d = d[k]
 
         if not flat:
-            return deepcopy(d)
+            r = {}
+            for k in d:
+                under = k.replace('-','_')
+                if isinstance(d[k],dict):
+                    r[under] = self.defaults(lpath + [k], flat)
+                    continue
+                r[under] = d[k]	
+            return r
 
         def _flatten(inside, index, d):
             r = {}
