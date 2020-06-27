@@ -53,7 +53,6 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
         src_intf = 'eth0'
         mak_cak = '232e44b7fda6f8e2d88a07bf78a7aff4'
         mak_ckn = '40916f4b23e3d548ad27eedd2d10c6f98c2d21684699647d63d41b500dfe8836'
-        mak_priority = '100'
         replay_window = '64'
         self.session.set(self._base_path + [intf, 'security', 'encrypt'])
 
@@ -77,7 +76,6 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.commit()
         self.session.set(self._base_path + [intf, 'security', 'mka', 'ckn', mak_ckn])
 
-        self.session.set(self._base_path + [intf, 'security', 'mka', 'priority', mak_priority])
         self.session.set(self._base_path + [intf, 'security', 'replay-window', replay_window])
         self.session.commit()
 
@@ -90,8 +88,9 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
         tmp = get_config_value(src_intf, 'mka_ckn')
         self.assertTrue(mak_ckn in tmp)
 
+        # check that the default priority of 255 is programmed
         tmp = get_config_value(src_intf, 'mka_priority')
-        self.assertTrue(mak_priority in tmp)
+        self.assertTrue("255" in tmp)
 
         tmp = get_config_value(src_intf, 'macsec_replay_window')
         self.assertTrue(replay_window in tmp)
