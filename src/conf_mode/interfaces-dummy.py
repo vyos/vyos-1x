@@ -41,6 +41,10 @@ def get_config():
     base = ['interfaces', 'dummy', ifname]
 
     dummy = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # Check if interface has been removed
+    if dummy == {}:
+        dummy.update({'deleted' : ''})
+
     # store interface instance name in dictionary
     dummy.update({'ifname': ifname})
 
@@ -50,14 +54,10 @@ def get_config():
         tmp = {'is_bridge_member' : bridge}
         dummy.update(tmp)
 
-    # Check if interface has been removed
-    tmp = {'deleted' : not conf.exists(base)}
-    dummy.update(tmp)
-
     return dummy
 
 def verify(dummy):
-    if dummy['deleted']:
+    if 'deleted' in dummy.keys():
         verify_bridge_delete(dummy)
         return None
 
@@ -73,7 +73,7 @@ def apply(dummy):
     d = DummyIf(dummy['ifname'])
 
     # Remove dummy interface
-    if dummy['deleted']:
+    if 'deleted' in dummy.keys():
         d.remove()
     else:
         d.update(dummy)

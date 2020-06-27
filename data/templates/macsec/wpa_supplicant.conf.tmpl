@@ -45,9 +45,10 @@ network={
     #  - the key server has decided to enable MACsec
     # 0: Encrypt traffic (default)
     # 1: Integrity only
-    macsec_integ_only={{ '0' if security_encrypt else '1' }}
+    macsec_integ_only={{ '0' if security is defined and security.encrypt is defined else '1' }}
 
-{% if security_encrypt %}
+{% if security is defined %}
+{%   if security.encrypt is defined %}
     # mka_cak, mka_ckn, and mka_priority: IEEE 802.1X/MACsec pre-shared key mode
     # This allows to configure MACsec with a pre-shared key using a (CAK,CKN) pair.
     # In this mode, instances of wpa_supplicant can act as MACsec peers. The peer
@@ -56,21 +57,22 @@ network={
     # hex-string (32 hex-digits) or a 32-byte (256-bit) hex-string (64 hex-digits)
     # mka_ckn (CKN = CAK Name) takes a 1..32-bytes (8..256 bit) hex-string
     # (2..64 hex-digits)
-    mka_cak={{ security_mka_cak }}
-    mka_ckn={{ security_mka_ckn }}
+    mka_cak={{ security.mka.cak }}
+    mka_ckn={{ security.mka.ckn }}
 
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
-    mka_priority={{ security_mka_priority }}
-{% endif %}
-{% if security_replay_window %}
+    mka_priority={{ security.mka.priority }}
+{%   endif %}
+
+{%   if security.replay_window is defined %}
     # macsec_replay_protect: IEEE 802.1X/MACsec replay protection
     # This setting applies only when MACsec is in use, i.e.,
     #  - macsec_policy is enabled
     #  - the key server has decided to enable MACsec
     # 0: Replay protection disabled (default)
     # 1: Replay protection enabled
-    macsec_replay_protect={{ '1' if security_replay_window else '0' }}
+    macsec_replay_protect=1
 
     # macsec_replay_window: IEEE 802.1X/MACsec replay protection window
     # This determines a window in which replay is tolerated, to allow receipt
@@ -80,7 +82,8 @@ network={
     #  - the key server has decided to enable MACsec
     # 0: No replay window, strict check (default)
     # 1..2^32-1: number of packets that could be misordered
-    macsec_replay_window={{ security_replay_window }}
+    macsec_replay_window={{ security.replay_window }}
+{%   endif %}
 {% endif %}
 }
 

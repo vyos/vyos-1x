@@ -36,12 +36,12 @@ def get_config():
     base = ['interfaces', 'loopback', ifname]
 
     loopback = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # Check if interface has been removed
+    if loopback == {}:
+        loopback.update({'deleted' : ''})
+
     # store interface instance name in dictionary
     loopback.update({'ifname': ifname})
-
-    # Check if interface has been removed
-    tmp = {'deleted' : not conf.exists(base)}
-    loopback.update(tmp)
 
     return loopback
 
@@ -53,7 +53,7 @@ def generate(loopback):
 
 def apply(loopback):
     l = LoopbackIf(loopback['ifname'])
-    if loopback['deleted']:
+    if 'deleted' in loopback.keys():
         l.remove()
     else:
         l.update(loopback)
