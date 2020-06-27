@@ -21,14 +21,14 @@
 # NOTE: imports should be as local as possible to the function which
 # makes use of it!
 
+from vyos import ConfigError
+
 def verify_bridge_vrf(config):
     """
     Common helper function used by interface implementations to
     perform recurring validation of VRF configuration
     """
     from netifaces import interfaces
-    from vyos import ConfigError
-
     if 'vrf' in config.keys():
         if config['vrf'] not in interfaces():
             raise ConfigError('VRF "{vrf}" does not exist'.format(**config))
@@ -45,8 +45,6 @@ def verify_bridge_address(config):
     perform recurring validation of IP address assignmenr
     when interface also is part of a bridge.
     """
-    from vyos import ConfigError
-
     if {'is_bridge_member', 'address'} <= set(config):
         raise ConfigError(
             f'Cannot assign address to interface "{ifname}" as it is a '
@@ -59,9 +57,18 @@ def verify_bridge_delete(config):
     perform recurring validation of IP address assignmenr
     when interface also is part of a bridge.
     """
-    from vyos import ConfigError
-
     if 'is_bridge_member' in config.keys():
         raise ConfigError(
             'Interface "{ifname}" cannot be deleted as it is a '
             'member of bridge "{is_bridge_member}"!'.format(**config))
+
+
+def verify_source_interface(config):
+    """
+    Common helper function used by interface implementations to
+    perform recurring validation of the existence of a source-interface
+    required by e.g. peth/MACvlan, MACsec ...
+    """
+    if not 'source_interface' in config.keys():
+        raise ConfigError('Physical source-interface required for '
+                          'interface "{ifname}"'.format(**config))
