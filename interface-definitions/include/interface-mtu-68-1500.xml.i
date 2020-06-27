@@ -10,4 +10,5 @@
     </constraint>
     <constraintErrorMessage>MTU must be between 68 and 1500</constraintErrorMessage>
   </properties>
+  <defaultValue>1500</defaultValue>
 </leafNode>
