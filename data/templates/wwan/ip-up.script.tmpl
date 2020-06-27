@@ -9,17 +9,17 @@ if [ -z $(echo $2 | egrep "(ttyS[0-9]+|usb[0-9]+b.*)$") ]; then
 fi
 
 # Determine if we are running inside a VRF or not, required for proper routing table
-if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
+if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     # Determine upper (VRF) interface
-    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
+    VRF=$(basename $(ls -d /sys/class/net/{{ ifname }}/upper_*))
     # Remove upper_ prefix from result string
     VRF_NAME=${VRF#"upper_"}
     # Remove default route from VRF routing table
-    vtysh -c "conf t" -c "vrf ${VRF_NAME}" -c "ip route 0.0.0.0/0 {{ intf }} {{ metric }}"
+    vtysh -c "conf t" -c "vrf ${VRF_NAME}" -c "ip route 0.0.0.0/0 {{ ifname }} {{ backup.distance }}"
 else
     # Remove default route from GRT (global routing table)
-    vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ intf }} {{ metric }}"
+    vtysh -c "conf t" -c "ip route 0.0.0.0/0 {{ ifname }} {{ backup.distance }}"
 fi
 
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
-logger -t pppd[$DIALER_PID] "added default route via {{ intf }} metric {{ metric }} ${VRF_NAME}"
+DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
+logger -t pppd[$DIALER_PID] "added default route via {{ ifname }} metric {{ backup.distance }} ${VRF_NAME}"

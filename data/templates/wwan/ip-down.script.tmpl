@@ -11,17 +11,17 @@ fi
 # Determine if we are running inside a VRF or not, required for proper routing table
 # NOTE: the down script can not be properly templated as we need the VRF name,
 # which is not present on deletion, thus we read it from the operating system.
-if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
+if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     # Determine upper (VRF) interface
-    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
+    VRF=$(basename $(ls -d /sys/class/net/{{ ifname }}/upper_*))
     # Remove upper_ prefix from result string
     VRF_NAME=${VRF#"upper_"}
     # Remove default route from VRF routing table
-    vtysh -c "conf t" -c "vrf ${VRF_NAME}" -c "no ip route 0.0.0.0/0 {{ intf }}"
+    vtysh -c "conf t" -c "vrf ${VRF_NAME}" -c "no ip route 0.0.0.0/0 {{ ifname }}"
 else
     # Remove default route from GRT (global routing table)
-    vtysh -c "conf t" -c "no ip route 0.0.0.0/0 {{ intf }}"
+    vtysh -c "conf t" -c "no ip route 0.0.0.0/0 {{ ifname }}"
 fi
 
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
-logger -t pppd[$DIALER_PID] "removed default route via {{ intf }} metric {{ metric }}"
+DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
+logger -t pppd[$DIALER_PID] "removed default route via {{ ifname }} metric {{ backup.distance }}"

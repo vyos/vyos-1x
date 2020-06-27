@@ -38,6 +38,7 @@
                   </constraint>
                   <constraintErrorMessage>Must be between (1-255)</constraintErrorMessage>
                 </properties>
+                <defaultValue>10</defaultValue>
               </leafNode>
             </children>
           </node>
