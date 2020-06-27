@@ -11,6 +11,7 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
 
+from copy import deepcopy
 
 from vyos.xml import kw
 
@@ -246,28 +247,31 @@ class XML(dict):
     # @lru_cache(maxsize=100)
     # XXX: need to use cachetool instead - for later
 
-    def defaults(self, lpath):
+    def defaults(self, lpath, flat):
         d = self[kw.default]
         for k in lpath:
             d = d[k]
-        r = {}
 
-        def _flatten(inside, index, d, r):
+        if not flat:
+            return deepcopy(d)
+
+        def _flatten(inside, index, d):
+            r = {}
             local = inside[index:]
             prefix = '_'.join(_.replace('-','_') for _ in local) + '_' if local else ''
             for k in d:
                 under = prefix + k.replace('-','_')
                 level = inside + [k]
                 if isinstance(d[k],dict):
-                    _flatten(level, index, d[k], r)
+                    r.update(_flatten(level, index, d[k]))
                     continue
                 if self.is_multi(level, with_tag=False):
                     r[under] = [_.strip() for _ in d[k].split(',')]
                     continue
                 r[under] = d[k]
+            return r
 
-        _flatten(lpath, len(lpath), d, r)
-        return r
+        return _flatten(lpath, len(lpath), d)
 
     # from functools import lru_cache
     # @lru_cache(maxsize=100)

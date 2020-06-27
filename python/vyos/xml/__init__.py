@@ -35,5 +35,10 @@ def load_configuration(cache=[]):
     return xml
 
 
-def defaults(lpath):
-    return load_configuration().defaults(lpath)
+def defaults(lpath, flat=True):
+    return load_configuration().defaults(lpath, flat)
+
+
+if __name__ == '__main__':
+    print(defaults(['service'], flat=True))
+    print(defaults(['service'], flat=False))
