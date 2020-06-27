@@ -97,10 +97,6 @@ def verify(conf, hosts):
     for host, hostprops in hosts['static_host_mapping'].items():
         if not hostprops['address']:
             raise ConfigError(f'IP address required for static-host-mapping "{host}"')
-        if hostprops['address'] in all_static_host_mapping_addresses:
-            raise ConfigError((
-                f'static-host-mapping "{host}" address "{hostprops["address"]}"'
-                f'already used in another static-host-mapping'))
         all_static_host_mapping_addresses.append(hostprops['address'])
         for a in hostprops['aliases']:
             if not hostname_regex.match(a) and len(a) != 0:
