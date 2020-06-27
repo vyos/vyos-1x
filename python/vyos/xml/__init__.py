@@ -9,7 +9,7 @@
 # See the GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along with this library;
-# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 
 from vyos.xml import definition
@@ -35,7 +35,7 @@ def load_configuration(cache=[]):
     return xml
 
 
-def defaults(lpath, flat=True):
+def defaults(lpath, flat=False):
     return load_configuration().defaults(lpath, flat)
 
 

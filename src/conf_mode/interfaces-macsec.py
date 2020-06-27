@@ -48,7 +48,7 @@ def get_config():
 
     # retrieve interface default values
     base = ['interfaces', 'macsec']
-    default_values = defaults(base, flat=False)
+    default_values = defaults(base)
 
     ifname = os.environ['VYOS_TAGNODE_VALUE']
     base = base + [ifname]
