@@ -796,6 +796,3 @@ class Interface(Control):
         # Interface administrative state
         state = 'down' if 'disable' in config.keys() else 'up'
         self.set_admin_state(state)
-
-        import pprint
-        pprint.pprint(config)

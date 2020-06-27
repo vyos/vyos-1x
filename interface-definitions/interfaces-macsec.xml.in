@@ -83,6 +83,7 @@
                         <validator name="numeric" argument="--range 0-255" />
                       </constraint>
                     </properties>
+                    <defaultValue>255</defaultValue>
                   </leafNode>
                 </children>
               </node>

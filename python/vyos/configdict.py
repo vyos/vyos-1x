@@ -96,6 +96,8 @@ def dict_merge(source, destination):
     for key, value in source.items():
         if key not in tmp.keys():
             tmp[key] = value
+        elif isinstance(source[key], dict):
+            tmp[key] = dict_merge(source[key], tmp[key])
 
     return tmp
 
