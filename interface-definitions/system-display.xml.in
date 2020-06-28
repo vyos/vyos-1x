@@ -2,7 +2,6 @@
 <interfaceDefinition>
   <!--
     system display model (sdec|ezio)
-    system display config (enabled|disabled)
     system display show host (cpu|cpu-all|cpu-hist|disk|load-hist|memory|proc|uptime)
                         network interface <intName> alias <alias>
                                 units (bps|Bps|pps)
@@ -12,6 +11,7 @@
     system display duration <s>
     system display hello <string>
     system display bye <string>
+    system display disabled
     -->
   <node name="system">
     <children>
@@ -42,27 +42,13 @@
               </valueHelp>
             </properties>
           </leafNode><!--system display model-->
-          <!-- system display config (enabled|disabled) -->
-          <leafNode name="config">
+          <!-- system display disabled -->
+          <leafNode name="disabled">
             <properties>
-              <help>Configuration status</help>
-              <completionHelp>
-                <list>enabled disabled</list>
-              </completionHelp>
-              <constraint>
-                <regex>(enabled|disabled)</regex>
-              </constraint>
-              <constraintErrorMessage>Invalid system display config status</constraintErrorMessage>
-              <valueHelp>
-                <format>enabled</format>
-                <description>Turn system display configuration ON</description>
-              </valueHelp>
-              <valueHelp>
-                <format>disabled</format>
-                <description>Turn system display configuration OFF</description>
-              </valueHelp>
+              <help>Disable sytem display</help>
+              <valueless/>
             </properties>
-          </leafNode><!--system display config-->
+          </leafNode><!--system display disabled-->
           <node name="show">
             <properties>
               <help>Select the screens for the system display [REQUIRED]</help>

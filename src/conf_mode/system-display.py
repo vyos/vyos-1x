@@ -66,7 +66,7 @@ def verify(c):
     return None
 
 def apply(c):
-    if not c or c['config'] == 'disabled':
+    if not c or 'disabled' in c.keys():
         # Stop client first
         run('systemctl stop lcdproc.service')
         # Stop server next
