@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from sys import exit
 
@@ -28,53 +27,57 @@ from vyos import airbag
 airbag.enable()
 
 def get_config():
-    c = Config()
+    # Return a (possibly empty) configuration dictionary
+    return Config().get_config_dict(['system', 'display'])
 
-    if not c.exists('system display'):
-        return None
-
-    c.set_level('system display')
-
-    return c.get_config_dict([])
-
-def generate(c):
-    if c == None:
+def generate(config_dict):
+    if not config_dict:
         return None
     # Render config file for daemon LCDd
-    render('/etc/LCDd.conf', 'system-display/LCDd.conf.tmpl', c)
+    render('/etc/LCDd.conf', 'system-display/LCDd.conf.tmpl', config_dict)
     # Render config file for client lcdproc
-    render('/etc/lcdproc.conf', 'system-display/lcdproc.conf.tmpl', c)
+    render('/etc/lcdproc.conf', 'system-display/lcdproc.conf.tmpl', config_dict)
 
     return None
 
-def verify(c):
-    if c == None:
+def verify(config_dict):
+    if not config_dict:
         return None
 
-    if c.get('model') == None:
-        raise ConfigError('For system display, a model is [REQUIRED]')
+    if 'model' not in config_dict:
+        raise ConfigError('Display model is [REQUIRED]')
 
-    if c.get('show') == None:
-        raise ConfigError('For system display, show cannot be empty')
+    if (           'show' not in config_dict
+        or (      'clock' not in config_dict['show']
+            and 'network' not in config_dict['show']
+            and    'host' not in config_dict['show']
+           )
+       ):
+        raise ConfigError('Display show must have a clock, host or network')
 
-    if 'network' in c['show'] and 'interface' not in c['show']['network']:
-        raise ConfigError('system display show network must have at least one interface')
+    if (      'network'     in config_dict['show']
+        and 'interface' not in config_dict['show']['network']
+       ):
+        raise ConfigError('Display show network must have an interface')
 
-    if 'network' in c['show'] and 'interface' in c['show']['network'] and len(c['show']['network']['interface']) > 3:
-        raise ConfigError('system display show network interface cannot have more than 3 entries')
+    if (      'network' in config_dict['show']
+        and 'interface' in config_dict['show']['network']
+        and len(config_dict['show']['network']['interface']) > 3
+       ):
+        raise ConfigError('Display show network cannot have > 3 interfaces')
 
     return None
 
-def apply(c):
-    if not c or 'disabled' in c.keys():
-        # Stop client first
-        run('systemctl stop lcdproc.service')
-        # Stop server next
-        return run('systemctl stop LCDd.service')
-
-    # Stop client first
+def apply(config_dict):
+    # Stop client
     run('systemctl stop lcdproc.service')
-    # Restart server next
+
+    if not config_dict or 'disabled' in config_dict:
+        # Stop server
+        run('systemctl stop LCDd.service')
+        return None
+
+    # Restart server
     run('systemctl restart LCDd.service')
     # Start client
     run('systemctl start lcdproc.service')
@@ -83,10 +86,10 @@ def apply(c):
 
 if __name__ == '__main__':
     try:
-        c = get_config()
-        verify(c)
-        generate(c)
-        apply(c)
+        config_dict = get_config()
+        verify(config_dict)
+        generate(config_dict)
+        apply(config_dict)
     except ConfigError as e:
         print(e)
         exit(1)

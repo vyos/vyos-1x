@@ -37,7 +37,6 @@ ReportToSyslog=true
 DisplayName="{%- if show['title'] %}{{ show['title'] }}{%- else %}VyOS{%- endif %}"
 
 {%- if show['host'] %}
-{#%- for s in show['host'] %#}
 
 [CPU]
 # Show screen
@@ -77,7 +76,6 @@ Active={%- if 'proc' in show['host'] %}true{%- else %}false{%- endif %}
 [Disk]
 # Show screen
 Active={%- if 'disk' in show['host'] %}true{%- else %}false{%- endif %}
-{#%- endfor %#}
 {%- else %} {# if show['host'] #}
 {# Turn off sections that default active #}
 
@@ -90,8 +88,6 @@ Active=false
 [Load]
 Active=false
 
-[TimeDate]
-Active=false
 {%- endif %} {# if show['host'] #}
 
 [TimeDate]
@@ -118,10 +114,10 @@ TimeFormat="%H:%M"
 Active={%- if show['network']['interface'] %}true{%- else %}false{%- endif %}
 {%- for i in show['network']['interface'] %}
 # Show stats for Interface {{ i }}
-Interface0={{ i }}
+Interface{{ loop.index0 }}={{ i }}
 {%- if show['network']['interface'][i]['alias'] %}
 # Interface alias name to display [default: <interface name>]
-Alias0={{ show['network']['interface'][i]['alias'] }}
+Alias{{ loop.index0 }}={{ show['network']['interface'][i]['alias'] }}
 {%- endif %}
 {%- endfor %}
 
@@ -139,7 +135,7 @@ unit=bit
 #transfer=TRUE
 {%- endif %} {# if show['network'] #}
 
-{%- else %} {# if show #}
+{%- else %}{# if show #}
 {# Turn off sections that default active #}
 
 [CPU]
@@ -153,7 +149,7 @@ Active=false
 
 [TimeDate]
 Active=false
-{%- endif %}
+{%- endif %}{# if show #}
 
 [Battery]
 # Show screen
