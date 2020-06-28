@@ -14,13 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
 import unittest
 
 from psutil import process_iter
 from vyos.configsession import ConfigSession, ConfigSessionError
-from vyos.util import read_file
 
 config_file = '/etc/ppp/peers/{}'
 base_path = ['interfaces', 'wirelessmodem']
@@ -32,7 +30,7 @@ def get_config_value(interface, key):
                 return list(line.split())
     return []
 
-class PPPoEInterfaceTest(unittest.TestCase):
+class WWANInterfaceTest(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
         self._interfaces = ['wlm0', 'wlm1']
@@ -42,7 +40,7 @@ class PPPoEInterfaceTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_pppoe_1(self):
+    def test_wlm_1(self):
         for interface in self._interfaces:
             self.session.set(base_path + [interface, 'no-peer-dns'])
             self.session.set(base_path + [interface, 'ondemand'])
