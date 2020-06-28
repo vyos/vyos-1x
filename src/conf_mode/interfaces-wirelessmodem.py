@@ -29,9 +29,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-# XXX: workaround for https://phabricator.vyos.net/T2660
-default_values = {'backup' : {'distance' : '10'}}
-
 def check_kmod():
     modules = ['option', 'usb_wwan', 'usbserial']
     for module in modules:
@@ -60,8 +57,7 @@ def get_config():
 
     # retrieve interface default values
     base = ['interfaces', 'wirelessmodem']
-    # XXX: workaround for https://phabricator.vyos.net/T2660
-    #default_values = defaults(base)
+    default_values = defaults(base)
 
     ifname = os.environ['VYOS_TAGNODE_VALUE']
     base = base + [ifname]
