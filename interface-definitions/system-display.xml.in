@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <!--
-    system display model (SDEC|EZIO)
+    system display model (sdec|ezio)
     system display config (enabled|disabled)
     system display show host (cpu|cpu-all|cpu-hist|disk|load-hist|memory|proc|uptime)
                         network interface <intName> alias <alias>
@@ -21,23 +21,23 @@
           <priority>400</priority>
         </properties>
         <children>
-          <!-- system display model (SDEC|EZIO) -->
+          <!-- system display model (sdec|ezio) -->
           <leafNode name="model">
             <properties>
               <help>Model of the display attached to this system [REQUIRED]</help>
               <completionHelp>
-                <list>SDEC EZIO</list>
+                <list>sdec ezio</list>
               </completionHelp>
               <constraint>
-                <regex>(SDEC|EZIO)</regex>
+                <regex>(sdec|ezio)</regex>
               </constraint>
               <constraintErrorMessage>Invalid system display model</constraintErrorMessage>
               <valueHelp>
-                <format>SDEC</format>
+                <format>sdec</format>
                 <description>Display model for Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances with built-in SDEC LCD</description>
               </valueHelp>
               <valueHelp>
-                <format>EZIO</format>
+                <format>ezio</format>
                 <description>Display model for Portwell, Caswell appliances with built-in EZIO-100 or EZIO-300 LCD</description>
               </valueHelp>
             </properties>

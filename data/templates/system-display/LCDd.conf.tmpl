@@ -52,11 +52,11 @@ DriverPath=/usr/lib/x86_64-linux-gnu/lcdproc/
 #   Olimex_MOD_LCD1x9, picolcd, pyramid, rawserial, sdeclcd, sed1330,
 #   sed1520, serialPOS, serialVFD, shuttleVFD, sli, stv5730, svga, t6963,
 #   text, tyan, ula200, vlsys_m428, xosd, yard2LCD
-{%- if model == 'SDEC' %}
+{%- if model == 'sdec' %}
 Driver=sdeclcd
 {%- endif %}
 
-{%- if model == 'EZIO' %}
+{%- if model == 'ezio' %}
 Driver=hd44780
 {%- endif %}
 
@@ -544,7 +544,7 @@ Speed=19200
 
 ## Hitachi HD44780 driver ##
 [hd44780]
-{%- if model == 'EZIO' %}
+{%- if model == 'ezio' %}
 ConnectionType=ezio
 Device=/dev/ttyS1
 Keypad=yes
