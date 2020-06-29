@@ -92,7 +92,7 @@ GoodBye="{%- if bye %}{{ bye }}{%- else %}Bye from VyOS{%- endif %}"
 #FrameInterval=125000
 
 # Sets the default time in seconds to displays a screen. [default: 4]
-WaitTime={%- if duration %}{{ duration }}{%- else%}4{%- endif %}
+WaitTime={%- if time %}{{ time }}{%- else%}4{%- endif %}
 
 # If set to no, LCDd will start with screen rotation disabled. This has the
 # same effect as if the ToggleRotateKey had been pressed. Rotation will start

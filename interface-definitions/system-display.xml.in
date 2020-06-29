@@ -8,7 +8,7 @@
                         clock (big|mini|date-time)
                         title <name>
 
-    system display duration <s>
+    system display time <s>
     system display hello <string>
     system display bye <string>
     system display disabled
@@ -191,8 +191,8 @@
               </leafNode><!--system display show title-->
             </children>
           </node><!--system display show-->
-          <!-- system display duration -->
-          <leafNode name="duration">
+          <!-- system display time -->
+          <leafNode name="time">
             <properties>
               <help>Time in sec to show each screen on the system display</help>
               <valueHelp>
@@ -203,7 +203,7 @@
                 <validator name="numeric" argument="--range 1-30"/>
               </constraint>
             </properties>
-          </leafNode><!--system display duration-->
+          </leafNode><!--system display time-->
           <!-- system display hello  -->
           <leafNode name="hello">
             <properties>
