@@ -32,7 +32,6 @@ def verify_bridge_vrf(config):
     if 'vrf' in config.keys():
         if config['vrf'] not in interfaces():
             raise ConfigError('VRF "{vrf}" does not exist'.format(**config))
-
         if 'is_bridge_member' in config.keys():
             raise ConfigError(
                 'Interface "{ifname}" cannot be both a member of VRF "{vrf}" '
@@ -69,6 +68,10 @@ def verify_source_interface(config):
     perform recurring validation of the existence of a source-interface
     required by e.g. peth/MACvlan, MACsec ...
     """
+    from netifaces import interfaces
     if not 'source_interface' in config.keys():
         raise ConfigError('Physical source-interface required for '
                           'interface "{ifname}"'.format(**config))
+    if not config['source_interface'] in interfaces():
+        raise ConfigError(f'Source interface {source_interface} does not '
+                          f'exist'.format(**config))

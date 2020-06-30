@@ -2,21 +2,21 @@
 
 # As PPPoE is an "on demand" interface we need to re-configure it when it
 # becomes up
-if [ "$6" != "{{ intf }}" ]; then
+if [ "$6" != "{{ ifname }}" ]; then
     exit
 fi
 
 # add some info to syslog
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
 {% if not on_demand %}
 # See https://phabricator.vyos.net/T2248. Determine if we are enslaved to a
 # VRF, this is needed to properly insert the default route.
 VRF_NAME=""
-if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
+if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     # Determine upper (VRF) interface
-    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
+    VRF=$(basename $(ls -d /sys/class/net/{{ ifname }}/upper_*))
     # Remove upper_ prefix from result string
     VRF=${VRF#"upper_"}
     # Populate variable to run in VR context
@@ -24,13 +24,13 @@ if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
 fi
 
 # Always delete default route when interface goes down
-vtysh -c "conf t" ${VRF_NAME} -c "no ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME}"
+vtysh -c "conf t" ${VRF_NAME} -c "no ip route 0.0.0.0/0 {{ ifname }} ${VRF_NAME}"
 {%   if ipv6_enable %}
-vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ intf }} ${VRF_NAME}"
+vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
 {%   endif %}
 {% endif %}
 
 {% if dhcpv6_pd_interfaces %}
 # Start wide dhcpv6 client
-systemctl stop dhcp6c@{{ intf }}.service
+systemctl stop dhcp6c@{{ ifname }}.service
 {% endif %}

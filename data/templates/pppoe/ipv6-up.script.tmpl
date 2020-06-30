@@ -3,17 +3,15 @@
 # As PPPoE is an "on demand" interface we need to re-configure it when it
 # becomes up
 
-if [ "$6" != "{{ intf }}" ]; then
+if [ "$6" != "{{ ifname }}" ]; then
     exit
 fi
 
-set -x
-
 {% if ipv6_autoconf -%}
 # add some info to syslog
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
-logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} via {{ source_interface }}"
+logger -t pppd[$DIALER_PID] "configuring interface {{ ifname }} via {{ source_interface }}"
 
 # Configure interface-specific Host/Router behaviour.
 # Note: It is recommended to have the same setting on all interfaces; mixed
@@ -22,7 +20,7 @@ logger -t pppd[$DIALER_PID] "configuring interface {{ intf }} via {{ source_inte
 # 0  Forwarding disabled
 # 1  Forwarding enabled
 #
-echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/forwarding
+echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/forwarding
 
 # Accept Router Advertisements; autoconfigure using them.
 #
@@ -36,15 +34,15 @@ echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/forwarding
 # 2  Overrule forwarding behaviour. Accept Router Advertisements
 #    even if forwarding is enabled.
 #
-echo 2 > /proc/sys/net/ipv6/conf/{{ intf }}/accept_ra
+echo 2 > /proc/sys/net/ipv6/conf/{{ ifname }}/accept_ra
 
 # Autoconfigure addresses using Prefix Information in Router Advertisements.
-echo 1 > /proc/sys/net/ipv6/conf/{{ intf }}/autoconf
+echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/autoconf
 {% endif %}
 
 {% if dhcpv6_pd_interfaces %}
 # Start wide dhcpv6 client
-systemctl start dhcp6c@{{ intf }}.service
+systemctl start dhcp6c@{{ ifname }}.service
 {% endif %}
 
 
@@ -54,9 +52,9 @@ systemctl start dhcp6c@{{ intf }}.service
 
 SED_OPT="^ipv6 route"
 VRF_NAME=""
-if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
+if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     # Determine upper (VRF) interface
-    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
+    VRF=$(basename $(ls -d /sys/class/net/{{ ifname }}/upper_*))
     # Remove upper_ prefix from result string
     VRF=${VRF#"upper_"}
     # generate new SED command
@@ -80,8 +78,8 @@ done
 {%     endif %}
 
 # Add default route to default or VRF routing table
-vtysh -c "conf t" ${VTY_OPT} -c "ipv6 route ::/0 {{ intf }} ${VRF_NAME}"
-logger -t pppd[$DIALER_PID] "added default route via {{ intf }} ${VRF_NAME}"
+vtysh -c "conf t" ${VTY_OPT} -c "ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
+logger -t pppd[$DIALER_PID] "added default route via {{ ifname }} ${VRF_NAME}"
 {%   endif %}
 
 

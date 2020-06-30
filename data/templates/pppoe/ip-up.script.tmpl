@@ -2,13 +2,13 @@
 
 # As PPPoE is an "on demand" interface we need to re-configure it when it
 # becomes up
-if [ "$6" != "{{ intf }}" ]; then
+if [ "$6" != "{{ ifname }}" ]; then
     exit
 fi
 
 {% if not on_demand %}
 # add some info to syslog
-DIALER_PID=$(cat /var/run/{{ intf }}.pid)
+DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
 {%   if default_route != 'none' -%}
@@ -17,9 +17,9 @@ logger -t pppd[$DIALER_PID] "executing $0"
 
 SED_OPT="^ip route"
 VRF_NAME=""
-if [ -d /sys/class/net/{{ intf }}/upper_* ]; then
+if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     # Determine upper (VRF) interface
-    VRF=$(basename $(ls -d /sys/class/net/{{ intf }}/upper_*))
+    VRF=$(basename $(ls -d /sys/class/net/{{ ifname }}/upper_*))
     # Remove upper_ prefix from result string
     VRF=${VRF#"upper_"}
     # generate new SED command
@@ -43,7 +43,7 @@ done
 {%     endif %}
 
 # Add default route to default or VRF routing table
-vtysh -c "conf t" ${VTY_OPT} -c "ip route 0.0.0.0/0 {{ intf }} ${VRF_NAME}"
-logger -t pppd[$DIALER_PID] "added default route via {{ intf }} ${VRF_NAME}"
+vtysh -c "conf t" ${VTY_OPT} -c "ip route 0.0.0.0/0 {{ ifname }} ${VRF_NAME}"
+logger -t pppd[$DIALER_PID] "added default route via {{ ifname }} ${VRF_NAME}"
 {%   endif %}
 {% endif %}

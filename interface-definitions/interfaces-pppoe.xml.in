@@ -71,6 +71,7 @@
                 <description>Replace existing default route</description>
               </valueHelp>
             </properties>
+            <defaultValue>auto</defaultValue>
           </leafNode>
           #include <include/dhcpv6-options.xml.i>
           #include <include/interface-description.xml.i>
