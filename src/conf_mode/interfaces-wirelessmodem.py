@@ -21,7 +21,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configverify import verify_bridge_vrf
+from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.util import call
 from vyos.xml import defaults
@@ -92,7 +92,7 @@ def verify(wwan):
     if not os.path.exists(find_device_file(wwan['device'])):
         raise ConfigError('Device "{device}" does not exist'.format(**wwan))
 
-    verify_bridge_vrf(wwan)
+    verify_vrf(wwan)
 
     return None
 

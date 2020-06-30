@@ -25,8 +25,8 @@ from vyos.ifconfig import MACsecIf
 from vyos.template import render
 from vyos.util import call
 from vyos.validate import is_member
-from vyos.configverify import verify_bridge_vrf
-from vyos.configverify import verify_bridge_address
+from vyos.configverify import verify_vrf
+from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_source_interface
 from vyos.xml import defaults
@@ -86,8 +86,8 @@ def verify(macsec):
         return None
 
     verify_source_interface(macsec)
-    verify_bridge_vrf(macsec)
-    verify_bridge_address(macsec)
+    verify_vrf(macsec)
+    verify_address(macsec)
 
     if not (('security' in macsec.keys()) and
             ('cipher' in macsec['security'].keys())):

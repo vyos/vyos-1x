@@ -19,8 +19,8 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos.configverify import verify_bridge_vrf
-from vyos.configverify import verify_bridge_address
+from vyos.configverify import verify_vrf
+from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.ifconfig import DummyIf
 from vyos.validate import is_member
@@ -61,8 +61,8 @@ def verify(dummy):
         verify_bridge_delete(dummy)
         return None
 
-    verify_bridge_vrf(dummy)
-    verify_bridge_address(dummy)
+    verify_vrf(dummy)
+    verify_address(dummy)
 
     return None
 

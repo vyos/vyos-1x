@@ -23,22 +23,23 @@
 
 from vyos import ConfigError
 
-def verify_bridge_vrf(config):
+def verify_vrf(config):
     """
-    Common helper function used by interface implementations to
-    perform recurring validation of VRF configuration
+    Common helper function used by interface implementations to perform
+    recurring validation of VRF configuration.
     """
     from netifaces import interfaces
     if 'vrf' in config.keys():
         if config['vrf'] not in interfaces():
             raise ConfigError('VRF "{vrf}" does not exist'.format(**config))
+
         if 'is_bridge_member' in config.keys():
             raise ConfigError(
                 'Interface "{ifname}" cannot be both a member of VRF "{vrf}" '
                 'and bridge "{is_bridge_member}"!'.format(**config))
 
 
-def verify_bridge_address(config):
+def verify_address(config):
     """
     Common helper function used by interface implementations to
     perform recurring validation of IP address assignmenr

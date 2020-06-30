@@ -24,7 +24,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_source_interface
-from vyos.configverify import verify_bridge_vrf
+from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.util import call
 from vyos.xml import defaults
@@ -71,7 +71,7 @@ def verify(pppoe):
         return None
 
     verify_source_interface(pppoe)
-    verify_bridge_vrf(pppoe)
+    verify_vrf(pppoe)
 
     if {'connect_on_demand', 'vrf'} <= set(pppoe):
         raise ConfigError('On-demand dialing and VRF can not be used at the same time')
