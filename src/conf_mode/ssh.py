@@ -37,7 +37,7 @@ def get_config():
     if not conf.exists(base):
         return None
 
-    ssh = conf.get_config_dict(base, key_mangling=('-', '_'))
+    ssh = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)

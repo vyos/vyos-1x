@@ -71,7 +71,6 @@ import subprocess
 import vyos.util
 import vyos.configtree
 
-
 class VyOSError(Exception):
     """
     Raised on config access errors, most commonly if the type of a config tree node
@@ -288,17 +287,24 @@ class Config(object):
             self.__session_env = save_env
             return(default)
 
-    def get_config_dict(self, path=[], effective=False, key_mangling=None):
+    def get_config_dict(self, path=[], effective=False, key_mangling=None, get_first_key=False):
         """
         Args: path (str list): Configuration tree path, can be empty
         Returns: a dict representation of the config
         """
-        res = self.show_config(self._make_path(path), effective=effective)
-        if res:
+        res = self.show_config(effective=effective)
+        config_dict = {}
+        if not res:
+            return config_dict
+        else:
             config_tree = vyos.configtree.ConfigTree(res)
             config_dict = json.loads(config_tree.to_json())
-        else:
-            config_dict = {}
+            config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path))
+            if get_first_key:
+                tmp = next(iter(config_dict.values()))
+                if not isinstance(tmp, dict):
+                    raise TypeError("Data under node is not of type dict")
+                config_dict = tmp
 
         if key_mangling:
             if not (isinstance(key_mangling, tuple) and \

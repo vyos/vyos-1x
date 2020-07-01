@@ -62,7 +62,7 @@ def get_config():
     ifname = os.environ['VYOS_TAGNODE_VALUE']
     base = base + [ifname]
 
-    wwan = conf.get_config_dict(base, key_mangling=('-', '_'))
+    wwan = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     # Check if interface has been removed
     if wwan == {}:
         wwan.update({'deleted' : ''})
