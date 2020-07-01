@@ -299,12 +299,7 @@ class Config(object):
         else:
             config_tree = vyos.configtree.ConfigTree(res)
             config_dict = json.loads(config_tree.to_json())
-            config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path))
-            if get_first_key and path and config_dict:
-                tmp = next(iter(config_dict.values()))
-                if not isinstance(tmp, dict):
-                    raise TypeError("Data under node is not of type dict")
-                config_dict = tmp
+            config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path), get_first_key)
 
         if key_mangling:
             if not (isinstance(key_mangling, tuple) and \

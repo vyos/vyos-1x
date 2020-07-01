@@ -376,7 +376,7 @@ def _get_sub_dict(d, lpath):
         return {}
     return _get_sub_dict(c[k], lpath)
 
-def get_sub_dict(source, lpath):
+def get_sub_dict(source, lpath, get_first_key=False):
     """ Returns the sub-dict of a nested dict, defined by path of keys.
 
     Args:
@@ -393,7 +393,16 @@ def get_sub_dict(source, lpath):
         raise TypeError("path must be of type list")
     if not lpath:
         return source
-    return _get_sub_dict(source, lpath)
+
+    ret =  _get_sub_dict(source, lpath)
+
+    if get_first_key and lpath and ret:
+        tmp = next(iter(ret.values()))
+        if not isinstance(tmp, dict):
+            raise TypeError("Data under node is not of type dict")
+        ret = tmp
+
+    return ret
 
 def process_running(pid_file):
     """ Checks if a process with PID in pid_file is running """
