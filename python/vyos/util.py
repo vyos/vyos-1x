@@ -383,7 +383,8 @@ def get_sub_dict(source, lpath):
         source (dict): Source dict to extract from
         lpath (list[str]): sequence of keys
 
-    Returns: {key : source[..]..[key]} for key the last element of lpath, if exists
+    Returns: source, if lpath is empty, else
+             {key : source[..]..[key]} for key the last element of lpath, if exists
              {} otherwise
     """
     if not isinstance(source, dict):
