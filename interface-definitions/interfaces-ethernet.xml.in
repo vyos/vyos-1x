@@ -56,6 +56,7 @@
               </constraint>
               <constraintErrorMessage>duplex must be auto, half or full</constraintErrorMessage>
             </properties>
+            <defaultValue>auto</defaultValue>
           </leafNode>
           #include <include/interface-hw-id.xml.i>
           <node name="ip">
@@ -265,6 +266,7 @@
               </constraint>
               <constraintErrorMessage>Speed must be auto, 10, 100, 1000, 2500, 5000, 10000, 25000, 40000, 50000 or 100000</constraintErrorMessage>
             </properties>
+            <defaultValue>auto</defaultValue>
           </leafNode>
           #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>

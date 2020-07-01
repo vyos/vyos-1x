@@ -16,6 +16,7 @@
 import os
 import re
 import json
+import jmespath
 from copy import deepcopy
 
 from ipaddress import IPv4Network
@@ -322,11 +323,11 @@ class Interface(Control):
             self.set_admin_state('down')
 
         self.set_interface('mac', mac)
-        
+
         # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
         if prev_state == 'up':
             self.set_admin_state('up')
-    
+
     def set_vrf(self, vrf=''):
         """
         Add/Remove interface from given VRF instance.
@@ -773,14 +774,17 @@ class Interface(Control):
         on any interface. """
 
         # Update interface description
-        self.set_alias(config.get('description', None))
+        self.set_alias(config.get('description', ''))
+
+        # Ignore link state changes
+        value = '2' if 'disable_link_detect' in config else '1'
+        self.set_link_detect(value)
 
         # Configure assigned interface IP addresses. No longer
         # configured addresses will be removed first
         new_addr = config.get('address', [])
 
-        # XXX workaround for T2636, convert IP address string to a list
-        # with one element
+        # XXX: T2636 workaround: convert string to a list with one element
         if isinstance(new_addr, str):
             new_addr = [new_addr]
 
@@ -800,6 +804,96 @@ class Interface(Control):
             # Bind interface instance into VRF
             self.set_vrf(config.get('vrf', ''))
 
+        # DHCP options
+        if 'dhcp_options' in config:
+            dhcp_options = config.get('dhcp_options')
+            if 'client_id' in dhcp_options:
+                self.dhcp.v4.options['client_id'] = dhcp_options.get('client_id')
+
+            if 'host_name' in dhcp_options:
+                self.dhcp.v4.options['hostname'] = dhcp_options.get('host_name')
+
+            if 'vendor_class_id' in dhcp_options:
+                self.dhcp.v4.options['vendor_class_id'] = dhcp_options.get('vendor_class_id')
+
+        # DHCPv6 options
+        if 'dhcpv6_options' in config:
+            dhcpv6_options = config.get('dhcpv6_options')
+            if 'parameters_only' in dhcpv6_options:
+                self.dhcp.v6.options['dhcpv6_prm_only'] = True
+
+            if 'temporary' in dhcpv6_options:
+                self.dhcp.v6.options['dhcpv6_temporary'] = True
+
+            if 'prefix_delegation' in dhcpv6_options:
+                prefix_delegation = dhcpv6_options.get('prefix_delegation')
+                if 'length' in prefix_delegation:
+                    self.dhcp.v6.options['dhcpv6_pd_length'] = prefix_delegation.get('length')
+
+                if 'interface' in prefix_delegation:
+                    self.dhcp.v6.options['dhcpv6_pd_interfaces'] = prefix_delegation.get('interface')
+
+        # Configure ARP cache timeout in milliseconds - has default value
+        tmp = jmespath.search('ip.arp_cache_timeout', config)
+        value = tmp if (tmp != None) else '30'
+        self.set_arp_cache_tmo(value)
+
+        # Configure ARP filter configuration
+        tmp = jmespath.search('ip.disable_arp_filter', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_arp_filter(value)
+
+        # Configure ARP accept
+        tmp = jmespath.search('ip.enable_arp_accept', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_accept(value)
+
+        # Configure ARP announce
+        tmp = jmespath.search('ip.enable_arp_announce', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_announce(value)
+
+        # Configure ARP ignore
+        tmp = jmespath.search('ip.enable_arp_ignore', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_ignore(value)
+
+        # Enable proxy-arp on this interface
+        tmp = jmespath.search('ip.enable_proxy_arp', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_proxy_arp(value)
+
+        # Enable private VLAN proxy ARP on this interface
+        tmp = jmespath.search('ip.proxy_arp_pvlan', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_proxy_arp_pvlan(value)
+
+        # IPv6 forwarding
+        tmp = jmespath.search('ipv6.disable_forwarding', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_ipv6_forwarding(value)
+
+        # IPv6 router advertisements
+        tmp = jmespath.search('ipv6.address.autoconf', config)
+        value = '2' if (tmp != None) else '1'
+        if 'dhcpv6' in new_addr:
+            value = '2'
+        self.set_ipv6_accept_ra(value)
+
+        # IPv6 address autoconfiguration
+        tmp = jmespath.search('ipv6.address.autoconf', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_ipv6_autoconf(value)
+
+        # IPv6 Duplicate Address Detection (DAD) tries
+        tmp = jmespath.search('ipv6.dup_addr_detect_transmits', config)
+        value = tmp if (tmp != None) else '1'
+        self.set_ipv6_dad_messages(value)
+
+        # MTU - Maximum Transfer Unit
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
+
         # Interface administrative state
-        state = 'down' if 'disable' in config.keys() else 'up'
+        state = 'down' if 'disable' in config else 'up'
         self.set_admin_state(state)

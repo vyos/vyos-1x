@@ -41,14 +41,14 @@ def verify_vrf(config):
 
 def verify_address(config):
     """
-    Common helper function used by interface implementations to
-    perform recurring validation of IP address assignmenr
-    when interface also is part of a bridge.
+    Common helper function used by interface implementations to perform
+    recurring validation of IP address assignment when interface is part
+    of a bridge or bond.
     """
     if {'is_bridge_member', 'address'} <= set(config):
         raise ConfigError(
-            f'Cannot assign address to interface "{ifname}" as it is a '
-            f'member of bridge "{is_bridge_member}"!'.format(**config))
+            'Cannot assign address to interface "{ifname}" as it is a '
+            'member of bridge "{is_bridge_member}"!'.format(**config))
 
 
 def verify_bridge_delete(config):
@@ -62,6 +62,15 @@ def verify_bridge_delete(config):
             'Interface "{ifname}" cannot be deleted as it is a '
             'member of bridge "{is_bridge_member}"!'.format(**config))
 
+def verify_interface_exists(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation if an interface actually exists.
+    """
+    from netifaces import interfaces
+    if not config['ifname'] in interfaces():
+        raise ConfigError(f'Interface "{ifname}" does not exist!'
+                          .format(**config))
 
 def verify_source_interface(config):
     """
@@ -76,3 +85,37 @@ def verify_source_interface(config):
     if not config['source_interface'] in interfaces():
         raise ConfigError(f'Source interface {source_interface} does not '
                           f'exist'.format(**config))
+
+def verify_dhcpv6(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of DHCPv6 options which are mutually exclusive.
+    """
+    if {'parameters_only', 'temporary'} <= set(config.get('dhcpv6_options', {})):
+        raise ConfigError('DHCPv6 temporary and parameters-only options '
+                          'are mutually exclusive!')
+
+def verify_vlan_config(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of interface VLANs
+    """
+    # 802.1q VLANs
+    for vlan in config.get('vif', {}).keys():
+        vlan = config['vif'][vlan]
+        verify_dhcpv6(vlan)
+        verify_address(vlan)
+        verify_vrf(vlan)
+
+    # 802.1ad (Q-in-Q) VLANs
+    for vlan in config.get('vif_s', {}).keys():
+        vlan = config['vif_s'][vlan]
+        verify_dhcpv6(vlan)
+        verify_address(vlan)
+        verify_vrf(vlan)
+
+        for vlan in config.get('vif_s', {}).get('vif_c', {}).keys():
+            vlan = config['vif_c'][vlan]
+            verify_dhcpv6(vlan)
+            verify_address(vlan)
+            verify_vrf(vlan)

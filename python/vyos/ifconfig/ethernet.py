@@ -15,12 +15,13 @@
 
 import os
 import re
+import jmespath
 
+from vyos.configdict import get_ethertype
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 from vyos.validate import assert_list
 from vyos.util import run
-
 
 @Interface.register
 @VLAN.enable
@@ -252,3 +253,101 @@ class EthernetIf(Interface):
         >>> i.set_udp_offload('on')
         """
         return self.set_interface('ufo', state)
+
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # now call the regular function from within our base class
+        super().update(config)
+
+        # disable ethernet flow control (pause frames)
+        value = 'off' if 'disable_flow_control' in config.keys() else 'on'
+        self.set_flow_control(value)
+
+        # GRO (generic receive offload)
+        tmp = jmespath.search('offload_options.generic_receive', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_gro(value)
+
+        # GSO (generic segmentation offload)
+        tmp = jmespath.search('offload_options.generic_segmentation', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_gso(value)
+
+        # scatter-gather option
+        tmp = jmespath.search('offload_options.scatter_gather', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_sg(value)
+
+        # TSO (TCP segmentation offloading)
+        tmp = jmespath.search('offload_options.udp_fragmentation', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_tso(value)
+
+        # UDP fragmentation offloading
+        tmp = jmespath.search('offload_options.udp_fragmentation', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_ufo(value)
+
+        # Set physical interface speed and duplex
+        if {'speed', 'duplex'} <= set(config):
+            speed = config.get('speed')
+            duplex = config.get('duplex')
+            self.set_speed_duplex(speed, duplex)
+
+        # Delete old IPv6 EUI64 addresses before changing MAC
+
+        # Change interface MAC address - re-set to real hardware address (hw-id)
+        # if custom mac is removed. Skip if bond member.
+        if 'is_bond_member' not in config:
+            mac = config.get('hw_id')
+            if 'mac' in config:
+                mac = config.get('mac')
+            if mac:
+                self.set_mac(mac)
+
+        # Add IPv6 EUI-based addresses
+        tmp = jmespath.search('ipv6.address.eui64', config)
+        if tmp:
+            # XXX: T2636 workaround: convert string to a list with one element
+            if isinstance(tmp, str):
+                tmp = [tmp]
+            for addr in tmp:
+                self.add_ipv6_eui64_address(addr)
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if 'is_bridge_member' in config:
+            bridge = config.get('is_bridge_member')
+            self.add_to_bridge(bridge)
+
+        # remove no longer required 802.1ad (Q-in-Q VLANs)
+        for vif_s_id in config.get('vif_s_remove', {}):
+            self.del_vlan(vif_s_id)
+
+        # create/update 802.1ad (Q-in-Q VLANs)
+        for vif_s_id, vif_s in config.get('vif_s', {}).items():
+            tmp=get_ethertype(vif_s.get('ethertype', '0x88A8'))
+            s_vlan = self.add_vlan(vif_s_id, ethertype=tmp)
+            s_vlan.update(vif_s)
+
+            # remove no longer required client VLAN (vif-c)
+            for vif_c_id in vif_s.get('vif_c_remove', {}):
+                s_vlan.del_vlan(vif_c_id)
+
+            # create/update client VLAN (vif-c) interface
+            for vif_c_id, vif_c in vif_s.get('vif_c', {}).items():
+                c_vlan = s_vlan.add_vlan(vif_c_id)
+                c_vlan.update(vif_c)
+
+        # remove no longer required 802.1q VLAN interfaces
+        for vif_id in config.get('vif_remove', {}):
+            self.del_vlan(vif_id)
+
+        # create/update 802.1q VLAN interfaces
+        for vif_id, vif in config.get('vif', {}).items():
+            vlan = self.add_vlan(vif_id)
+            vlan.update(vif)

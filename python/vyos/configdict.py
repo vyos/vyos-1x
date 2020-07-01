@@ -102,12 +102,35 @@ def dict_merge(source, destination):
     return tmp
 
 def list_diff(first, second):
-    """
-    Diff two dictionaries and return only unique items
-    """
+    """ Diff two dictionaries and return only unique items """
     second = set(second)
     return [item for item in first if item not in second]
 
+def T2665_default_dict_cleanup(dict):
+    """ Cleanup default keys for tag nodes https://phabricator.vyos.net/T2665. """
+    # Cleanup
+    for vif in ['vif', 'vif_s']:
+        if vif in dict.keys():
+            for key in ['ip', 'mtu']:
+                if key in dict[vif].keys():
+                    del dict[vif][key]
+
+            # cleanup VIF-S defaults
+            if 'vif_c' in dict[vif].keys():
+                for key in ['ip', 'mtu']:
+                    if key in dict[vif]['vif_c'].keys():
+                        del dict[vif]['vif_c'][key]
+                # If there is no vif-c defined and we just cleaned the default
+                # keys - we can clean the entire vif-c dict as it's useless
+                if not dict[vif]['vif_c']:
+                    del dict[vif]['vif_c']
+
+            # If there is no real vif/vif-s defined and we just cleaned the default
+            # keys - we can clean the entire vif dict as it's useless
+            if not dict[vif]:
+                del dict[vif]
+
+    return dict
 
 def get_ethertype(ethertype_val):
     if ethertype_val == '0x88A8':
