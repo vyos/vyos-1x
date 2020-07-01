@@ -52,7 +52,7 @@ def vrf_interfaces(c, match):
     matched = []
     old_level = c.get_level()
     c.set_level(['interfaces'])
-    section = c.get_config_dict([])
+    section = c.get_config_dict([], get_first_key=True)
     for type in section:
         interfaces = section[type]
         for name in interfaces:

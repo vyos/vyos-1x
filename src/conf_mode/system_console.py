@@ -31,7 +31,7 @@ def get_config():
     base = ['system', 'console']
 
     # retrieve configuration at once
-    console = conf.get_config_dict(base)
+    console = conf.get_config_dict(base, get_first_key=True)
 
     # bail out early if no serial console is configured
     if 'device' not in console.keys():

@@ -35,7 +35,7 @@ def get_config():
     ifname = os.environ['VYOS_TAGNODE_VALUE']
     base = ['interfaces', 'loopback', ifname]
 
-    loopback = conf.get_config_dict(base, key_mangling=('-', '_'))
+    loopback = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     # Check if interface has been removed
     if loopback == {}:
         loopback.update({'deleted' : ''})
