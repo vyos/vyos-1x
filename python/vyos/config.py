@@ -300,7 +300,7 @@ class Config(object):
             config_tree = vyos.configtree.ConfigTree(res)
             config_dict = json.loads(config_tree.to_json())
             config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path))
-            if get_first_key:
+            if get_first_key and path and config_dict:
                 tmp = next(iter(config_dict.values()))
                 if not isinstance(tmp, dict):
                     raise TypeError("Data under node is not of type dict")
