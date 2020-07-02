@@ -292,14 +292,16 @@ class Config(object):
         Args: path (str list): Configuration tree path, can be empty
         Returns: a dict representation of the config
         """
-        res = self.show_config(effective=effective)
         config_dict = {}
-        if not res:
-            return config_dict
+
+        if effective:
+            if self._running_config:
+                config_dict = json.loads((self._running_config).to_json())
         else:
-            config_tree = vyos.configtree.ConfigTree(res)
-            config_dict = json.loads(config_tree.to_json())
-            config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path), get_first_key)
+            if self._session_config:
+                config_dict = json.loads((self._session_config).to_json())
+
+        config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path), get_first_key)
 
         if key_mangling:
             if not (isinstance(key_mangling, tuple) and \
