@@ -34,9 +34,9 @@ def generate(config_dict):
     if not config_dict:
         return None
     # Render config file for daemon LCDd
-    render('/etc/LCDd.conf', 'system-display/LCDd.conf.tmpl', config_dict)
+    render('/run/LCDd/LCDd.lo.conf', 'system-display/LCDd.conf.tmpl', config_dict)
     # Render config file for client lcdproc
-    render('/etc/lcdproc.conf', 'system-display/lcdproc.conf.tmpl', config_dict)
+    render('/run/lcdproc/lcdproc.lo.conf', 'system-display/lcdproc.conf.tmpl', config_dict)
 
     return None
 
@@ -70,17 +70,17 @@ def verify(config_dict):
 
 def apply(config_dict):
     # Stop client
-    run('systemctl stop lcdproc.service')
+    run('systemctl stop lcdproc@lo.service')
 
     if not config_dict or 'disabled' in config_dict:
         # Stop server
-        run('systemctl stop LCDd.service')
+        run('systemctl stop LCDd@lo.service')
         return None
 
     # Restart server
-    run('systemctl restart LCDd.service')
+    run('systemctl restart LCDd@lo.service')
     # Start client
-    run('systemctl start lcdproc.service')
+    run('systemctl start lcdproc@lo.service')
 
     return None
 
