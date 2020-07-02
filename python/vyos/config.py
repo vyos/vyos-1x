@@ -289,8 +289,13 @@ class Config(object):
 
     def get_config_dict(self, path=[], effective=False, key_mangling=None, get_first_key=False):
         """
-        Args: path (str list): Configuration tree path, can be empty
-        Returns: a dict representation of the config
+        Args:
+            path (str list): Configuration tree path, can be empty
+            effective=False: effective or session config
+            key_mangling=None: mangle dict keys according to regex and replacement
+            get_first_key=False: if k = path[:-1], return sub-dict d[k] instead of {k: d[k]}
+
+        Returns: a dict representation of the config under path
         """
         config_dict = {}
 
