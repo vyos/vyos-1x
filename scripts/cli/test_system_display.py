@@ -84,7 +84,7 @@ class SystemDisplayTest(unittest.TestCase):
 
         # load up ini-styled LCDd.conf
         LCDd_conf = configparser.ConfigParser()
-        LCDd_conf.read('/etc/LCDd.conf')
+        LCDd_conf.read('/run/LCDd/LCDd.lo.conf')
 
         # Check settings made it into LCDd.conf
         self.assertTrue(LCDd_conf['server']['Driver'] == 'hd44780')
@@ -104,7 +104,7 @@ class SystemDisplayTest(unittest.TestCase):
         # load up ini-styled lcdproc.conf configuration file
         lcdproc_conf = configparser.ConfigParser()
 
-        lcdproc_conf.read('/etc/lcdproc.conf')
+        lcdproc_conf.read('/run/lcdproc/lcdproc.lo.conf')
         # clock
         self.assertTrue(lcdproc_conf['TimeDate']['Active'] == 'false')
         self.assertTrue(lcdproc_conf['BigClock']['Active'] == 'true')
