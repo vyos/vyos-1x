@@ -1,0 +1,7 @@
+{% if network is string %}
+{{ network }}
+{% else %}
+{%   for net in network %}
+{{ net }}
+{%   endfor %}
+{% endif %}

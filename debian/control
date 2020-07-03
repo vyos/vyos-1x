@@ -102,7 +102,9 @@ Depends: python3,
   salt-minion,
   vyos-utils,
   nftables (>= 0.9.3),
-  conntrack
+  conntrack,
+  libatomic1,
+  fastnetmon
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
