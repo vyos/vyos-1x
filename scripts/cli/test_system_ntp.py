@@ -18,9 +18,9 @@ import re
 import os
 import unittest
 
-from ipaddress import ip_network
 from psutil import process_iter
 from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.template import vyos_address_from_cidr, vyos_netmask_from_cidr
 from vyos.util import read_file
 
 NTP_CONF = '/etc/ntp.conf'
@@ -29,7 +29,8 @@ base_path = ['system', 'ntp']
 def get_config_value(key):
     tmp = read_file(NTP_CONF)
     tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
-    return tmp
+    # remove possible trailing whitespaces
+    return [item.strip() for item in tmp]
 
 class TestSystemNTP(unittest.TestCase):
     def setUp(self):
@@ -86,8 +87,8 @@ class TestSystemNTP(unittest.TestCase):
 
         # Check generated client address configuration
         for network in networks:
-            network_address = ip_network(network).network_address
-            network_netmask = ip_network(network).netmask
+            network_address = vyos_address_from_cidr(network)
+            network_netmask = vyos_netmask_from_cidr(network)
 
             tmp = get_config_value(f'restrict {network_address}')[0]
             test = f'mask {network_netmask} nomodify notrap nopeer'
