@@ -18,6 +18,7 @@ import re
 import os
 import unittest
 
+from ipaddress import ip_network
 from psutil import process_iter
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
@@ -43,6 +44,7 @@ class TestSystemNTP(unittest.TestCase):
         del self.session
 
     def test_ntp_options(self):
+        """ Test basic NTP support with multiple servers and their options """
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['noselect', 'preempt', 'prefer']
 
@@ -53,11 +55,50 @@ class TestSystemNTP(unittest.TestCase):
         # commit changes
         self.session.commit()
 
-        # Check configured port
+        # Check generated configuration
         tmp = get_config_value('server')
         for server in servers:
             test = f'{server} iburst ' + ' '.join(options)
             self.assertTrue(test in tmp)
+
+        # Check for running process
+        self.assertTrue("ntpd" in (p.name() for p in process_iter()))
+
+    def test_ntp_clients(self):
+        """ Test the allowed-networks statement """
+        listen_address = ['127.0.0.1', '::1']
+        for listen in listen_address:
+            self.session.set(base_path + ['listen-address', listen])
+
+        networks = ['192.0.2.0/24', '2001:db8:1000::/64']
+        for network in networks:
+            self.session.set(base_path + ['allow-clients', 'address', network])
+
+        # Verify "NTP server not configured" verify() statement
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        servers = ['192.0.2.1', '192.0.2.2']
+        for server in servers:
+            self.session.set(base_path + ['server', server])
+
+        self.session.commit()
+
+        # Check generated client address configuration
+        for network in networks:
+            network_address = ip_network(network).network_address
+            network_netmask = ip_network(network).netmask
+
+            tmp = get_config_value(f'restrict {network_address}')[0]
+            test = f'mask {network_netmask} nomodify notrap nopeer'
+            self.assertTrue(tmp in test)
+
+        # Check listen address
+        tmp = get_config_value('interface')
+        test = ['ignore wildcard']
+        for listen in listen_address:
+            test.append(f'listen {listen}')
+        self.assertEqual(tmp, test)
 
         # Check for running process
         self.assertTrue("ntpd" in (p.name() for p in process_iter()))
