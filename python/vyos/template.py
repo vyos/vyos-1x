@@ -31,10 +31,18 @@ _templates_mem = {
 }
 
 def vyos_address_from_cidr(text):
+    """ Take an IPv4/IPv6 CIDR prefix and convert the network to an "address".
+    Example:
+    192.0.2.0/24 -> 192.0.2.0, 2001:db8::/48 -> 2001:db8::
+    """
     from ipaddress import ip_network
     return ip_network(text).network_address
 
 def vyos_netmask_from_cidr(text):
+    """ Take an IPv4/IPv6 CIDR prefix and convert the prefix length to a "subnet mask".
+    Example:
+    192.0.2.0/24 -> 255.255.255.0, 2001:db8::/48 -> ffff:ffff:ffff::
+    """
     from ipaddress import ip_network
     return ip_network(text).netmask
 

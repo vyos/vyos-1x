@@ -16,77 +16,22 @@
 
 import os
 
-from copy import deepcopy
-from ipaddress import ip_network
-from netifaces import interfaces
-from sys import exit
-
 from vyos.config import Config
+from vyos.configverify import verify_vrf
+from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
-from vyos import ConfigError
-
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/ntp.conf'
 systemd_override = r'/etc/systemd/system/ntp.service.d/override.conf'
 
-default_config_data = {
-    'servers': [],
-    'allowed_networks': [],
-    'listen_address': [],
-    'vrf': ''
-}
-
 def get_config():
-    ntp = deepcopy(default_config_data)
     conf = Config()
     base = ['system', 'ntp']
-    if not conf.exists(base):
-        return None
-    else:
-        conf.set_level(base)
 
-    node = ['allow-clients', 'address']
-    if conf.exists(node):
-        networks = conf.return_values(node)
-        for n in networks:
-            addr = ip_network(n)
-            net = {
-                "network" : n,
-                "address" : addr.network_address,
-                "netmask" : addr.netmask
-            }
-
-            ntp['allowed_networks'].append(net)
-
-    node = ['listen-address']
-    if conf.exists(node):
-        ntp['listen_address'] = conf.return_values(node)
-
-    node = ['server']
-    if conf.exists(node):
-        for node in conf.list_nodes(node):
-            options = []
-            server = {
-                "name": node,
-                "options": []
-            }
-            if conf.exists('server {0} noselect'.format(node)):
-                options.append('noselect')
-            if conf.exists('server {0} preempt'.format(node)):
-                options.append('preempt')
-            if conf.exists('server {0} prefer'.format(node)):
-                options.append('prefer')
-
-            server['options'] = options
-            ntp['servers'].append(server)
-
-    node = ['vrf']
-    if conf.exists(node):
-        ntp['vrf'] = conf.return_value(node)
-
+    ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return ntp
 
 def verify(ntp):
@@ -94,13 +39,10 @@ def verify(ntp):
     if not ntp:
         return None
 
-    # Configuring allowed clients without a server makes no sense
-    if len(ntp['allowed_networks']) and not len(ntp['servers']):
+    if len(ntp.get('allow_clients', {})) and not (len(ntp.get('server', {})) > 0):
         raise ConfigError('NTP server not configured')
 
-    if ntp['vrf'] and ntp['vrf'] not in interfaces():
-        raise ConfigError('VRF "{vrf}" does not exist'.format(**ntp))
-
+    verify_vrf(ntp)
     return None
 
 def generate(ntp):
@@ -108,7 +50,7 @@ def generate(ntp):
     if not ntp:
         return None
 
-    render(config_file, 'ntp/ntp.conf.tmpl', ntp)
+    render(config_file, 'ntp/ntp.conf.tmpl', ntp, trim_blocks=True)
     render(systemd_override, 'ntp/override.conf.tmpl', ntp, trim_blocks=True)
 
     return None
@@ -124,7 +66,6 @@ def apply(ntp):
 
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
-
     if ntp:
         call('systemctl restart ntp.service')
 

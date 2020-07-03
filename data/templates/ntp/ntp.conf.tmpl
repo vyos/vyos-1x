@@ -13,26 +13,35 @@ restrict -6 ::1
 #
 # Configurable section
 #
-
-{% if servers -%}
-{% for s in servers -%}
-# Server configuration for: {{ s.name }}
-server {{ s.name }} iburst {{ s.options | join(" ") }}
-{% endfor -%}
+{% if server %}
+{%   for srv in server %}
+{%     set options = '' %}
+{%     set options = options + 'noselect ' if server[srv].noselect is defined else '' %}
+{%     set options = options + 'preempt ' if server[srv].preempt is defined else '' %}
+{%     set options = options + 'prefer ' if server[srv].prefer is defined else '' %}
+server {{ srv }} iburst {{ options }}
+{%   endfor %}
 {% endif %}
 
-{% if allowed_networks -%}
-{% for n in allowed_networks -%}
-# Client configuration for network: {{ n.network }}
-restrict {{ n.address }} mask {{ n.netmask }} nomodify notrap nopeer
-
-{% endfor -%}
+{% if allow_clients is defined and allow_clients.address is defined %}
+# Allowed clients configuration
+{%   if allow_clients.address is string %}
+restrict {{ allow_clients.address|address_from_cidr }} mask {{ allow_clients.address|netmask_from_cidr }} nomodify notrap nopeer
+{%   else %}
+{%     for address in allow_clients.address %}
+restrict {{ address|address_from_cidr }} mask {{ address|netmask_from_cidr }} nomodify notrap nopeer
+{%     endfor %}
+{%   endif %}
 {% endif %}
 
-{% if listen_address -%}
+{% if listen_address %}
 # NTP should listen on configured addresses only
 interface ignore wildcard
-{% for a in listen_address -%}
-interface listen {{ a }}
-{% endfor -%}
+{%   if listen_address is string %}
+interface listen {{ listen_address }}
+{%   else %}
+{%     for address in listen_address %}
+interface listen {{ address }}
+{%     endfor %}
+{%   endif %}
 {% endif %}
