@@ -153,7 +153,7 @@ def apply(mpls):
     operate_mpls_on_intfc(diactive_ifaces, 0)
 
     if os.path.exists(config_file):
-        call("sudo vtysh -d ldpd -f " + config_file)
+        call(f'vtysh -d ldpd -f {config_file}')
         os.remove(config_file)
 
     return None

@@ -54,8 +54,8 @@ def get_config():
 def vpn_control(action):
   # XXX: Should these commands report failure
   if action == 'restore' and gl_ipsec_conf:
-    return run('sudo ipsec start')
-  return run(f'sudo ipsec {action}')
+    return run('ipsec start')
+  return run(f'ipsec {action}')
 
 def verify(c):
   # Check if QAT service installed
@@ -66,7 +66,7 @@ def verify(c):
     return
 
   # Check if QAT device exist
-  output, err = popen('sudo lspci -nn', decode='utf-8')
+  output, err = popen('lspci -nn', decode='utf-8')
   if not err:
     data = re.findall('(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output)
     #If QAT devices found
@@ -81,13 +81,13 @@ def apply(c):
 
   # Disable QAT service
   if c['qat_conf'] == None:
-    run('sudo /etc/init.d/qat_service stop')
+    run('/etc/init.d/qat_service stop')
     if c['ipsec_conf']:
       vpn_control('start')
     return
 
   # Run qat init.d script
-  run('sudo /etc/init.d/qat_service start')
+  run('/etc/init.d/qat_service start')
   if c['ipsec_conf']:
     # Recovery VPN service
     vpn_control('start')

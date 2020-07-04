@@ -297,7 +297,7 @@ def apply(rip):
         return None
 
     if os.path.exists(config_file):
-        call("sudo vtysh -d ripd -f " + config_file)
+        call(f'vtysh -d ripd -f {config_file}')
         os.remove(config_file)
     else:
         print("File {0} not found".format(config_file))

@@ -97,7 +97,7 @@ def apply(igmp):
         return None
 
     if os.path.exists(config_file):
-        call("sudo vtysh -d pimd -f " + config_file)
+        call(f'vtysh -d pimd -f {config_file}')
         os.remove(config_file)
 
     return None

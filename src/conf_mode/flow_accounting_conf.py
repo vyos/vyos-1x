@@ -84,7 +84,7 @@ def _iptables_get_nflog():
 
     for iptables_variant in ['iptables', 'ip6tables']:
         # run iptables, save output and split it by lines
-        iptables_command = "sudo {0} -t {1} -S {2}".format(iptables_variant, iptables_nflog_table, iptables_nflog_chain)
+        iptables_command = f'{iptables_variant} -t {iptables_nflog_table} -S {iptables_nflog_chain}'
         tmp = cmd(iptables_command, message='Failed to get flows list')
 
         # parse each line and add information to list
@@ -118,7 +118,7 @@ def _iptables_config(configured_ifaces):
         if interface not in configured_ifaces:
             table = rule['table']
             rule = rule['rule_definition']
-            iptable_commands.append(f'sudo {iptables} -t {table} -D {rule}')
+            iptable_commands.append(f'{iptables} -t {table} -D {rule}')
         else:
             active_nflog_ifaces.append({
                 'iface': interface,
@@ -135,7 +135,7 @@ def _iptables_config(configured_ifaces):
         iface = iface_extended['iface']
         iptables = iface_extended['iptables_variant']
         rule_definition = f'{iptables_nflog_chain} -i {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {default_captured_packet_size} --nflog-threshold 100'
-        iptable_commands.append(f'sudo {iptables} -t {iptables_nflog_table} -I {rule_definition}')
+        iptable_commands.append(f'{iptables} -t {iptables_nflog_table} -I {rule_definition}')
 
     # change iptables
     for command in iptable_commands:
