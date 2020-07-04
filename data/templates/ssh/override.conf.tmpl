@@ -1,8 +1,5 @@
+{% set vrf_command = '/sbin/ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
 [Service]
 ExecStart=
-{% if vrf %}
-ExecStart=/sbin/ip vrf exec {{ vrf }} /usr/sbin/sshd -D $SSHD_OPTS
-{% else %}
-ExecStart=/usr/sbin/sshd -D $SSHD_OPTS
-{% endif %}
+ExecStart={{vrf_command}}/usr/sbin/sshd -D $SSHD_OPTS
 
