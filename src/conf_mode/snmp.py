@@ -22,6 +22,7 @@ from time import sleep
 from sys import exit
 
 from vyos.config import Config
+from vyos.configverify import verify_vrf
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos.version import get_version_data
 from vyos import ConfigError
@@ -67,8 +68,7 @@ default_config_data = {
     'v3_traps': [],
     'v3_users': [],
     'v3_views': [],
-    'script_ext': [],
-    'vrf': ''
+    'script_ext': []
 }
 
 def rmfile(file):
@@ -191,6 +191,9 @@ def get_config():
             snmp['script_ext'].append(extension)
 
     if conf.exists('vrf'):
+        # Append key to dict but don't place it in the default dictionary.
+        # This is required to make the override.conf.tmpl work until we
+        # migrate to get_config_dict().
         snmp['vrf'] = conf.return_value('vrf')
 
 
@@ -416,8 +419,7 @@ def verify(snmp):
         else:
             print('WARNING: SNMP listen address {0} not configured!'.format(addr))
 
-    if snmp['vrf'] and snmp['vrf'] not in interfaces():
-        raise ConfigError('VRF "{vrf}" does not exist'.format(**snmp))
+    verify_vrf(snmp)
 
     # bail out early if SNMP v3 is not configured
     if not snmp['v3_enabled']:
@@ -550,15 +552,20 @@ def apply(snmp):
     # start SNMP daemon
     call("systemctl restart snmpd.service")
 
-    while (call('systemctl -q is-active snmpd.service') != 0):
-        print("service not yet started")
-        sleep(0.5)
+    if 'vrf' not in snmp.keys():
+        # service will be restarted multiple times later on
+        while (call('systemctl -q is-active snmpd.service') != 0):
+            sleep(0.5)
 
     # net-snmp is now regenerating the configuration file in the background
     # thus we need to re-open and re-read the file as the content changed.
     # After that we can no read the encrypted password from the config and
     # replace the CLI plaintext password with its encrypted version.
     os.environ["vyos_libexec_dir"] = "/usr/libexec/vyos"
+
+    # XXX: actually this whole logic makes less sense - why not calculate the
+    # password hashed on our own and write them back into the config? I see
+    # no valid reason in waiting for a third party process to do so.
     with open(config_file_user, 'r') as f:
         engineID = ''
         for line in f:

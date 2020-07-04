@@ -1,9 +1,13 @@
+{% set vrf_command = '/sbin/ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
+[Unit]
+StartLimitIntervalSec=0
+After=vyos-router.service
+
 [Service]
 Environment=
 Environment="MIBSDIR=/usr/share/snmp/mibs:/usr/share/snmp/mibs/iana:/usr/share/snmp/mibs/ietf:/usr/share/mibs/site:/usr/share/snmp/mibs:/usr/share/mibs/iana:/usr/share/mibs/ietf:/usr/share/mibs/netsnmp"
 ExecStart=
-{% if vrf %}
-ExecStart=/sbin/ip vrf exec {{ vrf }} /usr/sbin/snmpd -LS0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
-{% else %}
-ExecStart=/usr/sbin/snmpd -LS0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
-{% endif %}
+ExecStart={{vrf_command}}/usr/sbin/snmpd -LS0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -I -ipCidrRouteTable,inetCidrRouteTable -f -p /run/snmpd.pid
+Restart=on-failure
+RestartSec=10
+
