@@ -31,7 +31,7 @@ networks_list = r'/etc/networks_list'
 def get_config():
     conf = Config()
     base = ['service', 'ids', 'ddos-protection']
-    fastnetmon = conf.get_config_dict(base, key_mangling=('-', '_'))
+    fastnetmon = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return fastnetmon
 
 def verify(fastnetmon):
