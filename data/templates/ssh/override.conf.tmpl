@@ -1,5 +1,10 @@
 {% set vrf_command = '/sbin/ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
+[Unit]
+StartLimitIntervalSec=0
+After=vyos-router.service
+
 [Service]
 ExecStart=
 ExecStart={{vrf_command}}/usr/sbin/sshd -D $SSHD_OPTS
+RestartSec=10
 
