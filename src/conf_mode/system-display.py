@@ -27,18 +27,11 @@ from vyos import airbag
 airbag.enable()
 
 def get_config():
+    conf = Config()
+    base = ['system', 'display']
+    display = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     # Return a (possibly empty) configuration dictionary
-    return Config().get_config_dict(['system', 'display'])
-
-def generate(config_dict):
-    if not config_dict:
-        return None
-    # Render config file for daemon LCDd
-    render('/run/LCDd/LCDd.lo.conf', 'system-display/LCDd.conf.tmpl', config_dict)
-    # Render config file for client lcdproc
-    render('/run/lcdproc/lcdproc.lo.conf', 'system-display/lcdproc.conf.tmpl', config_dict)
-
-    return None
+    return display
 
 def verify(config_dict):
     if not config_dict:
@@ -65,6 +58,16 @@ def verify(config_dict):
         and len(config_dict['show']['network']['interface']) > 3
        ):
         raise ConfigError('Display show network cannot have > 3 interfaces')
+
+    return None
+
+def generate(config_dict):
+    if not config_dict:
+        return None
+    # Render config file for daemon LCDd
+    render('/run/LCDd/LCDd.lo.conf', 'system-display/LCDd.conf.tmpl', config_dict)
+    # Render config file for client lcdproc
+    render('/run/lcdproc/lcdproc.lo.conf', 'system-display/lcdproc.conf.tmpl', config_dict)
 
     return None
 
