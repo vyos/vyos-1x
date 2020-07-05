@@ -10,6 +10,7 @@
           <node name="ddos-protection" owner="${vyos_conf_scripts_dir}/service_ids_fastnetmon.py">
             <properties>
               <help>FastNetMon detection and protection parameters</help>
+              <priority>731</priority>
             </properties>
             <children>
               <leafNode name="alert-script">
