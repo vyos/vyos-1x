@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <!--
-    system display model (sdec|ezio)
+    system display model (sdec|ezio|test)
     system display show host (cpu|cpu-all|cpu-hist|disk|load-hist|memory|proc|uptime)
                         network interface <intName> alias <alias>
                                 units (bps|Bps|pps)
@@ -26,10 +26,10 @@
             <properties>
               <help>Model of the display attached to this system [REQUIRED]</help>
               <completionHelp>
-                <list>sdec ezio</list>
+                <list>sdec ezio test</list>
               </completionHelp>
               <constraint>
-                <regex>(sdec|ezio)</regex>
+                <regex>(sdec|ezio|test)</regex>
               </constraint>
               <constraintErrorMessage>Invalid system display model</constraintErrorMessage>
               <valueHelp>
@@ -39,6 +39,10 @@
               <valueHelp>
                 <format>ezio</format>
                 <description>Display model for Portwell, Caswell appliances with built-in EZIO-100 or EZIO-300 LCD</description>
+              </valueHelp>
+              <valueHelp>
+                <format>test</format>
+                <description>Test model for USB CrystalFonz CF533</description>
               </valueHelp>
             </properties>
           </leafNode><!--system display model-->

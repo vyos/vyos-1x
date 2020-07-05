@@ -60,6 +60,10 @@ Driver=sdeclcd
 Driver=hd44780
 {%- endif %}
 
+{%- if model == 'test' %}
+Driver=CFontzPacket
+{%- endif %}
+
 # Tells the driver to bind to the given interface. [default: 127.0.0.1]
 #Bind=127.0.0.1
 
@@ -191,44 +195,15 @@ Reboot=no
 
 ## CrystalFontz packet driver (for CFA533, CFA631, CFA633 & CFA635) ##
 [CFontzPacket]
-
-# Select the LCD model [default: 633; legal: 533, 631, 633, 635]
-Model=633
-
-# Select the output device to use [default: /dev/lcd]
-Device=/dev/ttyS1
-
-# Set the initial contrast [default: 560; legal: 0 - 1000]
+{%- if model == 'test' %}
+Model=533
+Device=/dev/serial/by-bus/usb0b1.1p1.0
 Contrast=350
-
-# Set the initial brightness [default: 1000; legal: 0 - 1000]
 Brightness=1000
-
-# Set the initial off-brightness [default: 0; legal: 0 - 1000]
-# This value is used when the display is normally
-# switched off in case LCDd is inactive
 OffBrightness=50
-
-# Reinitialize the LCD's BIOS on driver start. [default: no; legal: yes, no]
 Reboot=yes
-
-# Enable the USB flag if the device is connected to an USB port. For
-# serial ports leave it disabled. [default: no; legal: yes, no]
-#USB=yes
-
-# Very old 633 firmware versions do not support partial screen updates using
-# 'Send Data to LCD' command (31). For those devices it may be necessary to
-# enable this flag. [default: no; legal: yes, no]
-#OldFirmware=yes
-
-# Override the LCD size known for the selected model. Usually setting this
-# value should not be necessary.
-#Size=20x4
-
-# Override the default communication speed known for the selected model.
-# Default value depends on model [legal: 19200, 115200]
-#Speed=115200
-
+USB=yes
+{%- endif %}
 
 
 ## Curses driver ##
@@ -546,7 +521,7 @@ Speed=19200
 [hd44780]
 {%- if model == 'ezio' %}
 ConnectionType=ezio
-Device=/dev/ttyS1
+Device=/dev/ttyUSB0
 Keypad=yes
 Size=16x2
 KeyMatrix_4_1=Enter
