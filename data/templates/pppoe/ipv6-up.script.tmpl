@@ -7,7 +7,7 @@ if [ "$6" != "{{ ifname }}" ]; then
     exit
 fi
 
-{% if ipv6_autoconf -%}
+{% if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined -%}
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
@@ -40,13 +40,13 @@ echo 2 > /proc/sys/net/ipv6/conf/{{ ifname }}/accept_ra
 echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/autoconf
 {% endif %}
 
-{% if dhcpv6_pd_interfaces %}
+{% if dhcpv6_options is defined and dhcpv6_options.prefix_delegation is defined %}
 # Start wide dhcpv6 client
 systemctl start dhcp6c@{{ ifname }}.service
 {% endif %}
 
 
-{%   if default_route != 'none' -%}
+{% if default_route != 'none' -%}
 # See https://phabricator.vyos.net/T2248 & T2220. Determine if we are enslaved
 # to a VRF, this is needed to properly insert the default route.
 
@@ -63,23 +63,22 @@ if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     VRF_NAME="vrf ${VRF}"
 fi
 
-{%     if default_route == 'auto' -%}
+{%   if default_route == 'auto' -%}
 # Only insert a new default route if there is no default route configured
 routes=$(vtysh -c "show running-config" | sed -n "/${SED_OPT}/,/!/p" | grep ::/0 | wc -l)
 if [ "$routes" -ne 0 ]; then
     exit 1
 fi
 
-{%     elif default_route == 'force' -%}
+{%   elif default_route == 'force' -%}
 # Retrieve current static default routes and remove it from the routing table
 vtysh -c "show running-config" | sed -n "/${SED_OPT}/,/!/p" | grep ::/0 | while read route ; do
     vtysh -c "conf t" ${VTY_OPT} -c "no ${route} ${VRF_NAME}"
 done
-{%     endif %}
+{%   endif %}
 
 # Add default route to default or VRF routing table
 vtysh -c "conf t" ${VTY_OPT} -c "ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
 logger -t pppd[$DIALER_PID] "added default route via {{ ifname }} ${VRF_NAME}"
-{%   endif %}
-
+{% endif %}
 
