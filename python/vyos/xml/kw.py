@@ -27,12 +27,12 @@ def found(word):
 
 # root
 
-version = '(version)'
-tree = '(tree)'
-priorities = '(priorities)'
-owners = '(owners)'
-tags = '(tags)'
-default = '(default)'
+version = '[version]'
+tree = '[tree]'
+priorities = '[priorities]'
+owners = '[owners]'
+tags = '[tags]'
+default = '[default]'
 
 # nodes
 
