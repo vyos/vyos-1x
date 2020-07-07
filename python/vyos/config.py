@@ -67,6 +67,7 @@ import os
 import re
 import json
 import subprocess
+from copy import deepcopy
 
 import vyos.util
 import vyos.configtree
@@ -91,6 +92,8 @@ class Config(object):
     def __init__(self, session_env=None):
         self._cli_shell_api = "/bin/cli-shell-api"
         self._level = []
+        self._dict_cache = {}
+
         if session_env:
             self.__session_env = session_env
         else:
@@ -297,6 +300,12 @@ class Config(object):
 
         Returns: a dict representation of the config under path
         """
+        # naive caching per path (not trying to lookup the object in the root dict)
+        spath = '/'.join(path)
+        cached = self._dict_cache.get(effective, {}).get(spath,None)
+        if cached is not None:
+            return deepcopy(cached)
+
         config_dict = {}
 
         if effective:
@@ -317,6 +326,7 @@ class Config(object):
             else:
                 config_dict = vyos.util.mangle_dict_keys(config_dict, key_mangling[0], key_mangling[1])
 
+        self._dict_cache.setdefault(effective, {})[spath] = deepcopy(config_dict)
         return config_dict
 
     def is_multi(self, path):
