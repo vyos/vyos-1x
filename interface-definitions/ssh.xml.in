@@ -132,30 +132,30 @@
             <properties>
               <help>Log level</help>
               <completionHelp>
-                <list>QUIET FATAL ERROR INFO VERBOSE</list>
+                <list>quiet fatal error info verbose</list>
               </completionHelp>
               <valueHelp>
-                <format>QUIET</format>
+                <format>quiet</format>
                 <description>stay silent</description>
               </valueHelp>
               <valueHelp>
-                <format>FATAL</format>
+                <format>fatal</format>
                 <description>log fatals only</description>
               </valueHelp>
               <valueHelp>
-                <format>ERROR</format>
+                <format>error</format>
                 <description>log errors and fatals only</description>
               </valueHelp>
               <valueHelp>
-                <format>INFO</format>
+                <format>info</format>
                 <description>default log level</description>
               </valueHelp>
               <valueHelp>
-                <format>VERBOSE</format>
+                <format>verbose</format>
                 <description>enable logging of failed login attempts</description>
               </valueHelp>
               <constraint>
-                <regex>^(QUIET|FATAL|ERROR|INFO|VERBOSE)$</regex>
+                <regex>^(quiet|fatal|error|info|verbose)$</regex>
               </constraint>
             </properties>
             <defaultValue>INFO</defaultValue>

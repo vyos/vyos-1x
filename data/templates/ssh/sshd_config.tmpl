@@ -46,7 +46,7 @@ Port {{ value }}
 {% endif %}
 
 # Gives the verbosity level that is used when logging messages from sshd
-LogLevel {{ loglevel }}
+LogLevel {{ loglevel | upper }}
 
 # Specifies whether password authentication is allowed
 PasswordAuthentication {{ "no" if disable_password_authentication is defined else "yes" }}
