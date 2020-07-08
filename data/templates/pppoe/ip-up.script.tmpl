@@ -6,7 +6,7 @@ if [ "$6" != "{{ ifname }}" ]; then
     exit
 fi
 
-{% if not connect_on_demand %}
+{% if connect_on_demand is not defined %}
 # add some info to syslog
 DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
