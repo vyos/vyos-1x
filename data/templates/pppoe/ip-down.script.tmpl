@@ -10,7 +10,7 @@ fi
 DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
-{% if not on_demand %}
+{% if not connect_on_demand %}
 # See https://phabricator.vyos.net/T2248. Determine if we are enslaved to a
 # VRF, this is needed to properly insert the default route.
 VRF_NAME=""
