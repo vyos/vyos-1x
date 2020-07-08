@@ -42,7 +42,7 @@ echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/autoconf
 
 {% if dhcpv6_options is defined and dhcpv6_options.prefix_delegation is defined %}
 # Start wide dhcpv6 client
-systemctl start dhcp6c@{{ ifname }}.service
+systemctl restart dhcp6c@{{ ifname }}.service
 {% endif %}
 
 
