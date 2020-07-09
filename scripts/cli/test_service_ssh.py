@@ -51,7 +51,7 @@ class TestServiceSSH(unittest.TestCase):
         self.session.set(base_path + ['port', '1234'])
         self.session.set(base_path + ['disable-host-validation'])
         self.session.set(base_path + ['disable-password-authentication'])
-        self.session.set(base_path + ['loglevel', 'VERBOSE'])
+        self.session.set(base_path + ['loglevel', 'verbose'])
         self.session.set(base_path + ['client-keepalive-interval', '100'])
         self.session.set(base_path + ['listen-address', '127.0.0.1'])
 
