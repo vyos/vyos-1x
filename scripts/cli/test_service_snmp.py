@@ -84,7 +84,7 @@ class TestSNMPService(unittest.TestCase):
     def test_snmpv3(self):
         """ Check if SNMPv3 can be configured and service runs"""
 
-        self.session.set(base_path + ['v3', 'engineid', '0xaffedeadbeef'])
+        self.session.set(base_path + ['v3', 'engineid', '000000000000000000000002'])
         self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
         # check validate() - a view must be created before this can be comitted
         with self.assertRaises(ConfigSessionError):
@@ -95,9 +95,10 @@ class TestSNMPService(unittest.TestCase):
         self.session.commit()
 
         # create user
-        for authpriv in ['auth', 'privacy']:
-            self.session.set(base_path + ['v3', 'user', 'vyos', authpriv, 'plaintext-key', 'vyos1234'])
-
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'auth', 'plaintext-password', 'vyos12345678'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'auth', 'type', 'sha'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'privacy', 'plaintext-password', 'vyos12345678'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'privacy', 'type', 'aes'])
         self.session.set(base_path + ['v3', 'user', 'vyos', 'group', 'default'])
 
         # TODO: read in config file and check values
