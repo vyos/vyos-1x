@@ -11,9 +11,9 @@
         <children>
           <tagNode name="community">
             <properties>
-              <help>Community name [REQUIRED]</help>
+              <help>Community name</help>
               <constraint>
-                <regex>[a-zA-Z0-9\-_]{1,100}</regex>
+                <regex>^[a-zA-Z0-9\-_]{1,100}$</regex>
               </constraint>
               <constraintErrorMessage>Community string is limited to alphanumerical characters only with a total lenght of 100</constraintErrorMessage>
             </properties>
@@ -33,7 +33,7 @@
                     <description>read write</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(ro|rw)</regex>
+                    <regex>^(ro|rw)$</regex>
                   </constraint>
                   <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
                 </properties>
@@ -71,7 +71,7 @@
             <properties>
               <help>Contact information</help>
               <constraint>
-                <regex>.{1,255}</regex>
+                <regex>^.{1,255}$</regex>
               </constraint>
               <constraintErrorMessage>Contact information is limited to 255 characters or less</constraintErrorMessage>
             </properties>
@@ -80,7 +80,7 @@
             <properties>
               <help>Description information</help>
               <constraint>
-                <regex>.{1,255}</regex>
+                <regex>^.{1,255}$</regex>
               </constraint>
               <constraintErrorMessage>Description is limited to 255 characters or less</constraintErrorMessage>
             </properties>
@@ -121,7 +121,7 @@
             <properties>
               <help>Location information</help>
               <constraint>
-                <regex>.{1,255}</regex>
+                <regex>^.{1,255}$</regex>
               </constraint>
               <constraintErrorMessage>Location is limited to 255 characters or less</constraintErrorMessage>
             </properties>
@@ -224,7 +224,7 @@
                         <description>read write</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(ro|rw)</regex>
+                        <regex>^(ro|rw)$</regex>
                       </constraint>
                       <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
                     </properties>
@@ -233,7 +233,7 @@
                     <properties>
                       <help>Security levels</help>
                       <completionHelp>
-                        <list>noauth auth priv2</list>
+                        <list>noauth auth priv</list>
                       </completionHelp>
                       <valueHelp>
                         <format>noauth</format>
@@ -248,7 +248,7 @@
                         <description>Messages are authenticated and encrypted (authPriv)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(noauth|auth|priv)</regex>
+                        <regex>^(noauth|auth|priv)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -290,14 +290,14 @@
                           <constraint>
                             <regex>0x[0-9a-f]*$</regex>
                           </constraint>
-                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                          <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="plaintext-key">
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
-                            <regex>.{8,}$</regex>
+                            <regex>^.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -317,7 +317,7 @@
                             <description>Secure Hash Algorithm</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(md5|sha)</regex>
+                            <regex>^(md5|sha)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -347,14 +347,14 @@
                           <constraint>
                             <regex>0x[0-9a-f]*$</regex>
                           </constraint>
-                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                          <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="plaintext-key">
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
-                            <regex>.{8,}$</regex>
+                            <regex>^.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -374,7 +374,7 @@
                             <description>Advanced Encryption Standard</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(des|aes)</regex>
+                            <regex>^(des|aes)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -395,7 +395,7 @@
                         <description>Use User Datagram Protocol for notifications</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(tcp|udp)</regex>
+                        <regex>^(tcp|udp)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -414,7 +414,7 @@
                         <description>Use TRAP</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(inform|trap)</regex>
+                        <regex>^(inform|trap)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -448,14 +448,14 @@
                           <constraint>
                             <regex>0x[0-9a-f]*$</regex>
                           </constraint>
-                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                          <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="plaintext-key">
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
-                            <regex>.{8,}$</regex>
+                            <regex>^.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -475,7 +475,7 @@
                             <description>Secure Hash Algorithm</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(md5|sha)</regex>
+                            <regex>^(md5|sha)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -504,7 +504,7 @@
                         <description>read write</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(ro|rw)</regex>
+                        <regex>^(ro|rw)$</regex>
                       </constraint>
                       <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
                     </properties>
@@ -520,14 +520,14 @@
                           <constraint>
                             <regex>0x[0-9a-f]*$</regex>
                           </constraint>
-                          <constraintErrorMessage>Key must start from '0x' and contain hex digits</constraintErrorMessage>
+                          <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="plaintext-key">
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
-                            <regex>.{8,}$</regex>
+                            <regex>^.{8,}$</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -547,7 +547,7 @@
                             <description>Advanced Encryption Standard</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(des|aes)</regex>
+                            <regex>^(des|aes)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -568,7 +568,7 @@
                     <properties>
                       <help>Specifies the oid</help>
                       <constraint>
-                        <regex>[0-9]+(\.[0-9]+)*$</regex>
+                        <regex>^[0-9]+(\.[0-9]+)*$</regex>
                       </constraint>
                       <constraintErrorMessage>OID must start from a number</constraintErrorMessage>
                     </properties>
@@ -582,7 +582,7 @@
                         <properties>
                           <help>Defines a bit-mask that is indicating which subidentifiers of the associated subtree OID should be regarded as significant</help>
                           <constraint>
-                            <regex>[0-9a-f]{2}([\.:][0-9a-f]{2})*$</regex>
+                            <regex>^[0-9a-f]{2}([\.:][0-9a-f]{2})*$</regex>
                           </constraint>
                           <constraintErrorMessage>MASK is a list of hex octets, separated by '.' or ':'</constraintErrorMessage>
                         </properties>
