@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import argv, exit
+from vyos.configtree import ConfigTree
+
+def migrate_keys(config, path):
+    # authentication: rename node 'encrypted-key' -> 'encrypted-password'
+    config_path_auth = path + ['auth', 'encrypted-key']
+    if config.exists(config_path_auth):
+        config.rename(config_path_auth, 'encrypted-password')
+        config_path_auth = path + ['auth', 'encrypted-password']
+
+        # remove leading '0x' from string if present
+        tmp = config.return_value(config_path_auth)
+        if tmp.startswith(prefix):
+            tmp = tmp.replace(prefix, '')
+            config.set(config_path_auth, value=tmp)
+
+    # privacy: rename node 'encrypted-key' -> 'encrypted-password'
+    config_path_priv = path + ['privacy', 'encrypted-key']
+    if config.exists(config_path_priv):
+        config.rename(config_path_priv, 'encrypted-password')
+        config_path_priv = path + ['privacy', 'encrypted-password']
+
+        # remove leading '0x' from string if present
+        tmp = config.return_value(config_path_priv)
+        if tmp.startswith(prefix):
+            tmp = tmp.replace(prefix, '')
+            config.set(config_path_priv, value=tmp)
+
+if __name__ == '__main__':
+    if (len(argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    config_base = ['service', 'snmp', 'v3']
+
+    if not config.exists(config_base):
+        # Nothing to do
+        exit(0)
+    else:
+        # We no longer support hashed values prefixed with '0x' to unclutter
+        # CLI and also calculate the hases in advance instead of retrieving
+        # them after service startup - which was always a bad idea
+        prefix = '0x'
+
+        config_engineid = config_base + ['engineid']
+        if config.exists(config_engineid):
+            tmp = config.return_value(config_engineid)
+            if tmp.startswith(prefix):
+                tmp = tmp.replace(prefix, '')
+                config.set(config_engineid, value=tmp)
+
+        config_user = config_base + ['user']
+        if config.exists(config_user):
+            for user in config.list_nodes(config_user):
+                migrate_keys(config, config_user + [user])
+
+        config_trap = config_base + ['trap-target']
+        if config.exists(config_trap):
+            for trap in config.list_nodes(config_trap):
+                migrate_keys(config, config_trap + [trap])
+
+        try:
+            with open(file_name, 'w') as f:
+                f.write(config.to_string())
+        except OSError as e:
+            print("Failed to save the modified config: {}".format(e))
+            exit(1)

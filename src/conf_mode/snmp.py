@@ -16,20 +16,16 @@
 
 import os
 
-from binascii import hexlify
-from netifaces import interfaces
-from time import sleep
 from sys import exit
 
 from vyos.config import Config
 from vyos.configverify import verify_vrf
+from vyos.snmpv3_hashgen import Hashgen
+from vyos.template import render
+from vyos.util import call
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos.version import get_version_data
-from vyos import ConfigError
-from vyos.util import call
-from vyos.template import render
-
-from vyos import airbag
+from vyos import ConfigError, airbag
 airbag.enable()
 
 config_file_client  = r'/etc/snmp/snmp.conf'
@@ -61,7 +57,7 @@ default_config_data = {
     'trap_targets': [],
     'vyos_user': '',
     'vyos_user_pass': '',
-    'version': '999',
+    'version': '',
     'v3_enabled': 'False',
     'v3_engineid': '',
     'v3_groups': [],
@@ -91,8 +87,8 @@ def get_config():
 
     # create an internal snmpv3 user of the form 'vyosxxxxxxxxxxxxxxxx'
     # os.urandom(8) returns 8 bytes of random data
-    snmp['vyos_user'] = 'vyos' + hexlify(os.urandom(8)).decode('utf-8')
-    snmp['vyos_user_pass'] = hexlify(os.urandom(16)).decode('utf-8')
+    snmp['vyos_user'] = 'vyos' + Hashgen.random_string(len=8)
+    snmp['vyos_user_pass'] = Hashgen.random_string(len=16)
 
     if conf.exists('community'):
         for name in conf.list_nodes('community'):
@@ -263,30 +259,30 @@ def get_config():
                 # cmdline option '-a'
                 trap_cfg['authProtocol'] = conf.return_value('v3 trap-target {0} auth type'.format(trap))
 
-            if conf.exists('v3 trap-target {0} auth plaintext-key'.format(trap)):
+            if conf.exists('v3 trap-target {0} auth plaintext-password'.format(trap)):
                 # Set the authentication pass phrase used for authenticated SNMPv3 messages.
                 # cmdline option '-A'
-                trap_cfg['authPassword'] = conf.return_value('v3 trap-target {0} auth plaintext-key'.format(trap))
+                trap_cfg['authPassword'] = conf.return_value('v3 trap-target {0} auth plaintext-password'.format(trap))
 
-            if conf.exists('v3 trap-target {0} auth encrypted-key'.format(trap)):
+            if conf.exists('v3 trap-target {0} auth encrypted-password'.format(trap)):
                 # Sets the keys to be used for SNMPv3 transactions. These options allow you to set the master authentication keys.
                 # cmdline option '-3m'
-                trap_cfg['authMasterKey'] = conf.return_value('v3 trap-target {0} auth encrypted-key'.format(trap))
+                trap_cfg['authMasterKey'] = conf.return_value('v3 trap-target {0} auth encrypted-password'.format(trap))
 
             if conf.exists('v3 trap-target {0} privacy type'.format(trap)):
                 # Set the privacy protocol (DES or AES) used for encrypted SNMPv3 messages.
                 # cmdline option '-x'
                 trap_cfg['privProtocol'] = conf.return_value('v3 trap-target {0} privacy type'.format(trap))
 
-            if conf.exists('v3 trap-target {0} privacy plaintext-key'.format(trap)):
+            if conf.exists('v3 trap-target {0} privacy plaintext-password'.format(trap)):
                 # Set the privacy pass phrase used for encrypted SNMPv3 messages.
                 # cmdline option '-X'
-                trap_cfg['privPassword'] = conf.return_value('v3 trap-target {0} privacy plaintext-key'.format(trap))
+                trap_cfg['privPassword'] = conf.return_value('v3 trap-target {0} privacy plaintext-password'.format(trap))
 
-            if conf.exists('v3 trap-target {0} privacy encrypted-key'.format(trap)):
+            if conf.exists('v3 trap-target {0} privacy encrypted-password'.format(trap)):
                 # Sets the keys to be used for SNMPv3 transactions. These options allow you to set the master encryption keys.
                 # cmdline option '-3M'
-                trap_cfg['privMasterKey'] = conf.return_value('v3 trap-target {0} privacy encrypted-key'.format(trap))
+                trap_cfg['privMasterKey'] = conf.return_value('v3 trap-target {0} privacy encrypted-password'.format(trap))
 
             if conf.exists('v3 trap-target {0} protocol'.format(trap)):
                 trap_cfg['ipProto'] = conf.return_value('v3 trap-target {0} protocol'.format(trap))
@@ -325,11 +321,11 @@ def get_config():
             }
 
             # v3 user {0} auth
-            if conf.exists('v3 user {0} auth encrypted-key'.format(user)):
-                user_cfg['authMasterKey'] = conf.return_value('v3 user {0} auth encrypted-key'.format(user))
+            if conf.exists('v3 user {0} auth encrypted-password'.format(user)):
+                user_cfg['authMasterKey'] = conf.return_value('v3 user {0} auth encrypted-password'.format(user))
 
-            if conf.exists('v3 user {0} auth plaintext-key'.format(user)):
-                user_cfg['authPassword'] = conf.return_value('v3 user {0} auth plaintext-key'.format(user))
+            if conf.exists('v3 user {0} auth plaintext-password'.format(user)):
+                user_cfg['authPassword'] = conf.return_value('v3 user {0} auth plaintext-password'.format(user))
 
             # load default value
             type = user_cfg['authProtocol']
@@ -349,11 +345,11 @@ def get_config():
                 user_cfg['mode'] = conf.return_value('v3 user {0} mode'.format(user))
 
             # v3 user {0} privacy
-            if conf.exists('v3 user {0} privacy encrypted-key'.format(user)):
-                user_cfg['privMasterKey'] = conf.return_value('v3 user {0} privacy encrypted-key'.format(user))
+            if conf.exists('v3 user {0} privacy encrypted-password'.format(user)):
+                user_cfg['privMasterKey'] = conf.return_value('v3 user {0} privacy encrypted-password'.format(user))
 
-            if conf.exists('v3 user {0} privacy plaintext-key'.format(user)):
-                user_cfg['privPassword'] = conf.return_value('v3 user {0} privacy plaintext-key'.format(user))
+            if conf.exists('v3 user {0} privacy plaintext-password'.format(user)):
+                user_cfg['privPassword'] = conf.return_value('v3 user {0} privacy plaintext-password'.format(user))
 
             # load default value
             type = user_cfg['privProtocol']
@@ -450,16 +446,16 @@ def verify(snmp):
     if 'v3_traps' in snmp.keys():
         for trap in snmp['v3_traps']:
             if trap['authPassword'] and trap['authMasterKey']:
-                raise ConfigError('Must specify only one of encrypted-key/plaintext-key for trap auth')
+                raise ConfigError('Must specify only one of encrypted-password/plaintext-key for trap auth')
 
             if trap['authPassword'] == '' and trap['authMasterKey'] == '':
-                raise ConfigError('Must specify encrypted-key or plaintext-key for trap auth')
+                raise ConfigError('Must specify encrypted-password or plaintext-key for trap auth')
 
             if trap['privPassword'] and trap['privMasterKey']:
-                raise ConfigError('Must specify only one of encrypted-key/plaintext-key for trap privacy')
+                raise ConfigError('Must specify only one of encrypted-password/plaintext-key for trap privacy')
 
             if trap['privPassword'] == '' and trap['privMasterKey'] == '':
-                raise ConfigError('Must specify encrypted-key or plaintext-key for trap privacy')
+                raise ConfigError('Must specify encrypted-password or plaintext-key for trap privacy')
 
             if not 'type' in trap.keys():
                 raise ConfigError('v3 trap: "type" must be specified')
@@ -490,19 +486,12 @@ def verify(snmp):
                 if error:
                     raise ConfigError('You must create group "{0}" first'.format(user['group']))
 
-            # Depending on the configured security level
-            # the user has to provide additional info
-            if user['authPassword'] and user['authMasterKey']:
-                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user auth')
-
+            # Depending on the configured security level the user has to provide additional info
             if (not user['authPassword'] and not user['authMasterKey']):
-                raise ConfigError('Must specify encrypted-key or plaintext-key for user auth')
-
-            if user['privPassword'] and user['privMasterKey']:
-                raise ConfigError('Can not mix "encrypted-key" and "plaintext-key" for user privacy')
+                raise ConfigError('Must specify encrypted-password or plaintext-key for user auth')
 
             if user['privPassword'] == '' and user['privMasterKey'] == '':
-                raise ConfigError('Must specify encrypted-key or plaintext-key for user privacy')
+                raise ConfigError('Must specify encrypted-password or plaintext-key for user privacy')
 
             if user['mode'] == '':
                 raise ConfigError('Must specify user mode ro/rw')
@@ -524,11 +513,34 @@ def generate(snmp):
     for file in config_files:
         rmfile(file)
 
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
-
     if not snmp:
         return None
+
+    if 'v3_users' in snmp.keys():
+        # net-snmp is now regenerating the configuration file in the background
+        # thus we need to re-open and re-read the file as the content changed.
+        # After that we can no read the encrypted password from the config and
+        # replace the CLI plaintext password with its encrypted version.
+        os.environ["vyos_libexec_dir"] = "/usr/libexec/vyos"
+
+        for user in snmp['v3_users']:
+            hash = Hashgen.sha1 if user['authProtocol'] in 'sha1' else Hashgen.md5
+
+            if user['authPassword']:
+                Kul_auth = Hashgen.derive_msg(user['authPassword'], snmp['v3_engineid'])
+                user['authMasterKey'] = hash(Kul_auth)
+                user['authPassword'] = ''
+
+                call('/opt/vyatta/sbin/my_set service snmp v3 user "{name}" auth encrypted-password "{authMasterKey}" > /dev/null'.format(**user))
+                call('/opt/vyatta/sbin/my_delete service snmp v3 user "{name}" auth plaintext-password > /dev/null'.format(**user))
+
+            if user['privPassword']:
+                Kul_priv = Hashgen.derive_msg(user['privPassword'], snmp['v3_engineid'])
+                user['privMasterKey'] = hash(Kul_priv)
+                user['privPassword'] = ''
+
+                call('/opt/vyatta/sbin/my_set service snmp v3 user "{name}" privacy encrypted-password "{privMasterKey}" > /dev/null'.format(**user))
+                call('/opt/vyatta/sbin/my_delete service snmp v3 user "{name}" privacy plaintext-password > /dev/null'.format(**user))
 
     # Write client config file
     render(config_file_client, 'snmp/etc.snmp.conf.tmpl', snmp)
@@ -544,50 +556,14 @@ def generate(snmp):
     return None
 
 def apply(snmp):
+    # Always reload systemd manager configuration
+    call('systemctl daemon-reload')
+
     if not snmp:
         return None
 
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
     # start SNMP daemon
-    call("systemctl restart snmpd.service")
-
-    if 'vrf' not in snmp.keys():
-        # service will be restarted multiple times later on
-        while (call('systemctl -q is-active snmpd.service') != 0):
-            sleep(0.5)
-
-    # net-snmp is now regenerating the configuration file in the background
-    # thus we need to re-open and re-read the file as the content changed.
-    # After that we can no read the encrypted password from the config and
-    # replace the CLI plaintext password with its encrypted version.
-    os.environ["vyos_libexec_dir"] = "/usr/libexec/vyos"
-
-    # XXX: actually this whole logic makes less sense - why not calculate the
-    # password hashed on our own and write them back into the config? I see
-    # no valid reason in waiting for a third party process to do so.
-    with open(config_file_user, 'r') as f:
-        engineID = ''
-        for line in f:
-            if line.startswith('usmUser'):
-                string = line.split(' ')
-                cfg = {
-                    'user': string[4].replace(r'"', ''),
-                    'auth_pw': string[8],
-                    'priv_pw': string[10]
-                }
-                # No need to take care about the VyOS internal user
-                if cfg['user'] == snmp['vyos_user']:
-                    continue
-
-                # Now update the running configuration
-                #
-                # Currently when executing call() the environment does not
-                # have the vyos_libexec_dir variable set, see Phabricator T685.
-                call('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" auth encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['auth_pw']))
-                call('/opt/vyatta/sbin/my_set service snmp v3 user "{0}" privacy encrypted-key "{1}" > /dev/null'.format(cfg['user'], cfg['priv_pw']))
-                call('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" auth plaintext-key > /dev/null'.format(cfg['user']))
-                call('/opt/vyatta/sbin/my_delete service snmp v3 user "{0}" privacy plaintext-key > /dev/null'.format(cfg['user']))
+    call('systemctl restart snmpd.service')
 
     # Enable AgentX in FRR
     call('vtysh -c "configure terminal" -c "agentx" >/dev/null')

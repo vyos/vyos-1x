@@ -197,9 +197,9 @@
             <children>
               <leafNode name="engineid">
                 <properties>
-                  <help>Specifies the EngineID that uniquely identify an agent (e.g. 0xff42)</help>
+                  <help>Specifies the EngineID that uniquely identify an agent (e.g. 000000000000000000000002)</help>
                   <constraint>
-                    <regex>(0x){0,1}([0-9a-f][0-9a-f]){1,18}$</regex>
+                    <regex>^([0-9a-f][0-9a-f]){1,18}$</regex>
                   </constraint>
                   <constraintErrorMessage>ID must contain an even number (from 2 to 36) of hex digits</constraintErrorMessage>
                 </properties>
@@ -284,16 +284,16 @@
                       <help>Defines the privacy</help>
                     </properties>
                     <children>
-                      <leafNode name="encrypted-key">
+                      <leafNode name="encrypted-password">
                         <properties>
                           <help>Defines the encrypted key for authentication</help>
                           <constraint>
-                            <regex>0x[0-9a-f]*$</regex>
+                            <regex>^[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="plaintext-key">
+                      <leafNode name="plaintext-password">
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
@@ -341,16 +341,16 @@
                       <help>Defines the privacy</help>
                     </properties>
                     <children>
-                      <leafNode name="encrypted-key">
+                      <leafNode name="encrypted-password">
                         <properties>
                           <help>Defines the encrypted key for privacy protocol</help>
                           <constraint>
-                            <regex>0x[0-9a-f]*$</regex>
+                            <regex>^[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="plaintext-key">
+                      <leafNode name="plaintext-password">
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
@@ -442,16 +442,16 @@
                       <help>Specifies the auth</help>
                     </properties>
                     <children>
-                      <leafNode name="encrypted-key">
+                      <leafNode name="encrypted-password">
                         <properties>
                           <help>Defines the encrypted key for authentication</help>
                           <constraint>
-                            <regex>0x[0-9a-f]*$</regex>
+                            <regex>^[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="plaintext-key">
+                      <leafNode name="plaintext-password">
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
@@ -514,16 +514,16 @@
                       <help>Defines the privacy</help>
                     </properties>
                     <children>
-                      <leafNode name="encrypted-key">
+                      <leafNode name="encrypted-password">
                         <properties>
                           <help>Defines the encrypted key for privacy protocol</help>
                           <constraint>
-                            <regex>0x[0-9a-f]*$</regex>
+                            <regex>^[0-9a-f]*$</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="plaintext-key">
+                      <leafNode name="plaintext-password">
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>

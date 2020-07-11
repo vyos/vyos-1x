@@ -32,87 +32,84 @@ sysDescr VyOS {{ version }}
 {% if description %}
 # Description
 SysDescr {{ description }}
-{%- endif %}
+{% endif %}
 
 # Listen
 agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161{% if ipv6_enabled %},udp6:161{% endif %}{% endif %}
 
 # SNMP communities
-{%- for c in communities %}
-
-{%- if c.network_v4 %}
-{%- for network in c.network_v4 %}
+{% for c in communities %}
+{%   if c.network_v4 %}
+{%     for network in c.network_v4 %}
 {{ c.authorization }}community {{ c.name }} {{ network }}
-{%- endfor %}
-{%- elif not c.has_source %}
+{%     endfor %}
+{%   elif not c.has_source %}
 {{ c.authorization }}community {{ c.name }}
-{%- endif %}
-
-{%- if c.network_v6 %}
-{%- for network in c.network_v6 %}
+{%   endif %}
+{%   if c.network_v6 %}
+{%     for network in c.network_v6 %}
 {{ c.authorization }}community6 {{ c.name }} {{ network }}
-{%- endfor %}
-{%- elif not c.has_source %}
+{%     endfor %}
+{%   elif not c.has_source %}
 {{ c.authorization }}community6 {{ c.name }}
-{%- endif %}
-
-{%- endfor %}
+{%   endif %}
+{% endfor %}
 
 {% if contact %}
 # system contact information
 SysContact {{ contact }}
-{%- endif %}
+{% endif %}
 
 {% if location %}
 # system location information
 SysLocation {{ location }}
-{%- endif %}
+{% endif %}
 
-{% if smux_peers -%}
+{% if smux_peers %}
 # additional smux peers
-{%- for sp in smux_peers %}
+{%   for sp in smux_peers %}
 smuxpeer {{ sp }}
-{%- endfor %}
-{%- endif %}
+{%   endfor %}
+{% endif %}
 
-{% if trap_targets -%}
+{% if trap_targets %}
 # if there is a problem - tell someone!
-{%- for t in trap_targets %}
-trap2sink {{ t.target }}{% if t.port -%}:{{ t.port }}{% endif %} {{ t.community }}
-{%- endfor %}
-{%- endif %}
+{%   for trap in trap_targets %}
+trap2sink {{ trap.target }}{{ ":" + trap.port if trap.port is defined }} {{ trap.community }}
+{%   endfor %}
+{% endif %}
 
-{%- if v3_enabled %}
+{% if v3_enabled %}
 #
 # SNMPv3 stuff goes here
 #
 # views
-{%- for v in v3_views %}
-{%- for oid in v.oids %}
-view {{ v.name }} included .{{ oid.oid }}
-{%- endfor %}
-{%- endfor %}
+{%   for view in v3_views %}
+{%     for oid in view.oids %}
+view {{ view.name }} included .{{ oid.oid }}
+{%     endfor %}
+{%   endfor %}
 
 # access
 #             context sec.model sec.level match  read    write  notif
-{%- for g in v3_groups %}
-access {{ g.name }} "" usm {{ g.seclevel }} exact {{ g.view }} {% if g.mode == 'ro' %}none{% else %}{{ g.view }}{% endif %} none
-{%- endfor %}
+{%   for group in v3_groups %}
+access {{ group.name }} "" usm {{ group.seclevel }} exact {{ group.view }} {% if group.mode == 'ro' %}none{% else %}{{ group.view }}{% endif %} none
+{%   endfor %}
 
 # trap-target
-{%- for t in v3_traps %}
+{%   for t in v3_traps %}
 trapsess -v 3 {{ '-Ci' if t.type == 'inform' }} -e {{ v3_engineid }} -u {{ t.secName }} -l {{ t.secLevel }} -a {{ t.authProtocol }} {% if t.authPassword %}-A {{ t.authPassword }}{% elif t.authMasterKey %}-3m {{ t.authMasterKey }}{% endif %} -x {{ t.privProtocol }} {% if t.privPassword %}-X {{ t.privPassword }}{% elif t.privMasterKey %}-3M {{ t.privMasterKey }}{% endif %} {{ t.ipProto }}:{{ t.ipAddr }}:{{ t.ipPort }}
-{%- endfor %}
+{%   endfor %}
 
 # group
-{%- for u in v3_users %}
+{%   for u in v3_users %}
 group {{ u.group }} usm {{ u.name }}
-{% endfor %}
-{%- endif %}
+{%   endfor %}
+{% endif %}
 
 {% if script_ext %}
 # extension scripts
-{%- for ext in script_ext|sort(attribute='name') %}
+{%   for ext in script_ext|sort(attribute='name') %}
 extend {{ ext.name }} {{ ext.script }}
-{%- endfor %}
+{%   endfor %}
 {% endif %}
