@@ -217,7 +217,7 @@
                     <properties>
                       <help>Security levels</help>
                       <completionHelp>
-                        <list>noauth auth priv2</list>
+                        <list>noauth auth priv</list>
                       </completionHelp>
                       <valueHelp>
                         <format>noauth</format>
