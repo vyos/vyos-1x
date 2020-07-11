@@ -92,7 +92,6 @@ class TestSNMPService(unittest.TestCase):
 
         self.session.set(base_path + ['v3', 'view', 'default', 'oid', '1'])
         self.session.set(base_path + ['v3', 'group', 'default', 'view', 'default'])
-        self.session.commit()
 
         # create user
         self.session.set(base_path + ['v3', 'user', 'vyos', 'auth', 'plaintext-password', 'vyos12345678'])
@@ -100,6 +99,16 @@ class TestSNMPService(unittest.TestCase):
         self.session.set(base_path + ['v3', 'user', 'vyos', 'privacy', 'plaintext-password', 'vyos12345678'])
         self.session.set(base_path + ['v3', 'user', 'vyos', 'privacy', 'type', 'aes'])
         self.session.set(base_path + ['v3', 'user', 'vyos', 'group', 'default'])
+
+        self.session.commit()
+
+        # commit will alter the CLI values - check if they have been updated:
+        hashed_password = '4e52fe55fd011c9c51ae2c65f4b78ca93dcafdfe'
+        tmp = self.session.show_config(base_path + ['v3', 'user', 'vyos', 'auth', 'encrypted-password']).split()[1]
+        self.assertEqual(tmp, hashed_password)
+
+        tmp = self.session.show_config(base_path + ['v3', 'user', 'vyos', 'privacy', 'encrypted-password']).split()[1]
+        self.assertEqual(tmp, hashed_password)
 
         # TODO: read in config file and check values
 
