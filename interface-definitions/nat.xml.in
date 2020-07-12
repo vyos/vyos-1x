@@ -81,7 +81,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              #include <include/nat-outbound-interface.xml.i>
+              #include <include/nat-interface.xml.i>
               <node name="source">
                 <properties>
                   <help>IPv6 source prefix options</help>
@@ -132,7 +132,7 @@
           #include <include/nat-rule.xml.i>
           <tagNode name="rule">
             <children>
-              #include <include/nat-outbound-interface.xml.i>
+              #include <include/nat-interface.xml.i>
               <node name="translation">
                 <properties>
                   <help>Outside NAT IP (source NAT only)</help>
