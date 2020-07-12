@@ -81,8 +81,8 @@ class TestSNMPService(unittest.TestCase):
         self.assertTrue("snmpd" in (p.name() for p in process_iter()))
 
 
-    def test_snmpv3(self):
-        """ Check if SNMPv3 can be configured and service runs"""
+    def test_snmpv3_sha(self):
+        """ Check if SNMPv3 can be configured with SHA authentication and service runs"""
 
         self.session.set(base_path + ['v3', 'engineid', '000000000000000000000002'])
         self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
@@ -114,6 +114,41 @@ class TestSNMPService(unittest.TestCase):
 
         # Check for running process
         self.assertTrue("snmpd" in (p.name() for p in process_iter()))
+
+    def test_snmpv3_md5(self):
+        """ Check if SNMPv3 can be configured with MD5 authentication and service runs"""
+
+        self.session.set(base_path + ['v3', 'engineid', '000000000000000000000002'])
+        self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
+        # check validate() - a view must be created before this can be comitted
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        self.session.set(base_path + ['v3', 'view', 'default', 'oid', '1'])
+        self.session.set(base_path + ['v3', 'group', 'default', 'view', 'default'])
+
+        # create user
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'auth', 'plaintext-password', 'vyos12345678'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'auth', 'type', 'md5'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'privacy', 'plaintext-password', 'vyos12345678'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'privacy', 'type', 'des'])
+        self.session.set(base_path + ['v3', 'user', 'vyos', 'group', 'default'])
+
+        self.session.commit()
+
+        # commit will alter the CLI values - check if they have been updated:
+        hashed_password = '4c67690d45d3dfcd33d0d7e308e370ad'
+        tmp = self.session.show_config(base_path + ['v3', 'user', 'vyos', 'auth', 'encrypted-password']).split()[1]
+        self.assertEqual(tmp, hashed_password)
+
+        tmp = self.session.show_config(base_path + ['v3', 'user', 'vyos', 'privacy', 'encrypted-password']).split()[1]
+        self.assertEqual(tmp, hashed_password)
+
+        # TODO: read in config file and check values
+
+        # Check for running process
+        self.assertTrue("snmpd" in (p.name() for p in process_iter()))
+
 
 if __name__ == '__main__':
     unittest.main()
