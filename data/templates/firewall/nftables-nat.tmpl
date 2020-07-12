@@ -6,7 +6,7 @@ flush table nat
 {% if helper_functions == 'remove' %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
 
-{% set base_command = "delete rule ip raw" %}
+{%   set base_command = "delete rule ip raw" %}
 {{ base_command }} PREROUTING handle {{ pre_ct_ignore }}
 {{ base_command }} OUTPUT     handle {{ out_ct_ignore }}
 {{ base_command }} PREROUTING handle {{ pre_ct_conntrack }}
@@ -19,7 +19,7 @@ delete chain ip raw NAT_CONNTRACK
 add chain ip raw NAT_CONNTRACK
 add rule ip raw NAT_CONNTRACK counter accept
 
-{% set base_command = "add rule ip raw" %}
+{%   set base_command = "add rule ip raw" %}
 
 {{ base_command }} PREROUTING position {{ pre_ct_ignore }}    counter jump VYATTA_CT_HELPER
 {{ base_command }} OUTPUT     position {{ out_ct_ignore }}    counter jump VYATTA_CT_HELPER
@@ -48,10 +48,11 @@ add rule ip raw NAT_CONNTRACK counter accept
 {%   set comment   = "DST-NAT-" + rule.number %}
 
 {%   if chain == "PREROUTING" %}
-{%     set interface = " iifname \"" + rule.interface_in + "\"" %}
+{%     set interface = " iifname \"" + rule.interface_in + "\"" if rule.interface_in is defined and rule.interface_in != 'any' else '' %}
 {%     set trns_addr = "dnat to " + rule.translation_address %}
+
 {%   elif chain == "POSTROUTING" %}
-{%     set interface = " oifname \"" + rule.interface_out + "\"" %}
+{%     set interface = " oifname \"" + rule.interface_out + "\"" if rule.interface_out is defined and rule.interface_out != 'any' else '' %}
 {%     if rule.translation_address == 'masquerade' %}
 {%       set trns_addr = rule.translation_address %}
 {%       if rule.translation_port %}

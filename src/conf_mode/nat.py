@@ -79,7 +79,7 @@ def verify_rule(rule, err_msg):
                              'statically maps a whole network of addresses onto another\n' \
                              'network of addresses')
 
-    if not rule['translation_address']:
+    if not rule['exclude'] and not rule['translation_address']:
         raise ConfigError(f'{err_msg} translation address not specified')
 
 
@@ -228,10 +228,10 @@ def verify(nat):
 
     for rule in nat['source']:
         interface = rule['interface_out']
-        err_msg = f"Source NAT configuration error in rule {rule['number']}:"
+        err_msg = f'Source NAT configuration error in rule "{rule["number"]}":'
 
-        if interface and interface not in interfaces():
-            print(f'NAT configuration warning: interface {interface} does not exist on this system')
+        if interface and interface not in 'any' and interface not in interfaces():
+            print(f'Warning: rule "{rule["number"]}" interface "{interface}" does not exist on this system')
 
         if not rule['interface_out']:
             raise ConfigError(f'{err_msg} outbound-interface not specified')
@@ -246,10 +246,10 @@ def verify(nat):
 
     for rule in nat['destination']:
         interface = rule['interface_in']
-        err_msg = f"Destination NAT configuration error in rule {rule['number']}:"
+        err_msg = f'Destination NAT configuration error in rule "{rule["number"]}":'
 
-        if interface and interface not in interfaces():
-            print(f'NAT configuration warning: interface {interface} does not exist on this system')
+        if interface and interface not in 'any' and interface not in interfaces():
+            print(f'Warning: rule "{rule["number"]}" interface "{interface}" does not exist on this system')
 
         if not rule['interface_in']:
             raise ConfigError(f'{err_msg} inbound-interface not specified')
@@ -261,7 +261,6 @@ def verify(nat):
 
 def generate(nat):
     render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat, trim_blocks=True, permission=0o755)
-
     return None
 
 def apply(nat):
