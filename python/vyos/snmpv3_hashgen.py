@@ -1,65 +1,50 @@
-# Copyright [2017] [Adam Bishop]
+# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# Imported from https://github.com/TheMysteriousX/SNMPv3-Hash-Generator
+# Documentation / Inspiration
+# - https://tools.ietf.org/html/rfc3414#appendix-A.3
+# - https://github.com/TheMysteriousX/SNMPv3-Hash-Generator
 
-import hashlib
-import string
-import secrets
+key_length = 1048576
 
-from itertools import repeat
+def random(l):
+    # os.urandom(8) returns 8 bytes of random data
+    import os
+    from binascii import hexlify
+    return hexlify(os.urandom(l)).decode('utf-8')
 
-P_LEN = 32
-E_LEN = 16
+def expand(s, l):
+    """ repead input string (s) as long as we reach the desired length in bytes """
+    from itertools import repeat
+    reps = l // len(s) + 1 # approximation; worst case: overrun = l + len(s)
+    return ''.join(list(repeat(s, reps)))[:l].encode('utf-8')
 
-class Hashgen(object):
-    @staticmethod
-    def md5(bytes):
-        return hashlib.md5(bytes).digest().hex()
+def plaintext_to_md5(passphrase, engine):
+    """ Convert input plaintext passphrase to MD5 hashed version usable by net-snmp """
+    from hashlib import md5
+    tmp = expand(passphrase, key_length)
+    hash = md5(tmp).digest()
+    engine = bytearray.fromhex(engine)
+    out = b''.join([hash, engine, hash])
+    return md5(out).digest().hex()
 
-    @staticmethod
-    def sha1(bytes):
-        return hashlib.sha1(bytes).digest().hex()
-
-    @staticmethod
-    def expand(s, l):
-        reps = l // len(s) + 1 # approximation; worst case: overrun = l + len(s)
-        return ''.join(list(repeat(s, reps)))[:l]
-
-    @classmethod
-    def kdf(cls, password):
-        data = cls.expand(password, 1048576).encode('utf-8')
-        return hashlib.sha1(data).digest()
-
-    @staticmethod
-    def random_string(len=P_LEN, alphabet=(string.ascii_letters + string.digits)):
-        return ''.join(secrets.choice(alphabet) for _ in range(len))
-
-    @staticmethod
-    def random_engine(len=E_LEN):
-        return secrets.token_hex(len)
-
-    @classmethod
-    def derive_msg(cls, passphrase, engine):
-        # Parameter derivation á la rfc3414
-        Ku = cls.kdf(passphrase)
-        E = bytearray.fromhex(engine)
-
-        return b''.join([Ku, E, Ku])
-
-    # Define available hash algorithms
-    algs = {
-        'sha1': sha1,
-        'md5': md5,
-    }
+def plaintext_to_sha1(passphrase, engine):
+    """ Convert input plaintext passphrase to SHA1hashed version usable by net-snmp """
+    from hashlib import sha1
+    tmp = expand(passphrase, key_length)
+    hash = sha1(tmp).digest()
+    engine = bytearray.fromhex(engine)
+    out = b''.join([hash, engine, hash])
+    return sha1(out).digest().hex()

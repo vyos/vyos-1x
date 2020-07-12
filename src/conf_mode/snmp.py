@@ -20,7 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configverify import verify_vrf
-from vyos.snmpv3_hashgen import Hashgen
+from vyos.snmpv3_hashgen import plaintext_to_md5, plaintext_to_sha1, random
 from vyos.template import render
 from vyos.util import call
 from vyos.validate import is_ipv4, is_addr_assigned
@@ -86,9 +86,8 @@ def get_config():
     snmp['version'] = version_data['version']
 
     # create an internal snmpv3 user of the form 'vyosxxxxxxxxxxxxxxxx'
-    # os.urandom(8) returns 8 bytes of random data
-    snmp['vyos_user'] = 'vyos' + Hashgen.random_string(len=8)
-    snmp['vyos_user_pass'] = Hashgen.random_string(len=16)
+    snmp['vyos_user'] = 'vyos' + random(8)
+    snmp['vyos_user_pass'] = random(16)
 
     if conf.exists('community'):
         for name in conf.list_nodes('community'):
@@ -524,19 +523,20 @@ def generate(snmp):
         os.environ["vyos_libexec_dir"] = "/usr/libexec/vyos"
 
         for user in snmp['v3_users']:
-            hash = Hashgen.sha1 if user['authProtocol'] in 'sha1' else Hashgen.md5
+            if user['authProtocol'] == 'sha':
+                hash = plaintext_to_sha1
+            else:
+                hash = plaintext_to_md5
 
             if user['authPassword']:
-                Kul_auth = Hashgen.derive_msg(user['authPassword'], snmp['v3_engineid'])
-                user['authMasterKey'] = hash(Kul_auth)
+                user['authMasterKey'] = hash(user['authPassword'], snmp['v3_engineid'])
                 user['authPassword'] = ''
 
                 call('/opt/vyatta/sbin/my_set service snmp v3 user "{name}" auth encrypted-password "{authMasterKey}" > /dev/null'.format(**user))
                 call('/opt/vyatta/sbin/my_delete service snmp v3 user "{name}" auth plaintext-password > /dev/null'.format(**user))
 
             if user['privPassword']:
-                Kul_priv = Hashgen.derive_msg(user['privPassword'], snmp['v3_engineid'])
-                user['privMasterKey'] = hash(Kul_priv)
+                user['privMasterKey'] = hash(user['privPassword'], snmp['v3_engineid'])
                 user['privPassword'] = ''
 
                 call('/opt/vyatta/sbin/my_set service snmp v3 user "{name}" privacy encrypted-password "{privMasterKey}" > /dev/null'.format(**user))
