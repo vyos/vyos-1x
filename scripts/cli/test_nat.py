@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,16 +27,17 @@ snat_pattern = 'nftables[?rule].rule[?chain].{chain: chain, comment: comment, ad
 
 class TestNAT(unittest.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
+        self.session = ConfigSession(os.getpid())
         self.session.delete(base_path)
 
     def tearDown(self):
-        del self.session
+        self.session.delete(base_path)
+        self.session.commit()
 
     def test_source_nat(self):
-        """ Check if SNMP can be configured and service runs """
+        """ Configure and validate source NAT rule(s) """
 
         path = base_path + ['source']
         network = '192.168.0.0/16'
@@ -60,4 +61,3 @@ class TestNAT(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
