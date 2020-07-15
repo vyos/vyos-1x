@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="ndp">
+        <properties>
+          <help>Monitors the NDP information received by the router through the device</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <children>
+              <leafNode name="any">
+                <properties>
+                  <help>Monitor the NDP information received by the router through all interfaces of the device</help>
+                </properties>
+                <command>sudo ndptool monitor</command>
+              </leafNode>
+            </children>
+            <command>sudo ndptool monitor --ifname=$4</command>
+            <properties>
+              <help>Monitor ndp usage on specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
