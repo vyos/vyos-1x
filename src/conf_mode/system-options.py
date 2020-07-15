@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,67 +16,62 @@
 
 import os
 
+from netifaces import interfaces
 from sys import exit
-from copy import deepcopy
-from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import run
 
+from vyos.config import Config
+from vyos.template import render
+from vyos.util import call
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-systemd_ctrl_alt_del = '/lib/systemd/system/ctrl-alt-del.target'
-
-default_config_data = {
-    'beep_if_fully_booted': False,
-    'ctrl_alt_del': 'ignore',
-    'reboot_on_panic': True
-}
+config_file = r'/etc/curlrc'
+systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 
 def get_config():
-    opt = deepcopy(default_config_data)
     conf = Config()
-    conf.set_level('system options')
-    if conf.exists(''):
-        if conf.exists('ctrl-alt-del-action'):
-            opt['ctrl_alt_del'] = conf.return_value('ctrl-alt-del-action')
+    base = ['system', 'options']
+    options = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    return options
 
-        opt['beep_if_fully_booted'] = conf.exists('beep-if-fully-booted')
-        opt['reboot_on_panic'] = conf.exists('reboot-on-panic')
+def verify(options):
+    if 'http_client' in options.keys():
+        config = options['http_client']
+        if 'source_interface' in config.keys():
+            if not config['source_interface'] in interfaces():
+                raise ConfigError(f'Source interface {source_interface} does not '
+                                  f'exist'.format(**config))
 
-    return opt
+        if {'source_address', 'source_interface'} <= set(config):
+            raise ConfigError('Can not define both HTTP source-interface and source-address')
 
-def verify(opt):
-    pass
+    return None
 
-def generate(opt):
-    pass
+def generate(options):
+    render(config_file, 'system/curlrc.tmpl', options, trim_blocks=True)
+    return None
 
-def apply(opt):
+def apply(options):
     # Beep action
-    if opt['beep_if_fully_booted']:
-        run('systemctl enable vyos-beep.service')
+    if 'beep_if_fully_booted' in options.keys():
+        call('systemctl enable vyos-beep.service')
     else:
-        run('systemctl disable vyos-beep.service')
+        call('systemctl disable vyos-beep.service')
 
     # Ctrl-Alt-Delete action
-    if opt['ctrl_alt_del'] == 'ignore':
-        if os.path.exists(systemd_ctrl_alt_del):
-            os.unlink('/lib/systemd/system/ctrl-alt-del.target')
+    if os.path.exists(systemd_action_file):
+        os.unlink(systemd_action_file)
 
-    elif opt['ctrl_alt_del'] == 'reboot':
-        if os.path.exists(systemd_ctrl_alt_del):
-            os.unlink(systemd_ctrl_alt_del)
-        os.symlink('/lib/systemd/system/reboot.target', systemd_ctrl_alt_del)
-
-    elif opt['ctrl_alt_del'] == 'poweroff':
-        if os.path.exists(systemd_ctrl_alt_del):
-            os.unlink(systemd_ctrl_alt_del)
-        os.symlink('/lib/systemd/system/poweroff.target', systemd_ctrl_alt_del)
+    if 'ctrl_alt_del_action' in options.keys():
+        if options['ctrl_alt_del_action'] == 'reboot':
+            os.symlink('/lib/systemd/system/reboot.target', systemd_action_file)
+        elif options['ctrl_alt_del_action'] == 'poweroff':
+            os.symlink('/lib/systemd/system/poweroff.target', systemd_action_file)
 
     # Reboot system on kernel panic
     with open('/proc/sys/kernel/panic', 'w') as f:
-        if opt['reboot_on_panic']:
+        if 'reboot_on_panic' in options.keys():
             f.write('60')
         else:
             f.write('0')

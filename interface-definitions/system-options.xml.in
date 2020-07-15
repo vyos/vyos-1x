@@ -33,7 +33,7 @@
                 <description>Poweroff VyOS</description>
               </valueHelp>
               <constraint>
-                <regex>(ignore|reboot|poweroff)</regex>
+                <regex>^(ignore|reboot|poweroff)$</regex>
               </constraint>
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
@@ -44,6 +44,15 @@
                <valueless/>
              </properties>
            </leafNode>
+           <node name="http-client">
+             <properties>
+               <help>Global options used for HTTP based commands</help>
+             </properties>
+             <children>
+               #include <include/source-interface.xml.i>
+               #include <include/source-address-ipv4-ipv6.xml.i>
+             </children>
+           </node>
         </children>
       </node>
     </children>

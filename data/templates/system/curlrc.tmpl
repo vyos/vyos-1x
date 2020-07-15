@@ -1,0 +1,8 @@
+{% if http_client is defined %}
+{%   if http_client.source_interface is defined %}
+--interface "{{ http_client.source_interface }}"
+{%   endif %}
+{%   if http_client.source_address is defined %}
+--interface "{{ http_client.source_address }}"
+{%   endif %}
+{% endif %}
