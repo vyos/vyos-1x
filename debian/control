@@ -105,7 +105,10 @@ Depends: python3,
   nftables (>= 0.9.3),
   conntrack,
   libatomic1,
-  fastnetmon
+  fastnetmon,
+  qrencode,
+  libpng16-16,
+  libqrencode4
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
