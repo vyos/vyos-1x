@@ -64,18 +64,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="source-interface">
-            <properties>
-              <help>Physical Interface used for this connection</help>
-              <valueHelp>
-                <format>interface</format>
-                <description>Interface used for VXLAN underlay</description>
-              </valueHelp>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-            </properties>
-          </leafNode>
+          #include <include/source-interface.xml.i>
           #include <include/interface-mtu-1200-9000.xml.i>
           <leafNode name="remote">
             <properties>
