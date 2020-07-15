@@ -21,8 +21,9 @@ import re
 import ipaddress
 import os.path
 from tabulate import tabulate
-
+from json import loads
 from vyos.util import cmd, run
+from vyos.logger import syslog
 
 # some default values
 uacctd_pidfile = '/var/run/uacctd.pid'
@@ -32,34 +33,35 @@ uacctd_pipefile = '/tmp/uacctd.pipe'
 # check if ports argument have correct format
 def _is_ports(ports):
     # define regex for checking
-    regex_filter = re.compile('^(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$|^(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])-(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$|^((\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]),)+(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')
+    regex_filter = re.compile(r'^(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$|^(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])-(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$|^((\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]),)+(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')
     if not regex_filter.search(ports):
         raise argparse.ArgumentTypeError("Invalid ports: {}".format(ports))
 
     # check which type nitation is used: single port, ports list, ports range
     # single port
-    regex_filter = re.compile('^(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')
+    regex_filter = re.compile(r'^(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')
     if regex_filter.search(ports):
-        filter_ports = { 'type': 'single', 'value': int(ports) }
+        filter_ports = {'type': 'single', 'value': int(ports)}
 
     # ports list
-    regex_filter = re.compile('^((\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]),)+(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])')
+    regex_filter = re.compile(r'^((\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]),)+(\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])')
     if regex_filter.search(ports):
-        filter_ports = { 'type': 'list', 'value': list(map(int, ports.split(','))) }
+        filter_ports = {'type': 'list', 'value': list(map(int, ports.split(',')))}
 
     # ports range
-    regex_filter = re.compile('^(?P<first>\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])-(?P<second>\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')
+    regex_filter = re.compile(r'^(?P<first>\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])-(?P<second>\d|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')
     if regex_filter.search(ports):
         # check if second number is greater than the first
         if int(regex_filter.search(ports).group('first')) >= int(regex_filter.search(ports).group('second')):
             raise argparse.ArgumentTypeError("Invalid ports: {}".format(ports))
-        filter_ports = { 'type': 'range', 'value': range(int(regex_filter.search(ports).group('first')), int(regex_filter.search(ports).group('second'))) }
+        filter_ports = {'type': 'range', 'value': range(int(regex_filter.search(ports).group('first')), int(regex_filter.search(ports).group('second')))}
 
     # if all above failed
     if not filter_ports:
         raise argparse.ArgumentTypeError("Failed to parse: {}".format(ports))
     else:
         return filter_ports
+
 
 # check if host argument have correct format
 def _is_host(host):
@@ -68,10 +70,12 @@ def _is_host(host):
         raise argparse.ArgumentTypeError("Invalid host: {}".format(host))
     return host
 
+
 # check if flow-accounting running
 def _uacctd_running():
     command = 'systemctl status uacctd.service > /dev/null'
     return run(command) == 0
+
 
 # get list of interfaces
 def _get_ifaces_dict():
@@ -83,7 +87,7 @@ def _get_ifaces_dict():
 
     # make a dictionary with interfaces and indexes
     ifaces_dict = {}
-    regex_filter = re.compile('^(?P<iface_index>\d+):\ (?P<iface_name>[\w\d\.]+)[:@].*$')
+    regex_filter = re.compile(r'^(?P<iface_index>\d+):\ (?P<iface_name>[\w\d\.]+)[:@].*$')
     for iface_line in ifaces_out:
         if regex_filter.search(iface_line):
             ifaces_dict[int(regex_filter.search(iface_line).group('iface_index'))] = regex_filter.search(iface_line).group('iface_name')
@@ -91,11 +95,12 @@ def _get_ifaces_dict():
     # return dictioanry
     return ifaces_dict
 
+
 # get list of flows
 def _get_flows_list():
     # run command to get flows list
     out = cmd(f'/usr/bin/pmacct -s -O json -T flows -p {uacctd_pipefile}',
-                message='Failed to get flows list')
+              message='Failed to get flows list')
 
     # read output
     flows_out = out.splitlines()
@@ -103,10 +108,14 @@ def _get_flows_list():
     # make a list with flows
     flows_list = []
     for flow_line in flows_out:
-        flows_list.append(eval(flow_line))
+        try:
+            flows_list.append(loads(flow_line))
+        except Exception as err:
+            syslog.error('Unable to read flow info: {}'.format(err))
 
     # return list of flows
     return flows_list
+
 
 # filter and format flows
 def _flows_filter(flows, ifaces):
@@ -149,14 +158,29 @@ def _flows_filter(flows, ifaces):
     # return filtered flows
     return flows_filtered
 
+
 # print flow table
 def _flows_table_print(flows):
-    #define headers and body
-    table_headers = [ 'IN_IFACE', 'SRC_MAC', 'DST_MAC', 'SRC_IP', 'DST_IP', 'SRC_PORT', 'DST_PORT', 'PROTOCOL', 'TOS', 'PACKETS', 'FLOWS', 'BYTES' ]
+    # define headers and body
+    table_headers = ['IN_IFACE', 'SRC_MAC', 'DST_MAC', 'SRC_IP', 'DST_IP', 'SRC_PORT', 'DST_PORT', 'PROTOCOL', 'TOS', 'PACKETS', 'FLOWS', 'BYTES']
     table_body = []
     # convert flows to list
     for flow in flows:
-        table_body.append([flow['iface_in_name'], flow['mac_src'], flow['mac_dst'], flow['ip_src'], flow['ip_dst'], flow['port_src'], flow['port_dst'], flow['ip_proto'], flow['tos'], flow['packets'], flow['flows'], flow['bytes'] ])
+        table_line = [
+            flow.get('iface_in_name'),
+            flow.get('mac_src'),
+            flow.get('mac_dst'),
+            flow.get('ip_src'),
+            flow.get('ip_dst'),
+            flow.get('port_src'),
+            flow.get('port_dst'),
+            flow.get('ip_proto'),
+            flow.get('tos'),
+            flow.get('packets'),
+            flow.get('flows'),
+            flow.get('bytes')
+        ]
+        table_body.append(table_line)
     # configure and fill table
     table = tabulate(table_body, table_headers, tablefmt="simple")
 
@@ -168,11 +192,13 @@ def _flows_table_print(flows):
     except KeyboardInterrupt:
         sys.exit(0)
 
+
 # check if in-memory table is active
 def _check_imt():
     if not os.path.exists(uacctd_pipefile):
         print("In-memory table is not available")
         sys.exit(1)
+
 
 # define program arguments
 cmd_args_parser = argparse.ArgumentParser(description='show flow-accounting')
