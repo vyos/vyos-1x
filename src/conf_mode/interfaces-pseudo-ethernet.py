@@ -36,7 +36,7 @@ default_config_data = {
     'ip_arp_cache_tmo': 30,
     'ip_proxy_arp_pvlan': 0,
     'source_interface': '',
-    'source_interface_changed': False,
+    'recreating_required': False,
     'mode': 'private',
     'vif_s': {},
     'vif_s_remove': [],
@@ -79,11 +79,14 @@ def get_config():
         peth['source_interface'] = conf.return_value(['source-interface'])
         tmp = conf.return_effective_value(['source-interface'])
         if tmp != peth['source_interface']:
-            peth['source_interface_changed'] = True
+            peth['recreating_required'] = True
 
     # MACvlan mode
     if conf.exists(['mode']):
         peth['mode'] = conf.return_value(['mode'])
+        tmp = conf.return_effective_value(['mode'])
+        if tmp != peth['mode']:
+            peth['recreating_required'] = True
 
     add_to_dict(conf, disabled, peth, 'vif', 'vif')
     add_to_dict(conf, disabled, peth, 'vif-s', 'vif_s')
@@ -139,10 +142,10 @@ def apply(peth):
         return None
 
     # Check if MACVLAN interface already exists. Parameters like the underlaying
-    # source-interface device can not be changed on the fly and the interface
+    # source-interface device or mode can not be changed on the fly and the interface
     # needs to be recreated from the bottom.
     if peth['intf'] in interfaces():
-        if peth['source_interface_changed']:
+        if peth['recreating_required']:
             MACVLANIf(peth['intf']).remove()
 
     # MACVLAN interface needs to be created on-block instead of passing a ton
