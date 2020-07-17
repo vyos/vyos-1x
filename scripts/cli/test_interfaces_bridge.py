@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
@@ -30,21 +31,23 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         members = []
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
-        for tmp in Section.interfaces("ethernet"):
-            if not '.' in tmp:
-                members.append(tmp)
+        if 'TEST_ETH' in os.environ:
+            members = os.environ['TEST_ETH'].split()
+        else:
+            for tmp in Section.interfaces("ethernet"):
+                if not '.' in tmp: members.append(tmp)
 
         for intf in self._interfaces:
+            base = self._base_path + [intf]
+            self.session.set(base + ['stp'])
+
             cost = 1000
             priority = 10
-
-            self.session.set(self._base_path + [intf, 'stp'])
-
             # assign members to bridge interface
             for member in members:
-                self.session.set(self._base_path + [intf, 'member', 'interface', member])
-                self.session.set(self._base_path + [intf, 'member', 'interface', member, 'cost', str(cost)])
-                self.session.set(self._base_path + [intf, 'member', 'interface', member, 'priority', str(priority)])
+                base_member = base + ['member', 'interface', member]
+                self.session.set(base_member + ['cost', str(cost)])
+                self.session.set(base_member + ['priority', str(priority)])
                 cost += 1
                 priority += 1
 
