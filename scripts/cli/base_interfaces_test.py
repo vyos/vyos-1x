@@ -23,9 +23,15 @@ from vyos.ifconfig import Interface
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
         _test_mtu = False
+        _test_vlan = False
+        _test_qinq = False
         _base_path = []
+
         _options = {}
         _interfaces = []
+        _vlan_range = ['100', '200', '300', '2000']
+        # choose IPv6 minimum MTU value for tests - this must always work
+        _mtu = '1280'
 
         def setUp(self):
             self.session = ConfigSession(os.getpid())
@@ -108,56 +114,49 @@ class BasicInterfaceTest:
 
                         self.assertTrue(is_intf_addr_assigned(intf, addr['addr']))
 
+        def _mtu_test(self, intf):
+            """ helper function to verify MTU size """
+            with open('/sys/class/net/{}/mtu'.format(intf), 'r') as f:
+                tmp = f.read().rstrip()
+                self.assertEqual(tmp, self._mtu)
 
         def test_change_mtu(self):
-            """
-            Check if MTU can be changed on interface.
-            Test MTU size will be 1400 bytes.
-            """
+            """ Testcase if MTU can be changed on interface """
             if not self._test_mtu:
                 return None
-
-            # choose MTU which works on every interface - 1280 is minimum for IPv6 so
-            # it will always work.
-            mtu = '1280'
             for intf in self._interfaces:
-                self.session.set(self._base_path + [intf, 'mtu', mtu])
+                base = self._base_path + [intf]
+                self.session.set(base + ['mtu', self._mtu])
                 for option in self._options.get(intf, []):
-                    self.session.set(self._base_path + [intf] + option.split())
+                    self.session.set(base + option.split())
 
             self.session.commit()
-
-            # Validate interface description
             for intf in self._interfaces:
-                with open('/sys/class/net/{}/mtu'.format(intf), 'r') as f:
-                    tmp = f.read().rstrip()
-                    self.assertEqual(tmp, mtu)
+                self._mtu_test(intf)
 
+        def _vlan_config(self, intf):
+            for vlan in self._vlan_range:
+                base = self._base_path + [intf, 'vif', vlan]
+                self.session.set(base + ['mtu', self._mtu])
+                for address in self._test_addr:
+                    self.session.set(base + ['address', address])
+
+        def _vlan_test(self, intf):
+            for vlan in self._vlan_range:
+                vif = f'{intf}.{vlan}'
+                for address in self._test_addr:
+                    self.assertTrue(is_intf_addr_assigned(vif, address))
+                with open(f'/sys/class/net/{vif}/mtu', 'r') as f:
+                    tmp = f.read().rstrip()
+                    self.assertEqual(tmp, self._mtu)
 
         def test_8021q_vlan(self):
             if not self._test_vlan:
                 return None
 
-            vlan_range = ['100', '200', '300', '2000']
             for intf in self._interfaces:
-                for vlan in vlan_range:
-                    address = '192.0.2.1/24'
-                    # choose MTU which works on every interface - 1280 is minimum for IPv6 so
-                    # it will always work.
-                    mtu = '1280'
-
-                    base = self._base_path + [intf, 'vif', vlan]
-                    self.session.set(base + ['address', address])
-                    self.session.set(base + ['mtu', mtu])
-
+                self._vlan_config(intf)
             self.session.commit()
-
-            # Validate interface description
             for intf in self._interfaces:
-                for vlan in vlan_range:
-                    vif = f'{intf}.{vlan}'
-                    with open(f'/sys/class/net/{vif}/mtu', 'r') as f:
-                        tmp = f.read().rstrip()
-                        self.assertEqual(tmp, mtu)
+                self._vlan_test(intf)
 
-                    self.assertTrue(is_intf_addr_assigned(vif, address))
