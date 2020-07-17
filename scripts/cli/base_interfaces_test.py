@@ -38,8 +38,11 @@ class BasicInterfaceTest:
         def tearDown(self):
             # we should not remove ethernet from the overall CLI
             if 'ethernet' in self._base_path:
-                self.session.delete(self._base_path)
                 for intf in self._interfaces:
+                    # when using a dedicated interface to test via TEST_ETH environment
+                    # variable only this one will be cleared in the end - usable to test
+                    # ethernet interfaces via SSH
+                    self.session.delete(self._base_path + [intf])
                     self.session.set(self._base_path + [intf])
             else:
                 self.session.delete(self._base_path)

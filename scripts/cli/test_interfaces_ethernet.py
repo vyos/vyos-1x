@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
@@ -29,10 +30,13 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
-        for tmp in Section.interfaces("ethernet"):
-            if not '.' in tmp:
-                self._interfaces.append(tmp)
-
+        if 'TEST_ETH' in os.environ:
+            tmp = os.environ['TEST_ETH'].split()
+            self._interfaces = tmp
+        else:
+            for tmp in Section.interfaces("ethernet"):
+                if not '.' in tmp:
+                    self._interfaces.append(tmp)
 
 if __name__ == '__main__':
     unittest.main()
