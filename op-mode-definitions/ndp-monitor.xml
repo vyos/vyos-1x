@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="ndp">
+        <properties>
+          <help>Monitors the NDP information received by the router through the device</help>
+        </properties>
+        <command>sudo ndptool monitor</command>
+        <children>
+          <tagNode name="interface">
+            <command>sudo ndptool monitor --ifname=$4</command>
+            <properties>
+              <help>Monitor ndp protocol on specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="type">
+                <command>sudo ndptool monitor --ifname=$4 --msg-type=$6</command>
+                <properties>
+                  <help>Monitor ndp protocol on specified interface</help>
+                  <completionHelp>
+                    <list>rs ra ns na</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="send">
+                    <command>sudo ndptool send --ifname=$4 --msg-type=$6</command>
+                    <properties>
+                      <help>Send a specified type of NDP message</help>
+                    </properties>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="type">
+            <command>sudo ndptool monitor --msg-type=$4</command>
+            <properties>
+              <help>Monitor ndp protocol on specified interface</help>
+              <completionHelp>
+                <list>rs ra ns na</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="send">
+                <command>sudo ndptool send --msg-type=$4</command>
+                <properties>
+                  <help>Send a specified type of NDP message</help>
+                </properties>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
