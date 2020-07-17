@@ -114,7 +114,7 @@ class BasicInterfaceTest:
             Check if MTU can be changed on interface.
             Test MTU size will be 1400 bytes.
             """
-            if self._test_mtu is False:
+            if not self._test_mtu:
                 return None
 
             # choose MTU which works on every interface - 1280 is minimum for IPv6 so
@@ -132,3 +132,32 @@ class BasicInterfaceTest:
                 with open('/sys/class/net/{}/mtu'.format(intf), 'r') as f:
                     tmp = f.read().rstrip()
                     self.assertEqual(tmp, mtu)
+
+
+        def test_8021q_vlan(self):
+            if not self._test_vlan:
+                return None
+
+            vlan_range = ['100', '200', '300', '2000']
+            for intf in self._interfaces:
+                for vlan in vlan_range:
+                    address = '192.0.2.1/24'
+                    # choose MTU which works on every interface - 1280 is minimum for IPv6 so
+                    # it will always work.
+                    mtu = '1280'
+
+                    base = self._base_path + [intf, 'vif', vlan]
+                    self.session.set(base + ['address', address])
+                    self.session.set(base + ['mtu', mtu])
+
+            self.session.commit()
+
+            # Validate interface description
+            for intf in self._interfaces:
+                for vlan in vlan_range:
+                    vif = f'{intf}.{vlan}'
+                    with open(f'/sys/class/net/{vif}/mtu', 'r') as f:
+                        tmp = f.read().rstrip()
+                        self.assertEqual(tmp, mtu)
+
+                    self.assertTrue(is_intf_addr_assigned(vif, address))
