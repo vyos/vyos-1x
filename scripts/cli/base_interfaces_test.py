@@ -117,8 +117,9 @@ class BasicInterfaceTest:
             if self._test_mtu is False:
                 return None
 
-            # choose a MTU which works on every interface
-            mtu = '1400'
+            # choose MTU which works on every interface - 1280 is minimum for IPv6 so
+            # it will always work.
+            mtu = '1280'
             for intf in self._interfaces:
                 self.session.set(self._base_path + [intf, 'mtu', mtu])
                 for option in self._options.get(intf, []):
@@ -130,4 +131,4 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 with open('/sys/class/net/{}/mtu'.format(intf), 'r') as f:
                     tmp = f.read().rstrip()
-                    self.assertTrue(tmp == mtu)
+                    self.assertEqual(tmp, mtu)
