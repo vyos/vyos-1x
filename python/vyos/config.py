@@ -67,6 +67,7 @@ import os
 import re
 import json
 import subprocess
+from copy import deepcopy
 
 import vyos.util
 import vyos.configtree
@@ -91,6 +92,8 @@ class Config(object):
     def __init__(self, session_env=None):
         self._cli_shell_api = "/bin/cli-shell-api"
         self._level = []
+        self._dict_cache = {}
+
         if session_env:
             self.__session_env = session_env
         else:
@@ -287,6 +290,24 @@ class Config(object):
             self.__session_env = save_env
             return(default)
 
+    def get_cached_dict(self, effective=False):
+        cached = self._dict_cache.get(effective, {})
+        if cached:
+            config_dict = cached
+        else:
+            config_dict = {}
+
+            if effective:
+                if self._running_config:
+                    config_dict = json.loads((self._running_config).to_json())
+            else:
+                if self._session_config:
+                    config_dict = json.loads((self._session_config).to_json())
+
+            self._dict_cache[effective] = config_dict
+
+        return config_dict
+
     def get_config_dict(self, path=[], effective=False, key_mangling=None, get_first_key=False):
         """
         Args:
@@ -297,14 +318,7 @@ class Config(object):
 
         Returns: a dict representation of the config under path
         """
-        config_dict = {}
-
-        if effective:
-            if self._running_config:
-                config_dict = json.loads((self._running_config).to_json())
-        else:
-            if self._session_config:
-                config_dict = json.loads((self._session_config).to_json())
+        config_dict = self.get_cached_dict(effective)
 
         config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path), get_first_key)
 
@@ -316,6 +330,8 @@ class Config(object):
                 raise ValueError("key_mangling must be a tuple of two strings")
             else:
                 config_dict = vyos.util.mangle_dict_keys(config_dict, key_mangling[0], key_mangling[1])
+        else:
+            config_dict = deepcopy(config_dict)
 
         return config_dict
 
