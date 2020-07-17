@@ -29,6 +29,7 @@ class BasicInterfaceTest:
 
         _options = {}
         _interfaces = []
+        _qinq_range = ['10', '20', '30']
         _vlan_range = ['100', '200', '300', '2000']
         # choose IPv6 minimum MTU value for tests - this must always work
         _mtu = '1280'
@@ -155,3 +156,24 @@ class BasicInterfaceTest:
                     self._mtu_test(vif)
 
 
+        def test_8021ad_qinq_vlan(self):
+            """ Testcase for 802.1ad Q-in-Q VLAN interfaces """
+            if not self._test_qinq:
+                return None
+
+            for interface in self._interfaces:
+                for vif_s in self._qinq_range:
+                    for vif_c in self._vlan_range:
+                        base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c', vif_c]
+                        self.session.set(base + ['mtu', self._mtu])
+                        for address in self._test_addr:
+                            self.session.set(base + ['address', address])
+
+            self.session.commit()
+            for interface in self._interfaces:
+                for vif_s in self._qinq_range:
+                    for vif_c in self._vlan_range:
+                        vif = f'{interface}.{vif_s}.{vif_c}'
+                        for address in self._test_addr:
+                            self.assertTrue(is_intf_addr_assigned(vif, address))
+                        self._mtu_test(vif)
