@@ -134,29 +134,24 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 self._mtu_test(intf)
 
-        def _vlan_config(self, intf):
-            for vlan in self._vlan_range:
-                base = self._base_path + [intf, 'vif', vlan]
-                self.session.set(base + ['mtu', self._mtu])
-                for address in self._test_addr:
-                    self.session.set(base + ['address', address])
-
-        def _vlan_test(self, intf):
-            for vlan in self._vlan_range:
-                vif = f'{intf}.{vlan}'
-                for address in self._test_addr:
-                    self.assertTrue(is_intf_addr_assigned(vif, address))
-                with open(f'/sys/class/net/{vif}/mtu', 'r') as f:
-                    tmp = f.read().rstrip()
-                    self.assertEqual(tmp, self._mtu)
-
         def test_8021q_vlan(self):
+            """ Testcase for 802.1q VLAN interfaces """
             if not self._test_vlan:
                 return None
 
             for intf in self._interfaces:
-                self._vlan_config(intf)
+                for vlan in self._vlan_range:
+                    base = self._base_path + [intf, 'vif', vlan]
+                    self.session.set(base + ['mtu', self._mtu])
+                    for address in self._test_addr:
+                        self.session.set(base + ['address', address])
+
             self.session.commit()
             for intf in self._interfaces:
-                self._vlan_test(intf)
+                for vlan in self._vlan_range:
+                    vif = f'{intf}.{vlan}'
+                    for address in self._test_addr:
+                        self.assertTrue(is_intf_addr_assigned(vif, address))
+                    self._mtu_test(vif)
+
 
