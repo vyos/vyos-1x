@@ -26,12 +26,12 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  <tagNode name="send">
+                  <leafNode name="send">
                     <command>sudo ndptool send --ifname=$4 --msg-type=$6</command>
                     <properties>
                       <help>Send a specified type of NDP message</help>
                     </properties>
-                  </tagNode>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>
@@ -44,14 +44,6 @@
                 <list>rs ra ns na</list>
               </completionHelp>
             </properties>
-            <children>
-              <tagNode name="send">
-                <command>sudo ndptool send --msg-type=$4</command>
-                <properties>
-                  <help>Send a specified type of NDP message</help>
-                </properties>
-              </tagNode>
-            </children>
           </tagNode>
         </children>
       </node>
