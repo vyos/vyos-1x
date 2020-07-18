@@ -322,7 +322,11 @@ class Interface(Control):
             self.set_admin_state('down')
 
         self.set_interface('mac', mac)
-
+        
+        # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
+        if prev_state == 'up':
+            self.set_admin_state('up')
+    
     def set_vrf(self, vrf=''):
         """
         Add/Remove interface from given VRF instance.
