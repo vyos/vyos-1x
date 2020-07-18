@@ -30,6 +30,20 @@
               </leafNode>
             </children>
           </tagNode>
+          <node name="wirelessmodem">
+            <properties>
+              <help>Show Wireless Modem (WWAN) interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wirelessmodem --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed Wireless Modem (WWAN( interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wirelessmodem --action=show</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

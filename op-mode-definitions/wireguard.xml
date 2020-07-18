@@ -96,6 +96,20 @@
              <!-- more commands upon request -->
             </children>
           </tagNode>
+          <node name="wireguard">
+            <properties>
+              <help>Show wireguard interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed wireguard interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

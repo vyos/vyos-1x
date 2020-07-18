@@ -74,6 +74,7 @@
             <properties>
               <help>Show ethernet interface information</help>
             </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=ethernet --action=show-brief</command>
             <children>
               <leafNode name="detail">
                 <properties>

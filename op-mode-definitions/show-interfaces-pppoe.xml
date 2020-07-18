@@ -30,6 +30,20 @@
               </leafNode>
             </children>
           </tagNode>
+          <node name="pppoe">
+            <properties>
+              <help>Show PPPoE interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=pppoe --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed PPPoE interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=pppoe --action=show</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
