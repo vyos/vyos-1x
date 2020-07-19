@@ -79,9 +79,6 @@ def verify_rule(rule, err_msg):
                              'statically maps a whole network of addresses onto another\n' \
                              'network of addresses')
 
-    if not rule['exclude'] and not rule['translation_address']:
-        raise ConfigError(f'{err_msg} translation address not specified')
-
 
 def parse_configuration(conf, source_dest):
     """ Common wrapper to read in both NAT source and destination CLI """
