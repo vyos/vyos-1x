@@ -70,6 +70,7 @@
               </constraint>
               <constraintErrorMessage>mode must be private, vepa, bridge or passthru</constraintErrorMessage>
             </properties>
+            <defaultValue>private</defaultValue>
           </leafNode>
           #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>
