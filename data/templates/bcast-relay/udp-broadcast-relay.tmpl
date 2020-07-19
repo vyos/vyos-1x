@@ -4,4 +4,4 @@
 {%- if description %}
 # Comment: {{ description }}
 {% endif %}
-DAEMON_ARGS="{% if address %}-s {{ address }} {% endif %}{{ id }} {{ port }} {{ interfaces | join(' ') }}"
+DAEMON_ARGS="{{ '-s ' + address if address is defined }} {{ instance }} {{ port }} {{ interface | join(' ') }}"
