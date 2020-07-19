@@ -667,10 +667,12 @@ class Interface(Control):
         if addr in self._addr:
             return False
 
+        addr_is_v4 = is_ipv4(addr)
+
         # we can't have both DHCP and static IPv4 addresses assigned
         for a in self._addr:
             if ( ( addr == 'dhcp' and a != 'dhcpv6' and is_ipv4(a) ) or
-                    ( a == 'dhcp' and addr != 'dhcpv6' and is_ipv4(addr) ) ):
+                    ( a == 'dhcp' and addr != 'dhcpv6' and addr_is_v4 ) ):
                 raise ConfigError((
                     "Can't configure both static IPv4 and DHCP address "
                     "on the same interface"))
@@ -681,7 +683,8 @@ class Interface(Control):
         elif addr == 'dhcpv6':
             self.dhcp.v6.set()
         elif not is_intf_addr_assigned(self.ifname, addr):
-            self._cmd(f'ip addr add "{addr}" dev "{self.ifname}"')
+            self._cmd(f'ip addr add "{addr}" '
+                    f'{"brd + " if addr_is_v4 else ""}dev "{self.ifname}"')
         else:
             return False
 
