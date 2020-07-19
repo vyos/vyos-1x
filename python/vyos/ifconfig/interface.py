@@ -17,7 +17,9 @@ import os
 import re
 import json
 import jmespath
+
 from copy import deepcopy
+from glob import glob
 
 from ipaddress import IPv4Network
 from ipaddress import IPv6Address
@@ -73,8 +75,12 @@ class Interface(Control):
     _command_get = {
         'admin_state': {
             'shellcmd': 'ip -json link show dev {ifname}',
-            'format': lambda j: 'up' if 'UP' in json.loads(j)[0]['flags'] else 'down',
-        }
+            'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
+        },
+        'vlan_protocol': {
+            'shellcmd': 'ip -json -details link show dev {ifname}',
+            'format': lambda j: jmespath.search('[*].linkinfo.info_data.protocol | [0]', json.loads(j)),
+        },
     }
 
     _command_set = {
@@ -544,6 +550,17 @@ class Interface(Control):
         """
         self.set_interface('alias', ifalias)
 
+    def get_vlan_protocol(self):
+        """
+        Retrieve VLAN protocol in use, this can be 802.1Q, 802.1ad or None
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0.10').get_vlan_protocol()
+        '802.1Q'
+        """
+        return self.get_interface('vlan_protocol')
+
     def get_admin_state(self):
         """
         Get interface administrative state. Function will return 'up' or 'down'
@@ -565,6 +582,17 @@ class Interface(Control):
         >>> Interface('eth0').get_admin_state()
         'down'
         """
+        # A VLAN interface can only be placed in admin up state when
+        # the lower interface is up, too
+        if self.get_vlan_protocol():
+            lower_interface = glob(f'/sys/class/net/{self.ifname}/lower*/flags')[0]
+            with open(lower_interface, 'r') as f:
+                flags = f.read()
+            # If parent is not up - bail out as we can not bring up the VLAN.
+            # Flags are defined in kernel source include/uapi/linux/if.h
+            if not int(flags, 16) & 1:
+                return None
+
         return self.set_interface('admin_state', state)
 
     def set_proxy_arp(self, enable):
