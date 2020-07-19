@@ -19,72 +19,36 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.configdict import T2665_default_dict_cleanup
+from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_address
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_vlan_config
 from vyos.ifconfig import EthernetIf
-from vyos.ifconfig_vlan import get_removed_vlans
-from vyos.validate import is_member
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 
 def get_config():
-    """ Retrive CLI config as dictionary. Dictionary can never be empty,
-    as at least the interface name will be added or a deleted flag """
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
     conf = Config()
+    base = ['interfaces', 'ethernet']
 
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
-    # retrieve interface default values
-    base = ['interfaces', 'ethernet']
-    default_values = defaults(base)
-
     ifname = os.environ['VYOS_TAGNODE_VALUE']
-    base = base + [ifname]
-    # setup config level which is extracted in get_removed_vlans()
-    conf.set_level(base)
-    ethernet = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-
-    # Check if interface has been removed
-    if ethernet == {}:
-        ethernet.update({'deleted' : ''})
-
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary
-    # retrived.
-    ethernet = dict_merge(default_values, ethernet)
-
-    # Add interface instance name into dictionary
-    ethernet.update({'ifname': ifname})
-
-    # Check if we are a member of a bridge device
-    bridge = is_member(conf, ifname, 'bridge')
-    if bridge:
-        tmp = {'is_bridge_member' : bridge}
-        ethernet.update(tmp)
-
-    # Check if we are a member of a bond device
-    bond = is_member(conf, ifname, 'bonding')
-    if bond:
-        tmp = {'is_bond_member' : bond}
-        ethernet.update(tmp)
-
-    ethernet = T2665_default_dict_cleanup( ethernet )
-    # Check vif, vif-s/vif-c VLAN interfaces for removal
-    ethernet = get_removed_vlans( conf, ethernet )
+    ethernet = get_interface_dict(conf, base, ifname)
     return ethernet
 
 def verify(ethernet):
-    if 'deleted' in ethernet.keys():
+    if 'deleted' in ethernet:
         return None
 
     verify_interface_exists(ethernet)
@@ -114,7 +78,7 @@ def generate(ethernet):
 
 def apply(ethernet):
     e = EthernetIf(ethernet['ifname'])
-    if 'deleted' in ethernet.keys():
+    if 'deleted' in ethernet:
         # delete interface
         e.remove()
     else:

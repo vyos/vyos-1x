@@ -17,6 +17,7 @@
 A library for retrieving value dicts from VyOS configs in a declarative fashion.
 
 """
+import jmespath
 
 from enum import Enum
 from copy import deepcopy
@@ -129,6 +130,102 @@ def T2665_default_dict_cleanup(dict):
             # keys - we can clean the entire vif dict as it's useless
             if not dict[vif]:
                 del dict[vif]
+
+    return dict
+
+def leaf_node_changed(conf, key):
+    """
+    Check if a leaf node was altered. If it has been altered - values has been
+    changed, or it was added/removed, we will return the old value. If nothing
+    has been changed, None is returned
+    """
+    from vyos.configdiff import get_config_diff
+
+    D = get_config_diff(conf, key_mangling=('-', '_'))
+    D.set_level(conf.get_level())
+    (new, old) = D.get_value_diff(key)
+    if new != old:
+        if isinstance(old, str):
+            return old
+        elif isinstance(old, list):
+            if isinstance(new, str):
+                new = [new]
+            elif isinstance(new, type(None)):
+                new = []
+            return list_diff(old, new)
+
+    return None
+
+def get_interface_dict(config, base, ifname):
+    """
+    Common utility function to retrieve and mandgle the interfaces available
+    in CLI configuration. All interfaces have a common base ground where the
+    value retrival is identical - so it can and should be reused
+
+    Will return a dictionary with the necessary interface configuration
+    """
+    from vyos.xml import defaults
+    from vyos.ifconfig_vlan import get_removed_vlans
+
+    # retrieve interface default values
+    default_values = defaults(base)
+
+    # setup config level which is extracted in get_removed_vlans()
+    config.set_level(base + [ifname])
+    dict = config.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+
+    # Check if interface has been removed
+    if dict == {}:
+        dict.update({'deleted' : ''})
+
+    # Add interface instance name into dictionary
+    dict.update({'ifname': ifname})
+
+    # We have gathered the dict representation of the CLI, but there are
+    # default options which we need to update into the dictionary
+    # retrived.
+    dict = dict_merge(default_values, dict)
+
+    # Check if we are a member of a bridge device
+    bridge = is_member(config, ifname, 'bridge')
+    if bridge:
+        dict.update({'is_bridge_member' : bridge})
+
+    # Check if we are a member of a bond device
+    bond = is_member(config, ifname, 'bonding')
+    if bond:
+        dict.update({'is_bond_member' : bond})
+
+    mac = leaf_node_changed(config, ['mac'])
+    if mac:
+        dict.update({'mac_old' : mac})
+
+    eui64 = leaf_node_changed(config, ['ipv6', 'address', 'eui64'])
+    if eui64:
+        # XXX: T2636 workaround: convert string to a list with one element
+        if isinstance(eui64, str):
+            eui64 = [eui64]
+        tmp = jmespath.search('ipv6.address', dict)
+        if not tmp:
+            dict.update({'ipv6': {'address': {'eui64_old': eui64}}})
+        else:
+            dict['ipv6']['address'].update({'eui64_old': eui64})
+
+    # remove wrongly inserted values
+    dict = T2665_default_dict_cleanup(dict)
+
+    # The values are identical for vif, vif-s and vif-c as the all include the same
+    # XML definitions which hold the defaults
+    default_vif_values = defaults(base + ['vif'])
+    for vif, vif_config in dict.get('vif', {}).items():
+        vif_config.update(default_vif_values)
+    for vif_s, vif_s_config in dict.get('vif_s', {}).items():
+        vif_s_config.update(default_vif_values)
+        for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
+            vif_c_config.update(default_vif_values)
+
+    # Check vif, vif-s/vif-c VLAN interfaces for removal
+    dict = get_removed_vlans(config, dict)
 
     return dict
 

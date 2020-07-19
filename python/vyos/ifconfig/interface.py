@@ -922,6 +922,31 @@ class Interface(Control):
         if 'mtu' in config:
             self.set_mtu(config.get('mtu'))
 
+        # Delete old IPv6 EUI64 addresses before changing MAC
+        tmp = jmespath.search('ipv6.address.eui64_old', config)
+        if tmp:
+            for addr in tmp:
+                self.del_ipv6_eui64_address(addr)
+
+        # Change interface MAC address - re-set to real hardware address (hw-id)
+        # if custom mac is removed. Skip if bond member.
+        if 'is_bond_member' not in config:
+            mac = config.get('hw_id')
+            if 'mac' in config:
+                mac = config.get('mac')
+            if mac:
+                self.set_mac(mac)
+
+        # Add IPv6 EUI-based addresses
+        tmp = jmespath.search('ipv6.address.eui64', config)
+        if tmp:
+            # XXX: T2636 workaround: convert string to a list with one element
+            if isinstance(tmp, str):
+                tmp = [tmp]
+            for addr in tmp:
+                self.add_ipv6_eui64_address(addr)
+
+
         # Interface administrative state
         state = 'down' if 'disable' in config else 'up'
         self.set_admin_state(state)

@@ -28,15 +28,18 @@ def get_removed_vlans(conf, dict):
     D.set_level(conf.get_level())
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
     keys = D.get_child_nodes_diff(['vif'], expand_nodes=Diff.DELETE)['delete'].keys()
-    dict['vif_remove'] = [*keys]
+    if keys:
+        dict.update({'vif_remove': [*keys]})
 
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
     keys = D.get_child_nodes_diff(['vif-s'], expand_nodes=Diff.DELETE)['delete'].keys()
-    dict['vif_s_remove'] = [*keys]
+    if keys:
+        dict.update({'vif_s_remove': [*keys]})
 
     for vif in dict.get('vif_s', {}).keys():
         keys = D.get_child_nodes_diff(['vif-s', vif, 'vif-c'], expand_nodes=Diff.DELETE)['delete'].keys()
-        dict['vif_s'][vif]['vif_c_remove'] = [*keys]
+        if keys:
+            dict.update({'vif_s': { vif : {'vif_c_remove': [*keys]}}})
 
     return dict
 

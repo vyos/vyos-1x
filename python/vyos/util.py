@@ -242,7 +242,7 @@ def chown(path, user, group):
 
     if not os.path.exists(path):
         return False
-	
+
     uid = getpwnam(user).pw_uid
     gid = getgrnam(group).gr_gid
     os.chown(path, uid, gid)

@@ -32,6 +32,7 @@
                 <validator name="numeric" argument="--range 0-0 --range 10-1000000"/>
               </constraint>
             </properties>
+            <defaultValue>300</defaultValue>
           </leafNode>
           #include <include/interface-description.xml.i>
           #include <include/dhcp-options.xml.i>
@@ -51,6 +52,7 @@
               </constraint>
               <constraintErrorMessage>Forwarding delay must be between 0 and 200 seconds</constraintErrorMessage>
             </properties>
+            <defaultValue>14</defaultValue>
           </leafNode>
           <leafNode name="hello-time">
             <properties>
@@ -64,6 +66,7 @@
               </constraint>
               <constraintErrorMessage>Bridge Hello interval must be between 1 and 10 seconds</constraintErrorMessage>
             </properties>
+            <defaultValue>2</defaultValue>
           </leafNode>
           <node name="igmp">
             <properties>
@@ -107,6 +110,7 @@
               </constraint>
               <constraintErrorMessage>Bridge max aging value must be between 1 and 40 seconds</constraintErrorMessage>
             </properties>
+            <defaultValue>20</defaultValue>
           </leafNode>
           <node name="member">
             <properties>
@@ -133,6 +137,7 @@
                       </constraint>
                       <constraintErrorMessage>Path cost value must be between 1 and 65535</constraintErrorMessage>
                     </properties>
+                    <defaultValue>100</defaultValue>
                   </leafNode>
                   <leafNode name="priority">
                     <properties>
@@ -146,6 +151,7 @@
                       </constraint>
                       <constraintErrorMessage>Port priority value must be between 0 and 63</constraintErrorMessage>
                     </properties>
+                    <defaultValue>32</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>
@@ -163,6 +169,7 @@
               </constraint>
               <constraintErrorMessage>Bridge priority must be between 0 and 65535 (multiples of 4096)</constraintErrorMessage>
             </properties>
+            <defaultValue>32768</defaultValue>
           </leafNode>
           <leafNode name="stp">
             <properties>

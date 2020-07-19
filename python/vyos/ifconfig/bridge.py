@@ -13,12 +13,13 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import jmespath
 
 from vyos.ifconfig.interface import Interface
-
+from vyos.ifconfig.stp import STP
 from vyos.validate import assert_boolean
 from vyos.validate import assert_positive
-
+from vyos.util import cmd
 
 @Interface.register
 class BridgeIf(Interface):
@@ -187,3 +188,66 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').del_port('eth1')
         """
         return self.set_interface('del_port', interface)
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # now call the regular function from within our base class
+        super().update(config)
+
+        # Set ageing time
+        value = config.get('aging')
+        self.set_ageing_time(value)
+
+        # set bridge forward delay
+        value = config.get('forwarding_delay')
+        self.set_forward_delay(value)
+
+        # set hello time
+        value = config.get('hello_time')
+        self.set_hello_time(value)
+
+        # set max message age
+        value = config.get('max_age')
+        self.set_max_age(value)
+
+        # set bridge priority
+        value = config.get('priority')
+        self.set_priority(value)
+
+        # enable/disable spanning tree
+        value = '1' if 'stp' in config else '0'
+        self.set_stp(value)
+
+        # enable or disable IGMP querier
+        tmp = jmespath.search('igmp.querier', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_multicast_querier(value)
+
+        # remove interface from bridge
+        tmp = jmespath.search('member.interface_remove', config)
+        if tmp:
+            for member in tmp:
+                self.del_port(member)
+
+        STPBridgeIf = STP.enable(BridgeIf)
+        tmp = jmespath.search('member.interface', config)
+        if tmp:
+            for interface, interface_config in tmp.items():
+                # if we've come here we already verified the interface doesn't
+                # have addresses configured so just flush any remaining ones
+                cmd(f'ip addr flush dev "{interface}"')
+                # enslave interface port to bridge
+                self.add_port(interface)
+
+                tmp = STPBridgeIf(interface)
+                # set bridge port path cost
+                value = interface_config.get('cost')
+                tmp.set_path_cost(value)
+
+                # set bridge port path priority
+                value = interface_config.get('priority')
+                tmp.set_path_priority(value)

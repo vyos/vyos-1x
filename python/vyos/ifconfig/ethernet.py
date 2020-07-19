@@ -299,26 +299,6 @@ class EthernetIf(Interface):
             duplex = config.get('duplex')
             self.set_speed_duplex(speed, duplex)
 
-        # Delete old IPv6 EUI64 addresses before changing MAC
-
-        # Change interface MAC address - re-set to real hardware address (hw-id)
-        # if custom mac is removed. Skip if bond member.
-        if 'is_bond_member' not in config:
-            mac = config.get('hw_id')
-            if 'mac' in config:
-                mac = config.get('mac')
-            if mac:
-                self.set_mac(mac)
-
-        # Add IPv6 EUI-based addresses
-        tmp = jmespath.search('ipv6.address.eui64', config)
-        if tmp:
-            # XXX: T2636 workaround: convert string to a list with one element
-            if isinstance(tmp, str):
-                tmp = [tmp]
-            for addr in tmp:
-                self.add_ipv6_eui64_address(addr)
-
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
             bridge = config.get('is_bridge_member')
