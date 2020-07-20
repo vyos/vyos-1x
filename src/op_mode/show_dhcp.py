@@ -158,7 +158,8 @@ def get_pool_size(config, pool):
             start = config.return_effective_value("service dhcp-server shared-network-name {0} subnet {1} range {2} start".format(pool, s, r))
             stop = config.return_effective_value("service dhcp-server shared-network-name {0} subnet {1} range {2} stop".format(pool, s, r))
 
-            size += int(ipaddress.ip_address(stop)) - int(ipaddress.ip_address(start))
+            # Add +1 because both range boundaries are inclusive
+            size += int(ipaddress.ip_address(stop)) - int(ipaddress.ip_address(start)) + 1
 
     return size
 
