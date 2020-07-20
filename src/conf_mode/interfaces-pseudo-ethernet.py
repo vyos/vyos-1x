@@ -52,8 +52,6 @@ def get_config():
     if mode:
         peth.update({'mode_old' : mode})
 
-    import pprint
-    pprint.pprint(peth)
     return peth
 
 def verify(peth):

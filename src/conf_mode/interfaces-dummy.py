@@ -19,41 +19,29 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.ifconfig import DummyIf
-from vyos.validate import is_member
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 def get_config():
-    """ Retrive CLI config as dictionary. Dictionary can never be empty,
-        as at least the interface name will be added or a deleted flag """
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
     conf = Config()
+    base = ['interfaces', 'dummy']
 
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     ifname = os.environ['VYOS_TAGNODE_VALUE']
-    base = ['interfaces', 'dummy', ifname]
-
-    dummy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # Check if interface has been removed
-    if dummy == {}:
-        dummy.update({'deleted' : ''})
-
-    # store interface instance name in dictionary
-    dummy.update({'ifname': ifname})
-
-    # check if we are a member of any bridge
-    bridge = is_member(conf, ifname, 'bridge')
-    if bridge:
-        tmp = {'is_bridge_member' : bridge}
-        dummy.update(tmp)
-
+    dummy = get_interface_dict(conf, base, ifname)
     return dummy
 
 def verify(dummy):

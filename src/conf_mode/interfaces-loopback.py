@@ -18,31 +18,27 @@ import os
 
 from sys import exit
 
-from vyos.ifconfig import LoopbackIf
 from vyos.config import Config
-from vyos import ConfigError, airbag
+from vyos.configdict import get_interface_dict
+from vyos.ifconfig import LoopbackIf
+from vyos import ConfigError
+from vyos import airbag
 airbag.enable()
 
 def get_config():
-    """ Retrive CLI config as dictionary. Dictionary can never be empty,
-        as at least the interface name will be added or a deleted flag """
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
     conf = Config()
+    base = ['interfaces', 'loopback']
 
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:
         raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
 
     ifname = os.environ['VYOS_TAGNODE_VALUE']
-    base = ['interfaces', 'loopback', ifname]
-
-    loopback = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # Check if interface has been removed
-    if loopback == {}:
-        loopback.update({'deleted' : ''})
-
-    # store interface instance name in dictionary
-    loopback.update({'ifname': ifname})
-
+    loopback = get_interface_dict(conf, base, ifname)
     return loopback
 
 def verify(loopback):

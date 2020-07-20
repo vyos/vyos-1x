@@ -30,7 +30,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-
 def get_config():
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
