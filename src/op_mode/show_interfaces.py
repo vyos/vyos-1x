@@ -220,8 +220,7 @@ def run_show_intf_brief(ifnames, iftypes, vif, vrrp):
         oper = ['u', ] if oper_state in ('up', 'unknown') else ['A', ]
         admin = ['u', ] if oper_state in ('up', 'unknown') else ['D', ]
         addrs = [_ for _ in interface.get_addr() if not _.startswith('fe80::')] or ['-', ]
-        # do not ask me why 56, it was the number in the perl code ...
-        descs = list(split_text(interface.get_alias(),56))
+        descs = list(split_text(interface.get_alias(),0))
 
         while intf or oper or admin or addrs or descs:
             i = intf.pop(0) if intf else ''
