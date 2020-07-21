@@ -19,7 +19,7 @@ restrict -6 ::1
 {%     set options = options + 'noselect ' if server[srv].noselect is defined else '' %}
 {%     set options = options + 'preempt ' if server[srv].preempt is defined else '' %}
 {%     set options = options + 'prefer ' if server[srv].prefer is defined else '' %}
-server {{ srv }} iburst {{ options }}
+server {{ srv | replace('_', '-') }} iburst {{ options }}
 {%   endfor %}
 {% endif %}
 
