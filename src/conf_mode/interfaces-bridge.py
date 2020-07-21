@@ -21,7 +21,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdiff import get_config_diff, Diff
+from vyos.configdict import node_changed
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
@@ -33,13 +33,6 @@ from vyos import ConfigError
 
 from vyos import airbag
 airbag.enable()
-
-def get_removed_members(conf):
-    D = get_config_diff(conf, key_mangling=('-', '_'))
-    D.set_level(conf.get_level())
-    # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(['member', 'interface'], expand_nodes=Diff.DELETE)['delete'].keys()
-    return list(keys)
 
 def get_config():
     """
@@ -57,7 +50,7 @@ def get_config():
     bridge = get_interface_dict(conf, base, ifname)
 
     # determine which members have been removed
-    tmp = get_removed_members(conf)
+    tmp = node_changed(conf, ['member', 'interface'])
     if tmp:
         if 'member' in bridge:
             bridge['member'].update({'interface_remove': tmp })

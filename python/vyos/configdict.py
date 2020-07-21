@@ -133,17 +133,16 @@ def T2665_default_dict_cleanup(dict):
 
     return dict
 
-def leaf_node_changed(conf, key):
+def leaf_node_changed(conf, path):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return the old value. If nothing
     has been changed, None is returned
     """
     from vyos.configdiff import get_config_diff
-
     D = get_config_diff(conf, key_mangling=('-', '_'))
     D.set_level(conf.get_level())
-    (new, old) = D.get_value_diff(key)
+    (new, old) = D.get_value_diff(path)
     if new != old:
         if isinstance(old, str):
             return old
@@ -155,6 +154,19 @@ def leaf_node_changed(conf, key):
             return list_diff(old, new)
 
     return None
+
+def node_changed(conf, path):
+    """
+    Check if a leaf node was altered. If it has been altered - values has been
+    changed, or it was added/removed, we will return the old value. If nothing
+    has been changed, None is returned
+    """
+    from vyos.configdiff import get_config_diff, Diff
+    D = get_config_diff(conf, key_mangling=('-', '_'))
+    D.set_level(conf.get_level())
+    # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
+    keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE)['delete'].keys()
+    return list(keys)
 
 def get_interface_dict(config, base, ifname):
     """
