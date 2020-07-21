@@ -24,10 +24,13 @@ from vyos.config import Config
 from vyos.ifconfig import L2TPv3If, Interface
 from vyos import ConfigError
 from vyos.util import call
+from vyos.util import check_kmod
 from vyos.validate import is_member, is_addr_assigned
 
 from vyos import airbag
 airbag.enable()
+
+k_mod = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
 
 default_config_data = {
     'address': [],
@@ -52,13 +55,6 @@ default_config_data = {
     'session_id': '',
     'tunnel_id': ''
 }
-
-def check_kmod():
-    modules = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
-    for module in modules:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
 
 def get_config():
     l2tpv3 = deepcopy(default_config_data)
@@ -283,7 +279,7 @@ def apply(l2tpv3):
 
 if __name__ == '__main__':
     try:
-        check_kmod()
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)

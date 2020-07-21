@@ -29,12 +29,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-def check_kmod():
-    modules = ['option', 'usb_wwan', 'usbserial']
-    for module in modules:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
+k_mod = ['option', 'usb_wwan', 'usbserial']
 
 def find_device_file(device):
     """ Recurively search /dev for the given device file and return its full path.
@@ -153,7 +148,7 @@ def apply(wwan):
 
 if __name__ == '__main__':
     try:
-        check_kmod()
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)

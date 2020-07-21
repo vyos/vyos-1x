@@ -24,12 +24,16 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, cmd
+from vyos.util import call
+from vyos.util import cmd
+from vyos.util import check_kmod
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
 from vyos import airbag
 airbag.enable()
+
+k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
 default_config_data = {
     'deleted': False,
@@ -43,15 +47,6 @@ default_config_data = {
 }
 
 iptables_nat_config = '/tmp/vyos-nat-rules.nft'
-
-def _check_kmod():
-    """ load required Kernel modules """
-    modules = ['nft_nat', 'nft_chain_nat_ipv4']
-    for module in modules:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
-
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -269,7 +264,7 @@ def apply(nat):
 
 if __name__ == '__main__':
     try:
-        _check_kmod()
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
