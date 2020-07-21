@@ -8,3 +8,13 @@ etc/vyos
 lib/
 opt/
 usr/
+usr/lib/
+usr/bin/
+usr/lib/
+usr/libexec/
+usr/sbin/
+usr/share/pam-configs/
+usr/share/vyos/component-versions.json
+usr/share/vyos/templates/
+usr/share/vyos/xml/configuration.xml
+usr/share/vyos/xml/operational.xml
