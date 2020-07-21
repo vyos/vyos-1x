@@ -299,11 +299,6 @@ class EthernetIf(Interface):
             duplex = config.get('duplex')
             self.set_speed_duplex(speed, duplex)
 
-        # re-add ourselves to any bridge we might have fallen out of
-        if 'is_bridge_member' in config:
-            bridge = config.get('is_bridge_member')
-            self.add_to_bridge(bridge)
-
         # remove no longer required 802.1ad (Q-in-Q VLANs)
         for vif_s_id in config.get('vif_s_remove', {}):
             self.del_vlan(vif_s_id)

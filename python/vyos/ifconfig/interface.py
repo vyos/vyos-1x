@@ -946,6 +946,10 @@ class Interface(Control):
             for addr in tmp:
                 self.add_ipv6_eui64_address(addr)
 
+        # re-add ourselves to any bridge we might have fallen out of
+        if 'is_bridge_member' in config:
+            bridge = config.get('is_bridge_member')
+            self.add_to_bridge(bridge)
 
         # Interface administrative state
         state = 'down' if 'disable' in config else 'up'
