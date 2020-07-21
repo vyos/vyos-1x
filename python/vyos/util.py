@@ -240,7 +240,8 @@ def chown(path, user, group):
     if user is None or group is None:
         return False
 
-    if not os.path.exists(path):
+    # path may also be an open file descriptor
+    if not isinstance(path, int) and not os.path.exists(path):
         return False
 	
     uid = getpwnam(user).pw_uid
@@ -250,7 +251,8 @@ def chown(path, user, group):
 
 
 def chmod(path, bitmask):
-    if not os.path.exists(path):
+    # path may also be an open file descriptor
+    if not isinstance(path, int) and not os.path.exists(path):
         return
     if bitmask is None:
         return
@@ -261,28 +263,25 @@ def chmod_600(path):
     """ make file only read/writable by owner """
     from stat import S_IRUSR, S_IWUSR
 
-    if os.path.exists(path):
-        bitmask = S_IRUSR | S_IWUSR
-        os.chmod(path, bitmask)
+    bitmask = S_IRUSR | S_IWUSR
+    chmod(path, bitmask)
 
 
 def chmod_750(path):
     """ make file/directory only executable to user and group """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP
 
-    if os.path.exists(path):
-        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
-        os.chmod(path, bitmask)
+    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
+    chmod(path, bitmask)
 
 
 def chmod_755(path):
     """ make file executable by all """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 
-    if os.path.exists(path):
-        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
-                  S_IROTH | S_IXOTH
-        os.chmod(path, bitmask)
+    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
+              S_IROTH | S_IXOTH
+    chmod(path, bitmask)
 
 
 def makedir(path, user=None, group=None):
