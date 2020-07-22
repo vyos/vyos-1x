@@ -27,12 +27,12 @@ import sys
 import tempfile
 import vyos.defaults
 import vyos.remote
-from vyos.config import Config, VyOSError
+from vyos.configsource import ConfigSourceSession, VyOSError
 from vyos.migrator import Migrator, VirtualMigrator, MigratorError
 
-class LoadConfig(Config):
+class LoadConfig(ConfigSourceSession):
     """A subclass for calling 'loadFile'.
-    This does not belong in config.py, and only has a single caller.
+    This does not belong in configsource.py, and only has a single caller.
     """
     def load_config(self, path):
         return self._run(['/bin/cli-shell-api','loadFile',path])
