@@ -72,7 +72,7 @@ def get_config():
         user = {
             'name': username,
             'password_plaintext': '',
-            'password_encred': '!',
+            'password_encrypted': '!',
             'public_keys': [],
             'full_name': '',
             'home_dir': '/home/' + username,
