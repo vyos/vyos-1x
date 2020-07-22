@@ -126,10 +126,12 @@ class XML(dict):
         elif word:
             if data_node != kw.plainNode or len(passed) == 1:
                 self.options = [_ for _ in self.tree if _.startswith(word)]
+                self.options.sort()
             else:
                 self.options = []
         else:
             self.options = named_options
+            self.options.sort()
 
         self.plain = not is_dataNode
 
@@ -143,6 +145,7 @@ class XML(dict):
             self.word = ''
             if self.tree.get(kw.node,'') not in (kw.tagNode, kw.leafNode):
                 self.options = [_ for _ in self.tree if not kw.found(_)]
+                self.options.sort()
 
     def checks(self, cmd):
         # as we move thought the named node twice
@@ -300,16 +303,28 @@ class XML(dict):
         return tree
 
     def _get(self, lpath, tag, with_tag=True):
-        return self._tree(lpath + [tag], with_tag)
+        tree = self._tree(lpath, with_tag)
+        if tree is None:
+            return None
+        return tree.get(tag, None)
 
     def is_multi(self, lpath, with_tag=True):
-        return self._get(lpath, kw.multi, with_tag) is True
+        tree = self._get(lpath, kw.multi, with_tag)
+        if tree is None:
+            return None
+        return tree is True
 
     def is_tag(self, lpath, with_tag=True):
-        return self._get(lpath, kw.node, with_tag) == kw.tagNode
+        tree = self._get(lpath, kw.node, with_tag)
+        if tree is None:
+            return None
+        return tree == kw.tagNode
 
     def is_leaf(self, lpath, with_tag=True):
-        return self._get(lpath, kw.node, with_tag) == kw.leafNode
+        tree = self._get(lpath, kw.node, with_tag)
+        if tree is None:
+            return None
+        return tree == kw.leafNode
 
     def exists(self, lpath, with_tag=True):
         return self._get(lpath, kw.node, with_tag) is not None

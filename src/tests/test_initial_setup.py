@@ -21,6 +21,7 @@ import tempfile
 import unittest
 from unittest import TestCase, mock
 
+from vyos import xml
 import vyos.configtree
 import vyos.initialsetup as vis
 
@@ -30,6 +31,7 @@ class TestInitialSetup(TestCase):
         with open('tests/data/config.boot.default', 'r') as f:
             config_string = f.read()
             self.config = vyos.configtree.ConfigTree(config_string)
+            self.xml = xml.load_configuration()
 
     def test_set_user_password(self):
         vis.set_user_password(self.config, 'vyos', 'vyosvyos')
@@ -56,7 +58,7 @@ class TestInitialSetup(TestCase):
 
         self.assertEqual(key_type, 'ssh-rsa')
         self.assertEqual(key_data, 'fakedata')
-        self.assertTrue(self.config.is_tag(["system", "login", "user", "vyos", "authentication", "public-keys"]))
+        self.assertTrue(self.xml.is_tag(["system", "login", "user", "vyos", "authentication", "public-keys"]))
 
     def test_set_ssh_key_without_name(self):
         # If key file doesn't include a name, the function will use user name for the key name
@@ -69,7 +71,7 @@ class TestInitialSetup(TestCase):
 
         self.assertEqual(key_type, 'ssh-rsa')
         self.assertEqual(key_data, 'fakedata')
-        self.assertTrue(self.config.is_tag(["system", "login", "user", "vyos", "authentication", "public-keys"]))
+        self.assertTrue(self.xml.is_tag(["system", "login", "user", "vyos", "authentication", "public-keys"]))
 
     def test_create_user(self):
         vis.create_user(self.config, 'jrandomhacker', password='qwerty', key=" ssh-rsa fakedata jrandomhacker@foovax ")
@@ -95,8 +97,8 @@ class TestInitialSetup(TestCase):
         vis.set_default_gateway(self.config, '192.0.2.1')
 
         self.assertTrue(self.config.exists(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '192.0.2.1']))
-        self.assertTrue(self.config.is_tag(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop']))
-        self.assertTrue(self.config.is_tag(['protocols', 'static', 'route']))
+        self.assertTrue(self.xml.is_tag(['protocols', 'static', 'multicast', 'route', '0.0.0.0/0', 'next-hop']))
+        self.assertTrue(self.xml.is_tag(['protocols', 'static', 'multicast', 'route']))
 
 if __name__ == "__main__":
     unittest.main()
