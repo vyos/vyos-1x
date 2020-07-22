@@ -63,23 +63,13 @@ In operational mode, all functions return values from the running config.
 
 """
 
-import os
 import re
 import json
-import subprocess
 from copy import deepcopy
 
 import vyos.util
 import vyos.configtree
-
-class VyOSError(Exception):
-    """
-    Raised on config access errors, most commonly if the type of a config tree node
-    in the system does not match the type of operation.
-
-    """
-    pass
-
+from vyos.configsource import ConfigSource, ConfigSourceSession
 
 class Config(object):
     """
@@ -89,51 +79,18 @@ class Config(object):
     the only state it keeps is relative *config path* for convenient access to config
     subtrees.
     """
-    def __init__(self, session_env=None):
-        self._cli_shell_api = "/bin/cli-shell-api"
+    def __init__(self, session_env=None, config_source=None):
+        if config_source is None:
+            self._config_source = ConfigSourceSession(session_env)
+        else:
+            if not isinstance(config_source, ConfigSource):
+                raise TypeError("config_source not of type ConfigSource")
+            self._config_source = config_source
+
         self._level = []
         self._dict_cache = {}
-
-        if session_env:
-            self.__session_env = session_env
-        else:
-            self.__session_env = None
-
-        # Running config can be obtained either from op or conf mode, it always succeeds
-        # once the config system is initialized during boot;
-        # before initialization, set to empty string
-        if os.path.isfile('/tmp/vyos-config-status'):
-            try:
-                running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
-            except VyOSError:
-                running_config_text = ''
-        else:
-            running_config_text = ''
-
-        # Session config ("active") only exists in conf mode.
-        # In op mode, we'll just use the same running config for both active and session configs.
-        if self.in_session():
-            try:
-                session_config_text = self._run([self._cli_shell_api, '--show-working-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
-            except VyOSError:
-                session_config_text = ''
-        else:
-            session_config_text = running_config_text
-
-        if running_config_text:
-            self._running_config = vyos.configtree.ConfigTree(running_config_text)
-        else:
-            self._running_config = None
-
-        if session_config_text:
-            self._session_config = vyos.configtree.ConfigTree(session_config_text)
-        else:
-            self._session_config = None
-
-    def _make_command(self, op, path):
-        args = path.split()
-        cmd = [self._cli_shell_api, op] + args
-        return cmd
+        (self._running_config,
+         self._session_config) = self._config_source.get_configtree_tuple()
 
     def _make_path(self, path):
         # Backwards-compatibility stuff: original implementation used string paths
@@ -148,19 +105,6 @@ class Config(object):
         else:
             raise TypeError("Path must be a whitespace-separated string or a list")
         return (self._level + path)
-
-    def _run(self, cmd):
-        if self.__session_env:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=self.__session_env)
-        else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        out = p.stdout.read()
-        p.wait()
-        p.communicate()
-        if p.returncode != 0:
-            raise VyOSError()
-        else:
-            return out.decode('ascii')
 
     def set_level(self, path):
         """
@@ -229,22 +173,14 @@ class Config(object):
         Returns:
             True if the config session has uncommited changes, False otherwise.
         """
-        try:
-            self._run(self._make_command('sessionChanged', ''))
-            return True
-        except VyOSError:
-            return False
+        return self._config_source.session_changed()
 
     def in_session(self):
         """
         Returns:
             True if called from a configuration session, False otherwise.
         """
-        try:
-            self._run(self._make_command('inSession', ''))
-            return True
-        except VyOSError:
-            return False
+        return self._config_source.in_session()
 
     def show_config(self, path=[], default=None, effective=False):
         """
@@ -255,40 +191,7 @@ class Config(object):
         Returns:
             str: working configuration
         """
-
-        # show_config should be independent of CLI edit level.
-        # Set the CLI edit environment to the top level, and
-        # restore original on exit.
-        save_env = self.__session_env
-
-        env_str = self._run(self._make_command('getEditResetEnv', ''))
-        env_list = re.findall(r'([A-Z_]+)=\'([^;\s]+)\'', env_str)
-        root_env = os.environ
-        for k, v in env_list:
-            root_env[k] = v
-
-        self.__session_env = root_env
-
-        # FIXUP: by default, showConfig will give you a diff
-        # if there are uncommitted changes.
-        # The config parser obviously cannot work with diffs,
-        # so we need to supress diff production using appropriate
-        # options for getting either running (active)
-        # or proposed (working) config.
-        if effective:
-            path = ['--show-active-only'] + path
-        else:
-            path = ['--show-working-only'] + path
-
-        if isinstance(path, list):
-            path = " ".join(path)
-        try:
-            out = self._run(self._make_command('showConfig', path))
-            self.__session_env = save_env
-            return out
-        except VyOSError:
-            self.__session_env = save_env
-            return(default)
+        return self._config_source.show_config(path, default, effective)
 
     def get_cached_dict(self, effective=False):
         cached = self._dict_cache.get(effective, {})
@@ -346,12 +249,8 @@ class Config(object):
         Note:
             It also returns False if node doesn't exist.
         """
-        try:
-            path = " ".join(self._level) + " " + path
-            self._run(self._make_command('isMulti', path))
-            return True
-        except VyOSError:
-            return False
+        self._config_source.set_level(self.get_level)
+        return self._config_source.is_multi(path)
 
     def is_tag(self, path):
         """
@@ -364,12 +263,8 @@ class Config(object):
         Note:
             It also returns False if node doesn't exist.
         """
-        try:
-            path = " ".join(self._level) + " " + path
-            self._run(self._make_command('isTag', path))
-            return True
-        except VyOSError:
-            return False
+        self._config_source.set_level(self.get_level)
+        return self._config_source.is_tag(path)
 
     def is_leaf(self, path):
         """
@@ -382,12 +277,8 @@ class Config(object):
         Note:
             It also returns False if node doesn't exist.
         """
-        try:
-            path = " ".join(self._level) + " " + path
-            self._run(self._make_command('isLeaf', path))
-            return True
-        except VyOSError:
-            return False
+        self._config_source.set_level(self.get_level)
+        return self._config_source.is_leaf(path)
 
     def return_value(self, path, default=None):
         """
@@ -548,9 +439,6 @@ class Config(object):
 
         Returns:
             str list: child node names
-
-        Raises:
-            VyOSError: if the node is not a tag node
         """
         if self._running_config:
             try:
