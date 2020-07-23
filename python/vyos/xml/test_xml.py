@@ -33,7 +33,7 @@ class TestSearch(TestCase):
         last = self.xml.traverse("")
         self.assertEqual(last, '')
         self.assertEqual(self.xml.inside, [])
-        self.assertEqual(self.xml.options, ['protocols', 'service', 'system', 'firewall', 'interfaces', 'vpn', 'nat', 'vrf', 'high-availability'])
+        self.assertEqual(self.xml.options, ['firewall', 'high-availability', 'interfaces', 'nat', 'protocols', 'service', 'system', 'vpn', 'vrf'])
         self.assertEqual(self.xml.filling, False)
         self.assertEqual(self.xml.word, last)
         self.assertEqual(self.xml.check, False)
