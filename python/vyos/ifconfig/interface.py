@@ -205,6 +205,7 @@ class Interface(Control):
 
         # make sure the ifname is the first argument and not from the dict
         self.config['ifname'] = ifname
+        self._admin_state_down_cnt = 0
 
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
@@ -594,7 +595,13 @@ class Interface(Control):
             if not int(flags, 16) & 1:
                 return None
 
-        return self.set_interface('admin_state', state)
+        if state == 'up':
+            self._admin_state_down_cnt -= 1
+            if self._admin_state_down_cnt < 1:
+                return self.set_interface('admin_state', state)
+        else:
+            self._admin_state_down_cnt += 1
+            return self.set_interface('admin_state', state)
 
     def set_proxy_arp(self, enable):
         """
@@ -829,8 +836,11 @@ class Interface(Control):
         # There are some items in the configuration which can only be applied
         # if this instance is not bound to a bridge. This should be checked
         # by the caller but better save then sorry!
-        if not config.get('is_bridge_member', False):
-            # Bind interface instance into VRF
+        if not any(k in ['is_bond_member', 'is_bridge_member'] for k in config):
+            # Bind interface to given VRF or unbind it if vrf node is not set.
+            # unbinding will call 'ip link set dev eth0 nomaster' which will
+            # also drop the interface out of a bridge or bond - thus this is
+            # checked before
             self.set_vrf(config.get('vrf', ''))
 
         # DHCP options

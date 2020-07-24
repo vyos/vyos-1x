@@ -78,6 +78,7 @@
               </constraint>
               <constraintErrorMessage>hash-policy must be layer2 layer2+3 or layer3+4</constraintErrorMessage>
             </properties>
+            <defaultValue>layer2</defaultValue>
           </leafNode>
           <node name="ip">
             <children>
@@ -137,6 +138,7 @@
               </constraint>
               <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, transmit-load-balance, adaptive-load-balance, or xor</constraintErrorMessage>
             </properties>
+            <defaultValue>802.3ad</defaultValue>
           </leafNode>
           <node name="member">
             <properties>
