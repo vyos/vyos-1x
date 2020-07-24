@@ -16,33 +16,6 @@
 from netifaces import interfaces
 from vyos import ConfigError
 
-def get_removed_vlans(conf, dict):
-    """
-    Common function to parse a dictionary retrieved via get_config_dict() and
-    determine any added/removed VLAN interfaces - be it 802.1q or Q-in-Q.
-    """
-    from vyos.configdiff import get_config_diff, Diff
-
-    # Check vif, vif-s/vif-c VLAN interfaces for removal
-    D = get_config_diff(conf, key_mangling=('-', '_'))
-    D.set_level(conf.get_level())
-    # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(['vif'], expand_nodes=Diff.DELETE)['delete'].keys()
-    if keys:
-        dict.update({'vif_remove': [*keys]})
-
-    # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(['vif-s'], expand_nodes=Diff.DELETE)['delete'].keys()
-    if keys:
-        dict.update({'vif_s_remove': [*keys]})
-
-    for vif in dict.get('vif_s', {}).keys():
-        keys = D.get_child_nodes_diff(['vif-s', vif, 'vif-c'], expand_nodes=Diff.DELETE)['delete'].keys()
-        if keys:
-            dict.update({'vif_s': { vif : {'vif_c_remove': [*keys]}}})
-
-    return dict
-
 def apply_all_vlans(intf, intfconfig):
     """
     Function applies all VLANs to the passed interface.
