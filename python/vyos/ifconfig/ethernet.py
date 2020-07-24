@@ -17,7 +17,6 @@ import os
 import re
 import jmespath
 
-from vyos.configdict import get_ethertype
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 from vyos.validate import assert_list
@@ -298,34 +297,6 @@ class EthernetIf(Interface):
             speed = config.get('speed')
             duplex = config.get('duplex')
             self.set_speed_duplex(speed, duplex)
-
-        # remove no longer required 802.1ad (Q-in-Q VLANs)
-        for vif_s_id in config.get('vif_s_remove', {}):
-            self.del_vlan(vif_s_id)
-
-        # create/update 802.1ad (Q-in-Q VLANs)
-        for vif_s_id, vif_s in config.get('vif_s', {}).items():
-            tmp=get_ethertype(vif_s.get('ethertype', '0x88A8'))
-            s_vlan = self.add_vlan(vif_s_id, ethertype=tmp)
-            s_vlan.update(vif_s)
-
-            # remove no longer required client VLAN (vif-c)
-            for vif_c_id in vif_s.get('vif_c_remove', {}):
-                s_vlan.del_vlan(vif_c_id)
-
-            # create/update client VLAN (vif-c) interface
-            for vif_c_id, vif_c in vif_s.get('vif_c', {}).items():
-                c_vlan = s_vlan.add_vlan(vif_c_id)
-                c_vlan.update(vif_c)
-
-        # remove no longer required 802.1q VLAN interfaces
-        for vif_id in config.get('vif_remove', {}):
-            self.del_vlan(vif_id)
-
-        # create/update 802.1q VLAN interfaces
-        for vif_id, vif in config.get('vif', {}).items():
-            vlan = self.add_vlan(vif_id)
-            vlan.update(vif)
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()

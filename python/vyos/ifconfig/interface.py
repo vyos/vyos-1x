@@ -31,6 +31,7 @@ from netifaces import AF_INET6
 
 from vyos import ConfigError
 from vyos.configdict import list_diff
+from vyos.configdict import get_ethertype
 from vyos.util import mac2eui64
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
@@ -951,3 +952,30 @@ class Interface(Control):
             bridge = config.get('is_bridge_member')
             self.add_to_bridge(bridge)
 
+        # remove no longer required 802.1ad (Q-in-Q VLANs)
+        for vif_s_id in config.get('vif_s_remove', {}):
+            self.del_vlan(vif_s_id)
+
+        # create/update 802.1ad (Q-in-Q VLANs)
+        for vif_s_id, vif_s in config.get('vif_s', {}).items():
+            tmp=get_ethertype(vif_s.get('ethertype', '0x88A8'))
+            s_vlan = self.add_vlan(vif_s_id, ethertype=tmp)
+            s_vlan.update(vif_s)
+
+            # remove no longer required client VLAN (vif-c)
+            for vif_c_id in vif_s.get('vif_c_remove', {}):
+                s_vlan.del_vlan(vif_c_id)
+
+            # create/update client VLAN (vif-c) interface
+            for vif_c_id, vif_c in vif_s.get('vif_c', {}).items():
+                c_vlan = s_vlan.add_vlan(vif_c_id)
+                c_vlan.update(vif_c)
+
+        # remove no longer required 802.1q VLAN interfaces
+        for vif_id in config.get('vif_remove', {}):
+            self.del_vlan(vif_id)
+
+        # create/update 802.1q VLAN interfaces
+        for vif_id, vif in config.get('vif', {}).items():
+            vlan = self.add_vlan(vif_id)
+            vlan.update(vif)
