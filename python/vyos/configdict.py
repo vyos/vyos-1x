@@ -267,14 +267,6 @@ def get_interface_dict(config, base, ifname):
 
     return dict
 
-def get_ethertype(ethertype_val):
-    if ethertype_val == '0x88A8':
-        return '802.1ad'
-    elif ethertype_val == '0x8100':
-        return '802.1q'
-    else:
-        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
-
 dhcpv6_pd_default_data = {
     'dhcpv6_prm_only': False,
     'dhcpv6_temporary': False,
@@ -636,6 +628,7 @@ def add_to_dict(conf, disabled, ifdict, section, key):
 
 
 def vlan_to_dict(conf, default=vlan_default):
+    from vyos.ifconfig.interface import get_ethertype
     vlan, disabled = intf_to_dict(conf, default)
 
     # if this is a not within vif-s node, we are done

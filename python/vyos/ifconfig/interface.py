@@ -31,7 +31,6 @@ from netifaces import AF_INET6
 
 from vyos import ConfigError
 from vyos.configdict import list_diff
-from vyos.configdict import get_ethertype
 from vyos.util import mac2eui64
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
@@ -49,6 +48,13 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
+def get_ethertype(ethertype_val):
+    if ethertype_val == '0x88A8':
+        return '802.1ad'
+    elif ethertype_val == '0x8100':
+        return '802.1q'
+    else:
+        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
 
 class Interface(Control):
     # This is the class which will be used to create
