@@ -25,6 +25,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'ethernet']
+        self._test_ip = True
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True

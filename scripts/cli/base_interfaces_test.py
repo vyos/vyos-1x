@@ -19,9 +19,11 @@ from vyos.configsession import ConfigSession
 from netifaces import ifaddresses, AF_INET, AF_INET6
 from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
 from vyos.ifconfig import Interface
+from vyos.util import read_file
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
+        _test_ip = False
         _test_mtu = False
         _test_vlan = False
         _test_qinq = False
@@ -177,3 +179,51 @@ class BasicInterfaceTest:
                         for address in self._test_addr:
                             self.assertTrue(is_intf_addr_assigned(vif, address))
                         self._mtu_test(vif)
+
+        def test_ip_options(self):
+            """ test IP options like arp """
+            if not self._test_ip:
+                return None
+
+            for interface in self._interfaces:
+                arp_tmo = '300'
+                path = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(path + option.split())
+
+                # Options
+                self.session.set(path + ['ip', 'arp-cache-timeout', arp_tmo])
+                self.session.set(path + ['ip', 'disable-arp-filter'])
+                self.session.set(path + ['ip', 'enable-arp-accept'])
+                self.session.set(path + ['ip', 'enable-arp-announce'])
+                self.session.set(path + ['ip', 'enable-arp-ignore'])
+                self.session.set(path + ['ip', 'enable-proxy-arp'])
+                self.session.set(path + ['ip', 'proxy-arp-pvlan'])
+                self.session.set(path + ['ip', 'source-validation', 'loose'])
+
+            self.session.commit()
+
+            for interface in self._interfaces:
+                tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
+                self.assertEqual(tmp, str((int(arp_tmo) * 1000))) # tmo value is in milli seconds
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_filter')
+                self.assertEqual('0', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_accept')
+                self.assertEqual('1', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_announce')
+                self.assertEqual('1', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_ignore')
+                self.assertEqual('1', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp')
+                self.assertEqual('1', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp_pvlan')
+                self.assertEqual('1', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/rp_filter')
+                self.assertEqual('2', tmp)
