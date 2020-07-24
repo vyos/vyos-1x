@@ -53,7 +53,7 @@ class PPPoEInterfaceTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_pppoe_1(self):
+    def test_pppoe(self):
         """ Check if PPPoE dialer can be configured and runs """
         for interface in self._interfaces:
             user = 'VyOS-user-' + interface
@@ -80,13 +80,13 @@ class PPPoEInterfaceTest(unittest.TestCase):
             password = 'VyOS-passwd-' + interface
 
             tmp = get_config_value(interface, 'mtu')[1]
-            self.assertTrue(tmp in mtu)
+            self.assertEqual(tmp, mtu)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
-            self.assertTrue(tmp in user)
+            self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
-            self.assertTrue(tmp in password)
+            self.assertEqual(tmp, password)
             tmp = get_config_value(interface, 'ifname')[1]
-            self.assertTrue(tmp in interface)
+            self.assertEqual(tmp, interface)
 
             # Check if ppp process is running in the interface in question
             running = False
@@ -98,7 +98,7 @@ class PPPoEInterfaceTest(unittest.TestCase):
             self.assertTrue(running)
 
     def test_pppoe_dhcpv6pd(self):
-        """ Check if PPPoE dialer can be configured and runs """
+        """ Check if PPPoE dialer can be configured with DHCPv6-PD """
         address = '1'
         sla_id = '0'
         sla_len = '8'
@@ -122,28 +122,28 @@ class PPPoEInterfaceTest(unittest.TestCase):
 
             # verify "normal" PPPoE value - 1492 is default MTU
             tmp = get_config_value(interface, 'mtu')[1]
-            self.assertTrue(tmp in '1492')
+            self.assertEqual(tmp, '1492')
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
-            self.assertTrue(tmp in 'vyos')
+            self.assertEqual(tmp, 'vyos')
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
-            self.assertTrue(tmp in 'vyos')
+            self.assertEqual(tmp, 'vyos')
 
             for param in ['+ipv6', 'ipv6cp-use-ipaddr']:
                 tmp = get_config_value(interface, param)[0]
-                self.assertTrue(tmp in param)
+                self.assertEqual(tmp, param)
 
             # verify DHCPv6 prefix delegation
             # will return: ['delegation', '::/56 infinity;']
             tmp = get_dhcp6c_config_value(interface, 'prefix')[1].split()[0] # mind the whitespace
-            self.assertTrue(tmp in '::/56')
+            self.assertEqual(tmp, '::/56')
             tmp = get_dhcp6c_config_value(interface, 'prefix-interface')[0].split()[0]
-            self.assertTrue(tmp in self._source_interface)
+            self.assertEqual(tmp, self._source_interface)
             tmp = get_dhcp6c_config_value(interface, 'ifid')[0]
-            self.assertTrue(tmp in address)
+            self.assertEqual(tmp, address)
             tmp = get_dhcp6c_config_value(interface, 'sla-id')[0]
-            self.assertTrue(tmp in sla_id)
+            self.assertEqual(tmp, sla_id)
             tmp = get_dhcp6c_config_value(interface, 'sla-len')[0]
-            self.assertTrue(tmp in sla_len)
+            self.assertEqual(tmp, sla_len)
 
             # Check if ppp process is running in the interface in question
             running = False
