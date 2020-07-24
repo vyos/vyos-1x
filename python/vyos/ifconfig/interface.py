@@ -951,6 +951,3 @@ class Interface(Control):
             bridge = config.get('is_bridge_member')
             self.add_to_bridge(bridge)
 
-        # Interface administrative state
-        state = 'down' if 'disable' in config else 'up'
-        self.set_admin_state(state)

@@ -195,7 +195,7 @@ class BridgeIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
-        # now call the regular function from within our base class
+        # call base class first
         super().update(config)
 
         # Set ageing time
@@ -251,3 +251,13 @@ class BridgeIf(Interface):
                 # set bridge port path priority
                 value = interface_config.get('priority')
                 tmp.set_path_priority(value)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)
