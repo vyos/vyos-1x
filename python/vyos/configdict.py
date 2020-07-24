@@ -230,11 +230,11 @@ def get_interface_dict(config, base, ifname):
     # XML definitions which hold the defaults
     default_vif_values = defaults(base + ['vif'])
     for vif, vif_config in dict.get('vif', {}).items():
-        vif_config.update(default_vif_values)
+        vif_config = dict_merge(default_vif_values, vif_config)
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
-        vif_s_config.update(default_vif_values)
+        vif_s_config = dict_merge(default_vif_values, vif_s_config)
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
-            vif_c_config.update(default_vif_values)
+            vif_c_config = dict_merge(default_vif_values, vif_c_config)
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
