@@ -35,13 +35,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'dummy']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    dummy = get_interface_dict(conf, base, ifname)
+    dummy = get_interface_dict(conf, base)
     return dummy
 
 def verify(dummy):

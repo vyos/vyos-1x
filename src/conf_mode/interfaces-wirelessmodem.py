@@ -48,14 +48,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'wirelessmodem']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    wwan = get_interface_dict(conf, base, ifname)
-
+    wwan = get_interface_dict(conf, base)
     return wwan
 
 def verify(wwan):

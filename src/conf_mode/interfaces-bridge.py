@@ -41,13 +41,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'bridge']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    bridge = get_interface_dict(conf, base, ifname)
+    bridge = get_interface_dict(conf, base)
 
     # determine which members have been removed
     tmp = node_changed(conf, ['member', 'interface'])
@@ -69,13 +63,12 @@ def get_config():
         # the default dictionary is not properly paged into the dict (see T2665)
         # thus we will ammend it ourself
         default_member_values = defaults(base + ['member', 'interface'])
-
         for interface, interface_config in bridge['member']['interface'].items():
             interface_config.update(default_member_values)
 
             # Check if we are a member of another bridge device
             tmp = is_member(conf, interface, 'bridge')
-            if tmp and tmp != ifname:
+            if tmp and tmp != bridge['ifname']:
                 interface_config.update({'is_bridge_member' : tmp})
 
             # Check if we are a member of a bond device

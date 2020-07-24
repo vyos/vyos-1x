@@ -38,13 +38,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'pppoe']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    pppoe = get_interface_dict(conf, base, ifname)
+    pppoe = get_interface_dict(conf, base)
 
     # PPPoE is "special" the default MTU is 1492 - update accordingly
     # as the config_level is already st in get_interface_dict() - we can use []

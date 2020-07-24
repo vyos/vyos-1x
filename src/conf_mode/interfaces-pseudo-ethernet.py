@@ -40,13 +40,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'pseudo-ethernet']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    peth = get_interface_dict(conf, base, ifname)
+    peth = get_interface_dict(conf, base)
 
     mode = leaf_node_changed(conf, ['mode'])
     if mode:

@@ -37,13 +37,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'ethernet']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    ethernet = get_interface_dict(conf, base, ifname)
+    ethernet = get_interface_dict(conf, base)
     return ethernet
 
 def verify(ethernet):

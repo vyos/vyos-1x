@@ -42,13 +42,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'macsec']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    macsec = get_interface_dict(conf, base, ifname)
+    macsec = get_interface_dict(conf, base)
 
     # Check if interface has been removed
     if 'deleted' in macsec:

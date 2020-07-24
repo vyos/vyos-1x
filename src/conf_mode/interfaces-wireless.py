@@ -71,13 +71,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'wireless']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    wifi = get_interface_dict(conf, base, ifname)
+    wifi = get_interface_dict(conf, base)
 
     if 'security' in wifi and 'wpa' in wifi['security']:
         wpa_cipher = wifi['security']['wpa'].get('cipher')

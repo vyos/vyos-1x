@@ -32,13 +32,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'loopback']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    loopback = get_interface_dict(conf, base, ifname)
+    loopback = get_interface_dict(conf, base)
     return loopback
 
 def verify(loopback):

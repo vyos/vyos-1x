@@ -15,8 +15,8 @@
 
 """
 A library for retrieving value dicts from VyOS configs in a declarative fashion.
-
 """
+import os
 import jmespath
 
 from enum import Enum
@@ -24,7 +24,6 @@ from copy import deepcopy
 
 from vyos import ConfigError
 from vyos.validate import is_member
-from vyos.util import ifname_from_config
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -195,7 +194,7 @@ def get_removed_vlans(conf, dict):
 
     return dict
 
-def get_interface_dict(config, base, ifname):
+def get_interface_dict(config, base, ifname=''):
     """
     Common utility function to retrieve and mandgle the interfaces available
     in CLI configuration. All interfaces have a common base ground where the
@@ -204,6 +203,12 @@ def get_interface_dict(config, base, ifname):
     Will return a dictionary with the necessary interface configuration
     """
     from vyos.xml import defaults
+
+    if not ifname:
+        # determine tagNode instance
+        if 'VYOS_TAGNODE_VALUE' not in os.environ:
+            raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
+        ifname = os.environ['VYOS_TAGNODE_VALUE']
 
     # retrieve interface default values
     default_values = defaults(base)

@@ -60,13 +60,7 @@ def get_config():
     """
     conf = Config()
     base = ['interfaces', 'bonding']
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    bond = get_interface_dict(conf, base, ifname)
+    bond = get_interface_dict(conf, base)
 
     # To make our own life easier transfor the list of member interfaces
     # into a dictionary - we will use this to add additional information
@@ -107,7 +101,7 @@ def get_config():
 
             # Check if we are a member of a bond device
             tmp = is_member(conf, interface, 'bonding')
-            if tmp and tmp != ifname:
+            if tmp and tmp != bond['ifname']:
                 interface_config.update({'is_bond_member' : tmp})
 
             # bond members must not have an assigned address
