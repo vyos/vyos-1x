@@ -18,6 +18,7 @@ import os
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from vyos.util import check_kmod
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
@@ -47,8 +48,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             # commit changes
             self.session.commit()
 
-
-
 if __name__ == '__main__':
-    os.system('sudo modprobe mac80211_hwsim')
+    check_kmod('mac80211_hwsim')
     unittest.main()
