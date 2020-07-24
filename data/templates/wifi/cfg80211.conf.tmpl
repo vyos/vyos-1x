@@ -1,3 +1,1 @@
-{%- if regdom -%}
-options cfg80211 ieee80211_regdom={{ regdom }}
-{% endif %}
+{{ 'options cfg80211 ieee80211_regdom=' + regdom if regdom is defined }}
