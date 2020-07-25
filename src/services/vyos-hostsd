@@ -592,7 +592,6 @@ if __name__ == '__main__':
     socket.bind(SOCKET_PATH)
     os.umask(o_mask)
 
-    systemd.daemon.notify('READY=1')
     while True:
         #  Wait for next request from client
         msg_json = socket.recv().decode()

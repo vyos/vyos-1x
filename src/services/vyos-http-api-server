@@ -28,7 +28,6 @@ import vyos.config
 
 from flask import Flask, request
 from waitress import serve
-import systemd.daemon
 
 from functools import wraps
 
@@ -394,9 +393,8 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGTERM, sig_handler)
 
-    systemd.daemon.notify('READY=1')
     try:
         serve(app, host=server_config["listen_address"],
                    port=server_config["port"])
     except OSError as e:
-        sys.exit(f"OSError {e}")
+        print(f"OSError {e}")
