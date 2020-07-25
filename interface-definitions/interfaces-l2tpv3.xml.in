@@ -29,6 +29,7 @@
                 <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
             </properties>
+            <defaultValue>5000</defaultValue>
           </leafNode>
           #include <include/interface-disable.xml.i>
           <leafNode name="encapsulation">
@@ -50,6 +51,7 @@
               </constraint>
               <constraintErrorMessage>Encapsulation must be UDP or IP</constraintErrorMessage>
             </properties>
+            <defaultValue>udp</defaultValue>
           </leafNode>
           <node name="ipv6">
             <children>
@@ -138,6 +140,7 @@
                 <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
             </properties>
+            <defaultValue>5000</defaultValue>
           </leafNode>
           <leafNode name="tunnel-id">
             <properties>
