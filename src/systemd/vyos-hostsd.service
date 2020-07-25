@@ -1,5 +1,6 @@
 [Unit]
 Description=VyOS DNS configuration keeper
+Before=vyos-router.service
 
 # Without this option, lots of default dependencies are added,
 # among them network.target, which creates a dependency cycle
@@ -14,7 +15,7 @@ WorkingDirectory=/run/vyos-hostsd
 RuntimeDirectory=vyos-hostsd
 RuntimeDirectoryPreserve=yes
 ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-hostsd
-Type=idle
+Type=notify
 KillMode=process
 
 SyslogIdentifier=vyos-hostsd
@@ -22,7 +23,6 @@ SyslogFacility=daemon
 
 Restart=on-failure
 
-# Does't work in Jessie but leave it here
 User=root
 Group=hostsd
 
@@ -31,4 +31,4 @@ Group=hostsd
 # Note: After= doesn't actually create a dependency,
 # it just sets order for the case when both services are to start,
 # and without RequiredBy it *does not* set vyos-hostsd to start.
-RequiredBy=cloud-init-local.service vyos-router.service
+WantedBy=vyos.target
