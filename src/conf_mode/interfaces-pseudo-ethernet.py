@@ -18,115 +18,44 @@ import os
 
 from copy import deepcopy
 from sys import exit
-from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.configdict import list_diff, intf_to_dict, add_to_dict, interface_default_data
-from vyos.ifconfig import MACVLANIf, Section
-from vyos.ifconfig_vlan import apply_all_vlans, verify_vlan_config
+from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
+from vyos.configverify import verify_vrf
+from vyos.configverify import verify_address
+from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_vlan_config
+from vyos.ifconfig import MACVLANIf
 from vyos import ConfigError
 
 from vyos import airbag
 airbag.enable()
 
-default_config_data = {
-    **interface_default_data,
-    'deleted': False,
-    'intf': '',
-    'ip_arp_cache_tmo': 30,
-    'ip_proxy_arp_pvlan': 0,
-    'source_interface': '',
-    'recreating_required': False,
-    'mode': 'private',
-    'vif_s': {},
-    'vif_s_remove': [],
-    'vif': {},
-    'vif_remove': [],
-    'vrf': ''
-}
-
 def get_config():
-    peth = deepcopy(default_config_data)
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
     conf = Config()
+    base = ['interfaces', 'pseudo-ethernet']
+    peth = get_interface_dict(conf, base)
 
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    peth['intf'] = os.environ['VYOS_TAGNODE_VALUE']
-
-    # Check if interface has been removed
-    cfg_base = ['interfaces', 'pseudo-ethernet', peth['intf']]
-    if not conf.exists(cfg_base):
-        peth['deleted'] = True
-        return peth
-
-    # set new configuration level
-    conf.set_level(cfg_base)
-
-    peth, disabled = intf_to_dict(conf, default_config_data)
-
-    # ARP cache entry timeout in seconds
-    if conf.exists(['ip', 'arp-cache-timeout']):
-        peth['ip_arp_cache_tmo'] = int(conf.return_value(['ip', 'arp-cache-timeout']))
-
-    # Enable private VLAN proxy ARP on this interface
-    if conf.exists(['ip', 'proxy-arp-pvlan']):
-        peth['ip_proxy_arp_pvlan'] = 1
-
-    # Physical interface
-    if conf.exists(['source-interface']):
-        peth['source_interface'] = conf.return_value(['source-interface'])
-        tmp = conf.return_effective_value(['source-interface'])
-        if tmp != peth['source_interface']:
-            peth['recreating_required'] = True
-
-    # MACvlan mode
-    if conf.exists(['mode']):
-        peth['mode'] = conf.return_value(['mode'])
-        tmp = conf.return_effective_value(['mode'])
-        if tmp != peth['mode']:
-            peth['recreating_required'] = True
-
-    add_to_dict(conf, disabled, peth, 'vif', 'vif')
-    add_to_dict(conf, disabled, peth, 'vif-s', 'vif_s')
+    mode = leaf_node_changed(conf, ['mode'])
+    if mode:
+        peth.update({'mode_old' : mode})
 
     return peth
 
 def verify(peth):
-    if peth['deleted']:
-        if peth['is_bridge_member']:
-            raise ConfigError((
-                f'Cannot delete interface "{peth["intf"]}" as it is a '
-                f'member of bridge "{peth["is_bridge_member"]}"!'))
-
+    if 'deleted' in peth:
+        verify_bridge_delete(peth)
         return None
 
-    if not peth['source_interface']:
-        raise ConfigError((
-            f'Link device must be set for pseudo-ethernet "{peth["intf"]}"'))
-
-    if not peth['source_interface'] in interfaces():
-        raise ConfigError((
-            f'Pseudo-ethernet "{peth["intf"]}" link device does not exist'))
-
-    if ( peth['is_bridge_member']
-            and ( peth['address']
-                or peth['ipv6_eui64_prefix']
-                or peth['ipv6_autoconf'] ) ):
-        raise ConfigError((
-            f'Cannot assign address to interface "{peth["intf"]}" '
-            f'as it is a member of bridge "{peth["is_bridge_member"]}"!'))
-
-    if peth['vrf']:
-        if peth['vrf'] not in interfaces():
-            raise ConfigError(f'VRF "{peth["vrf"]}" does not exist')
-
-        if peth['is_bridge_member']:
-            raise ConfigError((
-                f'Interface "{peth["intf"]}" cannot be member of VRF '
-                f'"{peth["vrf"]}" and bridge {peth["is_bridge_member"]} '
-                f'at the same time!'))
+    verify_source_interface(peth)
+    verify_vrf(peth)
+    verify_address(peth)
 
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
@@ -136,17 +65,16 @@ def generate(peth):
     return None
 
 def apply(peth):
-    if peth['deleted']:
+    if 'deleted' in peth:
         # delete interface
-        MACVLANIf(peth['intf']).remove()
+        MACVLANIf(peth['ifname']).remove()
         return None
 
     # Check if MACVLAN interface already exists. Parameters like the underlaying
     # source-interface device or mode can not be changed on the fly and the interface
     # needs to be recreated from the bottom.
-    if peth['intf'] in interfaces():
-        if peth['recreating_required']:
-            MACVLANIf(peth['intf']).remove()
+    if 'mode_old' in peth:
+        MACVLANIf(peth['ifname']).remove()
 
     # MACVLAN interface needs to be created on-block instead of passing a ton
     # of arguments, I just use a dict that is managed by vyos.ifconfig
@@ -158,98 +86,8 @@ def apply(peth):
 
     # It is safe to "re-create" the interface always, there is a sanity check
     # that the interface will only be create if its non existent
-    p = MACVLANIf(peth['intf'], **conf)
-
-    # update interface description used e.g. within SNMP
-    p.set_alias(peth['description'])
-
-    if peth['dhcp_client_id']:
-        p.dhcp.v4.options['client_id'] = peth['dhcp_client_id']
-
-    if peth['dhcp_hostname']:
-        p.dhcp.v4.options['hostname'] = peth['dhcp_hostname']
-
-    if peth['dhcp_vendor_class_id']:
-        p.dhcp.v4.options['vendor_class_id'] = peth['dhcp_vendor_class_id']
-
-    if peth['dhcpv6_prm_only']:
-        p.dhcp.v6.options['dhcpv6_prm_only'] = True
-
-    if peth['dhcpv6_temporary']:
-        p.dhcp.v6.options['dhcpv6_temporary'] = True
-
-    if peth['dhcpv6_pd_length']:
-        p.dhcp.v6.options['dhcpv6_pd_length'] = peth['dhcpv6_pd_length']
-
-    if peth['dhcpv6_pd_interfaces']:
-        p.dhcp.v6.options['dhcpv6_pd_interfaces'] = peth['dhcpv6_pd_interfaces']
-
-    # ignore link state changes
-    p.set_link_detect(peth['disable_link_detect'])
-    # configure ARP cache timeout in milliseconds
-    p.set_arp_cache_tmo(peth['ip_arp_cache_tmo'])
-    # configure ARP filter configuration
-    p.set_arp_filter(peth['ip_disable_arp_filter'])
-    # configure ARP accept
-    p.set_arp_accept(peth['ip_enable_arp_accept'])
-    # configure ARP announce
-    p.set_arp_announce(peth['ip_enable_arp_announce'])
-    # configure ARP ignore
-    p.set_arp_ignore(peth['ip_enable_arp_ignore'])
-    # Enable proxy-arp on this interface
-    p.set_proxy_arp(peth['ip_proxy_arp'])
-    # Enable private VLAN proxy ARP on this interface
-    p.set_proxy_arp_pvlan(peth['ip_proxy_arp_pvlan'])
-    # IPv6 accept RA
-    p.set_ipv6_accept_ra(peth['ipv6_accept_ra'])
-    # IPv6 address autoconfiguration
-    p.set_ipv6_autoconf(peth['ipv6_autoconf'])
-    # IPv6 forwarding
-    p.set_ipv6_forwarding(peth['ipv6_forwarding'])
-    # IPv6 Duplicate Address Detection (DAD) tries
-    p.set_ipv6_dad_messages(peth['ipv6_dup_addr_detect'])
-
-    # assign/remove VRF (ONLY when not a member of a bridge,
-    # otherwise 'nomaster' removes it from it)
-    if not peth['is_bridge_member']:
-        p.set_vrf(peth['vrf'])
-
-    # Delete old IPv6 EUI64 addresses before changing MAC
-    for addr in peth['ipv6_eui64_prefix_remove']:
-        p.del_ipv6_eui64_address(addr)
-
-    # Change interface MAC address
-    if peth['mac']:
-        p.set_mac(peth['mac'])
-
-    # Add IPv6 EUI-based addresses
-    for addr in peth['ipv6_eui64_prefix']:
-        p.add_ipv6_eui64_address(addr)
-
-    # Change interface mode
-    p.set_mode(peth['mode'])
-
-    # Enable/Disable interface
-    if peth['disable']:
-        p.set_admin_state('down')
-    else:
-        p.set_admin_state('up')
-
-    # Configure interface address(es)
-    # - not longer required addresses get removed first
-    # - newly addresses will be added second
-    for addr in peth['address_remove']:
-        p.del_addr(addr)
-    for addr in peth['address']:
-        p.add_addr(addr)
-
-    # re-add ourselves to any bridge we might have fallen out of
-    if peth['is_bridge_member']:
-        p.add_to_bridge(peth['is_bridge_member'])
-
-    # apply all vlans to interface
-    apply_all_vlans(p, peth)
-
+    p = MACVLANIf(peth['ifname'], **conf)
+    p.update(peth)
     return None
 
 if __name__ == '__main__':

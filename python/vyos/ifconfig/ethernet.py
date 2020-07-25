@@ -15,12 +15,12 @@
 
 import os
 import re
+import jmespath
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 from vyos.validate import assert_list
 from vyos.util import run
-
 
 @Interface.register
 @VLAN.enable
@@ -252,3 +252,58 @@ class EthernetIf(Interface):
         >>> i.set_udp_offload('on')
         """
         return self.set_interface('ufo', state)
+
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class first
+        super().update(config)
+
+        # disable ethernet flow control (pause frames)
+        value = 'off' if 'disable_flow_control' in config.keys() else 'on'
+        self.set_flow_control(value)
+
+        # GRO (generic receive offload)
+        tmp = jmespath.search('offload_options.generic_receive', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_gro(value)
+
+        # GSO (generic segmentation offload)
+        tmp = jmespath.search('offload_options.generic_segmentation', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_gso(value)
+
+        # scatter-gather option
+        tmp = jmespath.search('offload_options.scatter_gather', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_sg(value)
+
+        # TSO (TCP segmentation offloading)
+        tmp = jmespath.search('offload_options.udp_fragmentation', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_tso(value)
+
+        # UDP fragmentation offloading
+        tmp = jmespath.search('offload_options.udp_fragmentation', config)
+        value = tmp if (tmp != None) else 'off'
+        self.set_ufo(value)
+
+        # Set physical interface speed and duplex
+        if {'speed', 'duplex'} <= set(config):
+            speed = config.get('speed')
+            duplex = config.get('duplex')
+            self.set_speed_duplex(speed, duplex)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)

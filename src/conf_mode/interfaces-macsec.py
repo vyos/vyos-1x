@@ -20,16 +20,14 @@ from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
+from vyos.configdict import get_interface_dict
 from vyos.ifconfig import MACsecIf
 from vyos.template import render
 from vyos.util import call
-from vyos.validate import is_member
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_source_interface
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -38,50 +36,25 @@ airbag.enable()
 wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
 
 def get_config():
-    """ Retrive CLI config as dictionary. Dictionary can never be empty,
-    as at least the interface name will be added or a deleted flag """
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
     conf = Config()
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    # retrieve interface default values
     base = ['interfaces', 'macsec']
-    default_values = defaults(base)
+    macsec = get_interface_dict(conf, base)
 
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    base = base + [ifname]
-
-    macsec = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     # Check if interface has been removed
-    if macsec == {}:
-        tmp = {
-            'deleted' : '',
-            'source_interface' : conf.return_effective_value(
+    if 'deleted' in macsec:
+        source_interface = conf.return_effective_value(
                 base + ['source-interface'])
-        }
-        macsec.update(tmp)
-
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary
-    # retrived.
-    macsec = dict_merge(default_values, macsec)
-
-    # Add interface instance name into dictionary
-    macsec.update({'ifname': ifname})
-
-    # Check if we are a member of any bridge
-    bridge = is_member(conf, ifname, 'bridge')
-    if bridge:
-        tmp = {'is_bridge_member' : bridge}
-        macsec.update(tmp)
+        macsec.update({'source_interface': source_interface})
 
     return macsec
 
 
 def verify(macsec):
-    if 'deleted' in macsec.keys():
+    if 'deleted' in macsec:
         verify_bridge_delete(macsec)
         return None
 
@@ -89,18 +62,18 @@ def verify(macsec):
     verify_vrf(macsec)
     verify_address(macsec)
 
-    if not (('security' in macsec.keys()) and
-            ('cipher' in macsec['security'].keys())):
+    if not (('security' in macsec) and
+            ('cipher' in macsec['security'])):
         raise ConfigError(
             'Cipher suite must be set for MACsec "{ifname}"'.format(**macsec))
 
-    if (('security' in macsec.keys()) and
-        ('encrypt' in macsec['security'].keys())):
+    if (('security' in macsec) and
+        ('encrypt' in macsec['security'])):
         tmp = macsec.get('security')
 
-        if not (('mka' in tmp.keys()) and
-                ('cak' in tmp['mka'].keys()) and
-                ('ckn' in tmp['mka'].keys())):
+        if not (('mka' in tmp) and
+                ('cak' in tmp['mka']) and
+                ('ckn' in tmp['mka'])):
             raise ConfigError('Missing mandatory MACsec security '
                               'keys as encryption is enabled!')
 

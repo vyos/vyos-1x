@@ -320,7 +320,7 @@
                     <properties>
                       <help>VHT link adaptation capabilities</help>
                       <completionHelp>
-			<list>unsolicited both</list>
+                        <list>unsolicited both</list>
                       </completionHelp>
                       <valueHelp>
                         <format>unsolicited</format>
@@ -451,6 +451,7 @@
           <leafNode name="disable-broadcast-ssid">
             <properties>
               <help>Disable broadcast of SSID from access-point</help>
+              <valueless/>
             </properties>
           </leafNode>
           #include <include/interface-disable-link-detect.xml.i>
@@ -551,9 +552,10 @@
                 <description>802.11ac - 1300 Mbits/sec</description>
               </valueHelp>
               <constraint>
-                <regex>(a|b|g|n|ac)</regex>
+                <regex>^(a|b|g|n|ac)$</regex>
               </constraint>
             </properties>
+            <defaultValue>g</defaultValue>
           </leafNode>
           <leafNode name="physical-device">
             <properties>
@@ -637,7 +639,7 @@
                         <description>Temporal Key Integrity Protocol [IEEE 802.11i/D7.0]</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)</regex>
+                        <regex>^(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)$</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid cipher selection</constraintErrorMessage>
                       <multi/>
@@ -670,7 +672,7 @@
                         <description>Temporal Key Integrity Protocol [IEEE 802.11i/D7.0]</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)</regex>
+                        <regex>^(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)$</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid group cipher selection</constraintErrorMessage>
                       <multi/>
@@ -695,7 +697,7 @@
                         <description>Allow both WPA and WPA2</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(wpa|wpa2|both)</regex>
+                        <regex>^(wpa|wpa2|both)$</regex>
                       </constraint>
                       <constraintErrorMessage>Unknown WPA mode</constraintErrorMessage>
                     </properties>
@@ -762,10 +764,11 @@
                 <description>Passively monitor all packets on the frequency/channel</description>
               </valueHelp>
               <constraint>
-                <regex>(access-point|station|monitor)</regex>
+                <regex>^(access-point|station|monitor)$</regex>
               </constraint>
               <constraintErrorMessage>Type must be access-point, station or monitor</constraintErrorMessage>
             </properties>
+            <defaultValue>monitor</defaultValue>
           </leafNode>
           #include <include/vif.xml.i>
           #include <include/vif-s.xml.i>

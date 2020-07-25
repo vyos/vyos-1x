@@ -279,7 +279,6 @@ def is_member(conf, interface, intftype=None):
     False -> interface type cannot have members
     """
     ret_val = None
-
     if intftype not in ['bonding', 'bridge', None]:
         raise ValueError((
             f'unknown interface type "{intftype}" or it cannot '
@@ -292,9 +291,9 @@ def is_member(conf, interface, intftype=None):
     conf.set_level([])
 
     for it in intftype:
-        base = 'interfaces ' + it
+        base = ['interfaces', it]
         for intf in conf.list_nodes(base):
-            memberintf = [base, intf, 'member', 'interface']
+            memberintf = base + [intf, 'member', 'interface']
             if xml.is_tag(memberintf):
                 if interface in conf.list_nodes(memberintf):
                     ret_val = intf
