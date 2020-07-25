@@ -79,12 +79,12 @@ def verify_source_interface(config):
     required by e.g. peth/MACvlan, MACsec ...
     """
     from netifaces import interfaces
-    if not 'source_interface' in config.keys():
+    if 'source_interface' not in config:
         raise ConfigError('Physical source-interface required for '
                           'interface "{ifname}"'.format(**config))
-    if not config['source_interface'] in interfaces():
-        raise ConfigError(f'Source interface {source_interface} does not '
-                          f'exist'.format(**config))
+    if config['source_interface'] not in interfaces():
+        raise ConfigError('Source interface {source_interface} does not '
+                          'exist'.format(**config))
 
 def verify_dhcpv6(config):
     """
