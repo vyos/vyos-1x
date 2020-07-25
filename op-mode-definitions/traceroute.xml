@@ -25,6 +25,24 @@
           </completionHelp>
         </properties>
         <command>/usr/bin/traceroute -4 "$3"</command>
+        <children>
+          <tagNode name="tcp">
+            <properties>
+              <help>Route tracing and port detection using TCP</help>
+            </properties>
+            <children>
+              <tagNode name="port">
+                <properties>
+                  <help>Perform operations on TCP ports</help>
+                  <completionHelp>
+                    <list>0-65535</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/sbin/tcptraceroute "$3" $6</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
       </tagNode>
       <tagNode name="ipv6">
         <properties>
@@ -34,6 +52,24 @@
           </completionHelp>
         </properties>
         <command>/usr/bin/traceroute -6 "$3"</command>
+        <children>
+          <tagNode name="tcp">
+            <properties>
+              <help>Use TCP/IPv6 packets to perform a traceroute</help>
+            </properties>
+            <children>
+              <tagNode name="port">
+                <properties>
+                  <help>Perform operations on TCP ports</help>
+                  <completionHelp>
+                    <list>0-65535</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/sbin/tcptraceroute6 "$3" $6</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
       </tagNode>
       <tagNode name="vrf">
         <properties>
