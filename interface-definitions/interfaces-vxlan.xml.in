@@ -93,6 +93,7 @@
                 <validator name="numeric" argument="--range 1-65535"/>
               </constraint>
             </properties>
+            <defaultValue>8472</defaultValue>
           </leafNode>
           <leafNode name="vni">
             <properties>

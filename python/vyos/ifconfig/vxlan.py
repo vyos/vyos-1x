@@ -47,8 +47,8 @@ class VXLANIf(Interface):
         'port': 8472,   # The Linux implementation of VXLAN pre-dates
                         # the IANA's selection of a standard destination port
         'remote': '',
-        'src_address': '',
-        'src_interface': '',
+        'source_address': '',
+        'source_interface': '',
         'vni': 0
     }
     definition = {
@@ -60,29 +60,29 @@ class VXLANIf(Interface):
         }
     }
     options = Interface.options + \
-        ['group', 'remote', 'src_interface', 'port', 'vni', 'src_address']
+        ['group', 'remote', 'source_interface', 'port', 'vni', 'source_address']
 
     mapping = {
         'ifname': 'add',
         'vni':    'id',
         'port':   'dstport',
-        'src_address': 'local',
-        'src_interface': 'dev',
+        'source_address': 'local',
+        'source_interface': 'dev',
     }
 
     def _create(self):
         cmdline = ['ifname', 'type', 'vni', 'port']
 
-        if self.config['src_address']:
-            cmdline.append('src_address')
+        if self.config['source_address']:
+            cmdline.append('source_address')
 
         if self.config['remote']:
             cmdline.append('remote')
 
-        if self.config['group'] or self.config['src_interface']:
-            if self.config['group'] and self.config['src_interface']:
+        if self.config['group'] or self.config['source_interface']:
+            if self.config['group'] and self.config['source_interface']:
                 cmdline.append('group')
-                cmdline.append('src_interface')
+                cmdline.append('source_interface')
             else:
                 ifname = self.config['ifname']
                 raise ConfigError(
