@@ -142,9 +142,13 @@ class BasicInterfaceTest:
             if not self._test_vlan:
                 return None
 
-            for intf in self._interfaces:
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(base + option.split())
+
                 for vlan in self._vlan_range:
-                    base = self._base_path + [intf, 'vif', vlan]
+                    base = self._base_path + [interface, 'vif', vlan]
                     self.session.set(base + ['mtu', self._mtu])
                     for address in self._test_addr:
                         self.session.set(base + ['address', address])
@@ -164,6 +168,10 @@ class BasicInterfaceTest:
                 return None
 
             for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(base + option.split())
+
                 for vif_s in self._qinq_range:
                     for vif_c in self._vlan_range:
                         base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c', vif_c]
