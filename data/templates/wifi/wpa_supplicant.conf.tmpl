@@ -1,8 +1,8 @@
 # WPA supplicant config
 network={
     ssid="{{ ssid }}"
-{%- if sec_wpa_passphrase %}
-    psk="{{ sec_wpa_passphrase }}"
+{% if security is defined and security.wpa is defined and security.wpa.passphrase is defined %}
+    psk="{{ security.wpa.passphrase }}"
 {% else %}
     key_mgmt=NONE
 {% endif %}

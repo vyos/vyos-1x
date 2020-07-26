@@ -9,7 +9,7 @@ device_name={{ description | truncate(32, True) }}
 # management frames with the Host AP driver); wlan0 with many nl80211 drivers
 # Note: This attribute can be overridden by the values supplied with the '-i'
 # command line parameter.
-interface={{ intf }}
+interface={{ ifname }}
 
 # Driver interface type (hostap/wired/none/nl80211/bsd);
 # default: hostap). nl80211 is used with all Linux mac80211 drivers.
@@ -28,8 +28,7 @@ logger_syslog_level=0
 logger_stdout=-1
 logger_stdout_level=0
 
-{%- if country_code %}
-
+{% if country_code %}
 # Country code (ISO/IEC 3166-1). Used to set regulatory domain.
 # Set as needed to indicate country in which device is operating.
 # This can limit available channels and transmit power.
@@ -42,14 +41,12 @@ country_code={{ country_code }}
 ieee80211d=1
 {% endif %}
 
-{%- if ssid %}
-
+{% if ssid %}
 # SSID to be used in IEEE 802.11 management frames
 ssid={{ ssid }}
 {% endif %}
 
-{%- if channel %}
-
+{% if channel %}
 # Channel number (IEEE 802.11)
 # (default: 0, i.e., not set)
 # Please note that some drivers do not use this value from hostapd and the
@@ -61,8 +58,7 @@ ssid={{ ssid }}
 channel={{ channel }}
 {% endif %}
 
-{%- if mode %}
-
+{% if mode %}
 # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
 # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
 # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
@@ -71,29 +67,30 @@ channel={{ channel }}
 # special value "any" can be used to indicate that any support band can be used.
 # This special case is currently supported only with drivers with which
 # offloaded ACS is used.
-{% if 'n' in mode -%}
+{%   if 'n' in mode %}
 hw_mode=g
-{% elif 'ac' in mode -%}
+{%   elif 'ac' in mode %}
 hw_mode=a
 ieee80211h=1
 ieee80211ac=1
-{% else -%}
+{%   else %}
 hw_mode={{ mode }}
-{% endif %}
+{%   endif %}
 {% endif %}
 
 # ieee80211w: Whether management frame protection (MFP) is enabled
 # 0 = disabled (default)
 # 1 = optional
 # 2 = required
-{% if 'disabled' in mgmt_frame_protection -%}
+{% if 'disabled' in mgmt_frame_protection %}
 ieee80211w=0
-{% elif 'optional' in mgmt_frame_protection -%}
+{% elif 'optional' in mgmt_frame_protection %}
 ieee80211w=1
-{% elif 'required' in mgmt_frame_protection -%}
+{% elif 'required' in mgmt_frame_protection %}
 ieee80211w=2
 {% endif %}
 
+{% if capabilities is defined and capabilities.ht is defined %}
 # ht_capab: HT capabilities (list of flags)
 # LDPC coding capability: [LDPC] = supported
 # Supported channel width set: [HT40-] = both 20 MHz and 40 MHz with secondary
@@ -127,79 +124,50 @@ ieee80211w=2
 # DSSS/CCK Mode in 40 MHz: [DSSS_CCK-40] = allowed (not allowed if not set)
 # 40 MHz intolerant [40-INTOLERANT] (not advertised if not set)
 # L-SIG TXOP protection support: [LSIG-TXOP-PROT] (disabled if not set)
-{% if cap_ht %}
-ht_capab=
-{%- endif -%}
+{%   set output = '' %}
+{%   set output = output + '[40-INTOLERANT]'  if capabilities.ht.fourtymhz_incapable is defined else '' %}
+{%   set output = output + '[DELAYED-BA]'     if capabilities.ht.delayed_block_ack   is defined else '' %}
+{%   set output = output + '[DSSS_CCK-40]'    if capabilities.ht.dsss_cck_40         is defined else '' %}
+{%   set output = output + '[GF]'             if capabilities.ht.greenfield          is defined else '' %}
+{%   set output = output + '[LDPC]'           if capabilities.ht.ldpc                is defined else '' %}
+{%   set output = output + '[LSIG-TXOP-PROT]' if capabilities.ht.lsig_protection     is defined else '' %}
+{%   set output = output + '[TX-STBC]'        if capabilities.ht.stbc.tx             is defined else '' %}
+{%   set output = output + '[RX-STBC-'   + capabilities.ht.stbc.rx | upper + ']' if capabilities.ht.stbc.tx   is defined else '' %}
+{%   set output = output + '[MAX-AMSDU-' + capabilities.ht.max_amsdu       + ']' if capabilities.ht.max_amsdu is defined else '' %}
+{%   set output = output + '[SMPS-'      + capabilities.ht.smps | upper    + ']' if capabilities.ht.smps      is defined else '' %}
 
-{%- if cap_ht_40mhz_incapable -%}
-[40-INTOLERANT]
-{%- endif -%}
+{% if capabilities.ht.channel_set_width is defined %}
+{%   for csw in capabilities.ht.channel_set_width %}
+{%     set output = output + '[' + csw | upper + ']'  %}
+{%   endfor %}
+{% endif %}
 
-{%- if cap_ht_delayed_block_ack -%}
-[DELAYED-BA]
-{%- endif -%}
+{% if capabilities.ht.short_gi is defined %}
+{%   for short_gi in capabilities.ht.short_gi %}
+{%     set output = output + '[SHORT-GI-' + short_gi | upper + ']'  %}
+{%   endfor %}
+{% endif %}
 
-{%- if cap_ht_dsss_cck_40 -%}
-[DSSS_CCK-40]
-{%- endif -%}
+ht_capab={{ output }}
 
-{%- if cap_ht_greenfield -%}
-[GF]
-{%- endif -%}
+{% if capabilities.ht.auto_powersave is defined %}
+# WMM-PS Unscheduled Automatic Power Save Delivery [U-APSD]
+# Enable this flag if U-APSD supported outside hostapd (eg., Firmware/driver)
+uapsd_advertisement_enabled=1
+{% endif %}
 
-{%- if cap_ht_ldpc -%}
-[LDPC]
-{%- endif -%}
-
-{%- if cap_ht_lsig_protection -%}
-[LSIG-TXOP-PROT]
-{%- endif -%}
-
-{%- if cap_ht_max_amsdu -%}
-[MAX-AMSDU-{{ cap_ht_max_amsdu }}]
-{%- endif -%}
-
-{%- if cap_ht_smps -%}
-[SMPS-{{ cap_ht_smps | upper }}]
-{%- endif -%}
-
-{%- if cap_ht_chan_set_width -%}
-{%- for csw in cap_ht_chan_set_width -%}
-[{{ csw | upper }}]
-{%- endfor -%}
-{%- endif -%}
-
-{%- if cap_ht_short_gi -%}
-{%- for gi in cap_ht_short_gi -%}
-[SHORT-GI-{{ gi }}]
-{%- endfor -%}
-{%- endif -%}
-
-{%- if cap_ht_stbc_tx -%}
-[TX-STBC]
-{%- endif -%}
-{%- if cap_ht_stbc_rx -%}
-[RX-STBC{{ cap_ht_stbc_rx }}]
-{%- endif %}
+{% endif %}
 
 # Required for full HT and VHT functionality
 wme_enabled=1
 
-{% if cap_ht_powersave -%}
-# WMM-PS Unscheduled Automatic Power Save Delivery [U-APSD]
-# Enable this flag if U-APSD supported outside hostapd (eg., Firmware/driver)
-uapsd_advertisement_enabled=1
-{%- endif %}
 
-{% if cap_req_ht -%}
+{% if capabilities is defined and capabilities.require_ht is defined %}
 # Require stations to support HT PHY (reject association if they do not)
 require_ht=1
 {% endif %}
 
-{%- if cap_vht_chan_set_width -%}
-vht_oper_chwidth={{ cap_vht_chan_set_width }}
-{%- endif %}
-
+{% if capabilities is defined and capabilities.vht is defined %}
 # vht_capab: VHT capabilities (list of flags)
 #
 # vht_max_mpdu_len: [MAX-MPDU-7991] [MAX-MPDU-11454]
@@ -316,133 +284,95 @@ vht_oper_chwidth={{ cap_vht_chan_set_width }}
 # Tx Antenna Pattern Consistency: [TX-ANTENNA-PATTERN]
 # Indicates the possibility of Tx antenna pattern change
 # 0 = Tx antenna pattern might change during the lifetime of an association
-# 1 = Tx antenna pattern does not change during the lifetime of an association
-{% if cap_vht %}
-vht_capab=
-{%- endif -%}
+# 1 = Tx antenna pattern does not change during the lifetime of an
 
-{%- if cap_vht_max_mpdu -%}
-[MAX-MPDU-{{ cap_vht_max_mpdu }}]
-{%- endif -%}
+{%   if capabilities.vht.center_channel_freq.freq_1 is defined %}
+# center freq = 5 GHz + (5 * index)
+# So index 42 gives center freq 5.210 GHz
+# which is channel 42 in 5G band
+vht_oper_centr_freq_seg0_idx={{ capabilities.vht.center_channel_freq.freq_1 }}
+{%   endif %}
 
-{%- if cap_vht_max_mpdu_exp -%}
-[MAX-A-MPDU-LEN-EXP{{ cap_vht_max_mpdu_exp }}]
-{%- endif -%}
+{%   if capabilities.vht.center_channel_freq.freq_2 is defined %}
+# center freq = 5 GHz + (5 * index)
+# So index 159 gives center freq 5.795 GHz
+# which is channel 159 in 5G band
+vht_oper_centr_freq_seg1_idx={{ capabilities.vht.center_channel_freq.freq_2 }}
+{%   endif %}
 
-{%- if cap_vht_chan_set_width -%}
-{%- if '2' in cap_vht_chan_set_width -%}
-[VHT160]
-{%- elif '3' in cap_vht_chan_set_width -%}
-[VHT160-80PLUS80]
-{%- endif -%}
-{%- endif -%}
+{%   if capabilities.vht.channel_set_width is defined %}
+vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
+{%   endif %}
 
-{%- if cap_vht_stbc_tx -%}
-[TX-STBC-2BY1]
-{%- endif -%}
+{%   set output = '' %}
+{%   set output = output + '[TX-STBC-2BY1]'       if capabilities.vht.stbc.tx               is defined else '' %}
+{%   set output = output + '[RXLDPC]'             if capabilities.vht.ldpc                  is defined else '' %}
+{%   set output = output + '[VHT-TXOP-PS]'        if capabilities.vht.tx_powersave          is defined else '' %}
+{%   set output = output + '[HTC-VHT]'            if capabilities.vht.vht_cf                is defined else '' %}
+{%   set output = output + '[RX-ANTENNA-PATTERN]' if capabilities.vht.antenna_pattern_fixed is defined else '' %}
+{%   set output = output + '[TX-ANTENNA-PATTERN]' if capabilities.vht.antenna_pattern_fixed is defined else '' %}
 
-{%- if cap_vht_stbc_rx -%}
-[RX-STBC-{{ cap_vht_stbc_rx }}]
-{%- endif -%}
+{%   set output = output + '[RX-STBC-'            + capabilities.vht.stbc.rx      + ']' if capabilities.vht.stbc.rx      is defined else '' %}
+{%   set output = output + '[MAX-MPDU-'           + capabilities.vht.max_mpdu     + ']' if capabilities.vht.max_mpdu     is defined else '' %}
+{%   set output = output + '[MAX-A-MPDU-LEN-EXP-' + capabilities.vht.max_mpdu_exp + ']' if capabilities.vht.max_mpdu_exp is defined else '' %}
+{%   set output = output + '[MAX-A-MPDU-LEN-EXP-' + capabilities.vht.max_mpdu_exp + ']' if capabilities.vht.max_mpdu_exp is defined else '' %}
 
-{%- if cap_vht_link_adaptation -%}
-{%- if 'unsolicited' in cap_vht_link_adaptation -%}
-[VHT-LINK-ADAPT2]
-{%- elif 'both' in cap_vht_link_adaptation -%}
-[VHT-LINK-ADAPT3]
-{%- endif -%}
-{%- endif -%}
+{%   set output = output + '[VHT160]'          if capabilities.vht.max_mpdu_exp    is defined and capabilities.vht.max_mpdu_exp == '2'              else '' %}
+{%   set output = output + '[VHT160-80PLUS80]' if capabilities.vht.max_mpdu_exp    is defined and capabilities.vht.max_mpdu_exp == '3'              else '' %}
+{%   set output = output + '[VHT-LINK-ADAPT2]' if capabilities.vht.link_adaptation is defined and capabilities.vht.link_adaptation == 'unsolicited' else '' %}
+{%   set output = output + '[VHT-LINK-ADAPT3]' if capabilities.vht.link_adaptation is defined and capabilities.vht.link_adaptation == 'both'        else '' %}
 
-{%- if cap_vht_short_gi -%}
-{%- for gi in cap_vht_short_gi -%}
-[SHORT-GI-{{ gi }}]
-{%- endfor -%}
-{%- endif -%}
+{%   if capabilities.vht.short_gi is defined %}
+{%     for short_gi in capabilities.vht.short_gi %}
+{%       set output = output + '[SHORT-GI-' + short_gi | upper + ']'  %}
+{%     endfor %}
+{%   endif %}
 
-{%- if cap_vht_ldpc -%}
-[RXLDPC]
-{%- endif -%}
+{%   if capabilities.vht.beamform %}
+{%     for beamform in capabilities.vht.beamform %}
+{%       set output = output + '[SU-BEAMFORMER]' if beamform == 'single-user-beamformer' else '' %}
+{%       set output = output + '[SU-BEAMFORMEE]' if beamform == 'single-user-beamformee' else '' %}
+{%       set output = output + '[MU-BEAMFORMER]' if beamform == 'multi-user-beamformer'  else '' %}
+{%       set output = output + '[MU-BEAMFORMEE]' if beamform == 'multi-user-beamformee'  else '' %}
+{%     endfor %}
+{%   endif %}
 
-{%- if cap_vht_tx_powersave -%}
-[VHT-TXOP-PS]
-{%- endif -%}
+{%   if capabilities.vht.antenna_count is defined and capabilities.vht.antenna_count|int > 1  %}
+{%     if capabilities.vht.beamform %}
+{%       if beamform == 'single-user-beamformer' %}
+{%         if capabilities.vht.antenna_count is defined and capabilities.vht.antenna_count|int > 1 and capabilities.vht.antenna_count|int < 6  %}
+{%           set output = output + '[BF-ANTENNA-' + capabilities.vht.antenna_count|int -1 + ']' %}
+{%           set output = output + '[SOUNDING-DIMENSION-' + capabilities.vht.antenna_count|int -1 + ']' %}
+{%         endif %}
+{%       endif %}
+{%       if capabilities.vht.antenna_count is defined and capabilities.vht.antenna_count|int > 1 and capabilities.vht.antenna_count|int < 5  %}
+{%         set output = output + '[BF-ANTENNA-' + capabilities.vht.antenna_count + ']' %}
+{%         set output = output + '[SOUNDING-DIMENSION-' + capabilities.vht.antenna_count+ ']' %}
+{%       endif %}
+{%     endif %}
+{%   endif %}
 
-{%- if cap_vht_vht_cf -%}
-[HTC-VHT]
-{%- endif -%}
-
-{%- if cap_vht_beamform -%}
-{%- for beamform in cap_vht_beamform -%}
-{%- if 'single-user-beamformer' in beamform -%}
-[SU-BEAMFORMER]
-{%- elif 'single-user-beamformee' in beamform -%}
-[SU-BEAMFORMEE]
-{%- elif 'multi-user-beamformer' in beamform -%}
-[MU-BEAMFORMER]
-{%- elif 'multi-user-beamformee' in beamform -%}
-[MU-BEAMFORMEE]
-{%- endif -%}
-{%- endfor -%}
-{%- endif -%}
-
-{%- if cap_vht_antenna_fixed -%}
-[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]
-{%- endif -%}
-
-{%- if cap_vht_antenna_cnt -%}
-{%- if cap_vht_antenna_cnt|int > 1 -%}
-{%- if cap_vht_beamform -%}
-{%- for beamform in cap_vht_beamform -%}
-{%- if 'single-user-beamformer' in beamform -%}
-{%- if cap_vht_antenna_cnt|int < 6 -%}
-[BF-ANTENNA-{{ cap_vht_antenna_cnt|int -1 }}][SOUNDING-DIMENSION-{{ cap_vht_antenna_cnt|int -1}}]
-{%- endif -%}
-{%- else -%}
-{%- if cap_vht_antenna_cnt|int < 5 -%}
-[BF-ANTENNA-{{ cap_vht_antenna_cnt }}][SOUNDING-DIMENSION-{{ cap_vht_antenna_cnt }}]
-{%- endif -%}
-{%- endif -%}
-{%- endfor -%}
-{%- else -%}
-{%- if cap_vht_antenna_cnt|int < 5 -%}
-[BF-ANTENNA-{{ cap_vht_antenna_cnt }}][SOUNDING-DIMENSION-{{ cap_vht_antenna_cnt }}]
-{%- endif -%}
-{%- endif -%}
-{%- endif -%}
-{%- endif %}
+vht_capab={{ output }}
+{% endif %}
 
 # ieee80211n: Whether IEEE 802.11n (HT) is enabled
 # 0 = disabled (default)
 # 1 = enabled
 # Note: You will also need to enable WMM for full HT functionality.
 # Note: hw_mode=g (2.4 GHz) and hw_mode=a (5 GHz) is used to specify the band.
-{% if cap_req_vht -%}
+{% if capabilities is defined and capabilities.require_vht is defined %}
 ieee80211n=0
 # Require stations to support VHT PHY (reject association if they do not)
 require_vht=1
-{% else -%}
-{% if 'n' in mode or 'ac' in mode -%}
+{% else %}
+{%   if 'n' in mode or 'ac' in mode %}
 ieee80211n=1
-{% else -%}
+{%   else %}
 ieee80211n=0
-{%- endif %}
+{%   endif %}
 {% endif %}
 
-{% if cap_vht_center_freq_1 -%}
-# center freq = 5 GHz + (5 * index)
-# So index 42 gives center freq 5.210 GHz
-# which is channel 42 in 5G band
-vht_oper_centr_freq_seg0_idx={{ cap_vht_center_freq_1 }}
-{% endif %}
-
-{% if cap_vht_center_freq_2 -%}
-# center freq = 5 GHz + (5 * index)
-# So index 159 gives center freq 5.795 GHz
-# which is channel 159 in 5G band
-vht_oper_centr_freq_seg1_idx={{ cap_vht_center_freq_2 }}
-{% endif %}
-
-{% if disable_broadcast_ssid -%}
+{% if disable_broadcast_ssid is defined %}
 # Send empty SSID in beacons and ignore probe request frames that do not
 # specify full SSID, i.e., require stations to know SSID.
 # default: disabled (0)
@@ -463,7 +393,7 @@ ignore_broadcast_ssid=1
 # 2 = use external RADIUS server (accept/deny lists are searched first)
 macaddr_acl=0
 
-{% if max_stations -%}
+{% if max_stations is defined %}
 # Maximum number of stations allowed in station table. New stations will be
 # rejected after the station table is full. IEEE 802.11 has a limit of 2007
 # different association IDs, so this number should not be larger than that.
@@ -471,13 +401,13 @@ macaddr_acl=0
 max_num_sta={{ max_stations }}
 {% endif %}
 
-{% if isolate_stations -%}
+{% if isolate_stations is defined %}
 # Client isolation can be used to prevent low-level bridging of frames between
 # associated stations in the BSS. By default, this bridging is allowed.
 ap_isolate=1
 {% endif %}
 
-{% if reduce_transmit_power -%}
+{% if reduce_transmit_power is defined %}
 # Add Power Constraint element to Beacon and Probe Response frames
 # This config option adds Power Constraint element when applicable and Country
 # element is added. Power Constraint element is required by Transmit Power
@@ -486,14 +416,15 @@ ap_isolate=1
 local_pwr_constraint={{ reduce_transmit_power }}
 {% endif %}
 
-{% if expunge_failing_stations -%}
+{% if expunge_failing_stations is defined %}
 # Disassociate stations based on excessive transmission failures or other
 # indications of connection loss. This depends on the driver capabilities and
 # may not be available with all drivers.
 disassoc_low_ack=1
 {% endif %}
 
-{% if sec_wep -%}
+
+{% if security is defined and security.wep is defined %}
 # IEEE 802.11 specifies two authentication algorithms. hostapd can be
 # configured to allow both of these or only one. Open system authentication
 # should be used with IEEE 802.1X.
@@ -522,13 +453,14 @@ wep_default_key=0
 # digits, depending on whether 40-bit (64-bit), 104-bit (128-bit), or
 # 128-bit (152-bit) WEP is used.
 # Only the default key must be supplied; the others are optional.
-{% if sec_wep_key -%}
-{% for key in sec_wep_key -%}
-wep_key{{ loop.index -1 }}={{ key}}
-{% endfor %}
-{%- endif %}
+{%   if security.wep.key is defined %}
+{%     for key in sec_wep_key %}
+wep_key{{ loop.index -1 }}={{ security.wep.key }}
+{%     endfor %}
+{%   endif %}
 
-{% elif sec_wpa -%}
+
+{% elif security is defined and security.wpa is defined %}
 ##### WPA/IEEE 802.11i configuration ##########################################
 
 # Enable WPA. Setting this variable configures the AP to require WPA (either
@@ -542,15 +474,17 @@ wep_key{{ loop.index -1 }}={{ key}}
 # and/or WPA2 (full IEEE 802.11i/RSN):
 # bit0 = WPA
 # bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
-{% if 'both' in sec_wpa_mode -%}
+{%   if security.wpa.mode is defined %}
+{%     if security.wpa.mode == 'both' %}
 wpa=3
-{%- elif 'wpa2' in sec_wpa_mode -%}
+{%     elif security.wpa.mode == 'wpa2' %}
 wpa=2
-{%- elif 'wpa' in sec_wpa_mode -%}
+{%     elif security.wpa.mode == 'wpa' %}
 wpa=1
-{%- endif %}
+{%     endif %}
+{%   endif %}
 
-{% if sec_wpa_cipher -%}
+{%   if security.wpa.cipher is defined %}
 # Set of accepted cipher suites (encryption algorithms) for pairwise keys
 # (unicast packets). This is a space separated list of algorithms:
 # CCMP = AES in Counter mode with CBC-MAC (CCMP-128)
@@ -563,26 +497,39 @@ wpa=1
 # allowed as the pairwise cipher, group cipher will also be CCMP. Otherwise,
 # TKIP will be used as the group cipher. The optional group_cipher parameter can
 # be used to override this automatic selection.
-{% if 'wpa2' in sec_wpa_mode -%}
-# Pairwise cipher for RSN/WPA2 (default: use wpa_pairwise value)
-rsn_pairwise={{ sec_wpa_cipher | join(" ") }}
-{% else -%}
-# Pairwise cipher for WPA (v1) (default: TKIP)
-wpa_pairwise={{ sec_wpa_cipher | join(" ") }}
-{%- endif -%}
-{% endif %}
 
-{% if sec_wpa_group_cipher -%}
+{%     if security.wpa.mode is defined and security.wpa.mode == 'wpa2' %}
+# Pairwise cipher for RSN/WPA2 (default: use wpa_pairwise value)
+{%       if security.wpa.cipher is string %}
+rsn_pairwise={{ security.wpa.cipher }}
+{%       else %}
+rsn_pairwise={{ security.wpa.cipher | join(" ") }}
+{%       endif %}
+{%     else %}
+# Pairwise cipher for WPA (v1) (default: TKIP)
+{%       if security.wpa.cipher is string %}
+wpa_pairwise={{ security.wpa.cipher }}
+{%       else %}
+wpa_pairwise={{ security.wpa.cipher | join(" ") }}
+{%       endif %}
+{%     endif %}
+{%   endif %}
+
+{%   if security.wpa.group_cipher is defined %}
 # Optional override for automatic group cipher selection
 # This can be used to select a specific group cipher regardless of which
 # pairwise ciphers were enabled for WPA and RSN. It should be noted that
 # overriding the group cipher with an unexpected value can result in
 # interoperability issues and in general, this parameter is mainly used for
 # testing purposes.
-group_cipher={{ sec_wpa_group_cipher | join(" ") }}
-{% endif %}
+{%     if security.wpa.group_cipher is string %}
+group_cipher={{ security.wpa.group_cipher }}
+{%     else %}
+group_cipher={{ security.wpa.group_cipher | join(" ") }}
+{%     endif %}
+{%   endif %}
 
-{% if sec_wpa_passphrase -%}
+{%   if security.wpa.passphrase is defined %}
 # IEEE 802.11 specifies two authentication algorithms. hostapd can be
 # configured to allow both of these or only one. Open system authentication
 # should be used with IEEE 802.1X.
@@ -595,7 +542,7 @@ auth_algs=1
 # secret in hex format (64 hex digits), wpa_psk, or as an ASCII passphrase
 # (8..63 characters) that will be converted to PSK. This conversion uses SSID
 # so the PSK changes when ASCII passphrase is used and the SSID is changed.
-wpa_passphrase={{ sec_wpa_passphrase }}
+wpa_passphrase={{ security.wpa.passphrase }}
 
 # Set of accepted key management algorithms (WPA-PSK, WPA-EAP, or both). The
 # entries are separated with a space. WPA-PSK-SHA256 and WPA-EAP-SHA256 can be
@@ -604,7 +551,7 @@ wpa_passphrase={{ sec_wpa_passphrase }}
 # WPA-PSK-SHA256 = WPA2-Personal using SHA256
 wpa_key_mgmt=WPA-PSK
 
-{% elif sec_wpa_radius -%}
+{%   elif security.wpa.radius is defined %}
 ##### IEEE 802.1X-2004 related configuration ##################################
 # Require IEEE 802.1X authorization
 ieee8021x=1
@@ -616,40 +563,37 @@ ieee8021x=1
 # WPA-EAP-SHA256 = WPA2-Enterprise using SHA256
 wpa_key_mgmt=WPA-EAP
 
-{% if sec_wpa_radius_source -%}
+{%     if security.wpa.radius.server is defined %}
 # RADIUS client forced local IP address for the access point
 # Normally the local IP address is determined automatically based on configured
 # IP addresses, but this field can be used to force a specific address to be
 # used, e.g., when the device has multiple IP addresses.
-radius_client_addr={{ sec_wpa_radius_source }}
-
 # The own IP address of the access point (used as NAS-IP-Address)
-own_ip_addr={{ sec_wpa_radius_source }}
-{% else %}
-# The own IP address of the access point (used as NAS-IP-Address)
+{%       if security.wpa.radius.source_address is defined %}
+radius_client_addr={{ security.wpa.radius.source_address }}
+own_ip_addr={{ security.wpa.radius.source_address }}
+{%       else %}
 own_ip_addr=127.0.0.1
-{% endif %}
+{%       endif %}
 
-{% for radius in sec_wpa_radius -%}
-{%- if not radius.disabled -%}
+{%       for radius in security.wpa.radius.server if not radius.disabled %}
 # RADIUS authentication server
 auth_server_addr={{ radius.server }}
 auth_server_port={{ radius.port }}
 auth_server_shared_secret={{ radius.key }}
-{% if radius.acc_port -%}
+
+{%         if radius.acc_port %}
 # RADIUS accounting server
 acct_server_addr={{ radius.server }}
 acct_server_port={{ radius.acc_port }}
 acct_server_shared_secret={{ radius.key }}
-{% endif %}
-{% endif %}
-{% endfor %}
-
-{% endif %}
-
-{% else %}
+{%         endif %}
+{%       endfor %}
+{%     else %}
 # Open system
 auth_algs=1
+{%     endif %}
+{%   endif %}
 {% endif %}
 
 # TX queue parameters (EDCF / bursting)

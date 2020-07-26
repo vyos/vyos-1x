@@ -25,6 +25,7 @@ from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.ifconfig import WireGuardIf
 from vyos.util import chown, chmod_750, call
+from vyos.util import check_kmod
 from vyos.validate import is_member, is_ipv6
 from vyos import ConfigError
 
@@ -32,6 +33,7 @@ from vyos import airbag
 airbag.enable()
 
 kdir = r'/config/auth/wireguard'
+k_mod = 'wireguard'
 
 default_config_data = {
     'intfc': '',
@@ -49,14 +51,6 @@ default_config_data = {
     'pk': f'{kdir}/default/private.key',
     'vrf': ''
 }
-
-def _check_kmod():
-    modules = ['wireguard']
-    for module in modules:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
-
 
 def _migrate_default_keys():
     if os.path.exists(f'{kdir}/private.key') and not os.path.exists(f'{kdir}/default/private.key'):
@@ -315,7 +309,7 @@ def apply(wg):
 
 if __name__ == '__main__':
     try:
-        _check_kmod()
+        check_kmod(k_mod)
         _migrate_default_keys()
         c = get_config()
         verify(c)

@@ -16,7 +16,10 @@
 import os
 import re
 import json
+import jmespath
+
 from copy import deepcopy
+from glob import glob
 
 from ipaddress import IPv4Network
 from ipaddress import IPv6Address
@@ -45,6 +48,13 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
+def get_ethertype(ethertype_val):
+    if ethertype_val == '0x88A8':
+        return '802.1ad'
+    elif ethertype_val == '0x8100':
+        return '802.1q'
+    else:
+        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
 
 class Interface(Control):
     # This is the class which will be used to create
@@ -72,8 +82,12 @@ class Interface(Control):
     _command_get = {
         'admin_state': {
             'shellcmd': 'ip -json link show dev {ifname}',
-            'format': lambda j: 'up' if 'UP' in json.loads(j)[0]['flags'] else 'down',
-        }
+            'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
+        },
+        'vlan_protocol': {
+            'shellcmd': 'ip -json -details link show dev {ifname}',
+            'format': lambda j: jmespath.search('[*].linkinfo.info_data.protocol | [0]', json.loads(j)),
+        },
     }
 
     _command_set = {
@@ -197,6 +211,7 @@ class Interface(Control):
 
         # make sure the ifname is the first argument and not from the dict
         self.config['ifname'] = ifname
+        self._admin_state_down_cnt = 0
 
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
@@ -322,11 +337,11 @@ class Interface(Control):
             self.set_admin_state('down')
 
         self.set_interface('mac', mac)
-        
+
         # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
         if prev_state == 'up':
             self.set_admin_state('up')
-    
+
     def set_vrf(self, vrf=''):
         """
         Add/Remove interface from given VRF instance.
@@ -543,6 +558,17 @@ class Interface(Control):
         """
         self.set_interface('alias', ifalias)
 
+    def get_vlan_protocol(self):
+        """
+        Retrieve VLAN protocol in use, this can be 802.1Q, 802.1ad or None
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0.10').get_vlan_protocol()
+        '802.1Q'
+        """
+        return self.get_interface('vlan_protocol')
+
     def get_admin_state(self):
         """
         Get interface administrative state. Function will return 'up' or 'down'
@@ -564,7 +590,24 @@ class Interface(Control):
         >>> Interface('eth0').get_admin_state()
         'down'
         """
-        return self.set_interface('admin_state', state)
+        # A VLAN interface can only be placed in admin up state when
+        # the lower interface is up, too
+        if self.get_vlan_protocol():
+            lower_interface = glob(f'/sys/class/net/{self.ifname}/lower*/flags')[0]
+            with open(lower_interface, 'r') as f:
+                flags = f.read()
+            # If parent is not up - bail out as we can not bring up the VLAN.
+            # Flags are defined in kernel source include/uapi/linux/if.h
+            if not int(flags, 16) & 1:
+                return None
+
+        if state == 'up':
+            self._admin_state_down_cnt -= 1
+            if self._admin_state_down_cnt < 1:
+                return self.set_interface('admin_state', state)
+        else:
+            self._admin_state_down_cnt += 1
+            return self.set_interface('admin_state', state)
 
     def set_proxy_arp(self, enable):
         """
@@ -773,14 +816,17 @@ class Interface(Control):
         on any interface. """
 
         # Update interface description
-        self.set_alias(config.get('description', None))
+        self.set_alias(config.get('description', ''))
+
+        # Ignore link state changes
+        value = '2' if 'disable_link_detect' in config else '1'
+        self.set_link_detect(value)
 
         # Configure assigned interface IP addresses. No longer
         # configured addresses will be removed first
         new_addr = config.get('address', [])
 
-        # XXX workaround for T2636, convert IP address string to a list
-        # with one element
+        # XXX: T2636 workaround: convert string to a list with one element
         if isinstance(new_addr, str):
             new_addr = [new_addr]
 
@@ -796,10 +842,156 @@ class Interface(Control):
         # There are some items in the configuration which can only be applied
         # if this instance is not bound to a bridge. This should be checked
         # by the caller but better save then sorry!
-        if not config.get('is_bridge_member', False):
-            # Bind interface instance into VRF
+        if not any(k in ['is_bond_member', 'is_bridge_member'] for k in config):
+            # Bind interface to given VRF or unbind it if vrf node is not set.
+            # unbinding will call 'ip link set dev eth0 nomaster' which will
+            # also drop the interface out of a bridge or bond - thus this is
+            # checked before
             self.set_vrf(config.get('vrf', ''))
 
-        # Interface administrative state
-        state = 'down' if 'disable' in config.keys() else 'up'
-        self.set_admin_state(state)
+        # DHCP options
+        if 'dhcp_options' in config:
+            dhcp_options = config.get('dhcp_options')
+            if 'client_id' in dhcp_options:
+                self.dhcp.v4.options['client_id'] = dhcp_options.get('client_id')
+
+            if 'host_name' in dhcp_options:
+                self.dhcp.v4.options['hostname'] = dhcp_options.get('host_name')
+
+            if 'vendor_class_id' in dhcp_options:
+                self.dhcp.v4.options['vendor_class_id'] = dhcp_options.get('vendor_class_id')
+
+        # DHCPv6 options
+        if 'dhcpv6_options' in config:
+            dhcpv6_options = config.get('dhcpv6_options')
+            if 'parameters_only' in dhcpv6_options:
+                self.dhcp.v6.options['dhcpv6_prm_only'] = True
+
+            if 'temporary' in dhcpv6_options:
+                self.dhcp.v6.options['dhcpv6_temporary'] = True
+
+            if 'prefix_delegation' in dhcpv6_options:
+                prefix_delegation = dhcpv6_options.get('prefix_delegation')
+                if 'length' in prefix_delegation:
+                    self.dhcp.v6.options['dhcpv6_pd_length'] = prefix_delegation.get('length')
+
+                if 'interface' in prefix_delegation:
+                    self.dhcp.v6.options['dhcpv6_pd_interfaces'] = prefix_delegation.get('interface')
+
+        # Configure ARP cache timeout in milliseconds - has default value
+        tmp = jmespath.search('ip.arp_cache_timeout', config)
+        value = tmp if (tmp != None) else '30'
+        self.set_arp_cache_tmo(value)
+
+        # Configure ARP filter configuration
+        tmp = jmespath.search('ip.disable_arp_filter', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_arp_filter(value)
+
+        # Configure ARP accept
+        tmp = jmespath.search('ip.enable_arp_accept', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_accept(value)
+
+        # Configure ARP announce
+        tmp = jmespath.search('ip.enable_arp_announce', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_announce(value)
+
+        # Configure ARP ignore
+        tmp = jmespath.search('ip.enable_arp_ignore', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_ignore(value)
+
+        # Enable proxy-arp on this interface
+        tmp = jmespath.search('ip.enable_proxy_arp', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_proxy_arp(value)
+
+        # Enable private VLAN proxy ARP on this interface
+        tmp = jmespath.search('ip.proxy_arp_pvlan', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_proxy_arp_pvlan(value)
+
+        # IPv6 forwarding
+        tmp = jmespath.search('ipv6.disable_forwarding', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_ipv6_forwarding(value)
+
+        # IPv6 router advertisements
+        tmp = jmespath.search('ipv6.address.autoconf', config)
+        value = '2' if (tmp != None) else '1'
+        if 'dhcpv6' in new_addr:
+            value = '2'
+        self.set_ipv6_accept_ra(value)
+
+        # IPv6 address autoconfiguration
+        tmp = jmespath.search('ipv6.address.autoconf', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_ipv6_autoconf(value)
+
+        # IPv6 Duplicate Address Detection (DAD) tries
+        tmp = jmespath.search('ipv6.dup_addr_detect_transmits', config)
+        value = tmp if (tmp != None) else '1'
+        self.set_ipv6_dad_messages(value)
+
+        # MTU - Maximum Transfer Unit
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
+
+        # Delete old IPv6 EUI64 addresses before changing MAC
+        tmp = jmespath.search('ipv6.address.eui64_old', config)
+        if tmp:
+            for addr in tmp:
+                self.del_ipv6_eui64_address(addr)
+
+        # Change interface MAC address - re-set to real hardware address (hw-id)
+        # if custom mac is removed. Skip if bond member.
+        if 'is_bond_member' not in config:
+            mac = config.get('hw_id')
+            if 'mac' in config:
+                mac = config.get('mac')
+            if mac:
+                self.set_mac(mac)
+
+        # Add IPv6 EUI-based addresses
+        tmp = jmespath.search('ipv6.address.eui64', config)
+        if tmp:
+            # XXX: T2636 workaround: convert string to a list with one element
+            if isinstance(tmp, str):
+                tmp = [tmp]
+            for addr in tmp:
+                self.add_ipv6_eui64_address(addr)
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if 'is_bridge_member' in config:
+            bridge = config.get('is_bridge_member')
+            self.add_to_bridge(bridge)
+
+        # remove no longer required 802.1ad (Q-in-Q VLANs)
+        for vif_s_id in config.get('vif_s_remove', {}):
+            self.del_vlan(vif_s_id)
+
+        # create/update 802.1ad (Q-in-Q VLANs)
+        for vif_s_id, vif_s in config.get('vif_s', {}).items():
+            tmp=get_ethertype(vif_s.get('ethertype', '0x88A8'))
+            s_vlan = self.add_vlan(vif_s_id, ethertype=tmp)
+            s_vlan.update(vif_s)
+
+            # remove no longer required client VLAN (vif-c)
+            for vif_c_id in vif_s.get('vif_c_remove', {}):
+                s_vlan.del_vlan(vif_c_id)
+
+            # create/update client VLAN (vif-c) interface
+            for vif_c_id, vif_c in vif_s.get('vif_c', {}).items():
+                c_vlan = s_vlan.add_vlan(vif_c_id)
+                c_vlan.update(vif_c)
+
+        # remove no longer required 802.1q VLAN interfaces
+        for vif_id in config.get('vif_remove', {}):
+            self.del_vlan(vif_id)
+
+        # create/update 802.1q VLAN interfaces
+        for vif_id, vif in config.get('vif', {}).items():
+            vlan = self.add_vlan(vif_id)
+            vlan.update(vif)

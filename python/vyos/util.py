@@ -242,7 +242,7 @@ def chown(path, user, group):
 
     if not os.path.exists(path):
         return False
-	
+
     uid = getpwnam(user).pw_uid
     gid = getgrnam(group).gr_gid
     os.chown(path, uid, gid)
@@ -652,3 +652,12 @@ def get_bridge_member_config(conf, br, intf):
 
     conf.set_level(old_level)
     return memberconf
+
+def check_kmod(k_mod):
+    """ Common utility function to load required kernel modules on demand """
+    if isinstance(k_mod, str):
+        k_mod = k_mod.split()
+    for module in k_mod:
+        if not os.path.exists(f'/sys/module/{module}'):
+            if call(f'modprobe {module}') != 0:
+                raise ConfigError(f'Loading Kernel module {module} failed')

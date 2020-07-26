@@ -21,22 +21,17 @@ import shutil
 import syslog as sl
 import re
 
-from vyos.ifconfig import WireGuardIf
-
-from vyos import ConfigError
 from vyos.config import Config
-from vyos.util import cmd, run
+from vyos.ifconfig import WireGuardIf
+from vyos.util import cmd
+from vyos.util import run
+from vyos.util import check_kmod
+from vyos import ConfigError
 
 dir = r'/config/auth/wireguard'
 psk = dir + '/preshared.key'
 
-def check_kmod():
-    """ check if kmod is loaded, if not load it """
-    if not os.path.exists('/sys/module/wireguard'):
-        sl.syslog(sl.LOG_NOTICE, "loading wirguard kmod")
-        if run('sudo modprobe wireguard') != 0:
-            sl.syslog(sl.LOG_ERR, "modprobe wireguard failed")
-            raise ConfigError("modprobe wireguard failed")
+k_mod = 'wireguard'
 
 def generate_keypair(pk, pub):
     """ generates a keypair which is stored in /config/auth/wireguard """
@@ -106,7 +101,7 @@ def del_key_dir(kname):
 
 
 if __name__ == '__main__':
-    check_kmod()
+    check_kmod(k_mod)
     parser = argparse.ArgumentParser(description='wireguard key management')
     parser.add_argument(
         '--genkey', action="store_true", help='generate key-pair')

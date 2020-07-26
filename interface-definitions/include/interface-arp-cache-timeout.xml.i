@@ -10,4 +10,5 @@
     </constraint>
     <constraintErrorMessage>ARP cache entry timeout must be between 1 and 86400 seconds</constraintErrorMessage>
   </properties>
+  <defaultValue>30</defaultValue>
 </leafNode>
