@@ -28,7 +28,7 @@
             <children>
               <node name="source">
                 <properties>
-                  <help>Bind listener to specifid interface/address, mandatory for IPv6</help>
+                  <help>Bind listener to specified interface/address, mandatory for IPv6</help>
                 </properties>
                 <children>
                   <leafNode name="interface">
