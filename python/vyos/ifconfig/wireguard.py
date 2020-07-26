@@ -24,7 +24,7 @@ from hurry.filesize import alternative
 from vyos.config import Config
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
-
+from vyos.validate import is_ipv6
 
 class WireGuardOperational(Operational):
     def _dump(self):
@@ -169,65 +169,79 @@ class WireGuardIf(Interface):
         ['port', 'private_key', 'pubkey', 'psk',
          'allowed_ips', 'fwmark', 'endpoint', 'keepalive']
 
-    """
-    Wireguard interface class, contains a comnfig dictionary since
-    wireguard VPN is being comnfigured via the wg command rather than
-    writing the config into a file. Otherwise if a pre-shared key is used
-    (symetric enryption key), it would we exposed within multiple files.
-    Currently it's only within the config.boot if the config was saved.
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
 
-    Example:
-    >>> from vyos.ifconfig import WireGuardIf as wg_if
-    >>> wg_intfc = wg_if("wg01")
-    >>> print (wg_intfc.wg_config)
-    {'private_key': None, 'keepalive': 0, 'endpoint': None, 'port': 0,
-    'allowed_ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
-    >>> wg_intfc.wg_config['keepalive'] = 100
-    >>> print (wg_intfc.wg_config)
-    {'private_key': None, 'keepalive': 100, 'endpoint': None, 'port': 0,
-    'allowed_ips': [], 'pubkey': None, 'fwmark': 0, 'psk': '/dev/null'}
-    """
+        # remove no longer associated peers first
+        if 'peer_remove' in config:
+            for tmp in config['peer_remove']:
+                peer = config['peer_remove'][tmp]
+                peer['ifname'] = config['ifname']
 
-    def update(self):
-        if not self.config['private_key']:
-            raise ValueError("private key required")
-        else:
-            # fmask permission check?
-            pass
+                cmd = 'wg set {ifname} peer {pubkey} remove'
+                self._cmd(cmd.format(**peer))
 
-        cmd  = 'wg set {ifname}'.format(**self.config)
-        cmd += ' listen-port {port}'.format(**self.config)
-        cmd += ' fwmark "{fwmark}" '.format(**self.config)
-        cmd += ' private-key {private_key}'.format(**self.config)
-        cmd += ' peer {pubkey}'.format(**self.config)
-        cmd += ' persistent-keepalive {keepalive}'.format(**self.config)
-        # allowed-ips must be properly quoted else the interface can't be properly
-        # created as the wg utility will tread multiple IP addresses as command
-        # parameters
-        cmd += ' allowed-ips "{}"'.format(','.join(self.config['allowed-ips']))
+        # Wireguard base command is identical for every peer
+        base_cmd  = 'wg set {ifname} private-key {private_key}'
+        if 'port' in config:
+            base_cmd += ' listen-port {port}'
+        if 'fwmark' in config:
+            base_cmd += ' fwmark {fwmark}'
 
-        if self.config['endpoint']:
-            cmd += ' endpoint "{endpoint}"'.format(**self.config)
+        base_cmd = base_cmd.format(**config)
 
-        psk_file = ''
-        if self.config['psk']:
-            psk_file = '/tmp/{ifname}.psk'.format(**self.config)
-            with open(psk_file, 'w') as f:
-                f.write(self.config['psk'])
+        for tmp in config['peer']:
+            peer = config['peer'][tmp]
+
+            # start of with a fresh 'wg' command
+            cmd = base_cmd + ' peer {pubkey}'
+
+            # If no PSK is given remove it by using /dev/null - passing keys via
+            # the shell (usually bash) is considered insecure, thus we use a file
+            no_psk_file = '/dev/null'
+            psk_file = no_psk_file
+            if 'preshared_key' in peer:
+                psk_file = '/tmp/tmp.wireguard.psk'
+                with open(psk_file, 'w') as f:
+                    f.write(peer['preshared_key'])
             cmd += f' preshared-key {psk_file}'
 
-        self._cmd(cmd)
+            # Persistent keepalive is optional
+            if 'persistent_keepalive'in peer:
+                cmd += ' persistent-keepalive {persistent_keepalive}'
 
-        # PSK key file is not required to be stored persistently as its backed by CLI
-        if os.path.exists(psk_file):
-            os.remove(psk_file)
+            # Multiple allowed-ip ranges can be defined - ensure we are always
+            # dealing with a list
+            if isinstance(peer['allowed_ips'], str):
+                peer['allowed_ips'] = [peer['allowed_ips']]
+            cmd += ' allowed-ips ' + ','.join(peer['allowed_ips'])
 
-    def remove_peer(self, peerkey):
-        """
-        Remove a peer of an interface, peers are identified by their public key.
-        Giving it a readable name is a vyos feature, to remove a peer the pubkey
-        and the interface is needed, to remove the entry.
-        """
-        cmd = "wg set {0} peer {1} remove".format(
-            self.config['ifname'], str(peerkey))
-        return self._cmd(cmd)
+            # Endpoint configuration is optional
+            if {'address', 'port'} <= set(peer):
+                if is_ipv6(config['address']):
+                    cmd += ' endpoint [{address}]:{port}'
+                else:
+                    cmd += ' endpoint {address}:{port}'
+
+            self._cmd(cmd.format(**peer))
+
+            # PSK key file is not required to be stored persistently as its backed by CLI
+            if psk_file != no_psk_file and os.path.exists(psk_file):
+                os.remove(psk_file)
+
+        # call base class
+        super().update(config)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)
+
