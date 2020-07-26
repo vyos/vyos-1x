@@ -49,7 +49,7 @@ radius
 {% endif %}
 chap-secrets
 ippool
-{% if client_ipv6_pool %}
+{% if ppp_options['ipv6'] != 'deny' %}
 ipv6pool
 {% endif %}
 auth_pap

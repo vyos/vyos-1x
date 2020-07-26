@@ -519,6 +519,9 @@
                     <format>require</format>
                     <description>Require IPv4 negotiation</description>
                   </valueHelp>
+                  <completionHelp>
+                    <list>deny allow prefer require</list>
+                  </completionHelp>
                 </properties>
               </leafNode>
               <leafNode name="ipv6">
@@ -544,6 +547,9 @@
                     <format>require</format>
                     <description>Require IPv6 negotiation</description>
                   </valueHelp>
+                  <completionHelp>
+                    <list>deny allow prefer require</list>
+                  </completionHelp>
                 </properties>
               </leafNode>
               <leafNode name="ipv6-intf-id">
