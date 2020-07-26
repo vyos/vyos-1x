@@ -28,7 +28,7 @@ except Exception as exn:
 
 try:
     for cmd in args.exec:
-        cmd = "{0} {1}".format(cmd, args.value)
+        cmd = "{0} \'{1}\'".format(cmd, args.value)
         if debug:
             print(cmd)
         res = os.system(cmd)

@@ -38,6 +38,18 @@ def is_ipv6(addr):
     else:
         return False
 
+def is_ipv6_link_local(addr):
+    """
+    Check addr if it is an IPv6 link-local address/network. Returns True/False
+    """
+
+    addr = addr.split('%')[0]
+    if is_ipv6(addr):
+        if ipaddress.IPv6Address(addr).is_link_local:
+            return True
+
+    return False
+
 def is_addr_assigned(addr):
     """
     Verify if the given IPv4/IPv6 address is assigned to any interface on this
