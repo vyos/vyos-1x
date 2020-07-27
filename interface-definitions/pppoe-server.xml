@@ -594,6 +594,34 @@
               </leafNode>
             </children>
           </node>
+          <tagNode name="pado-delay">
+            <properties>
+              <help>PADO delays</help>
+              <valueHelp>
+                <format>1-999999</format>
+                <description>Number in ms</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Invalid PADO delay</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="sessions">
+                <properties>
+                  <help>Number of sessions</help>
+                  <valueHelp>
+                    <format>1-999999</format>
+                    <description>Number of sessions</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-999999"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid number of delayed sessions</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
         </children>
       </node>
     </children>

@@ -239,7 +239,9 @@ interface={{int}}
 {% if svc_name %}
 service-name={{svc_name}}
 {% endif %}
-pado-delay=0
+{% if pado_delay %}
+pado-delay={{pado_delay}}
+{% endif %}
 # maybe: called-sid, tr101, padi-limit etc.
 
 {% if limits %}
@@ -339,7 +341,8 @@ def get_config():
     'mtu'               : '1492',
     'ppp_options'       : {},
     'limits'            : {},
-    'snmp'              : 'disable'
+    'snmp'              : 'disable',
+    'pado_delay'        : ''
   }
 
   c.set_level('service pppoe-server')
@@ -521,6 +524,21 @@ def get_config():
 
   if len(ppp_options) !=0:
     config_data['ppp_options'] = ppp_options
+
+  if c.exists('pado-delay'):
+    config_data['pado_delay'] = '0'
+    a = {}
+    for id in c.list_nodes('pado-delay'):
+      if not c.return_value('pado-delay {0} sessions'.format(id)):
+        a[id] = 0
+      else:
+        a[id] = c.return_value('pado-delay {0} sessions'.format(id))
+
+    for k in sorted(a.keys()):
+      if k != sorted(a.keys())[-1]:
+        config_data['pado_delay'] += ",{0}:{1}".format(k,a[k])
+      else:
+        config_data['pado_delay'] += ",{0}:{1}".format('-1',a[k])
 
   return config_data
 
