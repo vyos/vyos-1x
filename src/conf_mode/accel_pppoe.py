@@ -237,7 +237,7 @@ interface={{int}}
 {% endfor %}
 {% endif %}
 {% if svc_name %}
-service-name={{svc_name}}
+service-name={{svc_name|join(',')}}
 {% endif %}
 {% if pado_delay %}
 pado-delay={{pado_delay}}
@@ -334,7 +334,7 @@ def get_config():
     'client_ipv6_pool'  : {},
     'interface'         : [],
     'ppp_gw'            : '',
-    'svc_name'          : '',
+    'svc_name'          : [],
     'dns'               : [],
     'dnsv6'             : [],
     'wins'              : [],
@@ -350,7 +350,7 @@ def get_config():
   if c.exists('access-concentrator'):
     config_data['concentrator'] = c.return_value('access-concentrator')
   if c.exists('service-name'):
-    config_data['svc_name'] = c.return_value('service-name')
+    config_data['svc_name'] = c.return_values('service-name')
   if c.exists('interface'):
     config_data['interface'] = c.return_values('interface')
   if c.exists('local-ip'):
