@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <children>
+          <node name="bgp">
+            <children>
+              <tagNode name="route-map">
+                <properties>
+                  <help>Show BGP routes matching the specified route map</help>
+                  <completionHelp>
+                    <path>policy route-map</path>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 route-map $5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
