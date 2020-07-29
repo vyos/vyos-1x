@@ -176,20 +176,6 @@
             </properties>
             <command>uptime</command>
           </leafNode>
-          <node name="usb">
-            <properties>
-              <help>Show information about Universal Serial Bus (USB)</help>
-            </properties>
-            <command>/usr/bin/lsusb -t</command>
-            <children>
-              <leafNode name="serial">
-                <properties>
-                  <help>Show information about connected USB serial ports</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/show_usb_serial.py</command>
-              </leafNode>
-            </children>
-          </node>
         </children>
       </node>
     </children>

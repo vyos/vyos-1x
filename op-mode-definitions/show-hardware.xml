@@ -71,14 +71,20 @@
             <properties>
               <help>Show peripherals connected to the USB bus</help>
             </properties>
-            <command>lsusb</command>
+            <command>/usr/bin/lsusb -t</command>
             <children>
               <node name="detail">
                 <properties>
                   <help>Show detailed USB bus information</help>
                 </properties>
-                <command>lsusb -v</command>
+                <command>/usr/bin/lsusb -v</command>
               </node>
+              <leafNode name="serial">
+                <properties>
+                  <help>Show information about connected USB serial ports</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_usb_serial.py</command>
+              </leafNode>
             </children>
           </node>
         </children>
