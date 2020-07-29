@@ -28,26 +28,10 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.ifconfig import WireGuardIf
-from vyos.util import chown, chmod_750
 from vyos.util import check_kmod
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
-k_mod = 'wireguard'
-
-def _migrate_default_keys():
-    kdir = r'/config/auth/wireguard'
-    if os.path.exists(f'{kdir}/private.key') and not os.path.exists(f'{kdir}/default/private.key'):
-        location = f'{kdir}/default'
-        if not os.path.exists(location):
-            os.makedirs(location)
-
-        chown(location, 'root', 'vyattacfg')
-        chmod_750(location)
-        os.rename(f'{kdir}/private.key', f'{location}/private.key')
-        os.rename(f'{kdir}/public.key', f'{location}/public.key')
-
 
 def get_config():
     """
@@ -78,7 +62,6 @@ def get_config():
         wireguard.update(dict)
 
     return wireguard
-
 
 def verify(wireguard):
     if 'deleted' in wireguard:
@@ -123,8 +106,7 @@ def apply(wireguard):
 
 if __name__ == '__main__':
     try:
-        check_kmod(k_mod)
-        _migrate_default_keys()
+        check_kmod('wireguard')
         c = get_config()
         verify(c)
         apply(c)

@@ -17,8 +17,23 @@
 # Split WireGuard endpoint into address / port nodes to make use of common
 # validators
 
+import os
+
 from sys import exit, argv
 from vyos.configtree import ConfigTree
+from vyos.util import chown, chmod_750
+
+def migrate_default_keys():
+    kdir = r'/config/auth/wireguard'
+    if os.path.exists(f'{kdir}/private.key') and not os.path.exists(f'{kdir}/default/private.key'):
+        location = f'{kdir}/default'
+        if not os.path.exists(location):
+            os.makedirs(location)
+
+        chown(location, 'root', 'vyattacfg')
+        chmod_750(location)
+        os.rename(f'{kdir}/private.key', f'{location}/private.key')
+        os.rename(f'{kdir}/public.key', f'{location}/public.key')
 
 if __name__ == '__main__':
     if (len(argv) < 1):
@@ -31,6 +46,8 @@ if __name__ == '__main__':
 
     config = ConfigTree(config_file)
     base = ['interfaces', 'wireguard']
+
+    migrate_default_keys()
 
     if not config.exists(base):
         # Nothing to do
