@@ -17,69 +17,51 @@
 import os
 
 from sys import exit
-from copy import deepcopy
-from netifaces import ifaddresses, AF_INET
+from netifaces import ifaddresses, interfaces, AF_INET
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
 from vyos.template import render
-
+from vyos.util import call
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/default/mdns-repeater'
 
-default_config_data = {
-    'disabled': False,
-    'interfaces': []
-}
-
 def get_config():
-    mdns = deepcopy(default_config_data)
     conf = Config()
     base = ['service', 'mdns', 'repeater']
-    if not conf.exists(base):
-        return None
-    else:
-        conf.set_level(base)
-
-    # Service can be disabled by user
-    if conf.exists(['disable']):
-        mdns['disabled'] = True
-        return mdns
-
-    # Interface to repeat mDNS advertisements
-    if conf.exists(['interface']):
-        mdns['interfaces'] = conf.return_values(['interface'])
-
+    mdns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return mdns
 
 def verify(mdns):
-    if mdns is None:
+    if not mdns:
         return None
 
-    if mdns['disabled']:
+    if 'disable' in mdns:
         return None
 
     # We need at least two interfaces to repeat mDNS advertisments
-    if len(mdns['interfaces']) < 2:
+    if 'interface' not in mdns or len(mdns['interface']) < 2:
         raise ConfigError('mDNS repeater requires at least 2 configured interfaces!')
 
     # For mdns-repeater to work it is essential that the interfaces has
     # an IPv4 address assigned
-    for interface in mdns['interfaces']:
-        if AF_INET in ifaddresses(interface).keys():
-            if len(ifaddresses(interface)[AF_INET]) < 1:
-                raise ConfigError('mDNS repeater requires an IPv6 address configured on interface %s!'.format(interface))
+    for interface in mdns['interface']:
+        if interface not in interfaces():
+            raise ConfigError(f'Interface "{interface}" does not exist!')
+
+        if AF_INET not in ifaddresses(interface):
+            raise ConfigError('mDNS repeater requires an IPv4 address to be '
+                                  f'configured on interface "{interface}"')
 
     return None
 
 def generate(mdns):
-    if mdns is None:
+    if not mdns:
         return None
 
-    if mdns['disabled']:
+    if 'disable' in mdns:
         print('Warning: mDNS repeater will be deactivated because it is disabled')
         return None
 
@@ -87,7 +69,7 @@ def generate(mdns):
     return None
 
 def apply(mdns):
-    if (mdns is None) or mdns['disabled']:
+    if not mdns or 'disable' in mdns:
         call('systemctl stop mdns-repeater.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
