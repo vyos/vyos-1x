@@ -954,6 +954,15 @@ class Interface(Control):
             if mac:
                 self.set_mac(mac)
 
+        # Manage IPv6 link-local addresses
+        tmp = jmespath.search('ipv6.address.no_default_link_local', config)
+        # we must check explicitly for None type as if the key is set we will
+        # get an empty dict (<class 'dict'>)
+        if tmp is not None:
+            self.del_ipv6_eui64_address('fe80::/64')
+        else:
+            self.add_ipv6_eui64_address('fe80::/64')
+
         # Add IPv6 EUI-based addresses
         tmp = jmespath.search('ipv6.address.eui64', config)
         if tmp:
