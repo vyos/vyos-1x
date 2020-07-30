@@ -362,10 +362,10 @@ class BondIf(Interface):
             value = jmespath.search('member.interface', config)
             if value:
                 for interface in value:
-                    # if we've come here we already verified the interface does
-                    # not have an addresses configured so just flush any
-                    # remaining ones
-                    cmd(f'ip addr flush dev "{interface}"')
+                    # if we've come here we already verified the interface
+                    # does not have an addresses configured so just flush
+                    # any remaining ones
+                    self.flush_addrs(interface)
                     self.add_port(interface)
 
         # Primary device interface - must be set after 'mode'

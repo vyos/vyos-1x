@@ -237,9 +237,10 @@ class BridgeIf(Interface):
         tmp = jmespath.search('member.interface', config)
         if tmp:
             for interface, interface_config in tmp.items():
-                # if we've come here we already verified the interface doesn't
-                # have addresses configured so just flush any remaining ones
-                cmd(f'ip addr flush dev "{interface}"')
+                # if we've come here we already verified the interface
+                # does not have an addresses configured so just flush
+                # any remaining ones
+                self.flush_addrs(interface)
                 # enslave interface port to bridge
                 self.add_port(interface)
 
