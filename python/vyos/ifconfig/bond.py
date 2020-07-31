@@ -365,7 +365,7 @@ class BondIf(Interface):
                     # if we've come here we already verified the interface
                     # does not have an addresses configured so just flush
                     # any remaining ones
-                    self.flush_addrs(interface)
+                    Interface(interface).flush_addrs()
                     self.add_port(interface)
 
         # Primary device interface - must be set after 'mode'
