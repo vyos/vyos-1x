@@ -24,27 +24,35 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         super().setUp()
 
+        self._test_ipv6 = True
+
         self._base_path = ['interfaces', 'bridge']
         self._interfaces = ['br0']
 
-    def test_add_remove_member(self):
-        members = []
+        self._members = []
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
-            members = os.environ['TEST_ETH'].split()
+            self._members = os.environ['TEST_ETH'].split()
         else:
             for tmp in Section.interfaces("ethernet"):
-                if not '.' in tmp: members.append(tmp)
+                if not '.' in tmp:
+                    self._members.append(tmp)
 
-        for intf in self._interfaces:
-            base = self._base_path + [intf]
+        self._options['br0'] = []
+        for member in self._members:
+            self._options['br0'].append(f'member interface {member}')
+
+    def test_add_remove_member(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
             self.session.set(base + ['stp'])
+            self.session.set(base + ['address', '192.0.2.1/24'])
 
             cost = 1000
             priority = 10
             # assign members to bridge interface
-            for member in members:
+            for member in self._members:
                 base_member = base + ['member', 'interface', member]
                 self.session.set(base_member + ['cost', str(cost)])
                 self.session.set(base_member + ['priority', str(priority)])
@@ -53,8 +61,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-        for intf in self._interfaces:
-            self.session.delete(self._base_path + [intf, 'member'])
+        for interface in self._interfaces:
+            self.session.delete(self._base_path + [interface, 'member'])
 
         self.session.commit()
 

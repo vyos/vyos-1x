@@ -25,38 +25,37 @@ from vyos.util import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-         super().setUp()
+        super().setUp()
 
-         self._base_path = ['interfaces', 'bonding']
-         self._interfaces = ['bond0']
-         self._test_mtu = True
-         self._test_vlan = True
-         self._test_qinq = True
+        self._base_path = ['interfaces', 'bonding']
+        self._interfaces = ['bond0']
+        self._test_mtu = True
+        self._test_vlan = True
+        self._test_qinq = True
+        self._test_ipv6 = True
 
-    def test_add_member(self):
-        members = []
+        self._members = []
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
-            members = os.environ['TEST_ETH'].split()
+            self._members = os.environ['TEST_ETH'].split()
         else:
             for tmp in Section.interfaces("ethernet"):
                 if not '.' in tmp:
-                    members.append(tmp)
+                    self._members.append(tmp)
 
-        for interface in self._interfaces:
-            base = self._base_path + [interface]
-            for member in members:
-                # We can not enslave an interface when there is an address
-                # assigned - take care here - or find them dynamically if a user
-                # runs vyos-smoketest on his production device?
-                self.session.set(base + ['member', 'interface', member])
+        self._options['bond0'] = []
+        for member in self._members:
+            self._options['bond0'].append(f'member interface {member}')
 
-        self.session.commit()
+
+    def test_add_address_single(self):
+        """ derived method to check if member interfaces are enslaved properly """
+        super().test_add_address_single()
 
         for interface in self._interfaces:
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
-            self.assertListEqual(slaves, members)
+            self.assertListEqual(slaves, self._members)
 
 if __name__ == '__main__':
     unittest.main()

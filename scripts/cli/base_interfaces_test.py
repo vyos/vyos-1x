@@ -15,11 +15,12 @@
 import os
 import unittest
 
-from vyos.configsession import ConfigSession
 from netifaces import ifaddresses, AF_INET, AF_INET6
-from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
+
+from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
 from vyos.util import read_file
+from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
@@ -27,6 +28,7 @@ class BasicInterfaceTest:
         _test_mtu = False
         _test_vlan = False
         _test_qinq = False
+        _test_ipv6 = False
         _base_path = []
 
         _options = {}
@@ -47,12 +49,14 @@ class BasicInterfaceTest:
         def tearDown(self):
             # we should not remove ethernet from the overall CLI
             if 'ethernet' in self._base_path:
-                for intf in self._interfaces:
+                for interface in self._interfaces:
                     # when using a dedicated interface to test via TEST_ETH environment
                     # variable only this one will be cleared in the end - usable to test
                     # ethernet interfaces via SSH
-                    self.session.delete(self._base_path + [intf])
-                    self.session.set(self._base_path + [intf])
+                    self.session.delete(self._base_path + [interface])
+                    self.session.set(self._base_path + [interface, 'duplex', 'auto'])
+                    self.session.set(self._base_path + [interface, 'speed', 'auto'])
+                    self.session.set(self._base_path + [interface, 'smp-affinity', 'auto'])
             else:
                 self.session.delete(self._base_path)
 
@@ -116,6 +120,34 @@ class BasicInterfaceTest:
                             continue
 
                         self.assertTrue(is_intf_addr_assigned(intf, addr['addr']))
+
+        def test_ipv6_link_local(self):
+            """ Common function for IPv6 link-local address assignemnts """
+            if not self._test_ipv6:
+                return None
+
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(base + option.split())
+
+            # after commit we must have an IPv6 link-local address
+            self.session.commit()
+
+            for interface in self._interfaces:
+                for addr in ifaddresses(interface)[AF_INET6]:
+                    self.assertTrue(is_ipv6_link_local(addr['addr']))
+
+            # disable IPv6 link-local address assignment
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                self.session.set(base + ['ipv6', 'address', 'no-default-link-local'])
+
+            # after commit we must have no IPv6 link-local address
+            self.session.commit()
+
+            for interface in self._interfaces:
+                self.assertTrue(AF_INET6 not in ifaddresses(interface))
 
         def _mtu_test(self, intf):
             """ helper function to verify MTU size """
