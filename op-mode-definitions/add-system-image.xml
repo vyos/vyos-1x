@@ -14,8 +14,32 @@
                   <list>/path/to/vyos-image.iso http://example.com/vyos-image.iso</list>
               </completionHelp>
             </properties>
-            <command>sudo ${vyatta_sbindir}/install-image --url "$4"</command>
+            <command>sudo ${vyatta_sbindir}/install-image --url "${4}"</command>
             <children>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Download image via specified VRF</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyatta_sbindir}/install-image --url "${4}" --vrf "${6}"</command>
+                <children>
+                  <tagNode name="username">
+                    <properties>
+                      <help>Username for authentication</help>
+                    </properties>
+                    <children>
+                      <tagNode name="password">
+                        <properties>
+                          <help>Password to use with authentication</help>
+                        </properties>
+                        <command>sudo ${vyatta_sbindir}/install-image --url "${4}" --vrf "${6}" --username "${8}" --password "${10}"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
               <tagNode name="username">
                 <properties>
                   <help>Username for authentication</help>
@@ -25,7 +49,7 @@
                     <properties>
                       <help>Password to use with authentication</help>
                     </properties>
-                    <command>sudo ${vyatta_sbindir}/install-image --url "$4" --username "$6" --password "$8"</command>
+                    <command>sudo ${vyatta_sbindir}/install-image --url "${4}" --username "${6}" --password "${8}"</command>
                   </tagNode>
                 </children>
               </tagNode>
