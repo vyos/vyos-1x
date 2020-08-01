@@ -88,6 +88,7 @@ op_mode_definitions:
 	find $(CURDIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
 	# XXX: delete top level op mode node.def's that now live in other packages
+	rm -f $(OP_TMPL_DIR)/add/node.def
 	rm -f $(OP_TMPL_DIR)/clear/node.def
 	rm -f $(OP_TMPL_DIR)/clear/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/set/node.def
