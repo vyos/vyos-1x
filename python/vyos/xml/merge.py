@@ -19,8 +19,34 @@ from xml.dom import minidom
 from vyos.xml.files import listing
 from vyos.xml.files import include
 
+# based on:
+# https://bugs.python.org/issue27899
+# but we do not want to change '/&apos;
 
-def _from_folder(folder):
+def with_patched_elementree(function):
+    def _escape_cdata(text):
+        try:
+            return text \
+                .replace("&", "&amp;") \
+                .replace("<", "&lt;") \
+                .replace(">", "&gt;")
+        except (TypeError, AttributeError):
+            from xml.etree.ElementTree import _raise_serialization_error
+            _raise_serialization_error(text)
+
+    def inner(folder):
+        escape_cdata = ElementTree._escape_cdata
+        try:
+            ElementTree._escape_cdata = _escape_cdata
+            return function(folder)
+        finally:
+            ElementTree._escape_cdata = escape_cdata
+
+    return inner
+
+
+@with_patched_elementree
+def from_folder(folder):
     tree = ElementTree.fromstring(
         '<?xml version="1.0"?>'
         '<interfaceDefinition>'
@@ -47,30 +73,3 @@ def _from_folder(folder):
     pretty = xmldom.toprettyxml(indent='  ', newl='\n')
 
     return '\n'.join(_ for _ in pretty.split('\n') if _.strip())
-
-
-# based on:
-# https://bugs.python.org/issue27899
-# but we do not want to change '/&apos;
-
-def _monkey_patched(function):
-    def _escape_cdata(text):
-        try:
-            return text \
-                .replace("&", "&amp;") \
-                .replace("<", "&lt;") \
-                .replace(">", "&gt;")
-        except (TypeError, AttributeError):
-            from xml.etree.ElementTree import _raise_serialization_error
-            _raise_serialization_error(text)
-
-    escape_cdata = ElementTree._escape_cdata
-    try:
-        ElementTree._escape_cdata = _escape_cdata
-        return function()
-    finally:
-        ElementTree._escape_cdata = escape_cdata
-
-
-def from_folder(folder):
-    return _monkey_patched(lambda: _from_folder(folder))
