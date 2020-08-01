@@ -14,7 +14,7 @@
                   <list>/path/to/vyos-image.iso http://example.com/vyos-image.iso</list>
               </completionHelp>
             </properties>
-            <command>sudo ${vyatta_sbindir}/install-image "$4"</command>
+            <command>sudo ${vyatta_sbindir}/install-image --url "$4"</command>
             <children>
               <tagNode name="username">
                 <properties>
@@ -25,7 +25,7 @@
                     <properties>
                       <help>Password to use with authentication</help>
                     </properties>
-                    <command>sudo ${vyatta_sbindir}/install-image "$4" "$6" "$8"</command>
+                    <command>sudo ${vyatta_sbindir}/install-image --url "$4" --username "$6" --password "$8"</command>
                   </tagNode>
                 </children>
               </tagNode>
