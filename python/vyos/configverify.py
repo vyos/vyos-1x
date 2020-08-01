@@ -69,7 +69,7 @@ def verify_interface_exists(config):
     """
     from netifaces import interfaces
     if not config['ifname'] in interfaces():
-        raise ConfigError(f'Interface "{ifname}" does not exist!'
+        raise ConfigError('Interface "{ifname}" does not exist!'
                           .format(**config))
 
 def verify_source_interface(config):
