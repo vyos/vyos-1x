@@ -66,7 +66,7 @@ chap-secrets={{ chap_secrets_file }}
 [radius]
 verbose=1
 {% for r in radius_server %}
-server={{ r.server }},{{ r.key }},auth-port={{ r.port }},req-limit=0,fail-time={{ r.fail_time }}
+server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
 {% endfor -%}
 
 acct-timeout={{ radius_acct_tmo }}
