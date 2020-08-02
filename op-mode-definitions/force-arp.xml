@@ -27,13 +27,13 @@
                     <properties>
                       <help>Send gratuitous ARP reply for specified address</help>
                     </properties>
-                    <command>sudo arping -I $5 -c 1 -A $7</command>
+                    <command>sudo /usr/bin/arping -I $5 -c 1 -A $7</command>
                     <children>
                       <tagNode name="count">
                         <properties>
                           <help>Send specified number of ARP replies</help>
                         </properties>
-                        <command>sudo arping -I $5 -c $9 -A $7</command>
+                        <command>sudo /usr/bin/arping -I $5 -c $9 -A $7</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -58,13 +58,13 @@
                     <properties>
                       <help>Send gratuitous ARP request for specified address</help>
                     </properties>
-                    <command>sudo arping -I $5 -c 1 -U $7</command>
+                    <command>sudo /usr/bin/arping -I $5 -c 1 -U $7</command>
                     <children>
                       <tagNode name="count">
                         <properties>
                           <help>Send specified number of ARP requests</help>
                         </properties>
-                        <command>sudo arping -I $5 -c $9 -U $7</command>
+                        <command>sudo /usr/bin/arping -I $5 -c $9 -U $7</command>
                       </tagNode>
                     </children>
                   </tagNode>
