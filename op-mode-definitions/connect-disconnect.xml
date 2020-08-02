@@ -2,9 +2,18 @@
 <interfaceDefinition>
   <node name="connect">
     <properties>
-      <help>Establish a connection</help>
+      <help>Establish connection</help>
     </properties>
     <children>
+      <tagNode name="console">
+        <properties>
+          <help>Connect to device attached to serial console server</help>
+          <completionHelp>
+            <path>service console-server device</path>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/console "$3"</command>
+      </tagNode>
       <tagNode name="interface">
         <properties>
           <help>Bring up a connection-oriented network interface</help>
