@@ -824,15 +824,7 @@ class Interface(Control):
 
         # DHCP options
         if 'dhcp_options' in config:
-            dhcp_options = config.get('dhcp_options')
-            if 'client_id' in dhcp_options:
-                self.dhcp.v4.options['client_id'] = dhcp_options.get('client_id')
-
-            if 'host_name' in dhcp_options:
-                self.dhcp.v4.options['hostname'] = dhcp_options.get('host_name')
-
-            if 'vendor_class_id' in dhcp_options:
-                self.dhcp.v4.options['vendor_class_id'] = dhcp_options.get('vendor_class_id')
+            self.dhcp.v4.options = config
 
         # DHCPv6 options
         if 'dhcpv6_options' in config:
