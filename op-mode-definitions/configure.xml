@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="configure">
+    <properties>
+      <help>Enter configure mode</help>
+    </properties>
+    <command>${vyos_op_scripts_dir}/enter_config_mode.sh</command>
+  </node>
+</interfaceDefinition>
