@@ -22,7 +22,7 @@ from psutil import process_iter
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
 
-SSHD_CONF = '/etc/ssh/sshd_config'
+SSHD_CONF = '/run/ssh/sshd_config'
 base_path = ['service', 'ssh']
 
 def get_config_value(key):
