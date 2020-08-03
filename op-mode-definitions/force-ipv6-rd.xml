@@ -4,26 +4,26 @@
     <children>
       <node name="ipv6-rd">
         <properties>
-          <help>IPv6 Router Discovery tool</help>
+          <help>IPv6 Router Discovery</help>
         </properties>
         <children>
           <tagNode name="interface">
             <properties>
-              <help>IPv6 Router Discovery tool on a specific interface</help>
+              <help>IPv6 Router Discovery on specified interface</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
             </properties>
-            <command>rdisc6 $4</command>
+            <command>/usr/bin/rdisc6 "$4"</command>
             <children>
               <tagNode name="address">
                 <properties>
-                  <help>The IP address of the target</help>
+                  <help>IPv6 address of target</help>
                   <completionHelp>
                     <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>rdisc6 $6 $4 -m</command>
+                <command>/usr/bin/rdisc6 -m "$6" "$4"</command>
               </tagNode>
             </children>
           </tagNode>
