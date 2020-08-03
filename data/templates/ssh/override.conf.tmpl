@@ -2,9 +2,10 @@
 [Unit]
 StartLimitIntervalSec=0
 After=vyos-router.service
+ConditionPathExists={{config_file}}
 
 [Service]
 ExecStart=
-ExecStart={{vrf_command}}/usr/sbin/sshd -D $SSHD_OPTS
+ExecStart={{vrf_command}}/usr/sbin/sshd -f {{config_file}} -D $SSHD_OPTS
 RestartSec=10
 
