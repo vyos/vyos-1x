@@ -15,6 +15,7 @@
 
 import os
 
+from vyos.configverify import verify_dhcpv6
 from vyos.dicts import FixedDict
 from vyos.ifconfig.control import Control
 from vyos.template import render
@@ -82,39 +83,31 @@ class _DHCPv4 (Control):
 class _DHCPv6 (Control):
     def __init__(self, ifname):
         super().__init__()
-        self.options = FixedDict(**{
-            'ifname': ifname,
-            'dhcpv6_prm_only': False,
-            'dhcpv6_temporary': False,
-            'dhcpv6_pd_interfaces': [],
-            'dhcpv6_pd_length': ''
-        })
-        self._conf_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        self.options = {'ifname' : ifname}
+        self._config = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
 
     def set(self):
         """
-        Configure interface as DHCPv6 client. The dhclient binary is automatically
-        started in background!
+        Configure interface as DHCPv6 client. The client is automatically
+        started in background when address is configured as DHCP.
 
         Example:
-
         >>> from vyos.ifconfig import Interface
         >>> j = Interface('eth0')
         >>> j.dhcp.v6.set()
         """
 
-        # better save then sorry .. should be checked in interface script
-        # but if you missed it we are safe!
-        if self.options['dhcpv6_prm_only'] and self.options['dhcpv6_temporary']:
-            raise Exception(
-                'DHCPv6 temporary and parameters-only options are mutually exclusive!')
+        # better save then sorry .. should be checked in interface script but if you
+        # missed it we are safe!
+        verify_dhcpv6(self.options)
 
-        render(self._conf_file, 'dhcp-client/ipv6.tmpl', self.options, trim_blocks=True)
-        return self._cmd('systemctl restart dhcp6c@{ifname}.service'.format(**self.options))
+        render(self._config, 'dhcp-client/ipv6.tmpl', self.options, trim_blocks=True)
+        return self._cmd('systemctl restart dhcp6c@{ifname}.service'.format(
+            **self.options))
 
     def delete(self):
         """
-        De-configure interface as DHCPv6 clinet. All auto generated files like
+        De-configure interface as DHCPv6 client. All auto generated files like
         pid, config and lease will be removed.
 
         Example:
@@ -126,9 +119,8 @@ class _DHCPv6 (Control):
         self._cmd('systemctl stop dhcp6c@{ifname}.service'.format(**self.options))
 
         # cleanup old config files
-        if os.path.isfile(self._conf_file):
-            os.remove(self._conf_file)
-
+        if os.path.isfile(self._config):
+            os.remove(self._config)
 
 class DHCP(object):
     def __init__(self, ifname):

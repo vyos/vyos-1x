@@ -108,7 +108,7 @@ def generate(pppoe):
     if tmp and len(tmp) > 0:
         # ipv6.tmpl relies on ifname - this should be made consitent in the
         # future better then double key-ing the same value
-        render(config_wide_dhcp6c, 'dhcp-client/ipv6_new.tmpl', pppoe, trim_blocks=True)
+        render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
 
     return None
 

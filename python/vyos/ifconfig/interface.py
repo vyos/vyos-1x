@@ -822,6 +822,22 @@ class Interface(Control):
         value = '2' if 'disable_link_detect' in config else '1'
         self.set_link_detect(value)
 
+        # DHCP options
+        if 'dhcp_options' in config:
+            dhcp_options = config.get('dhcp_options')
+            if 'client_id' in dhcp_options:
+                self.dhcp.v4.options['client_id'] = dhcp_options.get('client_id')
+
+            if 'host_name' in dhcp_options:
+                self.dhcp.v4.options['hostname'] = dhcp_options.get('host_name')
+
+            if 'vendor_class_id' in dhcp_options:
+                self.dhcp.v4.options['vendor_class_id'] = dhcp_options.get('vendor_class_id')
+
+        # DHCPv6 options
+        if 'dhcpv6_options' in config:
+            self.dhcp.v6.options = config
+
         # Configure assigned interface IP addresses. No longer
         # configured addresses will be removed first
         new_addr = config.get('address', [])
@@ -848,35 +864,6 @@ class Interface(Control):
             # also drop the interface out of a bridge or bond - thus this is
             # checked before
             self.set_vrf(config.get('vrf', ''))
-
-        # DHCP options
-        if 'dhcp_options' in config:
-            dhcp_options = config.get('dhcp_options')
-            if 'client_id' in dhcp_options:
-                self.dhcp.v4.options['client_id'] = dhcp_options.get('client_id')
-
-            if 'host_name' in dhcp_options:
-                self.dhcp.v4.options['hostname'] = dhcp_options.get('host_name')
-
-            if 'vendor_class_id' in dhcp_options:
-                self.dhcp.v4.options['vendor_class_id'] = dhcp_options.get('vendor_class_id')
-
-        # DHCPv6 options
-        if 'dhcpv6_options' in config:
-            dhcpv6_options = config.get('dhcpv6_options')
-            if 'parameters_only' in dhcpv6_options:
-                self.dhcp.v6.options['dhcpv6_prm_only'] = True
-
-            if 'temporary' in dhcpv6_options:
-                self.dhcp.v6.options['dhcpv6_temporary'] = True
-
-            if 'prefix_delegation' in dhcpv6_options:
-                prefix_delegation = dhcpv6_options.get('prefix_delegation')
-                if 'length' in prefix_delegation:
-                    self.dhcp.v6.options['dhcpv6_pd_length'] = prefix_delegation.get('length')
-
-                if 'interface' in prefix_delegation:
-                    self.dhcp.v6.options['dhcpv6_pd_interfaces'] = prefix_delegation.get('interface')
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = jmespath.search('ip.arp_cache_timeout', config)
@@ -982,9 +969,11 @@ class Interface(Control):
             self.del_vlan(vif_s_id)
 
         # create/update 802.1ad (Q-in-Q VLANs)
+        ifname = config['ifname']
         for vif_s_id, vif_s in config.get('vif_s', {}).items():
             tmp=get_ethertype(vif_s.get('ethertype', '0x88A8'))
             s_vlan = self.add_vlan(vif_s_id, ethertype=tmp)
+            vif_s['ifname'] = f'{ifname}.{vif_s_id}'
             s_vlan.update(vif_s)
 
             # remove no longer required client VLAN (vif-c)
@@ -994,6 +983,7 @@ class Interface(Control):
             # create/update client VLAN (vif-c) interface
             for vif_c_id, vif_c in vif_s.get('vif_c', {}).items():
                 c_vlan = s_vlan.add_vlan(vif_c_id)
+                vif_c['ifname'] = f'{ifname}.{vif_s_id}.{vif_c_id}'
                 c_vlan.update(vif_c)
 
         # remove no longer required 802.1q VLAN interfaces
@@ -1003,4 +993,5 @@ class Interface(Control):
         # create/update 802.1q VLAN interfaces
         for vif_id, vif in config.get('vif', {}).items():
             vlan = self.add_vlan(vif_id)
+            vif['ifname'] = f'{ifname}.{vif_id}'
             vlan.update(vif)
