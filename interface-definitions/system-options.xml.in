@@ -46,10 +46,18 @@
            </leafNode>
            <node name="http-client">
              <properties>
-               <help>Global options used for HTTP based commands</help>
+               <help>Global options used for HTTP client</help>
              </properties>
              <children>
                #include <include/source-interface.xml.i>
+               #include <include/source-address-ipv4-ipv6.xml.i>
+             </children>
+           </node>
+           <node name="ssh-client">
+             <properties>
+               <help>Global options used for SSH client</help>
+             </properties>
+             <children>
                #include <include/source-address-ipv4-ipv6.xml.i>
              </children>
            </node>
