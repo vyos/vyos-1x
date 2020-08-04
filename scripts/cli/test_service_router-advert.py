@@ -47,6 +47,7 @@ class TestServiceRADVD(unittest.TestCase):
     def test_single(self):
         self.session.set(base_path + ['prefix', '::/64', 'no-on-link-flag'])
         self.session.set(base_path + ['prefix', '::/64', 'no-autonomous-flag'])
+        self.session.set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
         self.session.set(base_path + ['dnssl', '2001:db8::1234'])
         self.session.set(base_path + ['other-config-flag'])
 
@@ -80,7 +81,7 @@ class TestServiceRADVD(unittest.TestCase):
 
         # this is a default value
         tmp = get_config_value('AdvValidLifetime')
-        self.assertEqual(tmp, '2592000')
+        self.assertEqual(tmp, 'infinity')
 
         # this is a default value
         tmp = get_config_value('AdvPreferredLifetime')
