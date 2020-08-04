@@ -4,14 +4,14 @@ timeout 60;
 retry 300;
 
 interface "{{ ifname }}" {
-	send host-name "{{ hostname }}";
-	{% if client_id -%}
-	send dhcp-client-identifier "{{ client_id }}";
-	{% endif -%}
-	{% if vendor_class_id -%}
-	send vendor-class-identifier "{{ vendor_class_id }}";
-	{% endif -%}
-	request subnet-mask, broadcast-address, routers, domain-name-servers,
-		rfc3442-classless-static-routes, domain-name, interface-mtu;
-	require subnet-mask;
+    send host-name "{{ dhcp_options.host_name }}";
+{% if dhcp_options.client_id is defined and dhcp_options.client_id is not none %}
+    send dhcp-client-identifier "{{ dhcp_options.client_id }}";
+{% endif %}
+{% if dhcp_options.vendor_class_id is defined and dhcp_options.vendor_class_id is not none %}
+    send vendor-class-identifier "{{ dhcp_options.vendor_class_id }}";
+{% endif %}
+    request subnet-mask, broadcast-address, routers, domain-name-servers,
+        rfc3442-classless-static-routes, domain-name, interface-mtu;
+    require subnet-mask;
 }

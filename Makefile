@@ -105,6 +105,10 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
 
+	# XXX: ping must be able to recursivly call itself as the
+	# options are provided from the script itself
+	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
+
 .PHONY: component_versions
 .ONESHELL:
 component_versions: $(BUILD_DIR) $(obj)

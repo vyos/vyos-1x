@@ -17,7 +17,7 @@
                 <properties>
                   <help>Show LLDP neighbor details</help>
                 </properties>
-                <command>/usr/sbin/lldpctl -f plain</command>
+                <command>${vyos_op_scripts_dir}/lldp_op.py --detail</command>
               </node>
               <tagNode name="interface">
                 <properties>

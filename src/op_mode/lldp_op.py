@@ -14,19 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import argparse
 import jinja2
 
-from xml.dom import minidom
 from sys import exit
 from tabulate import tabulate
+from xml.dom import minidom
 
-from vyos.util import popen
+from vyos.util import cmd
 from vyos.config import Config
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--all", action="store_true", help="Show LLDP neighbors on all interfaces")
+parser.add_argument("-d", "--detail", action="store_true", help="Show detailes LLDP neighbor information on all interfaces")
 parser.add_argument("-i", "--interface", action="store", help="Show LLDP neighbors on specific interface")
 
 # Please be careful if you edit the template.
@@ -40,10 +40,8 @@ Device ID                 Local     Proto  Cap   Platform             Port ID
 {% endfor -%}
 """
 
-def _get_neighbors():
-    command = '/usr/sbin/lldpcli -f xml show neighbors'
-    out,_ = popen(command)
-    return out
+def get_neighbors():
+    return cmd('/usr/sbin/lldpcli -f xml show neighbors')
 
 def extract_neighbor(neighbor):
     """
@@ -148,12 +146,17 @@ if __name__ == '__main__':
         exit(0)
 
     if args.all:
-       neighbors = minidom.parseString(_get_neighbors())
+       neighbors = minidom.parseString(get_neighbors())
        for neighbor in neighbors.getElementsByTagName('interface'):
            tmp['neighbors'].append( extract_neighbor(neighbor) )
 
+    elif args.detail:
+        out = cmd('/usr/sbin/lldpctl -f plain')
+        print(out)
+        exit(0)
+
     elif args.interface:
-        neighbors = minidom.parseString(_get_neighbors())
+        neighbors = minidom.parseString(get_neighbors())
         for neighbor in neighbors.getElementsByTagName('interface'):
             # check if neighbor appeared on proper interface
             if neighbor.getAttribute('name') == args.interface:
