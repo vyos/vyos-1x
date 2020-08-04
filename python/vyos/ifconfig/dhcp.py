@@ -103,7 +103,10 @@ class _DHCPv6 (Control):
 
         render(self._config, 'dhcp-client/ipv6.tmpl',
                self.options, trim_blocks=True)
-        return self._cmd('systemctl restart dhcp6c@{ifname}.service'.format(
+
+        # We must ignore any return codes. This is required to enable DHCPv6-PD
+        # for interfaces which are yet not up and running.
+        return self._popen('systemctl restart dhcp6c@{ifname}.service'.format(
             **self.options))
 
     def delete(self):
