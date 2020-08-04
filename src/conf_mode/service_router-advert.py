@@ -73,7 +73,15 @@ def verify(rtradv):
         if 'prefix' in interface:
             for prefix in interface['prefix']:
                 prefix = interface['prefix'][prefix]
-                if not (int(prefix['valid_lifetime']) > int(prefix['preferred_lifetime'])):
+                valid_lifetime = prefix['valid_lifetime']
+                if valid_lifetime == 'infinity':
+                    valid_lifetime = 4294967295
+
+                preferred_lifetime = prefix['preferred_lifetime']
+                if preferred_lifetime == 'infinity':
+                    preferred_lifetime = 4294967295
+
+                if not (int(valid_lifetime) > int(preferred_lifetime)):
                     raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
 
     return None
