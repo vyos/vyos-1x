@@ -30,6 +30,7 @@
             <properties>
               <help>Route tracing and port detection using TCP</help>
             </properties>
+            <command>sudo /usr/bin/tcptraceroute "$3" </command>
             <children>
               <tagNode name="port">
                 <properties>
@@ -57,6 +58,7 @@
             <properties>
               <help>Use TCP/IPv6 packets to perform a traceroute</help>
             </properties>
+            <command>sudo /usr/bin/tcptraceroute6 "$3" </command>
             <children>
               <tagNode name="port">
                 <properties>
@@ -103,6 +105,7 @@
                 <properties>
                   <help>Route tracing and port detection using TCP</help>
                 </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute "$5" </command>
                 <children>
                   <tagNode name="port">
                     <properties>
@@ -130,6 +133,7 @@
                 <properties>
                   <help>Use TCP/IPv6 packets to perform a traceroute</help>
                 </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute6 "$5" </command>
                 <children>
                   <tagNode name="port">
                     <properties>
