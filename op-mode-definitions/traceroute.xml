@@ -98,6 +98,24 @@
               </completionHelp>
             </properties>
             <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/traceroute -4 "$5"</command>
+            <children>
+              <node name="tcp">
+                <properties>
+                  <help>Route tracing and port detection using TCP</help>
+                </properties>
+                <children>
+                  <tagNode name="port">
+                    <properties>
+                      <help>Perform operations on TCP ports</help>
+                      <completionHelp>
+                        <list>0-65535</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute "$5" $8</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
           </tagNode>
           <tagNode name="ipv6">
             <properties>
@@ -107,6 +125,24 @@
               </completionHelp>
             </properties>
             <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/traceroute -6 "$5"</command>
+            <children>
+              <node name="tcp">
+                <properties>
+                  <help>Use TCP/IPv6 packets to perform a traceroute</help>
+                </properties>
+                <children>
+                  <tagNode name="port">
+                    <properties>
+                      <help>Perform operations on TCP ports</help>
+                      <completionHelp>
+                        <list>0-65535</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute6 "$5" $8</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
           </tagNode>
         </children>
       </tagNode>
