@@ -47,7 +47,9 @@ default_config_data = {
 
 hostsd_tag = 'system'
 
-def get_config(conf):
+def get_config():
+    conf = Config()
+
     hosts = copy.deepcopy(default_config_data)
 
     hosts['hostname'] = conf.return_value("system host-name")
@@ -77,7 +79,7 @@ def get_config(conf):
     return hosts
 
 
-def verify(conf, hosts):
+def verify(hosts):
     if hosts is None:
         return None
 
@@ -168,9 +170,8 @@ def apply(config):
 
 if __name__ == '__main__':
     try:
-        conf = Config()
-        c = get_config(conf)
-        verify(conf, c)
+        c = get_config()
+        verify(c)
         generate(c)
         apply(c)
     except ConfigError as e:
