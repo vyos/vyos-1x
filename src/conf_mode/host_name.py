@@ -18,20 +18,16 @@
 conf-mode script for 'system host-name' and 'system domain-name'.
 """
 
-import os
 import re
 import sys
 import copy
-import glob
-import argparse
-import jinja2
 
 import vyos.util
 import vyos.hostsd_client
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd, call, run, process_named_running
+from vyos.util import cmd, call, process_named_running
 
 from vyos import airbag
 airbag.enable()
