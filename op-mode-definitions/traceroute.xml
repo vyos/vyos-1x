@@ -34,7 +34,7 @@
             <children>
               <tagNode name="port">
                 <properties>
-                  <help>Perform operations on TCP ports</help>
+                  <help>TCP port to connect to for path tracing</help>
                   <completionHelp>
                     <list>0-65535</list>
                   </completionHelp>
@@ -62,7 +62,7 @@
             <children>
               <tagNode name="port">
                 <properties>
-                  <help>Perform operations on TCP ports</help>
+                  <help>TCP port to connect to for path tracing</help>
                   <completionHelp>
                     <list>0-65535</list>
                   </completionHelp>
@@ -109,7 +109,7 @@
                 <children>
                   <tagNode name="port">
                     <properties>
-                      <help>Perform operations on TCP ports</help>
+                      <help>TCP port to connect to for path tracing</help>
                       <completionHelp>
                         <list>0-65535</list>
                       </completionHelp>
@@ -137,7 +137,7 @@
                 <children>
                   <tagNode name="port">
                     <properties>
-                      <help>Perform operations on TCP ports</help>
+                      <help>TCP port to connect to for path tracing</help>
                       <completionHelp>
                         <list>0-65535</list>
                       </completionHelp>
