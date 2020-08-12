@@ -31,6 +31,8 @@ from netifaces import AF_INET6
 
 from vyos import ConfigError
 from vyos.configdict import list_diff
+from vyos.configdict import dict_merge
+from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
@@ -43,7 +45,6 @@ from vyos.validate import assert_positive
 from vyos.validate import assert_range
 
 from vyos.ifconfig.control import Control
-from vyos.ifconfig.dhcp import DHCP
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
@@ -216,7 +217,6 @@ class Interface(Control):
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
         self.ifname = ifname
-        self.dhcp = DHCP(ifname)
 
         if not self.exists(ifname):
             # Any instance of Interface, such as Interface('eth0')
@@ -722,9 +722,9 @@ class Interface(Control):
 
         # add to interface
         if addr == 'dhcp':
-            self.dhcp.v4.set()
+            self.set_dhcp(True)
         elif addr == 'dhcpv6':
-            self.dhcp.v6.set()
+            self.set_dhcpv6(True)
         elif not is_intf_addr_assigned(self.ifname, addr):
             self._cmd(f'ip addr add "{addr}" '
                     f'{"brd + " if addr_is_v4 else ""}dev "{self.ifname}"')
@@ -763,9 +763,9 @@ class Interface(Control):
 
         # remove from interface
         if addr == 'dhcp':
-            self.dhcp.v4.delete()
+            self.set_dhcp(False)
         elif addr == 'dhcpv6':
-            self.dhcp.v6.delete()
+            self.set_dhcpv6(False)
         elif is_intf_addr_assigned(self.ifname, addr):
             self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
         else:
@@ -784,8 +784,8 @@ class Interface(Control):
         Will raise an exception on error.
         """
         # stop DHCP(v6) if running
-        self.dhcp.v4.delete()
-        self.dhcp.v6.delete()
+        self.set_dhcp(False)
+        self.set_dhcpv6(False)
 
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
@@ -809,11 +809,82 @@ class Interface(Control):
 
         return True
 
+    def set_dhcp(self, enable):
+        """
+        Enable/Disable DHCP client on a given interface.
+        """
+        if enable not in [True, False]:
+            raise ValueError()
+
+        ifname = self.ifname
+        config_base = r'/var/lib/dhcp/dhclient'
+        config_file = f'{config_base}_{ifname}.conf'
+        options_file = f'{config_base}_{ifname}.options'
+        pid_file = f'{config_base}_{ifname}.pid'
+        lease_file = f'{config_base}_{ifname}.leases'
+
+        if enable and 'disable' not in self._config:
+            if jmespath.search('dhcp_options.host_name', self._config) == None:
+                # read configured system hostname.
+                # maybe change to vyos hostd client ???
+                hostname = 'vyos'
+                with open('/etc/hostname', 'r') as f:
+                    hostname = f.read().rstrip('\n')
+                    tmp = {'dhcp_options' : { 'host_name' : hostname}}
+                    self._config = dict_merge(tmp, self._config)
+
+            render(options_file, 'dhcp-client/daemon-options.tmpl',
+                   self._config, trim_blocks=True)
+            render(config_file, 'dhcp-client/ipv4.tmpl',
+                   self._config, trim_blocks=True)
+
+            # 'up' check is mandatory b/c even if the interface is A/D, as soon as
+            # the DHCP client is started the interface will be placed in u/u state.
+            # This is not what we intended to do when disabling an interface.
+            return self._cmd(f'systemctl restart dhclient@{ifname}.service')
+        else:
+            self._cmd(f'systemctl stop dhclient@{ifname}.service')
+
+            # cleanup old config files
+            for file in [config_file, options_file, pid_file, lease_file]:
+                if os.path.isfile(file):
+                    os.remove(file)
+
+
+    def set_dhcpv6(self, enable):
+        """
+        Enable/Disable DHCPv6 client on a given interface.
+        """
+        if enable not in [True, False]:
+            raise ValueError()
+
+        ifname = self.ifname
+        config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+
+        if enable and 'disable' not in self._config:
+            render(config_file, 'dhcp-client/ipv6.tmpl',
+                   self._config, trim_blocks=True)
+
+            # We must ignore any return codes. This is required to enable DHCPv6-PD
+            # for interfaces which are yet not up and running.
+            return self._popen(f'systemctl restart dhcp6c@{ifname}.service')
+        else:
+            self._popen(f'systemctl stop dhcp6c@{ifname}.service')
+
+            if os.path.isfile(config_file):
+                os.remove(config_file)
+
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
         on any interface. """
+
+        # Cache the configuration - it will be reused inside e.g. DHCP handler
+        # XXX: maybe pass the option via __init__ in the future and rename this
+        # method to apply()?
+        self._config = config
 
         # Update interface description
         self.set_alias(config.get('description', ''))
@@ -821,14 +892,6 @@ class Interface(Control):
         # Ignore link state changes
         value = '2' if 'disable_link_detect' in config else '1'
         self.set_link_detect(value)
-
-        # DHCP options
-        if 'dhcp_options' in config:
-            self.dhcp.v4.options = config
-
-        # DHCPv6 options
-        if 'dhcpv6_options' in config:
-            self.dhcp.v6.options = config
 
         # Configure assigned interface IP addresses. No longer
         # configured addresses will be removed first
