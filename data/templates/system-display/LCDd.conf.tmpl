@@ -1,0 +1,1500 @@
+### Autogenerted by system-display.py ##
+# LCDd.conf -- configuration file for the LCDproc server daemon LCDd
+#
+# This file contains the configuration for the LCDd server.
+#
+# The format is ini-file-like. It is divided into sections that start at
+# markers that look like [section]. Comments are all line-based comments,
+# and are lines that start with '#' or ';'.
+#
+# The server has a 'central' section named [server]. For the menu there is
+# a section called [menu]. Further each driver has a section which
+# defines how the driver acts.
+#
+# The drivers are activated by specifying them in a driver= line in the
+# server section, like:
+#
+#   Driver=curses
+#
+# This tells LCDd to use the curses driver.
+# The first driver that is loaded and is capable of output defines the
+# size of the display. The default driver to use is curses.
+# If the driver is specified using the -d <driver> command line option,
+# the Driver= options in the config file are ignored.
+#
+# The drivers read their own options from the respective sections.
+
+
+
+## Server section with all kinds of settings for the LCDd server ##
+[server]
+
+# Where can we find the driver modules ?
+# IMPORTANT: Make sure to change this setting to reflect your
+#            specific setup! Otherwise LCDd won't be able to find
+#            the driver modules and will thus not be able to
+#            function properly.
+# NOTE: Always place a slash as last character !
+DriverPath=/usr/lib/x86_64-linux-gnu/lcdproc/
+
+# Tells the server to load the given drivers. Multiple lines can be given.
+# The name of the driver is case sensitive and determines the section
+# where to look for further configuration options of the specific driver
+# as well as the name of the dynamic driver module to load at runtime.
+# The latter one can be changed by giving a File= directive in the
+# driver specific section.
+#
+# The following drivers are supported:
+#   bayrad, CFontz, CFontzPacket, curses, CwLnx, ea65, EyeboxOne, futaba,
+#   g15, glcd, glcdlib, glk, hd44780, icp_a106, imon, imonlcd,, IOWarrior,
+#   irman, joy, lb216, lcdm001, lcterm, linux_input, lirc, lis, MD8800,
+#   mdm166a, ms6931, mtc_s16209x, MtxOrb, mx5000, NoritakeVFD,
+#   Olimex_MOD_LCD1x9, picolcd, pyramid, rawserial, sdeclcd, sed1330,
+#   sed1520, serialPOS, serialVFD, shuttleVFD, sli, stv5730, svga, t6963,
+#   text, tyan, ula200, vlsys_m428, xosd, yard2LCD
+{%- if model == 'sdec' %}
+Driver=sdeclcd
+{%- endif %}
+
+{%- if model == 'ezio' %}
+Driver=hd44780
+{%- endif %}
+
+{%- if model == 'test' %}
+Driver=CFontzPacket
+{%- endif %}
+
+# Tells the driver to bind to the given interface. [default: 127.0.0.1]
+#Bind=127.0.0.1
+
+# Listen on this specified port. [default: 13666]
+#Port=13666
+
+# Sets the reporting level; defaults to warnings and errors only.
+# [default: 2; legal: 0-5]
+#ReportLevel=3
+
+# Should we report to syslog instead of stderr? [default: no; legal: yes, no]
+#ReportToSyslog=yes
+
+# User to run as.  LCDd will drop its root privileges and run as this user
+# instead. [default: nobody]
+User=nobody
+
+# The server will stay in the foreground if set to yes.
+# [default: no, legal: yes, no]
+#Foreground=yes
+
+# Hello message: each entry represents a display line; default: builtin
+Hello="{%- if hello %}{{ hello }}{%- else %}Welcome to VyOS{%- endif %}"
+
+# GoodBye message: each entry represents a display line; default: builtin
+GoodBye="{%- if bye %}{{ bye }}{%- else %}Bye from VyOS{%- endif %}"
+
+# Sets the interval in microseconds for updating the display.
+# [default: 125000 meaning 8Hz]
+#FrameInterval=125000
+
+# Sets the default time in seconds to displays a screen. [default: 4]
+WaitTime={%- if time %}{{ time }}{%- else%}4{%- endif %}
+
+# If set to no, LCDd will start with screen rotation disabled. This has the
+# same effect as if the ToggleRotateKey had been pressed. Rotation will start
+# if the ToggleRotateKey is pressed. Note that this setting does not turn off
+# priority sorting of screens. [default: on; legal: on, off]
+#AutoRotate=off
+
+# If yes, the the serverscreen will be rotated as a usual info screen. If no,
+# it will be a background screen, only visible when no other screens are
+# active. The special value 'blank' is similar to no, but only a blank screen
+# is displayed. [default: on; legal: on, off, blank]
+ServerScreen=no
+
+# Set master backlight setting. If set to 'open' a client may control the
+# backlight for its own screens (only). [default: open; legal: off, open, on]
+#Backlight=open
+
+# Set master heartbeat setting. If set to 'open' a client may control the
+# heartbeat for its own screens (only). [default: open; legal: off, open, on]
+#Heartbeat=open
+
+# set title scrolling speed [default: 10; legal: 0-10]
+#TitleSpeed=10
+
+# The "...Key=" lines define what the server does with keypresses that
+# don't go to any client. The ToggleRotateKey stops rotation of screens, while
+# the PrevScreenKey and NextScreenKey go back / forward one screen (even if
+# rotation is disabled.
+# Assign the key string returned by the driver to the ...Key setting. These
+# are the defaults:
+ToggleRotateKey=Enter
+PrevScreenKey=Left
+NextScreenKey=Right
+#ScrollUpKey=Up
+#ScrollDownKey=Down
+
+## The menu section. The menu is an internal LCDproc client. ##
+[menu]
+# If true the server allows transitions between different client's menus
+# [default: false; legal: true, false]
+#PermissiveGoto=false
+
+# You can configure what keys the menu should use. Note that the MenuKey
+# will be reserved exclusively, the others work in shared mode.
+
+# Up to six keys are supported. The MenuKey (to enter and exit the menu), the
+# EnterKey (to select values) and at least one movement keys are required.
+# These are the default key assignments:
+MenuKey=Escape
+EnterKey=Enter
+UpKey=Up
+DownKey=Down
+#LeftKey=Left
+#RightKey=Right
+
+
+### Driver sections are below this line, in alphabetical order  ###
+
+
+## EMAC BayRAD driver ##
+[bayrad]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/lcd
+
+# Set the communication speed [default: 9600; legal:  1200, 2400, 9600, 19200]
+Speed=9600
+
+
+
+## CrystalFontz driver (for CF632 & CF634) ##
+[CFontz]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/ttyS0
+# Select the LCD size [default: 20x4]
+Size=20x4
+# Set the initial contrast [default: 560; legal: 0 - 1000]
+Contrast=350
+# Set the initial brightness [default: 1000; legal: 0 - 1000]
+Brightness=1000
+# Set the initial off-brightness [default: 0; legal: 0 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+OffBrightness=0
+# Set the communication speed [default: 9600; legal: 1200, 2400, 9600, 19200,
+# 115200]
+Speed=9600
+# Set the firmware version (New means >= 2.0) [default: no; legal: yes, no]
+NewFirmware=no
+# Reinitialize the LCD's BIOS [default: no; legal: yes, no]
+# normally you shouldn't need this
+Reboot=no
+
+
+
+## CrystalFontz packet driver (for CFA533, CFA631, CFA633 & CFA635) ##
+[CFontzPacket]
+{%- if model == 'test' %}
+Model=533
+Device=/dev/serial/by-bus/usb0b1.1p1.0
+Contrast=350
+Brightness=1000
+OffBrightness=50
+Reboot=yes
+USB=yes
+{%- endif %}
+
+
+## Curses driver ##
+[curses]
+
+# color settings
+# foreground color [default: blue]
+Foreground=blue
+# background color when "backlight" is off [default: cyan]
+Background=cyan
+# background color when "backlight" is on [default: red]
+Backlight=red
+
+# display size [default: 20x4]
+Size=20x2
+
+# What position (X,Y) to start the left top corner at...
+# Default: (7,7)
+TopLeftX=7
+TopLeftY=7
+
+# use ASC symbols for icons & bars [default: no; legal: yes, no]
+UseACS=no
+
+# draw Border [default: yes; legal: yes, no]
+DrawBorder=yes
+
+
+
+## Cwlinux driver ##
+[CwLnx]
+
+# Select the LCD model [default: 12232; legal: 12232, 12832, 1602]
+Model=12232
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/ttyUSB0
+
+# Select the LCD size. Default depends on model:
+# 12232: 20x4
+# 12832: 21x4
+# 1602: 16x2
+Size=20x4
+
+# Set the communication speed [default: 19200; legal: 9600, 19200]
+Speed=19200
+
+# Reinitialize the LCD's BIOS [default: no; legal: yes, no]
+# normally you shouldn't need this
+Reboot=no
+
+# If you have a keypad connected. Keypad layout is currently not
+# configureable from the config file.
+Keypad=yes
+
+# If you have a non-standard keypad you can associate any keystrings to keys.
+# There are 6 input keys in the CwLnx hardware that generate characters
+# from 'A' to 'F'.
+#
+# The following is the built-in default mapping hardcoded in the driver.
+# You can leave those unchanged if you have a standard keypad.
+# You can change it if you want to report other keystrings or have a non
+# standard keypad.
+# KeyMap_A=Up
+# KeyMap_B=Down
+# KeyMap_C=Left
+# KeyMap_D=Right
+# KeyMap_E=Enter
+# KeyMap_F=Escape
+
+# keypad_test_mode permits one to test keypad assignment
+# Default value is no
+#keypad_test_mode=yes
+
+
+
+## ea65 driver for the display in AOpen XC Cube AV EA65 media barebones ##
+[ea65]
+
+# Device is fixed /dev/ttyS1
+# Width and Height are fixed 9x1
+
+# As the VFD is self luminescent we don't have a backlight
+# But we can use the backlight functions to control the front LEDs
+# Brightness 0 to 299 -> LEDs off
+# Brightness 300 to 699 -> LEDs half bright
+# Brightness 700 to 1000 -> LEDs full bright
+Brightness=500
+# OffBrightness is the the value used for the 'backlight off' state
+OffBrightness=0
+
+
+
+## EyeboxOne driver ##
+[EyeboxOne]
+
+# Select the output device to use [default: /dev/ttyS1]
+# Device=/dev/cua01
+Device=/dev/ttyS1
+
+# Set the display size [default: 20x4]
+Size=20x4
+
+# Switch on the backlight? [default: yes]
+Backlight=yes
+
+# Switch on the cursor? [default: no]
+Cursor=no
+
+# Set the communication speed [default: 19200; legal: 1200, 2400, 9600, 19200]
+Speed=19200
+
+# Enter Key is a \r character, so it's hardcoded in the driver
+LeftKey=D
+RightKey=C
+UpKey=A
+DownKey=B
+EscapeKey=P
+
+# You can find out which key of your display sends which
+# character by setting keypad_test_mode to yes and running
+# LCDd. LCDd will output all characters it receives.
+# Afterwards you can modify the settings above and set
+# keypad_set_mode to no again.
+keypad_test_mode=no
+
+## Futaba TOSD-5711BB VFD Driver ##
+[futaba]
+
+## g15 driver for Logitech G15 Keyboard LCDs ##
+[g15]
+
+# Display size (currently unused)
+size=20x5
+
+
+
+## glcd generic graphical display driver
+[glcd]
+# Select what type of connection. See documentation for types.
+ConnectionType=t6963
+
+# Width and height of the display in pixel. The supported sizes may depend on
+# the ConnectionType. [default: 128x64; legal: 1x1 - 640x480]
+#Size=128x64
+
+# Width and height of a character cell in pixels. This value is only used if
+# the driver has been compiled with FreeType and it is enabled. Otherwise the
+# default 6x8 cell is used.
+#CellSize=12x16
+
+# If LCDproc has been compiled with FreeType 2 support this option can be used
+# to turn if off intentionally. [default: yes; legal: yes, no]
+#useFT2=no
+
+# Path to font file to use for FreeType rendering. This font must be monospace
+# and should contain some special Unicode characters like arrows (Andale Mono
+# is recommended and can be fetched at http://corefonts.sf.net).
+#normal_font=/usr/local/lib/X11/fonts/TTF/andalemo.ttf
+
+# Some fonts miss the Unicode characters used to represent icons. In this case
+# the built-in 5x8 font can used if this option is turned off. [default: yes;
+# legal: yes, no]
+#fontHasIcons=no
+
+# Set the initial contrast if supported by connection type.
+# [default: 600; legal: 0 - 1000]
+#Contrast=600
+
+# Set brightness of the backlight if the backlight is switched 'on'.
+# [default: 800; legal: 0 - 1000]
+#Brightness=1000
+
+# Set brightness of the backlight if the backlight is switched 'off'. Set this
+# to zero to completely turn off the backlight. [default: 100; legal: 0 - 1000]
+#OffBrightness=0
+
+# Time (ms) from first key report to first repeat. Set to 0 to disable repeated
+# key reports. [default: 500; legal: 0 - 3000]
+#KeyRepeatDelay=500
+
+# Time (ms) between repeated key reports. Ignored if KeyRepeatDelay is disabled
+# (set to zero). [default: 300; legal: 0 - 3000]
+#KeyRepeatInterval=300
+
+# Assign key strings to keys. There may be up to 16 keys numbered 'A' to 'Z'.
+# By default keys 'A' to 'F' are assigned Up, Down, Left, Right, Enter, Escape.
+KeyMap_A=Up
+KeyMap_B=Down
+KeyMap_C=Enter
+KeyMap_D=Escape
+
+# --- t6963 options ---
+
+# Parallel port to use [default: 0x378; legal: 0x200 - 0x400]
+#Port=0x378
+
+# Use LPT port in bi-directional mode. This should work on most LPT port
+# and is required for proper timing! [default: yes; legal: yes, no]
+#bidirectional=yes
+
+# Insert additional delays into reads / writes. [default: no; legal: yes, no]
+#delayBus=no
+
+# --- serdisplib options ---
+
+# Name of the underlying serdisplib driver, e.g. ctinclud. See
+# serdisplib documentation for details.
+serdisp_name=t6963
+
+# The display device to use, e.g. serraw:/dev/ttyS0,
+# parport:/dev/parport0 or USB:07c0/1501.
+serdisp_device=/dev/ppi0
+
+# Options string to pass to serdisplib during initialization. Use
+# this to set any display related options (e.g. wiring). The display size is
+# always set based on the Size configured above! By default, no options are
+# set.
+# Important: The value must be quoted as it contains equal signs!
+#serdisp_options="INVERT=1"
+
+# --- x11 options ---
+
+# PixelSize is size of each dot in pixels + a pixel gap. [default: 3+1]
+#x11_PixelSize=3+1
+
+# Colors are in RRGGBB format prefixed with "0x".
+# PixelColor: The color of each dot at full contrast. [default: 0x000000]
+#x11_PixelColor=0x000000
+
+# BacklightColor: The color of the backlight as full brightness.
+# [default: 0x80FF80]
+#x11_BacklightColor=0x80FF80
+
+# Border: Adds a border (empty space) around the LCD portion of X11 window.
+# [default: 20]
+#x11_Border=20
+
+# Inverted: inverts the pixels [default: no; legal: yes, no]
+#x11_Inverted=no
+
+# --- picolcdgfx options ---
+
+# Time in ms for usb_read to wait on a key press. [default: 125; legal: >0]
+#picolcdgfx_KeyTimeout=125
+
+# Inverted: Inverts the pixels. [default: no; legal: yes or no]
+#picolcdgfx_Inverted=no
+
+
+
+## glcdlib meta driver for graphical LCDs ##
+[glcdlib]
+
+## mandatory:
+
+# which graphical display supported by graphlcd-base to use [default: image]
+# (see /etc/graphlcd.conf for possible drivers)
+Driver=noritake800
+
+# no=use graphlcd bitmap fonts (they have only one size / font file)
+# yes=use fonts supported by FreeType2 (needs Freetype2 support in
+# libglcdprocdriver and its dependants)
+UseFT2=yes
+
+# text resolution in fixed width characters [default: 16x4]
+# (if it won't fit according to available physical pixel resolution
+# and the minimum available font face size in pixels, then
+# 'DebugBorder' will automatically be turned on)
+TextResolution=20x4
+
+# path to font file to use
+FontFile=/usr/share/fonts/corefonts/courbd.ttf
+
+## these only apply if UseFT2=yes:
+
+# character encoding to use
+CharEncoding=iso8859-2
+
+# minimum size in pixels in which fonts should be rendered
+MinFontFaceSize=7x12
+
+## optional:
+Brightness=50                   # Brightness (in %) if applicable
+Contrast=50                     # Contrast (in %) if applicable
+Backlight=no                    # Backlight if applicable
+UpsideDown=no                   # flip image upside down
+Invert=no                       # invert light/dark pixels
+ShowDebugFrame=no               # turns on/off 1 pixel thick debugging
+                                # border within the usable text area,
+                                # for setting up TextResolution and
+                                # MinFontFaceSize (if using FT2);
+ShowBigBorder=no                # border around the unused area
+ShowThinBorder=yes              # border around the unused area
+PixelShiftX=0
+PixelShiftY=2
+
+
+
+## Matrix Orbital GLK driver ##
+[glk]
+
+# select the serial device to use [default: /dev/lcd]
+Device=/dev/lcd
+
+# set the initial contrast value [default: 500; legal: 0 - 1000]
+Contrast=500
+
+# set the serial port speed [default: 19200; legal: 9600, 19200, 38400, 57600, 115200]
+Speed=19200
+
+
+
+## Hitachi HD44780 driver ##
+[hd44780]
+{%- if model == 'ezio' %}
+ConnectionType=ezio
+Device=/dev/ttyUSB0
+Keypad=yes
+Size=16x2
+KeyMatrix_4_1=Enter
+KeyMatrix_4_2=Up
+KeyMatrix_4_3=Down
+KeyMatrix_4_4=Escape
+{%- endif %}
+
+# Select what type of connection. See documentation for available types.
+#ConnectionType=4bit
+
+# Select model if have non-standard one which require extra initialization or handling or
+# just want extra features it offers.
+# Available: standard (default), extended, winstar_oled, pt6314_vfd
+# - standard is default, use for LCDs not mentioned below.
+# - extended, hd66712, ks0073: allows use 4-line "extended" mode,
+#   same as deprecated now option ExtendedMode=yes
+# - winstar_oled, weh00xxyya: changes initialization for WINSTAR's WEH00xxyyA displays
+#   and allows handling brightness
+# - pt6314_vfd: allows handling brightness on PTC's PT6314 VFDs
+#
+# This option should be independent of connection type.
+#Model = standard
+
+# I/O address of the LPT port. Usual values are: 0x278, 0x378 and 0x3BC.
+# For I2C connections this sets the slave address (usually 0x20).
+#Port=0x378
+
+# Device of the serial, I2C, or SPI interface [default: /dev/lcd]
+#Device=/dev/ttyS0
+
+# Bitrate of the serial port (0 for interface default)
+#Speed=0
+
+# If you have a keypad connected.
+# You may also need to configure the keypad layout further on in this file.
+#Keypad=no
+
+# Set the initial contrast (bwctusb, lcd2usb, and usb4all)
+# [default: 800; legal: 0 - 1000]
+#Contrast=0
+
+# Set brightness of the backlight (lcd2usb and usb4all):
+# Brightness is the brightness while the backlight is set to 'on'.
+# [default: 800; legal: 0 - 1000]
+#Brightness=1000
+
+# OffBrightness is the brightness while the backlight is set to 'off'.
+# [default: 300; legal: 0 - 1000]
+#OffBrightness=0
+
+# Specify if you have a switchable backlight and if yes, can select method for turning it on/off:
+#
+# - none - no switchable backlight is available. For compability also boolean
+#          0, n, no, off and false are aliases.
+# - external - use external pin or any other method defined with ConnectionType backlight
+#          handling. For backward compability also this value is chosen for boolean
+#          TRUE values: 1, y, yes, on and true.
+# - internal - means that backlight is handled using internal commands according
+#          to selected display model (with Model option). Depending on model,
+#          Brightness and OffBrightness options can be taken into account.
+# - internalCmds - means that commands for turning on and off backlight are given
+#          with extra options BacklightOnCmd and BacklightOffCmd, which would be treated
+#          as catch up (last resort) for other types of displays which have similar features.
+#
+# You can provide multiple occurences of this option to use more than one method.
+# Default is model specific: Winstar OLED and PT6314 VFD enables internal backlight mode,
+# for others it is set to none.
+#Backlight = none
+
+# Commands for enabling internal backlight for use with Backlight=internalCmds.
+# Up to 4 bytes can be encoded, as integer number in big-endian order.
+#
+# NOTE: this is advanced option, if command contains bits other than only brighness handling,
+# they must be set accordingly to not disrupt display state. If for example 'FUNCTION SET' command
+# is used for this purpose, bits of interface length (4-bit / 8-bit) must be set according to
+# selected ConnectionType.
+#BacklightCmdOn=0x1223
+
+# Commands for disabling internal backlight for use with Backlight=internalCmds.
+# Up to 4 bytes can be encoded, as integer number in big-endian order.
+#BacklightCmdOff=0x1234
+
+
+# If you have the additional output port ("bargraph") and you want to
+# be able to control it with the lcdproc OUTPUT command
+#OutputPort=no
+
+# Specifies if the last line is pixel addressable (yes) or it controls an
+# underline effect (no). [default: yes; legal: yes, no]
+#Lastline=yes
+
+# Specifies the size of the LCD.
+# In case of multiple combined displays, this should be the total size.
+#Size=20x4
+
+# For multiple combined displays: how many lines does each display have.
+# Vspan=2,2 means both displays have 2 lines.
+#vspan=2,2
+
+# If you have an HD66712, a KS0073 or another controller with 'extended mode',
+# set this flag to get into 4-line mode. On displays with just two lines, do
+# not set this flag.
+# As an additional restriction, controllers with and without extended mode
+# AND 4 lines cannot be mixed for those connection types that support more
+# than one display!
+# NOTE: This option is deprecated in favour of choosing Model=extended option.
+#ExtendedMode=yes
+
+# In extended mode, on some controllers like the ST7036 (in 3 line mode)
+# the next line in DDRAM won't start 0x20 higher. [default: 0x20]
+#LineAddress=0x10
+
+# Character map to to map ISO-8859-1 to the LCD's character set
+# [default: hd44780_default; legal: hd44780_default, hd44780_euro, ea_ks0073,
+# sed1278f_0b, hd44780_koi8_r, hd44780_cp1251, hd44780_8859_5, upd16314,
+# weh001602a_1]
+# (hd44780_koi8_r, hd44780_cp1251, hd44780_8859_5, upd16314 and weh001602a_1
+# are possible if compiled with additional charmaps)
+CharMap=hd44780_default
+
+# Font bank to be used for some displays such as the WINSTAR WEH001602A
+# 0: English/Japanese (default)
+# 1: Western Europe I
+# 2: English/Rusian
+# 3: Western Europe II
+#FontBank=0
+
+# If your display is slow and cannot keep up with the flow of data from
+# LCDd, garbage can appear on the LCDd. Set this delay factor to 2 or 4
+# to increase the delays. Default: 1.
+#DelayMult=2
+
+# Some displays (e.g. vdr-wakeup) need a message from the driver to that it
+# is still alive. When set to a value bigger then null the character in the
+# upper left corner is updated every <KeepAliveDisplay> seconds. Default: 0.
+#KeepAliveDisplay=0
+
+# If you experience occasional garbage on your display you can use this
+# option as workaround. If set to a value bigger than null it forces a
+# full screen refresh <RefreshDiplay> seconds. Default: 0.
+#RefreshDisplay=5
+
+# You can reduce the inserted delays by setting this to false.
+# On fast PCs it is possible your LCD does not respond correctly.
+# Default: true.
+#DelayBus=true
+
+# If you have a keypad you can assign keystrings to the keys.
+# See documentation for used terms and how to wire it.
+# For example to give directly connected key 4 the string "Enter", use:
+#   KeyDirect_4=Enter
+# For matrix keys use the X and Y coordinates of the key:
+#   KeyMatrix_1_3=Enter
+#KeyMatrix_4_1=Enter
+#KeyMatrix_4_2=Up
+#KeyMatrix_4_3=Down
+#KeyMatrix_4_4=Escape
+
+## ICP Peripheral Comminication Protocol driver ##
+# Supports A125 and A106
+#
+# Short Press Select: Down
+# Long Press Select: Up
+# Short Press Enter: Enter
+# Long Press Enter: Escape
+#
+[icp_a106]
+Device=/dev/ttyS1
+
+# Display dimensions
+Size=20x2
+
+
+## Code Mercenaries IO-Warrior driver ##
+[IOWarrior]
+
+# display dimensions
+Size=20x4
+
+# serial number. Must be exactly as listed by usbview
+# (if not given, the 1st IOWarrior found gets used)
+#SerialNumber=00000674
+
+# If you have an HD66712, a KS0073 or another 'almost HD44780-compatible',
+# set this flag to get into extended mode (4-line linear).
+#ExtendedMode=yes
+
+# Specifies if the last line is pixel addressable (yes) or it controls an
+# underline effect (no). [default: yes; legal: yes, no]
+#Lastline=yes
+
+
+
+## Soundgraph/Ahanix/Silverstone/Uneed/Accent iMON driver ##
+[imon]
+
+# select the device to use
+Device=/dev/lcd0
+
+# display dimensions
+Size=16x2
+
+# Character map to to map ISO-8859-1 to the displays character set.
+# [default: none; legal: none, hd44780_euro, upd16314, hd44780_koi8_r,
+# hd44780_cp1251, hd44780_8859_5 ] (upd16314, hd44780_koi8_r,
+# hd44780_cp1251, hd44780_8859_5 are possible if compiled with additional
+# charmaps)
+CharMap=hd44780_euro
+
+## Soundgraph iMON LCD ##
+[imonlcd]
+# Specify which iMon protocol should be used
+# [legal: 0, 1; default: 0]
+# Choose 0 for 15c2:ffdc device,
+# Choose 1 for 15c2:0038 device
+Protocol=0
+
+# Set the exit behavior [legal: 0-2; default: 1]
+# 0 means leave shutdown message,
+# 1 means show the big clock,
+# 2 means blank device
+#OnExit=2
+
+# Select the output device to use [default: /dev/lcd0]
+Device=/dev/lcd0
+
+# Select the displays contrast [default: 200; legal: 0-1000]
+Contrast=200
+
+# Specify the size of the display in pixels [default: 96x16]
+#Size=96x16
+
+# Set the backlight state [default: on; legal: on, off]
+#Backlight=on
+
+# Set the disc mode [legal: 0,1; default: 0]
+# 0 => spin the "slim" disc - two disc segments,
+# 1 => their complement spinning;
+#DiscMode=0
+
+
+
+## IrMan driver ##
+[IrMan]
+# in case of trouble with IrMan, try the Lirc emulator for IrMan
+
+# Select the input device to use
+#Device=/dev/irman
+
+# Select the configuration file to use
+#Config=/etc/irman.cfg
+
+
+
+## IRtrans driver ##
+[irtrans]
+
+# Does the device have a backlight? [default: no; legal: yes, no]
+#Backlight=no
+
+# IRTrans device to connect to [default: localhost]
+#Hostname=localhost
+
+# display dimensions
+Size=16x2
+
+
+
+## Joystick driver ##
+[joy]
+
+# Select the input device to use [default: /dev/js0]
+Device=/dev/js0
+
+# set the axis map
+Map_Axis1neg=Left
+Map_Axis1pos=Right
+Map_Axis2neg=Up
+Map_Axis2pos=Down
+
+# set the button map
+Map_Button1=Enter
+Map_Button2=Escape
+
+
+## JW-002 driver ##
+[jw002]
+
+# Select the output device to use [default: /dev/lcd]
+#Device=/dev/ttyS0
+
+# Set the display size [default: 24x8]
+Size=24x8 
+
+# Optional X and Y offsets (in characters) to center a smaller display
+# size on the full 24x8 panel
+X_offset=0
+Y_offset=0   
+
+# Set the communication speed [default: 19200; legal: 1200, 2400, 9600, 19200]
+Speed=19200
+
+# Pick which font page to use [default: 0]
+# Note that different fonts probably have their bargraph chars in different
+# spots.  For ROM-based fonts 0-3, those characters are already known.
+Font=0
+
+# The following table translates from jw002 key letters to logical key names.
+# By default no keys are mapped, meaning the keypad is not used at all.
+#KeyMap_I=Left
+#KeyMap_J=Right
+#KeyMap_H=Up
+#KeyMap_K=Down
+#KeyMap_L=Enter
+#KeyMap_A=Escape
+# See the [menu] section for an explanation of the key mappings
+
+# You can find out which key of your display sends which
+# character by setting keypad_test_mode to yes and running
+# LCDd. LCDd will output all characters it receives.
+# Afterwards you can modify the settings above and set
+# keypad_set_mode to no again.
+keypad_test_mode=no
+
+
+## LB216 driver ##
+[lb216]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/lcd
+
+# Set the initial brightness [default: 255; legal: 0 - 255]
+Brightness=255
+
+# Set the communication speed [default: 9600; legal: 2400, 9600]
+Speed=9600
+
+# Reinitialize the LCD's BIOS [default: no; legal: yes, no]
+Reboot=no
+
+
+
+## LCDM001 driver ##
+[lcdm001]
+
+Device=/dev/ttyS1
+
+# keypad settings
+# Keyname      Function
+#              Normal context              Menu context
+# -------      --------------              ------------
+# PauseKey     Pause/Continue              Enter/select
+# BackKey      Back(Go to previous screen) Up/Left
+# ForwardKey   Forward(Go to next screen)  Down/Right
+# MainMenuKey  Open main menu              Exit/Cancel
+PauseKey=LeftKey
+BackKey=UpKey
+ForwardKey=DownKey
+MainMenuKey=RightKey
+
+# You can rearrange the settings here.
+# If your device is broken, have a look at server/drivers/lcdm001.h
+
+
+
+## HNE LCTerm driver ##
+[lcterm]
+Device=/dev/ttyS1
+Size=16x2
+
+
+## Linux event device input driver ##
+[linux_input]
+
+# Select the input device to use [default: /dev/input/event0]. This may be
+# either an absolute path to the input node, starting with '/', or
+# an input device name, e.g. "Logitech Gaming Keyboard Gaming Keys".
+# Device=/dev/input/event0
+
+# specify a non-default key map
+#key=1,Escape
+#key=28,Enter
+#key=96,Enter
+#key=105,Left
+#key=106,Right
+#key=103,Up
+#key=108,Down
+
+
+## LIRC input driver ##
+[lirc]
+
+# Specify an alternative location of the lircrc file [default: ~/.lircrc]
+#lircrc=/etc/lircrc.lcdproc
+
+# Must be the same as in your lircrc
+#prog=lcdd
+
+
+
+## LIS MCE 2005 driver ##
+[lis]
+
+# Set the initial brightness [default: 1000; legal: 0 - 1000]
+# 0-250 = 25%, 251-500 = 50%, 501-750 = 75%, 751-1000 = 100%
+#Brightness=1000
+
+# Columns by lines [default: 20x2]
+#Size=20x2
+
+# USB Vendor ID [default: 0x0403]
+# Change only if testing a compatible device.
+#VendorID=0x0403
+
+# USB Product ID [default: 0x6001]
+# Change only if testing a compatible device.
+#ProductID=0x6001
+
+# Specifies if the last line is pixel addressable (yes) or it only controls an
+# underline effect (no). [default: yes; legal: yes, no]
+#Lastline=yes
+
+
+
+##The driver for the VFD of the Medion MD8800 PC ##
+[MD8800]
+# device to use [default: /dev/ttyS1]
+#Device=/dev/ttyS1
+
+# display size [default: 16x2]
+#Size=16x2
+
+# Set the initial brightness [default: 1000; legal: 0 - 1000]
+Brightness=1000
+# Set the initial off-brightness [default: 0; legal: 0 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+OffBrightness=50
+
+
+
+## Futuba MDM166A Display
+[mdm166a]
+# Show self-running clock after LCDd shutdown
+# Possible values: [default: no; legal: no, small, big]
+Clock=big
+# Dim display, no dimming gives full brightness [default: no, legal: yes, no]
+Dimming=no
+# Dim display in case LCDd is inactive [default: no, legal: yes, no]
+OffDimming=yes
+
+
+
+## MSI MS-6931 driver for displays in 1HU servers ##
+[ms6931]
+
+# device to use [default: /dev/ttyS1]
+Device=/dev/ttyS1
+
+# display size [default: 16x2]
+#Size=16x2
+
+
+
+## MTC-S16209x driver ##
+[mtc_s16209x]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/lcd
+
+# Set the initial brightness [default: 255; legal: 0 - 255]
+Brightness=255
+
+# Reinitialize the LCD's BIOS [default: no; legal: yes, no]
+Reboot=no
+
+
+
+## Matrix Orbital driver ##
+[MtxOrb]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/ttyS0
+
+# Set the display size [default: 20x4]
+Size=20x4
+
+# Set the display type [default: lcd; legal: lcd, lkd, vfd, vkd]
+Type=lkd
+
+# Set the initial contrast [default: 480]
+# NOTE: The driver will ignore this if the display
+#       is a vfd or vkd as they don't have this feature
+Contrast=480
+
+# Some old displays do not have an adjustable backlight but only can
+# switch the backlight on/off. If you experience randomly appearing block
+# characters, try setting this to false. [default: yes; legal: yes, no]
+hasAdjustableBacklight=no
+
+# Set the initial brightness [default: 1000; legal: 0 - 1000]
+Brightness=1000
+# Set the initial off-brightness [default: 0; legal: 0 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+OffBrightness=0
+
+# Set the communication speed [default: 19200; legal: 1200, 2400, 9600, 19200]
+Speed=19200
+
+# The following table translates from MtxOrb key letters to logical key names.
+# By default no keys are mapped, meaning the keypad is not used at all.
+#KeyMap_A=Left
+#KeyMap_B=Right
+#KeyMap_C=Up
+#KeyMap_D=Down
+#KeyMap_E=Enter
+#KeyMap_F=Escape
+# See the [menu] section for an explanation of the key mappings
+
+# You can find out which key of your display sends which
+# character by setting keypad_test_mode to yes and running
+# LCDd. LCDd will output all characters it receives.
+# Afterwards you can modify the settings above and set
+# keypad_set_mode to no again.
+keypad_test_mode=no
+
+
+
+## mx5000 driver for LCD display on the Logitech MX5000 keyboard ##
+[mx5000]
+
+# Select the output device to use [default: /dev/hiddev0]
+Device = /dev/hiddev0
+# Time to wait in ms after the refresh screen has been sent [default: 1000]
+WaitAfterRefresh = 1000
+
+
+
+## Noritake VFD driver ##
+[NoritakeVFD]
+# device where the VFD is. Usual values are /dev/ttyS0 and /dev/ttyS1
+# [default: /dev/lcd]
+Device=/dev/ttyS0
+# Specifies the size of the LCD.
+Size=20x4
+# Set the initial brightness [default: 1000; legal: 0 - 1000]
+Brightness=1000
+# Set the initial off-brightness [default: 0; legal: 0 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+OffBrightness=50
+# set the serial port speed [default: 9600, legal: 1200, 2400, 9600, 19200, 115200]
+Speed=9600
+# Set serial data parity [default: 0; legal: 0-2 ]
+# Meaning: 0(=none), 1(=odd), 2(=even)
+Parity=0
+# re-initialize the VFD [default: no; legal: yes, no]
+Reboot=no
+
+
+
+## Olimex MOD-LCD1x9 driver ##
+[Olimex_MOD_LCD1x9]
+
+# device file of the i2c controler
+Device=/dev/i2c-0
+
+
+## Mini-box.com picoLCD (usblcd) driver ##
+[picolcd]
+
+# KeyTimeout is only used if the picoLCD driver is built with libusb-0.1. When
+# built with libusb-1.0 key and IR data is input asynchronously so there is no
+# need to wait for the USB data.
+# KeyTimeout is the time in ms that LCDd spends waiting for a key press before
+# cycling through other duties.  Higher values make LCDd use less CPU time and
+# make key presses more detectable.  Lower values make LCDd more responsive
+# but a little prone to missing key presses.  500 (.5 second) is the default
+# and a balanced value. [default: 500; legal: 0 - 1000]
+KeyTimeout=500
+
+# Key auto repeat is only available if the picoLCD driver is built with
+# libusb-1.0. Use KeyRepeatDelay and KeyRepeatInterval to configure key auto
+# repeat.
+#
+# Key auto repeat delay (time in ms from first key report to first repeat). Use
+# zero to disable auto repeat. [default: 300; legal: 0 - 3000]
+KeyRepeatDelay=300
+
+# Key auto repeat interval (time in ms between repeat reports). Only used if
+# KeyRepeatDelay is not zero. [default: 200; legal: 0 - 3000]
+KeyRepeatInterval=200
+
+# Sets the initial state of the backlight upon start-up.
+# [default: on; legal: on, off]
+#Backlight=on
+
+# Set the initial brightness [default: 1000; legal: 0 - 1000]. Works only
+# with the 20x4 device
+Brightness=1000
+
+# Set the brightness while the backlight is 'off' [default: 0; legal: 0 - 1000].
+# Works only with the 20x4 device.
+#OffBrightness=0
+
+# Set the initial contrast [default: 1000; legal: 0 - 1000]
+Contrast=1000
+
+# Link the key lights to the backlight? [default: on; legal: on, off]
+#LinkLights=off
+
+# Light the keys? [default: on; legal: on, off]
+Keylights=on
+
+# If Keylights is on, the you can unlight specific keys below:
+# Key0 is the directional pad.  Key1 - Key5 correspond to the F1 - F5 keys.
+# There is no LED for the +/- keys.  This is a handy way to indicate to users
+# which keys are disabled.  [default: on; legal: on, off]
+Key0Light=on
+Key1Light=on
+Key2Light=on
+Key3Light=on
+Key4Light=on
+Key5Light=on
+
+# Host name or IP address of the LIRC instance that is to receive IR codes
+# If not set, or set to an empty value, IR support is disabled.
+#LircHost=127.0.0.1
+
+# UDP port on which LIRC is listening [default: 8765; legal: 1 - 65535]
+LircPort=8765
+
+# UDP data time unit for LIRC  [default: off; legal: on, off]
+# On:  times sent in microseconds (requires LIRC UDP driver that accepts this).
+# Off: times sent in 'jiffies' (1/16384s) (supported by standard LIRC UDP driver).
+LircTime_us=on
+
+# Threshold in microseconds of the gap that triggers flushing the IR data
+# to lirc [default: 8000; legal: 1000 - ]
+# If LircTime_us is on values greater than 32.767ms will disable the flush
+# If LircTime_us is off values greater than 1.999938s will disable the flush
+LircFlushThreshold=10000
+
+
+
+## Pyramid LCD driver ##
+[pyramid]
+
+# device to connect to [default: /dev/lcd]
+Device=/dev/ttyUSB0
+
+
+
+## rawserial driver ##
+[rawserial]
+
+# Select the output device to use [default: /dev/cuaU0]
+Device=/dev/ttyS0
+
+# Serial port baudrate [default: 9600]
+Speed=9600
+
+# Specifies the size of the LCD. If this driver is loaded as a secondary driver
+# it always adopts to the size of the primary driver. If loaded as the only
+# (or primary) driver, the size can be set. [default: 40x4]
+#Size=16x2
+
+# How often to dump the LCD contents out the port, in Hertz (times per second)
+# 1 = once per second, 4 is 4 times per second, 0.1 is once every 10 seconds.
+# [default: 1; legal: 0.0005 - 10]
+UpdateRate=1
+
+
+
+## SDEC driver for Watchguard Firebox ##
+[sdeclcd]
+# No options
+
+
+## Seiko Epson 1330 driver ##
+[sed1330]
+
+# Port where the LPT is. Common values are 0x278, 0x378 and 0x3BC
+Port=0x378
+
+# Type of LCD module (legal: G321D, G121C, G242C, G191D, G2446, SP14Q002)
+# Note: Currently only tested with G321D & SP14Q002.
+Type=G321D
+
+# Width x Height of a character cell in pixels [legal: 6x7 - 8x16; default: 6x10]
+CellSize=6x10
+
+# Select what type of connection [legal: classic, bitshaker; default: classic]
+ConnectionType=classic
+
+
+
+## Seiko Epson 1520 driver ##
+[sed1520]
+
+# Port where the LPT is. Usual values are 0x278, 0x378 and 0x3BC
+Port=0x378
+
+# Select the interface type (wiring) for the display. Supported values are
+# 68 for 68-style connection (RESET level high) and 80 for 80-style connection
+# (RESET level low). [legal: 68, 80; default: 80]
+InterfaceType=80
+
+# On fast machines it may be necessary to slow down transfer to the display.
+# If this value is set to zero, delay is disabled. Any value greater than
+# zero slows down each write by one microsecond. [legal: 0-1000; default: 1]
+DelayMult=0
+
+# The original wiring used an inverter to drive the control lines. If you do
+# not use an inverter set haveInverter to no. [default: yes; legal: yes, no]
+HaveInverter=no
+
+# On some displays column data in memory is mapped to segment lines from right
+# to left. This is called inverted mapping (not to be confused with
+# 'haveInverter' from above). [default: no; legal: yes, no]
+#InvertedMapping=yes
+
+# At least one display is reported (Everbouquet MG1203D) that requires sending
+# three times 0xFF before a reset during initialization.
+# [default: no; legal: yes, no]
+#UseHardReset=yes
+
+
+## serial POS display driver ##
+[serialPOS]
+
+# Device to use in serial mode [default: /dev/ttyS0]
+Device=/dev/ttyS0
+
+# Specifies the size of the display in characters. [default: 16x2]
+Size=16x2
+
+# Specifies the cell size of each character cell on the display in characters.
+# [default: 5x8]
+Cellsize=5x8
+
+# Specifies the number of custom characters supported by the display.
+# [default: 0]
+Custom_chars=0
+
+# Set the communication protocol to use with the POS display.
+# [default: AEDEX; legal: AEDEX, CD5220, Epson, Emax, LogicControls, Ultimate]
+Type=AEDEX
+
+# communication baud rate with the display [default: 9600; legal: 1200, 2400,
+# 4800, 9600, 19200, 115200]
+Speed=9600
+
+
+
+## Serial VFD driver ##
+## Drives various (see below) serial 5x7dot VFD's.  ##
+[serialVFD]
+
+# Specifies the displaytype.[default: 0]
+# 0 NEC (FIPC8367 based) VFDs.
+# 1 KD Rev 2.1.
+# 2 Noritake VFDs (*).
+# 3 Futaba VFDs
+# 4 IEE S03601-95B
+# 5 IEE S03601-96-080 (*)
+# 6 Futaba NA202SD08FA (allmost IEE compatible)
+# 7 Samsung 20S207DA4 and 20S207DA6
+# 8 Nixdorf BA6x / VT100
+# (* most should work, not tested yet.)
+Type=0
+
+# "no" if display connected serial, "yes" if connected parallel. [default: no]
+# I.e. serial by default
+use_parallel=no
+
+# Number of Custom-Characters. default is display type dependent
+#Custom-Characters=0
+
+# Portaddress where the LPT is. Used in parallel mode only. Usual values are
+# 0x278, 0x378 and 0x3BC.
+Port=0x378
+
+# Set parallel port timing delay (us). Used in parallel mode only.
+# [default: 2; legal: 0 - 255]
+#PortWait=2
+
+# Device to use in serial mode. Usual values are /dev/ttyS0 and /dev/ttyS1
+Device=/dev/ttyS1
+
+# Specifies the size of the VFD.
+Size=20x2
+
+# Set the initial brightness [default: 1000; legal: 0 - 1000]
+# (4 steps 0-250, 251-500, 501-750, 751-1000)
+Brightness=1000
+# Set the initial off-brightness [default: 0; legal: 0 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+# (4 steps 0-250, 251-500, 501-750, 751-1000)
+OffBrightness=0
+
+# set the serial port speed [default: 9600; legal: 1200, 2400, 9600, 19200, 115200]
+Speed=9600
+
+# enable ISO 8859 1 compatibility [default: yes; legal: yes, no]
+#ISO_8859_1=yes
+
+
+
+## shuttleVFD driver ##
+[shuttleVFD]
+# No options
+
+
+
+## stv5730 driver ##
+[stv5730]
+
+# Port the device is connected to [default: 0x378]
+Port=0x378
+
+
+[SureElec]
+
+# Port the device is connected to  (by default first USB serial port)
+Device=/dev/ttyUSB0
+
+# Edition level of the device (can be 1, 2 or 3) [default: 2]
+#Edition=1
+
+# set display size
+# Note: The size can be obtained directly from device for edition 2 & 3.
+#Size=16x2
+
+# Set the initial contrast [default: 480; legal: 0 - 1000]
+#Contrast=200
+
+# Set the initial brightness [default: 480; legal: 1 - 1000]
+#Brightness=480
+
+# Set the initial off-brightness [default: 100; legal: 1 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+#OffBrightness=100
+
+
+## SVGAlib driver ##
+[svga]
+
+# svgalib mode to use [default: G320x240x256 ]
+# legal values are supported svgalib modes
+#Mode=G640x480x256
+
+# set display size [default: 20x4]
+Size=20x4
+
+# Set the initial contrast [default: 500; legal: 0 - 1000]
+# Can be set but does not change anything internally
+Contrast=500
+
+# Set the initial brightness [default: 1000; legal: 1 - 1000]
+Brightness=1000
+
+# Set the initial off-brightness [default: 500; legal: 1 - 1000]
+# This value is used when the display is normally
+# switched off in case LCDd is inactive
+OffBrightness=500
+
+
+
+## Text driver ##
+[text]
+# Set the display size [default: 20x4]
+Size=20x4
+
+
+
+## Toshiba T6963 driver ##
+[t6963]
+
+# set display size in pixels [default: 128x64]
+Size=128x64
+
+# port to use [default: 0x378; legal: 0x200 - 0x400]
+Port=0x378
+
+# Use LPT port in bi-directional mode. This should work on most LPT port and
+# is required for proper timing! [default: yes; legal: yes, no]
+#bidirectional=yes
+
+# Insert additional delays into reads / writes. [default: no; legal: yes, no]
+#delayBus=no
+
+# Clear graphic memory on start-up. [default: no; legal: yes, no]
+#ClearGraphic=no
+
+
+
+## Tyan Barebones LCD driver (GS10 & GS12 series) ##
+[tyan]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/lcd
+
+# Set the communication speed [default: 9600; legal: 4800, 9600]
+Speed=9600
+
+# set display size [default: 16x2]
+Size=16x2
+
+
+
+## ELV ula200 driver ##
+[ula200]
+
+# Select the LCD size [default: 20x4]
+Size=20x4
+
+# If you have a non standard keypad you can associate any keystrings to keys.
+# There are 6 input key in the CwLnx hardware that generate characters
+# from 'A' to 'F'.
+#
+# The following it the built-in default mapping hardcoded in the driver.
+# You can leave those unchanged if you have a standard keypad.
+# You can change it if you want to report other keystrings or have a non
+# standard keypad.
+# KeyMap_A=Up
+# KeyMap_B=Down
+# KeyMap_C=Left
+# KeyMap_D=Right
+# KeyMap_E=Enter
+# KeyMap_F=Escape
+
+
+
+## Wirz SLI LCD driver ##
+[sli]
+
+# Select the output device to use [default: /dev/lcd]
+Device=/dev/lcd
+
+# Set the communication speed [default: 19200; legal: 1200, 2400, 9600, 19200,
+# 38400, 57600, 115200]
+Speed=19200
+
+
+
+## vlsys_m428 for VFD/IR combination in Moneual MonCaso 320 ##
+[vlsys_m428]
+
+# Select the output device to use [default: /dev/ttyUSB0]
+#Device=/dev/ttyUSB0
+
+
+
+## OnScreen Display using libxosd ##
+[xosd]
+
+# set display size [default: 20x4]
+Size=20x4
+
+# Offset in pixels from the top-left corner of the monitor [default: 0x0]
+Offset=200x200
+
+# X font to use, in XLFD format, as given by "xfontsel"
+Font=-*-terminus-*-r-*-*-*-320-*-*-*-*-*
+
+## Y.A.R.D.2 LCD section
+[yard2LCD]
+Size=20x4
+# If rendering rate is too high, change in server\main.h #define RENDER_FREQ 8 to "1"
+
+# EOF
