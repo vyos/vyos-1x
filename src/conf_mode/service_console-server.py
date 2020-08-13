@@ -31,11 +31,9 @@ def get_config():
     conf = Config()
     base = ['service', 'console-server']
 
-    if not conf.exists(base):
-        return None
-
     # Retrieve CLI representation as dictionary
-    proxy = conf.get_config_dict(base, key_mangling=('-', '_'))
+    proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                 get_first_key=True)
     # The retrieved dictionary will look something like this:
     #
     # {'device': {'usb0b2.4p1.0': {'speed': '9600'},
@@ -47,9 +45,10 @@ def get_config():
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base + ['device'])
-    for device in proxy['device'].keys():
-        tmp = dict_merge(default_values, proxy['device'][device])
-        proxy['device'][device] = tmp
+    if 'device' in proxy:
+        for device in proxy['device']:
+            tmp = dict_merge(default_values, proxy['device'][device])
+            proxy['device'][device] = tmp
 
     return proxy
 
@@ -57,15 +56,14 @@ def verify(proxy):
     if not proxy:
         return None
 
-    for device in proxy['device']:
-        keys = proxy['device'][device].keys()
-        if 'speed' not in keys:
-            raise ConfigError(f'Serial port speed must be defined for "{tmp}"!')
+    if 'device' in proxy:
+        for device in proxy['device']:
+            if 'speed' not in proxy['device'][device]:
+                raise ConfigError(f'Serial port speed must be defined for "{device}"!')
 
-        if 'ssh' in keys:
-            ssh_keys = proxy['device'][device]['ssh'].keys()
-            if 'port' not in ssh_keys:
-                raise ConfigError(f'SSH port must be defined for "{tmp}"!')
+            if 'ssh' in proxy['device'][device]:
+                if 'port' not in proxy['device'][device]['ssh']:
+                    raise ConfigError(f'SSH port must be defined for "{device}"!')
 
     return None
 
@@ -86,10 +84,11 @@ def apply(proxy):
 
     call('systemctl restart conserver-server.service')
 
-    for device in proxy['device']:
-        if 'ssh' in proxy['device'][device].keys():
-            port = proxy['device'][device]['ssh']['port']
-            call(f'systemctl restart dropbear@{device}.service')
+    if 'device' in proxy:
+        for device in proxy['device']:
+            if 'ssh' in proxy['device'][device]:
+                port = proxy['device'][device]['ssh']['port']
+                call(f'systemctl restart dropbear@{device}.service')
 
     return None
 
