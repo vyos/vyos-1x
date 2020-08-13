@@ -16,7 +16,6 @@
 
 import os
 
-from fnmatch import fnmatch
 from sys import exit
 
 from vyos.config import Config
@@ -25,21 +24,12 @@ from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.util import call
 from vyos.util import check_kmod
+from vyos.util import find_device_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 k_mod = ['option', 'usb_wwan', 'usbserial']
-
-def find_device_file(device):
-    """ Recurively search /dev for the given device file and return its full path.
-        If no device file was found 'None' is returned """
-    for root, dirs, files in os.walk('/dev'):
-        for basename in files:
-            if fnmatch(basename, device):
-                return os.path.join(root, basename)
-
-    return None
 
 def get_config():
     """
