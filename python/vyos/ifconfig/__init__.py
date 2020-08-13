@@ -13,12 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from vyos.ifconfig.section import Section
 from vyos.ifconfig.control import Control
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.operational import Operational
-from vyos.ifconfig.dhcp import DHCP
 from vyos.ifconfig.vrrp import VRRP
 
 from vyos.ifconfig.bond import BondIf
