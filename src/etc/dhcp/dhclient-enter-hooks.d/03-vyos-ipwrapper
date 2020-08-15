@@ -20,7 +20,7 @@ function iptovtysh () {
     local VTYSH_NETADDR=""
     local VTYSH_GATEWAY=""
     local VTYSH_DEV=""
-    local VTYSH_VRF_NAME=$(ip -d link show dev $interface | grep $interface | awk '{print $9}')
+    local VTYSH_VRF_NAME=$(basename /sys/class/net/eth1/upper_* | sed -e 's/upper_//')
     # convert default route to 0.0.0.0/0
     if [ "$4" == "default" ] ; then
         VTYSH_NETADDR="0.0.0.0/0"
@@ -42,12 +42,11 @@ function iptovtysh () {
         VTYSH_DEV=$8
     fi
 
-    # check if vrf is present
-    if [ $(ip -d link show dev $interface | grep vrf | wc -l) -eq 0 ]; then
-        VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE"
-    elif [ $(ip -d link show dev $interface | grep vrf | wc -l) -eq 1 ]; then
-        VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE vrf $VTYSH_VRF_NAME"
+    # Add route to VRF routing table
+    if [ -n $VTYSH_VRF_NAME ]; then
+        VTYSH_VRF="vrf $VTYSH_VRF_NAME"
     fi
+    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VTYSH_VRF"
 
     # delete route if the command is "del"
     if [ "$3" == "del" ] ; then
