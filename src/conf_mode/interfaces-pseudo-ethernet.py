@@ -28,6 +28,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.ifconfig import MACVLANIf
+from vyos.validate import is_member
 from vyos import ConfigError
 
 from vyos import airbag
@@ -35,8 +36,8 @@ airbag.enable()
 
 def get_config():
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
-    interface name will be added or a deleted flag
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at
+    least the interface name will be added or a deleted flag
     """
     conf = Config()
     base = ['interfaces', 'pseudo-ethernet']
@@ -45,6 +46,17 @@ def get_config():
     mode = leaf_node_changed(conf, ['mode'])
     if mode:
         peth.update({'mode_old' : mode})
+
+    # Check if source-interface is member of a bridge device
+    if 'source_interface' in peth:
+        bridge = is_member(conf, peth['source_interface'], 'bridge')
+        if bridge:
+            peth.update({'source_interface_is_bridge_member' : bridge})
+
+        # Check if we are a member of a bond device
+        bond = is_member(conf, peth['source_interface'], 'bonding')
+        if bond:
+            peth.update({'source_interface_is_bond_member' : bond})
 
     return peth
 
@@ -56,6 +68,16 @@ def verify(peth):
     verify_source_interface(peth)
     verify_vrf(peth)
     verify_address(peth)
+
+    if 'source_interface_is_bridge_member' in peth:
+        raise ConfigError(
+            'Source interface "{source_interface}" can not be used as it is already a '
+            'member of bridge "{source_interface_is_bridge_member}"!'.format(**peth))
+
+    if 'source_interface_is_bond_member' in peth:
+        raise ConfigError(
+            'Source interface "{source_interface}" can not be used as it is already a '
+            'member of bond "{source_interface_is_bond_member}"!'.format(**peth))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
@@ -71,8 +93,8 @@ def apply(peth):
         return None
 
     # Check if MACVLAN interface already exists. Parameters like the underlaying
-    # source-interface device or mode can not be changed on the fly and the interface
-    # needs to be recreated from the bottom.
+    # source-interface device or mode can not be changed on the fly and the
+    # interface needs to be recreated from the bottom.
     if 'mode_old' in peth:
         MACVLANIf(peth['ifname']).remove()
 
