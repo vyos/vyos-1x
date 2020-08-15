@@ -23,7 +23,6 @@ from enum import Enum
 from copy import deepcopy
 
 from vyos import ConfigError
-from vyos.validate import is_member
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -203,6 +202,7 @@ def get_interface_dict(config, base, ifname=''):
     Will return a dictionary with the necessary interface configuration
     """
     from vyos.xml import defaults
+    from vyos.validate import is_member
 
     if not ifname:
         # determine tagNode instance
