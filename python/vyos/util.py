@@ -661,3 +661,15 @@ def check_kmod(k_mod):
         if not os.path.exists(f'/sys/module/{module}'):
             if call(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
+
+def find_device_file(device):
+    """ Recurively search /dev for the given device file and return its full path.
+        If no device file was found 'None' is returned """
+    from fnmatch import fnmatch
+
+    for root, dirs, files in os.walk('/dev'):
+        for basename in files:
+            if fnmatch(basename, device):
+                return os.path.join(root, basename)
+
+    return None
