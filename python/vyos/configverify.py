@@ -29,11 +29,11 @@ def verify_vrf(config):
     recurring validation of VRF configuration.
     """
     from netifaces import interfaces
-    if 'vrf' in config.keys():
+    if 'vrf' in config:
         if config['vrf'] not in interfaces():
             raise ConfigError('VRF "{vrf}" does not exist'.format(**config))
 
-        if 'is_bridge_member' in config.keys():
+        if 'is_bridge_member' in config:
             raise ConfigError(
                 'Interface "{ifname}" cannot be both a member of VRF "{vrf}" '
                 'and bridge "{is_bridge_member}"!'.format(**config))
@@ -57,7 +57,7 @@ def verify_bridge_delete(config):
     perform recurring validation of IP address assignmenr
     when interface also is part of a bridge.
     """
-    if 'is_bridge_member' in config.keys():
+    if 'is_bridge_member' in config:
         raise ConfigError(
             'Interface "{ifname}" cannot be deleted as it is a '
             'member of bridge "{is_bridge_member}"!'.format(**config))
@@ -101,20 +101,20 @@ def verify_vlan_config(config):
     recurring validation of interface VLANs
     """
     # 802.1q VLANs
-    for vlan in config.get('vif', {}).keys():
+    for vlan in config.get('vif', {}):
         vlan = config['vif'][vlan]
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
 
     # 802.1ad (Q-in-Q) VLANs
-    for vlan in config.get('vif_s', {}).keys():
+    for vlan in config.get('vif_s', {}):
         vlan = config['vif_s'][vlan]
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
 
-        for vlan in config.get('vif_s', {}).get('vif_c', {}).keys():
+        for vlan in config.get('vif_s', {}).get('vif_c', {}):
             vlan = config['vif_c'][vlan]
             verify_dhcpv6(vlan)
             verify_address(vlan)
