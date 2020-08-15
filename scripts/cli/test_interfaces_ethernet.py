@@ -42,5 +42,27 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
                 if not '.' in tmp:
                     self._interfaces.append(tmp)
 
+        def test_dhcp_disable(self):
+            """
+            When interface is configured as admin down, it must be admin down even
+            """
+            for interface in self._interfaces:
+                self.session.set(self._base_path + [interface, 'disable'])
+                for option in self._options.get(interface, []):
+                    self.session.set(self._base_path + [interface] + option.split())
+
+                # Also enable DHCP (ISC DHCP always places interface in admin up
+                # state so we check that we do not start DHCP client.
+                # https://phabricator.vyos.net/T2767
+                self.session.set(self._base_path + [interface, 'address', 'dhcp'])
+
+            self.session.commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                with open(f'/sys/class/net/{interface}/flags', 'r') as f:
+                    flags = f.read()
+                self.assertEqual(int(flags, 16) & 1, 0)
+
 if __name__ == '__main__':
     unittest.main()
