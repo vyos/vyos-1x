@@ -4,7 +4,7 @@
     <children>
       <node name="ndp">
         <properties>
-          <help>Monitors the NDP information received by the router through the device</help>
+          <help>Monitor the NDP information received by the router through the device</help>
         </properties>
         <command>sudo ndptool monitor</command>
         <children>
@@ -20,7 +20,7 @@
               <tagNode name="type">
                 <command>sudo ndptool monitor --ifname=$4 --msg-type=$6</command>
                 <properties>
-                  <help>Monitor ndp protocol on specified interface</help>
+                  <help>Monitor specific types of NDP protocols</help>
                   <completionHelp>
                     <list>rs ra ns na</list>
                   </completionHelp>
@@ -31,7 +31,7 @@
           <tagNode name="type">
             <command>sudo ndptool monitor --msg-type=$4</command>
             <properties>
-              <help>Monitor ndp protocol on specified interface</help>
+              <help>Monitor specific types of NDP protocols</help>
               <completionHelp>
                 <list>rs ra ns na</list>
               </completionHelp>
