@@ -2,13 +2,13 @@
   <properties>
     <help>Rule number for NAT</help>
     <valueHelp>
-      <format>1-9999</format>
+      <format>1-999999</format>
       <description>Number for this NAT rule</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 1-9999"/>
+      <validator name="numeric" argument="--range 1-999999"/>
     </constraint>
-    <constraintErrorMessage>NAT rule number must be between 1 and 9999</constraintErrorMessage>
+    <constraintErrorMessage>NAT rule number must be between 1 and 999999</constraintErrorMessage>
   </properties>
   <children>
     <leafNode name="description">
