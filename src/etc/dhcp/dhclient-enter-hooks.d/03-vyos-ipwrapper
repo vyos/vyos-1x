@@ -20,7 +20,6 @@ function iptovtysh () {
     local VTYSH_NETADDR=""
     local VTYSH_GATEWAY=""
     local VTYSH_DEV=""
-    local VTYSH_VRF_NAME=$(basename /sys/class/net/eth1/upper_* | sed -e 's/upper_//')
     # convert default route to 0.0.0.0/0
     if [ "$4" == "default" ] ; then
         VTYSH_NETADDR="0.0.0.0/0"
@@ -43,6 +42,7 @@ function iptovtysh () {
     fi
 
     # Add route to VRF routing table
+    local VTYSH_VRF_NAME=$(basename /sys/class/net/$VTYSH_DEV/upper_* | sed -e 's/upper_//')
     if [ -n $VTYSH_VRF_NAME ]; then
         VTYSH_VRF="vrf $VTYSH_VRF_NAME"
     fi

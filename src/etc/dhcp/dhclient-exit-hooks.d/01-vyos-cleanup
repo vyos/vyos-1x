@@ -15,8 +15,14 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
 
     # try to delete default ip route 
     for router in $old_routers; do
-        logmsg info "Deleting default route: via $router dev ${interface}"
-        ip -4 route del default via $router dev ${interface}
+        # check if we are bound to a VRF
+        local vrf_name=$(basename /sys/class/net/${interface}/upper_* | sed -e 's/upper_//')
+        if [ -n $vrf_name ]; then
+            vrf="vrf $vrf_name"
+        fi
+
+        logmsg info "Deleting default route: via $router dev ${interface} ${vrf}"
+        ip -4 route del default via $router dev ${interface} ${vrf}
     done
 
     # delete rfc3442 routes
