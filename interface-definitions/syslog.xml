@@ -10,9 +10,9 @@
         <children>
           <tagNode name="user">
             <properties>
-              <help>Logging to specific user's terminal</help>
+              <help>Logging to specific terminal of given user</help>
               <constraint>
-                <regex>^[a-z_][a-z0-9_-]{1,31}[$]?</regex>
+                <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
               </constraint>
               <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
               <valueHelp>
@@ -184,7 +184,7 @@
                 <validator name="ip-address"/>
                 <validator name="fqdn"/>
               </constraint>
-              <constraintErrorMessage>Invalid host FQDN or IP address</constraintErrorMessage>
+              <constraintErrorMessage>Invalid host (FQDN or IP address)</constraintErrorMessage>
               <valueHelp>
                 <format>ipv4</format>
                 <description>Remote syslog server IPv4 address</description>
@@ -195,6 +195,19 @@
               </valueHelp>
             </properties>
             <children>
+              <leafNode name="port">
+                <properties>
+                  <help>Destination port</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Destination port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid destination port value</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <tagNode name="facility">
                 <properties>
                   <help>Facility for logging</help>
@@ -308,7 +321,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>tcp</format>
-                        <description>send log messages to remote syslog server over tdp</description>
+                        <description>send log messages to remote syslog server over tcp</description>
                       </valueHelp>
                       <completionHelp>
                         <list>udp tcp</list>
@@ -385,7 +398,7 @@
                     <properties>
                       <help>Number of saved files (default is 5)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
                     </properties>
@@ -394,7 +407,7 @@
                     <properties>
                       <help>Size of log files (in kbytes, default is 256)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
                     </properties>
@@ -582,7 +595,7 @@
             <properties>
               <help>Logging to a file</help>
               <constraint>
-                <regex>^[a-zA-Z0-9\-_.]{1,255}</regex>
+                <regex>[a-zA-Z0-9\-_.]{1,255}</regex>
               </constraint>
               <constraintErrorMessage>illegal characters in filename or filename longer than 255 characters</constraintErrorMessage>
             </properties>
@@ -596,7 +609,7 @@
                     <properties>
                       <help>Number of saved files (default is 5)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
                     </properties>
@@ -605,7 +618,7 @@
                     <properties>
                       <help>Size of log files (in kbytes, default is 256)</help>
                       <constraint>
-                        <regex>^[0-9]+</regex>
+                        <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
                     </properties>
