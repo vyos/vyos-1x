@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,13 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-import sys
+
 import os
 import re
 import jinja2
+from sys import exit
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -53,9 +52,17 @@ $outchannel {{file}},{{files[file]['log-file']}},{{files[file]['max-size']}},{{f
 ## remote logging
 {% for host in hosts %}
 {% if hosts[host]['proto'] == 'tcp' %}
+{% if hosts[host]['port'] %}
+{{hosts[host]['selectors']}} @@{{host}}:{{hosts[host]['port']}}
+{% else %}
 {{hosts[host]['selectors']}} @@{{host}}
+{% endif %}
+{% else %}
+{% if hosts[host]['port'] %}
+{{hosts[host]['selectors']}} @{{host}}:{{hosts[host]['port']}}
 {% else %}
 {{hosts[host]['selectors']}} @{{host}}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -177,13 +184,14 @@ def get_config():
 
     # set system syslog host
     if c.exists('host'):
-        proto = 'udp'
         rhosts = c.list_nodes('host')
         for rhost in rhosts:
             for fac in c.list_nodes('host ' + rhost + ' facility'):
                 if c.exists('host ' + rhost + ' facility ' + fac + ' protocol'):
                     proto = c.return_value(
                         'host ' + rhost + ' facility ' + fac + ' protocol')
+                else:
+                    proto = 'udp'
 
             config_data['hosts'].update(
                 {
@@ -193,6 +201,9 @@ def get_config():
                     }
                 }
             )
+            if c.exists('host ' + rhost + ' port'):
+                config_data['hosts'][rhost][
+                    'port'] = c.return_value('host ' + rhost + ' port')
 
     # set system syslog user
     if c.exists('user'):
@@ -213,32 +224,31 @@ def generate_selectors(c, config_node):
 # protocols and security are being mapped here
 # for backward compatibility with old configs
 # security and protocol mappings can be removed later
-    if c.is_tag(config_node):
-        nodes = c.list_nodes(config_node)
-        selectors = ""
-        for node in nodes:
-            lvl = c.return_value(config_node + ' ' + node + ' level')
-            if lvl == None:
-                lvl = "err"
-            if lvl == 'all':
-                lvl = '*'
-            if node == 'all' and node != nodes[-1]:
-                selectors += "*." + lvl + ";"
-            elif node == 'all':
-                selectors += "*." + lvl
-            elif node != nodes[-1]:
-                if node == 'protocols':
-                    node = 'local7'
-                if node == 'security':
-                    node = 'auth'
-                selectors += node + "." + lvl + ";"
-            else:
-                if node == 'protocols':
-                    node = 'local7'
-                if node == 'security':
-                    node = 'auth'
-                selectors += node + "." + lvl
-        return selectors
+    nodes = c.list_nodes(config_node)
+    selectors = ""
+    for node in nodes:
+        lvl = c.return_value(config_node + ' ' + node + ' level')
+        if lvl == None:
+            lvl = "err"
+        if lvl == 'all':
+            lvl = '*'
+        if node == 'all' and node != nodes[-1]:
+            selectors += "*." + lvl + ";"
+        elif node == 'all':
+            selectors += "*." + lvl
+        elif node != nodes[-1]:
+            if node == 'protocols':
+                node = 'local7'
+            if node == 'security':
+                node = 'auth'
+            selectors += node + "." + lvl + ";"
+        else:
+            if node == 'protocols':
+                node = 'local7'
+            if node == 'security':
+                node = 'auth'
+            selectors += node + "." + lvl
+    return selectors
 
 
 def generate(c):
@@ -261,7 +271,8 @@ def generate(c):
 def verify(c):
     if c == None:
         return None
-    #
+
+    # may be obsolete
     # /etc/rsyslog.conf is generated somewhere and copied over the original (exists in /opt/vyatta/etc/rsyslog.conf)
     # it interferes with the global logging, to make sure we are using a single base, template is enforced here
     #
@@ -273,6 +284,7 @@ def verify(c):
     # /var/log/vyos-rsyslog were the old files, we may want to clean those up, but currently there
     # is a chance that someone still needs it, so I don't automatically remove
     # them
+    #
 
     if c == None:
         return None
@@ -289,7 +301,6 @@ def verify(c):
                 for s in c[conf][item]['selectors'].split(";"):
                     f = re.sub("\..*$", "", s)
                     if f not in fac:
-                        print (c[conf])
                         raise ConfigError(
                             'Invalid facility ' + s + ' set in ' + conf + ' ' + item)
                     l = re.sub("^.+\.", "", s)
@@ -317,4 +328,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        sys.exit(1)
+        exit(1)
