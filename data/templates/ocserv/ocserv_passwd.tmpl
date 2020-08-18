@@ -1,0 +1,6 @@
+#<username>:<group>:<hash>
+{% for user in username if username is defined %}
+{%   if not "disable" in username[user] %}
+{{ user }}:*:{{ username[user].hash }}
+{%   endif %}
+{% endfor %}
