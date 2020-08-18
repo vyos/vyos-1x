@@ -421,6 +421,9 @@ def verify(pppoe):
     if len(pppoe['dnsv6']) > 3:
         raise ConfigError('Not more then three IPv6 DNS name-servers can be configured')
 
+    if not pppoe['interfaces']:
+        raise ConfigError('At least one listen interface must be defined!')
+
     # local ippool and gateway settings config checks
     if pppoe['client_ip_subnets'] or pppoe['client_ip_pool']:
         if not pppoe['ppp_gw']:

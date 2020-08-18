@@ -901,6 +901,11 @@ class Interface(Control):
         if isinstance(new_addr, str):
             new_addr = [new_addr]
 
+        # ensure DHCP/DHCPv6 is stopped (when not configured explicitly)
+        for proto in ['dhcp', 'dhcpv6']:
+            if proto not in new_addr:
+                self.del_addr(proto)
+
         # determine IP addresses which are assigned to the interface and build a
         # list of addresses which are no longer in the dict so they can be removed
         cur_addr = self.get_addr()

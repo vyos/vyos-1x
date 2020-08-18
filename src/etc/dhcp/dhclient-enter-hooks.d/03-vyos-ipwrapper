@@ -40,7 +40,14 @@ function iptovtysh () {
     elif [ "$7" == "dev" ]; then
         VTYSH_DEV=$8
     fi
-    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE"
+
+    # Add route to VRF routing table
+    local VTYSH_VRF_NAME=$(basename /sys/class/net/$VTYSH_DEV/upper_* | sed -e 's/upper_//')
+    if [ -n $VTYSH_VRF_NAME ]; then
+        VTYSH_VRF="vrf $VTYSH_VRF_NAME"
+    fi
+    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VTYSH_VRF"
+
     # delete route if the command is "del"
     if [ "$3" == "del" ] ; then
         VTYSH_CMD="no $VTYSH_CMD"

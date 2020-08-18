@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="lcd" owner="${vyos_conf_scripts_dir}/system_lcd.py">
+        <properties>
+          <help>System LCD display</help>
+          <priority>100</priority>
+        </properties>
+        <children>
+          <leafNode name="model">
+            <properties>
+              <help>Model of the display attached to this system [REQUIRED]</help>
+              <completionHelp>
+                <list>cfa-533 cfa-631 cfa-633 cfa-635 sdec</list>
+              </completionHelp>
+              <valueHelp>
+                <format>cfa-533</format>
+                <description>Crystalfontz CFA-533</description>
+              </valueHelp>
+              <valueHelp>
+                <format>cfa-631</format>
+                <description>Crystalfontz CFA-631</description>
+              </valueHelp>
+              <valueHelp>
+                <format>cfa-633</format>
+                <description>Crystalfontz CFA-633</description>
+              </valueHelp>
+              <valueHelp>
+                <format>cfa-635</format>
+                <description>Crystalfontz CFA-635</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sdec</format>
+                <description>Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(cfa-533|cfa-631|cfa-633|cfa-635|sdec)$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="device">
+            <properties>
+              <help>Physical device used by LCD display</help>
+              <completionHelp>
+                <script>ls -1 /dev | grep ttyS</script>
+                <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
+              </completionHelp>
+              <valueHelp>
+                <format>ttySXX</format>
+                <description>TTY device name, regular serial port</description>
+              </valueHelp>
+              <valueHelp>
+                <format>usbNbXpY</format>
+                <description>TTY device name, USB based</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(ttyS[0-9]+|usb[0-9]+b.*)$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

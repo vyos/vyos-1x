@@ -107,7 +107,8 @@ Depends: python3,
   libatomic1,
   fastnetmon,
   libndp-tools,
-  ocserv
+  ocserv,
+  tcptraceroute
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
