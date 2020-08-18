@@ -1,0 +1,258 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vpn">
+    <children>
+      <node name="anyconnect" owner="${vyos_conf_scripts_dir}/vpn_anyconnect.py">
+        <properties>
+          <help>SSL VPN AnyConnect</help>
+          <priority>901</priority>
+        </properties>
+        <children>
+          <node name="authentication">
+            <properties>
+              <help>Authentication for remote access SSL VPN Server</help>
+            </properties>
+            <children>
+              <leafNode name="mode">
+                <properties>
+                  <help>Authentication mode used by this server</help>
+                  <valueHelp>
+                    <format>local</format>
+                    <description>Use local username/password configuration</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>radius</format>
+                    <description>Use RADIUS server for user autentication</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(local|radius)</regex>
+                  </constraint>
+                  <completionHelp>
+                    <list>local radius</list>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <node name="local-users">
+                <properties>
+                  <help>Local user authentication for SSL VPN server</help>
+                </properties>
+                <children>
+                  <tagNode name="username">
+                    <properties>
+                      <help>User name for authentication</help>
+                    </properties>
+                    <children>
+                      <leafNode name="disable">
+                        <properties>
+                          <help>Option to disable a SSL VPN Server user</help>
+                          <valueless />
+                        </properties>
+                      </leafNode>
+                      <leafNode name="password">
+                        <properties>
+                          <help>Password for authentication</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              #include <include/radius-server.xml.i>
+              <node name="radius">
+                <children>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Session timeout</help>
+                      <valueHelp>
+                        <format>1-30</format>
+                        <description>Session timeout in seconds (default: 2)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-30"/>
+                      </constraint>
+                      <constraintErrorMessage>Timeout must be between 1 and 30 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>2</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="listen-ports">
+            <properties>
+              <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
+            </properties>
+            <children>
+              <leafNode name="tcp">
+                <properties>
+                  <help>tcp port number to accept connections (default: 443)</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Numeric IP port (default: 443)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>443</defaultValue>
+              </leafNode>
+              <leafNode name="udp">
+                <properties>
+                  <help>udp port number to accept connections (default: 443)</help>
+                  <valueHelp>
+                    <format>1-65535</format>
+                    <description>Numeric IP port (default: 443)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>443</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="ssl">
+            <properties>
+              <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
+            </properties>
+            <children>
+              <leafNode name="ca-cert-file">
+                <properties>
+                  <help>Certificate Authority certificate</help>
+                  <completionHelp>
+                    <script>ls /config/auth</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="cert-file">
+                <properties>
+                  <help>Server Certificate</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="key-file">
+                <properties>
+                  <help>Privat Key of the Server Certificate</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>File in /config/auth directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-exists" argument="--directory /config"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="network-settings">
+            <properties>
+              <help>Network settings</help>
+            </properties>
+            <children>
+              <leafNode name="push-route">
+                <properties>
+                  <help>Route to be pushed to the client</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 network and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 network and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <node name="client-ip-settings">
+                <properties>
+                  <help>Client IP pools settings</help>
+                </properties>
+                <children>
+                  <leafNode name="subnet">
+                    <properties>
+                      <help>Client IP subnet (CIDR notation)</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 address and prefix length</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                      <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="client-ipv6-pool">
+                <properties>
+                  <help>Pool of client IPv6 addresses</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>Pool of addresses used to assign to clients</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 address and prefix length</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mask">
+                    <properties>
+                      <help>Prefix length used for individual client</help>
+                      <valueHelp>
+                        <format>&lt;48-128&gt;</format>
+                        <description>Client prefix length (default: 64)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 48-128"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>64</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="name-server">
+                <properties>
+                  <help>Domain Name Server (DNS) propagated to client</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Domain Name Server (DNS) IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Domain Name Server (DNS) IPv6 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+      </children>
+    </node>
+  </children>
+</node>
+</interfaceDefinition>
