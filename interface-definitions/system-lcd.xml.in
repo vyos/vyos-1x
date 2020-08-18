@@ -12,26 +12,30 @@
             <properties>
               <help>Model of the display attached to this system [REQUIRED]</help>
               <completionHelp>
-                <list>CFA-533 CFA-631 CFA-633 CFA-635</list>
+                <list>cfa-533 cfa-631 cfa-633 cfa-635 sdec</list>
               </completionHelp>
               <valueHelp>
-                <format>CFA-533</format>
+                <format>cfa-533</format>
                 <description>Crystalfontz CFA-533</description>
               </valueHelp>
               <valueHelp>
-                <format>CFA-631</format>
+                <format>cfa-631</format>
                 <description>Crystalfontz CFA-631</description>
               </valueHelp>
               <valueHelp>
-                <format>CFA-633</format>
+                <format>cfa-633</format>
                 <description>Crystalfontz CFA-633</description>
               </valueHelp>
               <valueHelp>
-                <format>CFA-635</format>
+                <format>cfa-635</format>
                 <description>Crystalfontz CFA-635</description>
               </valueHelp>
+              <valueHelp>
+                <format>sdec</format>
+                <description>Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances</description>
+              </valueHelp>
               <constraint>
-                <regex>^(CFA-533|CFA-631|CFA-633|CFA-635)$</regex>
+                <regex>^(cfa-533|cfa-631|cfa-633|cfa-635|sdec)$</regex>
               </constraint>
             </properties>
           </leafNode>

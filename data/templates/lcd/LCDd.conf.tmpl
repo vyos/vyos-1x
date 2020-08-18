@@ -48,8 +48,12 @@ DriverPath=/usr/lib/x86_64-linux-gnu/lcdproc/
 #   sed1520, serialPOS, serialVFD, shuttleVFD, sli, stv5730, svga, t6963,
 #   text, tyan, ula200, vlsys_m428, xosd, yard2LCD
 
-{% if model is defined and model.startswith('CFA-') %}
+{% if model is defined %}
+{%   if model.startswith('cfa-') %}
 Driver=CFontzPacket
+{%   elif model == 'sdec' %}
+Driver=sdeclcd
+{%   endif %}
 {% endif %}
 
 # Tells the driver to bind to the given interface. [default: 127.0.0.1]
@@ -112,7 +116,7 @@ Heartbeat=off
 TitleSpeed=10
 
 {% if model is defined and model is not none %}
-{%   if model.startswith('CFA-') %}
+{%   if model.startswith('cfa-') %}
 ## CrystalFontz packet driver (for CFA533, CFA631, CFA633 & CFA635) ##
 [CFontzPacket]
 Model={{ model.split('-')[1] }}
@@ -122,5 +126,9 @@ Brightness=500
 OffBrightness=50
 Reboot=yes
 USB=yes
+{%   elif model == 'sdec' %}
+## SDEC driver for Lanner, Watchguard, Sophos sppliances ##
+[sdeclcd]
+# No options
 {%   endif %}
 {% endif %}

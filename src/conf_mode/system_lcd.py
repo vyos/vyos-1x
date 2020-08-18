@@ -41,6 +41,10 @@ def verify(lcd):
     if not lcd:
         return None
 
+    if 'model' in lcd and lcd['model'] in ['sdec']:
+        # This is a fixed LCD display, no device needed - bail out early
+        return None
+
     if not {'device', 'model'} <= set(lcd):
         raise ConfigError('Both device and driver must be set!')
 
