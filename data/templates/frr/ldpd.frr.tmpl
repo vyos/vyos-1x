@@ -21,6 +21,18 @@ no discovery transport-address {{ old_ldp.d_transp_ipv4 }}
 {% if ldp.d_transp_ipv4 -%}
 discovery transport-address {{ ldp.d_transp_ipv4 }}
 {% endif -%}
+{% if old_ldp.hello_holdtime -%}
+no  discovery hello holdtime {{ old_ldp.hello_holdtime }}
+{% endif -%}
+{% if ldp.hello_holdtime -%}
+discovery hello holdtime {{ ldp.hello_holdtime }}
+{% endif -%}
+{% if old_ldp.hello_interval -%}
+no discovery hello interval {{ old_ldp.hello_interval }}
+{% endif -%}
+{% if ldp.hello_interval -%}
+discovery hello interval {{ ldp.hello_interval }}
+{% endif -%}
 {% for interface in old_ldp.interfaces -%}
 no interface {{interface}}
 {% endfor -%}
