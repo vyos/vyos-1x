@@ -27,6 +27,7 @@ from vyos import airbag
 airbag.enable()
 
 vyos_conf_scripts_dir = vyos.defaults.directories['conf_mode']
+vyos_certbot_dir = vyos.defaults.directories['certbot']
 
 dependencies = [
     'https.py',
@@ -45,7 +46,7 @@ def request_certbot(cert):
     else:
         domain_flag = ''
 
-    certbot_cmd = 'certbot certonly -n --nginx --agree-tos --no-eff-email --expand {0} {1}'.format(email_flag, domain_flag)
+    certbot_cmd = f'certbot certonly --config-dir {vyos_certbot_dir} -n --nginx --agree-tos --no-eff-email --expand {email_flag} {domain_flag}'
 
     cmd(certbot_cmd,
         raising=ConfigError,
