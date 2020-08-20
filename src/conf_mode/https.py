@@ -31,6 +31,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/nginx/sites-available/default'
+certbot_dir = vyos.defaults.directories['certbot']
 
 default_server_block = {
     'id'        : '',
@@ -86,8 +87,9 @@ def get_config():
             if sub_list:
                 for sb in sub_list:
                     sb['certbot'] = True
+                    sb['certbot_dir'] = certbot_dir
                     # certbot organizes certificates by first domain
-                    sb['certbot_dir'] = certbot_domains[0]
+                    sb['certbot_domain_dir'] = certbot_domains[0]
 
     api_somewhere = False
     api_data = {}
