@@ -43,6 +43,9 @@ def get_hash(password):
 def get_config():
     conf = Config()
     base = ['vpn', 'anyconnect']
+    if not conf.exists(base):
+        return None
+
     ocserv = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
