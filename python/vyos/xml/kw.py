@@ -78,6 +78,10 @@ argument = '[argument]'
 
 error = '[error]'
 
+# operational mode
+
+command = '[command]'
+
 # created
 
 node = '[node]'

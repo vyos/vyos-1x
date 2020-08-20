@@ -24,9 +24,15 @@ override_dh_auto_build:
 override_dh_auto_install:
 	dh_auto_install
 
-	# convert the XML to dictionaries
-	env PYTHONPATH=python python3 python/vyos/xml/generate.py
+	# install the parsed XML files into /usr/share/vyos/xml
+	env PYTHONPATH=python python3 python/vyos/xml/generate.py xml $(DIR)
 
+	# add the cache dictionaries with the python code (failover to xml)
+	# it makes sure the code is still working if the xml can not be parsed
+	# (ie: bad user edit or deleted)
+	env PYTHONPATH=python python3 python/vyos/xml/generate.py python
+
+	# install the python code in /usr/lib/python.<version>
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
 
 	# Install scripts

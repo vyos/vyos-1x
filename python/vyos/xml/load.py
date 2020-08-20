@@ -11,8 +11,6 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
 
-import glob
-
 from os.path import join
 from os.path import abspath
 from os.path import dirname
@@ -23,6 +21,8 @@ from vyos import debug
 from vyos.xml import kw
 from vyos.xml import definition
 
+from vyos.xml.files import listing
+from vyos.xml.files import include
 
 # where the files are located
 
@@ -34,6 +34,8 @@ configuration_cache = abspath(join(_here, 'cache', 'configuration.py'))
 operational_definition = abspath(join(_here, '..', '..' ,'..', 'op-mode-definitions'))
 operational_cache = abspath(join(_here, 'cache', 'operational.py'))
 
+configuration_xml = '/usr/share/vyos/xml/configuration.xml'
+operational_xml = '/usr/share/vyos/xml/operational.xml'
 
 # This code is only ran during the creation of the debian package
 # therefore we accept that failure can be fatal and not handled
@@ -61,44 +63,35 @@ def _safe_update(dict1, dict2):
     return {**dict1, **dict2}
 
 
-def _merge(dict1, dict2):
+def _merge_dict(dict1, dict2, inside=[]):
     """
     merge dict2 in to dict1 and return it
     """
     for k in list(dict2):
-        if k not in dict1:
-            dict1[k] = dict2[k]
+        old = dict1.get(k, None)
+        new = dict2[k]
+
+        if old is None:
+            dict1[k] = new
             continue
-        if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
-            dict1[k] = _merge(dict1[k], dict2[k])
-        elif isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
-            dict1[k].extend(dict2[k])
-        elif dict1[k] == dict2[k]:
+
+        if isinstance(old, dict) and isinstance(new, dict):
+            dict1[k] = _merge_dict(old, new, inside + [k])
+            continue
+
+        if isinstance(old, list) and isinstance(new, list):
+            dict1[k].extend(new)
+            continue
+
+        if old == new:
             # A definition shared between multiple files
-            if k in (kw.valueless, kw.multi, kw.hidden, kw.node, kw.summary, kw.owner, kw.priority):
-                continue
-            _fatal()
-            raise RuntimeError('parsing issue - undefined leaf?')
-        else:
-            raise RuntimeError('parsing issue - we messed up?')
+            # if k not in (kw.valueless, kw.multi, kw.hidden, kw.node, kw.summary, kw.owner, kw.priority):
+            if not kw.found(k):
+                _fatal('parsing issue - undefined leaf?')
+            continue
+
+        _fatal(f'parsing issue with ({k})\n\n{old}\n\n{new}')
     return dict1
-
-
-def _include(fname, folder=''):
-    """
-    return the content of a file, including any file referenced with a #include
-    """
-    if not folder:
-        folder = dirname(fname)
-    content = ''
-    with open(fname, 'r') as r:
-        for line in r.readlines():
-            if '#include' in line:
-                content += _include(join(folder,line.strip()[10:-1]), folder)
-                continue
-            content += line
-    return content
-
 
 def _format_nodes(inside, conf, xml):
     r = {}
@@ -132,6 +125,7 @@ def _format_nodes(inside, conf, xml):
             node = nodes
             name = node.pop('@name')
             into = inside + [name]
+
             r[name] = _format_node(inside + [name], node, xml)
             r[name][kw.node] = nodename
             xml[kw.tags].append(' '.join(into))
@@ -265,8 +259,12 @@ def _format_node(inside, conf, xml):
             default = conf.pop('defaultValue')
             x = xml[kw.default]
             for k in inside[:-1]:
-                x = x.setdefault(k,{})
+                x = x.setdefault(k, {})
             x[inside[-1]] = '' if default is None else default
+
+        elif 'command' in keys:
+            command = conf.pop('command')
+            r[kw.command] = command
 
         else:
             _fatal(conf)
@@ -274,17 +272,38 @@ def _format_node(inside, conf, xml):
     return r
 
 
-def xml(folder):
-    """
-    read all the xml in the folder 
-    """
-    xml = definition.XML()
-    for fname in glob.glob(f'{folder}/*.xml.in'):
-        parsed = xmltodict.parse(_include(fname))
-        formated = _format_nodes([], parsed['interfaceDefinition'], xml)
-        _merge(xml[kw.tree], formated)
+def _add_root_node(xml):
     # fix the configuration root node for completion
     # as we moved all the name "up" the chain to use them as index.
     xml[kw.tree][kw.node] = kw.plainNode
-    # XXX: do the others
     return xml
+
+
+def from_folder(folder):
+    """
+    read all the xml files in the folder and return a parsed python dict
+    """
+
+    xml = definition.XML()
+    for fname in listing(folder):
+        parsed = xmltodict.parse(include(fname))
+        formated = _format_nodes([], parsed['interfaceDefinition'], xml)
+        _merge_dict(xml[kw.tree], formated)
+
+    return _add_root_node(xml)
+
+
+def from_file(fname):
+    """
+    read an xml file and return a parsed python dict
+    """
+
+    xml = definition.XML()
+    with open(fname, 'rt') as r:
+        print(f'reading {fname}\n')
+        raw = r.read()
+        # using r instead of raw does not work!
+        parsed = xmltodict.parse(raw)
+        xml[kw.tree] = _format_nodes([], parsed['interfaceDefinition'], xml)
+
+    return _add_root_node(xml)
