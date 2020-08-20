@@ -96,7 +96,7 @@ class VRRP(object):
             pid = util.read_file(cls.location['pid'])
             os.kill(int(pid), cls._signal[what])
 
-            # shoud look for file size change ?
+            # should look for file size change?
             sleep(0.2)
             return util.read_file(fname)
         except FileNotFoundError:
@@ -126,8 +126,8 @@ class VRRP(object):
         return disabled
 
     @classmethod
-    def format (cls, data):
-        headers = ["Name", "Interface", "VRID", "State", "Last Transition"]
+    def format(cls, data):
+        headers = ["Name", "Interface", "VRID", "State", "Priority", "Last Transition"]
         groups = []
 
         data = json.loads(data)
@@ -138,11 +138,12 @@ class VRRP(object):
             intf = data['ifp_ifname']
             vrid = data['vrid']
             state = cls.decode_state(data["state"])
+            priority = data['effective_priority']
 
             since = int(time() - float(data['last_transition']))
             last = util.seconds_to_human(since)
 
-            groups.append([name, intf, vrid, state, last])
+            groups.append([name, intf, vrid, state, priority, last])
 
         # add to the active list disabled instances
         groups.extend(cls.disabled())
