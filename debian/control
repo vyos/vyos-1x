@@ -33,6 +33,7 @@ Depends:
   isc-dhcp-relay,
   isc-dhcp-server,
   keepalived (>=2.0.5),
+  lcdproc,
   libvyosconfig0,
   lsscsi,
   mdns-repeater,
