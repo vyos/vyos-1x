@@ -11,6 +11,9 @@ interface {{ ifname }} {
 {%   if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
     send ia-na 0; # non-temporary address
 {%   endif %}
+{%   if dhcpv6_options is defined and dhcpv6_options.rapid_commit is defined %}
+    send rapid-commit; # wait for immediate reply instead of advertisements
+{%   endif %}
 {% endif %}
 {% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
 {%   for pd in dhcpv6_options.pd %}

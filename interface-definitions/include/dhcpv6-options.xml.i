@@ -70,9 +70,15 @@
         </tagNode>
       </children>
     </tagNode>
+    <leafNode name="rapid-commit">
+      <properties>
+        <help>Wait for immediate reply instead of advertisements</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="temporary">
       <properties>
-        <help>IPv6 "temporary" address</help>
+        <help>IPv6 temporary address</help>
         <valueless/>
       </properties>
     </leafNode>
