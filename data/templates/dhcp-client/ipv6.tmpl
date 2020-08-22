@@ -2,13 +2,15 @@
 
 # man https://www.unix.com/man-page/debian/5/dhcp6c.conf/
 interface {{ ifname }} {
+{% if address is defined and 'dhcpv6' in address %}
     request domain-name-servers;
     request domain-name;
-{% if dhcpv6_options is defined and dhcpv6_options.parameters_only is defined %}
+{%   if dhcpv6_options is defined and dhcpv6_options.parameters_only is defined %}
     information-only;
-{% endif %}
-{% if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
+{%   endif %}
+{%   if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
     send ia-na 0; # non-temporary address
+{%   endif %}
 {% endif %}
 {% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
 {%   for pd in dhcpv6_options.pd %}
@@ -17,10 +19,12 @@ interface {{ ifname }} {
 {% endif %}
 };
 
-{% if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
+{% if address is defined and 'dhcpv6' in address %}
+{%   if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
 id-assoc na 0 {
     # Identity association for non temporary address
 };
+{%   endif %}
 {% endif %}
 
 {% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
