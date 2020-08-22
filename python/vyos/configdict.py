@@ -93,7 +93,7 @@ def dict_merge(source, destination):
     tmp = deepcopy(destination)
 
     for key, value in source.items():
-        if key not in tmp.keys():
+        if key not in tmp:
             tmp[key] = value
         elif isinstance(source[key], dict):
             tmp[key] = dict_merge(source[key], tmp[key])
@@ -109,15 +109,15 @@ def T2665_default_dict_cleanup(dict):
     """ Cleanup default keys for tag nodes https://phabricator.vyos.net/T2665. """
     # Cleanup
     for vif in ['vif', 'vif_s']:
-        if vif in dict.keys():
-            for key in ['ip', 'mtu']:
-                if key in dict[vif].keys():
+        if vif in dict:
+            for key in ['ip', 'mtu', 'dhcpv6_options']:
+                if key in dict[vif]:
                     del dict[vif][key]
 
             # cleanup VIF-S defaults
-            if 'vif_c' in dict[vif].keys():
-                for key in ['ip', 'mtu']:
-                    if key in dict[vif]['vif_c'].keys():
+            if 'vif_c' in dict[vif]:
+                for key in ['ip', 'mtu', 'dhcpv6_options']:
+                    if key in dict[vif]['vif_c']:
                         del dict[vif]['vif_c'][key]
                 # If there is no vif-c defined and we just cleaned the default
                 # keys - we can clean the entire vif-c dict as it's useless
@@ -128,6 +128,21 @@ def T2665_default_dict_cleanup(dict):
             # keys - we can clean the entire vif dict as it's useless
             if not dict[vif]:
                 del dict[vif]
+
+    if 'dhcpv6_options' in dict and 'pd' in dict['dhcpv6_options']:
+        if 'length' in dict['dhcpv6_options']['pd']:
+            del dict['dhcpv6_options']['pd']['length']
+
+    # delete empty dicts
+    if 'dhcpv6_options' in dict:
+        if 'pd' in dict['dhcpv6_options']:
+            # test if 'pd' is an empty node so we can remove it
+            if not dict['dhcpv6_options']['pd']:
+                del dict['dhcpv6_options']['pd']
+
+        # test if 'dhcpv6_options' is an empty node so we can remove it
+        if not dict['dhcpv6_options']:
+            del dict['dhcpv6_options']
 
     return dict
 
@@ -193,6 +208,16 @@ def get_removed_vlans(conf, dict):
 
     return dict
 
+
+def dict_add_dhcpv6pd_defaults(defaults, config_dict):
+    # Implant default dictionary for DHCPv6-PD instances
+    if 'dhcpv6_options' in config_dict and 'pd' in config_dict['dhcpv6_options']:
+        for pd, pd_config in config_dict['dhcpv6_options']['pd'].items():
+            config_dict['dhcpv6_options']['pd'][pd] = dict_merge(
+                defaults, pd_config)
+
+    return config_dict
+
 def get_interface_dict(config, base, ifname=''):
     """
     Common utility function to retrieve and mandgle the interfaces available
@@ -257,15 +282,30 @@ def get_interface_dict(config, base, ifname=''):
     # remove wrongly inserted values
     dict = T2665_default_dict_cleanup(dict)
 
-    # The values are identical for vif, vif-s and vif-c as the all include the same
-    # XML definitions which hold the defaults
+    # Implant default dictionary for DHCPv6-PD instances
+    default_pd_values = defaults(base + ['dhcpv6-options', 'pd'])
+    dict = dict_add_dhcpv6pd_defaults(default_pd_values, dict)
+
+    # Implant default dictionary in vif/vif-s VLAN interfaces. Values are
+    # identical for all types of VLAN interfaces as they all include the same
+    # XML definitions which hold the defaults.
     default_vif_values = defaults(base + ['vif'])
     for vif, vif_config in dict.get('vif', {}).items():
-        vif_config = dict_merge(default_vif_values, vif_config)
+        dict['vif'][vif] = dict_add_dhcpv6pd_defaults(
+                default_pd_values, vif_config)
+        dict['vif'][vif] = T2665_default_dict_cleanup(
+                dict_merge(default_vif_values, vif_config))
+
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
-        vif_s_config = dict_merge(default_vif_values, vif_s_config)
+        dict['vif_s'][vif_s] = dict_add_dhcpv6pd_defaults(
+                default_pd_values, vif_s_config)
+        dict['vif_s'][vif_s] = T2665_default_dict_cleanup(
+                dict_merge(default_vif_values, vif_s_config))
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
-            vif_c_config = dict_merge(default_vif_values, vif_c_config)
+            dict['vif_s'][vif_s]['vif_c'][vif_c] = dict_add_dhcpv6pd_defaults(
+                    default_pd_values, vif_c_config)
+            dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_default_dict_cleanup(
+                    dict_merge(default_vif_values, vif_c_config))
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)

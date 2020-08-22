@@ -8,37 +8,43 @@ interface {{ ifname }} {
     information-only;
 {% endif %}
 {% if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
-    send ia-na 1; # non-temporary address
+    send ia-na 0; # non-temporary address
 {% endif %}
-{% if dhcpv6_options is defined and dhcpv6_options.prefix_delegation is defined %}
-    send ia-pd 2; # prefix delegation
+{% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
+{%   for pd in dhcpv6_options.pd %}
+    send ia-pd {{ pd }}; # prefix delegation #{{ pd }}
+{%   endfor %}
 {% endif %}
 };
 
 {% if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
-id-assoc na 1 {
-    # Identity association NA
+id-assoc na 0 {
+    # Identity association for non temporary address
 };
 {% endif %}
 
-{% if dhcpv6_options is defined and dhcpv6_options.prefix_delegation is defined %}
-id-assoc pd 2 {
-{%   if dhcpv6_options.prefix_delegation.length is defined %}
-    prefix ::/{{ dhcpv6_options.prefix_delegation.length }} infinity;
-{%   endif %}
-{%   for interface in dhcpv6_options.prefix_delegation.interface %}
+{% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
+{%   for pd in dhcpv6_options.pd %}
+id-assoc pd {{ pd }} {
+{#   length got a default value #}
+    prefix ::/{{ dhcpv6_options.pd[pd].length }} infinity;
+{%     set sla_len = 64 - dhcpv6_options.pd[pd].length|int %}
+{%     set count = namespace(value=0) %}
+{%     for interface in dhcpv6_options.pd[pd].interface if dhcpv6_options.pd[pd].interface is defined %}
     prefix-interface {{ interface }} {
-{%     if dhcpv6_options.prefix_delegation.interface[interface].sla_id is defined %}
-        sla-id {{ dhcpv6_options.prefix_delegation.interface[interface].sla_id }};
-{%     endif %}
-{%     if dhcpv6_options.prefix_delegation.interface[interface].sla_len is defined %}
-        sla-len {{ dhcpv6_options.prefix_delegation.interface[interface].sla_len }};
-{%     endif %}
-{%     if dhcpv6_options.prefix_delegation.interface[interface].address is defined %}
-        ifid {{ dhcpv6_options.prefix_delegation.interface[interface].address }};
-{%     endif %}
+        sla-len {{ sla_len }};
+{%       if dhcpv6_options.pd[pd].interface[interface].sla_id is defined and dhcpv6_options.pd[pd].interface[interface].sla_id is not none %}
+        sla-id {{ dhcpv6_options.pd[pd].interface[interface].sla_id }};
+{%       else %}
+        sla-id {{ count.value }};
+{%       endif %}
+{%       if dhcpv6_options.pd[pd].interface[interface].address is defined and dhcpv6_options.pd[pd].interface[interface].address is not none %}
+        ifid {{ dhcpv6_options.pd[pd].interface[interface].address }};
+{%       endif %}
     };
-{%   endfor %}
+{%      set count.value = count.value + 1 %}
+{%     endfor %}
 };
+{%   endfor %}
 {% endif %}
 
