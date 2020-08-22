@@ -111,11 +111,10 @@ class PPPoEInterfaceTest(unittest.TestCase):
             self.session.set(base_path + [interface, 'ipv6', 'enable'])
 
             # prefix delegation stuff
-            dhcpv6_pd_base = base_path + [interface, 'dhcpv6-options', 'prefix-delegation']
+            dhcpv6_pd_base = base_path + [interface, 'dhcpv6-options', 'pd', '0']
             self.session.set(dhcpv6_pd_base + ['length', '56'])
             self.session.set(dhcpv6_pd_base + ['interface', self._source_interface, 'address', address])
             self.session.set(dhcpv6_pd_base + ['interface', self._source_interface, 'sla-id',  sla_id])
-            self.session.set(dhcpv6_pd_base + ['interface', self._source_interface, 'sla-len', sla_len])
 
             # commit changes
             self.session.commit()
