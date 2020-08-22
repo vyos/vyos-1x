@@ -1,0 +1,134 @@
+### Autogenerted by system-display.py ##
+
+# LCDd.conf -- configuration file for the LCDproc server daemon LCDd
+#
+# This file contains the configuration for the LCDd server.
+#
+# The format is ini-file-like. It is divided into sections that start at
+# markers that look like [section]. Comments are all line-based comments,
+# and are lines that start with '#' or ';'.
+#
+# The server has a 'central' section named [server]. For the menu there is
+# a section called [menu]. Further each driver has a section which
+# defines how the driver acts.
+#
+# The drivers are activated by specifying them in a driver= line in the
+# server section, like:
+#
+#   Driver=curses
+#
+# This tells LCDd to use the curses driver.
+# The first driver that is loaded and is capable of output defines the
+# size of the display. The default driver to use is curses.
+# If the driver is specified using the -d <driver> command line option,
+# the Driver= options in the config file are ignored.
+#
+# The drivers read their own options from the respective sections.
+
+## Server section with all kinds of settings for the LCDd server ##
+[server]
+
+# Where can we find the driver modules ?
+# NOTE: Always place a slash as last character !
+DriverPath=/usr/lib/x86_64-linux-gnu/lcdproc/
+
+# Tells the server to load the given drivers. Multiple lines can be given.
+# The name of the driver is case sensitive and determines the section
+# where to look for further configuration options of the specific driver
+# as well as the name of the dynamic driver module to load at runtime.
+# The latter one can be changed by giving a File= directive in the
+# driver specific section.
+#
+# The following drivers are supported:
+#   bayrad, CFontz, CFontzPacket, curses, CwLnx, ea65, EyeboxOne, futaba,
+#   g15, glcd, glcdlib, glk, hd44780, icp_a106, imon, imonlcd,, IOWarrior,
+#   irman, joy, lb216, lcdm001, lcterm, linux_input, lirc, lis, MD8800,
+#   mdm166a, ms6931, mtc_s16209x, MtxOrb, mx5000, NoritakeVFD,
+#   Olimex_MOD_LCD1x9, picolcd, pyramid, rawserial, sdeclcd, sed1330,
+#   sed1520, serialPOS, serialVFD, shuttleVFD, sli, stv5730, svga, t6963,
+#   text, tyan, ula200, vlsys_m428, xosd, yard2LCD
+
+{% if model is defined %}
+{%   if model.startswith('cfa-') %}
+Driver=CFontzPacket
+{%   elif model == 'sdec' %}
+Driver=sdeclcd
+{%   endif %}
+{% endif %}
+
+# Tells the driver to bind to the given interface. [default: 127.0.0.1]
+Bind=127.0.0.1
+
+# Listen on this specified port. [default: 13666]
+Port=13666
+
+# Sets the reporting level; defaults to warnings and errors only.
+# [default: 2; legal: 0-5]
+ReportLevel=3
+
+# Should we report to syslog instead of stderr? [default: no; legal: yes, no]
+ReportToSyslog=yes
+
+# User to run as.  LCDd will drop its root privileges and run as this user
+# instead. [default: nobody]
+User=nobody
+
+# The server will stay in the foreground if set to yes.
+# [default: no, legal: yes, no]
+Foreground=yes
+
+# Hello message: each entry represents a display line; default: builtin
+Hello="Starting VyOS"
+Hello="      ...    "
+
+# GoodBye message: each entry represents a display line; default: builtin
+GoodBye=" VyOS shutting"
+GoodBye="    down...   "
+
+# Sets the interval in microseconds for updating the display.
+# [default: 125000 meaning 8Hz]
+FrameInterval=250000 # 4 updates per second
+
+# Sets the default time in seconds to displays a screen. [default: 4]
+WaitTime=1
+
+# If set to no, LCDd will start with screen rotation disabled. This has the
+# same effect as if the ToggleRotateKey had been pressed. Rotation will start
+# if the ToggleRotateKey is pressed. Note that this setting does not turn off
+# priority sorting of screens. [default: on; legal: on, off]
+AutoRotate=on
+
+# If yes, the the serverscreen will be rotated as a usual info screen. If no,
+# it will be a background screen, only visible when no other screens are
+# active. The special value 'blank' is similar to no, but only a blank screen
+# is displayed. [default: on; legal: on, off, blank]
+ServerScreen=blank
+
+# Set master backlight setting. If set to 'open' a client may control the
+# backlight for its own screens (only). [default: open; legal: off, open, on]
+Backlight=on
+
+# Set master heartbeat setting. If set to 'open' a client may control the
+# heartbeat for its own screens (only). [default: open; legal: off, open, on]
+Heartbeat=off
+
+# set title scrolling speed [default: 10; legal: 0-10]
+TitleSpeed=10
+
+{% if model is defined and model is not none %}
+{%   if model.startswith('cfa-') %}
+## CrystalFontz packet driver (for CFA533, CFA631, CFA633 & CFA635) ##
+[CFontzPacket]
+Model={{ model.split('-')[1] }}
+Device={{ device }}
+Contrast=350
+Brightness=500
+OffBrightness=50
+Reboot=yes
+USB=yes
+{%   elif model == 'sdec' %}
+## SDEC driver for Lanner, Watchguard, Sophos sppliances ##
+[sdeclcd]
+# No options
+{%   endif %}
+{% endif %}

@@ -1,0 +1,11 @@
+[Unit]
+Description=LCD display daemon
+Documentation=man:LCDd(8) http://www.lcdproc.org/
+After=vyos-router.service
+
+[Service]
+User=root
+ExecStart=/usr/sbin/LCDd -c /run/LCDd/LCDd.conf
+
+[Install]
+WantedBy=multi-user.target
