@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import jmespath
 
 from sys import exit
 from copy import deepcopy
@@ -104,8 +103,7 @@ def generate(pppoe):
     render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
            pppoe, trim_blocks=True, permission=0o755)
 
-    tmp = jmespath.search('dhcpv6_options.prefix_delegation.interface', pppoe)
-    if tmp and len(tmp) > 0:
+    if 'dhcpv6_options' in pppoe and 'pd' in pppoe['dhcpv6_options']:
         # ipv6.tmpl relies on ifname - this should be made consitent in the
         # future better then double key-ing the same value
         render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)

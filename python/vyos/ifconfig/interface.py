@@ -901,10 +901,15 @@ class Interface(Control):
         if isinstance(new_addr, str):
             new_addr = [new_addr]
 
-        # ensure DHCP/DHCPv6 is stopped (when not configured explicitly)
-        for proto in ['dhcp', 'dhcpv6']:
-            if proto not in new_addr:
-                self.del_addr(proto)
+        # always ensure DHCP client is stopped (when not configured explicitly)
+        if 'dhcp' not in new_addr:
+            self.del_addr('dhcp')
+
+        # always ensure DHCPv6 client is stopped (when not configured as client
+        # for IPv6 address or prefix delegation
+        dhcpv6pd = jmespath.search('dhcpv6_options.pd', config)
+        if 'dhcpv6' not in new_addr or dhcpv6pd == None:
+            self.del_addr('dhcpv6')
 
         # determine IP addresses which are assigned to the interface and build a
         # list of addresses which are no longer in the dict so they can be removed
@@ -914,6 +919,10 @@ class Interface(Control):
 
         for addr in new_addr:
             self.add_addr(addr)
+
+        # start DHCPv6 client when only PD was configured
+        if dhcpv6pd != None:
+            self.set_dhcpv6(True)
 
         # There are some items in the configuration which can only be applied
         # if this instance is not bound to a bridge. This should be checked
