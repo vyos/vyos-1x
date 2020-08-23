@@ -14,12 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import jmespath
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 
 from vyos.util import cmd
+from vyos.util import vyos_dict_search
 from vyos.validate import assert_list
 from vyos.validate import assert_positive
 
@@ -336,7 +336,7 @@ class BondIf(Interface):
             self.set_arp_ip_target('-' + addr)
 
         # Add configured ARP target addresses
-        value = jmespath.search('arp_monitor.target', config)
+        value = vyos_dict_search('arp_monitor.target', config)
         if isinstance(value, str):
             value = [value]
         if value:
@@ -359,7 +359,7 @@ class BondIf(Interface):
             if value: self.set_mode(value)
 
             # Add (enslave) interfaces to bond
-            value = jmespath.search('member.interface', config)
+            value = vyos_dict_search('member.interface', config)
             if value:
                 for interface in value:
                     # if we've come here we already verified the interface

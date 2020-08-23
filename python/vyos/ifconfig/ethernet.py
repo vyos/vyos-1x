@@ -15,12 +15,12 @@
 
 import os
 import re
-import jmespath
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 from vyos.validate import assert_list
 from vyos.util import run
+from vyos.util import vyos_dict_search
 
 @Interface.register
 @VLAN.enable
@@ -268,27 +268,27 @@ class EthernetIf(Interface):
         self.set_flow_control(value)
 
         # GRO (generic receive offload)
-        tmp = jmespath.search('offload_options.generic_receive', config)
+        tmp = vyos_dict_search('offload_options.generic_receive', config)
         value = tmp if (tmp != None) else 'off'
         self.set_gro(value)
 
         # GSO (generic segmentation offload)
-        tmp = jmespath.search('offload_options.generic_segmentation', config)
+        tmp = vyos_dict_search('offload_options.generic_segmentation', config)
         value = tmp if (tmp != None) else 'off'
         self.set_gso(value)
 
         # scatter-gather option
-        tmp = jmespath.search('offload_options.scatter_gather', config)
+        tmp = vyos_dict_search('offload_options.scatter_gather', config)
         value = tmp if (tmp != None) else 'off'
         self.set_sg(value)
 
         # TSO (TCP segmentation offloading)
-        tmp = jmespath.search('offload_options.udp_fragmentation', config)
+        tmp = vyos_dict_search('offload_options.udp_fragmentation', config)
         value = tmp if (tmp != None) else 'off'
         self.set_tso(value)
 
         # UDP fragmentation offloading
-        tmp = jmespath.search('offload_options.udp_fragmentation', config)
+        tmp = vyos_dict_search('offload_options.udp_fragmentation', config)
         value = tmp if (tmp != None) else 'off'
         self.set_ufo(value)
 

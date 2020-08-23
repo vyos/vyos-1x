@@ -17,7 +17,6 @@
 A library for retrieving value dicts from VyOS configs in a declarative fashion.
 """
 import os
-import jmespath
 
 from enum import Enum
 from copy import deepcopy
@@ -226,8 +225,9 @@ def get_interface_dict(config, base, ifname=''):
 
     Will return a dictionary with the necessary interface configuration
     """
-    from vyos.xml import defaults
+    from vyos.util import vyos_dict_search
     from vyos.validate import is_member
+    from vyos.xml import defaults
 
     if not ifname:
         # determine tagNode instance
@@ -273,7 +273,7 @@ def get_interface_dict(config, base, ifname=''):
         # XXX: T2636 workaround: convert string to a list with one element
         if isinstance(eui64, str):
             eui64 = [eui64]
-        tmp = jmespath.search('ipv6.address', dict)
+        tmp = vyos_dict_search('ipv6.address', dict)
         if not tmp:
             dict.update({'ipv6': {'address': {'eui64_old': eui64}}})
         else:

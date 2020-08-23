@@ -93,17 +93,18 @@ def verify_dhcpv6(config):
     """
     if 'dhcpv6_options' in config:
         from vyos.util import vyos_dict_search
+
         if {'parameters_only', 'temporary'} <= set(config['dhcpv6_options']):
             raise ConfigError('DHCPv6 temporary and parameters-only options '
                               'are mutually exclusive!')
 
         # It is not allowed to have duplicate SLA-IDs as those identify an
         # assigned IPv6 subnet from a delegated prefix
-        for pd in vyos_dict_search(config, 'dhcpv6_options.pd'):
+        for pd in vyos_dict_search('dhcpv6_options.pd', config):
             sla_ids = []
-            for interface in vyos_dict_search(config, f'dhcpv6_options.pd.{pd}.interface'):
-                sla_id = vyos_dict_search(config,
-                        f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id')
+            for interface in vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+                sla_id = vyos_dict_search(
+                    f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id', config)
                 sla_ids.append(sla_id)
 
             # Check for duplicates

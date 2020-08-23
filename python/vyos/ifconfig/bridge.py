@@ -13,13 +13,12 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import jmespath
-
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.stp import STP
 from vyos.validate import assert_boolean
 from vyos.validate import assert_positive
 from vyos.util import cmd
+from vyos.util import vyos_dict_search
 
 @Interface.register
 class BridgeIf(Interface):
@@ -223,18 +222,18 @@ class BridgeIf(Interface):
         self.set_stp(value)
 
         # enable or disable IGMP querier
-        tmp = jmespath.search('igmp.querier', config)
+        tmp = vyos_dict_search('igmp.querier', config)
         value = '1' if (tmp != None) else '0'
         self.set_multicast_querier(value)
 
         # remove interface from bridge
-        tmp = jmespath.search('member.interface_remove', config)
+        tmp = vyos_dict_search('member.interface_remove', config)
         if tmp:
             for member in tmp:
                 self.del_port(member)
 
         STPBridgeIf = STP.enable(BridgeIf)
-        tmp = jmespath.search('member.interface', config)
+        tmp = vyos_dict_search('member.interface', config)
         if tmp:
             for interface, interface_config in tmp.items():
                 # if we've come here we already verified the interface
