@@ -672,3 +672,17 @@ def find_device_file(device):
                 return os.path.join(root, basename)
 
     return None
+
+def vyos_dict_search(dict, path):
+    """ Traverse Python dictionary (dict) delimited by dot (.).
+    Return value of key if found, None otherwise.
+
+    This is faster implementation then jmespath.search('foo.bar', dict)"""
+    parts = path.split('.')
+    inside = parts[:-1]
+    if not inside:
+        return dict[path]
+    c = dict
+    for p in parts[:-1]:
+        c = c.get(p, {})
+    return c.get(parts[-1], None)
