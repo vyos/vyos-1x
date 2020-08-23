@@ -18,6 +18,7 @@ import os
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from psutil import process_iter
 from vyos.util import check_kmod
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -38,15 +39,19 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         self._interfaces = list(self._options)
         self.session.set(['system', 'wifi-regulatory-domain', 'SE'])
 
-    def test_wifi_client(self):
-        """ test creation of a wireless station """
-        for intf in self._interfaces:
-            # prepare interfaces
-            for option in self._options.get(intf, []):
-                self.session.set(self._base_path + [intf] + option.split())
+    def test_add_address_single(self):
+        """ derived method to check if member interfaces are enslaved properly """
+        super().test_add_address_single()
 
-            # commit changes
-            self.session.commit()
+        for option, option_value in self._options.items():
+            if 'type access-point' in option_value:
+                # Check for running process
+                self.assertIn('hostapd', (p.name() for p in process_iter()))
+            elif 'type station' in option_value:
+                # Check for running process
+                self.assertIn('wpa_supplicant', (p.name() for p in process_iter()))
+            else:
+                self.assertTrue(False)
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
