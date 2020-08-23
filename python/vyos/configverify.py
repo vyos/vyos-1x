@@ -91,9 +91,26 @@ def verify_dhcpv6(config):
     Common helper function used by interface implementations to perform
     recurring validation of DHCPv6 options which are mutually exclusive.
     """
-    if {'parameters_only', 'temporary'} <= set(config.get('dhcpv6_options', {})):
-        raise ConfigError('DHCPv6 temporary and parameters-only options '
-                          'are mutually exclusive!')
+    if 'dhcpv6_options' in config:
+        from vyos.util import vyos_dict_search
+        if {'parameters_only', 'temporary'} <= set(config['dhcpv6_options']):
+            raise ConfigError('DHCPv6 temporary and parameters-only options '
+                              'are mutually exclusive!')
+
+        # It is not allowed to have duplicate SLA-IDs as those identify an
+        # assigned IPv6 subnet from a delegated prefix
+        for pd in vyos_dict_search(config, 'dhcpv6_options.pd'):
+            sla_ids = []
+            for interface in vyos_dict_search(config, f'dhcpv6_options.pd.{pd}.interface'):
+                sla_id = vyos_dict_search(config,
+                        f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id')
+                sla_ids.append(sla_id)
+
+            # Check for duplicates
+            duplicates = [x for n, x in enumerate(sla_ids) if x in sla_ids[:n]]
+            if duplicates:
+                raise ConfigError('Site-Level Aggregation Identifier (SLA-ID) '
+                                  'must be unique per prefix-delegation!')
 
 def verify_vlan_config(config):
     """
