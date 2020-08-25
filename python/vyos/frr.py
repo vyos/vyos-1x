@@ -281,7 +281,7 @@ def replace_section(config, replacement, from_re, to_re=r'!', before_re=r'line v
 
     startline and endline tags will be automatically added to the resulting from_re/to_re and before_re regex'es
     """
-    return _replace_section(config, replacement, replace_re=rf'^{from_re}$.*?^{to_re}$', before_re=rf'^{before_re}$')
+    return _replace_section(config, replacement, replace_re=rf'^{from_re}$.*?^{to_re}$', before_re=rf'^({before_re})$')
 
 
 def remove_section(config, from_re, to_re='!'):
