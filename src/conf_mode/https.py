@@ -14,9 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import sys
 
-from sys import exit
 from copy import deepcopy
 
 import vyos.defaults
@@ -33,6 +32,11 @@ airbag.enable()
 config_file = '/etc/nginx/sites-available/default'
 certbot_dir = vyos.defaults.directories['certbot']
 
+# https config needs to coordinate several subsystems: api, certbot,
+# self-signed certificate, as well as the virtual hosts defined within the
+# https config definition itself. Consequently, one needs a general dict,
+# encompassing the https and other configs, and a list of such virtual hosts
+# (server blocks in nginx terminology) to pass to the jinja2 template.
 default_server_block = {
     'id'        : '',
     'address'   : '*',
@@ -44,44 +48,57 @@ default_server_block = {
 }
 
 def get_config():
-    server_block_list = []
     conf = Config()
     if not conf.exists('service https'):
         return None
-    else:
-        conf.set_level('service https')
 
-    if not conf.exists('virtual-host'):
+    server_block_list = []
+    https_dict = conf.get_config_dict('service https', get_first_key=True)
+
+    # organize by vhosts
+
+    vhost_dict = https_dict.get('virtual-host', {})
+
+    if not vhost_dict:
+        # no specified virtual hosts (server blocks); use default
         server_block_list.append(default_server_block)
     else:
-        for vhost in conf.list_nodes('virtual-host'):
+        for vhost in list(vhost_dict):
             server_block = deepcopy(default_server_block)
             server_block['id'] = vhost
-            if conf.exists(f'virtual-host {vhost} listen-address'):
-                addr = conf.return_value(f'virtual-host {vhost} listen-address')
-                server_block['address'] = addr
-            if conf.exists(f'virtual-host {vhost} listen-port'):
-                port = conf.return_value(f'virtual-host {vhost} listen-port')
-                server_block['port'] = port
-            if conf.exists(f'virtual-host {vhost} server-name'):
-                names = conf.return_values(f'virtual-host {vhost} server-name')
-                server_block['name'] = names[:]
+            data = vhost_dict.get(vhost, {})
+            server_block['address'] = data.get('listen-address', '*')
+            server_block['port'] = data.get('listen-port', '443')
+            name = data.get('server-name', ['_'])
+            # XXX: T2636 workaround: convert string to a list with one element
+            if not isinstance(name, list):
+                name = [name]
+            server_block['name'] = name
             server_block_list.append(server_block)
 
+    # get certificate data
+
+    cert_dict = https_dict.get('certificates', {})
+
+        # self-signed certificate
+
     vyos_cert_data = {}
-    if conf.exists('certificates system-generated-certificate'):
+    if 'system-generated-certificate' in list(cert_dict):
         vyos_cert_data = vyos.defaults.vyos_cert_data
     if vyos_cert_data:
         for block in server_block_list:
             block['vyos_cert'] = vyos_cert_data
 
+        # letsencrypt certificate using certbot
+
     certbot = False
-    certbot_domains = []
-    if conf.exists('certificates certbot domain-name'):
-        certbot_domains = conf.return_values('certificates certbot domain-name')
-    if certbot_domains:
+    cert_domains = cert_dict.get('certbot', {}).get('domain-name', [])
+    if cert_domains:
+        # XXX: T2636 workaround: convert string to a list with one element
+        if not isinstance(cert_domains, list):
+            cert_domains = [cert_domains]
         certbot = True
-        for domain in certbot_domains:
+        for domain in cert_domains:
             sub_list = vyos.certbot_util.choose_server_block(server_block_list,
                                                              domain)
             if sub_list:
@@ -89,25 +106,30 @@ def get_config():
                     sb['certbot'] = True
                     sb['certbot_dir'] = certbot_dir
                     # certbot organizes certificates by first domain
-                    sb['certbot_domain_dir'] = certbot_domains[0]
+                    sb['certbot_domain_dir'] = cert_domains[0]
 
-    api_somewhere = False
+    # get api data
+
+    api_set = False
     api_data = {}
-    if conf.exists('api'):
-        api_somewhere = True
+    if 'api' in list(https_dict):
+        api_set = True
         api_data = vyos.defaults.api_data
-        if conf.exists('api port'):
-            port = conf.return_value('api port')
+    api_settings = https_dict.get('api', {})
+    if api_settings:
+        port = api_settings.get('port', '')
+        if port:
             api_data['port'] = port
-        if conf.exists('api-restrict virtual-host'):
-            vhosts = conf.return_values('api-restrict virtual-host')
+        vhosts = https_dict.get('api-restrict', {}).get('virtual-host', [])
+        # XXX: T2636 workaround: convert string to a list with one element
+        if not isinstance(vhosts, list):
+            vhosts = [vhosts]
+        if vhosts:
             api_data['vhost'] = vhosts[:]
 
     if api_data:
-        # we do not want to include 'vhost' key as part of
-        # vyos.defaults.api_data, so check for key existence
-        vhost_list = api_data.get('vhost')
-        if vhost_list is None:
+        vhost_list = api_data.get('vhost', [])
+        if not vhost_list:
             for block in server_block_list:
                 block['api'] = api_data
         else:
@@ -115,9 +137,12 @@ def get_config():
                 if block['id'] in vhost_list:
                     block['api'] = api_data
 
+    # return dict for use in template
+
     https = {'server_block_list' : server_block_list,
-             'api_somewhere': api_somewhere,
+             'api_set': api_set,
              'certbot': certbot}
+
     return https
 
 def verify(https):
@@ -157,4 +182,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        exit(1)
+        sys.exit(1)

@@ -52,7 +52,7 @@ server {
 
         error_page 501 502 503 =200 @50*_json;
 
-{% if api_somewhere %}
+{% if api_set %}
         location @50*_json {
                 default_type application/json;
                 return 200 '{"error": "service https api unavailable at this proxy address: set service https api-restrict virtual-host"}';
