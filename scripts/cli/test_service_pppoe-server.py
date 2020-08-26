@@ -67,24 +67,32 @@ class TestServicePPPoEServer(unittest.TestCase):
         # check ppp
         self.assertTrue(conf['ppp'].getboolean('verbose'))
         self.assertTrue(conf['ppp'].getboolean('check-ip'))
-        self.assertFalse(conf['ppp'].getboolean('ccp'))
         self.assertEqual(conf['ppp']['min-mtu'], mtu)
         self.assertEqual(conf['ppp']['mtu'], mtu)
-        self.assertEqual(conf['ppp']['mppe'], 'prefer')
         self.assertEqual(conf['ppp']['lcp-echo-interval'], '30')
         self.assertEqual(conf['ppp']['lcp-echo-timeout'], '0')
         self.assertEqual(conf['ppp']['lcp-echo-failure'], '3')
 
-    def test_local_auth(self):
-        """ Test configuration of local authentication for PPPoE server """
+    def basic_config(self):
         self.session.set(local_if + ['address', '192.0.2.1/32'])
+
         self.session.set(base_path + ['access-concentrator', ac_name])
-        self.session.set(base_path + ['authentication', 'local-users', 'username', 'vyos', 'password', 'vyos'])
         self.session.set(base_path + ['authentication', 'mode', 'local'])
         self.session.set(base_path + ['client-ip-pool', 'subnet', subnet])
         self.session.set(base_path + ['name-server', nameserver])
         self.session.set(base_path + ['interface', interface])
         self.session.set(base_path + ['local-ip', gateway])
+
+    def test_local_auth(self):
+        """ Test configuration of local authentication for PPPoE server """
+        self.basic_config()
+        # authentication
+        self.session.set(base_path + ['authentication', 'local-users', 'username', 'vyos', 'password', 'vyos'])
+        self.session.set(base_path + ['authentication', 'mode', 'local'])
+        # other settings
+        self.session.set(base_path + ['ppp-options', 'ccp'])
+        self.session.set(base_path + ['ppp-options', 'mppe', 'require'])
+        self.session.set(base_path + ['limits', 'connection-limit', '20/min'])
 
         # commit changes
         self.session.commit()
@@ -100,6 +108,13 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertEqual(conf['chap-secrets']['chap-secrets'], '/run/accel-pppd/pppoe.chap-secrets')
         self.assertEqual(conf['chap-secrets']['gw-ip-address'], gateway)
 
+        # check pado
+        self.assertEqual(conf['ppp']['mppe'], 'require')
+        self.assertTrue(conf['ppp'].getboolean('ccp'))
+
+        # check other settings
+        self.assertEqual(conf['connlimit']['limit'], '20/min')
+
         # Check for running process
         self.assertTrue('accel-pppd' in (p.name() for p in process_iter()))
 
@@ -110,17 +125,11 @@ class TestServicePPPoEServer(unittest.TestCase):
         radius_port = '2000'
         radius_port_acc = '3000'
 
-        self.session.set(local_if + ['address', '192.0.2.1/32'])
-        self.session.set(base_path + ['access-concentrator', ac_name])
+        self.basic_config()
         self.session.set(base_path + ['authentication', 'radius', 'server', radius_server, 'key', radius_key])
         self.session.set(base_path + ['authentication', 'radius', 'server', radius_server, 'port', radius_port])
         self.session.set(base_path + ['authentication', 'radius', 'server', radius_server, 'acct-port', radius_port_acc])
-
         self.session.set(base_path + ['authentication', 'mode', 'radius'])
-        self.session.set(base_path + ['client-ip-pool', 'subnet', subnet])
-        self.session.set(base_path + ['name-server', nameserver])
-        self.session.set(base_path + ['interface', interface])
-        self.session.set(base_path + ['local-ip', gateway])
 
         # commit changes
         self.session.commit()
@@ -146,6 +155,10 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertEqual(f'acct-port={radius_port_acc}', server[3])
         self.assertEqual(f'req-limit=0', server[4])
         self.assertEqual(f'fail-time=0', server[5])
+
+        # check defaults
+        self.assertEqual(conf['ppp']['mppe'], 'prefer')
+        self.assertFalse(conf['ppp'].getboolean('ccp'))
 
         # Check for running process
         self.assertTrue('accel-pppd' in (p.name() for p in process_iter()))
