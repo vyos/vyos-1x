@@ -91,3 +91,11 @@ override_dh_auto_install:
 
 	# Make directory for generated configuration file
 	mkdir -p $(DIR)/etc/vyos
+
+	# Install smoke test scripts
+	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/smoke/
+	cp -r smoketest/scripts/* $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/smoke
+
+	# Install system programs
+	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
+	cp -r smoketest/bin/* $(DIR)/$(VYOS_BIN_DIR)

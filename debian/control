@@ -122,3 +122,8 @@ Depends:
 Description: VyOS configuration scripts and data for VMware
  Adds configuration files required for VyOS running on VMware hosts.
 
+Package: vyos-1x-smoketest
+Architecture: all
+Depends:
+ vyos-1x
+Description: VyOS build sanity checking toolkit
