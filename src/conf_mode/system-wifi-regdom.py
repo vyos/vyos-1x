@@ -34,9 +34,12 @@ default_config_data = {
     'deleted' : False
 }
 
-def get_config():
+def get_config(config=None):
     regdom = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['system', 'wifi-regulatory-domain']
 
     # Check if interface has been removed

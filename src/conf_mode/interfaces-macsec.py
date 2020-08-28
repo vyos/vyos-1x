@@ -35,12 +35,15 @@ airbag.enable()
 # XXX: wpa_supplicant works on the source interface
 wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
 
-def get_config():
+def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'macsec']
     macsec = get_interface_dict(conf, base)
 

@@ -167,9 +167,12 @@ def parse_configuration(conf, source_dest):
 
     return ruleset
 
-def get_config():
+def get_config(config=None):
     nat = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
 
     # read in current nftable (once) for further processing
     tmp = cmd('nft -j list table raw')

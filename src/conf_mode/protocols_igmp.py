@@ -29,8 +29,11 @@ airbag.enable()
 
 config_file = r'/tmp/igmp.frr'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     igmp_conf = {
         'igmp_conf' : False,
         'old_ifaces'    : {},

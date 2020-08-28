@@ -29,9 +29,12 @@ default_config_data = {
     'name': 'UTC'
 }
 
-def get_config():
+def get_config(config=None):
     tz = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if conf.exists('system time-zone'):
         tz['name'] = conf.return_value('system time-zone')
 

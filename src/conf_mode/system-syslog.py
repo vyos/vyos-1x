@@ -27,8 +27,11 @@ from vyos.template import render
 from vyos import airbag
 airbag.enable()
 
-def get_config():
-    c = Config()
+def get_config(config=None):
+    if config:
+        c = config
+    else:
+        c = Config()
     if not c.exists('system syslog'):
         return None
     c.set_level('system syslog')

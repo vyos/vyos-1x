@@ -126,9 +126,12 @@ def dhcp_static_route(static_subnet, static_router):
 
     return string
 
-def get_config():
+def get_config(config=None):
     dhcp = default_config_data
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if not conf.exists('service dhcp-server'):
         return None
     else:

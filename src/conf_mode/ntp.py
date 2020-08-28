@@ -27,8 +27,11 @@ airbag.enable()
 config_file = r'/etc/ntp.conf'
 systemd_override = r'/etc/systemd/system/ntp.service.d/override.conf'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['system', 'ntp']
 
     ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)

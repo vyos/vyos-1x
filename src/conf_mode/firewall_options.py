@@ -32,9 +32,12 @@ default_config_data = {
     'new_chain6': False
 }
 
-def get_config():
+def get_config(config=None):
     opts = copy.deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if not conf.exists('firewall options'):
         # bail out early
         return opts

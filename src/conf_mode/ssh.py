@@ -31,8 +31,11 @@ airbag.enable()
 config_file = r'/run/ssh/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'ssh']
     if not conf.exists(base):
         return None

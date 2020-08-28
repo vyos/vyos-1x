@@ -76,8 +76,11 @@ def vrf_routing(c, match):
     return matched
 
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     vrf_config = deepcopy(default_config_data)
 
     cfg_base = ['vrf']

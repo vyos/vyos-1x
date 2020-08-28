@@ -40,9 +40,12 @@ default_config_data = {
     'listen': []
 }
 
-def get_config():
+def get_config(config=None):
     tftpd = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'tftp-server']
     if not conf.exists(base):
         return None

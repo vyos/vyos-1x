@@ -29,8 +29,11 @@ config_file = r'/tmp/ldpd.frr'
 def sysctl(name, value):
     call('sysctl -wq {}={}'.format(name, value))
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     mpls_conf = {
         'router_id'  : None,
         'mpls_ldp'   : False,

@@ -35,9 +35,12 @@ default_config_data = {
 def sysctl(name, value):
     call('sysctl -wq {}={}'.format(name, value))
 
-def get_config():
+def get_config(config=None):
     ip_opt = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     conf.set_level('system ip')
     if conf.exists(''):
         if conf.exists('arp table-size'):

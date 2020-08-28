@@ -28,8 +28,11 @@ airbag.enable()
 config_file = r'/etc/fastnetmon.conf'
 networks_list = r'/etc/networks_list'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'ids', 'ddos-protection']
     fastnetmon = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return fastnetmon

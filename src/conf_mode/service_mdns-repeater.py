@@ -28,8 +28,11 @@ airbag.enable()
 
 config_file = r'/etc/default/mdns-repeater'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'mdns', 'repeater']
     mdns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return mdns

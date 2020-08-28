@@ -64,12 +64,15 @@ def find_other_stations(conf, base, ifname):
     conf.set_level(old_level)
     return dict
 
-def get_config():
+def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'wireless']
     wifi = get_interface_dict(conf, base)
 

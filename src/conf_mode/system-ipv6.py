@@ -41,9 +41,12 @@ default_config_data = {
 def sysctl(name, value):
     call('sysctl -wq {}={}'.format(name, value))
 
-def get_config():
+def get_config(config=None):
     ip_opt = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     conf.set_level('system ipv6')
     if conf.exists(''):
         ip_opt['disable_addr_assignment'] = conf.exists('disable')

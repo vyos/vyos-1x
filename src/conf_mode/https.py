@@ -47,8 +47,12 @@ default_server_block = {
     'certbot'   : False
 }
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
+
     if not conf.exists('service https'):
         return None
 

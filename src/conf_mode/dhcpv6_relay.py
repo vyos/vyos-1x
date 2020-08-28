@@ -35,9 +35,12 @@ default_config_data = {
     'options': [],
 }
 
-def get_config():
+def get_config(config=None):
     relay = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if not conf.exists('service dhcpv6-relay'):
         return None
     else:

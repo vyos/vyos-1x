@@ -32,11 +32,14 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos import airbag
 airbag.enable()
 
-def get_config():
+def get_config(config=None):
     vrrp_groups = []
     sync_groups = []
 
-    config = vyos.config.Config()
+    if config:
+        config = config
+    else:
+        config = vyos.config.Config()
 
     # Get the VRRP groups
     for group_name in config.list_nodes("high-availability vrrp group"):

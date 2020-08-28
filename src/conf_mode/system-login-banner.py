@@ -41,9 +41,12 @@ default_config_data = {
     'motd': motd
 }
 
-def get_config():
+def get_config(config=None):
     banner = default_config_data
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base_level = ['system', 'login', 'banner']
 
     if not conf.exists(base_level):

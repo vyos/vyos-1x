@@ -27,8 +27,11 @@ from vyos import ConfigError
 
 config_file = r'/run/conserver/conserver.cf'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'console-server']
 
     # Retrieve CLI representation as dictionary

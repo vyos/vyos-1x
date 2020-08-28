@@ -397,12 +397,16 @@ def ip_proto (afi):
     return 6 if afi == IP6 else 4
 
 
-def get_config():
+def get_config(config=None):
     ifname = os.environ.get('VYOS_TAGNODE_VALUE','')
     if not ifname:
         raise ConfigError('Interface not specified')
 
-    config = Config()
+    if config:
+        config = config
+    else:
+        config = Config()
+
     conf = ConfigurationState(config, ['interfaces', 'tunnel ', ifname], default_config_data)
     options = conf.options
     changes = conf.changes
