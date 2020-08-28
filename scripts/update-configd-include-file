@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+###
+# A simple script for safely editing configd-include.json, the list of
+# scripts which are off-loaded to be run by the daemon.
+# Usage:
+# update-configd-include-file --add script1.py script2.py ...
+#                             --remove scriptA.py scriptB.py ...
+#
+# Additionally, it offers optional sanity checks by examining the signatures
+# of functions and placement of Config instance for consistency with configd
+# requirements.
+# Usage:
+# update-configd-include-file --check-current
+#   to check the current include list
+# update-configd-include-file --check-file
+#   to check arbitrary conf_mode scripts
+#
+# Note that this feature is the basis for the configd smoketest, but it is of
+# limited use in this script, as it requires an environment that has all script
+# (python) dependencies installed (e.g. installed image) so that the script may
+# be imported for introspection. Nonetheless, for testing and development, it has
+# its uses.
+
+import os
+import sys
+import json
+import argparse
+import datetime
+import importlib.util
+from inspect import signature, getsource
+
+from vyos.defaults import directories
+from vyos.version import get_version
+from vyos.util import cmd
+
+# Defaults
+
+installed_image = False
+
+include_file = 'configd-include.json'
+build_relative_include_file = '../data/configd-include.json'
+dirname = os.path.dirname(__file__)
+
+build_location_include_file = os.path.join(dirname, build_relative_include_file)
+image_location_include_file = os.path.join(directories['data'], include_file)
+
+build_relative_conf_dir = '../src/conf_mode'
+
+build_location_conf_dir = os.path.join(dirname, build_relative_conf_dir)
+image_location_conf_dir = directories['conf_mode']
+
+# Get arguments
+
+parser = argparse.ArgumentParser(description='Add or remove scripts from the list of scripts to be run be daemon')
+parser.add_argument('--add', nargs='*', default=[],
+                    help='scripts to add to configd include list')
+parser.add_argument('--remove', nargs='*', default=[],
+                    help='scripts to remove from configd include list')
+parser.add_argument('--show-diff', action='store_true',
+                    help='show list of conf_mode scripts not in include list')
+parser.add_argument('--check-file', nargs='*', default=[],
+                    help='check files for suitability to run under daemon')
+parser.add_argument('--check-current', action="store_true",
+                    help='check current include list for suitability to run under daemon')
+
+args = vars(parser.parse_args())
+
+# Check if we are running within installed image; since this script is not
+# part of the distribution, there is no need to check if live cd
+if get_version():
+    installed_image = True
+
+if installed_image:
+    include_file = image_location_include_file
+    conf_dir = image_location_conf_dir
+else:
+    include_file = build_location_include_file
+    conf_dir = build_location_conf_dir
+
+# Utilities for checking function signature and body
+def import_script(s: str):
+    """
+    A compact form of the import code in vyos-configd
+    """
+    path = os.path.join(conf_dir, s)
+    if not os.path.exists(path):
+        print(f"script {s} is not in conf_mode directory")
+        return None
+
+    name = os.path.splitext(s)[0].replace('-', '_')
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+funcs = { 'get_config': False,
+          'verify':     False,
+          'generate':   False,
+          'apply':      False
+        }
+
+def check_signatures(s: str) -> bool:
+    """
+    Basic sanity check: script standard functions should all take one
+    argument, including get_config(config=None).
+    """
+    funcd = dict(funcs)
+    for i in list(funcd):
+        m = import_script(s)
+        f = getattr(m, i, None)
+        if not f:
+            funcd[i] = True
+            continue
+        sig = signature(f)
+        params = sig.parameters
+        if len(params) != 1:
+            continue
+        if i == 'get_config':
+            for p in params.values():
+                funcd[i] = True if (p.default is None) else False
+        else:
+            funcd[i] = True
+
+    res = True
+
+    for k, v in funcd.items():
+        if v is False:
+            if k == 'get_config':
+                print(f"function '{k}' will need the standard modification")
+            else:
+                print(f"function '{k}' in script '{s}' has wrong signature")
+            res = False
+
+    return res
+
+def check_instance_per_function(s: str) -> bool:
+    """
+    The standard function 'get_config' should have one instantiation of Config;
+    all other standard functions, zero.
+    """
+    funcd = dict(funcs)
+    for i in list(funcd):
+        m = import_script(s)
+        f = getattr(m, i, None)
+        if not f:
+            funcd[i] = True
+            continue
+        str_f = getsource(f)
+        n = str_f.count('Config()')
+        if n == 1 and i == 'get_config':
+            funcd[i] = True
+        if n == 0 and i != 'get_config':
+            funcd[i] = True
+
+    res = True
+
+    for k, v in funcd.items():
+        if v is False:
+            fi = 'zero' if k == 'get_config' else 'non-zero'
+            print(f"function '{k}' in script '{s}' has {fi} instances of Config")
+            res = False
+
+    return res
+
+def check_instance_total(s: str) -> bool:
+    """
+    A script should have at most one instantiation of Config.
+    """
+    m = import_script(s)
+    str_m = getsource(m)
+    n = str_m.count('Config()')
+    if n != 1:
+        print(f"instance of Config outside of 'get_config' in script '{s}'")
+        return False
+
+    return True
+
+def check_config_modification(s: str) -> bool:
+    """
+    Modification to the session config from within a script is necessary in
+    certain cases, but the script should then run as stand-alone.
+    """
+    m = import_script(s)
+    str_m = getsource(m)
+    n = str_m.count('my_set')
+    if n != 0:
+        print(f"modification of config within script")
+        return False
+
+    return True
+
+def check_viability(s: str) -> bool:
+    """
+    Check existence, and if on installed image, signatures, instances of
+    Config, and modification of session config
+    """
+    path = os.path.join(conf_dir, s)
+    if not os.path.exists(path):
+        print(f"script {s} is not in conf_mode directory")
+        return False
+
+    if not installed_image:
+        if args['check_file'] or args['check_current']:
+            print(f"In order to check script viability for offload, run this script on installed image")
+        return True
+
+    r1 = check_signatures(s)
+    r2 = check_instance_per_function(s)
+    r3 = check_instance_total(s)
+    r4 = check_config_modification(s)
+
+    if not r1 or not r2 or not r3 or not r4:
+        return False
+
+    return True
+
+def check_file(s: str) -> bool:
+    if not check_viability(s):
+        return False
+    return True
+
+def check_files(l: list) -> int:
+    check_list = l[:]
+    res = 0
+    for s in check_list:
+        if not check_file(s):
+            res = 1
+    return res
+
+# Status
+
+def show_diff(l: list):
+    print(conf_dir)
+    (_, _, filenames) = next(iter(os.walk(conf_dir)))
+    filenames.sort()
+    res = [i for i in filenames if i not in l]
+    print(res)
+
+# Read configd-include.json and add/remove/check/show scripts
+
+with open(include_file, 'r') as f:
+    try:
+        include_list = json.load(f)
+    except OSError as e:
+        print(f"configd include file error: {e}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"JSON load error: {e}")
+        sys.exit(1)
+
+if args['show_diff']:
+    show_diff(include_list)
+    sys.exit(0)
+
+if args['check_file']:
+    l = args['check_file']
+    ret = check_files(l)
+    if not ret:
+        print('pass')
+    sys.exit(ret)
+
+if args['check_current']:
+    ret = check_files(include_list)
+    if not ret:
+        print('pass')
+    sys.exit(ret)
+
+add_list = args['add']
+# drop redundencies
+add_list = [i for i in add_list if i not in include_list]
+# prune entries that don't pass check
+add_list = [i for i in add_list if check_file(i)]
+
+remove_list = args['remove']
+
+if not add_list and not remove_list:
+    sys.exit(0)
+
+separator = '.'
+backup_file_name = separator.join([include_file,
+    '{0:%Y-%m-%d-%H%M%S}'.format(datetime.datetime.now()), 'bak'])
+
+cmd(f'cp -p {include_file} {backup_file_name}')
+
+if add_list:
+    include_list.extend(add_list)
+    include_list.sort()
+if remove_list:
+    include_list = [i for i in include_list if i not in remove_list]
+
+with open(include_file, 'w') as f:
+    try:
+        json.dump(include_list, f, indent=0)
+    except OSError as e:
+        print(f"error writing configd include file: {e}")
+        sys.exit(1)
