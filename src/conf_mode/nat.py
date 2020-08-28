@@ -232,6 +232,8 @@ def verify(nat):
             addr = rule['translation_address']
             if addr != 'masquerade' and not is_addr_assigned(addr):
                 print(f'Warning: IP address {addr} does not exist on the system!')
+        elif not rule['exclude']:
+            raise ConfigError(f'{err_msg} translation address not specified')
 
         # common rule verification
         verify_rule(rule, err_msg)
@@ -245,6 +247,9 @@ def verify(nat):
 
         if not rule['interface_in']:
             raise ConfigError(f'{err_msg} inbound-interface not specified')
+
+        if not rule['translation_address'] and not rule['exclude']:
+            raise ConfigError(f'{err_msg} translation address not specified')
 
         # common rule verification
         verify_rule(rule, err_msg)

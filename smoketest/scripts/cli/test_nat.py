@@ -23,6 +23,8 @@ from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import cmd
 
 base_path = ['nat']
+source_path = base_path + ['source']
+
 snat_pattern = 'nftables[?rule].rule[?chain].{chain: chain, comment: comment, address: { network: expr[].match.right.prefix.addr | [0], prefix: expr[].match.right.prefix.len | [0]}}'
 
 class TestNAT(unittest.TestCase):
@@ -39,16 +41,15 @@ class TestNAT(unittest.TestCase):
     def test_source_nat(self):
         """ Configure and validate source NAT rule(s) """
 
-        path = base_path + ['source']
         network = '192.168.0.0/16'
-        self.session.set(path + ['rule', '1', 'destination', 'address', network])
-        self.session.set(path + ['rule', '1', 'exclude'])
+        self.session.set(source_path + ['rule', '1', 'destination', 'address', network])
+        self.session.set(source_path + ['rule', '1', 'exclude'])
 
         # check validate() - outbound-interface must be defined
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
 
-        self.session.set(path + ['rule', '1', 'outbound-interface', 'any'])
+        self.session.set(source_path + ['rule', '1', 'outbound-interface', 'any'])
         self.session.commit()
 
         tmp = cmd('sudo nft -j list table nat')
@@ -58,6 +59,16 @@ class TestNAT(unittest.TestCase):
         self.assertEqual(condensed_json['comment'], 'DST-NAT-1')
         self.assertEqual(condensed_json['address']['network'], network.split('/')[0])
         self.assertEqual(str(condensed_json['address']['prefix']), network.split('/')[1])
+
+
+    def test_validation(self):
+        """ T2813: Ensure translation address is specified """
+        self.session.set(source_path + ['rule', '100', 'outbound-interface', 'eth0'])
+
+        # check validate() - translation address not specified
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
 
 if __name__ == '__main__':
     unittest.main()
