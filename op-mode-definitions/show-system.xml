@@ -59,7 +59,7 @@
             <properties>
               <help>Checks overall system integrity</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/system_integrity.py</command>
+            <command>sudo ${vyos_op_scripts_dir}/show_system_integrity.py</command>
           </leafNode>
           <leafNode name="kernel-messages">
             <properties>
