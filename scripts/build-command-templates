@@ -225,11 +225,13 @@ def make_node_def(props):
     if "constraint" in props:
         node_def += "syntax:expression: {0}\n".format(props["constraint"])
 
+    shim = '${vyshim}'
+
     if "owner" in props:
         if "tag" in props:
-            node_def += "end: sudo sh -c \"VYOS_TAGNODE_VALUE='$VAR(@)' {0}\"\n".format(props["owner"])
+            node_def += "end: sudo sh -c \"{1} VYOS_TAGNODE_VALUE='$VAR(@)' {0}\"\n".format(props["owner"], shim)
         else:
-            node_def += "end: sudo sh -c \"{0}\"\n".format(props["owner"])
+            node_def += "end: sudo sh -c \"{1} {0}\"\n".format(props["owner"], shim)
 
     if debug:
         print("The contents of the node.def file:\n", node_def)
