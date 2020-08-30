@@ -97,7 +97,7 @@ def get_config():
     # Get distribute list interface old_rip
     for dist_iface in conf.list_effective_nodes('distribute-list interface'):
         # Set level 'distribute-list interface ethX'
-        conf.set_level((str(base)) + ' distribute-list interface ' + dist_iface)
+        conf.set_level(base + ['distribute-list', 'interface', dist_iface])
         rip_conf['rip']['distribute'].update({
         dist_iface : {
             'iface_access_list_in': conf.return_effective_value('access-list in'.format(dist_iface)),
@@ -125,7 +125,7 @@ def get_config():
     # Get distribute list interface 
     for dist_iface in conf.list_nodes('distribute-list interface'):
         # Set level 'distribute-list interface ethX'
-        conf.set_level((str(base)) + ' distribute-list interface ' + dist_iface)
+        conf.set_level(base + ['distribute-list', 'interface', dist_iface])
         rip_conf['rip']['distribute'].update({
         dist_iface : {
             'iface_access_list_in': conf.return_value('access-list in'.format(dist_iface)),
@@ -148,7 +148,7 @@ def get_config():
         if conf.exists('prefix-list out'.format(dist_iface)):
             rip_conf['rip']['iface_prefix_list_out'] = conf.return_value('prefix-list out'.format(dist_iface))
 
-    conf.set_level((str(base)) + ' distribute-list')
+    conf.set_level(base + ['distribute-list'])
 
     # Get distribute list, access-list in
     if conf.exists_effective('access-list in'):
