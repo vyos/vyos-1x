@@ -19,6 +19,8 @@ import json
 import os
 
 from copy import deepcopy
+from distutils.version import LooseVersion
+from platform import release as kernel_version
 from sys import exit
 from netifaces import interfaces
 
@@ -33,7 +35,10 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
+if LooseVersion(kernel_version()) > LooseVersion('5.1'):
+    k_mod = ['nft_nat', 'nft_chain_nat']
+else:
+    k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
 default_config_data = {
     'deleted': False,
