@@ -67,6 +67,7 @@ import re
 import json
 from copy import deepcopy
 
+import vyos.xml
 import vyos.util
 import vyos.configtree
 from vyos.configsource import ConfigSource, ConfigSourceSession
@@ -193,50 +194,62 @@ class Config(object):
         """
         return self._config_source.show_config(path, default, effective)
 
-    def get_cached_dict(self, effective=False):
+    def get_cached_root_dict(self, effective=False):
         cached = self._dict_cache.get(effective, {})
         if cached:
-            config_dict = cached
+            return cached
+
+        if effective:
+            config = self._running_config
+        else:
+            config = self._session_config
+
+        if config:
+            config_dict = json.loads(config.to_json())
         else:
             config_dict = {}
 
-            if effective:
-                if self._running_config:
-                    config_dict = json.loads((self._running_config).to_json())
-            else:
-                if self._session_config:
-                    config_dict = json.loads((self._session_config).to_json())
-
-            self._dict_cache[effective] = config_dict
+        self._dict_cache[effective] = config_dict
 
         return config_dict
 
-    def get_config_dict(self, path=[], effective=False, key_mangling=None, get_first_key=False):
+    def get_config_dict(self, path=[], effective=False, key_mangling=None,
+                        get_first_key=False, no_multi_convert=False):
         """
         Args:
             path (str list): Configuration tree path, can be empty
             effective=False: effective or session config
             key_mangling=None: mangle dict keys according to regex and replacement
             get_first_key=False: if k = path[:-1], return sub-dict d[k] instead of {k: d[k]}
+            no_multi_convert=False: if convert, return single value of multi node as list
 
         Returns: a dict representation of the config under path
         """
-        config_dict = self.get_cached_dict(effective)
+        lpath = self._make_path(path)
+        root_dict = self.get_cached_root_dict(effective)
+        conf_dict = vyos.util.get_sub_dict(root_dict, lpath, get_first_key)
 
-        config_dict = vyos.util.get_sub_dict(config_dict, self._make_path(path), get_first_key)
+        if not key_mangling and no_multi_convert:
+            return deepcopy(conf_dict)
 
-        if key_mangling:
-            if not (isinstance(key_mangling, tuple) and \
-                    (len(key_mangling) == 2) and \
-                    isinstance(key_mangling[0], str) and \
-                    isinstance(key_mangling[1], str)):
-                raise ValueError("key_mangling must be a tuple of two strings")
-            else:
-                config_dict = vyos.util.mangle_dict_keys(config_dict, key_mangling[0], key_mangling[1])
-        else:
-            config_dict = deepcopy(config_dict)
+        xmlpath = lpath if get_first_key else lpath[:-1]
 
-        return config_dict
+        if not key_mangling:
+            conf_dict = vyos.xml.multi_to_list(xmlpath, conf_dict)
+            return conf_dict
+
+        if no_multi_convert is False:
+            conf_dict = vyos.xml.multi_to_list(xmlpath, conf_dict)
+
+        if not (isinstance(key_mangling, tuple) and \
+                (len(key_mangling) == 2) and \
+                isinstance(key_mangling[0], str) and \
+                isinstance(key_mangling[1], str)):
+            raise ValueError("key_mangling must be a tuple of two strings")
+
+        conf_dict = vyos.util.mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1])
+
+        return conf_dict
 
     def is_multi(self, path):
         """

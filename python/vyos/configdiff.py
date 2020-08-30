@@ -82,8 +82,8 @@ class ConfigDiff(object):
     """
     def __init__(self, config, key_mangling=None):
         self._level = config.get_level()
-        self._session_config_dict = config.get_cached_dict()
-        self._effective_config_dict = config.get_cached_dict(effective=True)
+        self._session_config_dict = config.get_cached_root_dict(effective=False)
+        self._effective_config_dict = config.get_cached_root_dict(effective=True)
         self._key_mangling = key_mangling
 
     # mirrored from Config; allow path arguments relative to level

@@ -281,6 +281,23 @@ class XML(dict):
 
         return _flatten(lpath, len(lpath), d)
 
+    def multi_to_list(self, lpath, conf):
+        r = {}
+        for k in conf:
+            # key mangling could also be done here
+            # it would prevent two parsing of the config tree
+            # under = k.replace('-','_')
+            under = k
+            fpath = lpath + [k]
+            if isinstance(conf[k],dict):
+                r[under] = self.multi_to_list(fpath, conf[k])
+                continue
+            value = conf[k]
+            if self.is_multi(fpath) and not isinstance(value, list):
+                value = [value]
+            r[under] = value
+        return r
+
     # from functools import lru_cache
     # @lru_cache(maxsize=100)
     # XXX: need to use cachetool instead - for later

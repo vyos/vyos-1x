@@ -51,6 +51,10 @@ def defaults(lpath, flat=False):
     return load_configuration().defaults(lpath, flat)
 
 
+def multi_to_list(lpath, conf):
+    return load_configuration().multi_to_list(lpath, conf)
+
+
 if __name__ == '__main__':
     print(defaults(['service'], flat=True))
     print(defaults(['service'], flat=False))
