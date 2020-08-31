@@ -270,9 +270,6 @@ def get_interface_dict(config, base, ifname=''):
 
     eui64 = leaf_node_changed(config, ['ipv6', 'address', 'eui64'])
     if eui64:
-        # XXX: T2636 workaround: convert string to a list with one element
-        if isinstance(eui64, str):
-            eui64 = [eui64]
         tmp = vyos_dict_search('ipv6.address', dict)
         if not tmp:
             dict.update({'ipv6': {'address': {'eui64_old': eui64}}})

@@ -898,10 +898,6 @@ class Interface(Control):
         # configured addresses will be removed first
         new_addr = config.get('address', [])
 
-        # XXX: T2636 workaround: convert string to a list with one element
-        if isinstance(new_addr, str):
-            new_addr = [new_addr]
-
         # always ensure DHCP client is stopped (when not configured explicitly)
         if 'dhcp' not in new_addr:
             self.del_addr('dhcp')
@@ -1023,9 +1019,6 @@ class Interface(Control):
         # Add IPv6 EUI-based addresses
         tmp = vyos_dict_search('ipv6.address.eui64', config)
         if tmp:
-            # XXX: T2636 workaround: convert string to a list with one element
-            if isinstance(tmp, str):
-                tmp = [tmp]
             for addr in tmp:
                 self.add_ipv6_eui64_address(addr)
 

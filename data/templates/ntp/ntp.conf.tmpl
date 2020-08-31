@@ -25,23 +25,15 @@ server {{ srv | replace('_', '-') }} iburst {{ options }}
 
 {% if allow_clients is defined and allow_clients.address is defined %}
 # Allowed clients configuration
-{%   if allow_clients.address is string %}
-restrict {{ allow_clients.address|address_from_cidr }} mask {{ allow_clients.address|netmask_from_cidr }} nomodify notrap nopeer
-{%   else %}
-{%     for address in allow_clients.address %}
+{%   for address in allow_clients.address %}
 restrict {{ address|address_from_cidr }} mask {{ address|netmask_from_cidr }} nomodify notrap nopeer
-{%     endfor %}
-{%   endif %}
+{%   endfor %}
 {% endif %}
 
 {% if listen_address %}
 # NTP should listen on configured addresses only
 interface ignore wildcard
-{%   if listen_address is string %}
-interface listen {{ listen_address }}
-{%   else %}
-{%     for address in listen_address %}
+{%   for address in listen_address %}
 interface listen {{ address }}
-{%     endfor %}
-{%   endif %}
+{%   endfor %}
 {% endif %}

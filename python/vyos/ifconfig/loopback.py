@@ -64,11 +64,6 @@ class LoopbackIf(Interface):
         on any interface. """
 
         addr = config.get('address', [])
-        # XXX workaround for T2636, convert IP address string to a list
-        # with one element
-        if isinstance(addr, str):
-            addr = [addr]
-
         # We must ensure that the loopback addresses are never deleted from the system
         addr += self._persistent_addresses
 

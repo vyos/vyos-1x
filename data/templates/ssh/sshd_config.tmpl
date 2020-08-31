@@ -37,13 +37,9 @@ PermitRootLogin no
 UseDNS {{ "no" if disable_host_validation is defined else "yes" }}
 
 # Specifies the port number that sshd(8) listens on
-{% if port is string %}
-Port {{ port }}
-{% else %}
-{%   for value in port %}
+{% for value in port %}
 Port {{ value }}
-{%   endfor %}
-{% endif %}
+{% endfor %}
 
 # Gives the verbosity level that is used when logging messages from sshd
 LogLevel {{ loglevel | upper }}
@@ -53,13 +49,9 @@ PasswordAuthentication {{ "no" if disable_password_authentication is defined els
 
 {% if listen_address %}
 # Specifies the local addresses sshd should listen on
-{%   if listen_address is string %}
-ListenAddress {{ listen_address }}
-{%   else %}
-{%     for address in listen_address %}
+{%   for address in listen_address %}
 ListenAddress {{ address }}
-{%     endfor %}
-{%   endif %}
+{%   endfor %}
 {% endif %}
 
 {% if ciphers %}

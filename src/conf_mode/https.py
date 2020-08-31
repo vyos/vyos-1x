@@ -74,9 +74,6 @@ def get_config(config=None):
             server_block['address'] = data.get('listen-address', '*')
             server_block['port'] = data.get('listen-port', '443')
             name = data.get('server-name', ['_'])
-            # XXX: T2636 workaround: convert string to a list with one element
-            if not isinstance(name, list):
-                name = [name]
             server_block['name'] = name
             server_block_list.append(server_block)
 
@@ -98,9 +95,6 @@ def get_config(config=None):
     certbot = False
     cert_domains = cert_dict.get('certbot', {}).get('domain-name', [])
     if cert_domains:
-        # XXX: T2636 workaround: convert string to a list with one element
-        if not isinstance(cert_domains, list):
-            cert_domains = [cert_domains]
         certbot = True
         for domain in cert_domains:
             sub_list = vyos.certbot_util.choose_server_block(server_block_list,
@@ -125,9 +119,6 @@ def get_config(config=None):
         if port:
             api_data['port'] = port
         vhosts = https_dict.get('api-restrict', {}).get('virtual-host', [])
-        # XXX: T2636 workaround: convert string to a list with one element
-        if not isinstance(vhosts, list):
-            vhosts = [vhosts]
         if vhosts:
             api_data['vhost'] = vhosts[:]
 

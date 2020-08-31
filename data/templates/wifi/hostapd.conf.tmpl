@@ -500,18 +500,10 @@ wpa=1
 
 {%     if security.wpa.mode is defined and security.wpa.mode == 'wpa2' %}
 # Pairwise cipher for RSN/WPA2 (default: use wpa_pairwise value)
-{%       if security.wpa.cipher is string %}
-rsn_pairwise={{ security.wpa.cipher }}
-{%       else %}
 rsn_pairwise={{ security.wpa.cipher | join(" ") }}
-{%       endif %}
 {%     else %}
 # Pairwise cipher for WPA (v1) (default: TKIP)
-{%       if security.wpa.cipher is string %}
-wpa_pairwise={{ security.wpa.cipher }}
-{%       else %}
 wpa_pairwise={{ security.wpa.cipher | join(" ") }}
-{%       endif %}
 {%     endif %}
 {%   endif %}
 
@@ -522,11 +514,7 @@ wpa_pairwise={{ security.wpa.cipher | join(" ") }}
 # overriding the group cipher with an unexpected value can result in
 # interoperability issues and in general, this parameter is mainly used for
 # testing purposes.
-{%     if security.wpa.group_cipher is string %}
-group_cipher={{ security.wpa.group_cipher }}
-{%     else %}
 group_cipher={{ security.wpa.group_cipher | join(" ") }}
-{%     endif %}
 {%   endif %}
 
 {%   if security.wpa.passphrase is defined %}
