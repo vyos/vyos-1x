@@ -31,8 +31,11 @@ curlrc_config = r'/etc/curlrc'
 ssh_config = r'/etc/ssh/ssh_config'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['system', 'options']
     options = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return options

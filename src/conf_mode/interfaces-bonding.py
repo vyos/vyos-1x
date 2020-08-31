@@ -53,12 +53,15 @@ def get_bond_mode(mode):
     else:
         raise ConfigError(f'invalid bond mode "{mode}"')
 
-def get_config():
+def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'bonding']
     bond = get_interface_dict(conf, base)
 

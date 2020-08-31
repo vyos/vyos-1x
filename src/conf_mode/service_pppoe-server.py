@@ -85,8 +85,11 @@ default_config_data = {
     'thread_cnt': get_half_cpus()
 }
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base_path = ['service', 'pppoe-server']
     if not conf.exists(base_path):
         return None

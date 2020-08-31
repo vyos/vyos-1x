@@ -28,8 +28,11 @@ airbag.enable()
 
 config_file = r'/tmp/ripd.frr'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['protocols', 'rip']
     rip_conf = {
         'rip_conf'          : False,

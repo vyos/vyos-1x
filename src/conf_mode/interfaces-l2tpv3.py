@@ -35,12 +35,15 @@ airbag.enable()
 k_mod = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
 
 
-def get_config():
+def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'l2tpv3']
     l2tpv3 = get_interface_dict(conf, base)
 

@@ -43,8 +43,11 @@ default_config_data = {
 
 hostsd_tag = 'system'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
 
     hosts = copy.deepcopy(default_config_data)
 

@@ -44,9 +44,12 @@ default_config_data = {
     'master_key': ''
 }
 
-def get_config():
+def get_config(config=None):
     salt = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'salt-minion']
 
     if not conf.exists(base):

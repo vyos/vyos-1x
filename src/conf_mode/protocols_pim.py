@@ -29,8 +29,11 @@ airbag.enable()
 
 config_file = r'/tmp/pimd.frr'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     pim_conf = {
         'pim_conf' : False,
         'old_pim' : {

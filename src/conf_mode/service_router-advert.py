@@ -29,8 +29,11 @@ airbag.enable()
 
 config_file = r'/run/radvd/radvd.conf'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'router-advert']
     rtradv = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 

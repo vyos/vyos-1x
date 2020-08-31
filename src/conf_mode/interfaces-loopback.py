@@ -25,12 +25,15 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-def get_config():
+def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'loopback']
     loopback = get_interface_dict(conf, base)
     return loopback

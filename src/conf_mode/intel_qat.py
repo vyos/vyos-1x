@@ -30,8 +30,11 @@ airbag.enable()
 # Define for recovering
 gl_ipsec_conf = None
 
-def get_config():
-  c = Config()
+def get_config(config=None):
+  if config:
+      c = config
+  else:
+      c = Config()
   config_data = {
     'qat_conf'     : None,
     'ipsec_conf'   : None,

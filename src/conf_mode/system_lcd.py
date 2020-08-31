@@ -29,8 +29,11 @@ airbag.enable()
 lcdd_conf = '/run/LCDd/LCDd.conf'
 lcdproc_conf = '/run/lcdproc/lcdproc.conf'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['system', 'lcd']
     lcd = conf.get_config_dict(base, key_mangling=('-', '_'),
                                get_first_key=True)

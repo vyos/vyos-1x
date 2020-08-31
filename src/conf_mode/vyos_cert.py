@@ -103,10 +103,13 @@ def generate_self_signed(cert_data):
     if san_config:
         san_config.close()
 
-def get_config():
+def get_config(config=None):
     vyos_cert = vyos.defaults.vyos_cert_data
 
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if not conf.exists('service https certificates system-generated-certificate'):
         return None
     else:

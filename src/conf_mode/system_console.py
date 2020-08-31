@@ -26,8 +26,11 @@ airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['system', 'console']
 
     # retrieve configuration at once

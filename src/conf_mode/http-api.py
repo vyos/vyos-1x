@@ -39,7 +39,7 @@ dependencies = [
     'https.py',
 ]
 
-def get_config():
+def get_config(config=None):
     http_api = deepcopy(vyos.defaults.api_data)
     x = http_api.get('api_keys')
     if x is None:
@@ -48,7 +48,11 @@ def get_config():
         default_key = x[0]
     keys_added = False
 
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
+
     if not conf.exists('service https api'):
         return None
     else:

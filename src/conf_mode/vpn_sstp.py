@@ -65,10 +65,13 @@ default_config_data = {
     'thread_cnt' : get_half_cpus()
 }
 
-def get_config():
+def get_config(config=None):
     sstp = deepcopy(default_config_data)
     base_path = ['vpn', 'sstp']
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if not conf.exists(base_path):
         return None
 

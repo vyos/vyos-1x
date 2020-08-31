@@ -30,8 +30,11 @@ airbag.enable()
 config_file = r'/tmp/static_mcast.frr'
 
 # Get configuration for static multicast route
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     mroute = {
         'old_mroute' : {},
         'mroute' : {}
