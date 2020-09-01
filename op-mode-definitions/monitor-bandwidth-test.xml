@@ -17,10 +17,19 @@
             <properties>
               <help>Initiate a bandwidth test to specified host (port TCP/5001)</help>
               <completionHelp>
-                <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                <list>&lt;hostname&gt; &lt;x.x.x.x&gt;</list>
               </completionHelp>
             </properties>
             <command>iperf -c $4</command>
+          </tagNode>
+          <tagNode name="initiate6">
+            <properties>
+              <help>Initiate a bandwidth test to specified IPv6 host (port TCP/5001)</help>
+              <completionHelp>
+                <list>&lt;hostname&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>iperf -u -V -c $4 -b 10G</command>
           </tagNode>
         </children>
       </node>
