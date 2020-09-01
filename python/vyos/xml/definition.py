@@ -254,6 +254,9 @@ class XML(dict):
             d = d.get(k, {})
 
         if not flat:
+            # _flatten will make this conversion
+            d = self.multi_to_list(lpath, d)
+
             r = {}
             for k in d:
                 under = k.replace('-','_')
