@@ -30,6 +30,9 @@ def get_config_value(key):
     tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
     return tmp
 
+def is_service_running():
+    return 'sshd' in (p.name() for p in process_iter())
+
 class TestServiceSSH(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
@@ -45,6 +48,21 @@ class TestServiceSSH(unittest.TestCase):
 
         self.session.commit()
         del self.session
+
+    def test_ssh_default(self):
+        """ Check if SSH service runs with default settings - used for checking
+            behavior of <defaultValue> in XML definition """
+        self.session.set(base_path)
+
+        # commit changes
+        self.session.commit()
+
+        # Check configured port
+        port = get_config_value('Port')[0]
+        self.assertEqual('22', port)
+
+        # Check for running process
+        self.assertTrue(is_service_running())
 
     def test_ssh_single(self):
         """ Check if SSH service can be configured and runs """
@@ -83,7 +101,7 @@ class TestServiceSSH(unittest.TestCase):
         self.assertTrue("100" in keepalive)
 
         # Check for running process
-        self.assertTrue("sshd" in (p.name() for p in process_iter()))
+        self.assertTrue(is_service_running())
 
     def test_ssh_multi(self):
         """ Check if SSH service can be configured and runs with multiple
@@ -110,7 +128,7 @@ class TestServiceSSH(unittest.TestCase):
             self.assertIn(address, tmp)
 
         # Check for running process
-        self.assertTrue("sshd" in (p.name() for p in process_iter()))
+        self.assertTrue(is_service_running())
 
 if __name__ == '__main__':
     unittest.main()
