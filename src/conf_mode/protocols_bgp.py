@@ -14,82 +14,71 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import jmespath
+import os
 
-from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
+from vyos.util import call
 from vyos.template import render
+from vyos.template import render_to_string
+from vyos import frr
 from vyos import ConfigError, airbag
 airbag.enable()
 
 config_file = r'/tmp/bgp.frr'
 
-default_config_data = {
-    'as_number':  ''
-}
-
 def get_config():
-    bgp = deepcopy(default_config_data)
     conf = Config()
-
-    # this lives in the "nbgp" tree until we switch over
     base = ['protocols', 'nbgp']
+    bgp = conf.get_config_dict(base, key_mangling=('-', '_'))
     if not conf.exists(base):
         return None
 
-    bgp = deepcopy(default_config_data)
-    # Get full BGP configuration as dictionary - output the configuration for development
-    #
-    # vyos@vyos# commit
-    # [ protocols nbgp 65000 ]
-    # {'nbgp': {'65000': {'address-family': {'ipv4-unicast': {'aggregate-address': {'1.1.0.0/16': {},
-    #                                                                               '2.2.2.0/24': {}}},
-    #                                        'ipv6-unicast': {'aggregate-address': {'2001:db8::/32': {}}}},
-    #                     'neighbor': {'192.0.2.1': {'password': 'foo',
-    #                                                'remote-as': '100'}}}}}
-    #
-    tmp = conf.get_config_dict(base)
-
-    # extract base key from dict as this is our AS number
-    bgp['as_number'] = jmespath.search('nbgp | keys(@) [0]', tmp)
-
-    # adjust level of dictionary returned by get_config_dict()
-    # by using jmesgpath and update dictionary
-    bgp.update(jmespath.search('nbgp.* | [0]', tmp))
-
     from pprint import pprint
     pprint(bgp)
-    # resulting in e.g.
-    # vyos@vyos# commit
-    # [ protocols nbgp 65000 ]
-    # {'address-family': {'ipv4-unicast': {'aggregate-address': {'1.1.0.0/16': {},
-    #                                                            '2.2.2.0/24': {}}},
-    #                     'ipv6-unicast': {'aggregate-address': {'2001:db8::/32': {}}}},
-    #  'as_number': '65000',
-    #  'neighbor': {'192.0.2.1': {'password': 'foo', 'remote-as': '100'}},
-    #  'timers': {'holdtime': '5'}}
 
     return bgp
 
 def verify(bgp):
-    # bail out early - looks like removal from running config
     if not bgp:
         return None
 
     return None
 
 def generate(bgp):
-    # bail out early - looks like removal from running config
     if not bgp:
         return None
 
+    # render(config) not needed, its only for debug
     render(config_file, 'frr/bgp.frr.tmpl', bgp)
+
+    bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp)
+
     return None
 
 def apply(bgp):
+    if bgp is None:
+        return None
+
+    # Save original configration prior to starting any commit actions
+    bgp['original_config'] = frr.get_configuration(daemon='bgpd')
+    bgp['modified_config'] = frr.replace_section(bgp['original_config'], bgp['new_frr_config'], from_re='router bgp .*')
+
+    # Debugging
+    print('--------- DEBUGGING ----------')
+    print(f'Existing config:\n{bgp["original_config"]}\n\n')
+    print(f'Replacement config:\n{bgp["new_frr_config"]}\n\n')
+    print(f'Modified config:\n{bgp["modified_config"]}\n\n')
+
+    # Frr Mark configuration will test for syntax errors and exception out if any syntax errors are detected
+    frr.mark_configuration(bgp['modified_config'])
+
+    # Commit the resulting new configuration to frr, this will render an frr.CommitError() Exception on fail
+    frr.reload_configuration(bgp['modified_config'], daemon='bgpd')
+
     return None
+
 
 if __name__ == '__main__':
     try:
