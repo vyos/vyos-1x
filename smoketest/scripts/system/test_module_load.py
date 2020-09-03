@@ -19,6 +19,7 @@ import unittest
 
 modules = {
     "intel": ["e1000", "e1000e", "igb", "ixgb", "ixgbe", "ixgbevf", "i40e", "i40evf", "iavf"],
+    "intel_qat": ["qat_c3xxx", "qat_c3xxxvf", "qat_c62x", "qat_c62xvf", "qat_d15xx", "qat_d15xxvf", "qat_dh895xcc", "qat_dh895xccvf", "usdm_drv"],
     "accel_ppp": ["ipoe", "vlan_mon"],
     "misc": ["wireguard"]
 }
