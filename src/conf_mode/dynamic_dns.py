@@ -258,19 +258,17 @@ def generate(dyndns):
     return None
 
 def apply(dyndns):
-    if os.path.exists(dyndns['cache_file']):
-        os.unlink(dyndns['cache_file'])
-
-    if os.path.exists('/etc/ddclient.conf'):
-        os.unlink('/etc/ddclient.conf')
-
     if dyndns is None:
         os.system('/etc/init.d/ddclient stop')
+        if os.path.exists(config_file):
+            os.unlink(config_file)
+    else:
         if os.path.exists(dyndns['pid_file']):
             os.unlink(dyndns['pid_file'])
-    else:
-        os.system('/etc/init.d/ddclient restart')
+        if os.path.exists(dyndns['cache_file']):
+            os.unlink(dyndns['cache_file'])
 
+        os.system('/etc/init.d/ddclient restart')
     return None
 
 if __name__ == '__main__':
