@@ -1,9 +1,7 @@
 [
 "bcast_relay.py",
 "dhcp_relay.py",
-"dhcp_server.py",
 "dhcpv6_relay.py",
-"dhcpv6_server.py",
 "dynamic_dns.py",
 "firewall_options.py",
 "host_name.py",
