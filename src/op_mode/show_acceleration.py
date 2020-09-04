@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import sys
 import os
@@ -44,7 +43,7 @@ def show_qat_status():
         sys.exit(1)
 
     # Show QAT service
-    os.system('sudo ' + qat_init_script)
+    os.system('sudo {} status'.format(qat_init_script))
 
 # Return QAT devices
 def get_qat_devices():
@@ -118,3 +117,4 @@ elif args.dev_list:
 else:
     parser.print_help()
     sys.exit(1)
+
