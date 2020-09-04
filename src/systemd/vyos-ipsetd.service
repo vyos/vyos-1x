@@ -1,0 +1,30 @@
+[Unit]
+Description=VyOS ipset manager
+
+# Without this option, lots of default dependencies are added,
+# among them network.target, which creates a dependency cycle
+DefaultDependencies=no
+
+# Seemingly sensible way to say "as early as the system is ready".
+# All vyos-ipsetd needs is read/write mounted root, DNS queries may fail during the
+# first seconds, but that's no problem.
+After=systemd-remount-fs.service
+
+[Service]
+ExecStart=vyos-ipsetd
+Type=idle
+KillMode=mixed
+Restart=on-failure
+
+User=root
+Group=ipsetd
+
+RuntimeDirectory=vyos-ipsetd
+RuntimeDirectoryPreserve=yes
+WorkingDirectory=/run/vyos-ipsetd
+
+SyslogIdentifier=vyos-ipsetd
+SyslogFacility=daemon
+
+[Install]
+WantedBy=cloud-init-local.service vyos-router.service

@@ -13,6 +13,7 @@ usr/bin/vyos-config-file-query
 usr/bin/vyos-config-to-commands
 usr/bin/vyos-config-to-json
 usr/bin/vyos-hostsd-client
+usr/bin/vyos-ipsetd
 usr/lib
 usr/libexec/vyos/completion
 usr/libexec/vyos/conf_mode
