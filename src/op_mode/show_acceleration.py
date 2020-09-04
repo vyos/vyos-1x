@@ -22,6 +22,8 @@ import argparse
 import subprocess
 from vyos.config import Config
 
+qat_init_script = '/etc/init.d/qat_service'
+
 def detect_qat_dev():
     ret = subprocess.Popen(['sudo', 'lspci',  '-nn'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (output, err) = ret.communicate()
@@ -37,16 +39,16 @@ def show_qat_status():
     detect_qat_dev()
 
     # Check QAT service
-    if not os.path.exists('/etc/init.d/vyos-qat-utilities'):
+    if not os.path.exists(qat_init_script):
         print("\t QAT service not installed")
         sys.exit(1)
 
     # Show QAT service
-    os.system('sudo /etc/init.d/vyos-qat-utilities status')
+    os.system('sudo ' + qat_init_script)
 
 # Return QAT devices
 def get_qat_devices():
-    ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities',  'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    ret = subprocess.Popen(['sudo', qat_init_script,  'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (output, err) = ret.communicate()
     if not err:
         #print(output)
@@ -58,7 +60,7 @@ def get_qat_devices():
 def get_qat_proc_path(qat_dev):
     q_type = ""
     q_bsf  = ""
-    ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities',  'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    ret = subprocess.Popen(['sudo', qat_init_script,  'status'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (output, err) = ret.communicate()
     if not err:
         # Parse QAT service output
