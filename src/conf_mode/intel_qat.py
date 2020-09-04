@@ -27,6 +27,8 @@ from vyos import ConfigError
 # Define for recovering
 gl_ipsec_conf = None
 
+qat_init_script = '/etc/init.d/qat_service'
+
 def get_config():
   c = Config()
   config_data = {
@@ -59,7 +61,7 @@ def vpn_control(action):
 
 def verify(c):
   # Check if QAT service installed
-  if not os.path.exists('/etc/init.d/vyos-qat-utilities'):
+  if not os.path.exists(qat_init_script):
     raise ConfigError("Warning: QAT init file not found")
 
   if c['qat_conf'] == None:
@@ -82,7 +84,7 @@ def apply(c):
 
   # Disable QAT service
   if c['qat_conf'] == None:
-    ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities', 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    ret = subprocess.Popen(['sudo', qat_init_script, 'stop'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (output, err) = ret.communicate()
     if c['ipsec_conf']:
       vpn_control('start')
@@ -90,7 +92,7 @@ def apply(c):
     return
 
   # Run qat init.d script
-  ret = subprocess.Popen(['sudo', '/etc/init.d/vyos-qat-utilities', 'start'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  ret = subprocess.Popen(['sudo', qat_init_script, 'start'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   (output, err) = ret.communicate()
 
   if c['ipsec_conf']:
