@@ -22,23 +22,28 @@ from sys import exit
 from vyos.config import Config
 from vyos.template import render
 from vyos.util import call
+from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/curlrc'
+curlrc_config = r'/etc/curlrc'
+ssh_config = r'/etc/ssh/ssh_config'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['system', 'options']
     options = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return options
 
 def verify(options):
-    if 'http_client' in options.keys():
+    if 'http_client' in options:
         config = options['http_client']
-        if 'source_interface' in config.keys():
+        if 'source_interface' in config:
             if not config['source_interface'] in interfaces():
                 raise ConfigError(f'Source interface {source_interface} does not '
                                   f'exist'.format(**config))
@@ -46,10 +51,21 @@ def verify(options):
         if {'source_address', 'source_interface'} <= set(config):
             raise ConfigError('Can not define both HTTP source-interface and source-address')
 
+        if 'source_address' in config:
+            if not is_addr_assigned(config['source_address']):
+                raise ConfigError('No interface with give address specified!')
+
+    if 'ssh_client' in options:
+        config = options['ssh_client']
+        if 'source_address' in config:
+            if not is_addr_assigned(config['source_address']):
+                raise ConfigError('No interface with give address specified!')
+
     return None
 
 def generate(options):
-    render(config_file, 'system/curlrc.tmpl', options, trim_blocks=True)
+    render(curlrc_config, 'system/curlrc.tmpl', options, trim_blocks=True)
+    render(ssh_config, 'system/ssh_config.tmpl', options, trim_blocks=True)
     return None
 
 def apply(options):
@@ -63,11 +79,19 @@ def apply(options):
     if os.path.exists(systemd_action_file):
         os.unlink(systemd_action_file)
 
-    if 'ctrl_alt_del_action' in options.keys():
+    if 'ctrl_alt_del_action' in options:
         if options['ctrl_alt_del_action'] == 'reboot':
             os.symlink('/lib/systemd/system/reboot.target', systemd_action_file)
         elif options['ctrl_alt_del_action'] == 'poweroff':
             os.symlink('/lib/systemd/system/poweroff.target', systemd_action_file)
+
+    if 'http_client' not in options:
+        if os.path.exists(curlrc_config):
+            os.unlink(curlrc_config)
+
+    if 'ssh_client' not in options:
+        if os.path.exists(ssh_config):
+            os.unlink(ssh_config)
 
     # Reboot system on kernel panic
     with open('/proc/sys/kernel/panic', 'w') as f:

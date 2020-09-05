@@ -15,58 +15,43 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import jmespath
 
 from sys import exit
 from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
+from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.util import call
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-def get_config():
-    """ Retrive CLI config as dictionary. Dictionary can never be empty,
-    as at least the interface name will be added or a deleted flag """
-    conf = Config()
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    # retrieve interface default values
+def get_config(config=None):
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'pppoe']
-    default_values = defaults(base)
+    pppoe = get_interface_dict(conf, base)
+
     # PPPoE is "special" the default MTU is 1492 - update accordingly
-    default_values['mtu'] = '1492'
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    base = base + [ifname]
-
-    pppoe = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # Check if interface has been removed
-    if pppoe == {}:
-        pppoe.update({'deleted' : ''})
-
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary
-    # retrived.
-    pppoe = dict_merge(default_values, pppoe)
-
-    # Add interface instance name into dictionary
-    pppoe.update({'ifname': ifname})
+    # as the config_level is already st in get_interface_dict() - we can use []
+    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    if 'mtu' not in tmp:
+        pppoe['mtu'] = '1492'
 
     return pppoe
 
 def verify(pppoe):
-    if 'deleted' in pppoe.keys():
+    if 'deleted' in pppoe:
         # bail out early
         return None
 
@@ -92,7 +77,7 @@ def generate(pppoe):
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
                     script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
 
-    if 'deleted' in pppoe.keys():
+    if 'deleted' in pppoe:
         # stop DHCPv6-PD client
         call(f'systemctl stop dhcp6c@{ifname}.service')
         # Hang-up PPPoE connection
@@ -121,20 +106,19 @@ def generate(pppoe):
     render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
            pppoe, trim_blocks=True, permission=0o755)
 
-    tmp = jmespath.search('dhcpv6_options.prefix_delegation.interface', pppoe)
-    if tmp and len(tmp) > 0:
+    if 'dhcpv6_options' in pppoe and 'pd' in pppoe['dhcpv6_options']:
         # ipv6.tmpl relies on ifname - this should be made consitent in the
         # future better then double key-ing the same value
-        render(config_wide_dhcp6c, 'dhcp-client/ipv6_new.tmpl', pppoe, trim_blocks=True)
+        render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
 
     return None
 
 def apply(pppoe):
-    if 'deleted' in pppoe.keys():
+    if 'deleted' in pppoe:
         # bail out early
         return None
 
-    if 'disable' not in pppoe.keys():
+    if 'disable' not in pppoe:
         # Dial PPPoE connection
         call('systemctl restart ppp@{ifname}.service'.format(**pppoe))
 

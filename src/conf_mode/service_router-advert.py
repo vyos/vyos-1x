@@ -16,145 +16,88 @@
 
 import os
 
-from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
+from vyos.configdict import dict_merge
 from vyos.template import render
-
+from vyos.util import call
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/run/radvd/radvd.conf'
 
-default_config_data = {
-    'interfaces': []
-}
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
+    base = ['service', 'router-advert']
+    rtradv = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-def get_config():
-    rtradv = default_config_data
-    conf = Config()
-    base_level = ['service', 'router-advert']
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_interface_values = defaults(base + ['interface'])
+    # we deal with prefix defaults later on
+    if 'prefix' in default_interface_values:
+        del default_interface_values['prefix']
 
-    if not conf.exists(base_level):
-        return rtradv
+    default_prefix_values = defaults(base + ['interface', 'prefix'])
 
-    for interface in conf.list_nodes(base_level + ['interface']):
-        intf = {
-            'name': interface,
-            'hop_limit' : '64',
-            'default_lifetime': '',
-            'default_preference': 'medium',
-            'dnssl': [],
-            'link_mtu': '',
-            'managed_flag': 'off',
-            'interval_max': '600',
-            'interval_min': '',
-            'name_server': [],
-            'other_config_flag': 'off',
-            'prefixes' : [],
-            'reachable_time': '0',
-            'retrans_timer': '0',
-            'send_advert': 'on'
-        }
+    if 'interface' in rtradv:
+        for interface in rtradv['interface']:
+            rtradv['interface'][interface] = dict_merge(
+                default_interface_values, rtradv['interface'][interface])
 
-        # set config level first to reduce boilerplate code
-        conf.set_level(base_level + ['interface', interface])
+            if 'prefix' in rtradv['interface'][interface]:
+                for prefix in rtradv['interface'][interface]['prefix']:
+                    rtradv['interface'][interface]['prefix'][prefix] = dict_merge(
+                        default_prefix_values, rtradv['interface'][interface]['prefix'][prefix])
 
-        if conf.exists(['hop-limit']):
-            intf['hop_limit'] = conf.return_value(['hop-limit'])
-
-        if conf.exists(['default-lifetime']):
-            intf['default_lifetime'] = conf.return_value(['default-lifetime'])
-
-        if conf.exists(['default-preference']):
-            intf['default_preference'] = conf.return_value(['default-preference'])
-
-        if conf.exists(['dnssl']):
-            intf['dnssl'] = conf.return_values(['dnssl'])
-
-        if conf.exists(['link-mtu']):
-            intf['link_mtu'] = conf.return_value(['link-mtu'])
-
-        if conf.exists(['managed-flag']):
-            intf['managed_flag'] = 'on'
-
-        if conf.exists(['interval', 'max']):
-            intf['interval_max'] = conf.return_value(['interval', 'max'])
-
-        if conf.exists(['interval', 'min']):
-            intf['interval_min'] = conf.return_value(['interval', 'min'])
-
-        if conf.exists(['name-server']):
-            intf['name_server'] = conf.return_values(['name-server'])
-
-        if conf.exists(['other-config-flag']):
-            intf['other_config_flag'] = 'on'
-
-        if conf.exists(['reachable-time']):
-            intf['reachable_time'] = conf.return_value(['reachable-time'])
-
-        if conf.exists(['retrans-timer']):
-            intf['retrans_timer'] = conf.return_value(['retrans-timer'])
-
-        if conf.exists(['no-send-advert']):
-            intf['send_advert'] = 'off'
-
-        for prefix in conf.list_nodes(['prefix']):
-            tmp = {
-                'prefix' : prefix,
-                'autonomous_flag' : 'on',
-                'on_link' : 'on',
-                'preferred_lifetime': 14400,
-                'valid_lifetime' : 2592000
-
-            }
-
-            # set config level first to reduce boilerplate code
-            conf.set_level(base_level + ['interface', interface, 'prefix', prefix])
-
-            if conf.exists(['no-autonomous-flag']):
-                tmp['autonomous_flag'] = 'off'
-
-            if conf.exists(['no-on-link-flag']):
-                tmp['on_link'] = 'off'
-
-            if conf.exists(['preferred-lifetime']):
-                tmp['preferred_lifetime'] = int(conf.return_value(['preferred-lifetime']))
-
-            if conf.exists(['valid-lifetime']):
-                tmp['valid_lifetime'] = int(conf.return_value(['valid-lifetime']))
-
-            intf['prefixes'].append(tmp)
-
-        rtradv['interfaces'].append(intf)
+            if 'name_server' in rtradv['interface'][interface]:
+                # always use a list when dealing with nameservers - eases the template generation
+                if isinstance(rtradv['interface'][interface]['name_server'], str):
+                    rtradv['interface'][interface]['name_server'] = [
+                        rtradv['interface'][interface]['name_server']]
 
     return rtradv
 
 def verify(rtradv):
-    for interface in rtradv['interfaces']:
-        for prefix in interface['prefixes']:
-            if not (prefix['valid_lifetime'] > prefix['preferred_lifetime']):
-                raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
+    if not rtradv:
+        return None
+
+    if 'interface' not in rtradv:
+        return None
+
+    for interface in rtradv['interface']:
+        interface = rtradv['interface'][interface]
+        if 'prefix' in interface:
+            for prefix in interface['prefix']:
+                prefix = interface['prefix'][prefix]
+                valid_lifetime = prefix['valid_lifetime']
+                if valid_lifetime == 'infinity':
+                    valid_lifetime = 4294967295
+
+                preferred_lifetime = prefix['preferred_lifetime']
+                if preferred_lifetime == 'infinity':
+                    preferred_lifetime = 4294967295
+
+                if not (int(valid_lifetime) > int(preferred_lifetime)):
+                    raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
 
     return None
 
 def generate(rtradv):
-    if not rtradv['interfaces']:
+    if not rtradv:
         return None
 
-    render(config_file, 'router-advert/radvd.conf.tmpl', rtradv, trim_blocks=True)
-
-    # adjust file permissions of new configuration file
-    if os.path.exists(config_file):
-        os.chmod(config_file, S_IRUSR | S_IWUSR | S_IRGRP)
-
+    render(config_file, 'router-advert/radvd.conf.tmpl', rtradv, trim_blocks=True, permission=0o644)
     return None
 
 def apply(rtradv):
-    if not rtradv['interfaces']:
+    if not rtradv:
         # bail out early - looks like removal from running config
         call('systemctl stop radvd.service')
         if os.path.exists(config_file):
@@ -163,6 +106,7 @@ def apply(rtradv):
         return None
 
     call('systemctl restart radvd.service')
+
     return None
 
 if __name__ == '__main__':

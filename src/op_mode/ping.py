@@ -118,7 +118,8 @@ options = {
     'vrf': {
         'ping': 'sudo ip vrf exec {value} {command}',
         'type': '<vrf>',
-        'help': 'Use specified VRF table'
+        'help': 'Use specified VRF table',
+        'dflt': 'default',
     },
     'verbose': {
         'ping': '{command} -v',
@@ -206,6 +207,11 @@ if __name__ == '__main__':
                 matched = complete(option)
                 sys.stdout.write(options[matched[0]]['type'])
                 sys.exit(0)
+
+    for name,option in options.items():
+        if 'dflt' in option and name not in args:
+            args.append(name)
+            args.append(option['dflt'])
 
     try:
         ip = socket.gethostbyname(host)

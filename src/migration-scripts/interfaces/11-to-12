@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - rename 'dhcpv6-options prefix-delegation' from single node to a new tag node
+#   'dhcpv6-options pd 0'
+# - delete 'sla-len' from CLI - value is calculated on demand
+
+from sys import exit, argv
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+
+    for type in config.list_nodes(['interfaces']):
+        for interface in config.list_nodes(['interfaces', type]):
+            # cache current config tree
+            base_path = ['interfaces', type, interface, 'dhcpv6-options']
+            old_base = base_path + ['prefix-delegation']
+            new_base = base_path + ['pd']
+            if config.exists(old_base):
+                config.set(new_base)
+                config.set_tag(new_base)
+                config.copy(old_base, new_base + ['0'])
+                config.delete(old_base)
+
+                for pd in config.list_nodes(new_base):
+                    for tmp in config.list_nodes(new_base + [pd, 'interface']):
+                        sla_config = new_base + [pd, 'interface', tmp, 'sla-len']
+                        if config.exists(sla_config):
+                            config.delete(sla_config)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)

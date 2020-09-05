@@ -117,6 +117,7 @@ debian/debhelper-build-stamp
 debian/.debhelper/
 debian/vyos-1x
 debian/vyos-1x-vmware
+debian/vyos-1x-smoketest
 debian/*.postinst.debhelper
 debian/*.prerm.debhelper
 debian/*.substvars

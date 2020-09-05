@@ -28,11 +28,14 @@ from vyos.xml import defaults
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/ssh/sshd_config'
+config_file = r'/run/ssh/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'ssh']
     if not conf.exists(base):
         return None
@@ -42,6 +45,8 @@ def get_config():
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     ssh = dict_merge(default_values, ssh)
+    # pass config file path - used in override template
+    ssh['config_file'] = config_file
 
     return ssh
 

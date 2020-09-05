@@ -36,9 +36,12 @@ default_config_data = {
     'relay_agent_packets': 'forward'
 }
 
-def get_config():
+def get_config(config=None):
     relay = default_config_data
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     if not conf.exists(['service', 'dhcp-relay']):
         return None
     else:

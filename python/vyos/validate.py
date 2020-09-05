@@ -19,6 +19,7 @@ import netifaces
 import ipaddress
 
 from vyos.util import cmd
+from vyos import xml
 
 # Important note when you are adding new validation functions:
 #
@@ -278,7 +279,6 @@ def is_member(conf, interface, intftype=None):
     False -> interface type cannot have members
     """
     ret_val = None
-
     if intftype not in ['bonding', 'bridge', None]:
         raise ValueError((
             f'unknown interface type "{intftype}" or it cannot '
@@ -291,14 +291,14 @@ def is_member(conf, interface, intftype=None):
     conf.set_level([])
 
     for it in intftype:
-        base = 'interfaces ' + it
+        base = ['interfaces', it]
         for intf in conf.list_nodes(base):
-            memberintf = f'{base} {intf} member interface'
-            if conf.is_tag(memberintf):
+            memberintf = base + [intf, 'member', 'interface']
+            if xml.is_tag(memberintf):
                 if interface in conf.list_nodes(memberintf):
                     ret_val = intf
                     break
-            elif conf.is_leaf(memberintf):
+            elif xml.is_leaf(memberintf):
                 if ( conf.exists(memberintf) and
                         interface in conf.return_values(memberintf) ):
                     ret_val = intf

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -29,8 +29,11 @@ config_file = r'/tmp/ldpd.frr'
 def sysctl(name, value):
     call('sysctl -wq {}={}'.format(name, value))
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     mpls_conf = {
         'router_id'  : None,
         'mpls_ldp'   : False,
@@ -38,13 +41,17 @@ def get_config():
                 'interfaces'          : [],
                 'neighbors'           : {},
                 'd_transp_ipv4'       : None,
-                'd_transp_ipv6'       : None
+                'd_transp_ipv6'       : None,
+                'hello_holdtime'      : None,
+                'hello_interval'      : None
         },
         'ldp'        : {
                 'interfaces'          : [],
                 'neighbors'           : {},
                 'd_transp_ipv4'       : None,
-                'd_transp_ipv6'       : None
+                'd_transp_ipv6'       : None,
+                'hello_holdtime'      : None,
+                'hello_interval'      : None
         }
     }
     if not (conf.exists('protocols mpls') or conf.exists_effective('protocols mpls')):
@@ -60,6 +67,20 @@ def get_config():
         mpls_conf['old_router_id'] = conf.return_effective_value('router-id')
     if conf.exists('router-id'):
         mpls_conf['router_id'] = conf.return_value('router-id')
+
+    # Get hello holdtime
+    if conf.exists_effective('discovery hello-holdtime'):
+        mpls_conf['old_ldp']['hello_holdtime'] = conf.return_effective_value('discovery hello-holdtime')
+
+    if conf.exists('discovery hello-holdtime'):
+        mpls_conf['ldp']['hello_holdtime'] = conf.return_value('discovery hello-holdtime')
+
+    # Get hello interval
+    if conf.exists_effective('discovery hello-interval'):
+        mpls_conf['old_ldp']['hello_interval'] = conf.return_effective_value('discovery hello-interval')
+
+    if conf.exists('discovery hello-interval'):
+        mpls_conf['ldp']['hello_interval'] = conf.return_value('discovery hello-interval')
 
     # Get discovery transport-ipv4-address
     if conf.exists_effective('discovery transport-ipv4-address'):

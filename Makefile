@@ -2,6 +2,9 @@ TMPL_DIR := templates-cfg
 OP_TMPL_DIR := templates-op
 BUILD_DIR := build
 DATA_DIR := data
+SHIM_DIR := src/shim
+CC := gcc
+LIBS := -lzmq
 CFLAGS :=
 
 src = $(wildcard interface-definitions/*.xml.in)
@@ -88,12 +91,14 @@ op_mode_definitions:
 	find $(CURDIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
 	# XXX: delete top level op mode node.def's that now live in other packages
+	rm -f $(OP_TMPL_DIR)/add/node.def
 	rm -f $(OP_TMPL_DIR)/clear/node.def
 	rm -f $(OP_TMPL_DIR)/clear/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/set/node.def
 	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/show/ipv6/node.def
+	rm -f $(OP_TMPL_DIR)/show/ipv6/bgp/node.def
 	rm -f $(OP_TMPL_DIR)/show/ipv6/route/node.def
 	rm -f $(OP_TMPL_DIR)/restart/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
@@ -103,19 +108,28 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
 
+	# XXX: ping must be able to recursivly call itself as the
+	# options are provided from the script itself
+	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
+
 .PHONY: component_versions
 .ONESHELL:
 component_versions: $(BUILD_DIR) $(obj)
 	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
 
+.PHONY: vyshim
+vyshim:
+	$(MAKE) -C $(SHIM_DIR)
+
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions
+all: clean interface_definitions op_mode_definitions component_versions vyshim
 
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf $(TMPL_DIR)
 	rm -rf $(OP_TMPL_DIR)
+	$(MAKE) -C $(SHIM_DIR) clean
 
 .PHONY: test
 test:

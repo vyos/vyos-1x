@@ -192,9 +192,12 @@ def getDefaultServer(network, topology, devtype):
 
     return server
 
-def get_config():
+def get_config(config=None):
     openvpn = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
 
     # determine tagNode instance
     if 'VYOS_TAGNODE_VALUE' not in os.environ:

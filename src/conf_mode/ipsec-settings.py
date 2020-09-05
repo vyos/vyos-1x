@@ -41,8 +41,11 @@ delim_ipsec_l2tp_begin = "### VyOS L2TP VPN Begin ###"
 delim_ipsec_l2tp_end = "### VyOS L2TP VPN End ###"
 charon_pidfile = "/var/run/charon.pid"
 
-def get_config():
-    config = Config()
+def get_config(config=None):
+    if config:
+        config = config
+    else:
+        config = Config()
     data = {"install_routes": "yes"}
 
     if config.exists("vpn ipsec options disable-route-autoinstall"):

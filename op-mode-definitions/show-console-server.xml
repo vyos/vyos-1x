@@ -1,18 +1,5 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="connect">
-    <children>
-      <tagNode name="console">
-        <properties>
-          <help>Connect to device attached to serial console server</help>
-          <completionHelp>
-            <path>service console-server device</path>
-          </completionHelp>
-        </properties>
-        <command>/usr/bin/console "$3"</command>
-      </tagNode>
-    </children>
-  </node>
   <node name="show">
     <children>
       <node name="log">

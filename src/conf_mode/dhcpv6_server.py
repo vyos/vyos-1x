@@ -37,9 +37,12 @@ default_config_data = {
     'shared_network': []
 }
 
-def get_config():
+def get_config(config=None):
     dhcpv6 = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['service', 'dhcpv6-server']
     if not conf.exists(base):
         return None

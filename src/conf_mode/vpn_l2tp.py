@@ -70,8 +70,11 @@ default_config_data = {
     'thread_cnt': get_half_cpus()
 }
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base_path = ['vpn', 'l2tp', 'remote-access']
     if not conf.exists(base_path):
         return None
@@ -151,7 +154,8 @@ def get_config():
                 'server' : server,
                 'key' : '',
                 'fail_time' : 0,
-                'port' : '1812'
+                'port' : '1812',
+                'acct_port' : '1813'
             }
 
             conf.set_level(base_path + ['authentication', 'radius', 'server', server])
@@ -161,6 +165,9 @@ def get_config():
 
             if conf.exists(['port']):
                 radius['port'] = conf.return_value(['port'])
+
+            if conf.exists(['acct-port']):
+                radius['acct_port'] = conf.return_value(['acct-port'])
 
             if conf.exists(['key']):
                 radius['key'] = conf.return_value(['key'])

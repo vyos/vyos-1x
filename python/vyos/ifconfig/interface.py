@@ -16,7 +16,10 @@
 import os
 import re
 import json
+import jmespath
+
 from copy import deepcopy
+from glob import glob
 
 from ipaddress import IPv4Network
 from ipaddress import IPv6Address
@@ -28,7 +31,10 @@ from netifaces import AF_INET6
 
 from vyos import ConfigError
 from vyos.configdict import list_diff
+from vyos.configdict import dict_merge
+from vyos.template import render
 from vyos.util import mac2eui64
+from vyos.util import vyos_dict_search
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -40,11 +46,17 @@ from vyos.validate import assert_positive
 from vyos.validate import assert_range
 
 from vyos.ifconfig.control import Control
-from vyos.ifconfig.dhcp import DHCP
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
+def get_ethertype(ethertype_val):
+    if ethertype_val == '0x88A8':
+        return '802.1ad'
+    elif ethertype_val == '0x8100':
+        return '802.1q'
+    else:
+        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
 
 class Interface(Control):
     # This is the class which will be used to create
@@ -72,8 +84,12 @@ class Interface(Control):
     _command_get = {
         'admin_state': {
             'shellcmd': 'ip -json link show dev {ifname}',
-            'format': lambda j: 'up' if 'UP' in json.loads(j)[0]['flags'] else 'down',
-        }
+            'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
+        },
+        'vlan_protocol': {
+            'shellcmd': 'ip -json -details link show dev {ifname}',
+            'format': lambda j: jmespath.search('[*].linkinfo.info_data.protocol | [0]', json.loads(j)),
+        },
     }
 
     _command_set = {
@@ -197,11 +213,11 @@ class Interface(Control):
 
         # make sure the ifname is the first argument and not from the dict
         self.config['ifname'] = ifname
+        self._admin_state_down_cnt = 0
 
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
         self.ifname = ifname
-        self.dhcp = DHCP(ifname)
 
         if not self.exists(ifname):
             # Any instance of Interface, such as Interface('eth0')
@@ -322,11 +338,11 @@ class Interface(Control):
             self.set_admin_state('down')
 
         self.set_interface('mac', mac)
-        
+
         # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
         if prev_state == 'up':
             self.set_admin_state('up')
-    
+
     def set_vrf(self, vrf=''):
         """
         Add/Remove interface from given VRF instance.
@@ -543,6 +559,17 @@ class Interface(Control):
         """
         self.set_interface('alias', ifalias)
 
+    def get_vlan_protocol(self):
+        """
+        Retrieve VLAN protocol in use, this can be 802.1Q, 802.1ad or None
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0.10').get_vlan_protocol()
+        '802.1Q'
+        """
+        return self.get_interface('vlan_protocol')
+
     def get_admin_state(self):
         """
         Get interface administrative state. Function will return 'up' or 'down'
@@ -564,7 +591,24 @@ class Interface(Control):
         >>> Interface('eth0').get_admin_state()
         'down'
         """
-        return self.set_interface('admin_state', state)
+        # A VLAN interface can only be placed in admin up state when
+        # the lower interface is up, too
+        if self.get_vlan_protocol():
+            lower_interface = glob(f'/sys/class/net/{self.ifname}/lower*/flags')[0]
+            with open(lower_interface, 'r') as f:
+                flags = f.read()
+            # If parent is not up - bail out as we can not bring up the VLAN.
+            # Flags are defined in kernel source include/uapi/linux/if.h
+            if not int(flags, 16) & 1:
+                return None
+
+        if state == 'up':
+            self._admin_state_down_cnt -= 1
+            if self._admin_state_down_cnt < 1:
+                return self.set_interface('admin_state', state)
+        else:
+            self._admin_state_down_cnt += 1
+            return self.set_interface('admin_state', state)
 
     def set_proxy_arp(self, enable):
         """
@@ -679,9 +723,9 @@ class Interface(Control):
 
         # add to interface
         if addr == 'dhcp':
-            self.dhcp.v4.set()
+            self.set_dhcp(True)
         elif addr == 'dhcpv6':
-            self.dhcp.v6.set()
+            self.set_dhcpv6(True)
         elif not is_intf_addr_assigned(self.ifname, addr):
             self._cmd(f'ip addr add "{addr}" '
                     f'{"brd + " if addr_is_v4 else ""}dev "{self.ifname}"')
@@ -720,9 +764,9 @@ class Interface(Control):
 
         # remove from interface
         if addr == 'dhcp':
-            self.dhcp.v4.delete()
+            self.set_dhcp(False)
         elif addr == 'dhcpv6':
-            self.dhcp.v6.delete()
+            self.set_dhcpv6(False)
         elif is_intf_addr_assigned(self.ifname, addr):
             self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
         else:
@@ -741,8 +785,8 @@ class Interface(Control):
         Will raise an exception on error.
         """
         # stop DHCP(v6) if running
-        self.dhcp.v4.delete()
-        self.dhcp.v6.delete()
+        self.set_dhcp(False)
+        self.set_dhcpv6(False)
 
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
@@ -766,23 +810,103 @@ class Interface(Control):
 
         return True
 
+    def set_dhcp(self, enable):
+        """
+        Enable/Disable DHCP client on a given interface.
+        """
+        if enable not in [True, False]:
+            raise ValueError()
+
+        ifname = self.ifname
+        config_base = r'/var/lib/dhcp/dhclient'
+        config_file = f'{config_base}_{ifname}.conf'
+        options_file = f'{config_base}_{ifname}.options'
+        pid_file = f'{config_base}_{ifname}.pid'
+        lease_file = f'{config_base}_{ifname}.leases'
+
+        if enable and 'disable' not in self._config:
+            if vyos_dict_search('dhcp_options.host_name', self._config) == None:
+                # read configured system hostname.
+                # maybe change to vyos hostd client ???
+                hostname = 'vyos'
+                with open('/etc/hostname', 'r') as f:
+                    hostname = f.read().rstrip('\n')
+                    tmp = {'dhcp_options' : { 'host_name' : hostname}}
+                    self._config = dict_merge(tmp, self._config)
+
+            render(options_file, 'dhcp-client/daemon-options.tmpl',
+                   self._config, trim_blocks=True)
+            render(config_file, 'dhcp-client/ipv4.tmpl',
+                   self._config, trim_blocks=True)
+
+            # 'up' check is mandatory b/c even if the interface is A/D, as soon as
+            # the DHCP client is started the interface will be placed in u/u state.
+            # This is not what we intended to do when disabling an interface.
+            return self._cmd(f'systemctl restart dhclient@{ifname}.service')
+        else:
+            self._cmd(f'systemctl stop dhclient@{ifname}.service')
+
+            # cleanup old config files
+            for file in [config_file, options_file, pid_file, lease_file]:
+                if os.path.isfile(file):
+                    os.remove(file)
+
+
+    def set_dhcpv6(self, enable):
+        """
+        Enable/Disable DHCPv6 client on a given interface.
+        """
+        if enable not in [True, False]:
+            raise ValueError()
+
+        ifname = self.ifname
+        config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+
+        if enable and 'disable' not in self._config:
+            render(config_file, 'dhcp-client/ipv6.tmpl',
+                   self._config, trim_blocks=True)
+
+            # We must ignore any return codes. This is required to enable DHCPv6-PD
+            # for interfaces which are yet not up and running.
+            return self._popen(f'systemctl restart dhcp6c@{ifname}.service')
+        else:
+            self._popen(f'systemctl stop dhcp6c@{ifname}.service')
+
+            if os.path.isfile(config_file):
+                os.remove(config_file)
+
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
+        # Cache the configuration - it will be reused inside e.g. DHCP handler
+        # XXX: maybe pass the option via __init__ in the future and rename this
+        # method to apply()?
+        self._config = config
+
         # Update interface description
-        self.set_alias(config.get('description', None))
+        self.set_alias(config.get('description', ''))
+
+        # Ignore link state changes
+        value = '2' if 'disable_link_detect' in config else '1'
+        self.set_link_detect(value)
 
         # Configure assigned interface IP addresses. No longer
         # configured addresses will be removed first
         new_addr = config.get('address', [])
 
-        # XXX workaround for T2636, convert IP address string to a list
-        # with one element
-        if isinstance(new_addr, str):
-            new_addr = [new_addr]
+        # always ensure DHCP client is stopped (when not configured explicitly)
+        if 'dhcp' not in new_addr:
+            self.del_addr('dhcp')
+
+        # always ensure DHCPv6 client is stopped (when not configured as client
+        # for IPv6 address or prefix delegation
+        dhcpv6pd = vyos_dict_search('dhcpv6_options.pd', config)
+        if 'dhcpv6' not in new_addr or dhcpv6pd == None:
+            self.del_addr('dhcpv6')
 
         # determine IP addresses which are assigned to the interface and build a
         # list of addresses which are no longer in the dict so they can be removed
@@ -793,13 +917,144 @@ class Interface(Control):
         for addr in new_addr:
             self.add_addr(addr)
 
+        # start DHCPv6 client when only PD was configured
+        if dhcpv6pd != None:
+            self.set_dhcpv6(True)
+
         # There are some items in the configuration which can only be applied
         # if this instance is not bound to a bridge. This should be checked
         # by the caller but better save then sorry!
-        if not config.get('is_bridge_member', False):
-            # Bind interface instance into VRF
+        if not any(k in ['is_bond_member', 'is_bridge_member'] for k in config):
+            # Bind interface to given VRF or unbind it if vrf node is not set.
+            # unbinding will call 'ip link set dev eth0 nomaster' which will
+            # also drop the interface out of a bridge or bond - thus this is
+            # checked before
             self.set_vrf(config.get('vrf', ''))
 
-        # Interface administrative state
-        state = 'down' if 'disable' in config.keys() else 'up'
-        self.set_admin_state(state)
+        # Configure ARP cache timeout in milliseconds - has default value
+        tmp = vyos_dict_search('ip.arp_cache_timeout', config)
+        value = tmp if (tmp != None) else '30'
+        self.set_arp_cache_tmo(value)
+
+        # Configure ARP filter configuration
+        tmp = vyos_dict_search('ip.disable_arp_filter', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_arp_filter(value)
+
+        # Configure ARP accept
+        tmp = vyos_dict_search('ip.enable_arp_accept', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_accept(value)
+
+        # Configure ARP announce
+        tmp = vyos_dict_search('ip.enable_arp_announce', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_announce(value)
+
+        # Configure ARP ignore
+        tmp = vyos_dict_search('ip.enable_arp_ignore', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_arp_ignore(value)
+
+        # Enable proxy-arp on this interface
+        tmp = vyos_dict_search('ip.enable_proxy_arp', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_proxy_arp(value)
+
+        # Enable private VLAN proxy ARP on this interface
+        tmp = vyos_dict_search('ip.proxy_arp_pvlan', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_proxy_arp_pvlan(value)
+
+        # IPv6 forwarding
+        tmp = vyos_dict_search('ipv6.disable_forwarding', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_ipv6_forwarding(value)
+
+        # IPv6 router advertisements
+        tmp = vyos_dict_search('ipv6.address.autoconf', config)
+        value = '2' if (tmp != None) else '1'
+        if 'dhcpv6' in new_addr:
+            value = '2'
+        self.set_ipv6_accept_ra(value)
+
+        # IPv6 address autoconfiguration
+        tmp = vyos_dict_search('ipv6.address.autoconf', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_ipv6_autoconf(value)
+
+        # IPv6 Duplicate Address Detection (DAD) tries
+        tmp = vyos_dict_search('ipv6.dup_addr_detect_transmits', config)
+        value = tmp if (tmp != None) else '1'
+        self.set_ipv6_dad_messages(value)
+
+        # MTU - Maximum Transfer Unit
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
+
+        # Delete old IPv6 EUI64 addresses before changing MAC
+        tmp = vyos_dict_search('ipv6.address.eui64_old', config)
+        if tmp:
+            for addr in tmp:
+                self.del_ipv6_eui64_address(addr)
+
+        # Change interface MAC address - re-set to real hardware address (hw-id)
+        # if custom mac is removed. Skip if bond member.
+        if 'is_bond_member' not in config:
+            mac = config.get('hw_id')
+            if 'mac' in config:
+                mac = config.get('mac')
+            if mac:
+                self.set_mac(mac)
+
+        # Manage IPv6 link-local addresses
+        tmp = vyos_dict_search('ipv6.address.no_default_link_local', config)
+        # we must check explicitly for None type as if the key is set we will
+        # get an empty dict (<class 'dict'>)
+        if tmp is not None:
+            self.del_ipv6_eui64_address('fe80::/64')
+        else:
+            self.add_ipv6_eui64_address('fe80::/64')
+
+        # Add IPv6 EUI-based addresses
+        tmp = vyos_dict_search('ipv6.address.eui64', config)
+        if tmp:
+            for addr in tmp:
+                self.add_ipv6_eui64_address(addr)
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if 'is_bridge_member' in config:
+            bridge = config.get('is_bridge_member')
+            self.add_to_bridge(bridge)
+
+        # remove no longer required 802.1ad (Q-in-Q VLANs)
+        for vif_s_id in config.get('vif_s_remove', {}):
+            self.del_vlan(vif_s_id)
+
+        # create/update 802.1ad (Q-in-Q VLANs)
+        ifname = config['ifname']
+        for vif_s_id, vif_s in config.get('vif_s', {}).items():
+            tmp=get_ethertype(vif_s.get('ethertype', '0x88A8'))
+            s_vlan = self.add_vlan(vif_s_id, ethertype=tmp)
+            vif_s['ifname'] = f'{ifname}.{vif_s_id}'
+            s_vlan.update(vif_s)
+
+            # remove no longer required client VLAN (vif-c)
+            for vif_c_id in vif_s.get('vif_c_remove', {}):
+                s_vlan.del_vlan(vif_c_id)
+
+            # create/update client VLAN (vif-c) interface
+            for vif_c_id, vif_c in vif_s.get('vif_c', {}).items():
+                c_vlan = s_vlan.add_vlan(vif_c_id)
+                vif_c['ifname'] = f'{ifname}.{vif_s_id}.{vif_c_id}'
+                c_vlan.update(vif_c)
+
+        # remove no longer required 802.1q VLAN interfaces
+        for vif_id in config.get('vif_remove', {}):
+            self.del_vlan(vif_id)
+
+        # create/update 802.1q VLAN interfaces
+        for vif_id, vif in config.get('vif', {}).items():
+            vlan = self.add_vlan(vif_id)
+            vif['ifname'] = f'{ifname}.{vif_id}'
+            vlan.update(vif)

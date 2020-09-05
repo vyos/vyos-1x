@@ -25,6 +25,25 @@
           </completionHelp>
         </properties>
         <command>/usr/bin/traceroute -4 "$3"</command>
+        <children>
+          <node name="tcp">
+            <properties>
+              <help>Route tracing and port detection using TCP</help>
+            </properties>
+            <command>sudo /usr/bin/tcptraceroute "$3" </command>
+            <children>
+              <tagNode name="port">
+                <properties>
+                  <help>TCP port to connect to for path tracing</help>
+                  <completionHelp>
+                    <list>0-65535</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/bin/tcptraceroute "$3" $6</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
       </tagNode>
       <tagNode name="ipv6">
         <properties>
@@ -34,6 +53,25 @@
           </completionHelp>
         </properties>
         <command>/usr/bin/traceroute -6 "$3"</command>
+        <children>
+          <node name="tcp">
+            <properties>
+              <help>Use TCP/IPv6 packets to perform a traceroute</help>
+            </properties>
+            <command>sudo /usr/bin/tcptraceroute6 "$3" </command>
+            <children>
+              <tagNode name="port">
+                <properties>
+                  <help>TCP port to connect to for path tracing</help>
+                  <completionHelp>
+                    <list>0-65535</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/bin/tcptraceroute6 "$3" $6</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
       </tagNode>
       <tagNode name="vrf">
         <properties>
@@ -62,6 +100,25 @@
               </completionHelp>
             </properties>
             <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/traceroute -4 "$5"</command>
+            <children>
+              <node name="tcp">
+                <properties>
+                  <help>Route tracing and port detection using TCP</help>
+                </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute "$5" </command>
+                <children>
+                  <tagNode name="port">
+                    <properties>
+                      <help>TCP port to connect to for path tracing</help>
+                      <completionHelp>
+                        <list>0-65535</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute "$5" $8</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
           </tagNode>
           <tagNode name="ipv6">
             <properties>
@@ -71,6 +128,25 @@
               </completionHelp>
             </properties>
             <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/traceroute -6 "$5"</command>
+            <children>
+              <node name="tcp">
+                <properties>
+                  <help>Use TCP/IPv6 packets to perform a traceroute</help>
+                </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute6 "$5" </command>
+                <children>
+                  <tagNode name="port">
+                    <properties>
+                      <help>TCP port to connect to for path tracing</help>
+                      <completionHelp>
+                        <list>0-65535</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo /usr/sbin/ip vrf exec "$3" /usr/bin/tcptraceroute6 "$5" $8</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
           </tagNode>
         </children>
       </tagNode>
@@ -89,6 +165,24 @@
       </tagNode>
       <node name="traceroute">
         <children>
+          <tagNode name="ipv4">
+            <properties>
+              <help>IPv4 fully qualified domain name (FQDN)</help>
+              <completionHelp>
+                <list>&lt;fqdn&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/mtr -4 "$4"</command>
+          </tagNode>
+          <tagNode name="ipv6">
+            <properties>
+              <help>IPv6 fully qualified domain name (FQDN)</help>
+              <completionHelp>
+                <list>&lt;fqdn&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/mtr -6 "$4"</command>
+          </tagNode>
           <tagNode name="vrf">
             <properties>
               <help>Monitor path to destination in realtime via given VRF</help>
@@ -97,8 +191,24 @@
               </completionHelp>
             </properties>
             <children>
-              <!-- we need an empty tagNode to pass in a plain fqdn/ip address and
-                   let traceroute decide how to handle this parameter -->
+              <tagNode name="ipv4">
+                <properties>
+                  <help>IPv4 fully qualified domain name (FQDN)</help>
+                  <completionHelp>
+                    <list>&lt;fqdn&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$4" /usr/bin/mtr -4 "$6"</command>
+              </tagNode>
+              <tagNode name="ipv6">
+                <properties>
+                  <help>IPv6 fully qualified domain name (FQDN)</help>
+                  <completionHelp>
+                    <list>&lt;fqdn&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/sbin/ip vrf exec "$4" /usr/bin/mtr -6 "$6"</command>
+              </tagNode>
               <tagNode name="">
                 <properties>
                   <help>Track network path to specified node via given VRF</help>

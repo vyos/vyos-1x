@@ -56,9 +56,12 @@ def get_local_users():
     return local_users
 
 
-def get_config():
+def get_config(config=None):
     login = default_config_data
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base_level = ['system', 'login']
 
     # We do not need to check if the nodes exist or not and bail out early

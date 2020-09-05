@@ -311,31 +311,29 @@
                   <valueless />
                 </properties>
               </leafNode>
-              <node name="mppe">
+              <leafNode name="mppe">
                 <properties>
                   <help>Specifies MPPE negotiation preference. (default prefer mppe)</help>
+                  <completionHelp>
+                    <list>deny prefer require</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>deny</format>
+                    <description>Deny MPPE</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>prefer</format>
+                    <description>Ask client for MPPE - do not fail on reject</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>require</format>
+                    <description>Ask client for MPPE - drop connection on reject</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(deny|prefer|require)$</regex>
+                  </constraint>
                 </properties>
-                <children>
-                  <leafNode name="require">
-                    <properties>
-                      <help>Ask client for MPPE, if it rejects then drop the connection</help>
-                      <valueless />
-                    </properties>
-                  </leafNode>
-                  <leafNode name="prefer">
-                    <properties>
-                      <help>Ask client for MPPE, if it rejects do not fail</help>
-                      <valueless />
-                    </properties>
-                  </leafNode>
-                  <leafNode name="deny">
-                    <properties>
-                      <help>Deny MPPE</help>
-                      <valueless />
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              </leafNode>
               <leafNode name="lcp-echo-interval">
                 <properties>
                   <help>LCP echo-requests/sec</help>

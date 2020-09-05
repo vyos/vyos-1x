@@ -26,7 +26,7 @@
                     <path>interfaces wirelessmodem</path>
                   </completionHelp>
                 </properties>
-                <command>/usr/sbin/pppstats $4</command>
+                <command>if [ -d "/sys/class/net/$4" ]; then /usr/sbin/pppstats "$4"; fi</command>
               </leafNode>
             </children>
           </tagNode>

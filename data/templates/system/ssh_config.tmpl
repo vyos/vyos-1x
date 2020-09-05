@@ -1,0 +1,3 @@
+{% if ssh_client is defined and ssh_client.source_address is defined and ssh_client.source_address is not none %}
+BindAddress {{ ssh_client.source_address }}
+{% endif %}

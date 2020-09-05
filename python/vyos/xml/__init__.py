@@ -35,10 +35,29 @@ def load_configuration(cache=[]):
     return xml
 
 
+# def is_multi(lpath):
+#     return load_configuration().is_multi(lpath)
+
+
+def is_tag(lpath):
+    return load_configuration().is_tag(lpath)
+
+
+def is_leaf(lpath, flat=True):
+    return load_configuration().is_leaf(lpath, flat)
+
+
 def defaults(lpath, flat=False):
     return load_configuration().defaults(lpath, flat)
+
+
+def multi_to_list(lpath, conf):
+    return load_configuration().multi_to_list(lpath, conf)
 
 
 if __name__ == '__main__':
     print(defaults(['service'], flat=True))
     print(defaults(['service'], flat=False))
+
+    print(is_tag(["system", "login", "user", "vyos", "authentication", "public-keys"]))
+    print(is_tag(['protocols', 'static', 'multicast', 'route', '0.0.0.0/0', 'next-hop']))

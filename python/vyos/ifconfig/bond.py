@@ -18,9 +18,10 @@ import os
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.vlan import VLAN
 
+from vyos.util import cmd
+from vyos.util import vyos_dict_search
 from vyos.validate import assert_list
 from vyos.validate import assert_positive
-
 
 @Interface.register
 @VLAN.enable
@@ -179,7 +180,13 @@ class BondIf(Interface):
         >>> BondIf('bond0').get_arp_ip_target()
         '192.0.2.1'
         """
-        return self.get_interface('bond_arp_ip_target')
+        # As this function might also be called from update() of a VLAN interface
+        # we must check if the bond_arp_ip_target retrieval worked or not - as this
+        # can not be set for a bond vif interface
+        try:
+            return self.get_interface('bond_arp_ip_target')
+        except FileNotFoundError:
+            return ''
 
     def set_arp_ip_target(self, target):
         """
@@ -209,11 +216,31 @@ class BondIf(Interface):
         >>> BondIf('bond0').add_port('eth0')
         >>> BondIf('bond0').add_port('eth1')
         """
-        # An interface can only be added to a bond if it is in 'down' state. If
-        # interface is in 'up' state, the following Kernel error will  be thrown:
-        # bond0: eth1 is up - this may be due to an out of date ifenslave.
-        Interface(interface).set_admin_state('down')
-        return self.set_interface('bond_add_port', f'+{interface}')
+
+        # From drivers/net/bonding/bond_main.c:
+        # ...
+        # bond_set_slave_link_state(new_slave,
+        #      BOND_LINK_UP,
+        #      BOND_SLAVE_NOTIFY_NOW);
+        # ...
+        #
+        # The kernel will ALWAYS place new bond members in "up" state regardless
+        # what the CLI will tell us!
+
+        # Physical interface must be in admin down state before they can be
+        # enslaved. If this is not the case an error will be shown:
+        # bond0: eth0 is up - this may be due to an out of date ifenslave
+        slave = Interface(interface)
+        slave_state = slave.get_admin_state()
+        if slave_state == 'up':
+            slave.set_admin_state('down')
+
+        ret = self.set_interface('bond_add_port', f'+{interface}')
+        # The kernel will ALWAYS place new bond members in "up" state regardless
+        # what the LI is configured for - thus we place the interface in its
+        # desired state
+        slave.set_admin_state(slave_state)
+        return ret
 
     def del_port(self, interface):
         """
@@ -277,3 +304,80 @@ class BondIf(Interface):
         >>> BondIf('bond0').set_mode('802.3ad')
         """
         return self.set_interface('bond_mode', mode)
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # use ref-counting function to place an interface into admin down state.
+        # set_admin_state_up() must be called the same amount of times else the
+        # interface won't come up. This can/should be used to prevent link flapping
+        # when changing interface parameters require the interface to be down.
+        # We will disable it once before reconfiguration and enable it afterwards.
+        if 'shutdown_required' in config:
+            self.set_admin_state('down')
+
+        # call base class first
+        super().update(config)
+
+        # ARP monitor targets need to be synchronized between sysfs and CLI.
+        # Unfortunately an address can't be send twice to sysfs as this will
+        # result in the following exception:  OSError: [Errno 22] Invalid argument.
+        #
+        # We remove ALL addresses prior to adding new ones, this will remove
+        # addresses manually added by the user too - but as we are limited to 16 adresses
+        # from the kernel side this looks valid to me. We won't run into an error
+        # when a user added manual adresses which would result in having more
+        # then 16 adresses in total.
+        arp_tgt_addr = list(map(str, self.get_arp_ip_target().split()))
+        for addr in arp_tgt_addr:
+            self.set_arp_ip_target('-' + addr)
+
+        # Add configured ARP target addresses
+        value = vyos_dict_search('arp_monitor.target', config)
+        if isinstance(value, str):
+            value = [value]
+        if value:
+            for addr in value:
+                self.set_arp_ip_target('+' + addr)
+
+        # Bonding transmit hash policy
+        value = config.get('hash_policy')
+        if value: self.set_hash_policy(value)
+
+        # Some interface options can only be changed if the interface is
+        # administratively down
+        if self.get_admin_state() == 'down':
+            # Delete bond member port(s)
+            for interface in self.get_slaves():
+                self.del_port(interface)
+
+            # Bonding policy/mode
+            value = config.get('mode')
+            if value: self.set_mode(value)
+
+            # Add (enslave) interfaces to bond
+            value = vyos_dict_search('member.interface', config)
+            if value:
+                for interface in value:
+                    # if we've come here we already verified the interface
+                    # does not have an addresses configured so just flush
+                    # any remaining ones
+                    Interface(interface).flush_addrs()
+                    self.add_port(interface)
+
+        # Primary device interface - must be set after 'mode'
+        value = config.get('primary')
+        if value: self.set_primary(value)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)

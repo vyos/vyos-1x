@@ -16,75 +16,42 @@
 
 import os
 
-from fnmatch import fnmatch
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
+from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.util import call
-from vyos.xml import defaults
+from vyos.util import check_kmod
+from vyos.util import find_device_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-def check_kmod():
-    modules = ['option', 'usb_wwan', 'usbserial']
-    for module in modules:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
+k_mod = ['option', 'usb_wwan', 'usbserial']
 
-def find_device_file(device):
-    """ Recurively search /dev for the given device file and return its full path.
-        If no device file was found 'None' is returned """
-    for root, dirs, files in os.walk('/dev'):
-        for basename in files:
-            if fnmatch(basename, device):
-                return os.path.join(root, basename)
-
-    return None
-
-def get_config():
-    """ Retrive CLI config as dictionary. Dictionary can never be empty,
-    as at least the interface name will be added or a deleted flag """
-    conf = Config()
-
-    # determine tagNode instance
-    if 'VYOS_TAGNODE_VALUE' not in os.environ:
-        raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
-
-    # retrieve interface default values
+def get_config(config=None):
+    """
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['interfaces', 'wirelessmodem']
-    default_values = defaults(base)
-
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
-    base = base + [ifname]
-
-    wwan = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # Check if interface has been removed
-    if wwan == {}:
-        wwan.update({'deleted' : ''})
-
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary
-    # retrived.
-    wwan = dict_merge(default_values, wwan)
-
-    # Add interface instance name into dictionary
-    wwan.update({'ifname': ifname})
-
+    wwan = get_interface_dict(conf, base)
     return wwan
 
 def verify(wwan):
-    if 'deleted' in wwan.keys():
+    if 'deleted' in wwan:
         return None
 
-    if not 'apn' in wwan.keys():
+    if not 'apn' in wwan:
         raise ConfigError('No APN configured for "{ifname}"'.format(**wwan))
 
-    if not 'device' in wwan.keys():
+    if not 'device' in wwan:
         raise ConfigError('Physical "device" must be configured')
 
     # we can not use isfile() here as Linux device files are no regular files
@@ -141,11 +108,11 @@ def generate(wwan):
     return None
 
 def apply(wwan):
-    if 'deleted' in wwan.keys():
+    if 'deleted' in wwan:
         # bail out early
         return None
 
-    if not 'disable' in wwan.keys():
+    if not 'disable' in wwan:
         # "dial" WWAN connection
         call('systemctl start ppp@{ifname}.service'.format(**wwan))
 
@@ -153,7 +120,7 @@ def apply(wwan):
 
 if __name__ == '__main__':
     try:
-        check_kmod()
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)

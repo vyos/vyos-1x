@@ -149,7 +149,7 @@
                 <properties>
                   <help>Show longer prefixes of routes for specified IP address or prefix</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route $4"</command>
+                <command>/usr/bin/vtysh -c "show ip route $4 longer-prefixes"</command>
               </leafNode>
             </children>
           </tagNode>

@@ -21,6 +21,7 @@
               </valueHelp>
               <completionHelp>
                 <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                <list>all</list>
               </completionHelp>
             </properties>
             <children>
@@ -73,7 +74,7 @@
                           </completionHelp>
                           <constraintErrorMessage>Datum should be WGS84, NAD83, or MLLW</constraintErrorMessage>
                           <constraint>
-                            <regex>(WGS84|NAD83|MLLW)$</regex>
+                            <regex>^(WGS84|NAD83|MLLW)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>

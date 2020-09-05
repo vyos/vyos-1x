@@ -50,9 +50,12 @@ default_config_data = {
     'deleted': False
 }
 
-def get_config():
+def get_config(config=None):
     dyndns = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base_level = ['service', 'dns', 'dynamic']
 
     if not conf.exists(base_level):

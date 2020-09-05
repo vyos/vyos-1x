@@ -53,8 +53,11 @@ def make_command(executable, arguments):
     else:
         return("sg vyattacfg \"{0}\"".format(executable))
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     conf.set_level("system task-scheduler task")
     task_names = conf.list_nodes("")
     tasks = []

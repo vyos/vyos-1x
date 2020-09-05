@@ -25,10 +25,10 @@ server {
 {% endfor %}
 
 {% if server.certbot %}
-        ssl_certificate /etc/letsencrypt/live/{{ server.certbot_dir }}/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/{{ server.certbot_dir }}/privkey.pem;
-        include /etc/letsencrypt/options-ssl-nginx.conf;
-        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+        ssl_certificate {{ server.certbot_dir }}/live/{{ server.certbot_domain_dir }}/fullchain.pem;
+        ssl_certificate_key {{ server.certbot_dir }}/live/{{ server.certbot_domain_dir }}/privkey.pem;
+        include {{ server.certbot_dir }}/options-ssl-nginx.conf;
+        ssl_dhparam {{ server.certbot_dir }}/ssl-dhparams.pem;
 {% elif server.vyos_cert %}
         include {{ server.vyos_cert.conf }};
 {% else %}
@@ -52,7 +52,7 @@ server {
 
         error_page 501 502 503 =200 @50*_json;
 
-{% if api_somewhere %}
+{% if api_set %}
         location @50*_json {
                 default_type application/json;
                 return 200 '{"error": "service https api unavailable at this proxy address: set service https api-restrict virtual-host"}';

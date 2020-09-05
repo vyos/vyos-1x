@@ -11,9 +11,9 @@
       <tagNode name="vrf">
         <properties>
           <help>Show information on specific VRF instance</help>
-            <completionHelp>
-              <path>vrf name</path>
-            </completionHelp>
+          <completionHelp>
+            <path>vrf name</path>
+          </completionHelp>
         </properties>
         <command>${vyos_op_scripts_dir}/show_vrf.py -e "$3"</command>
         <children>

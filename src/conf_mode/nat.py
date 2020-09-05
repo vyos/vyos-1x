@@ -19,17 +19,26 @@ import json
 import os
 
 from copy import deepcopy
+from distutils.version import LooseVersion
+from platform import release as kernel_version
 from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call, cmd
+from vyos.util import call
+from vyos.util import cmd
+from vyos.util import check_kmod
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 
 from vyos import airbag
 airbag.enable()
+
+if LooseVersion(kernel_version()) > LooseVersion('5.1'):
+    k_mod = ['nft_nat', 'nft_chain_nat']
+else:
+    k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
 default_config_data = {
     'deleted': False,
@@ -43,15 +52,6 @@ default_config_data = {
 }
 
 iptables_nat_config = '/tmp/vyos-nat-rules.nft'
-
-def _check_kmod():
-    """ load required Kernel modules """
-    modules = ['nft_nat', 'nft_chain_nat_ipv4']
-    for module in modules:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
-
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -167,9 +167,12 @@ def parse_configuration(conf, source_dest):
 
     return ruleset
 
-def get_config():
+def get_config(config=None):
     nat = deepcopy(default_config_data)
-    conf = Config()
+    if config:
+        conf = config
+    else:
+        conf = Config()
 
     # read in current nftable (once) for further processing
     tmp = cmd('nft -j list table raw')
@@ -237,6 +240,8 @@ def verify(nat):
             addr = rule['translation_address']
             if addr != 'masquerade' and not is_addr_assigned(addr):
                 print(f'Warning: IP address {addr} does not exist on the system!')
+        elif not rule['exclude']:
+            raise ConfigError(f'{err_msg} translation address not specified')
 
         # common rule verification
         verify_rule(rule, err_msg)
@@ -250,6 +255,9 @@ def verify(nat):
 
         if not rule['interface_in']:
             raise ConfigError(f'{err_msg} inbound-interface not specified')
+
+        if not rule['translation_address'] and not rule['exclude']:
+            raise ConfigError(f'{err_msg} translation address not specified')
 
         # common rule verification
         verify_rule(rule, err_msg)
@@ -269,7 +277,7 @@ def apply(nat):
 
 if __name__ == '__main__':
     try:
-        _check_kmod()
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)

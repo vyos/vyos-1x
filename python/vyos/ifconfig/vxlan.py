@@ -47,8 +47,8 @@ class VXLANIf(Interface):
         'port': 8472,   # The Linux implementation of VXLAN pre-dates
                         # the IANA's selection of a standard destination port
         'remote': '',
-        'src_address': '',
-        'src_interface': '',
+        'source_address': '',
+        'source_interface': '',
         'vni': 0
     }
     definition = {
@@ -60,29 +60,29 @@ class VXLANIf(Interface):
         }
     }
     options = Interface.options + \
-        ['group', 'remote', 'src_interface', 'port', 'vni', 'src_address']
+        ['group', 'remote', 'source_interface', 'port', 'vni', 'source_address']
 
     mapping = {
         'ifname': 'add',
         'vni':    'id',
         'port':   'dstport',
-        'src_address': 'local',
-        'src_interface': 'dev',
+        'source_address': 'local',
+        'source_interface': 'dev',
     }
 
     def _create(self):
         cmdline = ['ifname', 'type', 'vni', 'port']
 
-        if self.config['src_address']:
-            cmdline.append('src_address')
+        if self.config['source_address']:
+            cmdline.append('source_address')
 
         if self.config['remote']:
             cmdline.append('remote')
 
-        if self.config['group'] or self.config['src_interface']:
-            if self.config['group'] and self.config['src_interface']:
+        if self.config['group'] or self.config['source_interface']:
+            if self.config['group'] and self.config['source_interface']:
                 cmdline.append('group')
-                cmdline.append('src_interface')
+                cmdline.append('source_interface')
             else:
                 ifname = self.config['ifname']
                 raise ConfigError(
@@ -109,3 +109,22 @@ class VXLANIf(Interface):
         >> dict = VXLANIf().get_config()
         """
         return deepcopy(cls.default)
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class first
+        super().update(config)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)

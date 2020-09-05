@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="log">
+        <properties>
+          <help>Monitor last lines of messages file</help>
+        </properties>
+        <command>tail --follow=name /var/log/messages</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

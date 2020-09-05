@@ -17,6 +17,8 @@ import re
 import sys
 import subprocess
 
+from vyos.util import call
+
 CLI_SHELL_API = '/bin/cli-shell-api'
 SET = '/opt/vyatta/sbin/my_set'
 DELETE = '/opt/vyatta/sbin/my_delete'
@@ -26,7 +28,7 @@ DISCARD = '/opt/vyatta/sbin/my_discard'
 SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
 SAVE_CONFIG = ['/opt/vyatta/sbin/vyatta-save-config.pl']
-INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image']
+INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image', '--url']
 REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
@@ -68,6 +70,11 @@ def inject_vyos_env(env):
     env['vyos_prefix'] = '/opt/vyatta'
     env['vyos_sbin_dir'] = '/usr/sbin'
     env['vyos_validators_dir'] = '/usr/libexec/vyos/validators'
+
+    # if running the vyos-configd daemon, inject the vyshim env var
+    ret = call('systemctl is-active --quiet vyos-configd.service')
+    if not ret:
+        env['vyshim'] = '/usr/sbin/vyshim'
 
     return env
 

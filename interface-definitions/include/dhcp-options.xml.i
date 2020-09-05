@@ -1,6 +1,6 @@
 <node name="dhcp-options">
   <properties>
-    <help>DHCP options</help>
+    <help>DHCP client settings/options</help>
   </properties>
   <children>
     <leafNode name="client-id">

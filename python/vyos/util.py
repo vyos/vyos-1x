@@ -240,9 +240,10 @@ def chown(path, user, group):
     if user is None or group is None:
         return False
 
-    if not os.path.exists(path):
+    # path may also be an open file descriptor
+    if not isinstance(path, int) and not os.path.exists(path):
         return False
-	
+
     uid = getpwnam(user).pw_uid
     gid = getgrnam(group).gr_gid
     os.chown(path, uid, gid)
@@ -250,7 +251,8 @@ def chown(path, user, group):
 
 
 def chmod(path, bitmask):
-    if not os.path.exists(path):
+    # path may also be an open file descriptor
+    if not isinstance(path, int) and not os.path.exists(path):
         return
     if bitmask is None:
         return
@@ -261,28 +263,25 @@ def chmod_600(path):
     """ make file only read/writable by owner """
     from stat import S_IRUSR, S_IWUSR
 
-    if os.path.exists(path):
-        bitmask = S_IRUSR | S_IWUSR
-        os.chmod(path, bitmask)
+    bitmask = S_IRUSR | S_IWUSR
+    chmod(path, bitmask)
 
 
 def chmod_750(path):
     """ make file/directory only executable to user and group """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP
 
-    if os.path.exists(path):
-        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
-        os.chmod(path, bitmask)
+    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
+    chmod(path, bitmask)
 
 
 def chmod_755(path):
     """ make file executable by all """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
 
-    if os.path.exists(path):
-        bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
-                  S_IROTH | S_IXOTH
-        os.chmod(path, bitmask)
+    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
+              S_IROTH | S_IXOTH
+    chmod(path, bitmask)
 
 
 def makedir(path, user=None, group=None):
@@ -652,3 +651,38 @@ def get_bridge_member_config(conf, br, intf):
 
     conf.set_level(old_level)
     return memberconf
+
+def check_kmod(k_mod):
+    """ Common utility function to load required kernel modules on demand """
+    if isinstance(k_mod, str):
+        k_mod = k_mod.split()
+    for module in k_mod:
+        if not os.path.exists(f'/sys/module/{module}'):
+            if call(f'modprobe {module}') != 0:
+                raise ConfigError(f'Loading Kernel module {module} failed')
+
+def find_device_file(device):
+    """ Recurively search /dev for the given device file and return its full path.
+        If no device file was found 'None' is returned """
+    from fnmatch import fnmatch
+
+    for root, dirs, files in os.walk('/dev'):
+        for basename in files:
+            if fnmatch(basename, device):
+                return os.path.join(root, basename)
+
+    return None
+
+def vyos_dict_search(path, dict):
+    """ Traverse Python dictionary (dict) delimited by dot (.).
+    Return value of key if found, None otherwise.
+
+    This is faster implementation then jmespath.search('foo.bar', dict)"""
+    parts = path.split('.')
+    inside = parts[:-1]
+    if not inside:
+        return dict[path]
+    c = dict
+    for p in parts[:-1]:
+        c = c.get(p, {})
+    return c.get(parts[-1], None)

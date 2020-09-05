@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="connect">
+    <properties>
+      <help>Establish connection</help>
+    </properties>
+    <children>
+      <tagNode name="console">
+        <properties>
+          <help>Connect to device attached to serial console server</help>
+          <completionHelp>
+            <path>service console-server device</path>
+          </completionHelp>
+        </properties>
+        <command>/usr/bin/console "$3"</command>
+      </tagNode>
+      <tagNode name="interface">
+        <properties>
+          <help>Bring up a connection-oriented network interface</help>
+          <completionHelp>
+            <path>interfaces pppoe</path>
+            <path>interfaces wirelessmodem</path>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
