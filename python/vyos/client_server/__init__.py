@@ -24,7 +24,7 @@ import msgpack
 STATE_STORE_NAME = "state"
 
 
-def _serialize_default(obj):
+def _msgpack_default(obj):
     """Convert unserializable types to suitable alternatives."""
     if isinstance(obj, (frozenset, set)):
         return tuple(obj)
@@ -75,7 +75,7 @@ class Protocol:
             raise ValueError(f"Message must be dict, not {type(msg).__qualname__}")
         try:
             # use_bin_type=True is required in the old msgpack version in buster
-            return msgpack.packb(msg, default=_serialize_default, use_bin_type=True)
+            return msgpack.packb(msg, default=_msgpack_default, use_bin_type=True)
         except ValueError as err:
             raise ValueError(f"Illegal message content: {err}")
 

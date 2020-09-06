@@ -21,6 +21,7 @@ setup(
     long_description="VyOS configuration libraries",
     entry_points={
         "console_scripts": (
+            "vyos-server-state-to-json=vyos.client_server.state_to_json:main",
             "vyos-ipsetd=vyos.ipsetd.server:IpsetServer.cli_main",
         ),
     },
