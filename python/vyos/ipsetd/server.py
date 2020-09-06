@@ -75,7 +75,13 @@ class Ipset:
         validator=attr.validators.matches_re(r"^[^\s.]\S{0,29}$"),
     )
     type = attr.ib(
-        default="hash:net", validator=attr.validators.in_(("hash:ip", "hash:net",))
+        default="hash:net",
+        validator=attr.validators.in_(
+            (
+                "hash:ip",
+                "hash:net",
+            )
+        ),
     )
     family = attr.ib(default="inet", validator=attr.validators.in_(("inet", "inet6")))
     hashsize = attr.ib(converter=int, default=1024)
@@ -143,7 +149,11 @@ class IpsetFailed(Exception):
 class IpsetServer(Server):
     protocol = IPSETD_PROTOCOL
     supports_state_store = True
-    default_state_store_path = "/run/vyos-ipsetd/state"
+    cli_description = (
+        "A system daemon that manages creation, updating and deletion of "
+        "ipsets in the kernel. It allows both static items and dynamically "
+        "resolved hostnames to be part of an ipset."
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

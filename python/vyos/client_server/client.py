@@ -99,6 +99,8 @@ class Client:
     protocol = None
 
     cli_default_log_level = "warning"
+    # A string shown at the top of the --help output
+    cli_description = None
 
     #
     # Arguments
@@ -393,7 +395,8 @@ class Client:
         arguments.
         """
         parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            description=cls.cli_description,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
         parser.add_argument(
             "-v",

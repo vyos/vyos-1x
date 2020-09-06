@@ -31,7 +31,7 @@ import trio
 import voluptuous.humanize
 
 from ..version import get_version
-from . import InternalError, Malformed, Protocol, RequestError
+from . import InternalError, Malformed, Protocol, RequestError, STATE_STORE_NAME
 from . import trio_except
 from .utils import socket_argument_type
 
@@ -128,10 +128,12 @@ class Server:
     supports_state_store = False
     # If True, the state store is mandatory and server won't start without a path
     requires_state_store = False
-    # Default path to use for storing the shelf
-    default_state_store_path = None
 
     cli_default_log_level = "info"
+    # Default directory for storing the shelf; None disables state storage by default
+    cli_default_state_store_path = "."
+    # A string shown at the top of the --help output
+    cli_description = None
     cli_stop_signals = (signal.SIGINT, signal.SIGTERM)
 
     #
@@ -167,6 +169,8 @@ class Server:
             self.logger = logging.getLogger(type(self).__module__)
         if self.requires_state_store and self.state_store_path is None:
             raise ValueError("state_store_path is required")
+        if isinstance(self.state_store_path, str):
+            self.state_store_path = os.path.abspath(self.state_store_path)
         self.banner = self.protocol.generate_banner()
 
     def __repr__(self):
@@ -378,16 +382,22 @@ class Server:
         if self.state_store is None:
             raise RuntimeError("No state store opened")
 
-    async def state_del(self, key):
+    async def state_del(self, key, sync=False):
         """Delete an entry from persistent state store.
 
         :param key: key of the entry to be removed
         :type  key: str
+        :param sync:
+            ``True`` ensures changes are synced to disk immediately; in any case,
+            pending changes are written on shutdown
+        :type  sync: bool
         :raises KeyError: if key not present
         """
         self._require_state_store()
         self.logger.debug("STATE-DEL: %r", key)
-        return await trio.to_thread.run_sync(self.state_store.__delitem__, key)
+        await trio.to_thread.run_sync(self.state_store.__delitem__, key)
+        if sync:
+            await trio.to_thread.run_sync(self.state_store.sync)
 
     async def state_get(self, key):
         """Retrieve an entry from persistent state store.
@@ -419,17 +429,23 @@ class Server:
         """
         pass
 
-    async def state_set(self, key, value):
+    async def state_set(self, key, value, sync=False):
         """Create or update an entry in persistent state store.
 
         :param key: key of the entry to be created/updated
         :type  key: str
         :param value: data to store
         :type  value: object
+        :param sync:
+            ``True`` ensures changes are synced to disk immediately; in any case,
+            pending changes are written on shutdown
+        :type  sync: bool
         """
         self._require_state_store()
         self.logger.debug("STATE-STORE: %r", key)
         await trio.to_thread.run_sync(self.state_store.__setitem__, key, value)
+        if sync:
+            await trio.to_thread.run_sync(self.state_store.sync)
 
     async def serve(self, task_status=trio.TASK_STATUS_IGNORED):
         """Entry point for running the server.
@@ -464,8 +480,12 @@ class Server:
             # Open persistent state storage
             if self.state_store_path is not None:
                 self.logger.info("STATE-OPEN: %r", self.state_store_path)
+                try:
+                    await trio.to_thread.run_sync(os.makedirs, self.state_store_path)
+                except FileExistsError:
+                    pass
                 self.state_store = await trio.to_thread.run_sync(
-                    shelve.open, self.state_store_path
+                    shelve.open, os.path.join(self.state_store_path, STATE_STORE_NAME)
                 )
                 await self.state_restore()
 
@@ -575,7 +595,7 @@ class Server:
                     except FileNotFoundError:
                         pass
             if self.state_store is not None:
-                self.logger.info("STATE-CLOSE: %r", self.state_store_path)
+                self.logger.info("STATE-CLOSE")
                 with trio.CancelScope(shield=True):
                     await trio.to_thread.run_sync(self.state_store.close)
             if cancelled:
@@ -602,7 +622,8 @@ class Server:
         arguments.
         """
         parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            description=cls.cli_description,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
         parser.add_argument(
             "-v",
@@ -633,14 +654,12 @@ class Server:
             parser.add_argument(
                 "-S",
                 "--state-store-path",
-                default=cls.default_state_store_path,
+                default=cls.cli_default_state_store_path or "",
                 required=cls.requires_state_store
-                and cls.default_state_store_path is None,
+                and cls.cli_default_state_store_path is None,
                 help=(
-                    "file for storing/reloading state on startup; "
-                    "as a side effect, a suffix might be appended to the path "
-                    "by the database library used and more than one file may "
-                    "be created"
+                    "directory for storing/reloading state on startup; "
+                    "specify the empty string '' to disable state storage"
                 ),
             )
         return parser
@@ -659,7 +678,7 @@ class Server:
         kwargs.setdefault("socket_info", cli_args.socket)
         kwargs.setdefault("max_connections", cli_args.max_connections)
         if cls.supports_state_store:
-            kwargs.setdefault("state_store_path", cli_args.state_store_path)
+            kwargs.setdefault("state_store_path", cli_args.state_store_path or None)
         return cls(**kwargs)
 
     @classmethod
