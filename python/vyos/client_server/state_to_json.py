@@ -54,7 +54,10 @@ def main():
     try:
         store = shelve.open(path, "r")
     except dbm.error as err:
-        print(f"Can't open {path!r}: {err}", file=sys.stderr)
+        if dbm.whichdb(path) is None:
+            print(f"No database found at {path!r}", file=sys.stderr)
+        else:
+            print(f"Can't open {path!r}: {err}", file=sys.stderr)
         return 1
 
     try:
