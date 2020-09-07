@@ -69,6 +69,7 @@ def main():
             sys.stdout,
             default=_json_default,
             indent=None if args.indent < 0 else args.indent,
+            separators=(",", ":") if args.indent < 0 else None,
         )
     except TypeError as err:
         print(f"Can't serialize: {err}", file=sys.stderr)
