@@ -26,7 +26,7 @@ def find_exc(exc, predicate):
     :type  exc: BaseException
     :param predicate: see :func:`findall_excs`
     :type  predicate: callable, type, (type)
-    :return BaseException, None:
+    :rtype: BaseException, None
     """
     for _exc in findall_excs(exc, predicate):
         return _exc
@@ -38,8 +38,9 @@ def findall_excs(exc, predicate):
     :param exc:
         Exception to check the predicate for.
         If this is a :exc:`trio.MultiError`, all contained exceptions are checked
-        and those that fulfill the predicate are yielded.
-    :type  exc: BaseException
+        and those that fulfill the predicate are yielded. If It's none, nothing
+        is yielded.
+    :type  exc: BaseException, None
     :param predicate:
         Callable that takes a :class:`BaseException` object and returns whether it
         fulfills some criteria (``True``) or not (``False``).
@@ -48,6 +49,9 @@ def findall_excs(exc, predicate):
     :type  predicate: callable, type, (type)
     :return: iterator over :exc:`BaseException` objects
     """
+    if exc is None:
+        return
+
     if isinstance(predicate, (type, tuple)):
         exc_type = predicate
         predicate = lambda _exc: isinstance(_exc, exc_type)
@@ -61,28 +65,36 @@ def findall_excs(exc, predicate):
 # Functions for modifying MultiError.
 
 
-def add_exc(exc, *to_add):
-    existing = exc.exceptions if isinstance(exc, trio.MultiError) else (exc,)
-    return trio.MultiError([*existing, *to_add])
+def add_exc(exc, to_add):
+    if exc is None:
+        existing = ()
+    elif isinstance(exc, trio.MultiError):
+        existing = e.exceptions
+    else:
+        existing = (exc,)
+    return trio.MultiError([*existing, to_add])
 
 
-def remove_exc(exc, *to_remove):
-    existing = exc.exceptions if isinstance(exc, trio.MultiError) else (exc,)
-    new = [e for e in existing if e not in to_remove]
+def maybe_reraise(exc, from_exc=0):
+    if exc is None:
+        return
+    if from_exc == 0:
+        from_exc = sys.exc_info()[1]
+    raise exc from from_exc
+
+
+def remove_exc(exc, to_remove):
+    if exc is None:
+        existing = ()
+    elif isinstance(exc, trio.MultiError):
+        existing = exc.exceptions
+    else:
+        existing = (exc,)
+    if to_remove not in existing:
+        raise ValueError("{!r} not contained in {!r}".format(to_remove, exc))
+    new = [e for e in existing if e is not to_remove]
     if new:
         return trio.MultiError(new)
-
-
-def replace_exc(exc, old, new):
-    return trio.MultiError.filter(lambda e: new if e is old else e, exc)
-
-
-def reraise(exc, from_exc=None):
-    if from_exc is None:
-        from_exc = sys.exc_info()[1]
-    if exc is from_exc:
-        raise exc
-    raise exc from from_exc
 
 
 def monkey_patch():
@@ -90,9 +102,8 @@ def monkey_patch():
     trio.MultiError.find = staticmethod(find_exc)
     trio.MultiError.findall = staticmethod(findall_excs)
     trio.MultiError.add = staticmethod(add_exc)
+    trio.MultiError.maybe_reraise = staticmethod(maybe_reraise)
     trio.MultiError.remove = staticmethod(remove_exc)
-    trio.MultiError.replace = staticmethod(replace_exc)
-    trio.MultiError.reraise = staticmethod(reraise)
 
 
 # Just an example of how to use this
@@ -119,9 +130,8 @@ if __name__ == "__main__":
                     print("delaying cancellation")
                     with trio.CancelScope(shield=True):
                         await trio.sleep(1)
-                if exc is not None:
-                    print("reraising", repr(exc))
-                    trio.MultiError.reraise(exc)
+                print("reraising", repr(exc))
+                trio.MultiError.maybe_reraise(exc)
 
     monkey_patch()
     trio.run(main)

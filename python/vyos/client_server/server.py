@@ -356,8 +356,7 @@ class Server:
                 exc = trio.MultiError.remove(exc, _exc)
             if trio.MultiError.find(exc, trio.Cancelled):
                 cancelled = True
-            if exc:
-                trio.MultiError.reraise(exc)
+            trio.MultiError.maybe_reraise(exc)
 
         finally:
             # Ensure self._clients stays consistent with active sockets
