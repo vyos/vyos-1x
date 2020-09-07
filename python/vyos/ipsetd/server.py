@@ -284,21 +284,20 @@ class IpsetServer(Server):
                 return
 
             self.logger.info("REWRITE: %r, items=%d", ipset.name, len(all_items))
+            create_args = ipset.get_create_args()
+            # Also recreate the original ipset in case it was deleted in between
+            try:
+                await self._run_ipset("create", ipset.name, *create_args)
+            except IpsetFailed:
+                pass
             tmp_name = f".{ipset.name}"
             try:
-                create_args = " ".join(ipset.get_create_args())
                 await self._run_ipset(
                     "-!",
                     "restore",
                     stdin="\n".join(
                         itertools.chain(
-                            (
-                                # Also try to create the original ipset
-                                # in case it was deleted in between;
-                                # will fail silently if it already exists due to -!
-                                f"create {ipset.name} {create_args}",
-                                f"create {tmp_name} {create_args}",
-                            ),
+                            (f"create {tmp_name} {' '.join(create_args)}",),
                             (f"add {tmp_name} {item}" for item in all_items),
                             (f"swap {ipset.name} {tmp_name}", f"destroy {tmp_name}"),
                         )
