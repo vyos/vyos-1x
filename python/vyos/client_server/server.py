@@ -173,18 +173,6 @@ class Server:
             self.state_store_path = os.path.abspath(self.state_store_path)
         self.banner = self.protocol.generate_banner()
 
-    def __repr__(self):
-        tokens = []
-        if self._state == 0:
-            tokens.append("uninitialized")
-        elif self._state == 1:
-            tokens.append("serving")
-        elif self._state == 2:
-            tokens.append("stopped")
-        elif self._state == 3:
-            tokens.append("dead")
-        return f"<{type(self).__name__} {' '.join(tokens)}>"
-
     async def _serve_client(self, sock, _hash):
         """Run the request processing loop on a client connection."""
 

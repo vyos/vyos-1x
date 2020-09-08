@@ -113,8 +113,6 @@ class Client:
     _lock = attr.ib(factory=threading.Lock, init=False)
     # Holds the socket after connecting
     _sock = attr.ib(default=None, init=False)
-    # Holds the address after connecting
-    _address = attr.ib(default=None, init=False)
     # Internal state flag (0 = active, 1 = closed)
     _state = attr.ib(default=0, init=False)
 
@@ -136,16 +134,6 @@ class Client:
 
     def __exit__(self, *_):
         self.close()
-
-    def __repr__(self):
-        tokens = []
-        if self._state == 0:
-            tokens.append("initializing")
-        elif self._state == 1:
-            tokens.extend((self._address, "connected"))
-        elif self._state == 2:
-            tokens.append("stopped")
-        return f"<{type(self).__name__} {' '.join(tokens)}>"
 
     def _connect(self):
         socket_info = self.socket_info
@@ -179,7 +167,6 @@ class Client:
         if socket_info["type"].startswith("tcp"):
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self._sock = sock
-        self._address = sock.getpeername()
 
         # Receive the banner from server
         chars = []
@@ -328,7 +315,7 @@ class Client:
         """
         with self._lock:
             if self._state != 0:
-                raise RuntimeError(f"{self!r} was closed")
+                raise RuntimeError("The close() method was called already")
             req = {"action": action, "params": params}
             try:
                 if self._sock is None:
