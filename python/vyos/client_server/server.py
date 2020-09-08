@@ -723,17 +723,33 @@ class Server:
                     nursery.start_soon(_listen_stop_signals)
                 server = await cls.cli_initialize(args, logger=logger)
                 try:
-                    await server.serve()
-                # They made dbm.error a tuple, actually...
-                except (OSError, *dbm.error) as err:
-                    logger.critical("FAILED: %s", err)
-                    return 1
+                    return await server.cli_run(args)
                 finally:
                     nursery.cancel_scope.cancel()
 
+            # Cancelled due to a stop signal
             return 0
 
         return trio.run(_main)
+
+    async def cli_run(self, cli_args: argparse.Namespace) -> int:
+        """Implement special logic for running the server from CLI.
+
+        By default this only calls :meth:`serve` and logs some errors.
+
+        Extend this method in a subclass if you need to hook up handlers for custom
+        signals etc.
+
+        :param cli_args: parsed CLI arguments
+        :return: exit code to pass to ``sys.exit``
+        """
+        try:
+            await self.serve()
+        # dbm.error is a tuple
+        except (OSError, *dbm.error) as err:
+            self.logger.critical("FAILED: %s", err)
+            return 1
+        return 0
 
 
 async def validate_data(data: T.Any, schema: T.Any) -> T.Any:
