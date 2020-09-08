@@ -80,7 +80,7 @@ class Client:
 
     The final client can then be used like so::
 
-        # The use as a context manager automatically connects/disconnects the socket
+        # The use as a context manager automatically disconnects the socket at exit
         with MyClient() as client:
             print(client.add(40, 2))
 
@@ -115,6 +115,7 @@ class Client:
     _sock = attr.ib(default=None, init=False)
     # Holds the address after connecting
     _address = attr.ib(default=None, init=False)
+    # Internal state flag (0 = active, 1 = closed)
     _state = attr.ib(default=0, init=False)
 
     def __attrs_post_init__(self):
@@ -131,7 +132,6 @@ class Client:
         self.close()
 
     def __enter__(self):
-        self.connect()
         return self
 
     def __exit__(self, *_):
@@ -146,6 +146,57 @@ class Client:
         elif self._state == 2:
             tokens.append("stopped")
         return f"<{type(self).__name__} {' '.join(tokens)}>"
+
+    def _connect(self):
+        socket_info = self.socket_info
+        self.logger.info("CONNECTING")
+        _type = socket_info["type"]
+        if _type == "tcp":
+            # Try both IPv4 and IPv6, return the socket for which connect() succeeded
+            sock = socket.create_connection(
+                (socket_info["host"], socket_info["port"]),
+                timeout=self.connect_timeout,
+            )
+        else:
+            if _type == "tcp4":
+                family = socket.AF_INET
+                address = socket_info["host"], socket_info["port"]
+            elif _type == "tcp6":
+                family = socket.AF_INET6
+                address = socket_info["host"], socket_info["port"]
+            elif _type == "unix":
+                family = socket.AF_UNIX
+                address = socket_info["path"]
+            else:
+                raise ValueError(f"Invalid socket_info: {socket_info!r}")
+            sock = socket.socket(family, socket.SOCK_STREAM)
+            sock.settimeout(self.connect_timeout)
+            sock.connect(address)
+
+        # After connecting, switch to the genuine socket timeout
+        sock.settimeout(self.socket_timeout)
+        # Should improve latency of interactive commands
+        if socket_info["type"].startswith("tcp"):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self._sock = sock
+        self._address = sock.getpeername()
+
+        # Receive the banner from server
+        chars = []
+        while len(chars) <= self.protocol.banner_size_max:
+            char = self._recv_nbytes(1)
+            if char == b"\n":
+                break
+            chars.append(char)
+        else:
+            raise Malformed(
+                f"Remote banner longer than {self.protocol.banner_size_max}"
+            )
+        banner_bytes = b"".join(chars)
+        self.logger.debug("Remote banner: %r", banner_bytes)
+        self.protocol.validate_banner(banner_bytes)
+
+        self.logger.info("CONNECTED: %r", self._sock.getpeername())
 
     def _recv(self) -> dict:
         """Receive a message from the server.
@@ -194,76 +245,16 @@ class Client:
         self._sock.sendall(data)
 
     def close(self):
-        """Close connection to server, if one is open."""
-        with self._lock:
-            if self._state == 2:
-                return
-            if self._state == 1:
-                self._sock.close()
-            self._state = 2
+        """Wait for request to finish and close connection to server.
 
-    def connect(self):
-        """Connect to server.
-
-        :raises OSError: if I/O fails
-        :raises RuntimeError: if called more than once or after :meth:`close`
-        :raises Malformed:
-        :raises ProtocolNameMismatch:
-        :raises WireProtocolVersionMismatch:
+        No more requests can be made after this method was called.
         """
-        socket_info = self.socket_info
         with self._lock:
-            if self._state != 0:
-                raise RuntimeError("Can only connect the client once")
-            self.logger.info("CONNECTING")
-            _type = socket_info["type"]
-            if _type == "tcp":
-                # Try both IPv4 and IPv6, return the socket for which connect() succeeded
-                sock = socket.create_connection(
-                    (socket_info["host"], socket_info["port"]),
-                    timeout=self.connect_timeout,
-                )
-            else:
-                if _type == "tcp4":
-                    family = socket.AF_INET
-                    address = socket_info["host"], socket_info["port"]
-                elif _type == "tcp6":
-                    family = socket.AF_INET6
-                    address = socket_info["host"], socket_info["port"]
-                elif _type == "unix":
-                    family = socket.AF_UNIX
-                    address = socket_info["path"]
-                else:
-                    raise ValueError(f"Invalid socket_info: {socket_info!r}")
-                sock = socket.socket(family, socket.SOCK_STREAM)
-                sock.settimeout(self.connect_timeout)
-                sock.connect(address)
-
-            # After connecting, switch to the genuine socket timeout
-            sock.settimeout(self.socket_timeout)
-            # Should improve latency of interactive commands
-            if socket_info["type"].startswith("tcp"):
-                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            self._sock = sock
-            self._address = sock.getpeername()
-
-            # Parse the welcome message
-            chars = []
-            while len(chars) <= self.protocol.banner_size_max:
-                char = self._recv_nbytes(1)
-                if char == b"\n":
-                    break
-                chars.append(char)
-            else:
-                raise Malformed(
-                    f"Remote banner longer than {self.protocol.banner_size_max}"
-                )
-            banner_bytes = b"".join(chars)
-            self.logger.debug("Remote banner: %r", banner_bytes)
-            self.protocol.validate_banner(banner_bytes)
-
+            if self._sock is not None:
+                self.logger.info("DISCONNECT")
+                self._sock.close()
+                self._sock = None
             self._state = 1
-            self.logger.info("CONNECTED: %r", self._sock.getpeername())
 
     def inreq_recv(self) -> dict:
         """Receive an in-request message from the server.
@@ -305,7 +296,7 @@ class Client:
     def request(
         self, action: str, **params: T.Any
     ) -> contextlib.AbstractContextManager:
-        """Execute an action on the server.
+        """Connect (if necessary) and execute an action on the server.
 
         All extra keyword arguments are passed to the action as parameters (``params``
         keyword argument of the server's action method).
@@ -329,35 +320,51 @@ class Client:
 
         :param action: name of the action to call
         :raises OSError: if I/O fails
-        :raises RuntimeError: if not connected
+        :raises RuntimeError: if :meth:`close` was called before
         :raises RequestError: if anything goes wrong during the request
         :raises RequestIncomplete:
             when leaving the returned context manager without receiving prior request
             completion from server
         """
         with self._lock:
-            if self._state != 1:
-                raise RuntimeError(f"{self!r} is not connected")
+            if self._state != 0:
+                raise RuntimeError(f"{self!r} was closed")
             req = {"action": action, "params": params}
-            self._send(req)
-            # This is yielded by the context manager and will be populated with
-            # the request's result after it completed successfully and the context
-            # block was left
-            result = concurrent.futures.Future()
             try:
-                # Now there's time to send action-specific in-request messages back
-                # and forth
-                yield result
-            except RequestComplete as err:
-                # Server sent a request completion message; end the context manager
-                # and populate the yielded Future with the request's result
-                result.set_result(err.result)
-                self.logger.debug("Request completed: %r", result)
-            else:
-                raise RequestIncomplete(
-                    f"request({action!r}) context manager left without receiving "
-                    "prior request completion"
-                )
+                if self._sock is None:
+                    self._connect()
+                try:
+                    self._send(req)
+                except BrokenPipeError as err:
+                    self.logger.info("DISCONNECT: %s", err)
+                    # Probably server was restarted; try reconnecting once
+                    self.logger.info("Trying to reconnect")
+                    self._connect()
+                    self._send(req)
+                # This is yielded by the context manager and will be populated with
+                # the request's result after it completed successfully and the context
+                # block was left
+                result = concurrent.futures.Future()
+                try:
+                    # Now there's time to send action-specific in-request messages back
+                    # and forth
+                    yield result
+                except RequestComplete as err:
+                    # Server sent a request completion message; end the context manager
+                    # and populate the yielded Future with the request's result
+                    result.set_result(err.result)
+                    self.logger.debug("Request completed: %r", result)
+                else:
+                    raise RequestIncomplete(
+                        f"request({action!r}) context manager left without receiving "
+                        "prior request completion"
+                    )
+            except OSError as err:
+                # Ensure next request creates a fresh socket
+                if self._sock is not None:
+                    self.logger.error("DISCONNECT: %s", err)
+                    self._sock.close()
+                    self._sock = None
 
     def simple_request(self, action, **params):
         """An alternative to :meth:`request` that permits no in-request communication.
@@ -474,7 +481,7 @@ class Client:
     def cli_run(self, cli_args: argparse.Namespace) -> int:
         """Implement your client logic in this method.
 
-        By the time this is called, the client is connected already.
+        :meth:`close` is called automatically after this method returns.
 
         :param cli_args: parsed CLI arguments
         :return: exit code to pass to ``sys.exit``
