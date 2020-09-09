@@ -28,7 +28,7 @@ occtl_socket = '/run/ocserv/occtl.socket'
 def show_sessions():
     out, code = popen("sudo {0} -j -s {1} show users".format(occtl, occtl_socket),stderr=DEVNULL)
     if code:
-        sys.exit('Cannot get anyconnect users information')
+        sys.exit('Cannot get openconnect users information')
     else:
         headers = ["interface", "username", "ip", "remote IP", "RX", "TX", "state", "uptime"]
         sessions = json.loads(out)
@@ -38,11 +38,11 @@ def show_sessions():
         if len(ses_list) > 0:
             print(tabulate(ses_list, headers))
         else:
-            print("No active anyconnect sessions")
+            print("No active openconnect sessions")
 
 def is_ocserv_configured():
-    if not Config().exists_effective('vpn anyconnect'):
-        print("vpn anyconnect server is not configured")
+    if not Config().exists_effective('vpn openconnect'):
+        print("vpn openconnect server is not configured")
         sys.exit(1)
 
 def main():
@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
 
 
-    # Check is IPoE configured
+    # Check is Openconnect server configured
     is_ocserv_configured()
 
     if args.action == "restart":

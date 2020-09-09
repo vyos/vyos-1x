@@ -23,16 +23,16 @@ from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
 
 OCSERV_CONF = '/run/ocserv/ocserv.conf'
-base_path = ['vpn', 'anyconnect']
+base_path = ['vpn', 'openconnect']
 cert = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
 cert_key = '/etc/ssl/private/ssl-cert-snakeoil.key'
 
-class TestVpnAnyconnect(unittest.TestCase):
+class TestVpnOpenconnect(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
 
     def tearDown(self):
-        # Delete vpn anyconnect configuration
+        # Delete vpn openconnect configuration
         self.session.delete(base_path)
         self.session.commit()
 

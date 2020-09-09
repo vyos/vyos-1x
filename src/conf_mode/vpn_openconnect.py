@@ -42,7 +42,7 @@ def get_hash(password):
 
 def get_config():
     conf = Config()
-    base = ['vpn', 'anyconnect']
+    base = ['vpn', 'openconnect']
     if not conf.exists(base):
         return None
 
@@ -61,24 +61,24 @@ def verify(ocserv):
         if "mode" in ocserv["authentication"]:
             if "local" in ocserv["authentication"]["mode"]:
                 if not ocserv["authentication"]["local_users"] or not ocserv["authentication"]["local_users"]["username"]:
-                    raise ConfigError('Anyconect mode local required at leat one user')
+                    raise ConfigError('openconnect mode local required at leat one user')
                 else:
                     for user in ocserv["authentication"]["local_users"]["username"]:
                         if not "password" in ocserv["authentication"]["local_users"]["username"][user]:
                             raise ConfigError(f'password required for user {user}')
         else:
-            raise ConfigError('anyconnect authentication mode required')
+            raise ConfigError('openconnect authentication mode required')
     else:
-        raise ConfigError('anyconnect authentication credentials required')
+        raise ConfigError('openconnect authentication credentials required')
 
     # Check ssl
     if "ssl" in ocserv:
         req_cert = ['ca_cert_file', 'cert_file', 'key_file']
         for cert in req_cert:
             if not cert in ocserv["ssl"]:
-                raise ConfigError('anyconnect ssl {0} required'.format(cert.replace('_', '-')))
+                raise ConfigError('openconnect ssl {0} required'.format(cert.replace('_', '-')))
     else:
-        raise ConfigError('anyconnect ssl required')
+        raise ConfigError('openconnect ssl required')
 
     # Check network settings
     if "network_settings" in ocserv:
@@ -90,7 +90,7 @@ def verify(ocserv):
         else:
             ocserv["network_settings"]["push_route"] = "default"  
     else:
-        raise ConfigError('anyconnect network settings required')
+        raise ConfigError('openconnect network settings required')
 
 
 def generate(ocserv):
