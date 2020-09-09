@@ -2,16 +2,16 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-      <node name="anyconnect-server">
+      <node name="openconnect-server">
         <properties>
-          <help>show anyconnect-server information</help>
+          <help>show openconnect-server information</help>
         </properties>
         <children>
           <leafNode name="sessions">
             <properties>
-              <help>Show active anyconnect server sessions</help>
+              <help>Show active openconnect server sessions</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/anyconnect-control.py --action="show_sessions"</command>
+            <command>${vyos_op_scripts_dir}/openconnect-control.py --action="show_sessions"</command>
           </leafNode>
         </children>
       </node>
