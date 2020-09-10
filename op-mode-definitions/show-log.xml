@@ -135,7 +135,7 @@
             </properties>
             <command>egrep -i "kernel:.*\[NAT-[A-Z]{3,}-[0-9]+(-MASQ)?\]" $(find /var/log -maxdepth 1 -type f -name messages\* | sort -t. -k2nr)</command>
           </leafNode>
-          <leafNode name="nat">
+          <leafNode name="openvpn">
             <properties>
               <help>Show log for OpenVPN</help>
             </properties>
