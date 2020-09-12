@@ -64,7 +64,7 @@ class Protocol:
 
     def generate_banner(self) -> bytes:
         """Generate welcome message to be sent to clients."""
-        return f"{self.name} {self.wire_protocol_version}\n".encode("ascii")
+        return f"{self.wire_protocol_version} {self.name}\n".encode("ascii")
 
     def pack_message(self, msg: dict) -> bytes:
         """Encode a message as binary data.
@@ -138,8 +138,8 @@ class Protocol:
             spl = banner.split()
             if len(spl) < 2:
                 raise ValueError
-            name = spl[0]
-            version = int(spl[1])
+            version = int(spl[0])
+            name = spl[1]
         except ValueError:
             raise Malformed("Malformed banner") from None
         if version != self.wire_protocol_version:
