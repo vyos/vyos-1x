@@ -464,10 +464,13 @@ class Interface(Control):
         Calculate the EUI64 from the interface's MAC, then assign it
         with the given prefix to the interface.
         """
-
-        eui64 = mac2eui64(self.get_mac(), prefix)
-        prefixlen = prefix.split('/')[1]
-        self.add_addr(f'{eui64}/{prefixlen}')
+        # T2863: only add a link-local IPv6 address if the interface returns
+        # a MAC address. This is not the case on e.g. WireGuard interfaces.
+        mac = self.get_mac()
+        if mac:
+            eui64 = mac2eui64(mac, prefix)
+            prefixlen = prefix.split('/')[1]
+            self.add_addr(f'{eui64}/{prefixlen}')
 
     def del_ipv6_eui64_address(self, prefix):
         """
