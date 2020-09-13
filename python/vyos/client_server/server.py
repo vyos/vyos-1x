@@ -64,7 +64,7 @@ class Server:
         import voluptuous as vol
 
         # This must be common between client and server, so better place it in __init__
-        MY_PROTOCOL = Protocol(name="my:1")
+        MY_PROTOCOL = Protocol(name="my/1")
 
         class MyServer(Server):
             protocol = MY_PROTOCOL

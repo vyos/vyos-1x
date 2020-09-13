@@ -45,10 +45,12 @@ class Protocol:
     msg_size_len = struct.calcsize(_msg_size_format)
     msg_size_bound = 256 ** msg_size_len - 1
 
-    # Maximum length of banner sent by server (excluding the trailing \n)
+    # Maximum length of banner sent by server (including the trailing \n)
     banner_size_max = 128
 
-    name = attr.ib(converter=str, validator=attr.validators.matches_re(r"^\S+$"))
+    name = attr.ib(
+        converter=str, validator=attr.validators.matches_re(r"^[A-Za-z0-9./_-]{1,32}$")
+    )
     default_socket = attr.ib(default="unix:///var/run/some.sock")
     # Support messages up to 10 MiB by default
     msg_size_max = attr.ib(converter=int, default=10 * 1024 ** 2)
@@ -63,8 +65,16 @@ class Protocol:
             )
 
     def generate_banner(self) -> bytes:
-        """Generate welcome message to be sent to clients."""
-        return f"{self.wire_protocol_version} {self.name}\n".encode("ascii")
+        """Generate welcome message to be sent to clients.
+
+        :raises RuntimeError: if banner length would exceed :attr:`banner_size_max`
+        """
+        banner = f"{self.wire_protocol_version} {self.name}\n".encode("ascii")
+        if len(banner) > self.banner_size_max:
+            raise RuntimeError(
+                "Banner {banner!r} exceeds banner_size_max ({self.banner_size_max})"
+            )
+        return banner
 
     def pack_message(self, msg: dict) -> bytes:
         """Encode a message as binary data.
@@ -133,6 +143,8 @@ class Protocol:
         :raises WireProtocolVersionMismatch:
             when local/remote wire protocol versions differ
         """
+        if not banner_bytes.endswith(b"\n"):
+            raise Malformed("Banner is incomplete")
         try:
             banner = banner_bytes.decode("ascii")
             spl = banner.split()
@@ -141,7 +153,7 @@ class Protocol:
             version = int(spl[0])
             name = spl[1]
         except ValueError:
-            raise Malformed("Malformed banner") from None
+            raise Malformed("Banner is malformed") from None
         if version != self.wire_protocol_version:
             raise WireProtocolVersionMismatch(
                 {"local": WIRE_PROTOCOL_VERSION, "remote": version}

@@ -23,7 +23,7 @@ See :class:`vyos.ipsetd.client.Client` for documentation of the API.
 from ..client_server import Protocol, RequestError
 
 
-IPSETD_PROTOCOL = Protocol("ipsetd:1", default_socket="unix:///run/vyos-ipsetd/sock")
+IPSETD_PROTOCOL = Protocol("ipsetd/1", default_socket="unix:///run/vyos-ipsetd/sock")
 
 
 class IncompatibleIpsetTypes(RequestError):

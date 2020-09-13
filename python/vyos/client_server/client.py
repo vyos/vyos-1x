@@ -172,13 +172,9 @@ class Client:
         chars = []
         while len(chars) <= self.protocol.banner_size_max:
             char = self._recv_nbytes(1)
+            chars.append(char)
             if char == b"\n":
                 break
-            chars.append(char)
-        else:
-            raise Malformed(
-                f"Remote banner longer than {self.protocol.banner_size_max}"
-            )
         banner_bytes = b"".join(chars)
         self.logger.debug("Remote banner: %r", banner_bytes)
         self.protocol.validate_banner(banner_bytes)
