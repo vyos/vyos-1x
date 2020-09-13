@@ -3,44 +3,47 @@ daemon=1m
 syslog=yes
 ssl=yes
 
-{% for interface in interfaces -%}
+{% for iface in interface %}
+# ddclient configuration for interface "{{ iface }}"
+{%   if interface[iface].use_web is defined and interface[iface].use_web is not none %}
+{%     set web_skip = ", web-skip='" + interface[iface].use_web.skip + "'" if interface[iface].use_web.skip is defined else '' %}
+use=web, web='{{ interface[iface].use_web.url }}'{{ web_skip }}
+{%   else %}
+use=if, if={{ iface }}
+{%   endif %}
 
-#
-# ddclient configuration for interface "{{ interface.interface }}":
-#
-{% if interface.web_url -%}
-use=web, web='{{ interface.web_url}}' {%- if interface.web_skip %}, web-skip='{{ interface.web_skip }}'{% endif %}
-{% else -%}
-use=if, if={{ interface.interface }}
-{% endif -%}
-
-{% for rfc in interface.rfc2136 -%}
-{% for record in rfc.record %}
-# RFC2136 dynamic DNS configuration for {{ record }}.{{ rfc.zone }}
-server={{ rfc.server }}
+{%   if interface[iface].rfc2136 is defined and interface[iface].rfc2136 is not none %}
+{%     for rfc2136, config in interface[iface].rfc2136.items() %}
+{%       for dns_record in config.record if config.record is defined %}
+# RFC2136 dynamic DNS configuration for {{ rfc2136 }}, {{ config.zone }}, {{ dns_record }}
+server={{ config.server }}
 protocol=nsupdate
-password={{ rfc.keyfile }}
-ttl={{ rfc.ttl }}
-zone={{ rfc.zone }}
-{{ record }}
-{% endfor -%}
-{% endfor -%}
+password={{ config.keyfile }}
+ttl={{ config.ttl }}
+zone={{ config.zone }}
+{{ dns_record }}
 
-{% for srv in interface.service %}
-{% for host in srv.host %}
-# DynDNS provider configuration for {{ host }}
-protocol={{ srv.protocol }},
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
+
+{%   if interface[iface].service is defined and interface[iface].service is not none %}
+{%     for service, config in interface[iface].service.items() %}
+{%       for dns_record in config.host_name %}
+# DynDNS provider configuration for {{ service }}, {{ dns_record }}
+protocol={{ config.protocol }},
 max-interval=28d,
-login={{ srv.login }},
-password='{{ srv.password }}',
-{% if srv.server -%}
-server={{ srv.server }},
-{% endif -%}
-{% if srv.zone -%}
-zone={{ srv.zone }},
-{% endif -%}
-{{ host }}
-{% endfor %}
-{% endfor %}
+login={{ config.login }},
+password='{{ config.password }}',
+{%         if config.server %}
+server={{ config.server }},
+{%         endif %}
+{%         if config.zone %}
+zone={{ config.zone }},
+{%         endif %}
+{{ dns_record }}
 
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
 {% endfor %}

@@ -17,14 +17,13 @@
 import os
 
 from sys import exit
-from copy import deepcopy
-from stat import S_IRUSR, S_IWUSR
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
+from vyos.configdict import dict_merge
 from vyos.template import render
-
+from vyos.util import call
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
@@ -45,197 +44,101 @@ default_service_protocol = {
     'zoneedit': 'zoneedit1'
 }
 
-default_config_data = {
-    'interfaces': [],
-    'deleted': False
-}
-
 def get_config(config=None):
-    dyndns = deepcopy(default_config_data)
     if config:
         conf = config
     else:
         conf = Config()
+
     base_level = ['service', 'dns', 'dynamic']
-
     if not conf.exists(base_level):
-        dyndns['deleted'] = True
-        return dyndns
+        return None
 
-    for interface in conf.list_nodes(base_level + ['interface']):
-        node = {
-            'interface': interface,
-            'rfc2136': [],
-            'service': [],
-            'web_skip': '',
-            'web_url': ''
-        }
+    dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'), get_first_key=True)
 
-        # set config level to e.g. "service dns dynamic interface eth0"
-        conf.set_level(base_level + ['interface', interface])
-        # Handle RFC2136 - Dynamic Updates in the Domain Name System
-        for rfc2136 in conf.list_nodes(['rfc2136']):
-            rfc = {
-                'name': rfc2136,
-                'keyfile': '',
-                'record': [],
-                'server': '',
-                'ttl': '600',
-                'zone': ''
-            }
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    for interface in dyndns['interface']:
+        if 'service' in dyndns['interface'][interface]:
+            # 'Autodetect' protocol used by DynDNS service
+            for service in dyndns['interface'][interface]['service']:
+                if service in default_service_protocol:
+                    dyndns['interface'][interface]['service'][service].update(
+                        {'protocol' : default_service_protocol.get(service)})
+                else:
+                    dyndns['interface'][interface]['service'][service].update(
+                        {'custom': ''})
 
-            # set config level
-            conf.set_level(base_level + ['interface', interface, 'rfc2136', rfc2136])
-
-            if conf.exists(['key']):
-                rfc['keyfile'] = conf.return_value(['key'])
-
-            if conf.exists(['record']):
-                rfc['record'] = conf.return_values(['record'])
-
-            if conf.exists(['server']):
-                rfc['server'] = conf.return_value(['server'])
-
-            if conf.exists(['ttl']):
-                rfc['ttl'] = conf.return_value(['ttl'])
-
-            if conf.exists(['zone']):
-                rfc['zone'] = conf.return_value(['zone'])
-
-            node['rfc2136'].append(rfc)
-
-        # set config level to e.g. "service dns dynamic interface eth0"
-        conf.set_level(base_level + ['interface', interface])
-        # Handle DynDNS service providers
-        for service in conf.list_nodes(['service']):
-            srv = {
-                'provider': service,
-                'host': [],
-                'login': '',
-                'password': '',
-                'protocol': '',
-                'server': '',
-                'custom' : False,
-                'zone' : ''
-            }
-
-            # set config level
-            conf.set_level(base_level + ['interface', interface, 'service', service])
-
-            # preload protocol from default service mapping
-            if service in default_service_protocol.keys():
-                srv['protocol'] = default_service_protocol[service]
-            else:
-                srv['custom'] = True
-
-            if conf.exists(['login']):
-                srv['login'] = conf.return_value(['login'])
-
-            if conf.exists(['host-name']):
-                srv['host'] = conf.return_values(['host-name'])
-
-            if conf.exists(['protocol']):
-                srv['protocol'] = conf.return_value(['protocol'])
-
-            if conf.exists(['password']):
-                srv['password'] = conf.return_value(['password'])
-
-            if conf.exists(['server']):
-                srv['server'] = conf.return_value(['server'])
-
-            if conf.exists(['zone']):
-                srv['zone'] = conf.return_value(['zone'])
-            elif srv['provider'] == 'cloudflare':
-                # default populate zone entry with bar.tld if
-                # host-name is foo.bar.tld
-                srv['zone'] = srv['host'][0].split('.',1)[1]
-
-            node['service'].append(srv)
-
-        # Set config back to appropriate level for these options
-        conf.set_level(base_level + ['interface', interface])
-
-        # Additional settings in CLI
-        if conf.exists(['use-web', 'skip']):
-            node['web_skip'] = conf.return_value(['use-web', 'skip'])
-
-        if conf.exists(['use-web', 'url']):
-            node['web_url'] = conf.return_value(['use-web', 'url'])
-
-        # set config level back to top level
-        conf.set_level(base_level)
-
-        dyndns['interfaces'].append(node)
+        if 'rfc2136' in dyndns['interface'][interface]:
+            default_values = defaults(base_level + ['interface', 'rfc2136'])
+            for rfc2136 in dyndns['interface'][interface]['rfc2136']:
+                dyndns['interface'][interface]['rfc2136'][rfc2136] = dict_merge(
+                    default_values, dyndns['interface'][interface]['rfc2136'][rfc2136])
 
     return dyndns
 
 def verify(dyndns):
     # bail out early - looks like removal from running config
-    if dyndns['deleted']:
+    if not dyndns:
         return None
 
     # A 'node' corresponds to an interface
-    for node in dyndns['interfaces']:
+    if 'interface' not in dyndns:
+        return None
 
+    for interface in dyndns['interface']:
         # RFC2136 - configuration validation
-        for rfc2136 in node['rfc2136']:
-            if not rfc2136['record']:
-                raise ConfigError('Set key for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+        if 'rfc2136' in dyndns['interface'][interface]:
+            for rfc2136, config in dyndns['interface'][interface]['rfc2136'].items():
 
-            if not rfc2136['zone']:
-                raise ConfigError('Set zone for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+                for tmp in ['record', 'zone', 'server', 'key']:
+                    if tmp not in config:
+                        raise ConfigError(f'"{tmp}" required for rfc2136 based '
+                                          f'DynDNS service on "{interface}"')
 
-            if not rfc2136['keyfile']:
-                raise ConfigError('Set keyfile for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
-            else:
-                if not os.path.isfile(rfc2136['keyfile']):
-                    raise ConfigError('Keyfile for service "{0}" to send DDNS updates for interface "{1}" does not exist'.format(rfc2136['name'], node['interface']))
-
-            if not rfc2136['server']:
-                raise ConfigError('Set server for service "{0}" to send DDNS updates for interface "{1}"'.format(rfc2136['name'], node['interface']))
+                if not os.path.isfile(config['key']):
+                    raise ConfigError(f'"key"-file not found for rfc2136 based '
+                                      f'DynDNS service on "{interface}"')
 
         # DynDNS service provider - configuration validation
-        for service in node['service']:
-            if not service['host']:
-                raise ConfigError('Set host-name for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+        if 'service' in dyndns['interface'][interface]:
+            for service, config in dyndns['interface'][interface]['service'].items():
+                error_msg = f'required for DynDNS service "{service}" on "{interface}"'
+                if 'host_name' not in config:
+                    raise ConfigError(f'"host-name" {error_msg}')
 
-            if not service['login']:
-                raise ConfigError('Set login for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+                if 'login' not in config:
+                    raise ConfigError(f'"login" (username) {error_msg}')
 
-            if not service['password']:
-                raise ConfigError('Set password for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+                if 'password' not in config:
+                    raise ConfigError(f'"password" {error_msg}')
 
-            if service['custom'] is True:
-                if not service['protocol']:
-                    raise ConfigError('Set protocol for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+                if 'zone' in config:
+                    if service != 'cloudflare':
+                        raise ConfigError(f'"zone" option only supported with CloudFlare')
 
-                if not service['server']:
-                    raise ConfigError('Set server for service "{0}" to send DDNS updates for interface "{1}"'.format(service['provider'], node['interface']))
+                if 'custom' in config:
+                    if 'protocol' not in config:
+                        raise ConfigError(f'"protocol" {error_msg}')
 
-            if service['zone']:
-                if service['provider'] != 'cloudflare':
-                    raise ConfigError('Zone option not allowed for "{0}", it can only be used for CloudFlare'.format(service['provider']))
+                    if 'server' not in config:
+                        raise ConfigError(f'"server" {error_msg}')
 
     return None
 
 def generate(dyndns):
     # bail out early - looks like removal from running config
-    if dyndns['deleted']:
+    if not dyndns:
         return None
 
-    render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns)
-
-    # Config file must be accessible only by its owner
-    os.chmod(config_file, S_IRUSR | S_IWUSR)
-
+    render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns, trim_blocks=True, permission=0o600)
     return None
 
 def apply(dyndns):
-    if dyndns['deleted']:
+    if not dyndns:
         call('systemctl stop ddclient.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
-
     else:
         call('systemctl restart ddclient.service')
 
