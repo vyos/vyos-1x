@@ -11,7 +11,7 @@
             <properties>
               <help>Wait for bandwidth test connections (port TCP/5001)</help>
             </properties>
-            <command>iperf -s</command>
+            <command>/usr/bin/iperf -V -s</command>
           </leafNode>
           <tagNode name="initiate">
             <properties>
