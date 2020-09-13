@@ -20,7 +20,7 @@
                 <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
               </completionHelp>
             </properties>
-            <command>iperf -c $4</command>
+            <command>${vyos_op_scripts_dir}/monitor_bandwidth_test.sh "$4"</command>
           </tagNode>
         </children>
       </node>
