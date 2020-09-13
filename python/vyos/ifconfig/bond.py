@@ -52,6 +52,10 @@ class BondIf(Interface):
             'validate': lambda v: assert_list(v, ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']),
             'location': '/sys/class/net/{ifname}/bonding/xmit_hash_policy',
         },
+        'bond_min_links': {
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/bonding/min_links',
+        },
         'bond_miimon': {
             'validate': assert_positive,
             'location': '/sys/class/net/{ifname}/bonding/miimon'
@@ -129,6 +133,29 @@ class BondIf(Interface):
         >>> BondIf('bond0').set_hash_policy('layer2+3')
         """
         self.set_interface('bond_hash_policy', mode)
+
+    def set_min_links(self, number):
+        """
+        Specifies the minimum number of links that must be active before
+	    asserting carrier. It is similar to the Cisco EtherChannel min-links
+	    feature. This allows setting the minimum number of member ports that
+	    must be up (link-up state) before marking the bond device as up
+	    (carrier on). This is useful for situations where higher level services
+	    such as clustering want to ensure a minimum number of low bandwidth
+	    links are active before switchover. This option only affect 802.3ad
+	    mode.
+
+	    The default value is 0. This will cause carrier to be asserted (for
+	    802.3ad mode) whenever there is an active aggregator, regardless of the
+	    number of available links in that aggregator. Note that, because an
+	    aggregator cannot be active without at least one available link,
+	    setting this option to 0 or to 1 has the exact same effect.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_min_links('0')
+        """
+        self.set_interface('bond_min_links', number)
 
     def set_arp_interval(self, interval):
         """
@@ -346,6 +373,10 @@ class BondIf(Interface):
         # Bonding transmit hash policy
         value = config.get('hash_policy')
         if value: self.set_hash_policy(value)
+
+        # Minimum number of member interfaces
+        value = config.get('min_links')
+        if value: self.set_min_links(value)
 
         # Some interface options can only be changed if the interface is
         # administratively down

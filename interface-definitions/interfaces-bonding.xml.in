@@ -99,6 +99,19 @@
             </children>
           </node>
           #include <include/interface-mac.xml.i>
+          <leafNode name="min-links">
+            <properties>
+              <help>Minimum number of member interfaces required up before enabling bond</help>
+              <valueHelp>
+                <format>&lt;0-16&gt;</format>
+                <description>Minimum number of member interfaces required up before enabling bond</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-16"/>
+              </constraint>
+            </properties>
+            <defaultValue>0</defaultValue>
+          </leafNode>
           <leafNode name="mode">
             <properties>
               <help>Bonding mode</help>
