@@ -162,6 +162,10 @@ int initialization(void* Requester)
     double prev_time_value, time_value;
     double time_diff;
 
+    char *pid_val = getenv("VYATTA_CONFIG_TMP");
+    strsep(&pid_val, "_");
+    debug_print("config session pid: %s\n", pid_val);
+
     debug_print("Sending init announcement\n");
     char *init_announce = mkjson(MKJSON_OBJ, 1,
                                  MKJSON_STRING, "type", "init");
@@ -218,6 +222,12 @@ int initialization(void* Requester)
     debug_print("Received session receipt\n");
 
     free(session_str);
+
+    debug_print("Sending config session pid\n");
+    zmq_send(Requester, pid_val, strlen(pid_val), 0);
+    zmq_recv(Requester, buffer, 16, 0);
+    debug_print("Received pid receipt\n");
+
 
     return 0;
 }
