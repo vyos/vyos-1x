@@ -148,8 +148,8 @@ def T2665_default_dict_cleanup(dict):
 def leaf_node_changed(conf, path):
     """
     Check if a leaf node was altered. If it has been altered - values has been
-    changed, or it was added/removed, we will return the old value. If nothing
-    has been changed, None is returned
+    changed, or it was added/removed, we will return a list containing the old
+    value(s). If nothing has been changed, None is returned
     """
     from vyos.configdiff import get_config_diff
     D = get_config_diff(conf, key_mangling=('-', '_'))
@@ -157,7 +157,7 @@ def leaf_node_changed(conf, path):
     (new, old) = D.get_value_diff(path)
     if new != old:
         if isinstance(old, str):
-            return old
+            return [old]
         elif isinstance(old, list):
             if isinstance(new, str):
                 new = [new]
