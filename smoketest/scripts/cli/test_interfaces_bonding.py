@@ -20,6 +20,7 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 
 from vyos.ifconfig import Section
+from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 
@@ -56,6 +57,29 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         for interface in self._interfaces:
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
             self.assertListEqual(slaves, self._members)
+
+    def test_remove_member(self):
+        """ T2515: when removing a bond member the interface must be admin-up again """
+
+        # configure member interfaces
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.session.set(self._base_path + [interface] + option.split())
+
+        self.session.commit()
+
+        # remove single bond member port
+        for interface in self._interfaces:
+            remove_member = self._members[0]
+            self.session.delete(self._base_path + [interface, 'member', 'interface', remove_member])
+
+        self.session.commit()
+
+        # removed member port must be admin-up
+        for interface in self._interfaces:
+            remove_member = self._members[0]
+            state = Interface(remove_member).get_admin_state()
+            self.assertEqual('up', state)
 
 if __name__ == '__main__':
     unittest.main()

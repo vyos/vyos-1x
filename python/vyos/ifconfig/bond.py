@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -381,9 +381,14 @@ class BondIf(Interface):
         # Some interface options can only be changed if the interface is
         # administratively down
         if self.get_admin_state() == 'down':
-            # Delete bond member port(s)
+            # Remove ALL bond member interfaces
             for interface in self.get_slaves():
                 self.del_port(interface)
+                # Removing an interface from a bond will always place the underlaying
+                # physical interface in admin-down state! If physical interface is
+                # not disabled, re-enable it.
+                if not vyos_dict_search(f'member.interface_remove.{interface}.disable', config):
+                    Interface(interface).set_admin_state('up')
 
             # Bonding policy/mode
             value = config.get('mode')
@@ -391,13 +396,12 @@ class BondIf(Interface):
 
             # Add (enslave) interfaces to bond
             value = vyos_dict_search('member.interface', config)
-            if value:
-                for interface in value:
-                    # if we've come here we already verified the interface
-                    # does not have an addresses configured so just flush
-                    # any remaining ones
-                    Interface(interface).flush_addrs()
-                    self.add_port(interface)
+            for interface in (value or []):
+                # if we've come here we already verified the interface
+                # does not have an addresses configured so just flush
+                # any remaining ones
+                Interface(interface).flush_addrs()
+                self.add_port(interface)
 
         # Primary device interface - must be set after 'mode'
         value = config.get('primary')

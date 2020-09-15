@@ -29,6 +29,7 @@ from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
+from vyos.ifconfig import Section
 from vyos.validate import is_member
 from vyos.validate import has_address_configured
 from vyos import ConfigError
@@ -69,31 +70,33 @@ def get_config(config=None):
     # into a dictionary - we will use this to add additional information
     # later on for wach member
     if 'member' in bond and 'interface' in bond['member']:
-        # first convert it to a list if only one member is given
-        if isinstance(bond['member']['interface'], str):
-            bond['member']['interface'] = [bond['member']['interface']]
-
-        tmp={}
-        for interface in bond['member']['interface']:
-            tmp.update({interface: {}})
-
-        bond['member']['interface'] = tmp
+        # convert list if member interfaces to a dictionary
+        bond['member']['interface'] = dict.fromkeys(
+            bond['member']['interface'], {})
 
     if 'mode' in bond:
         bond['mode'] = get_bond_mode(bond['mode'])
 
     tmp = leaf_node_changed(conf, ['mode'])
-    if tmp:
-        bond.update({'shutdown_required': ''})
+    if tmp: bond.update({'shutdown_required': {}})
 
     # determine which members have been removed
-    tmp = leaf_node_changed(conf, ['member', 'interface'])
-    if tmp:
-        bond.update({'shutdown_required': ''})
-        if 'member' in bond:
-            bond['member'].update({'interface_remove': tmp })
-        else:
-            bond.update({'member': {'interface_remove': tmp }})
+    interfaces_removed = leaf_node_changed(conf, ['member', 'interface'])
+    if interfaces_removed:
+        bond.update({'shutdown_required': {}})
+        if 'member' not in bond:
+            bond.update({'member': {}})
+
+        tmp = {}
+        for interface in interfaces_removed:
+            section = Section.section(interface) # this will be 'ethernet' for 'eth0'
+            if conf.exists(['insterfaces', section, interface, 'disable']):
+                tmp.update({interface : {'disable': ''}})
+            else:
+                tmp.update({interface : {}})
+
+        # also present the interfaces to be removed from the bond as dictionary
+        bond['member'].update({'interface_remove': tmp})
 
     if 'member' in bond and 'interface' in bond['member']:
         for interface, interface_config in bond['member']['interface'].items():
@@ -109,8 +112,7 @@ def get_config(config=None):
 
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp:
-                interface_config.update({'has_address' : ''})
+            if tmp: interface_config.update({'has_address' : ''})
 
     return bond
 
