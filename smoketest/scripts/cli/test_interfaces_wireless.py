@@ -15,11 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 from psutil import process_iter
+
 from vyos.util import check_kmod
+from vyos.util import read_file
+
+def get_config_value(interface, key):
+    tmp = read_file(f'/run/hostapd/{interface}.conf')
+    tmp = re.findall(r'\n?{}=+(.*)'.format(key), tmp)
+    return tmp[0]
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
@@ -52,6 +60,85 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
                 self.assertIn('wpa_supplicant', (p.name() for p in process_iter()))
             else:
                 self.assertTrue(False)
+
+    def test_hostapd_config(self):
+        """ Check if hostapd config is properly generated """
+
+        # Only set the hostapd (access-point) options
+        interface = 'wlan0'
+        phy = 'phy0'
+        ssid = 'ssid'
+        channel = '1'
+
+        self.session.set(self._base_path + [interface, 'physical-device', phy])
+        self.session.set(self._base_path + [interface, 'ssid', ssid])
+        self.session.set(self._base_path + [interface, 'type', 'access-point'])
+        self.session.set(self._base_path + [interface, 'channel', channel])
+        # auto-powersave is special
+        self.session.set(self._base_path + [interface, 'capabilities', 'ht', 'auto-powersave'])
+
+        ht_opt = {
+            # VyOS CLI option           hostapd - ht_capab setting
+            '40mhz-incapable'         : '[40-INTOLERANT]',
+            'delayed-block-ack'       : '[DELAYED-BA]',
+            'greenfield'              : '[GF]',
+            'ldpc'                    : '[LDPC]',
+            'lsig-protection'         : '[LSIG-TXOP-PROT]',
+            'channel-set-width ht40+' : '[HT40+]',
+            'stbc tx'                 : '[TX-STBC]',
+            'stbc rx 123'             : '[RX-STBC-123]',
+            'max-amsdu 7935'          : '[MAX-AMSDU-7935]',
+            'smps static'             : '[SMPS-STATIC]',
+        }
+        for key in ht_opt:
+            self.session.set(self._base_path + [interface, 'capabilities', 'ht'] + key.split())
+
+        vht_opt = {
+            # VyOS CLI option           hostapd - ht_capab setting
+            'stbc tx'                 : '[TX-STBC-2BY1]',
+            'stbc rx 12'              : '[RX-STBC-12]',
+            'ldpc'                    : '[RXLDPC]',
+            'tx-powersave'            : '[VHT-TXOP-PS]',
+            'vht-cf'                  : '[HTC-VHT]',
+            'antenna-pattern-fixed'   : '[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
+            'max-mpdu 11454'          : '[MAX-MPDU-11454]',
+            'max-mpdu-exp 2'          : '[MAX-A-MPDU-LEN-EXP-2][VHT160]',
+            'link-adaptation both'    : '[VHT-LINK-ADAPT3]',
+            'short-gi 80'             : '[SHORT-GI-80]',
+            'short-gi 160'            : '[SHORT-GI-160]',
+        }
+        for key in vht_opt:
+            self.session.set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
+
+        self.session.commit()
+
+        #
+        # Validate Config
+        #
+
+        # ssid
+        tmp = get_config_value(interface, 'ssid')
+        self.assertEqual(ssid, tmp)
+
+        # channel
+        tmp = get_config_value(interface, 'channel')
+        self.assertEqual(channel, tmp)
+
+        # auto-powersave is special
+        tmp = get_config_value(interface, 'uapsd_advertisement_enabled')
+        self.assertEqual('1', tmp)
+
+        tmp = get_config_value(interface, 'ht_capab')
+        for key, value in ht_opt.items():
+            self.assertIn(value, tmp)
+
+        tmp = get_config_value(interface, 'vht_capab')
+        for key, value in vht_opt.items():
+            self.assertIn(value, tmp)
+
+        # Check for running process
+        self.assertIn('hostapd', (p.name() for p in process_iter()))
+
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
