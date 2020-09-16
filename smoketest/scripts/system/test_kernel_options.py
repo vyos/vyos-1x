@@ -30,7 +30,7 @@ class TestKernelModules(unittest.TestCase):
         for option in ['CONFIG_AUDIT', 'CONFIG_HAVE_ARCH_AUDITSYSCALL',
                        'CONFIG_AUDITSYSCALL', 'CONFIG_AUDIT_WATCH',
                        'CONFIG_AUDIT_TREE', 'CONFIG_AUDIT_ARCH']:
-            self.asserIn(f'{option}=y', config)
+            self.assertIn(f'{option}=y', config)
 
 if __name__ == '__main__':
     unittest.main()
