@@ -149,7 +149,6 @@
                       <constraint>
                         <regex>(static|dynamic)</regex>
                       </constraint>
-                      <multi/>
                     </properties>
                   </leafNode>
                   <node name="stbc">
