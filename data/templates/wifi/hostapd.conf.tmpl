@@ -341,13 +341,10 @@ vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
 {%     set output.value = output.value + '[HTC-VHT]' %}
 {%   endif %}
 {%   if capabilities.vht.antenna_pattern_fixed is defined %}
-{%     set output.value = output.value + '[RX-ANTENNA-PATTERN]' %}
-{%   endif %}
-{%   if capabilities.vht.antenna_pattern_fixed is defined %}
-{%     set output.value = output.value + '[TX-ANTENNA-PATTERN]' %}
+{%     set output.value = output.value + '[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]' %}
 {%   endif %}
 {%   if capabilities.vht.max_mpdu is defined %}
-{%     set output.value = output.value + '[MAX-MPDU-' + capabilities.vht.max_mpdu     + ']' %}
+{%     set output.value = output.value + '[MAX-MPDU-' + capabilities.vht.max_mpdu + ']' %}
 {%   endif %}
 {%   if capabilities.vht.max_mpdu_exp is defined %}
 {%     set output.value = output.value + '[MAX-A-MPDU-LEN-EXP-' + capabilities.vht.max_mpdu_exp + ']' %}
