@@ -253,6 +253,22 @@ class EthernetIf(Interface):
         """
         return self.set_interface('ufo', state)
 
+    def set_ring_buffer(self, b_type, b_size):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_ring_buffer('rx', '4096')
+        """
+        cmd = '/sbin/ethtool -G {0} {1} {2}'.format(self.config['ifname'], b_type, b_size)
+        output, code = self._popen(cmd)
+        # ethtool error codes:
+        #  80 - value already setted
+        #  81 - does not possible to set value
+        if code and code != 80:
+            print('could not set {0} ring-buffer for {1}'.format(b_type, self.config['ifname']))
+        return output
+
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -297,6 +313,11 @@ class EthernetIf(Interface):
             speed = config.get('speed')
             duplex = config.get('duplex')
             self.set_speed_duplex(speed, duplex)
+
+        # Set interface ring buffer
+        if 'ring_buffer' in config:
+            for b_type in config['ring_buffer']:
+                self.set_ring_buffer(b_type, config['ring_buffer'][b_type])
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()

@@ -268,6 +268,37 @@
             </properties>
             <defaultValue>auto</defaultValue>
           </leafNode>
+          <node name="ring-buffer">
+            <properties>
+              <help>Shared buffer between the device driver and NIC</help>
+            </properties>
+            <children>
+              <leafNode name="rx">
+                <properties>
+                  <help>RX ring buffer</help>
+                  <valueHelp>
+                    <format>80-16384</format>
+                    <description>ring buffer size</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 80-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx">
+                <properties>
+                  <help>TX ring buffer</help>
+                  <valueHelp>
+                    <format>80-16384</format>
+                    <description>ring buffer size</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 80-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>
         </children>
