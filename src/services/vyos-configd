@@ -111,6 +111,7 @@ def explicit_print(t, m):
     try:
         with open(t, 'w') as f:
             f.write(m)
+            f.write("\n")
             f.flush()
     except Exception:
         pass
@@ -124,7 +125,7 @@ def run_script(script, config) -> int:
         script.apply(c)
     except ConfigError as e:
         logger.critical(e)
-        explicit_print(session_tty, e)
+        explicit_print(session_tty, str(e))
         return R_ERROR_COMMIT
     except Exception:
         return R_ERROR_DAEMON
@@ -132,6 +133,7 @@ def run_script(script, config) -> int:
     return R_SUCCESS
 
 def initialization(socket):
+    global session_tty
     # Reset config strings:
     active_string = ''
     session_string = ''
