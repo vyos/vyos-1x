@@ -110,7 +110,6 @@
                       <constraint>
                         <regex>(3839|7935)</regex>
                       </constraint>
-                      <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="short-gi">
