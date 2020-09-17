@@ -58,6 +58,14 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
             self.assertListEqual(slaves, self._members)
 
+    def test_8021q_vlan(self):
+        """ Testcase for 802.1q VLAN interfaces """
+        super().test_8021q_vlan()
+
+        for interface in self._interfaces:
+            slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
+            self.assertListEqual(slaves, self._members)
+
     def test_remove_member(self):
         """ T2515: when removing a bond member the interface must be admin-up again """
 
