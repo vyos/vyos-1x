@@ -59,7 +59,8 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertListEqual(slaves, self._members)
 
     def test_8021q_vlan(self):
-        """ Testcase for 802.1q VLAN interfaces """
+        """ Testcase for 802.1q VLAN interfaces created on top of a lacp / bond
+        interface. This is the testcase for T2894 """
         super().test_8021q_vlan()
 
         for interface in self._interfaces:
@@ -67,7 +68,9 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertListEqual(slaves, self._members)
 
     def test_remove_member(self):
-        """ T2515: when removing a bond member the interface must be admin-up again """
+        """ T2515: when removing a bond member the previously enslaved/member
+        interface must be in its former admin-up/down state. Here we ensure that
+        it is admin-up as it was admin-up before. """
 
         # configure member interfaces
         for interface in self._interfaces:
