@@ -16,14 +16,12 @@
 import os
 import json
 import signal
+
 from time import time
 from time import sleep
-
 from tabulate import tabulate
 
-from vyos import airbag
 from vyos import util
-
 
 class VRRPError(Exception):
     pass

@@ -18,7 +18,6 @@ from copy import deepcopy
 from vyos import ConfigError
 from vyos.ifconfig.interface import Interface
 
-
 @Interface.register
 class VXLANIf(Interface):
     """

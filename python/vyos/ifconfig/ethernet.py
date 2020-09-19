@@ -17,13 +17,11 @@ import os
 import re
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLAN
 from vyos.validate import assert_list
 from vyos.util import run
 from vyos.util import vyos_dict_search
 
 @Interface.register
-@VLAN.enable
 class EthernetIf(Interface):
     """
     Abstraction of a Linux Ethernet Interface

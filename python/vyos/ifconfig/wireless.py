@@ -13,14 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLAN
-
 
 @Interface.register
-@VLAN.enable
 class WiFiIf(Interface):
     """
     Handle WIFI/WLAN interfaces.

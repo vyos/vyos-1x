@@ -14,13 +14,9 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from copy import deepcopy
-
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLAN
-
 
 @Interface.register
-@VLAN.enable
 class MACVLANIf(Interface):
     """
     Abstraction of a Linux MACvlan interface

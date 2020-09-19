@@ -16,15 +16,12 @@
 import os
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLAN
-
 from vyos.util import cmd
 from vyos.util import vyos_dict_search
 from vyos.validate import assert_list
 from vyos.validate import assert_positive
 
 @Interface.register
-@VLAN.enable
 class BondIf(Interface):
     """
     The Linux bonding driver provides a method for aggregating multiple network
