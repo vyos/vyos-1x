@@ -1077,8 +1077,7 @@ class VLANIf(Interface):
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> i = Interface('eth0')
-        >>> i.remove()
+        >>> VLANIf('eth0.10').remove
         """
         # Do we have sub interfaces (VLANs)? As interfaces need to be deleted
         # "in order" starting from Q-in-Q we delete them first.
@@ -1117,7 +1116,7 @@ class VLANIf(Interface):
         used by this class.
 
         Example:
-        >> dict = MACsecIf().get_config()
+        >> dict = VLANIf().get_config()
         """
         config = deepcopy(__class__.default)
         del config['type']
@@ -1129,8 +1128,8 @@ class VLANIf(Interface):
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').set_admin_state('down')
-        >>> Interface('eth0').get_admin_state()
+        >>> Interface('eth0.10').set_admin_state('down')
+        >>> Interface('eth0.10').get_admin_state()
         'down'
         """
         # A VLAN interface can only be placed in admin up state when
