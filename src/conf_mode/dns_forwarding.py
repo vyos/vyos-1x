@@ -127,6 +127,7 @@ def verify(conf, dns):
                     f'Error: No server configured for domain {domain}'))
 
     no_system_nameservers = False
+    conf.set_level([])
     if dns['system'] and not (
             conf.exists(['system', 'name-server']) or
             conf.exists(['system', 'name-servers-dhcp']) ):
