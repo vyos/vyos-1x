@@ -17,7 +17,6 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
@@ -95,10 +94,11 @@ def apply(vxlan):
         v.remove()
 
     if 'deleted' not in vxlan:
-        # VXLAN interface needs to be created on-block
-        # instead of passing a ton of arguments, I just use a dict
-        # that is managed by vyos.ifconfig
-        conf = deepcopy(VXLANIf.get_config())
+        # This is a special type of interface which needs additional parameters
+        # when created using iproute2. Instead of passing a ton of arguments,
+        # use a dictionary provided by the interface class which holds all the
+        # options necessary.
+        conf = VXLANIf.get_config()
 
         # Assign VXLAN instance configuration parameters to config dict
         for tmp in ['vni', 'group', 'source_address', 'source_interface', 'remote', 'port']:

@@ -50,22 +50,6 @@ class WiFiIf(Interface):
             .format(**self.config)
         self._cmd(cmd)
 
-    @staticmethod
-    def get_config():
-        """
-        WiFi interfaces require a configuration when they are added using
-        iw (type/phy). This static method will provide the configuration
-        ictionary used by this class.
-
-        Example:
-        >> conf = WiFiIf().get_config()
-        """
-        config = {
-            'phy': 'phy0'
-        }
-        return config
-
-
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered

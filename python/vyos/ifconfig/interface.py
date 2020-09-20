@@ -174,6 +174,15 @@ class Interface(Control):
     def exists(cls, ifname):
         return os.path.exists(f'/sys/class/net/{ifname}')
 
+    @classmethod
+    def get_config(cls):
+        """
+        Some but not all interfaces require a configuration when they are added
+        using iproute2. This method will provide the configuration dictionary
+        used by this class.
+        """
+        return deepcopy(cls.default)
+
     def __init__(self, ifname, **kargs):
         """
         This is the base interface class which supports basic IP/MAC address
@@ -1084,7 +1093,7 @@ class VLANIf(Interface):
 
     def _create(self):
         # bail out early if interface already exists
-        if os.path.exists(f'/sys/class/net/{self.ifname}'):
+        if self.exists(f'{self.ifname}'):
             return
 
         cmd = 'ip link add link {source_interface} name {ifname} type vlan id {vlan_id}'
@@ -1099,20 +1108,6 @@ class VLANIf(Interface):
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
-
-    @staticmethod
-    def get_config():
-        """
-        MACsec interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
-
-        Example:
-        >> dict = VLANIf().get_config()
-        """
-        config = deepcopy(__class__.default)
-        del config['type']
-        return config
 
     def set_admin_state(self, state):
         """

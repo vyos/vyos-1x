@@ -56,22 +56,6 @@ class MACsecIf(Interface):
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
 
-    @staticmethod
-    def get_config():
-        """
-        MACsec interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
-
-        Example:
-        >> dict = MACsecIf().get_config()
-        """
-        config = {
-            'security_cipher': '',
-            'source_interface': '',
-        }
-        return config
-
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered

@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from copy import deepcopy
 from vyos.ifconfig.interface import Interface
 
 @Interface.register
@@ -52,18 +51,6 @@ class MACVLANIf(Interface):
         ifname = self.config['ifname']
         cmd = f'ip link set dev {ifname} type macvlan mode {mode}'
         return self._cmd(cmd)
-
-    @classmethod
-    def get_config(cls):
-        """
-        MACVLAN interfaces require a configuration when they are added using
-        iproute2. This method will provide the configuration dictionary used
-        by this class.
-
-        Example:
-        >> dict = MACVLANIf().get_config()
-        """
-        return deepcopy(cls.default)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by

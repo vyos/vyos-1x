@@ -14,9 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
-from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
@@ -101,9 +98,11 @@ def apply(peth):
     if 'mode_old' in peth:
         MACVLANIf(peth['ifname']).remove()
 
-    # MACVLAN interface needs to be created on-block instead of passing a ton
-    # of arguments, I just use a dict that is managed by vyos.ifconfig
-    conf = deepcopy(MACVLANIf.get_config())
+    # This is a special type of interface which needs additional parameters
+    # when created using iproute2. Instead of passing a ton of arguments,
+    # use a dictionary provided by the interface class which holds all the
+    # options necessary.
+    conf = MACVLANIf.get_config()
 
     # Assign MACVLAN instance configuration parameters to config dict
     conf['source_interface'] = peth['source_interface']

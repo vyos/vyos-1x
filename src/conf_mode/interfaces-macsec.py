@@ -16,7 +16,6 @@
 
 import os
 
-from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
@@ -102,12 +101,11 @@ def apply(macsec):
             os.unlink(wpa_suppl_conf.format(**macsec))
 
     else:
-        # MACsec interfaces require a configuration when they are added using
-        # iproute2. This static method will provide the configuration
-        # dictionary used by this class.
-
-        # XXX: subject of removal after completing T2653
-        conf = deepcopy(MACsecIf.get_config())
+        # This is a special type of interface which needs additional parameters
+        # when created using iproute2. Instead of passing a ton of arguments,
+        # use a dictionary provided by the interface class which holds all the
+        # options necessary.
+        conf = MACsecIf.get_config()
         conf['source_interface'] = macsec['source_interface']
         conf['security_cipher'] = macsec['security']['cipher']
 

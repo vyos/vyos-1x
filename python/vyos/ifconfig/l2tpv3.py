@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 from vyos.ifconfig.interface import Interface
 
 @Interface.register
@@ -28,6 +27,15 @@ class L2TPv3If(Interface):
 
     default = {
         'type': 'l2tp',
+        'peer_tunnel_id': '',
+        'local_port': 0,
+        'remote_port': 0,
+        'encapsulation': 'udp',
+        'local_address': '',
+        'remote_address': '',
+        'session_id': '',
+        'tunnel_id': '',
+        'peer_session_id': ''
     }
     definition = {
         **Interface.definition,
@@ -73,7 +81,7 @@ class L2TPv3If(Interface):
         >>> i.remove()
         """
 
-        if os.path.exists('/sys/class/net/{}'.format(self.config['ifname'])):
+        if self.exists(self.config['ifname']):
             # interface is always A/D down. It needs to be enabled explicitly
             self.set_admin_state('down')
 
@@ -86,25 +94,3 @@ class L2TPv3If(Interface):
                 cmd = 'ip l2tp del tunnel tunnel_id {tunnel_id}'
                 self._cmd(cmd.format(**self.config))
 
-    @staticmethod
-    def get_config():
-        """
-        L2TPv3 interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
-
-        Example:
-        >> dict = L2TPv3If().get_config()
-        """
-        config = {
-            'peer_tunnel_id': '',
-            'local_port': 0,
-            'remote_port': 0,
-            'encapsulation': 'udp',
-            'local_address': '',
-            'remote_address': '',
-            'session_id': '',
-            'tunnel_id': '',
-            'peer_session_id': ''
-        }
-        return config

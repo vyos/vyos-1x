@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from copy import deepcopy
 from vyos.ifconfig.interface import Interface
 
 @Interface.register
@@ -50,18 +49,6 @@ class GeneveIf(Interface):
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
-
-    @classmethod
-    def get_config(cls):
-        """
-        GENEVE interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
-
-        Example:
-        >> dict = GeneveIf().get_config()
-        """
-        return deepcopy(cls.default)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
