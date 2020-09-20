@@ -946,6 +946,9 @@ def verify(openvpn):
             else:
                 print('Diffie-Hellman prime file is unspecified, assuming ECDH')
 
+    if openvpn['encryption'] == 'none':
+        print('Warning: "encryption none" was specified. NO encryption will be performed and tunnelled data WILL be transmitted in clear text over the network!')
+
     #
     # Auth user/pass
     #
