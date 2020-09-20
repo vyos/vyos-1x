@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,15 +16,12 @@
 import os
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLAN
-
 from vyos.util import cmd
 from vyos.util import vyos_dict_search
 from vyos.validate import assert_list
 from vyos.validate import assert_positive
 
 @Interface.register
-@VLAN.enable
 class BondIf(Interface):
     """
     The Linux bonding driver provides a method for aggregating multiple network
@@ -51,6 +48,10 @@ class BondIf(Interface):
         'bond_hash_policy': {
             'validate': lambda v: assert_list(v, ['layer2', 'layer2+3', 'layer3+4', 'encap2+3', 'encap3+4']),
             'location': '/sys/class/net/{ifname}/bonding/xmit_hash_policy',
+        },
+        'bond_min_links': {
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/bonding/min_links',
         },
         'bond_miimon': {
             'validate': assert_positive,
@@ -129,6 +130,29 @@ class BondIf(Interface):
         >>> BondIf('bond0').set_hash_policy('layer2+3')
         """
         self.set_interface('bond_hash_policy', mode)
+
+    def set_min_links(self, number):
+        """
+        Specifies the minimum number of links that must be active before
+	    asserting carrier. It is similar to the Cisco EtherChannel min-links
+	    feature. This allows setting the minimum number of member ports that
+	    must be up (link-up state) before marking the bond device as up
+	    (carrier on). This is useful for situations where higher level services
+	    such as clustering want to ensure a minimum number of low bandwidth
+	    links are active before switchover. This option only affect 802.3ad
+	    mode.
+
+	    The default value is 0. This will cause carrier to be asserted (for
+	    802.3ad mode) whenever there is an active aggregator, regardless of the
+	    number of available links in that aggregator. Note that, because an
+	    aggregator cannot be active without at least one available link,
+	    setting this option to 0 or to 1 has the exact same effect.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_min_links('0')
+        """
+        self.set_interface('bond_min_links', number)
 
     def set_arp_interval(self, interval):
         """
@@ -347,12 +371,21 @@ class BondIf(Interface):
         value = config.get('hash_policy')
         if value: self.set_hash_policy(value)
 
+        # Minimum number of member interfaces
+        value = config.get('min_links')
+        if value: self.set_min_links(value)
+
         # Some interface options can only be changed if the interface is
         # administratively down
         if self.get_admin_state() == 'down':
-            # Delete bond member port(s)
+            # Remove ALL bond member interfaces
             for interface in self.get_slaves():
                 self.del_port(interface)
+                # Removing an interface from a bond will always place the underlaying
+                # physical interface in admin-down state! If physical interface is
+                # not disabled, re-enable it.
+                if not vyos_dict_search(f'member.interface_remove.{interface}.disable', config):
+                    Interface(interface).set_admin_state('up')
 
             # Bonding policy/mode
             value = config.get('mode')
@@ -360,13 +393,12 @@ class BondIf(Interface):
 
             # Add (enslave) interfaces to bond
             value = vyos_dict_search('member.interface', config)
-            if value:
-                for interface in value:
-                    # if we've come here we already verified the interface
-                    # does not have an addresses configured so just flush
-                    # any remaining ones
-                    Interface(interface).flush_addrs()
-                    self.add_port(interface)
+            for interface in (value or []):
+                # if we've come here we already verified the interface
+                # does not have an addresses configured so just flush
+                # any remaining ones
+                Interface(interface).flush_addrs()
+                self.add_port(interface)
 
         # Primary device interface - must be set after 'mode'
         value = config.get('primary')

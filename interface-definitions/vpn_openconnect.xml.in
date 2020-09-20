@@ -2,9 +2,9 @@
 <interfaceDefinition>
   <node name="vpn">
     <children>
-      <node name="anyconnect" owner="${vyos_conf_scripts_dir}/vpn_anyconnect.py">
+      <node name="openconnect" owner="${vyos_conf_scripts_dir}/vpn_openconnect.py">
         <properties>
-          <help>SSL VPN AnyConnect</help>
+          <help>SSL VPN OpenConnect, AnyConnect compatible server</help>
           <priority>901</priority>
         </properties>
         <children>

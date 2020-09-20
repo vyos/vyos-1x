@@ -19,6 +19,12 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
               </leafNode>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed interface information</help>
+                </properties>
+                <command>if [ -f "/proc/net/bonding/$4" ]; then cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
+              </leafNode>
               <tagNode name="vif">
                 <properties>
                   <help>Show specified virtual network interface (vif) information</help>

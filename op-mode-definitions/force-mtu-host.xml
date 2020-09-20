@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <node name="mtu">
+        <properties>
+          <help>Show MTU max value for remote host protocol TCP</help>
+        </properties>
+        <children>
+          <tagNode name="host">
+            <properties>
+              <help>IP address of the remote host</help>
+              <completionHelp>
+                <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/force_mtu_host.sh $4</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Source interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/force_mtu_host.sh $4 $6</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

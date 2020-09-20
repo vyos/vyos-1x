@@ -51,10 +51,6 @@ ssid={{ ssid }}
 # (default: 0, i.e., not set)
 # Please note that some drivers do not use this value from hostapd and the
 # channel will need to be configured separately with iwconfig.
-#
-# If CONFIG_ACS build option is enabled, the channel can be selected
-# automatically at run time by setting channel=acs_survey or channel=0, both of
-# which will enable the ACS survey based algorithm.
 channel={{ channel }}
 {% endif %}
 
@@ -124,38 +120,58 @@ ieee80211w=2
 # DSSS/CCK Mode in 40 MHz: [DSSS_CCK-40] = allowed (not allowed if not set)
 # 40 MHz intolerant [40-INTOLERANT] (not advertised if not set)
 # L-SIG TXOP protection support: [LSIG-TXOP-PROT] (disabled if not set)
-{%   set output = '' %}
-{%   set output = output + '[40-INTOLERANT]'  if capabilities.ht.fourtymhz_incapable is defined else '' %}
-{%   set output = output + '[DELAYED-BA]'     if capabilities.ht.delayed_block_ack   is defined else '' %}
-{%   set output = output + '[DSSS_CCK-40]'    if capabilities.ht.dsss_cck_40         is defined else '' %}
-{%   set output = output + '[GF]'             if capabilities.ht.greenfield          is defined else '' %}
-{%   set output = output + '[LDPC]'           if capabilities.ht.ldpc                is defined else '' %}
-{%   set output = output + '[LSIG-TXOP-PROT]' if capabilities.ht.lsig_protection     is defined else '' %}
-{%   set output = output + '[TX-STBC]'        if capabilities.ht.stbc.tx             is defined else '' %}
-{%   set output = output + '[RX-STBC-'   + capabilities.ht.stbc.rx | upper + ']' if capabilities.ht.stbc.tx   is defined else '' %}
-{%   set output = output + '[MAX-AMSDU-' + capabilities.ht.max_amsdu       + ']' if capabilities.ht.max_amsdu is defined else '' %}
-{%   set output = output + '[SMPS-'      + capabilities.ht.smps | upper    + ']' if capabilities.ht.smps      is defined else '' %}
+{%   set output = namespace(value='')  %}
+
+{%   if capabilities.ht.fourtymhz_incapable is defined %}
+{%     set output.value = output.value + '[40-INTOLERANT]' %}
+{%   endif %}
+{%   if capabilities.ht.delayed_block_ack is defined %}
+{%     set output.value = output.value + '[DELAYED-BA]' %}
+{%   endif %}
+{%   if capabilities.ht.dsss_cck_40 is defined %}
+{%     set output.value = output.value + '[DSSS_CCK-40]' %}
+{%   endif %}
+{%   if capabilities.ht.greenfield is defined %}
+{%     set output.value = output.value + '[GF]' %}
+{%   endif %}
+{%   if capabilities.ht.ldpc is defined %}
+{%     set output.value = output.value + '[LDPC]' %}
+{%   endif %}
+{%   if capabilities.ht.lsig_protection is defined %}
+{%     set output.value = output.value + '[LSIG-TXOP-PROT]' %}
+{%   endif %}
+{%   if capabilities.ht.stbc is defined and capabilities.ht.stbc.tx is defined %}
+{%     set output.value = output.value + '[TX-STBC]' %}
+{%   endif %}
+{%   if capabilities.ht.stbc is defined and capabilities.ht.stbc.rx is defined %}
+{%     set output.value = output.value + '[RX-STBC-' + capabilities.ht.stbc.rx | upper + ']' %}
+{%   endif %}
+{%   if capabilities.ht.max_amsdu is defined %}
+{%     set output.value = output.value + '[MAX-AMSDU-' + capabilities.ht.max_amsdu + ']' %}
+{%   endif %}
+{%   if capabilities.ht.smps is defined %}
+{%     set output.value = output.value + '[SMPS-' + capabilities.ht.smps | upper + ']' %}
+{%   endif %}
 
 {% if capabilities.ht.channel_set_width is defined %}
 {%   for csw in capabilities.ht.channel_set_width %}
-{%     set output = output + '[' + csw | upper + ']'  %}
+{%     set output.value = output.value + '[' + csw | upper + ']'  %}
 {%   endfor %}
 {% endif %}
 
 {% if capabilities.ht.short_gi is defined %}
 {%   for short_gi in capabilities.ht.short_gi %}
-{%     set output = output + '[SHORT-GI-' + short_gi | upper + ']'  %}
+{%     set output.value = output.value + '[SHORT-GI-' + short_gi | upper + ']'  %}
 {%   endfor %}
 {% endif %}
 
-ht_capab={{ output }}
+ht_capab={{ output.value }}
 
-{% if capabilities.ht.auto_powersave is defined %}
+{%   if capabilities.ht.auto_powersave is defined %}
 # WMM-PS Unscheduled Automatic Power Save Delivery [U-APSD]
 # Enable this flag if U-APSD supported outside hostapd (eg., Firmware/driver)
 uapsd_advertisement_enabled=1
-{% endif %}
-
+{%   endif %}
 {% endif %}
 
 # Required for full HT and VHT functionality
@@ -286,14 +302,14 @@ require_ht=1
 # 0 = Tx antenna pattern might change during the lifetime of an association
 # 1 = Tx antenna pattern does not change during the lifetime of an
 
-{%   if capabilities.vht.center_channel_freq.freq_1 is defined %}
+{%   if capabilities.vht.center_channel_freq is defined and capabilities.vht.center_channel_freq.freq_1 is defined %}
 # center freq = 5 GHz + (5 * index)
 # So index 42 gives center freq 5.210 GHz
 # which is channel 42 in 5G band
 vht_oper_centr_freq_seg0_idx={{ capabilities.vht.center_channel_freq.freq_1 }}
 {%   endif %}
 
-{%   if capabilities.vht.center_channel_freq.freq_2 is defined %}
+{%   if capabilities.vht.center_channel_freq is defined and capabilities.vht.center_channel_freq.freq_2 is defined %}
 # center freq = 5 GHz + (5 * index)
 # So index 159 gives center freq 5.795 GHz
 # which is channel 159 in 5G band
@@ -304,55 +320,71 @@ vht_oper_centr_freq_seg1_idx={{ capabilities.vht.center_channel_freq.freq_2 }}
 vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
 {%   endif %}
 
-{%   set output = '' %}
-{%   set output = output + '[TX-STBC-2BY1]'       if capabilities.vht.stbc.tx               is defined else '' %}
-{%   set output = output + '[RXLDPC]'             if capabilities.vht.ldpc                  is defined else '' %}
-{%   set output = output + '[VHT-TXOP-PS]'        if capabilities.vht.tx_powersave          is defined else '' %}
-{%   set output = output + '[HTC-VHT]'            if capabilities.vht.vht_cf                is defined else '' %}
-{%   set output = output + '[RX-ANTENNA-PATTERN]' if capabilities.vht.antenna_pattern_fixed is defined else '' %}
-{%   set output = output + '[TX-ANTENNA-PATTERN]' if capabilities.vht.antenna_pattern_fixed is defined else '' %}
-
-{%   set output = output + '[RX-STBC-'            + capabilities.vht.stbc.rx      + ']' if capabilities.vht.stbc.rx      is defined else '' %}
-{%   set output = output + '[MAX-MPDU-'           + capabilities.vht.max_mpdu     + ']' if capabilities.vht.max_mpdu     is defined else '' %}
-{%   set output = output + '[MAX-A-MPDU-LEN-EXP-' + capabilities.vht.max_mpdu_exp + ']' if capabilities.vht.max_mpdu_exp is defined else '' %}
-{%   set output = output + '[MAX-A-MPDU-LEN-EXP-' + capabilities.vht.max_mpdu_exp + ']' if capabilities.vht.max_mpdu_exp is defined else '' %}
-
-{%   set output = output + '[VHT160]'          if capabilities.vht.max_mpdu_exp    is defined and capabilities.vht.max_mpdu_exp == '2'              else '' %}
-{%   set output = output + '[VHT160-80PLUS80]' if capabilities.vht.max_mpdu_exp    is defined and capabilities.vht.max_mpdu_exp == '3'              else '' %}
-{%   set output = output + '[VHT-LINK-ADAPT2]' if capabilities.vht.link_adaptation is defined and capabilities.vht.link_adaptation == 'unsolicited' else '' %}
-{%   set output = output + '[VHT-LINK-ADAPT3]' if capabilities.vht.link_adaptation is defined and capabilities.vht.link_adaptation == 'both'        else '' %}
-
-{%   if capabilities.vht.short_gi is defined %}
-{%     for short_gi in capabilities.vht.short_gi %}
-{%       set output = output + '[SHORT-GI-' + short_gi | upper + ']'  %}
-{%     endfor %}
+{%   set output = namespace(value='')  %}
+{%   if capabilities.vht.stbc is defined and capabilities.vht.stbc.tx is defined %}
+{%     set output.value = output.value + '[TX-STBC-2BY1]' %}
+{%   endif %}
+{%   if capabilities.vht.stbc is defined and capabilities.vht.stbc.rx is defined %}
+{%     set output.value = output.value + '[RX-STBC-' + capabilities.vht.stbc.rx + ']' %}
+{%   endif %}
+{%   if capabilities.vht.ldpc is defined %}
+{%     set output.value = output.value + '[RXLDPC]' %}
+{%   endif %}
+{%   if capabilities.vht.tx_powersave is defined %}
+{%     set output.value = output.value + '[VHT-TXOP-PS]' %}
+{%   endif %}
+{%   if capabilities.vht.vht_cf is defined %}
+{%     set output.value = output.value + '[HTC-VHT]' %}
+{%   endif %}
+{%   if capabilities.vht.antenna_pattern_fixed is defined %}
+{%     set output.value = output.value + '[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]' %}
+{%   endif %}
+{%   if capabilities.vht.max_mpdu is defined %}
+{%     set output.value = output.value + '[MAX-MPDU-' + capabilities.vht.max_mpdu + ']' %}
+{%   endif %}
+{%   if capabilities.vht.max_mpdu_exp is defined %}
+{%     set output.value = output.value + '[MAX-A-MPDU-LEN-EXP-' + capabilities.vht.max_mpdu_exp + ']' %}
+{%   endif %}
+{%   if capabilities.vht.max_mpdu_exp is defined and capabilities.vht.max_mpdu_exp == '2' %}
+{%     set output.value = output.value + '[VHT160]' %}
+{%   endif %}
+{%   if capabilities.vht.max_mpdu_exp is defined and capabilities.vht.max_mpdu_exp == '3' %}
+{%     set output.value = output.value + '[VHT160-80PLUS80]' %}
+{%   endif %}
+{%   if capabilities.vht.link_adaptation is defined and capabilities.vht.link_adaptation == 'unsolicited' %}
+{%     set output.value = output.value + '[VHT-LINK-ADAPT2]' %}
+{%   endif %}
+{%   if capabilities.vht.link_adaptation is defined and capabilities.vht.link_adaptation == 'both' %}
+{%     set output.value = output.value + '[VHT-LINK-ADAPT3]' %}
 {%   endif %}
 
-{%   if capabilities.vht.beamform %}
-{%     for beamform in capabilities.vht.beamform %}
-{%       set output = output + '[SU-BEAMFORMER]' if beamform == 'single-user-beamformer' else '' %}
-{%       set output = output + '[SU-BEAMFORMEE]' if beamform == 'single-user-beamformee' else '' %}
-{%       set output = output + '[MU-BEAMFORMER]' if beamform == 'multi-user-beamformer'  else '' %}
-{%       set output = output + '[MU-BEAMFORMEE]' if beamform == 'multi-user-beamformee'  else '' %}
-{%     endfor %}
-{%   endif %}
+{%   for short_gi in capabilities.vht.short_gi if capabilities.vht.short_gi is defined %}
+{%     set output.value = output.value + '[SHORT-GI-' + short_gi | upper + ']'  %}
+{%   endfor %}
+
+{%   for beamform in capabilities.vht.beamform if capabilities.vht.beamform is defined %}
+{%     set output.value = output.value + '[SU-BEAMFORMER]' if beamform == 'single-user-beamformer' else '' %}
+{%     set output.value = output.value + '[SU-BEAMFORMEE]' if beamform == 'single-user-beamformee' else '' %}
+{%     set output.value = output.value + '[MU-BEAMFORMER]' if beamform == 'multi-user-beamformer'  else '' %}
+{%     set output.value = output.value + '[MU-BEAMFORMEE]' if beamform == 'multi-user-beamformee'  else '' %}
+{%   endfor %}
 
 {%   if capabilities.vht.antenna_count is defined and capabilities.vht.antenna_count|int > 1  %}
 {%     if capabilities.vht.beamform %}
 {%       if beamform == 'single-user-beamformer' %}
 {%         if capabilities.vht.antenna_count is defined and capabilities.vht.antenna_count|int > 1 and capabilities.vht.antenna_count|int < 6  %}
-{%           set output = output + '[BF-ANTENNA-' + capabilities.vht.antenna_count|int -1 + ']' %}
-{%           set output = output + '[SOUNDING-DIMENSION-' + capabilities.vht.antenna_count|int -1 + ']' %}
+{%           set output.value = output.value + '[BF-ANTENNA-' + capabilities.vht.antenna_count|int -1 + ']' %}
+{%           set output.value = output.value + '[SOUNDING-DIMENSION-' + capabilities.vht.antenna_count|int -1 + ']' %}
 {%         endif %}
 {%       endif %}
 {%       if capabilities.vht.antenna_count is defined and capabilities.vht.antenna_count|int > 1 and capabilities.vht.antenna_count|int < 5  %}
-{%         set output = output + '[BF-ANTENNA-' + capabilities.vht.antenna_count + ']' %}
-{%         set output = output + '[SOUNDING-DIMENSION-' + capabilities.vht.antenna_count+ ']' %}
+{%         set output.value = output.value + '[BF-ANTENNA-' + capabilities.vht.antenna_count + ']' %}
+{%         set output.value = output.value + '[SOUNDING-DIMENSION-' + capabilities.vht.antenna_count+ ']' %}
 {%       endif %}
 {%     endif %}
 {%   endif %}
 
-vht_capab={{ output }}
+vht_capab={{ output.value }}
 {% endif %}
 
 # ieee80211n: Whether IEEE 802.11n (HT) is enabled

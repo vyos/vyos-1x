@@ -33,6 +33,7 @@ from vyos.configverify import verify_vrf
 from vyos.ifconfig import WiFiIf
 from vyos.template import render
 from vyos.util import call
+from vyos.util import vyos_dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -212,6 +213,11 @@ def generate(wifi):
             # change dialect to use : as delimiter instead of -
             mac.dialect = mac_unix_expanded
             wifi['mac'] = str(mac)
+
+    # XXX: Jinja2 can not operate on a dictionary key when it starts of with a number
+    if '40mhz_incapable' in (vyos_dict_search('capabilities.ht', wifi) or []):
+        wifi['capabilities']['ht']['fourtymhz_incapable'] = wifi['capabilities']['ht']['40mhz_incapable']
+        del wifi['capabilities']['ht']['40mhz_incapable']
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['type'] == 'access-point':

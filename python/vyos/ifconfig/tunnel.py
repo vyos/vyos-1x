@@ -16,7 +16,6 @@
 # https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels/
 # https://community.hetzner.com/tutorials/linux-setup-gre-tunnel
 
-
 from copy import deepcopy
 
 from vyos.ifconfig.interface import Interface

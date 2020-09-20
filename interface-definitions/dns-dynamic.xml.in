@@ -58,6 +58,7 @@
                             <validator name="numeric" argument="--range 1-86400"/>
                           </constraint>
                         </properties>
+                        <defaultValue>600</defaultValue>
                       </leafNode>
                       <leafNode name="zone">
                         <properties>

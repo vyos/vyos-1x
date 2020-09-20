@@ -14,20 +14,19 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+
 from time import time
 from datetime import datetime
 from functools import reduce
-
 from tabulate import tabulate
 
 from vyos.ifconfig import Control
-
 
 class Operational(Control):
     """
     A class able to load Interface statistics
     """
-    
+
     cache_magic = 'XYZZYX'
 
     _stat_names = {

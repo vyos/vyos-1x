@@ -654,6 +654,7 @@ def get_bridge_member_config(conf, br, intf):
 
 def check_kmod(k_mod):
     """ Common utility function to load required kernel modules on demand """
+    from vyos import ConfigError
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:

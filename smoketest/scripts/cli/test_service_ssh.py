@@ -27,7 +27,7 @@ base_path = ['service', 'ssh']
 
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
-    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
     return tmp
 
 def is_service_running():

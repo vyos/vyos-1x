@@ -13,14 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.vlan import VLAN
-
 
 @Interface.register
-@VLAN.enable
 class WiFiIf(Interface):
     """
     Handle WIFI/WLAN interfaces.
@@ -77,8 +72,21 @@ class WiFiIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
+        # We can not call add_to_bridge() until wpa_supplicant is running, thus
+        # we will remove the key from the config dict and react to this specal
+        # case in thie derived class.
+        # re-add ourselves to any bridge we might have fallen out of
+        bridge_member = ''
+        if 'is_bridge_member' in config:
+            bridge_member = config['is_bridge_member']
+            del config['is_bridge_member']
+
         # call base class first
         super().update(config)
+
+        # re-add ourselves to any bridge we might have fallen out of
+        if bridge_member:
+            self.add_to_bridge(bridge_member)
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()

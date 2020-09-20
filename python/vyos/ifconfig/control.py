@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
+
 from inspect import signature
 from inspect import _empty
 
@@ -30,9 +30,9 @@ class Control(Section):
     _signature = {}
 
     def __init__(self, **kargs):
-        # some commands (such as operation comands - show interfaces, etc.) 
+        # some commands (such as operation comands - show interfaces, etc.)
         # need to query the interface statistics. If the interface
-        # code is used and the debugging is enabled, the screen output 
+        # code is used and the debugging is enabled, the screen output
         # will include both the command but also the debugging for that command
         # to prevent this, debugging can be explicitely disabled
 
