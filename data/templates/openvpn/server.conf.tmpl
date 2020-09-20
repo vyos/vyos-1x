@@ -186,6 +186,7 @@ tls-auth {{tls_auth}} 1
 {%- elif mode == 'server' %}
 tls-auth {{tls_auth}} 0
 {%- endif %}
+{%- endif %}
 
 {%- if tls_role %}
 {%- if 'active' in tls_role %}
