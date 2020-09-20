@@ -256,7 +256,10 @@ def get_config(config=None):
     if conf.exists('encryption ncp-ciphers'):
         _ncp_ciphers = []
         for enc in conf.return_values('encryption ncp-ciphers'):
-            if enc == 'des':
+            if enc == 'none':
+                _ncp_ciphers.append('none')
+                _ncp_ciphers.append('NONE')
+            elif enc == 'des':
                 _ncp_ciphers.append('des-cbc')
                 _ncp_ciphers.append('DES-CBC')
             elif enc == '3des':
