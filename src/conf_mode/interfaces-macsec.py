@@ -21,6 +21,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.ifconfig import MACsecIf
+from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
 from vyos.configverify import verify_vrf
@@ -45,6 +46,14 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'macsec']
     macsec = get_interface_dict(conf, base)
+
+    # MACsec is "special" the default MTU is 1460 - update accordingly
+    # as the config_level is already st in get_interface_dict() - we can use []
+    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    if 'mtu' not in tmp:
+        # base MTU for MACsec is 1468 bytes, but we leave room for 802.1ad and
+        # 802.1q VLAN tags, thus the limit is 1460 bytes.
+        macsec['mtu'] = '1460'
 
     # Check if interface has been removed
     if 'deleted' in macsec:
@@ -78,6 +87,15 @@ def verify(macsec):
                 ('ckn' in tmp['mka'])):
             raise ConfigError('Missing mandatory MACsec security '
                               'keys as encryption is enabled!')
+
+    if 'source_interface' in macsec:
+        # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
+        # and 802.1q) - we need to check the underlaying MTU if our configured
+        # MTU is at least 40 bytes less then the MTU of our physical interface.
+        underlay_mtu = int(Interface(macsec['source_interface']).get_mtu())
+        if underlay_mtu < (int(macsec['mtu']) + 40):
+            raise ConfigError('MACsec overhead does not fit into underlaying device MTU,\n' \
+                              f'{underlay_mtu} bytes is too small!')
 
     return None
 
