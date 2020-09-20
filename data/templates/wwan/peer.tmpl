@@ -21,7 +21,7 @@ noauth
 crtscts
 lock
 persist
-{{ "demand" if ondemand is defined }}
+{{ "demand" if connect_on_demand is defined }}
 
 connect '/usr/sbin/chat -v -t6 -f /etc/ppp/peers/chat.{{ ifname }}'
 

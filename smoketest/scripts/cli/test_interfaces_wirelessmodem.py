@@ -43,7 +43,7 @@ class WWANInterfaceTest(unittest.TestCase):
     def test_wlm_1(self):
         for interface in self._interfaces:
             self.session.set(base_path + [interface, 'no-peer-dns'])
-            self.session.set(base_path + [interface, 'ondemand'])
+            self.session.set(base_path + [interface, 'connect-on-demand'])
 
             # check validate() - APN must be configure
             with self.assertRaises(ConfigSessionError):

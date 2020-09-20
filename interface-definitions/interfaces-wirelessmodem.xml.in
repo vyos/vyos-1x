@@ -80,12 +80,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="ondemand">
-            <properties>
-              <help>Only dial when traffic is available</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-dial-on-demand.xml.i>
         </children>
       </tagNode>
     </children>

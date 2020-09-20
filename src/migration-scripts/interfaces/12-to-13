@@ -17,6 +17,8 @@
 # - T2903: Change vif-s ethertype from numeric number to literal
 #   - 0x88a8 -> 802.1ad
 #   - 0x8100 -> 802.1q
+# - T2905: Change WWAN "ondemand" node to "connect-on-demand" to have identical
+#   CLI nodes for both types of dialer interfaces
 
 from sys import exit, argv
 from vyos.configtree import ConfigTree
@@ -32,6 +34,9 @@ if __name__ == '__main__':
 
     config = ConfigTree(config_file)
 
+    #
+    # T2903
+    #
     for type in config.list_nodes(['interfaces']):
         for interface in config.list_nodes(['interfaces', type]):
             if not config.exists(['interfaces', type, interface, 'vif-s']):
@@ -47,6 +52,15 @@ if __name__ == '__main__':
 
                     config.set(base_path + ['protocol'], value=protocol)
                     config.delete(base_path + ['ethertype'])
+
+    #
+    # T2905
+    #
+    wwan_base = ['interfaces', 'wirelessmodem']
+    if config.exists(wwan_base):
+        for interface in config.list_nodes(wwan_base):
+            if config.exists(wwan_base + [interface, 'ondemand']):
+                config.rename(wwan_base + [interface, 'ondemand'], 'connect-on-demand')
 
     try:
         with open(file_name, 'w') as f:
