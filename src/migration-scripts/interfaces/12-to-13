@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - T2903: Change vif-s ethertype from numeric number to literal
+#   - 0x88a8 -> 802.1ad
+#   - 0x8100 -> 802.1q
+
+from sys import exit, argv
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+
+    for type in config.list_nodes(['interfaces']):
+        for interface in config.list_nodes(['interfaces', type]):
+            if not config.exists(['interfaces', type, interface, 'vif-s']):
+                continue
+
+            for vif_s in config.list_nodes(['interfaces', type, interface, 'vif-s']):
+                base_path = ['interfaces', type, interface, 'vif-s', vif_s]
+                if config.exists(base_path + ['ethertype']):
+                    protocol = '802.1ad'
+                    tmp = config.return_value(base_path + ['ethertype'])
+                    if tmp == '0x8100':
+                        protocol = '802.1q'
+
+                    config.set(base_path + ['protocol'], value=protocol)
+                    config.delete(base_path + ['ethertype'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)
+

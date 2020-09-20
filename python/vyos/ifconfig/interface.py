@@ -50,14 +50,6 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
-def get_ethertype(ethertype_val):
-    if ethertype_val == '0x88A8':
-        return '802.1ad'
-    elif ethertype_val == '0x8100':
-        return '802.1q'
-    else:
-        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
-
 class Interface(Control):
     # This is the class which will be used to create
     # self.operational, it allows subclasses, such as
@@ -1013,7 +1005,7 @@ class Interface(Control):
         # create/update 802.1ad (Q-in-Q VLANs)
         for vif_s_id, vif_s_config in config.get('vif_s', {}).items():
             tmp = deepcopy(VLANIf.get_config())
-            tmp['ethertype'] = get_ethertype(vif_s_config.get('ethertype', '0x88A8'))
+            tmp['protocol'] = vif_s_config['protocol']
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_s_id
 
@@ -1061,13 +1053,13 @@ class VLANIf(Interface):
         'type': 'vlan',
         'source_interface': '',
         'vlan_id': '',
-        'ethertype': '',
+        'protocol': '',
         'ingress_qos': '',
         'egress_qos': '',
     }
 
     options = Interface.options + \
-        ['source_interface', 'vlan_id', 'ethertype', 'ingress_qos', 'egress_qos']
+        ['source_interface', 'vlan_id', 'protocol', 'ingress_qos', 'egress_qos']
 
     def remove(self):
         """
@@ -1096,8 +1088,8 @@ class VLANIf(Interface):
             return
 
         cmd = 'ip link add link {source_interface} name {ifname} type vlan id {vlan_id}'
-        if self.config['ethertype']:
-            cmd += ' proto {ethertype}'
+        if self.config['protocol']:
+            cmd += ' protocol {protocol}'
         if self.config['ingress_qos']:
             cmd += ' ingress-qos-map {ingress_qos}'
         if self.config['egress_qos']:
