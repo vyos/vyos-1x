@@ -23,8 +23,8 @@ from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 
-def get_config_value(intf, key):
-    tmp = read_file(f'/run/wpa_supplicant/{intf}.conf')
+def get_config_value(interface, key):
+    tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
     tmp = re.findall(r'\n?{}=(.*)'.format(key), tmp)
     return tmp[0]
 
@@ -49,51 +49,60 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
         mode - both using different mandatory settings, lets test
         encryption as the basic authentication test has been performed
         using the base class tests """
-        intf = 'macsec0'
-        src_intf = 'eth0'
+        interface = 'macsec0'
+        src_interface = 'eth0'
         mak_cak = '232e44b7fda6f8e2d88a07bf78a7aff4'
         mak_ckn = '40916f4b23e3d548ad27eedd2d10c6f98c2d21684699647d63d41b500dfe8836'
         replay_window = '64'
-        self.session.set(self._base_path + [intf, 'security', 'encrypt'])
+        self.session.set(self._base_path + [interface, 'security', 'encrypt'])
 
         # check validate() - Cipher suite must be set for MACsec
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(self._base_path + [intf, 'security', 'cipher', 'gcm-aes-128'])
+        self.session.set(self._base_path + [interface, 'security', 'cipher', 'gcm-aes-128'])
 
         # check validate() - Physical source interface must be set for MACsec
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(self._base_path + [intf, 'source-interface', src_intf])
+        self.session.set(self._base_path + [interface, 'source-interface', src_interface])
+
+        # check validate() - Physical source interface MTU must be higher then our MTU
+        self.session.set(self._base_path + [interface, 'mtu', '1500'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(self._base_path + [interface, 'mtu'])
 
         # check validate() - MACsec security keys mandartory when encryption is enabled
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(self._base_path + [intf, 'security', 'mka', 'cak', mak_cak])
+        self.session.set(self._base_path + [interface, 'security', 'mka', 'cak', mak_cak])
 
         # check validate() - MACsec security keys mandartory when encryption is enabled
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(self._base_path + [intf, 'security', 'mka', 'ckn', mak_ckn])
+        self.session.set(self._base_path + [interface, 'security', 'mka', 'ckn', mak_ckn])
 
-        self.session.set(self._base_path + [intf, 'security', 'replay-window', replay_window])
+        self.session.set(self._base_path + [interface, 'security', 'replay-window', replay_window])
         self.session.commit()
 
-        tmp = get_config_value(src_intf, 'macsec_integ_only')
+        tmp = get_config_value(src_interface, 'macsec_integ_only')
         self.assertTrue("0" in tmp)
 
-        tmp = get_config_value(src_intf, 'mka_cak')
+        tmp = get_config_value(src_interface, 'mka_cak')
         self.assertTrue(mak_cak in tmp)
 
-        tmp = get_config_value(src_intf, 'mka_ckn')
+        tmp = get_config_value(src_interface, 'mka_ckn')
         self.assertTrue(mak_ckn in tmp)
 
         # check that the default priority of 255 is programmed
-        tmp = get_config_value(src_intf, 'mka_priority')
+        tmp = get_config_value(src_interface, 'mka_priority')
         self.assertTrue("255" in tmp)
 
-        tmp = get_config_value(src_intf, 'macsec_replay_window')
+        tmp = get_config_value(src_interface, 'macsec_replay_window')
         self.assertTrue(replay_window in tmp)
+
+        tmp = read_file(f'/sys/class/net/{interface}/mtu')
+        self.assertEqual(tmp, '1460')
 
         # Check for running process
         self.assertTrue("wpa_supplicant" in (p.name() for p in process_iter()))
