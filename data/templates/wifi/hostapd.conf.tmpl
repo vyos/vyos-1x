@@ -11,6 +11,21 @@ device_name={{ description | truncate(32, True) }}
 # command line parameter.
 interface={{ ifname }}
 
+{% if is_bridge_member is defined %}
+# In case of atheros and nl80211 driver interfaces, an additional
+# configuration parameter, bridge, may be used to notify hostapd if the
+# interface is included in a bridge. This parameter is not used with Host AP
+# driver. If the bridge parameter is not set, the drivers will automatically
+# figure out the bridge interface (assuming sysfs is enabled and mounted to
+# /sys) and this parameter may not be needed.
+#
+# For nl80211, this parameter can be used to request the AP interface to be
+# added to the bridge automatically (brctl may refuse to do this before hostapd
+# has been started to change the interface mode). If needed, the bridge
+# interface is also created.
+bridge={{ is_bridge_member }}
+{% endif %}
+
 # Driver interface type (hostap/wired/none/nl80211/bsd);
 # default: hostap). nl80211 is used with all Linux mac80211 drivers.
 # Use driver=none if building hostapd as a standalone RADIUS server that does
