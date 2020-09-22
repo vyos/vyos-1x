@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_member
+from vyos.configdict import is_source_interface
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
@@ -110,6 +111,10 @@ def get_config(config=None):
             if tmp and tmp != bond['ifname']:
                 interface_config.update({'is_bond_member' : tmp})
 
+            # Check if member interface is used as source-interface on another interface
+            tmp = is_source_interface(conf, interface)
+            if tmp: interface_config.update({'is_source_interface' : tmp})
+
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
             if tmp: interface_config.update({'has_address' : ''})
@@ -161,6 +166,10 @@ def verify(bond):
             if 'is_bond_member' in interface_config:
                 tmp = interface_config['is_bond_member']
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
+
+            if 'is_source_interface' in interface_config:
+                tmp = interface_config['is_source_interface']
+                raise ConfigError(error_msg + f'it is the source-interface of "{tmp}"!')
 
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')

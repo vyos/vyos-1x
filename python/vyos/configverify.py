@@ -82,9 +82,20 @@ def verify_source_interface(config):
     if 'source_interface' not in config:
         raise ConfigError('Physical source-interface required for '
                           'interface "{ifname}"'.format(**config))
+
     if config['source_interface'] not in interfaces():
-        raise ConfigError('Source interface {source_interface} does not '
-                          'exist'.format(**config))
+        raise ConfigError('Specified source-interface {source_interface} does '
+                          'not exist'.format(**config))
+
+    if 'source_interface_is_bridge_member' in config:
+        raise ConfigError('Invalid source-interface {source_interface}. Interface '
+                          'is already a member of bridge '
+                          '{source_interface_is_bridge_member}'.format(**config))
+
+    if 'source_interface_is_bond_member' in config:
+        raise ConfigError('Invalid source-interface {source_interface}. Interface '
+                          'is already a member of bond '
+                          '{source_interface_is_bond_member}'.format(**config))
 
 def verify_dhcpv6(config):
     """
