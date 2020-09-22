@@ -63,8 +63,12 @@
                 <properties>
                   <help>Standard Data Encryption Algorithm</help>
                   <completionHelp>
-                    <list>des 3des bf128 bf256 aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                    <list>none des 3des bf128 bf256 aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
                   </completionHelp>
+                  <valueHelp>
+                    <format>none</format>
+                    <description>Disable encryption</description>
+                  </valueHelp>
                   <valueHelp>
                     <format>des</format>
                     <description>DES algorithm</description>
@@ -106,7 +110,7 @@
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>(none|des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -114,8 +118,12 @@
                 <properties>
                   <help>Cipher negotiation list for use in server or client mode</help>
                   <completionHelp>
-                    <list>des 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                    <list>none des 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
                   </completionHelp>
+                  <valueHelp>
+                    <format>none</format>
+                    <description>Disable encryption</description>
+                  </valueHelp>
                   <valueHelp>
                     <format>des</format>
                     <description>DES algorithm</description>
@@ -149,7 +157,7 @@
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>(none|des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
                   </constraint>
                   <multi/>
                 </properties>

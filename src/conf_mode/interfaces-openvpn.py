@@ -257,7 +257,10 @@ def get_config(config=None):
     if conf.exists('encryption ncp-ciphers'):
         _ncp_ciphers = []
         for enc in conf.return_values('encryption ncp-ciphers'):
-            if enc == 'des':
+            if enc == 'none':
+                _ncp_ciphers.append('none')
+                _ncp_ciphers.append('NONE')
+            elif enc == 'des':
                 _ncp_ciphers.append('des-cbc')
                 _ncp_ciphers.append('DES-CBC')
             elif enc == '3des':
@@ -943,6 +946,9 @@ def verify(openvpn):
                 print('Warning: using dh-file and EC keys simultaneously will lead to DH ciphers being used instead of ECDH')
             else:
                 print('Diffie-Hellman prime file is unspecified, assuming ECDH')
+
+    if openvpn['encryption'] == 'none':
+        print('Warning: "encryption none" was specified. NO encryption will be performed and tunnelled data WILL be transmitted in clear text over the network!')
 
     #
     # Auth user/pass

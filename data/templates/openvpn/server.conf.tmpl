@@ -196,7 +196,9 @@ tls-server
 
 # Encryption options
 {%- if encryption %}
-{% if encryption == 'des' -%}
+{% if encryption == 'none' -%}
+cipher none
+{%- elif encryption == 'des' -%}
 cipher des-cbc
 {%- elif encryption == '3des' -%}
 cipher des-ede3-cbc
