@@ -28,7 +28,6 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_source_interface
-from vyos.validate import is_member
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -62,11 +61,6 @@ def get_config(config=None):
                 base + ['source-interface'])
         macsec.update({'source_interface': source_interface})
 
-    if 'source_interface' in macsec:
-        # Check if source interface is used by another bridge
-        tmp = is_member(conf, macsec['source_interface'], 'bridge')
-        if tmp: macsec.update({'is_bridge_member_source_interface' : tmp})
-
     return macsec
 
 
@@ -93,10 +87,6 @@ def verify(macsec):
                 ('ckn' in tmp['mka'])):
             raise ConfigError('Missing mandatory MACsec security '
                               'keys as encryption is enabled!')
-
-    if 'is_bridge_member_source_interface' in macsec:
-        raise ConfigError('source-interface is already member of bridge ' \
-                          '{is_bridge_member_source_interface}!'.format(**macsec))
 
     if 'source_interface' in macsec:
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad

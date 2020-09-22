@@ -21,8 +21,9 @@ import os
 from copy import deepcopy
 
 from vyos.util import vyos_dict_search
-from vyos.validate import is_member
 from vyos.xml import defaults
+from vyos.xml import is_tag
+from vyos.xml import is_leaf
 from vyos import ConfigError
 
 def retrieve_config(path_hash, base_path, config):
@@ -186,6 +187,47 @@ def T2665_set_dhcpv6pd_defaults(config_dict):
 
     return config_dict
 
+def is_member(conf, interface, intftype=None):
+    """
+    Checks if passed interface is member of other interface of specified type.
+    intftype is optional, if not passed it will search all known types
+    (currently bridge and bonding)
+
+    Returns:
+    None -> Interface is not a member
+    interface name -> Interface is a member of this interface
+    False -> interface type cannot have members
+    """
+    ret_val = None
+    intftypes = ['bonding', 'bridge']
+    if intftype not in intftypes + [None]:
+        raise ValueError((
+            f'unknown interface type "{intftype}" or it cannot '
+            f'have member interfaces'))
+
+    intftype = intftypes if intftype == None else [intftype]
+
+    # set config level to root
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    for it in intftype:
+        base = ['interfaces', it]
+        for intf in conf.list_nodes(base):
+            memberintf = base + [intf, 'member', 'interface']
+            if is_tag(memberintf):
+                if interface in conf.list_nodes(memberintf):
+                    ret_val = intf
+                    break
+            elif is_leaf(memberintf):
+                if ( conf.exists(memberintf) and
+                        interface in conf.return_values(memberintf) ):
+                    ret_val = intf
+                    break
+
+    old_level = conf.set_level(old_level)
+    return ret_val
+
 def get_interface_dict(config, base, ifname=''):
     """
     Common utility function to retrieve and mandgle the interfaces available
@@ -236,17 +278,15 @@ def get_interface_dict(config, base, ifname=''):
 
     # Check if we are a member of a bridge device
     bridge = is_member(config, ifname, 'bridge')
-    if bridge:
-        dict.update({'is_bridge_member' : bridge})
+    if bridge: dict.update({'is_bridge_member' : bridge})
 
     # Check if we are a member of a bond device
     bond = is_member(config, ifname, 'bonding')
-    if bond:
-        dict.update({'is_bond_member' : bond})
+    if bond: dict.update({'is_bond_member' : bond})
+
 
     mac = leaf_node_changed(config, ['mac'])
-    if mac:
-        dict.update({'mac_old' : mac})
+    if mac: dict.update({'mac_old' : mac})
 
     eui64 = leaf_node_changed(config, ['ipv6', 'address', 'eui64'])
     if eui64:

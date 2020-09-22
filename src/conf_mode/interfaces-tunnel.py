@@ -22,10 +22,11 @@ from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.configdict import is_member
 from vyos.ifconfig import Interface, GREIf, GRETapIf, IPIPIf, IP6GREIf, IPIP6If, IP6IP6If, SitIf, Sit6RDIf
 from vyos.ifconfig.afi import IP4, IP6
 from vyos.configdict import list_diff
-from vyos.validate import is_ipv4, is_ipv6, is_member
+from vyos.validate import is_ipv4, is_ipv6
 from vyos import ConfigError
 from vyos.dicts import FixedDict
 
@@ -170,8 +171,8 @@ class ConfigurationState(object):
         """
         >>> conf.get_values('addresses', 'address')
         will place a list of the new IP present in 'interface dummy dum1 address'
-        into the dictionnary entry "-add" (here 'addresses-add') using 
-        Config.return_values and will add the the one which were removed in into 
+        into the dictionnary entry "-add" (here 'addresses-add') using
+        Config.return_values and will add the the one which were removed in into
         the entry "-del" (here addresses-del')
         """
         add_name = f'{name}-add'
@@ -263,7 +264,7 @@ class ConfigurationState(object):
             d = d[lpath[-1]]
         # XXX: it should have provided me the content and not the key
         self._conf.set_level(l)
-        return d    
+        return d
 
     def to_api(self):
         """

@@ -26,10 +26,11 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import list_diff
+from vyos.configdict import is_member
 from vyos.ifconfig import VTunIf
 from vyos.template import render
 from vyos.util import call, chown, chmod_600, chmod_755
-from vyos.validate import is_addr_assigned, is_member, is_ipv4
+from vyos.validate import is_addr_assigned, is_ipv4
 from vyos import ConfigError
 
 from vyos import airbag

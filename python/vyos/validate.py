@@ -19,7 +19,6 @@ import netifaces
 import ipaddress
 
 from vyos.util import cmd
-from vyos import xml
 
 # Important note when you are adding new validation functions:
 #
@@ -266,46 +265,6 @@ def assert_mac(m):
     if octets[:5] == (0, 0, 94, 0, 1):
         raise ValueError(f'{m} is a VRRP MAC address')
 
-
-def is_member(conf, interface, intftype=None):
-    """
-    Checks if passed interface is member of other interface of specified type.
-    intftype is optional, if not passed it will search all known types
-    (currently bridge and bonding)
-
-    Returns:
-    None -> Interface is not a member
-    interface name -> Interface is a member of this interface
-    False -> interface type cannot have members
-    """
-    ret_val = None
-    if intftype not in ['bonding', 'bridge', None]:
-        raise ValueError((
-            f'unknown interface type "{intftype}" or it cannot '
-            f'have member interfaces'))
-
-    intftype = ['bonding', 'bridge'] if intftype == None else [intftype]
-
-    # set config level to root
-    old_level = conf.get_level()
-    conf.set_level([])
-
-    for it in intftype:
-        base = ['interfaces', it]
-        for intf in conf.list_nodes(base):
-            memberintf = base + [intf, 'member', 'interface']
-            if xml.is_tag(memberintf):
-                if interface in conf.list_nodes(memberintf):
-                    ret_val = intf
-                    break
-            elif xml.is_leaf(memberintf):
-                if ( conf.exists(memberintf) and
-                        interface in conf.return_values(memberintf) ):
-                    ret_val = intf
-                    break
-
-    old_level = conf.set_level(old_level)
-    return ret_val
 
 def has_address_configured(conf, intf):
     """
