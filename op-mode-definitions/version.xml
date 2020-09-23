@@ -18,7 +18,7 @@
              <properties>
                <help>Show system version and versions of all packages</help>
              </properties>
-             <command>sudo ${vyos_op_scripts_dir}/version.py --all</command>
+             <command>echo "Package versions:"; dpkg -l | awk '$0~/>/{exit}1'</command>
           </leafNode>
         </children>
       </node>
