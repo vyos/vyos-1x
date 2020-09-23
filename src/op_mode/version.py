@@ -33,7 +33,6 @@ import vyos.limericks
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-a", "--all", action="store_true", help="Include individual package versions")
 parser.add_argument("-f", "--funny", action="store_true", help="Add something funny to the output")
 parser.add_argument("-j", "--json", action="store_true", help="Produce JSON output")
 
@@ -117,10 +116,6 @@ if __name__ == '__main__':
     else:
         output = pystache.render(version_output_tmpl, version_data).strip()
         print(output)
-
-        if args.all:
-           print("Package versions:")
-           os.system("dpkg -l")
 
         if args.funny:
             print(vyos.limericks.get_random())
