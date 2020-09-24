@@ -42,7 +42,7 @@ Depends:
   ntpdate,
   openssh-server,
   pciutils,
-  pdns-recursor,
+  pdns-recursor (>= 4.3.4),
   procps,
   python3,
   python3-bottle,
