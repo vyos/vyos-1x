@@ -23,8 +23,10 @@ class WiFiIf(Interface):
 
     default = {
         'type': 'wifi',
-        'phy': 'phy0'
+        'phy': '',
+        'wds': 'off',
     }
+
     definition = {
         **Interface.definition,
         **{
@@ -33,12 +35,19 @@ class WiFiIf(Interface):
             'bridgeable': True,
         }
     }
+
     options = Interface.options + \
         ['phy', 'op_mode']
 
+    _command_set = {**Interface._command_set, **{
+        '4addr': {
+            'shellcmd': 'iw dev {ifname} set 4addr {value}',
+        },
+    }}
+
     def _create(self):
         # all interfaces will be added in monitor mode
-        cmd = 'iw phy {phy} interface add {ifname} type monitor' \
+        cmd = 'iw phy {phy} interface add {ifname} type monitor 4addr {wds}' \
             .format(**self.config)
         self._cmd(cmd)
 
@@ -50,27 +59,19 @@ class WiFiIf(Interface):
             .format(**self.config)
         self._cmd(cmd)
 
+    def set_4aadr_mode(self, state):
+        return self.set_interface('4addr', state)
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
-        # We can not call add_to_bridge() until wpa_supplicant is running, thus
-        # we will remove the key from the config dict and react to this specal
-        # case in thie derived class.
-        # re-add ourselves to any bridge we might have fallen out of
-        bridge_member = ''
-        if 'is_bridge_member' in config:
-            bridge_member = config['is_bridge_member']
-            del config['is_bridge_member']
+        self.set_4aadr_mode('on' if 'wds' in config else 'off')
 
         # call base class first
         super().update(config)
-
-        # re-add ourselves to any bridge we might have fallen out of
-        if bridge_member:
-            self.add_to_bridge(bridge_member)
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
