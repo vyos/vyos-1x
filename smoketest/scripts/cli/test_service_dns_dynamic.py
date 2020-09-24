@@ -22,6 +22,7 @@ from getpass import getuser
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
+from vyos.util import process_named_running
 
 PROCESS_NAME = 'ddclient'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
