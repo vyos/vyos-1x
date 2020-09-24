@@ -18,8 +18,6 @@ import re
 import os
 import unittest
 
-from psutil import process_iter
-
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
 from vyos.util import process_named_running

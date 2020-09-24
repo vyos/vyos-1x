@@ -14,13 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
 import unittest
 
-from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
-from vyos.util import read_file
+from vyos.configsession import ConfigSession
+from vyos.util import process_named_running
 
 OCSERV_CONF = '/run/ocserv/ocserv.conf'
 base_path = ['vpn', 'openconnect']
@@ -52,7 +50,7 @@ class TestVpnOpenconnect(unittest.TestCase):
         self.session.commit()
 
         # Check for running process
-        self.assertTrue("ocserv-main" in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running('ocserv-main'))
 
 if __name__ == '__main__':
     unittest.main()

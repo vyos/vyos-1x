@@ -18,9 +18,9 @@ import re
 import os
 import unittest
 
-from psutil import process_iter
 from vyos.configsession import ConfigSession
 from vyos.util import read_file
+from vyos.util import process_named_running
 
 RADVD_CONF = '/run/radvd/radvd.conf'
 
@@ -90,10 +90,8 @@ class TestServiceRADVD(unittest.TestCase):
         tmp = get_config_value('AdvOnLink')
         self.assertEqual(tmp, 'off')
 
-
-
         # Check for running process
-        self.assertTrue('radvd' in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running('radvd'))
 
 if __name__ == '__main__':
     unittest.main()

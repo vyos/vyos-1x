@@ -18,11 +18,14 @@ import re
 import os
 import unittest
 
-from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
-from vyos.template import vyos_address_from_cidr, vyos_netmask_from_cidr
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
+from vyos.template import vyos_address_from_cidr
+from vyos.template import vyos_netmask_from_cidr
 from vyos.util import read_file
+from vyos.util import process_named_running
 
+PROCESS_NAME = 'ntpd'
 NTP_CONF = '/etc/ntp.conf'
 base_path = ['system', 'ntp']
 
@@ -63,7 +66,7 @@ class TestSystemNTP(unittest.TestCase):
             self.assertTrue(test in tmp)
 
         # Check for running process
-        self.assertTrue("ntpd" in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ntp_clients(self):
         """ Test the allowed-networks statement """
@@ -102,7 +105,7 @@ class TestSystemNTP(unittest.TestCase):
         self.assertEqual(tmp, test)
 
         # Check for running process
-        self.assertTrue("ntpd" in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main()

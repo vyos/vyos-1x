@@ -17,8 +17,8 @@
 import os
 import unittest
 
-from psutil import process_iter
 from vyos.configsession import ConfigSession
+from vyos.util import process_named_running
 
 base_path = ['service', 'mdns', 'repeater']
 intf_base = ['interfaces', 'dummy']
@@ -45,7 +45,7 @@ class TestServiceMDNSrepeater(unittest.TestCase):
         self.session.commit()
 
         # Check for running process
-        self.assertTrue("mdns-repeater" in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running('mdns-repeater'))
 
 if __name__ == '__main__':
     unittest.main()

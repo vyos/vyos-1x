@@ -18,10 +18,12 @@ import re
 import os
 import unittest
 
-from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
+from vyos.util import process_named_running
 
+PROCESS_NAME = 'sshd'
 SSHD_CONF = '/run/ssh/sshd_config'
 base_path = ['service', 'ssh']
 
@@ -29,9 +31,6 @@ def get_config_value(key):
     tmp = read_file(SSHD_CONF)
     tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
     return tmp
-
-def is_service_running():
-    return 'sshd' in (p.name() for p in process_iter())
 
 class TestServiceSSH(unittest.TestCase):
     def setUp(self):
@@ -62,7 +61,7 @@ class TestServiceSSH(unittest.TestCase):
         self.assertEqual('22', port)
 
         # Check for running process
-        self.assertTrue(is_service_running())
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ssh_single(self):
         """ Check if SSH service can be configured and runs """
@@ -101,7 +100,7 @@ class TestServiceSSH(unittest.TestCase):
         self.assertTrue("100" in keepalive)
 
         # Check for running process
-        self.assertTrue(is_service_running())
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ssh_multi(self):
         """ Check if SSH service can be configured and runs with multiple
@@ -128,7 +127,7 @@ class TestServiceSSH(unittest.TestCase):
             self.assertIn(address, tmp)
 
         # Check for running process
-        self.assertTrue(is_service_running())
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main()

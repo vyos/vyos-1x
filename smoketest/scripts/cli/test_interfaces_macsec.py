@@ -17,13 +17,13 @@
 import re
 import unittest
 
-from psutil import process_iter
 from base_interfaces_test import BasicInterfaceTest
 from netifaces import interfaces
 
-from vyos.ifconfig import Section
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import Section
 from vyos.util import read_file
+from vyos.util import process_named_running
 
 def get_config_value(interface, key):
     tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
@@ -103,7 +103,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertEqual(tmp, '1460')
 
             # Check for running process
-            self.assertTrue("wpa_supplicant" in (p.name() for p in process_iter()))
+            self.assertTrue(process_named_running('wpa_supplicant'))
 
     def test_mandatory_toptions(self):
         interface = 'macsec1'
