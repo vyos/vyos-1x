@@ -113,6 +113,11 @@ def verify_dhcpv6(config):
         # assigned IPv6 subnet from a delegated prefix
         for pd in vyos_dict_search('dhcpv6_options.pd', config):
             sla_ids = []
+
+            if not vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+                raise ConfigError('DHCPv6-PD requires an interface where to assign '
+                                  'the delegated prefix!')
+
             for interface in vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
                 sla_id = vyos_dict_search(
                     f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id', config)
