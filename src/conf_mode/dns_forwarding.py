@@ -148,10 +148,10 @@ def generate(dns):
         return None
 
     render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.tmpl',
-            dns, user=pdns_rec_user, group=pdns_rec_group)
+            dns, trim_blocks=True, user=pdns_rec_user, group=pdns_rec_group)
 
     render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.tmpl',
-            dns, user=pdns_rec_user, group=pdns_rec_group)
+            dns, trim_blocks=True, user=pdns_rec_user, group=pdns_rec_group)
 
     # if vyos-hostsd didn't create its files yet, create them (empty)
     for f in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:
