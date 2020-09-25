@@ -20,11 +20,12 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configverify import verify_interface_exists
-from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_address
-from vyos.configverify import verify_vrf
+from vyos.configverify import verify_dhcpv6
+from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_mtu
 from vyos.configverify import verify_vlan_config
+from vyos.configverify import verify_vrf
 from vyos.ifconfig import EthernetIf
 from vyos import ConfigError
 from vyos import airbag
@@ -57,6 +58,7 @@ def verify(ethernet):
         if ethernet.get('speed', None) != 'auto':
             raise ConfigError('If duplex is hardcoded, speed must be hardcoded, too')
 
+    verify_mtu(ethernet)
     verify_dhcpv6(ethernet)
     verify_address(ethernet)
     verify_vrf(ethernet)
