@@ -1,47 +1,71 @@
 #!/usr/bin/env python3
 
-# converts 'set system syslog host <address>:<port>'
-# to 'set system syslog host <address> port <port>'
+# Unclutter RADIUS configuration
+#
+# Move radius-server top level tag nodes to a regular node which allows us
+# to specify additional general features for the RADIUS client.
 
 import sys
-import re
-
 from vyos.configtree import ConfigTree
 
 if (len(sys.argv) < 1):
-  print("Must specify file name!")
-  sys.exit(1)
+    print("Must specify file name!")
+    sys.exit(1)
 
 file_name = sys.argv[1]
 
 with open(file_name, 'r') as f:
-  config_file = f.read()
+    config_file = f.read()
 
 config = ConfigTree(config_file)
-cbase = ['system', 'syslog', 'host']
-
-if not config.exists(cbase):
+cfg_base = ['system', 'login']
+if not (config.exists(cfg_base + ['radius-server']) or config.exists(cfg_base + ['radius-source-address'])):
+    # Nothing to do
     sys.exit(0)
+else:
+    #
+    # Migrate "system login radius-source-address" to "system login radius"
+    #
+    if config.exists(cfg_base + ['radius-source-address']):
+        address = config.return_value(cfg_base + ['radius-source-address'])
+        # delete old configuration node
+        config.delete(cfg_base + ['radius-source-address'])
+        # write new configuration node
+        config.set(cfg_base + ['radius', 'source-address'], value=address)
 
-for host in config.list_nodes(cbase):
-    if re.search(':[0-9]{1,5}$',host):
-        h = re.search('^[a-zA-Z\-0-9\.]+', host).group(0)
-        p = re.sub(':', '', re.search(':[0-9]+$', host).group(0))
-        config.set(cbase + [h])
-        config.set(cbase + [h, 'port'], value=p)
-        for fac in config.list_nodes(cbase + [host, 'facility']):
-            config.set(cbase + [h, 'facility', fac])
-            config.set_tag(cbase + [h, 'facility'])
-            if config.exists(cbase + [host, 'facility', fac, 'protocol']):
-                proto = config.return_value(cbase + [host, 'facility', fac, 'protocol'])
-                config.set(cbase + [h, 'facility', fac, 'protocol'], value=proto)
-            if config.exists(cbase + [host, 'facility', fac, 'level']):
-                lvl = config.return_value(cbase + [host, 'facility', fac, 'level'])
-                config.set(cbase + [h, 'facility', fac, 'level'], value=lvl)
-        config.delete(cbase + [host])
+    #
+    # Migrate "system login radius-server" tag node to new
+    # "system login radius server" tag node and also rename the "secret" node to "key"
+    #
+    for server in config.list_nodes(cfg_base + ['radius-server']):
+        base_server = cfg_base + ['radius-server', server]
+        # "key" node is mandatory
+        key = config.return_value(base_server + ['secret'])
+        config.set(cfg_base + ['radius', 'server', server, 'key'], value=key)
 
-try:
-    open(file_name,'w').write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+        # "port" is optional
+        if config.exists(base_server + ['port']):
+            port = config.return_value(base_server + ['port'])
+            config.set(cfg_base + ['radius', 'server', server, 'port'], value=port)
+
+        # "timeout is optional"
+        if config.exists(base_server + ['timeout']):
+            timeout = config.return_value(base_server + ['timeout'])
+            config.set(cfg_base + ['radius', 'server', server, 'timeout'], value=timeout)
+
+        # format as tag node
+        config.set_tag(cfg_base + ['radius', 'server'])
+
+        # delete old configuration node
+        config.delete(base_server)
+
+    # delete top level tag node
+    if config.exists(cfg_base + ['radius-server']):
+        config.delete(cfg_base + ['radius-server'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

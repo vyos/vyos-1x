@@ -1,70 +1,47 @@
 #!/usr/bin/env python3
 
-# Fixup non existent time-zones. Some systems have time-zone set to: Los*
-# (Los_Angeles), Den* (Denver), New* (New_York) ... but those are no real IANA
-# assigned time zones. In the past they have been silently remapped.
-#
-# Time to clean it up!
-#
-# Migrate all configured timezones to real IANA assigned timezones!
+# converts 'set system syslog host <address>:<port>'
+# to 'set system syslog host <address> port <port>'
 
-import re
 import sys
+import re
 
 from vyos.configtree import ConfigTree
-from vyos.util import cmd
-
 
 if (len(sys.argv) < 1):
-    print("Must specify file name!")
-    sys.exit(1)
+  print("Must specify file name!")
+  sys.exit(1)
 
 file_name = sys.argv[1]
 
 with open(file_name, 'r') as f:
-    config_file = f.read()
+  config_file = f.read()
 
 config = ConfigTree(config_file)
-tz_base = ['system', 'time-zone']
-if not config.exists(tz_base):
-    # Nothing to do
+cbase = ['system', 'syslog', 'host']
+
+if not config.exists(cbase):
     sys.exit(0)
-else:
-    tz = config.return_value(tz_base)
 
-    # retrieve all valid timezones
-    try:
-        tz_datas = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
-    except OSError:
-        tz_datas = ''
-    tz_data = tz_datas.split('\n')
+for host in config.list_nodes(cbase):
+    if re.search(':[0-9]{1,5}$',host):
+        h = re.search('^[a-zA-Z\-0-9\.]+', host).group(0)
+        p = re.sub(':', '', re.search(':[0-9]+$', host).group(0))
+        config.set(cbase + [h])
+        config.set(cbase + [h, 'port'], value=p)
+        for fac in config.list_nodes(cbase + [host, 'facility']):
+            config.set(cbase + [h, 'facility', fac])
+            config.set_tag(cbase + [h, 'facility'])
+            if config.exists(cbase + [host, 'facility', fac, 'protocol']):
+                proto = config.return_value(cbase + [host, 'facility', fac, 'protocol'])
+                config.set(cbase + [h, 'facility', fac, 'protocol'], value=proto)
+            if config.exists(cbase + [host, 'facility', fac, 'level']):
+                lvl = config.return_value(cbase + [host, 'facility', fac, 'level'])
+                config.set(cbase + [h, 'facility', fac, 'level'], value=lvl)
+        config.delete(cbase + [host])
 
-    if re.match(r'[Ll][Oo][Ss].+', tz):
-        tz = 'America/Los_Angeles'
-    elif re.match(r'[Dd][Ee][Nn].+', tz):
-        tz = 'America/Denver'
-    elif re.match(r'[Hh][Oo][Nn][Oo].+', tz):
-        tz = 'Pacific/Honolulu'
-    elif re.match(r'[Nn][Ee][Ww].+', tz):
-        tz = 'America/New_York'
-    elif re.match(r'[Cc][Hh][Ii][Cc]*.+', tz):
-        tz = 'America/Chicago'
-    elif re.match(r'[Aa][Nn][Cc].+', tz):
-        tz = 'America/Anchorage'
-    elif re.match(r'[Pp][Hh][Oo].+', tz):
-        tz = 'America/Phoenix'
-    elif re.match(r'GMT(.+)?', tz):
-        tz = 'Etc/' + tz
-    elif tz not in tz_data:
-        # assign default UTC timezone
-        tz = 'UTC'
-
-    # replace timezone data is required
-    config.set(tz_base, value=tz)
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)
+try:
+    open(file_name,'w').write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)

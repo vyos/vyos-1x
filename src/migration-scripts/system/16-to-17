@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# remove "system console netconsole"
-# remove "system console device <device> modem"
+# * remove "system login user <user> group" node, Why should be add a user to a
+#   3rd party group when the system is fully managed by CLI?
+# * remove "system login user <user> level" node
+#   This is the only privilege level left and also the default, what is the
+#   sense in keeping this orphaned node?
 
 import os
 import sys
@@ -32,41 +35,17 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
-base = ['system', 'console']
+base = ['system', 'login', 'user']
 if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 else:
-    # remove "system console netconsole" (T2561)
-    if config.exists(base + ['netconsole']):
-        config.delete(base + ['netconsole'])
+    for user in config.list_nodes(base):
+        if config.exists(base + [user, 'group']):
+            config.delete(base + [user, 'group'])
 
-    if config.exists(base + ['device']):
-        for device in config.list_nodes(base + ['device']):
-            dev_path = base + ['device', device]
-            # remove "system console device <device> modem" (T2570)
-            if config.exists(dev_path + ['modem']):
-                config.delete(dev_path + ['modem'])
-
-            # Only continue on USB based serial consoles
-            if not 'ttyUSB' in device:
-                continue
-
-            # A serial console has been configured but it does no longer
-            # exist on the system - cleanup
-            if not os.path.exists(f'/dev/{device}'):
-                config.delete(dev_path)
-                continue
-
-            # migrate from ttyUSB device to new device in /dev/serial/by-bus
-            for root, dirs, files in os.walk('/dev/serial/by-bus'):
-                for usb_device in files:
-                    device_file = os.path.realpath(os.path.join(root, usb_device))
-                    # migrate to new USB device names (T2529)
-                    if os.path.basename(device_file) == device:
-                        config.copy(dev_path, base + ['device', usb_device])
-                        # Delete old USB node from config
-                        config.delete(dev_path)
+        if config.exists(base + [user, 'level']):
+            config.delete(base + [user, 'level'])
 
     try:
         with open(file_name, 'w') as f:
