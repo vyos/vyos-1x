@@ -19,10 +19,10 @@
 +.={{ n.dot_zone_ns }}
 {% endif %}
 
-{% if forward_zones %}
+{% if forward_zones is defined %}
 # zones added via 'service dns forwarding domain'
 {%   for zone, zonedata in forward_zones.items() %}
-{%     if zonedata['recursion-desired'] %}+{% endif %}{{ zone }}={{ zonedata['nslist']|join(', ') }}
+{{ "+" if zonedata['recursion_desired'] is defined }}{{ zone }}={{ zonedata['server']|join(', ') }}
 {%   endfor %}
 {% endif %}
 

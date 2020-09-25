@@ -99,9 +99,9 @@ try:
             raise ValueError("--nameservers is required for this operation")
         client.add_forward_zones(
                 { args.add_forward_zone: {
-                    'nslist': args.nameservers,
-                    'addNTA': args.addnta,
-                    'recursion-desired': args.recursion_desired
+                    'server': args.nameservers,
+                    'addnta': args.addnta,
+                    'recursion_desired': args.recursion_desired
                     }
                 })
     elif args.delete_forward_zones:

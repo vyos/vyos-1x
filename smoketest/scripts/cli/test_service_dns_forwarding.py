@@ -24,6 +24,7 @@ from vyos.util import process_named_running
 
 CONFIG_FILE = '/run/powerdns/recursor.conf'
 FORWARD_FILE = '/run/powerdns/recursor.forward-zones.conf'
+HOSTSD_FILE = '/run/powerdns/recursor.vyos-hostsd.conf.lua'
 PROCESS_NAME= 'pdns-r/worker'
 
 base_path = ['service', 'dns', 'forwarding']
@@ -69,6 +70,9 @@ class TestServicePowerDNS(unittest.TestCase):
         # configure DNSSEC
         self.session.set(base_path + ['dnssec', 'validate'])
 
+        # Do not use local /etc/hosts file in name resolution
+        self.session.set(base_path + ['ignore-hosts-file'])
+
         # commit changes
         self.session.commit()
 
@@ -87,6 +91,10 @@ class TestServicePowerDNS(unittest.TestCase):
         # Maximum amount of time negative entries are cached
         tmp = get_config_value('max-negative-ttl')
         self.assertEqual(tmp, negative_ttl)
+
+        # Do not use local /etc/hosts file in name resolution
+        tmp = get_config_value('export-etc-hosts')
+        self.assertEqual(tmp, 'no')
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -130,6 +138,11 @@ class TestServicePowerDNS(unittest.TestCase):
         tmp = get_config_value(r'\+.', file=FORWARD_FILE)
         self.assertEqual(tmp, ', '.join(nameservers))
 
+        # Do not use local /etc/hosts file in name resolution
+        # default: yes
+        tmp = get_config_value('export-etc-hosts')
+        self.assertEqual(tmp, 'yes')
+
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
@@ -141,21 +154,39 @@ class TestServicePowerDNS(unittest.TestCase):
         for address in listen_adress:
             self.session.set(base_path + ['listen-address', address])
 
-        domains = ['vyos.io', 'vyos.net']
+        domains = ['vyos.io', 'vyos.net', 'vyos.com']
         nameservers = ['192.0.2.1', '192.0.2.2']
         for domain in domains:
             for nameserver in nameservers:
                 self.session.set(base_path + ['domain', domain, 'server', nameserver])
 
+            # Test 'recursion-desired' flag for only one domain
+            if domain == domains[0]:
+                self.session.set(base_path + ['domain', domain, 'recursion-desired'])
+
+            # Test 'negative trust anchor' flag for the second domain only
+            if domain == domains[1]:
+                self.session.set(base_path + ['domain', domain, 'addnta'])
+
         # commit changes
         self.session.commit()
 
+        # Test configured name-servers
+        hosts_conf = read_file(HOSTSD_FILE)
         for domain in domains:
-            tmp = get_config_value(domain, file=FORWARD_FILE)
+            # Test 'recursion-desired' flag for the first domain only
+            if domain == domains[0]: key =f'\+{domain}'
+            else: key =f'{domain}'
+            tmp = get_config_value(key, file=FORWARD_FILE)
             self.assertEqual(tmp, ', '.join(nameservers))
+
+            # Test 'negative trust anchor' flag for the second domain only
+            if domain == domains[1]:
+                self.assertIn(f'addNTA("{domain}", "static")', hosts_conf)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main()
+
