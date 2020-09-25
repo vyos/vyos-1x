@@ -40,8 +40,8 @@ for host in config.list_nodes(cbase):
                 config.set(cbase + [h, 'facility', fac, 'level'], value=lvl)
         config.delete(cbase + [host])
 
-    try:
-        open(file_name,'w').write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)
+try:
+    open(file_name,'w').write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)
