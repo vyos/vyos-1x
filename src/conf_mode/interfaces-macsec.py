@@ -92,8 +92,8 @@ def verify(macsec):
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
         # and 802.1q) - we need to check the underlaying MTU if our configured
         # MTU is at least 40 bytes less then the MTU of our physical interface.
-        underlay_mtu = int(Interface(macsec['source_interface']).get_mtu())
-        if underlay_mtu < (int(macsec['mtu']) + 40):
+        lower_mtu = Interface(macsec['source_interface']).get_mtu()
+        if lower_mtu < (int(macsec['mtu']) + 40):
             raise ConfigError('MACsec overhead does not fit into underlaying device MTU,\n' \
                               f'{underlay_mtu} bytes is too small!')
 

@@ -72,8 +72,8 @@ def verify(vxlan):
     if 'source_interface' in vxlan:
         # VXLAN adds a 50 byte overhead - we need to check the underlaying MTU
         # if our configured MTU is at least 50 bytes less
-        underlay_mtu = int(Interface(vxlan['source_interface']).get_mtu())
-        if underlay_mtu < (int(vxlan['mtu']) + 50):
+        lower_mtu = Interface(vxlan['source_interface']).get_mtu()
+        if lower_mtu < (int(vxlan['mtu']) + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               f'MTU is to small ({underlay_mtu} bytes)')
 

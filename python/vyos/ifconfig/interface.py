@@ -321,7 +321,7 @@ class Interface(Control):
         >>> Interface('eth0').get_mtu()
         '1500'
         """
-        return self.get_interface('mtu')
+        return int(self.get_interface('mtu'))
 
     def set_mtu(self, mtu):
         """
