@@ -299,7 +299,7 @@ class Interface(Control):
         >>> Interface('eth0').get_min_mtu()
         '60'
         """
-        return self.get_interface('min_mtu')
+        return int(self.get_interface('min_mtu'))
 
     def get_max_mtu(self):
         """
@@ -310,7 +310,7 @@ class Interface(Control):
         >>> Interface('eth0').get_max_mtu()
         '9000'
         """
-        return self.get_interface('max_mtu')
+        return int(self.get_interface('max_mtu'))
 
     def get_mtu(self):
         """

@@ -23,6 +23,27 @@
 
 from vyos import ConfigError
 
+def verify_mtu(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation if the specified MTU can be used by the underlaying
+    hardware.
+    """
+    from vyos.ifconfig import Interface
+    if 'mtu' in config:
+        mtu = int(config['mtu'])
+
+        tmp = Interface(config['ifname'])
+        min_mtu = tmp.get_min_mtu()
+        max_mtu = tmp.get_max_mtu()
+
+        if mtu < min_mtu:
+            raise ConfigError(f'Interface MTU too low, ' \
+                              f'minimum supported MTU is {min_mtu}!')
+        if mtu > max_mtu:
+            raise ConfigError(f'Interface MTU too high, ' \
+                              f'maximum supported MTU is {max_mtu}!')
+
 def verify_vrf(config):
     """
     Common helper function used by interface implementations to perform
