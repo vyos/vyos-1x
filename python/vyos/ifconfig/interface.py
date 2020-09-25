@@ -78,6 +78,14 @@ class Interface(Control):
             'shellcmd': 'ip -json link show dev {ifname}',
             'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
         },
+        'min_mtu': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].min_mtu | [0]', json.loads(j)),
+        },
+        'max_mtu': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].max_mtu | [0]', json.loads(j)),
+        },
     }
 
     _command_set = {
@@ -281,6 +289,28 @@ class Interface(Control):
         # to be called and instead should raise an Exception:
         cmd = 'ip link del dev {ifname}'.format(**self.config)
         return self._cmd(cmd)
+
+    def get_min_mtu(self):
+        """
+        Get hardware minimum supported MTU
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_min_mtu()
+        '60'
+        """
+        return self.get_interface('min_mtu')
+
+    def get_max_mtu(self):
+        """
+        Get hardware maximum supported MTU
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_max_mtu()
+        '9000'
+        """
+        return self.get_interface('max_mtu')
 
     def get_mtu(self):
         """
