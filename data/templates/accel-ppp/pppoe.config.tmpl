@@ -132,6 +132,11 @@ ccp=1
 {% else %}
 ccp=0
 {% endif %}
+{% if ppp_preallocate_vif %}
+unit-preallocate=1
+{% else %}
+unit-preallocate=0
+{% endif %}
 {% if ppp_min_mtu %}
 min-mtu={{ ppp_min_mtu }}
 {% else %}
