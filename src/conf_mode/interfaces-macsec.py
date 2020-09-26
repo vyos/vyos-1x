@@ -97,7 +97,7 @@ def verify(macsec):
         lower_mtu = Interface(macsec['source_interface']).get_mtu()
         if lower_mtu < (int(macsec['mtu']) + 40):
             raise ConfigError('MACsec overhead does not fit into underlaying device MTU,\n' \
-                              f'{underlay_mtu} bytes is too small!')
+                              f'{lower_mtu} bytes is too small!')
 
     return None
 

@@ -76,7 +76,7 @@ def verify(vxlan):
         lower_mtu = Interface(vxlan['source_interface']).get_mtu()
         if lower_mtu < (int(vxlan['mtu']) + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
-                              f'MTU is to small ({underlay_mtu} bytes)')
+                              f'MTU is to small ({lower_mtu} bytes)')
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
