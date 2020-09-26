@@ -86,6 +86,10 @@ verbose=1
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
 {% endfor -%}
 
+{% if radius_acct_inter_jitter %}
+acct-interim-jitter={{ radius_acct_inter_jitter }}
+{% endif %}
+
 acct-timeout={{ radius_acct_tmo }}
 timeout={{ radius_timeout }}
 max-try={{ radius_max_try }}

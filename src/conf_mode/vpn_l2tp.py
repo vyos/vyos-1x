@@ -56,6 +56,7 @@ default_config_data = {
     'ppp_echo_interval' : '30',
     'ppp_echo_timeout': '0',
     'radius_server': [],
+    'radius_acct_inter_jitter': '',
     'radius_acct_tmo': '3',
     'radius_max_try': '3',
     'radius_timeout': '3',
@@ -178,6 +179,9 @@ def get_config(config=None):
         #
         # advanced radius-setting
         conf.set_level(base_path + ['authentication', 'radius'])
+
+        if conf.exists(['acct-interim-jitter']):
+            l2tp['radius_acct_inter_jitter'] = conf.return_value(['acct-interim-jitter'])
 
         if conf.exists(['acct-timeout']):
             l2tp['radius_acct_tmo'] = conf.return_value(['acct-timeout'])

@@ -72,6 +72,7 @@ default_config_data = {
     'ppp_preallocate_vif': False,
 
     'radius_server': [],
+    'radius_acct_inter_jitter': '',
     'radius_acct_tmo': '3',
     'radius_max_try': '3',
     'radius_timeout': '3',
@@ -270,6 +271,9 @@ def get_config(config=None):
         #
         # advanced radius-setting
         conf.set_level(base_path + ['authentication', 'radius'])
+
+        if conf.exists(['acct-interim-jitter']):
+            pppoe['radius_acct_inter_jitter'] = conf.return_value(['acct-interim-jitter'])
 
         if conf.exists(['acct-timeout']):
             pppoe['radius_acct_tmo'] = conf.return_value(['acct-timeout'])
