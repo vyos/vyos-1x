@@ -23,6 +23,57 @@
 
 from vyos import ConfigError
 
+def verify_mtu(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation if the specified MTU can be used by the underlaying
+    hardware.
+    """
+    from vyos.ifconfig import Interface
+    if 'mtu' in config:
+        mtu = int(config['mtu'])
+
+        tmp = Interface(config['ifname'])
+        min_mtu = tmp.get_min_mtu()
+        max_mtu = tmp.get_max_mtu()
+
+        if mtu < min_mtu:
+            raise ConfigError(f'Interface MTU too low, ' \
+                              f'minimum supported MTU is {min_mtu}!')
+        if mtu > max_mtu:
+            raise ConfigError(f'Interface MTU too high, ' \
+                              f'maximum supported MTU is {max_mtu}!')
+
+def verify_mtu_ipv6(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation if the specified MTU can be used when IPv6 is
+    configured on the interface. IPv6 requires a 1280 bytes MTU.
+    """
+    from vyos.validate import is_ipv6
+    from vyos.util import vyos_dict_search
+    # IPv6 minimum required link mtu
+    min_mtu = 1280
+
+    if int(config['mtu']) < min_mtu:
+        interface = config['ifname']
+        error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
+                    f'thus the minimum MTU requirement is {min_mtu}!'
+
+        if not vyos_dict_search('ipv6.address.no_default_link_local', config):
+            raise ConfigError('link-local ' + error_msg)
+
+        for address in (vyos_dict_search('address', config) or []):
+            if address in ['dhcpv6'] or is_ipv6(address):
+                raise ConfigError(error_msg)
+
+        if vyos_dict_search('ipv6.address.autoconf', config):
+            raise ConfigError(error_msg)
+
+        if vyos_dict_search('ipv6.address.eui64', config):
+            raise ConfigError(error_msg)
+
+
 def verify_vrf(config):
     """
     Common helper function used by interface implementations to perform
@@ -82,9 +133,20 @@ def verify_source_interface(config):
     if 'source_interface' not in config:
         raise ConfigError('Physical source-interface required for '
                           'interface "{ifname}"'.format(**config))
+
     if config['source_interface'] not in interfaces():
-        raise ConfigError('Source interface {source_interface} does not '
-                          'exist'.format(**config))
+        raise ConfigError('Specified source-interface {source_interface} does '
+                          'not exist'.format(**config))
+
+    if 'source_interface_is_bridge_member' in config:
+        raise ConfigError('Invalid source-interface {source_interface}. Interface '
+                          'is already a member of bridge '
+                          '{source_interface_is_bridge_member}'.format(**config))
+
+    if 'source_interface_is_bond_member' in config:
+        raise ConfigError('Invalid source-interface {source_interface}. Interface '
+                          'is already a member of bond '
+                          '{source_interface_is_bond_member}'.format(**config))
 
 def verify_dhcpv6(config):
     """
@@ -102,6 +164,11 @@ def verify_dhcpv6(config):
         # assigned IPv6 subnet from a delegated prefix
         for pd in vyos_dict_search('dhcpv6_options.pd', config):
             sla_ids = []
+
+            if not vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+                raise ConfigError('DHCPv6-PD requires an interface where to assign '
+                                  'the delegated prefix!')
+
             for interface in vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
                 sla_id = vyos_dict_search(
                     f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id', config)

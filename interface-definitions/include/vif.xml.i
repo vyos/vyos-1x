@@ -50,6 +50,7 @@
         #include <include/interface-enable-arp-announce.xml.i>
         #include <include/interface-enable-arp-ignore.xml.i>
         #include <include/interface-enable-proxy-arp.xml.i>
+        #include <include/interface-proxy-arp-pvlan.xml.i>
       </children>
     </node>
     <node name="ipv6">

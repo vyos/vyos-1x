@@ -107,16 +107,17 @@
 #
 ### forward_zones
 ## Additional zones added to pdns-recursor forward-zones-file.
-## If recursion-desired is true, '+' will be prepended to the zone line.
-## If addNTA is true, a NTA will be added via lua-config-file.
+## If recursion_desired is true, '+' will be prepended to the zone line.
+## If addnta is true, a NTA (Negative Trust Anchor) will be added via
+## lua-config-file.
 #
 # { 'type': 'forward_zones',
 #   'op': 'add',
 #   'data': {
 #       '<str zone>': {
-#           'nslist': ['<str nameserver>', ...],
-#           'addNTA': <bool>,
-#           'recursion-desired': <bool>
+#           'server': ['<str nameserver>', ...],
+#           'addnta': <bool>,
+#           'recursion_desired': <bool>
 #         }
 #       ...
 #     }
@@ -305,12 +306,12 @@ tag_regex_schema = op_type_schema.extend({
 forward_zone_add_schema = op_type_schema.extend({
     'data': {
         str: {
-            'nslist': [str],
-            'addNTA': bool,
-            'recursion-desired': bool
+            'server': [str],
+            'addnta': Any({}, None),
+            'recursion_desired': Any({}, None),
             }
         }
-    }, required=True)
+    }, required=False)
 
 hosts_add_schema = op_type_schema.extend({
     'data': {
@@ -586,7 +587,7 @@ if __name__ == '__main__':
 
     context = zmq.Context()
     socket = context.socket(zmq.REP)
-    
+
     # Set the right permissions on the socket, then change it back
     o_mask = os.umask(0o007)
     socket.bind(SOCKET_PATH)

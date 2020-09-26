@@ -18,9 +18,10 @@ import os
 import unittest
 
 from configparser import ConfigParser
-from psutil import process_iter
 from vyos.configsession import ConfigSession
+from vyos.util import process_named_running
 
+config_file = '/run/LCDd/LCDd.conf'
 base_path = ['system', 'lcd']
 
 class TestSystemLCD(unittest.TestCase):
@@ -42,13 +43,13 @@ class TestSystemLCD(unittest.TestCase):
 
         # load up ini-styled LCDd.conf
         conf = ConfigParser()
-        conf.read('/run/LCDd/LCDd.conf')
+        conf.read(config_file)
 
         self.assertEqual(conf['CFontzPacket']['Model'], '533')
         self.assertEqual(conf['CFontzPacket']['Device'], '/dev/ttyS1')
 
-        # both processes running
-        self.assertTrue('LCDd' in (p.name() for p in process_iter()))
+        # Check for running process
+        self.assertTrue(process_named_running('LCDd'))
 
 if __name__ == '__main__':
     unittest.main()

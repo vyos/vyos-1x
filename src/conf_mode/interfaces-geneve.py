@@ -17,12 +17,12 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_bridge_delete
 from vyos.ifconfig import GeneveIf
 from vyos import ConfigError
@@ -48,6 +48,7 @@ def verify(geneve):
         verify_bridge_delete(geneve)
         return None
 
+    verify_mtu_ipv6(geneve)
     verify_address(geneve)
 
     if 'remote' not in geneve:
@@ -62,7 +63,6 @@ def verify(geneve):
 def generate(geneve):
     return None
 
-
 def apply(geneve):
     # Check if GENEVE interface already exists
     if geneve['ifname'] in interfaces():
@@ -72,10 +72,11 @@ def apply(geneve):
         g.remove()
 
     if 'deleted' not in geneve:
-        # GENEVE interface needs to be created on-block
-        # instead of passing a ton of arguments, I just use a dict
-        # that is managed by vyos.ifconfig
-        conf = deepcopy(GeneveIf.get_config())
+        # This is a special type of interface which needs additional parameters
+        # when created using iproute2. Instead of passing a ton of arguments,
+        # use a dictionary provided by the interface class which holds all the
+        # options necessary.
+        conf = GeneveIf.get_config()
 
         # Assign GENEVE instance configuration parameters to config dict
         conf['vni'] = geneve['vni']

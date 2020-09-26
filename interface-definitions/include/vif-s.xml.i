@@ -13,25 +13,26 @@
     #include <include/dhcpv6-options.xml.i>
     #include <include/interface-disable-link-detect.xml.i>
     #include <include/interface-disable.xml.i>
-    <leafNode name="ethertype">
+    <leafNode name="protocol">
       <properties>
-        <help>Set Ethertype</help>
+        <help>Protocol used for service VLAN (default: 802.1ad)</help>
         <completionHelp>
-          <list>0x88A8 0x8100</list>
+          <list>802.1ad 802.1q</list>
         </completionHelp>
         <valueHelp>
-          <format>0x88A8</format>
-          <description>802.1ad</description>
+          <format>802.1ad</format>
+          <description>Provider Bridging (IEEE 802.1ad, Q-inQ), ethertype 0x88a8</description>
         </valueHelp>
         <valueHelp>
-          <format>0x8100</format>
-          <description>802.1q</description>
+          <format>802.1q</format>
+          <description>VLAN-tagged frame (IEEE 802.1q), ethertype 0x8100</description>
         </valueHelp>
         <constraint>
-          <regex>(0x88A8|0x8100)</regex>
+          <regex>(802.1q|802.1ad)</regex>
         </constraint>
-        <constraintErrorMessage>Ethertype must be 0x88A8 or 0x8100</constraintErrorMessage>
+        <constraintErrorMessage>Ethertype must be 802.1ad or 802.1q</constraintErrorMessage>
       </properties>
+      <defaultValue>802.1ad</defaultValue>
     </leafNode>
     <node name="ip">
       <children>

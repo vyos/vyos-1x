@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-#
-# Delete 'system ipv6 blacklist' option as the IPv6 module can no longer be
-# blacklisted as it is required by e.g. WireGuard and thus will always be
-# loaded.
 
-import os
+# Fixup non existent time-zones. Some systems have time-zone set to: Los*
+# (Los_Angeles), Den* (Denver), New* (New_York) ... but those are no real IANA
+# assigned time zones. In the past they have been silently remapped.
+#
+# Time to clean it up!
+#
+# Migrate all configured timezones to real IANA assigned timezones!
+
+import re
 import sys
 
-ipv6_blacklist_file = '/etc/modprobe.d/vyatta_blacklist_ipv6.conf'
-
 from vyos.configtree import ConfigTree
+from vyos.util import cmd
+
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")
@@ -21,16 +25,42 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
-ip_base = ['system', 'ipv6']
-if not config.exists(ip_base):
+tz_base = ['system', 'time-zone']
+if not config.exists(tz_base):
     # Nothing to do
     sys.exit(0)
 else:
-    # delete 'system ipv6 blacklist' node
-    if config.exists(ip_base + ['blacklist']):
-        config.delete(ip_base + ['blacklist'])
-        if os.path.isfile(ipv6_blacklist_file):
-            os.unlink(ipv6_blacklist_file)
+    tz = config.return_value(tz_base)
+
+    # retrieve all valid timezones
+    try:
+        tz_datas = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+    except OSError:
+        tz_datas = ''
+    tz_data = tz_datas.split('\n')
+
+    if re.match(r'[Ll][Oo][Ss].+', tz):
+        tz = 'America/Los_Angeles'
+    elif re.match(r'[Dd][Ee][Nn].+', tz):
+        tz = 'America/Denver'
+    elif re.match(r'[Hh][Oo][Nn][Oo].+', tz):
+        tz = 'Pacific/Honolulu'
+    elif re.match(r'[Nn][Ee][Ww].+', tz):
+        tz = 'America/New_York'
+    elif re.match(r'[Cc][Hh][Ii][Cc]*.+', tz):
+        tz = 'America/Chicago'
+    elif re.match(r'[Aa][Nn][Cc].+', tz):
+        tz = 'America/Anchorage'
+    elif re.match(r'[Pp][Hh][Oo].+', tz):
+        tz = 'America/Phoenix'
+    elif re.match(r'GMT(.+)?', tz):
+        tz = 'Etc/' + tz
+    elif tz not in tz_data:
+        # assign default UTC timezone
+        tz = 'UTC'
+
+    # replace timezone data is required
+    config.set(tz_base, value=tz)
 
     try:
         with open(file_name, 'w') as f:

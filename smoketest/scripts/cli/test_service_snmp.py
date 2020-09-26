@@ -19,12 +19,15 @@ import re
 import unittest
 
 from vyos.validate import is_ipv4
-from psutil import process_iter
 
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
+from vyos.util import process_named_running
 
+PROCESS_NAME = 'snmpd'
 SNMPD_CONF = '/etc/snmp/snmpd.conf'
+
 base_path = ['service', 'snmp']
 
 def get_config_value(key):
@@ -78,7 +81,7 @@ class TestSNMPService(unittest.TestCase):
         self.assertTrue(expected in config)
 
         # Check for running process
-        self.assertTrue("snmpd" in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
 
     def test_snmpv3_sha(self):
@@ -113,7 +116,7 @@ class TestSNMPService(unittest.TestCase):
         # TODO: read in config file and check values
 
         # Check for running process
-        self.assertTrue("snmpd" in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_snmpv3_md5(self):
         """ Check if SNMPv3 can be configured with MD5 authentication and service runs"""
@@ -147,8 +150,7 @@ class TestSNMPService(unittest.TestCase):
         # TODO: read in config file and check values
 
         # Check for running process
-        self.assertTrue("snmpd" in (p.name() for p in process_iter()))
-
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main()

@@ -42,12 +42,7 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="connect-on-demand">
-            <properties>
-              <help>Automatic establishment of PPPOE connection when traffic is sent</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface-dial-on-demand.xml.i>
           <leafNode name="default-route">
             <properties>
               <help>Default route insertion behaviour (default: auto)</help>

@@ -109,7 +109,7 @@
               </node>
               #include <include/accel-auth-mode.xml.i>
               #include <include/radius-server.xml.i>
-              #include <include/accel-radius-additions.xml.in>
+              #include <include/accel-radius-additions.xml.i>
               <node name="radius">
                 <children>
                   <node name="rate-limit">
@@ -200,8 +200,8 @@
               </leafNode>
             </children>
           </node>
-          #include <include/accel-client-ipv6-pool.xml.in>
-          #include <include/accel-name-server.xml.in>
+          #include <include/accel-client-ipv6-pool.xml.i>
+          #include <include/accel-name-server.xml.i>
           <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>

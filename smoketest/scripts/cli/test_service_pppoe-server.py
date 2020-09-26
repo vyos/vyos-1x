@@ -14,15 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
 import unittest
 
 from configparser import ConfigParser
-from psutil import process_iter
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.util import process_named_running
 
+process_name = 'accel-pppd'
 base_path = ['service', 'pppoe-server']
 local_if = ['interfaces', 'dummy', 'dum667']
 pppoe_conf = '/run/accel-pppd/pppoe.conf'
@@ -116,7 +116,7 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertEqual(conf['connlimit']['limit'], '20/min')
 
         # Check for running process
-        self.assertTrue('accel-pppd' in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running(process_name))
 
     def test_radius_auth(self):
         """ Test configuration of RADIUS authentication for PPPoE server """
@@ -161,7 +161,7 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertFalse(conf['ppp'].getboolean('ccp'))
 
         # Check for running process
-        self.assertTrue('accel-pppd' in (p.name() for p in process_iter()))
+        self.assertTrue(process_named_running(process_name))
 
 if __name__ == '__main__':
     unittest.main()

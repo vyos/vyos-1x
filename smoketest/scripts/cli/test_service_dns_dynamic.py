@@ -19,10 +19,12 @@ import os
 import unittest
 
 from getpass import getuser
-from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
+from vyos.util import process_named_running
 
+PROCESS_NAME = 'ddclient'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
 base_path = ['service', 'dns', 'dynamic']
 
@@ -31,17 +33,6 @@ def get_config_value(key):
     tmp = re.findall(r'\n?{}=+(.*)'.format(key), tmp)
     tmp = tmp[0].rstrip(',')
     return tmp
-
-def check_process():
-    """
-    Check for running process, process name changes dynamically e.g.
-    "ddclient - sleeping for 270 seconds", thus we need a different approach
-    """
-    running = False
-    for p in process_iter():
-        if "ddclient" in p.name():
-            running = True
-    return running
 
 class TestServiceDDNS(unittest.TestCase):
     def setUp(self):
@@ -104,8 +95,7 @@ class TestServiceDDNS(unittest.TestCase):
                 self.assertTrue(pwd == "'" + password + "'")
 
             # Check for running process
-            self.assertTrue(check_process())
-
+            self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_rfc2136(self):
         """ Check if DDNS service can be configured and runs """
@@ -135,7 +125,7 @@ class TestServiceDDNS(unittest.TestCase):
         # TODO: inspect generated configuration file
 
         # Check for running process
-        self.assertTrue(check_process())
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main()

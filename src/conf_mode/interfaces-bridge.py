@@ -22,13 +22,16 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import node_changed
+from vyos.configdict import is_member
+from vyos.configdict import is_source_interface
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
-from vyos.validate import is_member, has_address_configured
+from vyos.validate import has_address_configured
 from vyos.xml import defaults
 
 from vyos.util import cmd
+from vyos.util import vyos_dict_search
 from vyos import ConfigError
 
 from vyos import airbag
@@ -54,8 +57,8 @@ def get_config(config=None):
         else:
             bridge.update({'member': {'interface_remove': tmp }})
 
-    if 'member' in bridge and 'interface' in bridge['member']:
-        # XXX TT2665 we need a copy of the dict keys for iteration, else we will get:
+    if vyos_dict_search('member.interface', bridge):
+        # XXX: T2665: we need a copy of the dict keys for iteration, else we will get:
         # RuntimeError: dictionary changed size during iteration
         for interface in list(bridge['member']['interface']):
             for key in ['cost', 'priority']:
@@ -69,20 +72,22 @@ def get_config(config=None):
         for interface, interface_config in bridge['member']['interface'].items():
             interface_config.update(default_member_values)
 
-            # Check if we are a member of another bridge device
+            # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
             if tmp and tmp != bridge['ifname']:
                 interface_config.update({'is_bridge_member' : tmp})
 
-            # Check if we are a member of a bond device
+            # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
-            if tmp:
-                interface_config.update({'is_bond_member' : tmp})
+            if tmp: interface_config.update({'is_bond_member' : tmp})
+
+            # Check if member interface is used as source-interface on another interface
+            tmp = is_source_interface(conf, interface)
+            if tmp: interface_config.update({'is_source_interface' : tmp})
 
             # Bridge members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp:
-                interface_config.update({'has_address' : ''})
+            if tmp: interface_config.update({'has_address' : ''})
 
     return bridge
 
@@ -93,11 +98,9 @@ def verify(bridge):
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
 
-    if 'member' in bridge:
-        member = bridge.get('member')
-        bridge_name = bridge['ifname']
-        for interface, interface_config in member.get('interface', {}).items():
-            error_msg = f'Can not add interface "{interface}" to bridge "{bridge_name}", '
+    if vyos_dict_search('member.interface', bridge):
+        for interface, interface_config in bridge['member']['interface'].items():
+            error_msg = f'Can not add interface "{interface}" to bridge, '
 
             if interface == 'lo':
                 raise ConfigError('Loopback interface "lo" can not be added to a bridge')
@@ -112,6 +115,10 @@ def verify(bridge):
             if 'is_bond_member' in interface_config:
                 tmp = interface_config['is_bond_member']
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
+
+            if 'is_source_interface' in interface_config:
+                tmp = interface_config['is_source_interface']
+                raise ConfigError(error_msg + f'it is the source-interface of "{tmp}"!')
 
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')

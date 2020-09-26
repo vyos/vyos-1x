@@ -19,8 +19,7 @@ import re
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
-from psutil import process_iter
-
+from vyos.util import process_named_running
 from vyos.util import check_kmod
 from vyos.util import read_file
 
@@ -54,10 +53,10 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         for option, option_value in self._options.items():
             if 'type access-point' in option_value:
                 # Check for running process
-                self.assertIn('hostapd', (p.name() for p in process_iter()))
+                self.assertTrue(process_named_running('hostapd'))
             elif 'type station' in option_value:
                 # Check for running process
-                self.assertIn('wpa_supplicant', (p.name() for p in process_iter()))
+                self.assertTrue(process_named_running('wpa_supplicant'))
             else:
                 self.assertTrue(False)
 
@@ -137,8 +136,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertIn(value, tmp)
 
         # Check for running process
-        self.assertIn('hostapd', (p.name() for p in process_iter()))
-
+        self.assertTrue(process_named_running('hostapd'))
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')

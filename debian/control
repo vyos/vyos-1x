@@ -18,7 +18,7 @@ Build-Depends:
 Standards-Version: 3.9.6
 
 Package: vyos-1x
-Architecture: all
+Architecture: amd64 arm64
 Depends:
   accel-ppp,
   beep,
@@ -117,7 +117,7 @@ Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
 Package: vyos-1x-vmware
-Architecture: amd64 i386
+Architecture: amd64
 Depends:
  vyos-1x,
  open-vm-tools

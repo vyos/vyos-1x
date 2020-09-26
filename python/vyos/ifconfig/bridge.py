@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from netifaces import interfaces
+
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.stp import STP
 from vyos.validate import assert_boolean
@@ -228,8 +230,8 @@ class BridgeIf(Interface):
 
         # remove interface from bridge
         tmp = vyos_dict_search('member.interface_remove', config)
-        if tmp:
-            for member in tmp:
+        for member in (tmp or []):
+            if member in interfaces():
                 self.del_port(member)
 
         STPBridgeIf = STP.enable(BridgeIf)

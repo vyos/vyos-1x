@@ -111,8 +111,8 @@
               </leafNode>
             </children>
           </tagNode>
-          #include <include/accel-name-server.xml.in>
-          #include <include/accel-client-ipv6-pool.xml.in>
+          #include <include/accel-name-server.xml.i>
+          #include <include/accel-client-ipv6-pool.xml.i>
           <node name="authentication">
             <properties>
               <help>Client authentication methods</help>
@@ -198,7 +198,7 @@
                 </children>
               </tagNode>
               #include <include/radius-server.xml.i>
-              #include <include/accel-radius-additions.xml.in>
+              #include <include/accel-radius-additions.xml.i>
             </children>
           </node>
         </children>

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 #
-# Make 'system options reboot-on-panic' valueless
+# Delete 'system ipv6 blacklist' option as the IPv6 module can no longer be
+# blacklisted as it is required by e.g. WireGuard and thus will always be
+# loaded.
 
 import os
 import sys
+
+ipv6_blacklist_file = '/etc/modprobe.d/vyatta_blacklist_ipv6.conf'
 
 from vyos.configtree import ConfigTree
 
@@ -17,17 +21,16 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
-base = ['system', 'options']
-if not config.exists(base):
+ip_base = ['system', 'ipv6']
+if not config.exists(ip_base):
     # Nothing to do
     sys.exit(0)
 else:
-    if config.exists(base + ['reboot-on-panic']):
-        reboot = config.return_value(base + ['reboot-on-panic'])
-        config.delete(base + ['reboot-on-panic'])
-        # create new valueless node if action was true
-        if reboot == "true":
-            config.set(base + ['reboot-on-panic'])
+    # delete 'system ipv6 blacklist' node
+    if config.exists(ip_base + ['blacklist']):
+        config.delete(ip_base + ['blacklist'])
+        if os.path.isfile(ipv6_blacklist_file):
+            os.unlink(ipv6_blacklist_file)
 
     try:
         with open(file_name, 'w') as f:

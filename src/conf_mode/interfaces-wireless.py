@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from re import findall
-from copy import deepcopy
 from netaddr import EUI, mac_unix_expanded
 
 from vyos.config import Config
@@ -233,13 +232,15 @@ def apply(wifi):
     if 'deleted' in wifi:
         WiFiIf(interface).remove()
     else:
-        # WiFi interface needs to be created on-block (e.g. mode or physical
-        # interface) instead of passing a ton of arguments, I just use a dict
-        # that is managed by vyos.ifconfig
-        conf = deepcopy(WiFiIf.get_config())
+        # This is a special type of interface which needs additional parameters
+        # when created using iproute2. Instead of passing a ton of arguments,
+        # use a dictionary provided by the interface class which holds all the
+        # options necessary.
+        conf = WiFiIf.get_config()
 
         # Assign WiFi instance configuration parameters to config dict
         conf['phy'] = wifi['physical_device']
+        conf['wds'] = 'on' if 'wds' in wifi else 'off'
 
         # Finally create the new interface
         w = WiFiIf(interface, **conf)

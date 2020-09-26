@@ -50,14 +50,6 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
-def get_ethertype(ethertype_val):
-    if ethertype_val == '0x88A8':
-        return '802.1ad'
-    elif ethertype_val == '0x8100':
-        return '802.1q'
-    else:
-        raise ConfigError('invalid ethertype "{}"'.format(ethertype_val))
-
 class Interface(Control):
     # This is the class which will be used to create
     # self.operational, it allows subclasses, such as
@@ -85,6 +77,14 @@ class Interface(Control):
         'admin_state': {
             'shellcmd': 'ip -json link show dev {ifname}',
             'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
+        },
+        'min_mtu': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].min_mtu | [0]', json.loads(j)),
+        },
+        'max_mtu': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].max_mtu | [0]', json.loads(j)),
         },
     }
 
@@ -181,6 +181,15 @@ class Interface(Control):
     @classmethod
     def exists(cls, ifname):
         return os.path.exists(f'/sys/class/net/{ifname}')
+
+    @classmethod
+    def get_config(cls):
+        """
+        Some but not all interfaces require a configuration when they are added
+        using iproute2. This method will provide the configuration dictionary
+        used by this class.
+        """
+        return deepcopy(cls.default)
 
     def __init__(self, ifname, **kargs):
         """
@@ -281,6 +290,28 @@ class Interface(Control):
         cmd = 'ip link del dev {ifname}'.format(**self.config)
         return self._cmd(cmd)
 
+    def get_min_mtu(self):
+        """
+        Get hardware minimum supported MTU
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_min_mtu()
+        '60'
+        """
+        return int(self.get_interface('min_mtu'))
+
+    def get_max_mtu(self):
+        """
+        Get hardware maximum supported MTU
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_max_mtu()
+        '9000'
+        """
+        return int(self.get_interface('max_mtu'))
+
     def get_mtu(self):
         """
         Get/set interface mtu in bytes.
@@ -290,7 +321,7 @@ class Interface(Control):
         >>> Interface('eth0').get_mtu()
         '1500'
         """
-        return self.get_interface('mtu')
+        return int(self.get_interface('mtu'))
 
     def set_mtu(self, mtu):
         """
@@ -1013,7 +1044,7 @@ class Interface(Control):
         # create/update 802.1ad (Q-in-Q VLANs)
         for vif_s_id, vif_s_config in config.get('vif_s', {}).items():
             tmp = deepcopy(VLANIf.get_config())
-            tmp['ethertype'] = get_ethertype(vif_s_config.get('ethertype', '0x88A8'))
+            tmp['protocol'] = vif_s_config['protocol']
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_s_id
 
@@ -1061,13 +1092,13 @@ class VLANIf(Interface):
         'type': 'vlan',
         'source_interface': '',
         'vlan_id': '',
-        'ethertype': '',
+        'protocol': '',
         'ingress_qos': '',
         'egress_qos': '',
     }
 
     options = Interface.options + \
-        ['source_interface', 'vlan_id', 'ethertype', 'ingress_qos', 'egress_qos']
+        ['source_interface', 'vlan_id', 'protocol', 'ingress_qos', 'egress_qos']
 
     def remove(self):
         """
@@ -1092,12 +1123,12 @@ class VLANIf(Interface):
 
     def _create(self):
         # bail out early if interface already exists
-        if os.path.exists(f'/sys/class/net/{self.ifname}'):
+        if self.exists(f'{self.ifname}'):
             return
 
         cmd = 'ip link add link {source_interface} name {ifname} type vlan id {vlan_id}'
-        if self.config['ethertype']:
-            cmd += ' proto {ethertype}'
+        if self.config['protocol']:
+            cmd += ' protocol {protocol}'
         if self.config['ingress_qos']:
             cmd += ' ingress-qos-map {ingress_qos}'
         if self.config['egress_qos']:
@@ -1107,20 +1138,6 @@ class VLANIf(Interface):
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
-
-    @staticmethod
-    def get_config():
-        """
-        MACsec interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
-
-        Example:
-        >> dict = VLANIf().get_config()
-        """
-        config = deepcopy(__class__.default)
-        del config['type']
-        return config
 
     def set_admin_state(self, state):
         """

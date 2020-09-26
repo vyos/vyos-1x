@@ -16,17 +16,18 @@
 
 import os
 
-from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.ifconfig import MACsecIf
+from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
 from vyos import ConfigError
 from vyos import airbag
@@ -47,6 +48,14 @@ def get_config(config=None):
     base = ['interfaces', 'macsec']
     macsec = get_interface_dict(conf, base)
 
+    # MACsec is "special" the default MTU is 1460 - update accordingly
+    # as the config_level is already st in get_interface_dict() - we can use []
+    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    if 'mtu' not in tmp:
+        # base MTU for MACsec is 1468 bytes, but we leave room for 802.1ad and
+        # 802.1q VLAN tags, thus the limit is 1460 bytes.
+        macsec['mtu'] = '1460'
+
     # Check if interface has been removed
     if 'deleted' in macsec:
         source_interface = conf.return_effective_value(
@@ -63,6 +72,7 @@ def verify(macsec):
 
     verify_source_interface(macsec)
     verify_vrf(macsec)
+    verify_mtu_ipv6(macsec)
     verify_address(macsec)
 
     if not (('security' in macsec) and
@@ -79,6 +89,15 @@ def verify(macsec):
                 ('ckn' in tmp['mka'])):
             raise ConfigError('Missing mandatory MACsec security '
                               'keys as encryption is enabled!')
+
+    if 'source_interface' in macsec:
+        # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
+        # and 802.1q) - we need to check the underlaying MTU if our configured
+        # MTU is at least 40 bytes less then the MTU of our physical interface.
+        lower_mtu = Interface(macsec['source_interface']).get_mtu()
+        if lower_mtu < (int(macsec['mtu']) + 40):
+            raise ConfigError('MACsec overhead does not fit into underlaying device MTU,\n' \
+                              f'{underlay_mtu} bytes is too small!')
 
     return None
 
@@ -102,12 +121,11 @@ def apply(macsec):
             os.unlink(wpa_suppl_conf.format(**macsec))
 
     else:
-        # MACsec interfaces require a configuration when they are added using
-        # iproute2. This static method will provide the configuration
-        # dictionary used by this class.
-
-        # XXX: subject of removal after completing T2653
-        conf = deepcopy(MACsecIf.get_config())
+        # This is a special type of interface which needs additional parameters
+        # when created using iproute2. Instead of passing a ton of arguments,
+        # use a dictionary provided by the interface class which holds all the
+        # options necessary.
+        conf = MACsecIf.get_config()
         conf['source_interface'] = macsec['source_interface']
         conf['security_cipher'] = macsec['security']['cipher']
 

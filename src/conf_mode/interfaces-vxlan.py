@@ -17,13 +17,13 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
 from vyos.ifconfig import VXLANIf, Interface
 from vyos import ConfigError
@@ -73,11 +73,12 @@ def verify(vxlan):
     if 'source_interface' in vxlan:
         # VXLAN adds a 50 byte overhead - we need to check the underlaying MTU
         # if our configured MTU is at least 50 bytes less
-        underlay_mtu = int(Interface(vxlan['source_interface']).get_mtu())
-        if underlay_mtu < (int(vxlan['mtu']) + 50):
+        lower_mtu = Interface(vxlan['source_interface']).get_mtu()
+        if lower_mtu < (int(vxlan['mtu']) + 50):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               f'MTU is to small ({underlay_mtu} bytes)')
 
+    verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
     return None
 
@@ -95,10 +96,11 @@ def apply(vxlan):
         v.remove()
 
     if 'deleted' not in vxlan:
-        # VXLAN interface needs to be created on-block
-        # instead of passing a ton of arguments, I just use a dict
-        # that is managed by vyos.ifconfig
-        conf = deepcopy(VXLANIf.get_config())
+        # This is a special type of interface which needs additional parameters
+        # when created using iproute2. Instead of passing a ton of arguments,
+        # use a dictionary provided by the interface class which holds all the
+        # options necessary.
+        conf = VXLANIf.get_config()
 
         # Assign VXLAN instance configuration parameters to config dict
         for tmp in ['vni', 'group', 'source_address', 'source_interface', 'remote', 'port']:

@@ -16,7 +16,7 @@
             <children>
               <leafNode name="cache-size">
                 <properties>
-                  <help>DNS forwarding cache size</help>
+                  <help>DNS forwarding cache size (default: 10000)</help>
                   <valueHelp>
                     <format>0-10000</format>
                     <description>DNS forwarding cache size</description>
@@ -25,6 +25,7 @@
                     <validator name="numeric" argument="--range 0-10000"/>
                   </constraint>
                 </properties>
+                <defaultValue>10000</defaultValue>
               </leafNode>
               <leafNode name="dhcp">
                 <properties>
@@ -37,7 +38,7 @@
               </leafNode>
               <leafNode name="dnssec">
                 <properties>
-                  <help>DNSSEC mode</help>
+                  <help>DNSSEC mode (default: process-no-validate)</help>
                   <completionHelp>
                     <list>off process-no-validate process log-fail validate</list>
                   </completionHelp>
@@ -62,9 +63,10 @@
                     <description>Full blown DNSSEC validation. Send SERVFAIL to clients on bogus responses.</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(off|process-no-validate|process|log-fail|validate)</regex>
+                    <regex>^(off|process-no-validate|process|log-fail|validate)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>process-no-validate</defaultValue>
               </leafNode>
               <tagNode name="domain">
                 <properties>
@@ -146,7 +148,7 @@
               </leafNode>
               <leafNode name="negative-ttl">
                 <properties>
-                  <help>Maximum amount of time negative entries are cached</help>
+                  <help>Maximum amount of time negative entries are cached (default: 3600)</help>
                   <valueHelp>
                     <format>0-7200</format>
                     <description>Seconds to cache NXDOMAIN entries</description>
@@ -155,6 +157,7 @@
                     <validator name="numeric" argument="--range 0-7200"/>
                   </constraint>
                 </properties>
+                <defaultValue>3600</defaultValue>
               </leafNode>
               <leafNode name="name-server">
                 <properties>

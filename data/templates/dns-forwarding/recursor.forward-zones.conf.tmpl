@@ -3,26 +3,26 @@
 
 # dot zone (catch-all): '+' indicates recursion is desired
 # (same as forward-zones-recurse)
-{#- the code below ensures the order of nameservers is determined first by #}
-{#- the order of tags, then by the order of nameservers within that tag #}
-{%- set n = namespace(dot_zone_ns='') %}
-{%- for tag in name_server_tags_recursor %}
-{%- set ns = '' %}
-{%- if tag in name_servers %}
-{%- set ns = ns + name_servers[tag]|join(', ') %}
-{%- set n.dot_zone_ns = (n.dot_zone_ns, ns)|join(', ') if n.dot_zone_ns != '' else ns %}
-{%- endif %}
+{# the code below ensures the order of nameservers is determined first by #}
+{# the order of tags, then by the order of nameservers within that tag #}
+{% set n = namespace(dot_zone_ns='') %}
+{% for tag in name_server_tags_recursor %}
+{%   set ns = '' %}
+{%   if tag in name_servers %}
+{%     set ns = ns + name_servers[tag]|join(', ') %}
+{%     set n.dot_zone_ns = (n.dot_zone_ns, ns)|join(', ') if n.dot_zone_ns != '' else ns %}
+{%   endif %}
 # {{ tag }}: {{ ns }}
-{%- endfor %}
+{% endfor %}
 
-{%- if n.dot_zone_ns %}
+{% if n.dot_zone_ns %}
 +.={{ n.dot_zone_ns }}
-{%- endif %}
+{% endif %}
 
-{% if forward_zones -%}
+{% if forward_zones is defined %}
 # zones added via 'service dns forwarding domain'
-{%- for zone, zonedata in forward_zones.items() %}
-{% if zonedata['recursion-desired'] %}+{% endif %}{{ zone }}={{ zonedata['nslist']|join(', ') }}
-{%- endfor %}
-{%- endif %}
+{%   for zone, zonedata in forward_zones.items() %}
+{{ "+" if zonedata['recursion_desired'] is defined }}{{ zone }}={{ zonedata['server']|join(', ') }}
+{%   endfor %}
+{% endif %}
 

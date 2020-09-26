@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from copy import deepcopy
-
 from vyos import ConfigError
 from vyos.ifconfig.interface import Interface
 
@@ -96,18 +94,6 @@ class VXLANIf(Interface):
             cmd += ' {} {}'.format(self.mapping.get(key, key), value)
 
         self._cmd(cmd)
-
-    @classmethod
-    def get_config(cls):
-        """
-        VXLAN interfaces require a configuration when they are added using
-        iproute2. This static method will provide the configuration dictionary
-        used by this class.
-
-        Example:
-        >> dict = VXLANIf().get_config()
-        """
-        return deepcopy(cls.default)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by

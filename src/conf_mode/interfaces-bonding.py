@@ -22,15 +22,18 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_member
+from vyos.configdict import is_source_interface
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
 from vyos.ifconfig import Section
-from vyos.validate import is_member
+from vyos.util import vyos_dict_search
 from vyos.validate import has_address_configured
 from vyos import ConfigError
 from vyos import airbag
@@ -98,17 +101,20 @@ def get_config(config=None):
         # also present the interfaces to be removed from the bond as dictionary
         bond['member'].update({'interface_remove': tmp})
 
-    if 'member' in bond and 'interface' in bond['member']:
+    if vyos_dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
-            # Check if we are a member of another bond device
+            # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp:
-                interface_config.update({'is_bridge_member' : tmp})
+            if tmp: interface_config.update({'is_bridge_member' : tmp})
 
-            # Check if we are a member of a bond device
+            # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
             if tmp and tmp != bond['ifname']:
                 interface_config.update({'is_bond_member' : tmp})
+
+            # Check if member interface is used as source-interface on another interface
+            tmp = is_source_interface(conf, interface)
+            if tmp: interface_config.update({'is_source_interface' : tmp})
 
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
@@ -136,6 +142,7 @@ def verify(bond):
             raise ConfigError('Option primary - mode dependency failed, not'
                               'supported in mode {mode}!'.format(**bond))
 
+    verify_mtu_ipv6(bond)
     verify_address(bond)
     verify_dhcpv6(bond)
     verify_vrf(bond)
@@ -144,10 +151,9 @@ def verify(bond):
     verify_vlan_config(bond)
 
     bond_name = bond['ifname']
-    if 'member' in bond:
-        member = bond.get('member')
-        for interface, interface_config in member.get('interface', {}).items():
-            error_msg = f'Can not add interface "{interface}" to bond "{bond_name}", '
+    if vyos_dict_search('member.interface', bond):
+        for interface, interface_config in bond['member']['interface'].items():
+            error_msg = f'Can not add interface "{interface}" to bond, '
 
             if interface == 'lo':
                 raise ConfigError('Loopback interface "lo" can not be added to a bond')
@@ -162,6 +168,10 @@ def verify(bond):
             if 'is_bond_member' in interface_config:
                 tmp = interface_config['is_bond_member']
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
+
+            if 'is_source_interface' in interface_config:
+                tmp = interface_config['is_source_interface']
+                raise ConfigError(error_msg + f'it is the source-interface of "{tmp}"!')
 
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')
