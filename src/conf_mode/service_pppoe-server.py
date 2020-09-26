@@ -69,6 +69,7 @@ default_config_data = {
     'ppp_min_mtu': '',
     'ppp_mppe': 'prefer',
     'ppp_mru': '',
+    'ppp_preallocate_vif': False,
 
     'radius_server': [],
     'radius_acct_tmo': '3',
@@ -284,6 +285,9 @@ def get_config(config=None):
 
         if conf.exists(['nas-ip-address']):
             pppoe['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+
+        if conf.exists(['preallocate-vif']):
+            pppoe['ppp_preallocate_vif'] = True
 
         if conf.exists(['source-address']):
             pppoe['radius_source_address'] = conf.return_value(['source-address'])

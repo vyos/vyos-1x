@@ -85,6 +85,12 @@
         </valueHelp>
        </properties>
      </leafNode>
+    <leafNode name="preallocate-vif">
+      <properties>
+        <help>Enable attribute NAS-Port-Id in Access-Request</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <node name="dynamic-author">
       <properties>
         <help>Dynamic Authorization Extension/Change of Authorization server</help>
