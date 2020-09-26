@@ -22,7 +22,7 @@ from vyos.config import Config
 from vyos.configverify import verify_vrf
 from vyos.snmpv3_hashgen import plaintext_to_md5, plaintext_to_sha1, random
 from vyos.template import render
-from vyos.util import call
+from vyos.util import call, chmod_755
 from vyos.validate import is_ipv4, is_addr_assigned
 from vyos.version import get_version_data
 from vyos import ConfigError, airbag
