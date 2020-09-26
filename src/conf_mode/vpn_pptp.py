@@ -36,6 +36,7 @@ default_pptp = {
     'auth_mode' : 'local',
     'local_users' : [],
     'radius_server' : [],
+    'radius_acct_inter_jitter': '',
     'radius_acct_tmo' : '30',
     'radius_max_try' : '3',
     'radius_timeout' : '30',
@@ -138,6 +139,9 @@ def get_config(config=None):
         #
         # advanced radius-setting
         conf.set_level(base_path + ['authentication', 'radius'])
+
+        if conf.exists(['acct-interim-jitter']):
+            pptp['radius_acct_inter_jitter'] = conf.return_value(['acct-interim-jitter'])
 
         if conf.exists(['acct-timeout']):
             pptp['radius_acct_tmo'] = conf.return_value(['acct-timeout'])

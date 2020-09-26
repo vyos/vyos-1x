@@ -1,5 +1,18 @@
 <node name="radius">
   <children>
+    <leafNode name="acct-interim-jitter">
+      <properties>
+        <help>Maximum jitter value in seconds to be applied to accounting information interval</help>
+        <valueHelp>
+          <format>1-60</format>
+          <description>Maximum jitter value in seconds</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-60"/>
+        </constraint>
+        <constraintErrorMessage>Jitter value must be between 1 and 60 seconds</constraintErrorMessage>
+      </properties>
+    </leafNode>
     <tagNode name="server">
       <children>
         <leafNode name="acct-port">
