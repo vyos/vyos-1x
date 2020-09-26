@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
 from vyos.ifconfig import VXLANIf, Interface
 from vyos import ConfigError
@@ -77,6 +78,7 @@ def verify(vxlan):
             raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
                               f'MTU is to small ({underlay_mtu} bytes)')
 
+    verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
     return None
 

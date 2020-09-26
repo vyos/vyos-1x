@@ -28,6 +28,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
@@ -141,6 +142,7 @@ def verify(bond):
             raise ConfigError('Option primary - mode dependency failed, not'
                               'supported in mode {mode}!'.format(**bond))
 
+    verify_mtu_ipv6(bond)
     verify_address(bond)
     verify_dhcpv6(bond)
     verify_vrf(bond)

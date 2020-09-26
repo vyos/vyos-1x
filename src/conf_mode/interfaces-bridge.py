@@ -25,6 +25,7 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_member
 from vyos.configdict import is_source_interface
 from vyos.configverify import verify_dhcpv6
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
 from vyos.validate import has_address_configured
@@ -95,6 +96,7 @@ def verify(bridge):
     if 'deleted' in bridge:
         return None
 
+    verify_mtu_ipv6(bridge)
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
 

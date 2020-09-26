@@ -24,6 +24,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_mtu_ipv6
 from vyos.template import render
 from vyos.util import call
 from vyos import ConfigError
@@ -57,6 +58,7 @@ def verify(pppoe):
 
     verify_source_interface(pppoe)
     verify_vrf(pppoe)
+    verify_mtu_ipv6(pppoe)
 
     if {'connect_on_demand', 'vrf'} <= set(pppoe):
         raise ConfigError('On-demand dialing and VRF can not be used at the same time')

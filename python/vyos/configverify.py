@@ -44,6 +44,36 @@ def verify_mtu(config):
             raise ConfigError(f'Interface MTU too high, ' \
                               f'maximum supported MTU is {max_mtu}!')
 
+def verify_mtu_ipv6(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation if the specified MTU can be used when IPv6 is
+    configured on the interface. IPv6 requires a 1280 bytes MTU.
+    """
+    from vyos.validate import is_ipv6
+    from vyos.util import vyos_dict_search
+    # IPv6 minimum required link mtu
+    min_mtu = 1280
+
+    if int(config['mtu']) < min_mtu:
+        interface = config['ifname']
+        error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
+                    f'thus the minimum MTU requirement is {min_mtu}!'
+
+        if not vyos_dict_search('ipv6.address.no_default_link_local', config):
+            raise ConfigError('link-local ' + error_msg)
+
+        for address in (vyos_dict_search('address', config) or []):
+            if address in ['dhcpv6'] or is_ipv6(address):
+                raise ConfigError(error_msg)
+
+        if vyos_dict_search('ipv6.address.autoconf', config):
+            raise ConfigError(error_msg)
+
+        if vyos_dict_search('ipv6.address.eui64', config):
+            raise ConfigError(error_msg)
+
+
 def verify_vrf(config):
     """
     Common helper function used by interface implementations to perform

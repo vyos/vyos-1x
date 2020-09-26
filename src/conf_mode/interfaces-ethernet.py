@@ -24,6 +24,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mtu
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import EthernetIf
@@ -42,6 +43,7 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'ethernet']
     ethernet = get_interface_dict(conf, base)
+
     return ethernet
 
 def verify(ethernet):
@@ -59,6 +61,7 @@ def verify(ethernet):
             raise ConfigError('If duplex is hardcoded, speed must be hardcoded, too')
 
     verify_mtu(ethernet)
+    verify_mtu_ipv6(ethernet)
     verify_dhcpv6(ethernet)
     verify_address(ethernet)
     verify_vrf(ethernet)
