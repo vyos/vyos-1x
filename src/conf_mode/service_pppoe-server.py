@@ -82,6 +82,7 @@ default_config_data = {
     'radius_shaper_attr': '',
     'radius_shaper_vendor': '',
     'radius_dynamic_author': '',
+    'radius_called_sid_format': '',
     'sesscrtl': 'replace',
     'snmp': False,
     'thread_cnt': get_half_cpus()
@@ -314,6 +315,9 @@ def get_config(config=None):
                 dae['key'] = conf.return_value(['dynamic-author', 'key'])
 
             pppoe['radius_dynamic_author'] = dae
+
+        if conf.exists(['called-sid-format']):
+            pppoe['radius_called_sid_format'] = conf.return_value(['called-sid-format'])
 
         # RADIUS based rate-limiter
         if conf.exists(['rate-limit', 'enable']):
