@@ -135,6 +135,26 @@
                       </leafNode>
                     </children>
                   </node>
+                  <leafNode name="called-sid-format">
+                    <properties>
+                      <help>Format of Called-Station-Id attribute</help>
+                      <completionHelp>
+                        <list>ifname ifname:mac</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(ifname|ifname:mac)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid Called-Station-Id format</constraintErrorMessage>
+                      <valueHelp>
+                        <format>ifname</format>
+                        <description>NAS-Port-Id - should contain root interface name (NAS-Port-Id=eth1)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ifname:mac</format>
+                        <description>NAS-Port-Id - should contain root interface name and mac address (NAS-Port-Id=eth1:00:00:00:00:00:00)</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <leafNode name="protocols">

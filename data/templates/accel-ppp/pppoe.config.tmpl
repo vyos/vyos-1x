@@ -186,6 +186,9 @@ vlan-mon={{ interface.name }},{{ interface.vlans | join(',') }}
 interface=re:{{ interface.name }}\.\d+
 {% endif %}
 {% endfor -%}
+{% if radius_called_sid_format %}
+called-sid={{ radius_called_sid_format }}
+{% endif %}
 {% endif -%}
 
 {% if svc_name %}
