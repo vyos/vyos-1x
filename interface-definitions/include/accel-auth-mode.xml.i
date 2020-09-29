@@ -16,4 +16,5 @@
       <list>local radius</list>
     </completionHelp>
   </properties>
+  <defaultValue>local</defaultValue>
 </leafNode>

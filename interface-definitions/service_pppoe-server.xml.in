@@ -29,12 +29,13 @@
               </constraint>
               <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
             </properties>
+            <defaultValue>vyos-ac</defaultValue>
           </leafNode>
           <leafNode name="session-control">
             <properties>
               <help>control sessions count</help>
               <constraint>
-                <regex>(deny|disable)</regex>
+                <regex>^(deny|disable|replace)$</regex>
               </constraint>
               <constraintErrorMessage>Invalid value</constraintErrorMessage>
               <valueHelp>
@@ -45,10 +46,15 @@
                 <format>deny</format>
                 <description>Deny second session authorization</description>
               </valueHelp>
+              <valueHelp>
+                <format>replace</format>
+                <description>Terminate first session when second is authorized</description>
+              </valueHelp>
               <completionHelp>
-                <list>deny disable</list>
+                <list>deny disable replace</list>
               </completionHelp>
             </properties>
+            <defaultValue>replace</defaultValue>
           </leafNode>
           <node name="authentication">
             <properties>
@@ -68,6 +74,7 @@
                       <leafNode name="disable">
                         <properties>
                           <help>Option to disable a PPPoE Server user</help>
+                          <valueless/>
                         </properties>
                       </leafNode>
                       <leafNode name="password">
@@ -79,6 +86,7 @@
                         <properties>
                           <help>Static client IP address</help>
                         </properties>
+                        <defaultValue>*</defaultValue>
                       </leafNode>
                       <node name="rate-limit">
                         <properties>
@@ -182,7 +190,7 @@
                   <completionHelp>
                     <list>pap chap mschap mschap-v2</list>
                   </completionHelp>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
@@ -234,10 +242,10 @@
                 <properties>
                   <help>VLAN monitor for the automatic creation of vlans (user per vlan)</help>
                   <constraint>
-                        <validator name="numeric" argument="--range 1-4096"/>
-                      </constraint>
-                      <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
-                      <multi />
+                    <validator name="numeric" argument="--range 1-4096"/>
+                  </constraint>
+                  <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
+                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="vlan-range">
@@ -246,7 +254,7 @@
                   <constraint>
                     <regex>(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})-(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})</regex>
                   </constraint>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
@@ -263,9 +271,10 @@
             <properties>
               <help>Maximum Transmission Unit (MTU) - default 1492</help>
               <constraint>
-              <validator name="numeric" argument="--range 128-16384"/>
+                <validator name="numeric" argument="--range 128-16384"/>
               </constraint>
             </properties>
+            <defaultValue>1492</defaultValue>
           </leafNode>
           <node name="limits">
             <properties>
@@ -353,6 +362,7 @@
                     <regex>^(deny|prefer|require)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>prefer</defaultValue>
               </leafNode>
               <leafNode name="lcp-echo-interval">
                 <properties>
@@ -361,6 +371,7 @@
                     <validator name="numeric" argument="--positive"/>
                   </constraint>
                 </properties>
+                <defaultValue>30</defaultValue>
               </leafNode>
               <leafNode name="lcp-echo-failure">
                 <properties>
@@ -369,6 +380,7 @@
                     <validator name="numeric" argument="--positive"/>
                   </constraint>
                 </properties>
+                <defaultValue>3</defaultValue>
               </leafNode>
               <leafNode name="lcp-echo-timeout">
                 <properties>
@@ -377,6 +389,7 @@
                     <validator name="numeric" argument="--positive"/>
                   </constraint>
                 </properties>
+                <defaultValue>0</defaultValue>
               </leafNode>
               <leafNode name="ipv4">
                 <properties>
@@ -437,6 +450,9 @@
               <leafNode name="ipv6-intf-id">
                 <properties>
                   <help>Fixed or random interface identifier for IPv6</help>
+                  <completionHelp>
+                    <list>random</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>random</format>
                     <description>Random interface identifier for IPv6</description>
@@ -450,6 +466,9 @@
               <leafNode name="ipv6-peer-intf-id">
                 <properties>
                   <help>Peer interface identifier for IPv6</help>
+                  <completionHelp>
+                    <list>random calling-sid ipv4</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>x:x:x:x</format>
                     <description>Interface identifier for IPv6</description>
