@@ -38,10 +38,8 @@ class WireGuardInterfaceTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_peer_setup(self):
-        """
-        Create WireGuard interfaces with associated peers
-        """
+    def test_peer(self):
+        """ Create WireGuard interfaces with associated peers """
         for intf in self._interfaces:
             peer = 'foo-' + intf
             psk = 'u2xdA70hkz0S1CG0dZlOh0aq2orwFXRIVrKo4DCvHgM='
@@ -63,6 +61,38 @@ class WireGuardInterfaceTest(unittest.TestCase):
             self.session.commit()
 
             self.assertTrue(os.path.isdir(f'/sys/class/net/{intf}'))
+
+
+    def test_add_remove_peer(self):
+        """ Create WireGuard interfaces with associated peers. Remove one of
+        the configured peers. Bug reported as T2939 """
+        interface = 'wg0'
+        port = '12345'
+        pubkey_1 = 'n1CUsmR0M2LUUsyicBd6blZICwUqqWWHbu4ifZ2/9gk='
+        pubkey_2 = 'ebFx/1G0ti8tvuZd94sEIosAZZIznX+dBAKG/8DFm0I='
+
+        self.session.set(base_path + [interface, 'address', '172.16.0.1/24'])
+
+        self.session.set(base_path + [interface, 'peer', 'PEER01', 'pubkey', pubkey_1])
+        self.session.set(base_path + [interface, 'peer', 'PEER01', 'port', port])
+        self.session.set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
+        self.session.set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
+
+        self.session.set(base_path + [interface, 'peer', 'PEER02', 'pubkey', pubkey_2])
+        self.session.set(base_path + [interface, 'peer', 'PEER02', 'port', port])
+        self.session.set(base_path + [interface, 'peer', 'PEER02', 'allowed-ips', '10.205.212.11/32'])
+        self.session.set(base_path + [interface, 'peer', 'PEER02', 'address', '192.0.2.2'])
+
+        # Commit peers
+        self.session.commit()
+
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
+
+        # Delete second peer
+        self.session.delete(base_path + [interface, 'peer', 'PEER01'])
+        self.session.commit()
+
+
 
 if __name__ == '__main__':
     unittest.main()
