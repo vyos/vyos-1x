@@ -101,6 +101,14 @@ vrrp_instance {{ group.name }} {
     {% endfor -%}
     }
 
+    {% if group.virtual_addresses_excluded -%}
+    virtual_ipaddress_excluded {
+    {% for addr in group.virtual_addresses_excluded -%}
+        {{ addr }}
+    {% endfor -%}
+    }
+    {% endif -%}
+
     {% if group.health_check_script -%}
     track_script {
         healthcheck_{{ group.name }}
@@ -180,6 +188,7 @@ def get_config():
         group["sync_group"] = config.return_value("sync-group")
         group["preempt_delay"] = config.return_value("preempt-delay")
         group["virtual_addresses"] = config.return_values("virtual-address")
+        group["virtual_addresses_excluded"] = config.return_values("virtual-address-excluded")
 
         group["auth_password"] = config.return_value("authentication password")
         group["auth_type"] = config.return_value("authentication type")
