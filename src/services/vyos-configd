@@ -27,7 +27,7 @@ import importlib.util
 import zmq
 
 from vyos.defaults import directories
-from vyos.configsource import ConfigSourceString
+from vyos.configsource import ConfigSourceString, ConfigSourceError
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -151,8 +151,12 @@ def initialization(socket):
     except FileNotFoundError:
         session_tty = None
 
-    configsource = ConfigSourceString(running_config_text=active_string,
-                                      session_config_text=session_string)
+    try:
+        configsource = ConfigSourceString(running_config_text=active_string,
+                                          session_config_text=session_string)
+    except ConfigSourceError as e:
+        logger.debug(e)
+        return None
 
     config = Config(config_source=configsource)
 
