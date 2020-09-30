@@ -59,9 +59,6 @@ configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-uns
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
 
-active_string = ''
-session_string = ''
-
 session_tty = None
 
 def key_name_from_file_name(f):
