@@ -16,6 +16,7 @@
 
 import os
 
+from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
@@ -114,7 +115,9 @@ def apply(macsec):
         call('systemctl stop wpa_supplicant-macsec@{source_interface}'
              .format(**macsec))
 
-        MACsecIf(macsec['ifname']).remove()
+        if macsec['ifname'] in interfaces():
+            tmp = MACsecIf(macsec['ifname'])
+            tmp.remove()
 
         # delete configuration on interface removal
         if os.path.isfile(wpa_suppl_conf.format(**macsec)):
