@@ -59,8 +59,7 @@ def get_config(config=None):
 
     # Check if interface has been removed
     if 'deleted' in macsec:
-        source_interface = conf.return_effective_value(
-                base + ['source-interface'])
+        source_interface = conf.return_effective_value(['source-interface'])
         macsec.update({'source_interface': source_interface})
 
     return macsec
@@ -111,7 +110,7 @@ def generate(macsec):
 
 def apply(macsec):
     # Remove macsec interface
-    if 'deleted' in macsec.keys():
+    if 'deleted' in macsec:
         call('systemctl stop wpa_supplicant-macsec@{source_interface}'
              .format(**macsec))
 
