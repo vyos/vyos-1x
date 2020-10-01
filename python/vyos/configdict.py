@@ -360,6 +360,10 @@ def get_interface_dict(config, base, ifname=''):
         # XXX: T2665: blend in proper DHCPv6-PD default values
         dict['vif'][vif] = T2665_set_dhcpv6pd_defaults(dict['vif'][vif])
 
+        # Check if we are a member of a bridge device
+        bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
+        if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
+
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         default_vif_s_values = defaults(base + ['vif-s'])
         # XXX: T2665: we only wan't the vif-s defaults - do not care about vif-c
@@ -375,6 +379,10 @@ def get_interface_dict(config, base, ifname=''):
         dict['vif_s'][vif_s] = T2665_set_dhcpv6pd_defaults(
             dict['vif_s'][vif_s])
 
+        # Check if we are a member of a bridge device
+        bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
+        if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
+
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
 
@@ -388,6 +396,11 @@ def get_interface_dict(config, base, ifname=''):
             # XXX: T2665: blend in proper DHCPv6-PD default values
             dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_set_dhcpv6pd_defaults(
                 dict['vif_s'][vif_s]['vif_c'][vif_c])
+
+            # Check if we are a member of a bridge device
+            bridge = is_member(config, f'{ifname}.{vif_s}.{vif_c}', 'bridge')
+            if bridge: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
+                {'is_bridge_member' : bridge})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
