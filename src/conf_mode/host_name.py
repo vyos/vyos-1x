@@ -170,7 +170,7 @@ def apply(config):
 
     # restart pdns if it is used
     if os.system("/usr/bin/rec_control ping >/dev/null 2>&1") == 0:
-        os.system("/etc/init.d/pdns-recursor restart >/dev/null")
+        os.system("/bin/systemctl restart pdns-recursor.service >/dev/null")
 
     return None
 
