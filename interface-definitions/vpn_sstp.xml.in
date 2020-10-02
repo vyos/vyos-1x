@@ -44,7 +44,7 @@
               #include <include/interface-mtu-68-1500.xml.i>
             </children>
           </node>
-          <node name="ppp-settings">
+          <node name="ppp-options">
             <properties>
               <help>PPP (Point-to-Point Protocol) settings</help>
             </properties>
