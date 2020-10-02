@@ -134,8 +134,19 @@ def initialization(socket):
     # Reset config strings:
     active_string = ''
     session_string = ''
+    # check first for resent init msg, in case of client timeout
+    while True:
+        msg = socket.recv().decode()
+        try:
+            message = json.loads(msg)
+            if message["type"] == "init":
+                resp = "init"
+                socket.send(resp.encode())
+        except:
+            break
+
     # zmq synchronous for ipc from single client:
-    active_string = socket.recv().decode()
+    active_string = msg
     resp = "active"
     socket.send(resp.encode())
     session_string = socket.recv().decode()
