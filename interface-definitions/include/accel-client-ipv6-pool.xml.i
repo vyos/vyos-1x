@@ -1,3 +1,4 @@
+<!-- included start from accel-client-ipv6-pool.xml.i -->
 <node name="client-ipv6-pool">
   <properties>
     <help>Pool of client IPv6 addresses</help>
@@ -57,3 +58,4 @@
     </tagNode>
   </children>
 </node>
+<!-- included end -->

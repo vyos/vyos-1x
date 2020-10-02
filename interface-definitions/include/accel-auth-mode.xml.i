@@ -1,3 +1,4 @@
+<!-- included start from accel-auth-mode.xml.i -->
 <leafNode name="mode">
   <properties>
     <help>Authentication mode used by this server</help>
@@ -18,3 +19,4 @@
   </properties>
   <defaultValue>local</defaultValue>
 </leafNode>
+<!-- included end -->

@@ -28,14 +28,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="gateway-address">
-                <properties>
-                  <help>Gatway address uses as client tunnel termination point</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/accel-gateway-address.xml.i>
               #include <include/accel-name-server.xml.i>
               <node name="lns">
                 <properties>
@@ -187,20 +180,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="subnet">
-                    <properties>
-                      <help>Client IP subnet (CIDR notation)</help>
-                      <constraint>
-                        <validator name="ipv4-prefix"/>
-                      </constraint>
-                      <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
-                      <valueHelp>
-                        <format>ipv4net</format>
-                        <description>IPv4 subnet address</description>
-                      </valueHelp>
-                      <multi />
-                    </properties>
-                  </leafNode>
+                  #include <include/accel-client-subnet.xml.i>
                 </children>
               </node>
               #include <include/accel-client-ipv6-pool.xml.i>
@@ -259,83 +239,9 @@
                       <multi />
                     </properties>
                   </leafNode>
-                  <leafNode name="mppe">
-                    <properties>
-                      <help>Specifies mppe negotioation preference. (default require mppe 128-bit stateless</help>
-                      <valueHelp>
-                        <format>deny</format>
-                        <description>deny mppe</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>prefer</format>
-                        <description>Ask client for mppe, if it rejects do not fail</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>require</format>
-                        <description>ask client for mppe, if it rejects drop connection</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(deny|prefer|require)</regex>
-                      </constraint>
-                      <completionHelp>
-                        <list>deny prefer require</list>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/accel-ppp-mppe.xml.i>
                   #include <include/accel-auth-mode.xml.i>
-                  <node name="local-users">
-                    <properties>
-                      <help>Local user authentication for remote access L2TP VPN</help>
-                    </properties>
-                    <children>
-                      <tagNode name="username">
-                        <properties>
-                          <help>User name for authentication</help>
-                        </properties>
-                        <children>
-                          <leafNode name="disable">
-                            <properties>
-                              <help>Option to disable a L2TP Server user</help>
-                              <valueless/>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="password">
-                            <properties>
-                              <help>Password for authentication</help>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="static-ip">
-                            <properties>
-                              <help>Static client IP address</help>
-                            </properties>
-                          </leafNode>
-                          <node name="rate-limit">
-                            <properties>
-                              <help>Upload/Download speed limits</help>
-                            </properties>
-                            <children>
-                              <leafNode name="upload">
-                                <properties>
-                                  <help>Upload bandwidth limit in kbits/sec</help>
-                                  <constraint>
-                                    <validator name="numeric" argument="--range 1-65535"/>
-                                  </constraint>
-                                </properties>
-                              </leafNode>
-                              <leafNode name="download">
-                                <properties>
-                                  <help>Download bandwidth limit in kbits/sec</help>
-                                  <constraint>
-                                    <validator name="numeric" argument="--range 1-65535"/>
-                                  </constraint>
-                                </properties>
-                              </leafNode>
-                            </children>
-                          </node>
-                        </children>
-                      </tagNode>
-                    </children>
-                  </node>
+                  #include <include/accel-auth-local-users.xml.i>
                   #include <include/radius-server.xml.i>
                   <node name="radius">
                     <children>
@@ -430,22 +336,7 @@
                   <help>Advanced protocol options</help>
                 </properties>
                 <children>
-                  <leafNode name="lcp-echo-interval">
-                    <properties>
-                      <help>LCP echo-requests/sec</help>
-                      <constraint>
-                        <validator name="numeric" argument="--positive"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="lcp-echo-failure">
-                    <properties>
-                      <help>Maximum number of Echo-Requests may be sent without valid reply</help>
-                      <constraint>
-                        <validator name="numeric" argument="--positive"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/accel-lcp-echo-interval-failure.xml.i>
                 </children>
               </node>
             </children>

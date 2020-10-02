@@ -13,117 +13,45 @@
               <help>Authentication for remote access SSTP Server</help>
             </properties>
             <children>
-              <node name="local-users">
-                <properties>
-                  <help>Local user authentication for SSTP server</help>
-                </properties>
-                <children>
-                  <tagNode name="username">
-                    <properties>
-                      <help>User name for authentication</help>
-                    </properties>
-                    <children>
-                      <leafNode name="disable">
-                        <properties>
-                          <help>Option to disable a SSTP Server user</help>
-                          <valueless />
-                        </properties>
-                      </leafNode>
-                      <leafNode name="password">
-                        <properties>
-                          <help>Password for authentication</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="static-ip">
-                        <properties>
-                          <help>Static client IP address</help>
-                        </properties>
-                      </leafNode>
-                      <node name="rate-limit">
-                        <properties>
-                          <help>Upload/Download speed limits</help>
-                        </properties>
-                        <children>
-                          <leafNode name="upload">
-                            <properties>
-                              <help>Upload bandwidth limit in kbits/sec</help>
-                              <constraint>
-                                <validator name="numeric" argument="--range 1-65535"/>
-                              </constraint>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="download">
-                            <properties>
-                              <help>Download bandwidth limit in kbits/sec</help>
-                              <constraint>
-                                <validator name="numeric" argument="--range 1-65535"/>
-                              </constraint>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
-                    </children>
-                  </tagNode>
-                </children>
-              </node>
+              #include <include/accel-auth-local-users.xml.i>
               #include <include/accel-auth-mode.xml.i>
-              <leafNode name="protocols">
-                <properties>
-                  <help>Authentication protocol for remote access peer SSTP VPN</help>
-                  <completionHelp>
-                    <list>pap chap mschap mschap-v2</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>pap</format>
-                    <description>Authentication via PAP (Password Authentication Protocol)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>chap</format>
-                    <description>Authentication via CHAP (Challenge Handshake Authentication Protocol)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>mschap</format>
-                    <description>Authentication via MS-CHAP (Microsoft Challenge Handshake Authentication Protocol)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>mschap-v2</format>
-                    <description>Authentication via MS-CHAPv2 (Microsoft Challenge Handshake Authentication Protocol, version 2)</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(pap|chap|mschap|mschap-v2)</regex>
-                  </constraint>
-                    <multi />
-                </properties>
-              </leafNode>
+              #include <include/accel-auth-protocols.xml.i>
               #include <include/radius-server.xml.i>
               #include <include/accel-radius-additions.xml.i>
               <node name="radius">
                 <children>
-                  <node name="rate-limit">
-                    <properties>
-                      <help>Upload/Download speed limits</help>
-                    </properties>
-                    <children>
-                      <leafNode name="attribute">
-                        <properties>
-                          <help>Specifies RADIUS attribute containing rate information (default 'Filter-Id')</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="vendor">
-                        <properties>
-                          <help>Specifies vendor dictionary (needs to be in /usr/share/accel-ppp/radius)</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="enable">
-                        <properties>
-                          <help>Enable RADIUS bandwidth shaping</help>
-                          <valueless />
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
+                  #include <include/accel-radius-additions-rate-limit.xml.i>
                 </children>
               </node>
+            </children>
+          </node>
+          <node name="network-settings">
+            <properties>
+              <help>Network settings</help>
+            </properties>
+            <children>
+              <node name="client-ip-settings">
+                <properties>
+                  <help>Client IP pools and gateway setting</help>
+                </properties>
+                <children>
+                  #include <include/accel-client-subnet.xml.i>
+                  #include <include/accel-gateway-address.xml.i>
+                </children>
+              </node>
+              #include <include/accel-client-ipv6-pool.xml.i>
+              #include <include/accel-name-server.xml.i>
+              #include <include/interface-mtu-68-1500.xml.i>
+            </children>
+          </node>
+          <node name="ppp-settings">
+            <properties>
+              <help>PPP (Point-to-Point Protocol) settings</help>
+            </properties>
+            <children>
+              #include <include/accel-ppp-mppe.xml.i>
+              #include <include/accel-lcp-echo-interval-failure.xml.i>
+              #include <include/accel-lcp-echo-timeout.xml.i>
             </children>
           </node>
           <node name="ssl">
@@ -168,106 +96,8 @@
               </leafNode>
             </children>
           </node>
-          <node name="network-settings">
-            <properties>
-              <help>Network settings</help>
-            </properties>
-            <children>
-              <node name="client-ip-settings">
-                <properties>
-                  <help>Client IP pools and gateway setting</help>
-                </properties>
-                <children>
-                  <leafNode name="subnet">
-                    <properties>
-                      <help>Client IP subnet (CIDR notation)</help>
-                      <valueHelp>
-                        <format>ipv4net</format>
-                        <description>IPv4 address and prefix length</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-prefix"/>
-                      </constraint>
-                      <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
-                      <multi />
-                    </properties>
-                  </leafNode>
-                  <leafNode name="gateway-address">
-                    <properties>
-                      <help>Gateway IP address</help>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                      <constraintErrorMessage>invalid IPv4 address</constraintErrorMessage>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Default Gateway send to the client</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
-              #include <include/accel-client-ipv6-pool.xml.i>
-              #include <include/accel-name-server.xml.i>
-              #include <include/interface-mtu-68-1500.xml.i>
-            </children>
-          </node>
-          <node name="ppp-settings">
-            <properties>
-              <help>PPP (Point-to-Point Protocol) settings</help>
-            </properties>
-            <children>
-              <leafNode name="mppe">
-                <properties>
-                  <help>Specifies mppe negotiation preferences</help>
-                  <completionHelp>
-                    <list>require prefer deny</list>
-                  </completionHelp>
-                  <constraint>
-                    <regex>(^require|prefer|deny)</regex>
-                  </constraint>
-                  <valueHelp>
-                    <format>require</format>
-                    <description>send mppe request, if client rejects, drop the connection</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>prefer</format>
-                    <description>send mppe request, if client rejects continue</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>deny</format>
-                    <description>drop all mppe</description>
-                  </valueHelp>
-                </properties>
-              </leafNode>
-              <leafNode name="lcp-echo-interval">
-                <properties>
-                  <help>LCP echo-requests/sec</help>
-                  <constraint>
-                    <validator name="numeric" argument="--positive"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="lcp-echo-failure">
-                <properties>
-                  <help>Maximum number of Echo-Requests may be sent without valid reply</help>
-                  <constraint>
-                    <validator name="numeric" argument="--positive"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="lcp-echo-timeout">
-                <properties>
-                  <help>Timeout in seconds to wait for any peer activity. If this option specified it turns on adaptive lcp echo functionality and "lcp-echo-failure" is not used.</help>
-                  <constraint>
-                    <validator name="numeric" argument="--positive"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-      </children>
-    </node>
-  </children>
-</node>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
