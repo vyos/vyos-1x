@@ -260,7 +260,7 @@ def get_config(config=None):
 
     #
     # read in network settings
-    conf.set_level(base_path + ['network-settings'])
+    conf.set_level(base_path)
     if conf.exists(['name-server']):
         for name_server in conf.return_values(['name-server']):
             if is_ipv4(name_server):
@@ -268,6 +268,9 @@ def get_config(config=None):
             else:
                 sstp['dnsv6'].append(name_server)
 
+    #
+    # read in network settings
+    conf.set_level(base_path + ['network-settings'])
     if conf.exists(['mtu']):
         sstp['mtu'] = conf.return_value(['mtu'])
 

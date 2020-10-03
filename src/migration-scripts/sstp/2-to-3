@@ -39,6 +39,11 @@ else:
     if config.exists(base_path + ['ppp-settings']):
         config.rename(base_path + ['ppp-settings'], 'ppp-options')
 
+    config_ns = base_path + ['network-settings', 'name-server']
+    if config.exists(config_ns):
+        config.copy(config_ns, base_path + ['name-server'])
+        config.delete(config_ns)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
