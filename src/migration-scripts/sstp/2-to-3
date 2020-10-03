@@ -44,6 +44,11 @@ else:
         config.copy(config_ns, base_path + ['name-server'])
         config.delete(config_ns)
 
+    config_mtu = base_path + ['network-settings', 'mtu']
+    if config.exists(config_mtu):
+        config.copy(config_mtu, base_path + ['mtu'])
+        config.delete(config_mtu)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

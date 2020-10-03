@@ -25,6 +25,7 @@
               </node>
             </children>
           </node>
+          #include <include/interface-mtu-68-1500.xml.i>
           #include <include/accel-name-server.xml.i>
           <node name="network-settings">
             <properties>
@@ -41,7 +42,6 @@
                 </children>
               </node>
               #include <include/accel-client-ipv6-pool.xml.i>
-              #include <include/interface-mtu-68-1500.xml.i>
             </children>
           </node>
           <node name="ppp-options">

@@ -270,7 +270,6 @@ def get_config(config=None):
 
     #
     # read in network settings
-    conf.set_level(base_path + ['network-settings'])
     if conf.exists(['mtu']):
         sstp['mtu'] = conf.return_value(['mtu'])
 
