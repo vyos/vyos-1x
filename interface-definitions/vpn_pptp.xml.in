@@ -65,14 +65,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="gateway-address">
-                <properties>
-                  <help>Gatway address uses as client tunnel termination point</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/accel-gateway-address.xml.i>
               <node name="authentication">
                 <properties>
                   <help>Authentication for remote access PPTP VPN</help>

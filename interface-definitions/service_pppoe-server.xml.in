@@ -8,19 +8,6 @@
           <priority>900</priority>
         </properties>
         <children>
-          <node name="snmp">
-            <properties>
-              <help>Enable SNMP</help>
-            </properties>
-            <children>
-              <leafNode name="master-agent">
-                <properties>
-                  <help>enable SNMP master agent mode</help>
-                  <valueless />
-                </properties>
-              </leafNode>
-            </children>
-          </node>
           <leafNode name="access-concentrator">
             <properties>
               <help>Access concentrator name</help>
@@ -29,142 +16,43 @@
               </constraint>
               <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
             </properties>
-          </leafNode>
-          <leafNode name="session-control">
-            <properties>
-              <help>control sessions count</help>
-              <constraint>
-                <regex>(deny|disable)</regex>
-              </constraint>
-              <constraintErrorMessage>Invalid value</constraintErrorMessage>
-              <valueHelp>
-                <format>disable</format>
-                <description>Disables session control</description>
-              </valueHelp>
-              <valueHelp>
-                <format>deny</format>
-                <description>Deny second session authorization</description>
-              </valueHelp>
-              <completionHelp>
-                <list>deny disable</list>
-              </completionHelp>
-            </properties>
+            <defaultValue>vyos-ac</defaultValue>
           </leafNode>
           <node name="authentication">
             <properties>
               <help>Authentication for remote access PPPoE Server</help>
             </properties>
             <children>
-              <node name="local-users">
-                <properties>
-                  <help>Local user authentication for PPPoE server</help>
-                </properties>
-                <children>
-                  <tagNode name="username">
-                    <properties>
-                      <help>User name for authentication</help>
-                    </properties>
-                    <children>
-                      <leafNode name="disable">
-                        <properties>
-                          <help>Option to disable a PPPoE Server user</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="password">
-                        <properties>
-                          <help>Password for authentication</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="static-ip">
-                        <properties>
-                          <help>Static client IP address</help>
-                        </properties>
-                      </leafNode>
-                      <node name="rate-limit">
-                        <properties>
-                          <help>Upload/Download speed limits</help>
-                        </properties>
-                        <children>
-                          <leafNode name="upload">
-                            <properties>
-                              <help>Upload bandwidth limit in kbits/sec</help>
-                              <constraint>
-                                <validator name="numeric" argument="--range 1-65535"/>
-                              </constraint>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="download">
-                            <properties>
-                              <help>Download bandwidth limit in kbits/sec</help>
-                              <constraint>
-                                <validator name="numeric" argument="--range 1-65535"/>
-                              </constraint>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
-                    </children>
-                  </tagNode>
-                </children>
-              </node>
+              #include <include/accel-auth-local-users.xml.i>
               #include <include/accel-auth-mode.xml.i>
+              #include <include/accel-auth-protocols.xml.i>
               #include <include/radius-server.xml.i>
               #include <include/accel-radius-additions.xml.i>
               <node name="radius">
                 <children>
-                  <node name="rate-limit">
+                  #include <include/accel-radius-additions-rate-limit.xml.i>
+                  <leafNode name="called-sid-format">
                     <properties>
-                      <help>Upload/Download speed limits</help>
+                      <help>Format of Called-Station-Id attribute</help>
+                      <completionHelp>
+                        <list>ifname ifname:mac</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(ifname|ifname:mac)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid Called-Station-Id format</constraintErrorMessage>
+                      <valueHelp>
+                        <format>ifname</format>
+                        <description>NAS-Port-Id - should contain root interface name (NAS-Port-Id=eth1)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ifname:mac</format>
+                        <description>NAS-Port-Id - should contain root interface name and mac address (NAS-Port-Id=eth1:00:00:00:00:00:00)</description>
+                      </valueHelp>
                     </properties>
-                    <children>
-                      <leafNode name="attribute">
-                        <properties>
-                          <help>Specifies which radius attribute contains rate information. (default is Filter-Id)</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="vendor">
-                        <properties>
-                          <help>Specifies the vendor dictionary. (dictionary needs to be in /usr/share/accel-ppp/radius)</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="enable">
-                        <properties>
-                          <help>Enables Bandwidth shaping via RADIUS</help>
-                          <valueless />
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
+                  </leafNode>
                 </children>
               </node>
-              <leafNode name="protocols">
-                <properties>
-                  <help>Authentication protocol</help>
-                  <valueHelp>
-                    <format>pap</format>
-                    <description>Allow PAP authentication [Password Authentication Protocol]</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>chap</format>
-                    <description>Allow CHAP authentication [Challenge Handshake Authentication Protocol]</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>mschap</format>
-                    <description>Allow MS-CHAP authentication [Microsoft Challenge Handshake Authentication Protocol, Version 1]</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>mschap-v2</format>
-                    <description>Allow MS-CHAPv2 authentication [Microsoft Challenge Handshake Authentication Protocol, Version 2]</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(pap|chap|mschap|mschap-v2)</regex>
-                  </constraint>
-                  <completionHelp>
-                    <list>pap chap mschap mschap-v2</list>
-                  </completionHelp>
-                  <multi />
-                </properties>
-              </leafNode>
             </children>
           </node>
           <node name="client-ip-pool">
@@ -188,16 +76,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="subnet">
-                <properties>
-                  <help>Client IP subnet (CIDR notation)</help>
-                  <constraint>
-                    <validator name="ipv4-prefix"/>
-                  </constraint>
-                  <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
-                  <multi />
-                </properties>
-              </leafNode>
+              #include <include/accel-client-subnet.xml.i>
             </children>
           </node>
           #include <include/accel-client-ipv6-pool.xml.i>
@@ -214,10 +93,10 @@
                 <properties>
                   <help>VLAN monitor for the automatic creation of vlans (user per vlan)</help>
                   <constraint>
-                        <validator name="numeric" argument="--range 1-4096"/>
-                      </constraint>
-                      <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
-                      <multi />
+                    <validator name="numeric" argument="--range 1-4096"/>
+                  </constraint>
+                  <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
+                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="vlan-range">
@@ -226,7 +105,7 @@
                   <constraint>
                     <regex>(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})-(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})</regex>
                   </constraint>
-                  <multi />
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
@@ -243,9 +122,10 @@
             <properties>
               <help>Maximum Transmission Unit (MTU) - default 1492</help>
               <constraint>
-              <validator name="numeric" argument="--range 128-16384"/>
+                <validator name="numeric" argument="--range 128-16384"/>
               </constraint>
             </properties>
+            <defaultValue>1492</defaultValue>
           </leafNode>
           <node name="limits">
             <properties>
@@ -311,53 +191,9 @@
                   <valueless />
                 </properties>
               </leafNode>
-              <leafNode name="mppe">
-                <properties>
-                  <help>Specifies MPPE negotiation preference. (default prefer mppe)</help>
-                  <completionHelp>
-                    <list>deny prefer require</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>deny</format>
-                    <description>Deny MPPE</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>prefer</format>
-                    <description>Ask client for MPPE - do not fail on reject</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>require</format>
-                    <description>Ask client for MPPE - drop connection on reject</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>^(deny|prefer|require)$</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="lcp-echo-interval">
-                <properties>
-                  <help>LCP echo-requests/sec</help>
-                  <constraint>
-                    <validator name="numeric" argument="--positive"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="lcp-echo-failure">
-                <properties>
-                  <help>Maximum number of Echo-Requests may be sent without valid reply</help>
-                  <constraint>
-                    <validator name="numeric" argument="--positive"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="lcp-echo-timeout">
-                <properties>
-                  <help>Timeout in seconds to wait for any peer activity. If this option specified it turns on adaptive lcp echo functionality and "lcp-echo-failure" is not used.</help>
-                  <constraint>
-                    <validator name="numeric" argument="--positive"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/accel-ppp-mppe.xml.i>
+              #include <include/accel-lcp-echo-interval-failure.xml.i>
+              #include <include/accel-lcp-echo-timeout.xml.i>
               <leafNode name="ipv4">
                 <properties>
                   <help>IPv4 (IPCP) negotiation algorithm</help>
@@ -417,6 +253,9 @@
               <leafNode name="ipv6-intf-id">
                 <properties>
                   <help>Fixed or random interface identifier for IPv6</help>
+                  <completionHelp>
+                    <list>random</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>random</format>
                     <description>Random interface identifier for IPv6</description>
@@ -430,6 +269,9 @@
               <leafNode name="ipv6-peer-intf-id">
                 <properties>
                   <help>Peer interface identifier for IPv6</help>
+                  <completionHelp>
+                    <list>random calling-sid ipv4</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>x:x:x:x</format>
                     <description>Interface identifier for IPv6</description>
@@ -484,6 +326,44 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="session-control">
+            <properties>
+              <help>control sessions count</help>
+              <constraint>
+                <regex>^(deny|disable|replace)$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid value</constraintErrorMessage>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disables session control</description>
+              </valueHelp>
+              <valueHelp>
+                <format>deny</format>
+                <description>Deny second session authorization</description>
+              </valueHelp>
+              <valueHelp>
+                <format>replace</format>
+                <description>Terminate first session when second is authorized</description>
+              </valueHelp>
+              <completionHelp>
+                <list>deny disable replace</list>
+              </completionHelp>
+            </properties>
+            <defaultValue>replace</defaultValue>
+          </leafNode>
+          <node name="snmp">
+            <properties>
+              <help>Enable SNMP</help>
+            </properties>
+            <children>
+              <leafNode name="master-agent">
+                <properties>
+                  <help>enable SNMP master agent mode</help>
+                  <valueless />
+                </properties>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

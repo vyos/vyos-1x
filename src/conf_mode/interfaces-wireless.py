@@ -74,7 +74,18 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'wireless']
+
     wifi = get_interface_dict(conf, base)
+    # defaults include RADIUS server specifics per TAG node which need to be
+    # added to individual RADIUS servers instead - so we can simply delete them
+    if vyos_dict_search('security.wpa.radius.server.port', wifi):
+        del wifi['security']['wpa']['radius']['server']['port']
+        if not len(wifi['security']['wpa']['radius']['server']):
+            del wifi['security']['wpa']['radius']
+        if not len(wifi['security']['wpa']):
+            del wifi['security']['wpa']
+        if not len(wifi['security']):
+            del wifi['security']
 
     if 'security' in wifi and 'wpa' in wifi['security']:
         wpa_cipher = wifi['security']['wpa'].get('cipher')
@@ -98,6 +109,14 @@ def get_config(config=None):
     # Only one wireless interface per phy can be in station mode
     tmp = find_other_stations(conf, base, wifi['ifname'])
     if tmp: wifi['station_interfaces'] = tmp
+
+    # Add individual RADIUS server default values
+    if vyos_dict_search('security.wpa.radius.server', wifi):
+        default_values = defaults(base + ['security', 'wpa', 'radius', 'server'])
+
+        for server in vyos_dict_search('security.wpa.radius.server', wifi):
+            wifi['security']['wpa']['radius']['server'][server] = dict_merge(
+                default_values, wifi['security']['wpa']['radius']['server'][server])
 
     return wifi
 

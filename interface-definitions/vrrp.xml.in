@@ -222,6 +222,25 @@
                   </valueHelp>
                 </properties>
               </leafNode>
+              <leafNode name="virtual-address-excluded">
+                <properties>
+                  <help>Virtual address (If you need additional IPv4 and IPv6 in same group)</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <multi/>
+                  <constraint>
+                    <validator name="ipv4-host"/>
+                    <validator name="ipv6-host"/>
+                  </constraint>
+                  <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <leafNode name="vrid">
                 <properties>
                   <help>Virtual router identifier</help>

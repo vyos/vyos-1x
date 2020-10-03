@@ -27,7 +27,7 @@ import importlib.util
 import zmq
 
 from vyos.defaults import directories
-from vyos.configsource import ConfigSourceString
+from vyos.configsource import ConfigSourceString, ConfigSourceError
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -58,9 +58,6 @@ configd_env_set_file = os.path.join(directories['data'], 'vyos-configd-env-set')
 configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-unset')
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
-
-active_string = ''
-session_string = ''
 
 session_tty = None
 
@@ -137,8 +134,19 @@ def initialization(socket):
     # Reset config strings:
     active_string = ''
     session_string = ''
+    # check first for resent init msg, in case of client timeout
+    while True:
+        msg = socket.recv().decode()
+        try:
+            message = json.loads(msg)
+            if message["type"] == "init":
+                resp = "init"
+                socket.send(resp.encode())
+        except:
+            break
+
     # zmq synchronous for ipc from single client:
-    active_string = socket.recv().decode()
+    active_string = msg
     resp = "active"
     socket.send(resp.encode())
     session_string = socket.recv().decode()
@@ -154,8 +162,12 @@ def initialization(socket):
     except FileNotFoundError:
         session_tty = None
 
-    configsource = ConfigSourceString(running_config_text=active_string,
-                                      session_config_text=session_string)
+    try:
+        configsource = ConfigSourceString(running_config_text=active_string,
+                                          session_config_text=session_string)
+    except ConfigSourceError as e:
+        logger.debug(e)
+        return None
 
     config = Config(config_source=configsource)
 

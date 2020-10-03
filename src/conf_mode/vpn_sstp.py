@@ -273,9 +273,9 @@ def get_config(config=None):
 
     #
     # read in PPP stuff
-    conf.set_level(base_path + ['ppp-settings'])
+    conf.set_level(base_path + ['ppp-options'])
     if conf.exists('mppe'):
-        sstp['ppp_mppe'] = conf.return_value(['ppp-settings', 'mppe'])
+        sstp['ppp_mppe'] = conf.return_value(['mppe'])
 
     if conf.exists(['lcp-echo-failure']):
         sstp['ppp_echo_failure'] = conf.return_value(['lcp-echo-failure'])

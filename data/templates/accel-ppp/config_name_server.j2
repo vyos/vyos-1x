@@ -1,0 +1,13 @@
+{% if name_server_ipv4 is defined and name_server_ipv4 is not none %}
+[dns]
+{%   for ns in name_server_ipv4 %}
+dns{{ loop.index }}={{ ns }}
+{%   endfor %}
+{% endif %}
+
+{% if name_server_ipv6 is defined and name_server_ipv6 is not none %}
+[ipv6-dns]
+{%   for ns in name_server_ipv6 %}
+{{ ns }}
+{%   endfor %}
+{% endif %}

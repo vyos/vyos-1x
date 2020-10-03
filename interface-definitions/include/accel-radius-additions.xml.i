@@ -1,5 +1,18 @@
 <node name="radius">
   <children>
+    <leafNode name="acct-interim-jitter">
+      <properties>
+        <help>Maximum jitter value in seconds to be applied to accounting information interval</help>
+        <valueHelp>
+          <format>1-60</format>
+          <description>Maximum jitter value in seconds</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-60"/>
+        </constraint>
+        <constraintErrorMessage>Jitter value must be between 1 and 60 seconds</constraintErrorMessage>
+      </properties>
+    </leafNode>
     <tagNode name="server">
       <children>
         <leafNode name="acct-port">
@@ -13,6 +26,7 @@
               <validator name="numeric" argument="--range 1-65535"/>
             </constraint>
           </properties>
+          <defaultValue>1813</defaultValue>
         </leafNode>
         <leafNode name="fail-time">
           <properties>
@@ -26,6 +40,7 @@
             </constraint>
             <constraintErrorMessage>Fail time must be between 0 and 600 seconds</constraintErrorMessage>
           </properties>
+          <defaultValue>0</defaultValue>
         </leafNode>
       </children>
     </tagNode>
@@ -41,6 +56,7 @@
         </constraint>
         <constraintErrorMessage>Timeout must be between 1 and 60 seconds</constraintErrorMessage>
       </properties>
+      <defaultValue>3</defaultValue>
     </leafNode>
     <leafNode name="acct-timeout">
       <properties>
@@ -54,6 +70,7 @@
         </constraint>
         <constraintErrorMessage>Timeout must be between 0 and 60 seconds</constraintErrorMessage>
       </properties>
+      <defaultValue>3</defaultValue>
     </leafNode>
     <leafNode name="max-try">
       <properties>
@@ -67,6 +84,7 @@
         </constraint>
         <constraintErrorMessage>Maximum tries must be between 1 and 20</constraintErrorMessage>
       </properties>
+      <defaultValue>3</defaultValue>
     </leafNode>
     <leafNode name="nas-identifier">
       <properties>
@@ -85,6 +103,12 @@
         </valueHelp>
        </properties>
      </leafNode>
+    <leafNode name="preallocate-vif">
+      <properties>
+        <help>Enable attribute NAS-Port-Id in Access-Request</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <node name="dynamic-author">
       <properties>
         <help>Dynamic Authorization Extension/Change of Authorization server</help>
@@ -104,7 +128,7 @@
         </leafNode>
         <leafNode name="port">
           <properties>
-            <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
+            <help>Port for Dynamic Authorization Extension server (DM/CoA) (default: 1700)</help>
             <valueHelp>
               <format>number</format>
               <description>TCP port</description>
@@ -113,6 +137,7 @@
               <validator name="numeric" argument="--range 1-65535"/>
             </constraint>
           </properties>
+          <defaultValue>1700</defaultValue>
         </leafNode>
         <leafNode name="key">
           <properties>

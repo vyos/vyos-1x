@@ -297,7 +297,7 @@ class XML(dict):
                 continue
             value = conf[k]
             if self.is_multi(fpath) and not isinstance(value, list):
-                value = [value]
+                value = value.split(' ')
             r[under] = value
         return r
 

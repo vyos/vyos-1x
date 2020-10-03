@@ -16,6 +16,7 @@
 
 import os
 
+from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
@@ -58,8 +59,7 @@ def get_config(config=None):
 
     # Check if interface has been removed
     if 'deleted' in macsec:
-        source_interface = conf.return_effective_value(
-                base + ['source-interface'])
+        source_interface = conf.return_effective_value(['source-interface'])
         macsec.update({'source_interface': source_interface})
 
     return macsec
@@ -97,7 +97,7 @@ def verify(macsec):
         lower_mtu = Interface(macsec['source_interface']).get_mtu()
         if lower_mtu < (int(macsec['mtu']) + 40):
             raise ConfigError('MACsec overhead does not fit into underlaying device MTU,\n' \
-                              f'{underlay_mtu} bytes is too small!')
+                              f'{lower_mtu} bytes is too small!')
 
     return None
 
@@ -110,11 +110,13 @@ def generate(macsec):
 
 def apply(macsec):
     # Remove macsec interface
-    if 'deleted' in macsec.keys():
+    if 'deleted' in macsec:
         call('systemctl stop wpa_supplicant-macsec@{source_interface}'
              .format(**macsec))
 
-        MACsecIf(macsec['ifname']).remove()
+        if macsec['ifname'] in interfaces():
+            tmp = MACsecIf(macsec['ifname'])
+            tmp.remove()
 
         # delete configuration on interface removal
         if os.path.isfile(wpa_suppl_conf.format(**macsec)):

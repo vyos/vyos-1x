@@ -70,6 +70,14 @@ vrrp_instance {{ group.name }} {
     {% endfor -%}
     }
 
+    {% if group.virtual_addresses_excluded -%}
+    virtual_ipaddress_excluded {
+    {% for addr in group.virtual_addresses_excluded -%}
+        {{ addr }}
+    {% endfor -%}
+    }
+    {% endif -%}
+
     {% if group.health_check_script -%}
     track_script {
         healthcheck_{{ group.name }}

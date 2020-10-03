@@ -238,8 +238,11 @@ def verify(nat):
 
         if rule['translation_address']:
             addr = rule['translation_address']
-            if addr != 'masquerade' and not is_addr_assigned(addr):
-                print(f'Warning: IP address {addr} does not exist on the system!')
+            if addr != 'masquerade':
+                for ip in addr.split('-'):
+                    if not is_addr_assigned(ip):
+                        print(f'Warning: IP address {ip} does not exist on the system!')
+
         elif not rule['exclude']:
             raise ConfigError(f'{err_msg} translation address not specified')
 

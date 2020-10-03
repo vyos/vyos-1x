@@ -57,13 +57,13 @@ def get_config(config=None):
 
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
+    dict = {}
     tmp = node_changed(conf, ['peer'])
-    if tmp:
-        dict = {}
-        for peer in tmp:
-            peer_config = leaf_node_changed(conf, ['peer', peer, 'pubkey'])
-            dict = dict_merge({'peer_remove' : {peer : {'pubkey' : peer_config}}}, dict)
-        wireguard.update(dict)
+    for peer in (tmp or []):
+        pubkey = leaf_node_changed(conf, ['peer', peer, 'pubkey'])
+        if pubkey:
+            dict = dict_merge({'peer_remove' : {peer : {'pubkey' : pubkey[0]}}}, dict)
+            wireguard.update(dict)
 
     return wireguard
 
@@ -101,12 +101,12 @@ def verify(wireguard):
                               f'for peer "{tmp}" if either one of them is set!')
 
 def apply(wireguard):
+    tmp = WireGuardIf(wireguard['ifname'])
     if 'deleted' in wireguard:
-        WireGuardIf(wireguard['ifname']).remove()
+        tmp.remove()
         return None
 
-    w = WireGuardIf(wireguard['ifname'])
-    w.update(wireguard)
+    tmp.update(wireguard)
     return None
 
 if __name__ == '__main__':

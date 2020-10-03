@@ -105,7 +105,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check for running process
             self.assertTrue(process_named_running('wpa_supplicant'))
 
-    def test_mandatory_toptions(self):
+    def test_mandatory_options(self):
         interface = 'macsec1'
         self.session.set(self._base_path + [interface])
 

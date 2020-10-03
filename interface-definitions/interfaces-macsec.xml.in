@@ -5,7 +5,7 @@
       <tagNode name="macsec" owner="${vyos_conf_scripts_dir}/interfaces-macsec.py">
         <properties>
           <help>MACsec Interface (802.1ae)</help>
-          <priority>319</priority>
+          <priority>461</priority>
           <constraint>
             <regex>^macsec[0-9]+$</regex>
           </constraint>

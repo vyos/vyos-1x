@@ -36,4 +36,10 @@ interface ignore wildcard
 {%   for address in listen_address %}
 interface listen {{ address }}
 {%   endfor %}
+interface listen 127.0.0.1
+interface listen ::1
+{% else %}
+interface ignore wildcard
+interface listen 127.0.0.1
+interface listen ::1
 {% endif %}

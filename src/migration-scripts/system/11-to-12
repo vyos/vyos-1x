@@ -37,31 +37,32 @@ else:
     # Migrate "system login radius-server" tag node to new
     # "system login radius server" tag node and also rename the "secret" node to "key"
     #
-    for server in config.list_nodes(cfg_base + ['radius-server']):
-        base_server = cfg_base + ['radius-server', server]
-        # "key" node is mandatory
-        key = config.return_value(base_server + ['secret'])
-        config.set(cfg_base + ['radius', 'server', server, 'key'], value=key)
-
-        # "port" is optional
-        if config.exists(base_server + ['port']):
-            port = config.return_value(base_server + ['port'])
-            config.set(cfg_base + ['radius', 'server', server, 'port'], value=port)
-
-        # "timeout is optional"
-        if config.exists(base_server + ['timeout']):
-            timeout = config.return_value(base_server + ['timeout'])
-            config.set(cfg_base + ['radius', 'server', server, 'timeout'], value=timeout)
-
-        # format as tag node
-        config.set_tag(cfg_base + ['radius', 'server'])
-
-        # delete old configuration node
-        config.delete(base_server)
-
-    # delete top level tag node
     if config.exists(cfg_base + ['radius-server']):
-        config.delete(cfg_base + ['radius-server'])
+        for server in config.list_nodes(cfg_base + ['radius-server']):
+            base_server = cfg_base + ['radius-server', server]
+            # "key" node is mandatory
+            key = config.return_value(base_server + ['secret'])
+            config.set(cfg_base + ['radius', 'server', server, 'key'], value=key)
+
+            # "port" is optional
+            if config.exists(base_server + ['port']):
+                port = config.return_value(base_server + ['port'])
+                config.set(cfg_base + ['radius', 'server', server, 'port'], value=port)
+
+            # "timeout is optional"
+            if config.exists(base_server + ['timeout']):
+                timeout = config.return_value(base_server + ['timeout'])
+                config.set(cfg_base + ['radius', 'server', server, 'timeout'], value=timeout)
+
+            # format as tag node
+            config.set_tag(cfg_base + ['radius', 'server'])
+
+            # delete old configuration node
+            config.delete(base_server)
+
+        # delete top level tag node
+        if config.exists(cfg_base + ['radius-server']):
+            config.delete(cfg_base + ['radius-server'])
 
     try:
         with open(file_name, 'w') as f:

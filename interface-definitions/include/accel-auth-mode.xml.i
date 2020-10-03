@@ -1,3 +1,4 @@
+<!-- included start from accel-auth-mode.xml.i -->
 <leafNode name="mode">
   <properties>
     <help>Authentication mode used by this server</help>
@@ -16,4 +17,6 @@
       <list>local radius</list>
     </completionHelp>
   </properties>
+  <defaultValue>local</defaultValue>
 </leafNode>
+<!-- included end -->
