@@ -67,9 +67,9 @@ def get_config(config=None):
     # configured in a different way in the configuration, this is why we split
     # the configuration
     if 'name_server' in pppoe:
+        ns_v4 = []
+        ns_v6 = []
         for ns in pppoe['name_server']:
-            ns_v4 = []
-            ns_v6 = []
             if is_ipv4(ns): ns_v4.append(ns)
             else: ns_v6.append(ns)
 
