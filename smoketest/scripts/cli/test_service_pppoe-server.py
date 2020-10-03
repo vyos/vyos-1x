@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
@@ -25,9 +24,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import process_named_running
 from vyos.util import cmd
 
-process_name = 'accel-pppd'
 local_if = ['interfaces', 'dummy', 'dum667']
-pppoe_conf = '/run/accel-pppd/pppoe.conf'
 
 ac_name = 'ACN'
 gateway = '192.0.2.1'
@@ -37,6 +34,10 @@ interface = 'eth0'
 class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
     def setUp(self):
         self._base_path = ['service', 'pppoe-server']
+        self._process_name = 'accel-pppd'
+        self._config_file = '/run/accel-pppd/pppoe.conf'
+        self._chap_secrets = '/run/accel-pppd/pppoe.chap-secrets'
+
         super().setUp()
 
     def tearDown(self):
@@ -77,7 +78,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         super().basic_config()
 
-    def test_authentication_local(self):
+    def test_foo(self):
         """ Test configuration of local authentication for PPPoE server """
         self.basic_config()
 
@@ -85,19 +86,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.set(['ppp-options', 'ccp'])
         self.set(['ppp-options', 'mppe', 'require'])
         self.set(['limits', 'connection-limit', '20/min'])
-
-        # upload / download limit
-        user = 'test'
-        password = 'test2'
-        static_ip = '100.100.100.101'
-        self.set(['authentication', 'local-users', 'username', user, 'password', password])
-        self.set(['authentication', 'local-users', 'username', user, 'static-ip', static_ip])
-        self.set(['authentication', 'local-users', 'username', user, 'rate-limit', 'upload', '5000'])
-
-        # upload rate-limit requires also download rate-limit
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.set(['authentication', 'local-users', 'username', user, 'rate-limit', 'download', '10000'])
 
         # min-mtu
         min_mtu = '1400'
@@ -112,13 +100,13 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(pppoe_conf)
+        conf.read(self._config_file)
 
         # basic verification
         self.verify(conf)
 
         # check auth
-        self.assertEqual(conf['chap-secrets']['chap-secrets'], '/run/accel-pppd/pppoe.chap-secrets')
+        self.assertEqual(conf['chap-secrets']['chap-secrets'], self._chap_secrets)
         self.assertEqual(conf['chap-secrets']['gw-ip-address'], gateway)
 
         # check ppp
@@ -131,14 +119,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         # check other settings
         self.assertEqual(conf['connlimit']['limit'], '20/min')
 
-        # check local users
-        tmp = cmd('sudo cat /run/accel-pppd/pppoe.chap-secrets')
-        regex = f'{user}\s+\*\s+{password}\s+{static_ip}\s+10000/5000'
-        tmp = re.findall(regex, tmp)
-        self.assertTrue(tmp)
-
         # Check for running process
-        self.assertTrue(process_named_running(process_name))
+        self.assertTrue(process_named_running(self._process_name))
 
     def test_authentication_radius(self):
         """ Test configuration of RADIUS authentication for PPPoE server """
@@ -176,7 +158,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(pppoe_conf)
+        conf.read(self._config_file)
 
         # basic verification
         self.verify(conf)
@@ -207,7 +189,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.assertFalse(conf['ppp'].getboolean('ccp'))
 
         # Check for running process
-        self.assertTrue(process_named_running(process_name))
+        self.assertTrue(process_named_running(self._process_name))
 
     def test_authentication_protocols(self):
         """ Test configuration of local authentication for PPPoE server """
@@ -221,12 +203,12 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True)
-        conf.read(pppoe_conf)
+        conf.read(self._config_file)
 
         self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
         # Check for running process
-        self.assertTrue(process_named_running(process_name))
+        self.assertTrue(process_named_running(self._process_name))
 
 
     def test_client_ip_pool(self):
@@ -247,12 +229,15 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True)
-        conf.read(pppoe_conf)
+        conf.read(self._config_file)
 
         # check configured subnet
         self.assertEqual(conf['ip-pool'][subnet], None)
         self.assertEqual(conf['ip-pool'][start_stop], None)
         self.assertEqual(conf['ip-pool']['gw-ip-address'], gateway)
+
+        # Check for running process
+        self.assertTrue(process_named_running(self._process_name))
 
 
     def test_client_ipv6_pool(self):
@@ -281,7 +266,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(pppoe_conf)
+        conf.read(self._config_file)
 
         for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
             self.assertEqual(conf['modules'][tmp], None)
@@ -295,7 +280,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.assertEqual(conf['ipv6-pool']['delegate'], f'{delegate_prefix},{delegate_mask}')
 
         # Check for running process
-        self.assertTrue(process_named_running(process_name))
+        self.assertTrue(process_named_running(self._process_name))
 
 if __name__ == '__main__':
     unittest.main()
