@@ -134,7 +134,7 @@ def verify(pppoe):
                               'can be configured')
 
     if 'name_server_ipv6' in pppoe:
-        if len(pppoe['name_server_ipv6']) > 2:
+        if len(pppoe['name_server_ipv6']) > 3:
             raise ConfigError('Not more then three IPv6 DNS name-servers ' \
                               'can be configured')
 
