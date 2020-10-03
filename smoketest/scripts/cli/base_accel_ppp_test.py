@@ -100,6 +100,9 @@ class BasicAccelPPPTest:
             conf = ConfigParser(allow_no_value=True, delimiters='=')
             conf.read(self._config_file)
 
+            # check proper path to chap-secrets file
+            self.assertEqual(conf['chap-secrets']['chap-secrets'], self._chap_secrets)
+
             # basic verification
             self.verify(conf)
 
@@ -108,6 +111,65 @@ class BasicAccelPPPTest:
             regex = f'{user}\s+\*\s+{password}\s+{static_ip}\s+{download}/{upload}'
             tmp = re.findall(regex, tmp)
             self.assertTrue(tmp)
+
+            # Check for running process
+            self.assertTrue(process_named_running(self._process_name))
+
+        def test_authentication_radius(self):
+            """ Test configuration of RADIUS authentication for PPPoE server """
+            self.basic_config()
+
+            radius_server = '192.0.2.22'
+            radius_key = 'secretVyOS'
+            radius_port = '2000'
+            radius_port_acc = '3000'
+
+            self.set(['authentication', 'mode', 'radius'])
+            self.set(['authentication', 'radius', 'server', radius_server, 'key', radius_key])
+            self.set(['authentication', 'radius', 'server', radius_server, 'port', radius_port])
+            self.set(['authentication', 'radius', 'server', radius_server, 'acct-port', radius_port_acc])
+
+            coa_server = '4.4.4.4'
+            coa_key = 'testCoA'
+            self.set(['authentication', 'radius', 'dynamic-author', 'server', coa_server])
+            self.set(['authentication', 'radius', 'dynamic-author', 'key', coa_key])
+
+            nas_id = 'VyOS-PPPoE'
+            nas_ip = '7.7.7.7'
+            self.set(['authentication', 'radius', 'nas-identifier', nas_id])
+            self.set(['authentication', 'radius', 'nas-ip-address', nas_ip])
+
+            source_address = '1.2.3.4'
+            self.set(['authentication', 'radius', 'source-address', source_address])
+
+            # commit changes
+            self.session.commit()
+
+            # Validate configuration values
+            conf = ConfigParser(allow_no_value=True, delimiters='=')
+            conf.read(self._config_file)
+
+            # basic verification
+            self.verify(conf)
+
+            # check auth
+            self.assertTrue(conf['radius'].getboolean('verbose'))
+            self.assertEqual(conf['radius']['acct-timeout'], '3')
+            self.assertEqual(conf['radius']['timeout'], '3')
+            self.assertEqual(conf['radius']['max-try'], '3')
+
+            self.assertEqual(conf['radius']['dae-server'], f'{coa_server}:1700,{coa_key}')
+            self.assertEqual(conf['radius']['nas-identifier'], nas_id)
+            self.assertEqual(conf['radius']['nas-ip-address'], nas_ip)
+            self.assertEqual(conf['radius']['bind'], source_address)
+
+            server = conf['radius']['server'].split(',')
+            self.assertEqual(radius_server, server[0])
+            self.assertEqual(radius_key, server[1])
+            self.assertEqual(f'auth-port={radius_port}', server[2])
+            self.assertEqual(f'acct-port={radius_port_acc}', server[3])
+            self.assertEqual(f'req-limit=0', server[4])
+            self.assertEqual(f'fail-time=0', server[5])
 
             # Check for running process
             self.assertTrue(process_named_running(self._process_name))

@@ -78,13 +78,14 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         super().basic_config()
 
-    def test_foo(self):
+    def test_ppp_options(self):
         """ Test configuration of local authentication for PPPoE server """
         self.basic_config()
 
         # other settings
+        mppe = 'require'
         self.set(['ppp-options', 'ccp'])
-        self.set(['ppp-options', 'mppe', 'require'])
+        self.set(['ppp-options', 'mppe', mppe])
         self.set(['limits', 'connection-limit', '20/min'])
 
         # min-mtu
@@ -105,12 +106,10 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         # basic verification
         self.verify(conf)
 
-        # check auth
-        self.assertEqual(conf['chap-secrets']['chap-secrets'], self._chap_secrets)
         self.assertEqual(conf['chap-secrets']['gw-ip-address'], gateway)
 
         # check ppp
-        self.assertEqual(conf['ppp']['mppe'], 'require')
+        self.assertEqual(conf['ppp']['mppe'], mppe)
         self.assertEqual(conf['ppp']['min-mtu'], min_mtu)
         self.assertEqual(conf['ppp']['mru'], mru)
 
@@ -118,75 +117,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # check other settings
         self.assertEqual(conf['connlimit']['limit'], '20/min')
-
-        # Check for running process
-        self.assertTrue(process_named_running(self._process_name))
-
-    def test_authentication_radius(self):
-        """ Test configuration of RADIUS authentication for PPPoE server """
-        radius_server = '192.0.2.22'
-        radius_key = 'secretVyOS'
-        radius_port = '2000'
-        radius_port_acc = '3000'
-        radius_acct_interim_jitter = '9'
-        radius_called_sid = 'ifname:mac'
-
-        self.basic_config()
-
-        self.set(['authentication', 'mode', 'radius'])
-        self.set(['authentication', 'radius', 'server', radius_server, 'key', radius_key])
-        self.set(['authentication', 'radius', 'server', radius_server, 'port', radius_port])
-        self.set(['authentication', 'radius', 'server', radius_server, 'acct-port', radius_port_acc])
-        self.set(['authentication', 'radius', 'acct-interim-jitter', radius_acct_interim_jitter])
-        self.set(['authentication', 'radius', 'called-sid-format', radius_called_sid])
-
-        coa_server = '4.4.4.4'
-        coa_key = 'testCoA'
-        self.set(['authentication', 'radius', 'dynamic-author', 'server', coa_server])
-        self.set(['authentication', 'radius', 'dynamic-author', 'key', coa_key])
-
-        nas_id = 'VyOS-PPPoE'
-        nas_ip = '7.7.7.7'
-        self.set(['authentication', 'radius', 'nas-identifier', nas_id])
-        self.set(['authentication', 'radius', 'nas-ip-address', nas_ip])
-
-        source_address = '1.2.3.4'
-        self.set(['authentication', 'radius', 'source-address', source_address])
-
-        # commit changes
-        self.session.commit()
-
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(self._config_file)
-
-        # basic verification
-        self.verify(conf)
-
-        # check auth
-        self.assertTrue(conf['radius'].getboolean('verbose'))
-        self.assertEqual(conf['radius']['acct-timeout'], '3')
-        self.assertEqual(conf['radius']['timeout'], '3')
-        self.assertEqual(conf['radius']['max-try'], '3')
-        self.assertEqual(conf['radius']['gw-ip-address'], gateway)
-        self.assertEqual(conf['radius']['acct-interim-jitter'], radius_acct_interim_jitter)
-        self.assertEqual(conf['radius']['called-sid'], radius_called_sid)
-        self.assertEqual(conf['radius']['dae-server'], f'{coa_server}:1700,{coa_key}')
-        self.assertEqual(conf['radius']['nas-identifier'], nas_id)
-        self.assertEqual(conf['radius']['nas-ip-address'], nas_ip)
-        self.assertEqual(conf['radius']['bind'], source_address)
-
-        server = conf['radius']['server'].split(',')
-        self.assertEqual(radius_server, server[0])
-        self.assertEqual(radius_key, server[1])
-        self.assertEqual(f'auth-port={radius_port}', server[2])
-        self.assertEqual(f'acct-port={radius_port_acc}', server[3])
-        self.assertEqual(f'req-limit=0', server[4])
-        self.assertEqual(f'fail-time=0', server[5])
-
-        # check defaults
-        self.assertEqual(conf['ppp']['mppe'], 'prefer')
-        self.assertFalse(conf['ppp'].getboolean('ccp'))
 
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))
@@ -209,7 +139,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))
-
 
     def test_client_ip_pool(self):
         """ Test configuration of IPv6 client pools """
@@ -281,6 +210,26 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))
+
+
+    def test_authentication_radius(self):
+        radius_called_sid = 'ifname:mac'
+        radius_acct_interim_jitter = '9'
+
+        self.set(['authentication', 'radius', 'called-sid-format', radius_called_sid])
+        self.set(['authentication', 'radius', 'acct-interim-jitter', radius_acct_interim_jitter])
+
+        # run common tests
+        super().test_authentication_radius()
+
+        # Validate configuration values
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
+        conf.read(self._config_file)
+
+        # Validate configuration
+        self.assertEqual(conf['radius']['called-sid'], radius_called_sid)
+        self.assertEqual(conf['radius']['acct-interim-jitter'], radius_acct_interim_jitter)
+
 
 if __name__ == '__main__':
     unittest.main()
