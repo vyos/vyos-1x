@@ -18,34 +18,30 @@ import os
 import re
 import unittest
 
+from base_accel_ppp_test import BasicAccelPPPTest
+
 from configparser import ConfigParser
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import process_named_running
 from vyos.util import cmd
 
 process_name = 'accel-pppd'
-base_path = ['service', 'pppoe-server']
 local_if = ['interfaces', 'dummy', 'dum667']
 pppoe_conf = '/run/accel-pppd/pppoe.conf'
 
 ac_name = 'ACN'
 gateway = '192.0.2.1'
-nameserver = '9.9.9.9'
+
 interface = 'eth0'
 
-class TestServicePPPoEServer(unittest.TestCase):
+class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        # ensure we can also run this test on a live system - so lets clean
-        # out the current configuration :)
-        self.session.delete(base_path)
+        self._base_path = ['service', 'pppoe-server']
+        super().setUp()
 
     def tearDown(self):
-        self.session.delete(base_path)
         self.session.delete(local_if)
-        self.session.commit()
-        del self.session
+        super().tearDown()
 
     def verify(self, conf):
         mtu = '1492'
@@ -70,54 +66,52 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertEqual(conf['ppp']['lcp-echo-timeout'], '0')
         self.assertEqual(conf['ppp']['lcp-echo-failure'], '3')
 
+        super().verify(conf)
+
     def basic_config(self):
         self.session.set(local_if + ['address', '192.0.2.1/32'])
 
-        # PPPoE local auth mode requires local users to be configured!
-        self.session.set(base_path + ['authentication', 'local-users', 'username', 'vyos', 'password', 'vyos'])
-        self.session.set(base_path + ['authentication', 'mode', 'local'])
+        self.set(['access-concentrator', ac_name])
+        self.set(['interface', interface])
+        self.set(['local-ip', gateway])
 
-        self.session.set(base_path + ['access-concentrator', ac_name])
-        self.session.set(base_path + ['authentication', 'mode', 'local'])
-        self.session.set(base_path + ['name-server', nameserver])
-        self.session.set(base_path + ['interface', interface])
-        self.session.set(base_path + ['local-ip', gateway])
+        super().basic_config()
 
-    def test_local_user(self):
+    def test_authentication_local(self):
         """ Test configuration of local authentication for PPPoE server """
         self.basic_config()
 
         # other settings
-        self.session.set(base_path + ['ppp-options', 'ccp'])
-        self.session.set(base_path + ['ppp-options', 'mppe', 'require'])
-        self.session.set(base_path + ['limits', 'connection-limit', '20/min'])
+        self.set(['ppp-options', 'ccp'])
+        self.set(['ppp-options', 'mppe', 'require'])
+        self.set(['limits', 'connection-limit', '20/min'])
 
         # upload / download limit
         user = 'test'
         password = 'test2'
         static_ip = '100.100.100.101'
-        self.session.set(base_path + ['authentication', 'local-users', 'username', user, 'password', password])
-        self.session.set(base_path + ['authentication', 'local-users', 'username', user, 'static-ip', static_ip])
-        self.session.set(base_path + ['authentication', 'local-users', 'username', user, 'rate-limit', 'upload', '5000'])
+        self.set(['authentication', 'local-users', 'username', user, 'password', password])
+        self.set(['authentication', 'local-users', 'username', user, 'static-ip', static_ip])
+        self.set(['authentication', 'local-users', 'username', user, 'rate-limit', 'upload', '5000'])
 
         # upload rate-limit requires also download rate-limit
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(base_path + ['authentication', 'local-users', 'username', user, 'rate-limit', 'download', '10000'])
+        self.set(['authentication', 'local-users', 'username', user, 'rate-limit', 'download', '10000'])
 
         # min-mtu
         min_mtu = '1400'
-        self.session.set(base_path + ['ppp-options', 'min-mtu', min_mtu])
+        self.set(['ppp-options', 'min-mtu', min_mtu])
 
         # mru
         mru = '9000'
-        self.session.set(base_path + ['ppp-options', 'mru', mru])
+        self.set(['ppp-options', 'mru', mru])
 
         # commit changes
         self.session.commit()
 
         # Validate configuration values
-        conf = ConfigParser(allow_no_value=True)
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(pppoe_conf)
 
         # basic verification
@@ -146,7 +140,7 @@ class TestServicePPPoEServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(process_name))
 
-    def test_radius_auth(self):
+    def test_authentication_radius(self):
         """ Test configuration of RADIUS authentication for PPPoE server """
         radius_server = '192.0.2.22'
         radius_key = 'secretVyOS'
@@ -157,31 +151,31 @@ class TestServicePPPoEServer(unittest.TestCase):
 
         self.basic_config()
 
-        self.session.set(base_path + ['authentication', 'mode', 'radius'])
-        self.session.set(base_path + ['authentication', 'radius', 'server', radius_server, 'key', radius_key])
-        self.session.set(base_path + ['authentication', 'radius', 'server', radius_server, 'port', radius_port])
-        self.session.set(base_path + ['authentication', 'radius', 'server', radius_server, 'acct-port', radius_port_acc])
-        self.session.set(base_path + ['authentication', 'radius', 'acct-interim-jitter', radius_acct_interim_jitter])
-        self.session.set(base_path + ['authentication', 'radius', 'called-sid-format', radius_called_sid])
+        self.set(['authentication', 'mode', 'radius'])
+        self.set(['authentication', 'radius', 'server', radius_server, 'key', radius_key])
+        self.set(['authentication', 'radius', 'server', radius_server, 'port', radius_port])
+        self.set(['authentication', 'radius', 'server', radius_server, 'acct-port', radius_port_acc])
+        self.set(['authentication', 'radius', 'acct-interim-jitter', radius_acct_interim_jitter])
+        self.set(['authentication', 'radius', 'called-sid-format', radius_called_sid])
 
         coa_server = '4.4.4.4'
         coa_key = 'testCoA'
-        self.session.set(base_path + ['authentication', 'radius', 'dynamic-author', 'server', coa_server])
-        self.session.set(base_path + ['authentication', 'radius', 'dynamic-author', 'key', coa_key])
+        self.set(['authentication', 'radius', 'dynamic-author', 'server', coa_server])
+        self.set(['authentication', 'radius', 'dynamic-author', 'key', coa_key])
 
         nas_id = 'VyOS-PPPoE'
         nas_ip = '7.7.7.7'
-        self.session.set(base_path + ['authentication', 'radius', 'nas-identifier', nas_id])
-        self.session.set(base_path + ['authentication', 'radius', 'nas-ip-address', nas_ip])
+        self.set(['authentication', 'radius', 'nas-identifier', nas_id])
+        self.set(['authentication', 'radius', 'nas-ip-address', nas_ip])
 
         source_address = '1.2.3.4'
-        self.session.set(base_path + ['authentication', 'radius', 'source-address', source_address])
+        self.set(['authentication', 'radius', 'source-address', source_address])
 
         # commit changes
         self.session.commit()
 
         # Validate configuration values
-        conf = ConfigParser(allow_no_value=True)
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(pppoe_conf)
 
         # basic verification
@@ -215,12 +209,12 @@ class TestServicePPPoEServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(process_name))
 
-    def test_auth_protocols(self):
+    def test_authentication_protocols(self):
         """ Test configuration of local authentication for PPPoE server """
         self.basic_config()
 
         # explicitly test mschap-v2 - no special reason
-        self.session.set(base_path + ['authentication', 'protocols', 'mschap-v2'])
+        self.set( ['authentication', 'protocols', 'mschap-v2'])
 
         # commit changes
         self.session.commit()
@@ -235,18 +229,18 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertTrue(process_named_running(process_name))
 
 
-    def test_ip_pool(self):
+    def test_client_ip_pool(self):
         """ Test configuration of IPv6 client pools """
         self.basic_config()
 
         subnet = '172.18.0.0/24'
-        self.session.set(base_path + ['client-ip-pool', 'subnet', subnet])
+        self.set(['client-ip-pool', 'subnet', subnet])
 
         start = '192.0.2.10'
         stop = '192.0.2.20'
         start_stop = f'{start}-{stop}'
-        self.session.set(base_path + ['client-ip-pool', 'start', start])
-        self.session.set(base_path + ['client-ip-pool', 'stop', stop])
+        self.set(['client-ip-pool', 'start', start])
+        self.set(['client-ip-pool', 'stop', stop])
 
         # commit changes
         self.session.commit()
@@ -261,26 +255,26 @@ class TestServicePPPoEServer(unittest.TestCase):
         self.assertEqual(conf['ip-pool']['gw-ip-address'], gateway)
 
 
-    def test_ipv6_pool(self):
+    def test_client_ipv6_pool(self):
         """ Test configuration of IPv6 client pools """
         self.basic_config()
 
         # Enable IPv6
         allow_ipv6 = 'allow'
         random = 'random'
-        self.session.set(base_path + ['ppp-options', 'ipv6', allow_ipv6])
-        self.session.set(base_path + ['ppp-options', 'ipv6-intf-id', random])
-        self.session.set(base_path + ['ppp-options', 'ipv6-accept-peer-intf-id'])
-        self.session.set(base_path + ['ppp-options', 'ipv6-peer-intf-id', random])
+        self.set(['ppp-options', 'ipv6', allow_ipv6])
+        self.set(['ppp-options', 'ipv6-intf-id', random])
+        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
+        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
 
         prefix = '2001:db8:ffff::/64'
         prefix_mask = '128'
         client_prefix = f'{prefix},{prefix_mask}'
-        self.session.set(base_path + ['client-ipv6-pool', 'prefix', prefix, 'mask', prefix_mask])
+        self.set(['client-ipv6-pool', 'prefix', prefix, 'mask', prefix_mask])
 
         delegate_prefix = '2001:db8::/40'
         delegate_mask = '56'
-        self.session.set(base_path + ['client-ipv6-pool', 'delegate', delegate_prefix, 'delegation-prefix', delegate_mask])
+        self.set(['client-ipv6-pool', 'delegate', delegate_prefix, 'delegation-prefix', delegate_mask])
 
         # commit changes
         self.session.commit()
