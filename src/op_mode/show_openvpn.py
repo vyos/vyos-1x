@@ -51,7 +51,7 @@ def bytes2HR(size):
     return output
 
 def get_status(mode, interface):
-    status_file = '/opt/vyatta/etc/openvpn/status/{}.status'.format(interface)
+    status_file = '/var/run/openvpn/{}.status'.format(interface)
     # this is an empirical value - I assume we have no more then 999999
     # current OpenVPN connections
     routing_table_line = 999999
@@ -175,4 +175,3 @@ if __name__ == '__main__':
 
         tmpl = jinja2.Template(outp_tmpl)
         print(tmpl.render(data))
-
