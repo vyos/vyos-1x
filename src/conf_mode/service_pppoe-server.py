@@ -63,14 +63,6 @@ def get_config(config=None):
     # we need to store the path to the secrets file
     pppoe.update({'chap_secrets_file' : pppoe_chap_secrets})
 
-    if not vyos_dict_search('authentication.protocols', pppoe):
-        if not 'authentication' in pppoe:
-            pppoe.update({'authentication' : ''})
-
-        pppoe['authentication'].update(
-            {'protocols' : ['auth_mschap_v2', 'auth_mschap_v1',
-                            'auth_chap_md5', 'auth_pap']})
-
     # We can only have two IPv4 and three IPv6 nameservers - also they are
     # configured in a different way in the configuration, this is why we split
     # the configuration

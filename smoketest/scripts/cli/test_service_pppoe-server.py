@@ -218,7 +218,9 @@ class TestServicePPPoEServer(unittest.TestCase):
     def test_auth_protocols(self):
         """ Test configuration of local authentication for PPPoE server """
         self.basic_config()
-        self.session.set(base_path + ['authentication', 'protocols', 'auth_mschap_v2'])
+
+        # explicitly test mschap-v2 - no special reason
+        self.session.set(base_path + ['authentication', 'protocols', 'mschap-v2'])
 
         # commit changes
         self.session.commit()
@@ -286,8 +288,6 @@ class TestServicePPPoEServer(unittest.TestCase):
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(pppoe_conf)
-        from vyos.util import read_file
-        print(read_file(pppoe_conf))
 
         for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
             self.assertEqual(conf['modules'][tmp], None)

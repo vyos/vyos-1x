@@ -11,8 +11,15 @@ ipv6_nd
 ipv6_dhcp
 {% endif %}
 {% for protocol in authentication.protocols %}
-{{ protocol }}
-{% endfor%}
+{#   this should be fixed in the CLI by a migrator #}
+{%   if protocol == 'chap' %}
+auth_chap_md5
+{%   elif protocol == 'mschap' %}
+auth_mschap_v1
+{%   else %}
+auth_{{ protocol.replace('-', '_') }}
+{%   endif %}
+{% endfor %}
 shaper
 {% if snmp is defined %}
 net-snmp

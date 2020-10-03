@@ -24,7 +24,8 @@
     <constraint>
       <regex>(pap|chap|mschap|mschap-v2)</regex>
     </constraint>
-      <multi />
+    <multi/>
   </properties>
+  <defaultValue>pap chap mschap mschap-v2</defaultValue>
 </leafNode>
 <!-- included end -->
