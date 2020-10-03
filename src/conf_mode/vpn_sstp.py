@@ -167,7 +167,7 @@ def get_config(config=None):
         # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
         if conf.exists(['dynamic-author']):
             dae = {
-                'port' : '',
+                'port' : '1700',
                 'server' : '',
                 'key' : ''
             }
