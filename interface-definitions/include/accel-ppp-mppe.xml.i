@@ -5,9 +5,6 @@
     <completionHelp>
       <list>require prefer deny</list>
     </completionHelp>
-    <constraint>
-      <regex>(^require|prefer|deny)</regex>
-    </constraint>
     <valueHelp>
       <format>require</format>
       <description>send mppe request, if client rejects, drop the connection</description>
@@ -20,6 +17,10 @@
       <format>deny</format>
       <description>drop all mppe</description>
     </valueHelp>
+    <constraint>
+      <regex>^(require|prefer|deny)$</regex>
+    </constraint>
   </properties>
+  <defaultValue>prefer</defaultValue>
 </leafNode>
 <!-- included end -->

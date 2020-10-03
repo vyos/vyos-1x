@@ -100,8 +100,6 @@ def get_config(config=None):
             pppoe['authentication']['local_users']['username'][username] = dict_merge(
                 default_values, pppoe['authentication']['local_users']['username'][username])
 
-    import pprint
-    pprint.pprint(pppoe)
     return pppoe
 
 
