@@ -12,14 +12,7 @@
               <help>Remote access PPTP VPN</help>
             </properties>
             <children>
-              <leafNode name="mtu">
-                <properties>
-                  <help>Maximum Transmission Unit (MTU)</help>
-                  <constraint>
-                    <validator name="numeric" argument="--range 128-16384"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/accel-mtu-128-16384.xml.i>
               <leafNode name="outside-address">
                 <properties>
                   <help>External IP address to which VPN clients will connect</help>
