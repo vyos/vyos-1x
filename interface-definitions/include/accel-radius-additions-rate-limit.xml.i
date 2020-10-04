@@ -8,6 +8,7 @@
       <properties>
         <help>Specifies which radius attribute contains rate information. (default is Filter-Id)</help>
       </properties>
+      <defaultValue>Filter-Id</defaultValue>
     </leafNode>
     <leafNode name="vendor">
       <properties>

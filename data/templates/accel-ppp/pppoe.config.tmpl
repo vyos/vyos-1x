@@ -2,25 +2,15 @@
 [modules]
 log_syslog
 pppoe
-{{ "radius" if authentication.mode is defined and authentication.mode == 'radius' }}
-chap-secrets
-ippool
-{% if ppp_options.ipv6 is defined and ppp_options.ipv6 != 'deny' %}
-ipv6pool
-ipv6_nd
-ipv6_dhcp
-{% endif %}
-{% for protocol in authentication.protocols %}
-{#   this should be fixed in the CLI by a migrator #}
-{%   if protocol == 'chap' %}
-auth_chap_md5
-{%   elif protocol == 'mschap' %}
-auth_mschap_v1
-{%   else %}
-auth_{{ protocol.replace('-', '_') }}
-{%   endif %}
-{% endfor %}
 shaper
+{# Common authentication backend definitions #}
+{% include 'accel-ppp/config_modules_auth_mode.j2' %}
+ippool
+{# Common IPv6 definitions #}
+{% include 'accel-ppp/config_modules_ipv6.j2' %}
+{# Common authentication protocols (pap, chap ...) #}
+{% include 'accel-ppp/config_modules_auth_protocols.j2' %}
+
 {% if snmp is defined %}
 net-snmp
 {% endif %}
@@ -60,41 +50,8 @@ wins{{ loop.index }}={{ server }}
 {%   endfor %}
 {% endif %}
 
-{% if authentication.mode is defined and authentication.mode == 'local' %}
-[chap-secrets]
-chap-secrets={{ chap_secrets_file }}
-{% elif authentication.mode is defined and authentication.mode == 'radius' %}
-[radius]
-verbose=1
-{%   for server, options in authentication.radius.server.items() if not options.disable is defined %}
-server={{ server }},{{ options.key }},auth-port={{ options.port }},acct-port={{ options.acct_port }},req-limit=0,fail-time={{ options.fail_time }}
-{%   endfor %}
-{%   if authentication.radius.acct_interim_jitter is defined and authentication.radius.acct_interim_jitter is not none %}
-acct-interim-jitter={{ authentication.radius.acct_interim_jitter }}
-{%   endif %}
-acct-timeout={{ authentication.radius.acct_timeout }}
-timeout={{ authentication.radius.timeout }}
-max-try={{ authentication.radius.max_try }}
-{%   if authentication.radius.nas_identifier is defined and authentication.radius.nas_identifier is not none %}
-nas-identifier={{ authentication.radius.nas_identifier }}
-{%   endif %}
-{%   if authentication.radius.nas_ip_address is defined and authentication.radius.nas_ip_address is not none %}
-nas-ip-address={{ authentication.radius.nas_ip_address }}
-{%   endif %}
-{%   if authentication.radius.source_address is defined and authentication.radius.source_address is not none %}
-bind={{ authentication.radius.source_address }}
-{%   endif %}
-{% if authentication.radius.called_sid_format is defined and authentication.radius.called_sid_format is not none %}
-called-sid={{ authentication.radius.called_sid_format }}
-{% endif %}
-{%   if authentication.radius.dynamic_author.server is defined and authentication.radius.dynamic_author.server is not none %}
-dae-server={{ authentication.radius.dynamic_author.server }}:{{ authentication.radius.dynamic_author.port }},{{ authentication.radius.dynamic_author.key }}
-{%   endif -%}
-{% endif %}
-
-{% if gateway_address is defined and gateway_address is not none %}
-gw-ip-address={{ gateway_address }}
-{% endif %}
+{# Common chap-secrets and RADIUS server/option definitions #}
+{% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
 {% if session_control is defined and session_control != 'disable' %}
 [common]
@@ -169,6 +126,9 @@ burst={{ limits.burst }}
 timeout={{ limits.timeout }}
 {%   endif %}
 {% endif %}
+
+{# Common RADIUS shaper configuration #}
+{% include 'accel-ppp/config_shaper_radius.j2' %}
 
 [cli]
 tcp=127.0.0.1:2001

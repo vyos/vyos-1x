@@ -1,0 +1,10 @@
+{% for protocol in authentication.protocols %}
+{#   this should be fixed in the CLI by a migrator #}
+{%   if protocol == 'chap' %}
+auth_chap_md5
+{%   elif protocol == 'mschap' %}
+auth_mschap_v1
+{%   else %}
+auth_{{ protocol.replace('-', '_') }}
+{%   endif %}
+{% endfor %}

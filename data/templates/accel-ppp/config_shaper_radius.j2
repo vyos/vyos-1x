@@ -1,0 +1,10 @@
+{% if authentication is defined and authentication.mode is defined and authentication.mode == 'radius' %}
+{%   if authentication is defined and authentication.radius is defined and authentication.radius.rate_limit is defined and authentication.radius.rate_limit.enable is defined %}
+[shaper]
+verbose=1
+attr={{ authentication.radius.rate_limit.attribute }}
+{%     if authentication.radius.rate_limit.vendor is defined and authentication.radius.rate_limit.vendor is not none %}
+vendor={{ authentication.radius.rate_limit.vendor }}
+{%     endif %}
+{%   endif %}
+{% endif %}

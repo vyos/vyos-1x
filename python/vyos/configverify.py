@@ -22,6 +22,7 @@
 # makes use of it!
 
 from vyos import ConfigError
+from vyos.util import vyos_dict_search
 
 def verify_mtu(config):
     """
@@ -51,7 +52,6 @@ def verify_mtu_ipv6(config):
     configured on the interface. IPv6 requires a 1280 bytes MTU.
     """
     from vyos.validate import is_ipv6
-    from vyos.util import vyos_dict_search
     # IPv6 minimum required link mtu
     min_mtu = 1280
 
@@ -204,3 +204,58 @@ def verify_vlan_config(config):
             verify_dhcpv6(vlan)
             verify_address(vlan)
             verify_vrf(vlan)
+
+def verify_accel_ppp_base_service(config):
+    """
+    Common helper function which must be used by all Accel-PPP services based
+    on get_config_dict()
+    """
+    # vertify auth settings
+    if vyos_dict_search('authentication.mode', config) == 'local':
+        if not vyos_dict_search('authentication.local_users', config):
+            raise ConfigError('PPPoE local auth mode requires local users to be configured!')
+
+        for user in vyos_dict_search('authentication.local_users.username', config):
+            user_config = config['authentication']['local_users']['username'][user]
+
+            if 'password' not in user_config:
+                raise ConfigError(f'Password required for local user "{user}"')
+
+            if 'rate_limit' in user_config:
+                # if up/download is set, check that both have a value
+                if not {'upload', 'download'} <= set(user_config['rate_limit']):
+                    raise ConfigError(f'User "{user}" has rate-limit configured for only one ' \
+                                      'direction but both upload and download must be given!')
+
+    elif vyos_dict_search('authentication.mode', config) == 'radius':
+        if not vyos_dict_search('authentication.radius.server', config):
+            raise ConfigError('RADIUS authentication requires at least one server')
+
+        for server in vyos_dict_search('authentication.radius.server', config):
+            radius_config = config['authentication']['radius']['server'][server]
+            if 'key' not in radius_config:
+                raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
+
+    if 'gateway_address' not in config:
+        raise ConfigError('PPPoE server requires gateway-address to be configured!')
+
+    if 'name_server_ipv4' in config:
+        if len(config['name_server_ipv4']) > 2:
+            raise ConfigError('Not more then two IPv4 DNS name-servers ' \
+                              'can be configured')
+
+    if 'name_server_ipv6' in config:
+        if len(config['name_server_ipv6']) > 3:
+            raise ConfigError('Not more then three IPv6 DNS name-servers ' \
+                              'can be configured')
+
+    if 'client_ipv6_pool' in config:
+        ipv6_pool = config['client_ipv6_pool']
+        if 'delegate' in ipv6_pool:
+            if 'prefix' not in ipv6_pool:
+                raise ConfigError('IPv6 "delegate" also requires "prefix" to be defined!')
+
+            for delegate in ipv6_pool['delegate']:
+                if 'delegation_prefix' not in ipv6_pool['delegate'][delegate]:
+                    raise ConfigError('delegation-prefix length required!')
+

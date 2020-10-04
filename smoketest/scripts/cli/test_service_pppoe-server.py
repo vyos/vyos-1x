@@ -47,7 +47,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         mtu = '1492'
 
         # validate some common values in the configuration
-        for tmp in ['log_syslog', 'pppoe', 'chap-secrets', 'ippool',
+        for tmp in ['log_syslog', 'pppoe', 'ippool',
                     'auth_mschap_v2', 'auth_mschap_v1', 'auth_chap_md5',
                     'auth_pap', 'shaper']:
             # Settings without values provide None

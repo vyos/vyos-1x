@@ -3,22 +3,16 @@
 log_syslog
 sstp
 shaper
-{% if auth_mode == 'local' %}
-chap-secrets
-{% elif auth_mode == 'radius' %}
-radius
-{% endif -%}
+{# Common authentication backend definitions #}
+{% include 'accel-ppp/config_modules_auth_mode.j2' %}
 ippool
-ipv6pool
-ipv6_nd
-ipv6_dhcp
-
-{% for proto in auth_proto %}
-{{proto}}
-{% endfor %}
+{# Common IPv6 definitions #}
+{% include 'accel-ppp/config_modules_ipv6.j2' %}
+{# Common authentication protocols (pap, chap ...) #}
+{% include 'accel-ppp/config_modules_auth_protocols.j2' %}
 
 [core]
-thread-count={{thread_cnt}}
+thread-count={{ thread_count }}
 
 [common]
 single-session=replace
@@ -35,112 +29,37 @@ disable
 verbose=1
 ifname=sstp%d
 accept=ssl
-ssl-ca-file={{ ssl_ca }}
-ssl-pemfile={{ ssl_cert }}
-ssl-keyfile={{ ssl_key }}
+ssl-ca-file={{ ssl.ca_cert_file }}
+ssl-pemfile={{ ssl.cert_file }}
+ssl-keyfile={{ ssl.key_file }}
 
-{% if client_ip_pool %}
-[ip-pool]
-gw-ip-address={{ client_gateway }}
-{% for subnet in client_ip_pool %}
-{{ subnet }}
-{% endfor %}
-{% endif %}
+{# Common IP pool definitions #}
+{% include 'accel-ppp/config_ip_pool.j2' %}
 
-{% if dnsv4 %}
-[dns]
-{% for dns in dnsv4 -%}
-dns{{ loop.index }}={{ dns }}
-{% endfor -%}
-{% endif %}
+{# Common IPv6 pool definitions #}
+{% include 'accel-ppp/config_ipv6_pool.j2' %}
 
-{% if dnsv6 %}
-[ipv6-dns]
-{% for dns in dnsv6 -%}
-{{ dns }}
-{% endfor -%}
-{% endif %}
+{# Common DNS name-server definition #}
+{% include 'accel-ppp/config_name_server.j2' %}
 
-
-{% if auth_mode == 'local' %}
-[chap-secrets]
-chap-secrets={{ chap_secrets_file }}
-{% elif auth_mode == 'radius' %}
-[radius]
-verbose=1
-{% for r in radius_server %}
-server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
-{% endfor -%}
-
-acct-timeout={{ radius_acct_tmo }}
-timeout={{ radius_timeout }}
-max-try={{ radius_max_try }}
-
-{% if radius_nas_id %}
-nas-identifier={{ radius_nas_id }}
-{% endif -%}
-{% if radius_nas_ip %}
-nas-ip-address={{ radius_nas_ip }}
-{% endif -%}
-{% if radius_source_address %}
-bind={{ radius_source_address }}
-{% endif -%}
-
-
-{% if radius_dynamic_author %}
-dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
-{% endif -%}
-{% endif %}
-{% if client_gateway %}
-gw-ip-address={{ client_gateway }}
-{% endif %}
+{# Common chap-secrets and RADIUS server/option definitions #}
+{% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
 [ppp]
 verbose=1
 check-ip=1
-{% if mtu %}
+{# MTU #}
 mtu={{ mtu }}
-{% endif -%}
-{% if client_ipv6_pool %}
+{% if client_ipv6_pool is defined %}
 ipv6=allow
 {% endif %}
+mppe={{ ppp_options.mppe }}
+lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
+lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}
+lcp-echo-failure={{ ppp_options.lcp_echo_failure }}
 
-{% if ppp_mppe %}
-mppe={{ ppp_mppe }}
-{% endif -%}
-{% if ppp_echo_interval %}
-lcp-echo-interval={{ ppp_echo_interval }}
-{% endif -%}
-{% if ppp_echo_failure %}
-lcp-echo-failure={{ ppp_echo_failure }}
-{% endif -%}
-{% if ppp_echo_timeout %}
-lcp-echo-timeout={{ ppp_echo_timeout }}
-{% endif %}
-
-{% if client_ipv6_pool %}
-[ipv6-pool]
-{% for p in client_ipv6_pool %}
-{{ p.prefix }},{{ p.mask }}
-{% endfor %}
-{% for p in client_ipv6_delegate_prefix %}
-delegate={{ p.prefix }},{{ p.mask }}
-{% endfor %}
-{% endif %}
-
-{% if client_ipv6_delegate_prefix %}
-[ipv6-dhcp]
-verbose=1
-{% endif %}
-
-{% if radius_shaper_attr %}
-[shaper]
-verbose=1
-attr={{ radius_shaper_attr }}
-{% if radius_shaper_vendor %}
-vendor={{ radius_shaper_vendor }}
-{% endif -%}
-{% endif %}
+{# Common RADIUS shaper configuration #}
+{% include 'accel-ppp/config_shaper_radius.j2' %}
 
 [cli]
 tcp=127.0.0.1:2005

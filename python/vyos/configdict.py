@@ -18,12 +18,8 @@ A library for retrieving value dicts from VyOS configs in a declarative fashion.
 """
 import os
 
-from copy import deepcopy
-
 from vyos.util import vyos_dict_search
 from vyos.xml import defaults
-from vyos.xml import is_tag
-from vyos.xml import is_leaf
 from vyos import ConfigError
 
 def retrieve_config(path_hash, base_path, config):
@@ -198,6 +194,9 @@ def is_member(conf, interface, intftype=None):
     interface name -> Interface is a member of this interface
     False -> interface type cannot have members
     """
+    from vyos.xml import is_tag
+    from vyos.xml import is_leaf
+
     ret_val = None
     intftypes = ['bonding', 'bridge']
     if intftype not in intftypes + [None]:
@@ -265,11 +264,12 @@ def is_source_interface(conf, interface, intftype=None):
 
 def get_interface_dict(config, base, ifname=''):
     """
-    Common utility function to retrieve and mandgle the interfaces available
-    in CLI configuration. All interfaces have a common base ground where the
-    value retrival is identical - so it can and should be reused
+    Common utility function to retrieve and mangle the interfaces configuration
+    from the CLI input nodes. All interfaces have a common base where value
+    retrival is identical. This function must be used whenever possible when
+    working on the interfaces node!
 
-    Will return a dictionary with the necessary interface configuration
+    Return a dictionary with the necessary interface config keys.
     """
     if not ifname:
         # determine tagNode instance
@@ -404,4 +404,71 @@ def get_interface_dict(config, base, ifname=''):
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
+    return dict
+
+
+def get_accel_dict(config, base, chap_secrets):
+    """
+    Common utility function to retrieve and mangle the Accel-PPP configuration
+    from different CLI input nodes. All Accel-PPP services have a common base
+    where value retrival is identical. This function must be used whenever
+    possible when working with Accel-PPP services!
+
+    Return a dictionary with the necessary interface config keys.
+    """
+    from vyos.util import get_half_cpus
+    from vyos.validate import is_ipv4
+
+    dict = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+
+    # defaults include RADIUS server specifics per TAG node which need to be
+    # added to individual RADIUS servers instead - so we can simply delete them
+    if vyos_dict_search('authentication.radius.server', default_values):
+        del default_values['authentication']['radius']['server']
+
+    # defaults include static-ip address per TAG node which need to be added to
+    # individual local users instead - so we can simply delete them
+    if vyos_dict_search('authentication.local_users.username', default_values):
+        del default_values['authentication']['local_users']['username']
+
+    dict = dict_merge(default_values, dict)
+
+    # set CPUs cores to process requests
+    dict.update({'thread_count' : get_half_cpus()})
+    # we need to store the path to the secrets file
+    dict.update({'chap_secrets_file' : chap_secrets})
+
+    # We can only have two IPv4 and three IPv6 nameservers - also they are
+    # configured in a different way in the configuration, this is why we split
+    # the configuration
+    if 'name_server' in dict:
+        ns_v4 = []
+        ns_v6 = []
+        for ns in dict['name_server']:
+            if is_ipv4(ns): ns_v4.append(ns)
+            else: ns_v6.append(ns)
+
+        dict.update({'name_server_ipv4' : ns_v4, 'name_server_ipv6' : ns_v6})
+        del dict['name_server']
+
+    # Add individual RADIUS server default values
+    if vyos_dict_search('authentication.radius.server', dict):
+        default_values = defaults(base + ['authentication', 'radius', 'server'])
+
+        for server in vyos_dict_search('authentication.radius.server', dict):
+            dict['authentication']['radius']['server'][server] = dict_merge(
+                default_values, dict['authentication']['radius']['server'][server])
+
+    # Add individual local-user default values
+    if vyos_dict_search('authentication.local_users.username', dict):
+        default_values = defaults(base + ['authentication', 'local_users', 'username'])
+
+        for username in vyos_dict_search('authentication.local_users.username', dict):
+            dict['authentication']['local_users']['username'][username] = dict_merge(
+                default_values, dict['authentication']['local_users']['username'][username])
+
     return dict

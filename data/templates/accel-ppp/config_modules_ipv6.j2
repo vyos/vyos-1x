@@ -1,0 +1,5 @@
+{% if ppp_options.ipv6 is defined and ppp_options.ipv6 != 'deny' %}
+ipv6pool
+ipv6_nd
+ipv6_dhcp
+{% endif %}

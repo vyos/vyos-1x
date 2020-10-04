@@ -1,0 +1,5 @@
+{% if authentication is defined and authentication.mode is defined and authentication.mode == 'local' %}
+chap-secrets
+{% elif authentication is defined and authentication.mode is defined and authentication.mode == 'radius' %}
+radius
+{% endif %}

@@ -13,4 +13,8 @@ delegate={{ prefix }},{{ options.delegation_prefix }}
 {%       endfor %}
 {%     endif %}
 {%   endif %}
+{%   if client_ipv6_pool.delegate is defined and client_ipv6_pool.delegate is not none %}
+[ipv6-dhcp]
+verbose=1
+{%   endif %}
 {% endif %}
