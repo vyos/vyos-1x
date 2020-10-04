@@ -1,3 +1,4 @@
+<!-- included start from interface-hw-id.xml.i -->
 <leafNode name="hw-id">
   <properties>
     <help>Associate Ethernet Interface with given Media Access Control (MAC) address</help>
@@ -10,3 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
+<!-- included end -->

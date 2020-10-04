@@ -1,3 +1,4 @@
+<!-- included start from bgp-peer-group-afi-ipv4-unicast.xml.i -->
 <node name="ipv4-unicast">
   <properties>
     <help>IPv4 BGP peer group parameters</help>
@@ -299,3 +300,4 @@
     </leafNode>
   </children>
 </node>
+<!-- included end -->

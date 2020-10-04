@@ -1,3 +1,4 @@
+<!-- included start from accel-wins-server.xml.i -->
 <leafNode name="wins-server">
   <properties>
     <help>Windows Internet Name Service (WINS) servers propagated to client</help>
@@ -11,3 +12,4 @@
     <multi/>
   </properties>
 </leafNode>
+<!-- included end -->

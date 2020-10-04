@@ -1,3 +1,4 @@
+<!-- included start from address-ipv4-ipv6.xml.i -->
 <leafNode name="address">
   <properties>
     <help>IP address</help>
@@ -15,3 +16,4 @@
     <multi/>
   </properties>
 </leafNode>
+<!-- included end -->

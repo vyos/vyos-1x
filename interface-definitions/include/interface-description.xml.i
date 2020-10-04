@@ -1,3 +1,4 @@
+<!-- included start from interface-description.xml.i -->
 <leafNode name="description">
   <properties>
     <help>Interface specific description</help>
@@ -7,3 +8,4 @@
     <constraintErrorMessage>Description too long (limit 256 characters)</constraintErrorMessage>
   </properties>
 </leafNode>
+<!-- included end -->

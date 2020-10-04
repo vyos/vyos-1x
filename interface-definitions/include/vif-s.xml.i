@@ -1,3 +1,4 @@
+<!-- included start from vif-s.xml.i -->
 <tagNode name="vif-s">
   <properties>
     <help>QinQ TAG-S Virtual Local Area Network (VLAN) ID</help>
@@ -66,3 +67,4 @@
     </tagNode>
   </children>
 </tagNode>
+<!-- included end -->

@@ -1,3 +1,4 @@
+<!-- included start from isis-redistribute-ipv4.xml.i -->
 <node name="level-1">
   <properties>
     <help>Redistribute into level-1</help>
@@ -80,3 +81,4 @@
     </tagNode>
   </children>
 </node>
+<!-- included end -->

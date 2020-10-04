@@ -1,3 +1,4 @@
+<!-- included start from interface-mtu-1450-9000.xml.i -->
 <leafNode name="mtu">
   <properties>
     <help>Maximum Transmission Unit (MTU)</help>
@@ -12,3 +13,4 @@
   </properties>
   <defaultValue>1500</defaultValue>
 </leafNode>
+<!-- included end -->

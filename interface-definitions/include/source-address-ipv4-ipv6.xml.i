@@ -1,3 +1,4 @@
+<!-- included start from source-address-ipv4-ipv6.xml.i -->
 <leafNode name="source-address">
   <properties>
     <help>IPv4/IPv6 source address</help>
@@ -15,3 +16,4 @@
     </constraint>
   </properties>
 </leafNode>
+<!-- included end -->

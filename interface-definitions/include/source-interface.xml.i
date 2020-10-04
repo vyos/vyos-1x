@@ -1,3 +1,4 @@
+<!-- included start from source-interface.xml.i -->
 <leafNode name="source-interface">
   <properties>
     <help>Physical interface used for connection</help>
@@ -10,3 +11,4 @@
     </completionHelp>
   </properties>
 </leafNode>
+<!-- included end -->

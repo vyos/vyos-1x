@@ -1,3 +1,4 @@
+<!-- included start from ipv6-address.xml.i -->
 <node name="address">
   <children>
     <leafNode name="autoconf">
@@ -27,3 +28,4 @@
     </leafNode>
   </children>
 </node>
+<!-- included end -->

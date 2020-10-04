@@ -1,3 +1,4 @@
+<!-- included start from interface-ipv6.xml.i -->
 <node name="ipv6">
   <properties>
     <help>IPv6 routing parameters</help>
@@ -8,3 +9,4 @@
     #include <include/ipv6-dup-addr-detect-transmits.xml.i>
   </children>
 </node>
+<!-- included end -->

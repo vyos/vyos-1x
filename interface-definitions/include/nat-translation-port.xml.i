@@ -1,3 +1,4 @@
+<!-- included start from nat-translation-port.xml.i -->
 <leafNode name="port">
   <properties>
     <help>Port number</help>
@@ -11,3 +12,4 @@
     </valueHelp>
   </properties>
 </leafNode>
+<!-- included end -->

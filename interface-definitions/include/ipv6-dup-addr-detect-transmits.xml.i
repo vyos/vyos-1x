@@ -1,3 +1,4 @@
+<!-- included start from ipv6-dup-addr-detect-transmits.xml.i -->
 <leafNode name="dup-addr-detect-transmits">
   <properties>
     <help>Number of NS messages to send while performing DAD (default: 1)</help>
@@ -14,3 +15,4 @@
     </constraint>
   </properties>
 </leafNode>
+<!-- included end -->

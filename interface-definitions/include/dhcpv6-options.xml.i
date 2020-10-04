@@ -1,3 +1,4 @@
+<!-- included start from dhcpv6-options.xml.i -->
 <node name="dhcpv6-options">
   <properties>
     <help>DHCPv6 client settings/options</help>
@@ -84,3 +85,4 @@
     </leafNode>
   </children>
 </node>
+<!-- included end -->

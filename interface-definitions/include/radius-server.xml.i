@@ -1,3 +1,4 @@
+<!-- included start from radius-server.xml.i -->
 <node name="radius">
   <properties>
     <help>RADIUS based user authentication</help>
@@ -55,3 +56,4 @@
     </tagNode>
   </children>
 </node>
+<!-- included end -->

@@ -1,3 +1,4 @@
+<!-- included start from interface-ipv4.xml.i -->
 <node name="ip">
   <properties>
     <help>IPv4 routing parameters</help>
@@ -9,3 +10,4 @@
     #include <include/interface-enable-arp-ignore.xml.i>
   </children>
 </node>
+<!-- included end -->

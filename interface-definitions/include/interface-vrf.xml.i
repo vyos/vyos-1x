@@ -1,3 +1,4 @@
+<!-- included start from interface-vrf.xml.i -->
 <leafNode name="vrf">
   <properties>
     <help>VRF instance name</help>
@@ -10,3 +11,4 @@
     </completionHelp>
   </properties>
 </leafNode>
+<!-- included end -->

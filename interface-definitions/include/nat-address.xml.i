@@ -1,3 +1,4 @@
+<!-- included start from nat-address.xml.i -->
 <leafNode name="address">
   <properties>
     <help>IP address, subnet, or range</help>
@@ -35,3 +36,4 @@
     </constraint>
   </properties>
 </leafNode>
+<!-- included end -->
