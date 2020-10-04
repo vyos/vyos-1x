@@ -14,9 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# - remove primary/secondary identifier from nameserver
-
-import os
+# Convert "service pppoe-server interface ethX" to: "service pppoe-server interface ethX {}"
 
 from sys import argv, exit
 from vyos.configtree import ConfigTree
@@ -30,112 +28,21 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-config = ConfigTree(config_file)
-base = ['service', 'pppoe-server']
-if not config.exists(base):
-    # Nothing to do
+ctree = ConfigTree(config_file)
+cbase = ['service', 'pppoe-server','interface']
+
+if not ctree.exists(cbase):
     exit(0)
 else:
-
-    # Migrate IPv4 DNS servers
-    dns_base = base + ['dns-servers']
-    if config.exists(dns_base):
-        for server in ['server-1', 'server-2']:
-          if config.exists(dns_base + [server]):
-            dns = config.return_value(dns_base + [server])
-            config.set(base + ['name-server'], value=dns, replace=False)
-
-        config.delete(dns_base)
-
-    # Migrate IPv6 DNS servers
-    dns_base = base + ['dnsv6-servers']
-    if config.exists(dns_base):
-        for server in ['server-1', 'server-2', 'server-3']:
-          if config.exists(dns_base + [server]):
-            dns = config.return_value(dns_base + [server])
-            config.set(base + ['name-server'], value=dns, replace=False)
-
-        config.delete(dns_base)
-
-    # Migrate IPv4 WINS servers
-    wins_base = base + ['wins-servers']
-    if config.exists(wins_base):
-        for server in ['server-1', 'server-2']:
-          if config.exists(wins_base + [server]):
-            wins = config.return_value(wins_base + [server])
-            config.set(base + ['wins-server'], value=wins, replace=False)
-
-        config.delete(wins_base)
-
-    # Migrate radius-settings node to RADIUS and use this as base for the
-    # later migration of the RADIUS servers - this will save a lot of code
-    radius_settings = base + ['authentication', 'radius-settings']
-    if config.exists(radius_settings):
-        config.rename(radius_settings, 'radius')
-
-    # Migrate RADIUS dynamic author / change of authorisation server
-    dae_old = base + ['authentication', 'radius', 'dae-server']
-    if config.exists(dae_old):
-        config.rename(dae_old, 'dynamic-author')
-        dae_new = base + ['authentication', 'radius', 'dynamic-author']
-
-        if config.exists(dae_new + ['ip-address']):
-            config.rename(dae_new + ['ip-address'], 'server')
-
-        if config.exists(dae_new + ['secret']):
-            config.rename(dae_new + ['secret'], 'key')
-
-    # Migrate RADIUS server
-    radius_server = base + ['authentication', 'radius-server']
-    if config.exists(radius_server):
-        new_base = base + ['authentication', 'radius', 'server']
-        config.set(new_base)
-        config.set_tag(new_base)
-        for server in config.list_nodes(radius_server):
-            old_base = radius_server + [server]
-            config.copy(old_base, new_base + [server])
-
-            # migrate key
-            if config.exists(new_base + [server, 'secret']):
-                config.rename(new_base + [server, 'secret'], 'key')
-
-            # remove old req-limit node
-            if config.exists(new_base + [server, 'req-limit']):
-                config.delete(new_base + [server, 'req-limit'])
-
-        config.delete(radius_server)
-
-    # Migrate IPv6 prefixes
-    ipv6_base = base + ['client-ipv6-pool']
-    if config.exists(ipv6_base + ['prefix']):
-        prefix_old = config.return_values(ipv6_base + ['prefix'])
-        # delete old prefix CLI nodes
-        config.delete(ipv6_base + ['prefix'])
-        # create ned prefix tag node
-        config.set(ipv6_base + ['prefix'])
-        config.set_tag(ipv6_base + ['prefix'])
-
-        for p in prefix_old:
-            prefix = p.split(',')[0]
-            mask = p.split(',')[1]
-            config.set(ipv6_base + ['prefix', prefix, 'mask'], value=mask)
-
-    if config.exists(ipv6_base + ['delegate-prefix']):
-        prefix_old = config.return_values(ipv6_base + ['delegate-prefix'])
-        # delete old delegate prefix CLI nodes
-        config.delete(ipv6_base + ['delegate-prefix'])
-        # create ned delegation tag node
-        config.set(ipv6_base + ['delegate'])
-        config.set_tag(ipv6_base + ['delegate'])
-
-        for p in prefix_old:
-            prefix = p.split(',')[0]
-            mask = p.split(',')[1]
-            config.set(ipv6_base + ['delegate', prefix, 'delegation-prefix'], value=mask)
+    nics = ctree.return_values(cbase)
+    # convert leafNode to a tagNode
+    ctree.set(cbase)
+    ctree.set_tag(cbase)
+    for nic in nics:
+        ctree.set(cbase + [nic])
 
     try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
+        open(file_name,'w').write(ctree.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
         exit(1)

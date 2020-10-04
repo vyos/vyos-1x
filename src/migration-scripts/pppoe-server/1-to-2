@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Convert "service pppoe-server interface ethX" to: "service pppoe-server interface ethX {}"
+# change mppe node to a leaf node with value prefer
+
+import os
 
 from sys import argv, exit
 from vyos.configtree import ConfigTree
@@ -28,21 +30,32 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-ctree = ConfigTree(config_file)
-cbase = ['service', 'pppoe-server','interface']
-
-if not ctree.exists(cbase):
+config = ConfigTree(config_file)
+base = ['service', 'pppoe-server']
+if not config.exists(base):
+    # Nothing to do
     exit(0)
 else:
-    nics = ctree.return_values(cbase)
-    # convert leafNode to a tagNode
-    ctree.set(cbase)
-    ctree.set_tag(cbase)
-    for nic in nics:
-        ctree.set(cbase + [nic])
+    mppe_base = base + ['ppp-options', 'mppe']
+    if config.exists(mppe_base):
+        # get current values
+        tmp = config.list_nodes(mppe_base)
+        # drop node(s) first ...
+        config.delete(mppe_base)
+
+        print(tmp)
+        # set new value based on preference
+        if 'require' in tmp:
+            config.set(mppe_base, value='require')
+        elif 'prefer' in tmp:
+            config.set(mppe_base, value='prefer')
+        elif 'deny' in tmp:
+            config.set(mppe_base, value='deny')
 
     try:
-        open(file_name,'w').write(ctree.to_string())
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
         exit(1)
+
