@@ -43,9 +43,6 @@ else:
         # ... and set new default
         config.set(mppe_base, value='prefer')
 
-    print(config.to_string())
-    exit(1)
-
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
