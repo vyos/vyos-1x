@@ -107,9 +107,9 @@ else:
         config.delete(radius_server)
 
     # migrate SSL certificates
-    old_ssl = new_base + ['sstp-settings', 'ssl-certs']
+    old_ssl = new_base + ['sstp-settings']
     new_ssl = new_base + ['ssl']
-    config.copy(old_ssl, new_ssl)
+    config.copy(old_ssl + ['ssl-certs'], new_ssl)
     config.delete(old_ssl)
 
     if config.exists(new_ssl + ['ca']):
@@ -120,7 +120,6 @@ else:
 
     if config.exists(new_ssl + ['server-key']):
         config.rename(new_ssl + ['server-key'], 'key-file')
-
 
     try:
         with open(file_name, 'w') as f:

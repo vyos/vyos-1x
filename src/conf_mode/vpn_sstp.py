@@ -224,16 +224,13 @@ def get_config(config=None):
 
     #
     # read in client IPv4 pool
-    conf.set_level(base_path + ['network-settings', 'client-ip-settings'])
+    conf.set_level(base_path + ['client-ip-pool'])
     if conf.exists(['subnet']):
         sstp['client_ip_pool'] = conf.return_values(['subnet'])
 
-    if conf.exists(['gateway-address']):
-        sstp['client_gateway'] = conf.return_value(['gateway-address'])
-
     #
     # read in client IPv6 pool
-    conf.set_level(base_path + ['network-settings', 'client-ipv6-pool'])
+    conf.set_level(base_path + ['client-ipv6-pool'])
     if conf.exists(['prefix']):
         for prefix in conf.list_nodes(['prefix']):
             tmp = {
@@ -261,6 +258,9 @@ def get_config(config=None):
     #
     # read in network settings
     conf.set_level(base_path)
+    if conf.exists(['gateway-address']):
+        sstp['client_gateway'] = conf.return_value(['gateway-address'])
+
     if conf.exists(['name-server']):
         for name_server in conf.return_values(['name-server']):
             if is_ipv4(name_server):
@@ -268,8 +268,6 @@ def get_config(config=None):
             else:
                 sstp['dnsv6'].append(name_server)
 
-    #
-    # read in network settings
     if conf.exists(['mtu']):
         sstp['mtu'] = conf.return_value(['mtu'])
 

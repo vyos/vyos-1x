@@ -26,24 +26,17 @@
             </children>
           </node>
           #include <include/interface-mtu-68-1500.xml.i>
+          #include <include/accel-gateway-address.xml.i>
           #include <include/accel-name-server.xml.i>
-          <node name="network-settings">
+          <node name="client-ip-pool">
             <properties>
-              <help>Network settings</help>
+              <help>Client IP pools and gateway setting</help>
             </properties>
             <children>
-              <node name="client-ip-settings">
-                <properties>
-                  <help>Client IP pools and gateway setting</help>
-                </properties>
-                <children>
-                  #include <include/accel-client-subnet.xml.i>
-                  #include <include/accel-gateway-address.xml.i>
-                </children>
-              </node>
-              #include <include/accel-client-ipv6-pool.xml.i>
+              #include <include/accel-client-subnet.xml.i>
             </children>
           </node>
+          #include <include/accel-client-ipv6-pool.xml.i>
           <node name="ppp-options">
             <properties>
               <help>PPP (Point-to-Point Protocol) settings</help>

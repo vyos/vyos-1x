@@ -49,9 +49,30 @@ else:
         config.copy(config_mtu, base_path + ['mtu'])
         config.delete(config_mtu)
 
+    config_gw = base_path + ['network-settings', 'client-ip-settings', 'gateway-address']
+    if config.exists(config_gw):
+        config.copy(config_gw, base_path + ['gateway-address'])
+        config.delete(config_gw)
+
+    config_client_ip = base_path + ['network-settings', 'client-ip-settings']
+    if config.exists(config_client_ip):
+        config.copy(config_client_ip, base_path + ['client-ip-pool'])
+        config.delete(config_client_ip)
+
+    config_client_ipv6 = base_path + ['network-settings', 'client-ipv6-pool']
+    if config.exists(config_client_ipv6):
+        config.copy(config_client_ipv6, base_path + ['client-ipv6-pool'])
+        config.delete(config_client_ipv6)
+
+    # all nodes now have been migrated out of network-settings - delete node
+    config_nw_settings = base_path + ['network-settings']
+    if config.exists(config_nw_settings):
+        config.delete(config_nw_settings)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
         exit(1)
+
