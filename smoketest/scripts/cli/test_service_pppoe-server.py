@@ -27,7 +27,6 @@ from vyos.util import cmd
 local_if = ['interfaces', 'dummy', 'dum667']
 
 ac_name = 'ACN'
-gateway = '192.0.2.1'
 
 interface = 'eth0'
 
@@ -74,7 +73,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         self.set(['access-concentrator', ac_name])
         self.set(['interface', interface])
-        self.set(['local-ip', gateway])
 
         super().basic_config()
 
@@ -106,7 +104,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         # basic verification
         self.verify(conf)
 
-        self.assertEqual(conf['chap-secrets']['gw-ip-address'], gateway)
+        self.assertEqual(conf['chap-secrets']['gw-ip-address'], self._gateway)
 
         # check ppp
         self.assertEqual(conf['ppp']['mppe'], mppe)
@@ -163,7 +161,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         # check configured subnet
         self.assertEqual(conf['ip-pool'][subnet], None)
         self.assertEqual(conf['ip-pool'][start_stop], None)
-        self.assertEqual(conf['ip-pool']['gw-ip-address'], gateway)
+        self.assertEqual(conf['ip-pool']['gw-ip-address'], self._gateway)
 
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))

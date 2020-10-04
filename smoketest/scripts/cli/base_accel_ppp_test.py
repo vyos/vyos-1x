@@ -30,6 +30,8 @@ class BasicAccelPPPTest:
 
         def setUp(self):
             self.session = ConfigSession(os.getpid())
+            self._gateway = '192.0.2.1'
+
             # ensure we can also run this test on a live system - so lets clean
             # out the current configuration :)
             self.session.delete(self._base_path)
@@ -46,7 +48,7 @@ class BasicAccelPPPTest:
             # PPPoE local auth mode requires local users to be configured!
             self.set(['authentication', 'local-users', 'username', 'vyos', 'password', 'vyos'])
             self.set(['authentication', 'mode', 'local'])
-
+            self.set(['gateway-address', self._gateway])
 
         def verify(self, conf):
             self.assertEqual(conf['core']['thread-count'], str(get_half_cpus()))

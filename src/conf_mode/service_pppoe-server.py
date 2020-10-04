@@ -141,8 +141,8 @@ def verify(pppoe):
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')
 
-    if 'local_ip' not in pppoe:
-        raise ConfigError('PPPoE server requires local-ip to be configured!')
+    if 'gateway_address' not in pppoe:
+        raise ConfigError('PPPoE server requires gateway-address to be configured!')
 
     # local ippool and gateway settings config checks
     if not (vyos_dict_search('client_ip_pool.subnet', pppoe) or

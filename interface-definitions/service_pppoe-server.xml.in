@@ -110,14 +110,7 @@
               </leafNode>
             </children>
           </tagNode>
-          <leafNode name="local-ip">
-            <properties>
-              <help>local gateway address</help>
-              <constraint>
-                <validator name="ipv4-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/accel-gateway-address.xml.i>
           <leafNode name="mtu">
             <properties>
               <help>Maximum Transmission Unit (MTU) - default 1492</help>

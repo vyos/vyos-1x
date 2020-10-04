@@ -1,11 +1,11 @@
 {% if client_ip_pool is defined and client_ip_pool is not none %}
 [ip-pool]
-{%   if local_ip is defined and local_ip is not none %}
-gw-ip-address={{ local_ip }}
+{%   if gateway_address is defined and gateway_address is not none %}
+gw-ip-address={{ gateway_address }}
 {%   endif %}
 {%   if client_ip_pool.start is defined and client_ip_pool.stop is defined and client_ip_pool.start is not none and client_ip_pool.stop is not none %}
 {{ client_ip_pool.start }}-{{ client_ip_pool.stop }}
-{%   endif -%}
+{%   endif %}
 {%   if client_ip_pool.subnet is defined and client_ip_pool.subnet is not none %}
 {%     for subnet in client_ip_pool.subnet %}
 {{ subnet }}

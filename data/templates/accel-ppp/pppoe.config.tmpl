@@ -92,8 +92,8 @@ dae-server={{ authentication.radius.dynamic_author.server }}:{{ authentication.r
 {%   endif -%}
 {% endif %}
 
-{% if local_ip is defined and local_ip is not none %}
-gw-ip-address={{ local_ip }}
+{% if gateway_address is defined and gateway_address is not none %}
+gw-ip-address={{ gateway_address }}
 {% endif %}
 
 {% if session_control is defined and session_control != 'disable' %}

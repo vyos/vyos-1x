@@ -41,9 +41,7 @@ class TestVPNSSTPServer(BasicAccelPPPTest.BaseTest):
         self.set(['ssl', 'ca-cert-file', ca_cert])
         self.set(['ssl', 'cert-file', ssl_cert])
         self.set(['ssl', 'key-file', ssl_key])
-
         self.set(['client-ip-pool', 'subnet', '192.0.2.0/24'])
-        self.set(['gateway-address', '1.1.1.1'])
 
         super().basic_config()
 
