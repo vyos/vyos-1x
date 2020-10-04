@@ -33,7 +33,7 @@
               <help>Client IP pools and gateway setting</help>
             </properties>
             <children>
-              #include <include/accel-client-subnet.xml.i>
+              #include <include/accel-client-ip-pool-subnet.xml.i>
             </children>
           </node>
           #include <include/accel-client-ipv6-pool.xml.i>
