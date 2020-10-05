@@ -60,16 +60,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="domain-search">
-                    <properties>
-                      <help>Domain name for client to search</help>
-                      <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>Invalid domain name. May only contain letters, numbers and .-_</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp-server-domain-search.xml.i>
                   <leafNode name="name-server">
                     <properties>
                       <help>IPv6 address of a Recursive DNS Server</help>
@@ -150,16 +141,7 @@
                       </tagNode>
                     </children>
                   </node>
-                  <leafNode name="domain-search">
-                    <properties>
-                      <help>Domain name for client to search</help>
-                      <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>Invalid domain name. May only contain letters, numbers and .-_</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp-server-domain-search.xml.i>
                   <node name="lease-time">
                     <properties>
                       <help>Parameters relating to the lease time</help>
