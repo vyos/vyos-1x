@@ -52,26 +52,26 @@ def verify_mtu_ipv6(config):
     configured on the interface. IPv6 requires a 1280 bytes MTU.
     """
     from vyos.validate import is_ipv6
-    # IPv6 minimum required link mtu
-    min_mtu = 1280
+    if 'mtu' in config:
+        # IPv6 minimum required link mtu
+        min_mtu = 1280
+        if int(config['mtu']) < min_mtu:
+            interface = config['ifname']
+            error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
+                        f'thus the minimum MTU requirement is {min_mtu}!'
 
-    if int(config['mtu']) < min_mtu:
-        interface = config['ifname']
-        error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
-                    f'thus the minimum MTU requirement is {min_mtu}!'
+            if not vyos_dict_search('ipv6.address.no_default_link_local', config):
+                raise ConfigError('link-local ' + error_msg)
 
-        if not vyos_dict_search('ipv6.address.no_default_link_local', config):
-            raise ConfigError('link-local ' + error_msg)
+            for address in (vyos_dict_search('address', config) or []):
+                if address in ['dhcpv6'] or is_ipv6(address):
+                    raise ConfigError(error_msg)
 
-        for address in (vyos_dict_search('address', config) or []):
-            if address in ['dhcpv6'] or is_ipv6(address):
+            if vyos_dict_search('ipv6.address.autoconf', config):
                 raise ConfigError(error_msg)
 
-        if vyos_dict_search('ipv6.address.autoconf', config):
-            raise ConfigError(error_msg)
-
-        if vyos_dict_search('ipv6.address.eui64', config):
-            raise ConfigError(error_msg)
+            if vyos_dict_search('ipv6.address.eui64', config):
+                raise ConfigError(error_msg)
 
 
 def verify_vrf(config):
