@@ -76,6 +76,14 @@ def get_config(config=None):
     base = ['interfaces', 'wireless']
 
     wifi = get_interface_dict(conf, base)
+
+    # Cleanup "delete" default values when required user selectable values are
+    # not defined at all
+    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    if not (vyos_dict_search('security.wpa.passphrase', tmp) or
+            vyos_dict_search('security.wpa.radius', tmp)):
+        del wifi['security']['wpa']
+
     # defaults include RADIUS server specifics per TAG node which need to be
     # added to individual RADIUS servers instead - so we can simply delete them
     if vyos_dict_search('security.wpa.radius.server.port', wifi):
