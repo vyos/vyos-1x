@@ -65,12 +65,38 @@ def get_config(config=None):
             config = {
                 'name': network,
                 'disabled': False,
+                'common': {},
                 'subnet': []
             }
 
             # If disabled, the shared-network configuration becomes inactive
             if conf.exists(['disable']):
                 config['disabled'] = True
+
+            # Common options shared among subnets. These can be overridden if
+            # the same option is specified on a per-subnet or per-host
+            # basis. These are the only options that can be handed out to
+            # stateless clients via an information-request message.
+            if conf.exists(['common-options']):
+                conf.set_level(base + ['shared-network-name', network, 'common-options'])
+
+                # How often stateless clients should refresh their information. This is
+                # mostly taken as a hint by clients, and only if they request it.
+                #  (if not specified, the server does not supply this to the client)
+                if conf.exists(['info-refresh-time']):
+                    config['common']['info_refresh_time'] = conf.return_value(['info-refresh-time'])
+
+                # The domain-search option specifies a 'search list' of Domain Names to be used
+                # by the client to locate not-fully-qualified domain names.
+                if conf.exists(['domain-search']):
+                    config['common']['domain_search'] = conf.return_values(['domain-search'])
+
+                # Specifies a list of Domain Name System name servers available to the client.
+                # Servers should be listed in order of preference.
+                if conf.exists(['name-server']):
+                    config['common']['dns_server'] = conf.return_values(['name-server'])
+
+                conf.set_level(base + ['shared-network-name', network])
 
             # check for multiple subnet configurations in a shared network
             if conf.exists(['subnet']):

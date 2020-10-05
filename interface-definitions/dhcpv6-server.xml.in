@@ -43,6 +43,48 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="common-options">
+                <properties>
+                  <help>Common options to distribute to all clients, including stateless clients</help>
+                </properties>
+                <children>
+                  <leafNode name="info-refresh-time">
+                    <properties>
+                      <help>Time (in seconds) that stateless clients should wait between refreshing the information they were given</help>
+                      <valueHelp>
+                        <format>1-4294967295</format>
+                        <description>DHCPv6 information refresh time</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="domain-search">
+                    <properties>
+                      <help>Domain name for client to search</help>
+                      <constraint>
+                        <regex>[-_a-zA-Z0-9.]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid domain name. May only contain letters, numbers and .-_</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name-server">
+                    <properties>
+                      <help>IPv6 address of a Recursive DNS Server</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of DNS name server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <tagNode name="subnet">
                 <properties>
                   <help>IPv6 DHCP subnet for this shared network [REQUIRED]</help>

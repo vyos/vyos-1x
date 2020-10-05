@@ -12,6 +12,15 @@ option dhcp6.preference {{ preference }};
 {% for network in shared_network %}
 {%- if not network.disabled -%}
 shared-network {{ network.name }} {
+    {%- if network.common.info_refresh_time %}
+    option dhcp6.info-refresh-time {{ network.common.info_refresh_time }};
+    {%- endif %}
+    {%- if network.common.domain_search %}
+    option dhcp6.domain-search "{{ network.common.domain_search | join('", "') }}";
+    {%- endif %}
+    {%- if network.common.dns_server %}
+    option dhcp6.name-servers {{ network.common.dns_server | join(', ') }};
+    {%- endif %}
     {%- for subnet in network.subnet %}
     subnet6 {{ subnet.network }} {
         {%- for range in subnet.range6_prefix %}
