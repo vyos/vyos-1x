@@ -699,6 +699,7 @@
                       </constraint>
                       <constraintErrorMessage>Unknown WPA mode</constraintErrorMessage>
                     </properties>
+                    <defaultValue>both</defaultValue>
                   </leafNode>
                   <leafNode name="passphrase">
                     <properties>
