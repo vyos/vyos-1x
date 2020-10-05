@@ -56,10 +56,9 @@ class TestNAT(unittest.TestCase):
         nftable_json = json.loads(tmp)
         condensed_json = jmespath.search(snat_pattern, nftable_json)[0]
 
-        self.assertEqual(condensed_json['comment'], 'DST-NAT-1')
+        self.assertEqual(condensed_json['comment'], 'SRC-NAT-1')
         self.assertEqual(condensed_json['address']['network'], network.split('/')[0])
         self.assertEqual(str(condensed_json['address']['prefix']), network.split('/')[1])
-
 
     def test_validation(self):
         """ T2813: Ensure translation address is specified """

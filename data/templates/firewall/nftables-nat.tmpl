@@ -28,6 +28,9 @@ add rule ip raw NAT_CONNTRACK counter accept
 {% endif %}
 
 {% macro nat_rule(rule, chain) %}
+{%   set comment  = "" %}
+{%   set base_log = "" %}
+
 {%   set src_addr  = "ip saddr " + rule.source_address if rule.source_address %}
 {%   set dst_addr  = "ip daddr " + rule.dest_address if rule.dest_address %}
 
@@ -45,13 +48,15 @@ add rule ip raw NAT_CONNTRACK counter accept
 {%     set dst_port  = "dport { " + rule.dest_port +" }" if rule.dest_port %}
 {%   endif %}
 
-{%   set comment   = "DST-NAT-" + rule.number %}
-
 {%   if chain == "PREROUTING" %}
+{%     set comment   = "DST-NAT-" + rule.number %}
+{%     set base_log  = "[NAT-DST-" + rule.number %}
 {%     set interface = " iifname \"" + rule.interface_in + "\"" if rule.interface_in is defined and rule.interface_in != 'any' else '' %}
 {%     set trns_addr = "dnat to " + rule.translation_address %}
 
 {%   elif chain == "POSTROUTING" %}
+{%     set comment   = "SRC-NAT-" + rule.number %}
+{%     set base_log  = "[NAT-SRC-" + rule.number %}
 {%     set interface = " oifname \"" + rule.interface_out + "\"" if rule.interface_out is defined and rule.interface_out != 'any' else '' %}
 {%     if rule.translation_address == 'masquerade' %}
 {%       set trns_addr = rule.translation_address %}
@@ -72,7 +77,6 @@ add rule ip raw NAT_CONNTRACK counter accept
 {%   endif %}
 
 {%   if rule.log %}
-{%     set base_log = "[NAT-DST-" + rule.number %}
 {%     if rule.exclude %}
 {%       set log = base_log + "-EXCL]" %}
 {%     elif rule.translation_address == 'masquerade' %}
