@@ -26,6 +26,7 @@ from vyos.util import chown
 from vyos.util import vyos_dict_search
 from vyos.template import render
 from vyos.xml import defaults
+from vyos.validate import is_ipv6
 
 from vyos import ConfigError
 from vyos import airbag
@@ -64,6 +65,21 @@ def get_config(config=None):
         base_nameservers_dhcp = ['system', 'name-servers-dhcp']
         if conf.exists(base_nameservers_dhcp):
             dns.update({'system_name_server_dhcp': conf.return_values(base_nameservers_dhcp)})
+
+    # Split the source_address property into separate IPv4 and IPv6 lists
+    # NOTE: In future versions of pdns-recursor (> 4.4.0), this logic can be removed
+    # as both IPv4 and IPv6 addresses can be specified in a single setting.
+    source_address_v4 = []
+    source_address_v6 = []
+
+    for source_address in dns['source_address']:
+        if is_ipv6(source_address):
+            source_address_v6.append(source_address)
+        else:
+            source_address_v4.append(source_address)
+
+    dns.update({'source_address_v4': source_address_v4})
+    dns.update({'source_address_v6': source_address_v6})
 
     return dns
 
