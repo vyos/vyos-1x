@@ -32,24 +32,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="listen-address">
-            <properties>
-              <help>Addresses for TFTP server to listen [REQUIRED]</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>TFTP IPv4 listen address</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6</format>
-                <description>TFTP IPv6 listen address</description>
-              </valueHelp>
-              <multi/>
-              <constraint>
-                <validator name="ipv4-address"/>
-                <validator name="ipv6-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/listen-address.xml.i>
         </children>
       </node>
     </children>

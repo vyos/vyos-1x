@@ -128,24 +128,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="listen-address">
-                <properties>
-                  <help>Addresses to listen for DNS queries [REQUIRED]</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Domain Name Server (DNS) IPv4 address</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>Domain Name Server (DNS) IPv6 address</description>
-                  </valueHelp>
-                  <multi/>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/listen-address.xml.i>
               <leafNode name="negative-ttl">
                 <properties>
                   <help>Maximum amount of time negative entries are cached (default: 3600)</help>
