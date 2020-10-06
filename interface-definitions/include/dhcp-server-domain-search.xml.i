@@ -5,7 +5,7 @@
     <constraint>
       <validator name="fqdn"/>
     </constraint>
-    <constraintErrorMessage>Invalid domain name (RFC 1123 section 2).\nMay only contain letters, numbers and .-_</constraintErrorMessage>
+     <constraintErrorMessage>Invalid domain name (RFC 1123 section 2).\nMay only contain letters, numbers, period, and underscore.</constraintErrorMessage>
     <multi/>
   </properties>
 </leafNode>
