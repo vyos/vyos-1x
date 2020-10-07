@@ -10,8 +10,8 @@ threads=1
 allow-from={{ allow_from | join(',') }}
 log-common-errors=yes
 non-local-bind=yes
-query-local-address=0.0.0.0
-query-local-address6=::
+query-local-address={{ source_address_v4 | join(',') }}
+query-local-address6={{ source_address_v6 | join(',') }}
 lua-config-file=recursor.conf.lua
 
 # cache-size

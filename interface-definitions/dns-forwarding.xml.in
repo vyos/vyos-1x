@@ -160,6 +160,27 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="source-address">
+                <properties>
+                  <help>Local addresses from which to send DNS queries.
+                If unspecified, the querier will use any available address on
+                the outbound interface.</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address from which to send traffic</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address from which to send traffic</description>
+                  </valueHelp>
+                  <multi/>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <defaultValue>0.0.0.0 ::</defaultValue>
+              </leafNode>
               <leafNode name="system">
                 <properties>
                   <help>Use system name servers</help>
