@@ -136,7 +136,7 @@ def initialization(socket):
     session_string = ''
     # check first for resent init msg, in case of client timeout
     while True:
-        msg = socket.recv().decode()
+        msg = socket.recv().decode("utf-8", "ignore")
         try:
             message = json.loads(msg)
             if message["type"] == "init":
@@ -149,10 +149,10 @@ def initialization(socket):
     active_string = msg
     resp = "active"
     socket.send(resp.encode())
-    session_string = socket.recv().decode()
+    session_string = socket.recv().decode("utf-8", "ignore")
     resp = "session"
     socket.send(resp.encode())
-    pid_string = socket.recv().decode()
+    pid_string = socket.recv().decode("utf-8", "ignore")
     resp = "pid"
     socket.send(resp.encode())
 
