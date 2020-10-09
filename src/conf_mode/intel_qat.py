@@ -67,7 +67,7 @@ def verify(qat):
     output, err = popen('lspci -nn', decode='utf-8')
     if not err:
         data = re.findall(
-            '(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output)
+            '(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)|(8086:1f18)', output)
         # If QAT devices found
         if not data:
             raise ConfigError('No QAT acceleration device found')
