@@ -233,8 +233,8 @@ def generate(login):
             env = os.environ.copy()
             env['vyos_libexec_dir'] = '/usr/libexec/vyos'
 
-            call("/opt/vyatta/sbin/my_set system login user '{name}' "
-                 "authentication plaintext-password '{password_plaintext}'"
+            call("/opt/vyatta/sbin/my_delete system login user '{name}' "
+                 "authentication plaintext-password"
                  .format(**user), env=env)
 
             call("/opt/vyatta/sbin/my_set system login user '{name}' "
