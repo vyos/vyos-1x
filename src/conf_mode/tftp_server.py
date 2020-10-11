@@ -101,7 +101,7 @@ def generate(tftpd):
         if vyos.validate.is_ipv4(listen):
             config['listen'] = [listen + ":" + tftpd['port'] + " -4"]
         else:
-            config['listen'] = ["[" + listen + "]" + tftpd['port'] + " -6"]
+            config['listen'] = ["[" + listen + "]:" + tftpd['port'] + " -6"]
 
         tmpl = jinja2.Template(config_tmpl)
         config_text = tmpl.render(config)
