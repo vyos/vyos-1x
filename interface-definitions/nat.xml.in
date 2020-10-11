@@ -42,7 +42,11 @@
                         <format>ipv4range</format>
                         <description>IPv4 address range to match</description>
                       </valueHelp>
-                      <!-- TODO: add general iptables constraint script -->
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv4-range"/>
+                      </constraint>
                     </properties>
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
