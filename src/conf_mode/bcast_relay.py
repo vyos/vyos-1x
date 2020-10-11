@@ -78,7 +78,8 @@ def generate(relay):
             continue
 
         config['instance'] = instance
-        render(config_file_base + instance, 'bcast-relay/udp-broadcast-relay.tmpl', config)
+        render(config_file_base + instance, 'bcast-relay/udp-broadcast-relay.tmpl',
+               config, trim_blocks=True)
 
     return None
 
