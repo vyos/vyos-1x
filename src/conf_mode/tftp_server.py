@@ -100,7 +100,7 @@ def generate(tftpd):
         if is_ipv4(listen):
             config['listen'] = [listen + ":" + tftpd['port'] + " -4"]
         else:
-            config['listen'] = ["[" + listen + "]" + tftpd['port'] + " -6"]
+            config['listen'] = ["[" + listen + "]:" + tftpd['port'] + " -6"]
 
         file = config_file + str(idx)
         render(file, 'tftp-server/default.tmpl', config)
