@@ -45,10 +45,6 @@ class TestNAT(unittest.TestCase):
         self.session.set(source_path + ['rule', '1', 'destination', 'address', network])
         self.session.set(source_path + ['rule', '1', 'exclude'])
 
-        # check validate() - outbound-interface must be defined
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-
         self.session.set(source_path + ['rule', '1', 'outbound-interface', 'any'])
         self.session.commit()
 
@@ -60,14 +56,22 @@ class TestNAT(unittest.TestCase):
         self.assertEqual(condensed_json['address']['network'], network.split('/')[0])
         self.assertEqual(str(condensed_json['address']['prefix']), network.split('/')[1])
 
-    def test_validation(self):
+    def test_validation_logic(self):
         """ T2813: Ensure translation address is specified """
-        self.session.set(source_path + ['rule', '100', 'outbound-interface', 'eth0'])
+        rule = '5'
+        self.session.set(source_path + ['rule', rule, 'source', 'address', '192.0.2.0/24'])
+
+        # check validate() - outbound-interface must be defined
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(source_path + ['rule', rule, 'outbound-interface', 'eth0'])
 
         # check validate() - translation address not specified
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
 
+        self.session.set(source_path + ['rule', rule, 'translation', 'address', 'masquerade'])
+        self.session.commit()
 
 if __name__ == '__main__':
     unittest.main()
