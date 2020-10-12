@@ -28,32 +28,36 @@ from vyos.validate import is_ipv6
 
 PROCESS_NAME = 'in.tftpd'
 base_path = ['service', 'tftp-server']
+dummy_if_path = ['interfaces', 'dummy', 'dum69']
+address_ipv4 = '192.0.2.1'
+address_ipv6 = '2001:db8::1'
 
 class TestServiceTFTPD(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        self.session.delete(base_path)
+        self.session.set(dummy_if_path + ['address', address_ipv4 + '/32'])
+        self.session.set(dummy_if_path + ['address', address_ipv6 + '/128'])
 
     def tearDown(self):
         self.session.delete(base_path)
+        self.session.delete(dummy_if_path)
         self.session.commit()
         del self.session
 
-    def test_tftpd_single(self):
+    def test_01_tftpd_single(self):
         directory = '/tmp'
-        address = '127.0.0.1'
         port = '69' # default port
 
         self.session.set(base_path + ['allow-upload'])
         self.session.set(base_path + ['directory', directory])
-        self.session.set(base_path + ['listen-address', address])
+        self.session.set(base_path + ['listen-address', address_ipv4])
 
         # commit changes
         self.session.commit()
 
         config = read_file('/etc/default/tftpd0')
         # verify listen IP address
-        self.assertIn(f'{address}:{port} -4', config)
+        self.assertIn(f'{address_ipv4}:{port} -4', config)
         # verify directory
         self.assertIn(directory, config)
         # verify upload
@@ -62,9 +66,9 @@ class TestServiceTFTPD(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_tftpd_multi(self):
+    def test_02_tftpd_multi(self):
         directory = '/tmp'
-        address = ['127.0.0.1', '::1']
+        address = [address_ipv4, address_ipv6]
         port = '70'
 
         self.session.set(base_path + ['directory', directory])
