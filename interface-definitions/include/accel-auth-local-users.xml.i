@@ -35,7 +35,7 @@
               <properties>
                 <help>Upload bandwidth limit in kbits/sec</help>
                 <constraint>
-                  <validator name="numeric" argument="--range 1-10000000"/>
+                  <validator name="numeric" argument="--range 1-65535"/>
                 </constraint>
               </properties>
             </leafNode>
@@ -43,7 +43,7 @@
               <properties>
                 <help>Download bandwidth limit in kbits/sec</help>
                 <constraint>
-                  <validator name="numeric" argument="--range 1-10000000"/>
+                  <validator name="numeric" argument="--range 1-65535"/>
                 </constraint>
               </properties>
             </leafNode>
