@@ -465,7 +465,7 @@ def get_accel_dict(config, base, chap_secrets):
 
     # Add individual local-user default values
     if vyos_dict_search('authentication.local_users.username', dict):
-        default_values = defaults(base + ['authentication', 'local_users', 'username'])
+        default_values = defaults(base + ['authentication', 'local-users', 'username'])
 
         for username in vyos_dict_search('authentication.local_users.username', dict):
             dict['authentication']['local_users']['username'][username] = dict_merge(

@@ -44,6 +44,9 @@ class BasicAccelPPPTest:
         def set(self, path):
             self.session.set(self._base_path + path)
 
+        def delete(self, path):
+            self.session.delete(self._base_path + path)
+
         def basic_config(self):
             # PPPoE local auth mode requires local users to be configured!
             self.set(['authentication', 'local-users', 'username', 'vyos', 'password', 'vyos'])
@@ -111,6 +114,20 @@ class BasicAccelPPPTest:
             # check local users
             tmp = cmd(f'sudo cat {self._chap_secrets}')
             regex = f'{user}\s+\*\s+{password}\s+{static_ip}\s+{download}/{upload}'
+            tmp = re.findall(regex, tmp)
+            self.assertTrue(tmp)
+
+            # Check for running process
+            self.assertTrue(process_named_running(self._process_name))
+
+            # Check local-users default value(s)
+            self.delete(['authentication', 'local-users', 'username', user, 'static-ip'])
+            # commit changes
+            self.session.commit()
+
+            # check local users
+            tmp = cmd(f'sudo cat {self._chap_secrets}')
+            regex = f'{user}\s+\*\s+{password}\s+\*\s+{download}/{upload}'
             tmp = re.findall(regex, tmp)
             self.assertTrue(tmp)
 
