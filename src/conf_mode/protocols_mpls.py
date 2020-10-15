@@ -43,7 +43,12 @@ def get_config(config=None):
                 'd_transp_ipv4'       : None,
                 'd_transp_ipv6'       : None,
                 'hello_holdtime'      : None,
-                'hello_interval'      : None
+                'hello_interval'      : None,
+                'ses_ipv4_hold'       : None,
+                'ses_ipv6_hold'       : None,
+                'export_ipv4_exp'     : False,
+                'export_ipv6_exp'     : False
+
         },
         'ldp'        : {
                 'interfaces'          : [],
@@ -51,7 +56,12 @@ def get_config(config=None):
                 'd_transp_ipv4'       : None,
                 'd_transp_ipv6'       : None,
                 'hello_holdtime'      : None,
-                'hello_interval'      : None
+                'hello_interval'      : None,
+                'ses_ipv4_hold'       : None,
+                'ses_ipv6_hold'       : None,
+                'export_ipv4_exp'     : False,
+                'export_ipv6_exp'     : False
+
         }
     }
     if not (conf.exists('protocols mpls') or conf.exists_effective('protocols mpls')):
@@ -82,6 +92,20 @@ def get_config(config=None):
     if conf.exists('discovery hello-interval'):
         mpls_conf['ldp']['hello_interval'] = conf.return_value('discovery hello-interval')
 
+    # Get session-ipv4-holdtime
+    if conf.exists_effective('discovery session-ipv4-holdtime'):
+        mpls_conf['old_ldp']['ses_ipv4_hold'] = conf.return_effective_value('discovery session-ipv4-holdtime')
+
+    if conf.exists('discovery session-ipv4-holdtime'):
+        mpls_conf['ldp']['ses_ipv4_hold'] = conf.return_value('discovery session-ipv4-holdtime')
+
+    # Get session-ipv6-holdtime
+    if conf.exists_effective('discovery session-ipv6-holdtime'):
+        mpls_conf['old_ldp']['ses_ipv6_hold'] = conf.return_effective_value('discovery session-ipv6-holdtime')
+
+    if conf.exists('discovery session-ipv6-holdtime'):
+        mpls_conf['ldp']['ses_ipv6_hold'] = conf.return_value('discovery session-ipv6-holdtime')
+
     # Get discovery transport-ipv4-address
     if conf.exists_effective('discovery transport-ipv4-address'):
         mpls_conf['old_ldp']['d_transp_ipv4'] = conf.return_effective_value('discovery transport-ipv4-address')
@@ -95,6 +119,20 @@ def get_config(config=None):
 
     if conf.exists('discovery transport-ipv6-address'):
         mpls_conf['ldp']['d_transp_ipv6'] = conf.return_value('discovery transport-ipv6-address')
+
+    # Get export ipv4 explicit-null
+    if conf.exists_effective('export ipv4 explicit-null'):
+        mpls_conf['old_ldp']['export_ipv4_exp'] = True
+
+    if conf.exists('export ipv4 explicit-null'):
+        mpls_conf['ldp']['export_ipv4_exp'] = True
+
+    # Get export ipv6 explicit-null
+    if conf.exists_effective('export ipv6 explicit-null'):
+        mpls_conf['old_ldp']['export_ipv6_exp'] = True
+
+    if conf.exists('export ipv6 explicit-null'):
+        mpls_conf['ldp']['export_ipv6_exp'] = True
 
     # Get interfaces
     if conf.exists_effective('interface'):
