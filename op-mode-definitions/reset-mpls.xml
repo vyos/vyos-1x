@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="mpls">
+        <properties>
+          <help>Reset MPLS and related protocol commands</help>
+        </properties>
+        <children>
+          <node name="ldp">
+            <properties>
+              <help>Reset LDP commands</help>
+            </properties>
+            <children>
+              <tagNode name="neighbor">
+                <properties>
+                  <help>Reset MPLS LDP neighbor/session</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                    <script>/usr/bin/vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "clear mpls ldp neighbor $5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
