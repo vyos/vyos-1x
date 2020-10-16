@@ -15,6 +15,12 @@ neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
 {% endfor -%}
 address-family ipv4
 label local allocate host-routes
+{% if old_ldp.export_ipv4_exp -%}
+no label local advertise explicit-null
+{% endif -%}
+{% if ldp.export_ipv4_exp -%}
+label local advertise explicit-null
+{% endif -%}
 {% if old_ldp.d_transp_ipv4 -%}
 no discovery transport-address {{ old_ldp.d_transp_ipv4 }}
 {% endif -%}
@@ -33,6 +39,12 @@ no discovery hello interval {{ old_ldp.hello_interval }}
 {% if ldp.hello_interval -%}
 discovery hello interval {{ ldp.hello_interval }}
 {% endif -%}
+{% if old_ldp.ses_ipv4_hold -%}
+no  session holdtime {{ old_ldp.ses_ipv4_hold }}
+{% endif -%}
+{% if ldp.ses_ipv4_hold -%}
+session holdtime {{ ldp.ses_ipv4_hold }}
+{% endif -%}
 {% for interface in old_ldp.interfaces -%}
 no interface {{interface}}
 {% endfor -%}
@@ -46,6 +58,18 @@ exit-address-family
 {% if ldp.d_transp_ipv6 -%}
 address-family ipv6
 label local allocate host-routes
+{% if old_ldp.export_ipv6_exp -%}
+no label local advertise explicit-null
+{% endif -%}
+{% if ldp.export_ipv6_exp -%}
+label local advertise explicit-null
+{% endif -%}
+{% if old_ldp.ses_ipv6_hold -%}
+no  session holdtime {{ old_ldp.ses_ipv6_hold }}
+{% endif -%}
+{% if ldp.ses_ipv6_hold -%}
+session holdtime {{ ldp.ses_ipv6_hold }}
+{% endif -%}
 {% if old_ldp.d_transp_ipv6 -%}
 no discovery transport-address {{ old_ldp.d_transp_ipv6 }}
 {% endif -%}
