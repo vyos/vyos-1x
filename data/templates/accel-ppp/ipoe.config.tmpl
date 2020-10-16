@@ -33,6 +33,7 @@ noauth=1
 username=ifname
 password=csid
 {% endif %}
+proxy-arp=1
 
 {%- for interface in interfaces %}
 {% if (interface.shared == '0') and (interface.vlan_mon) %}
