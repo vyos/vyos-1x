@@ -40,6 +40,12 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <leafNode name="peers">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) peers brief</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bfd peers brief"</command>
+              </leafNode>
             </children>
           </node>
         </children>
