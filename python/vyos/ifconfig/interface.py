@@ -147,6 +147,10 @@ class Interface(Control):
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
         },
+        'ipv4_forwarding': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/forwarding',
+        },
         'ipv6_accept_ra': {
             'validate': lambda ara: assert_range(ara,0,3),
             'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra',
@@ -460,6 +464,12 @@ class Interface(Control):
             configured on the incoming interface
         """
         return self.set_interface('arp_ignore', arp_ignore)
+
+    def set_ipv4_forwarding(self, forwarding):
+        """
+        Configure IPv4 forwarding.
+        """
+        return self.set_interface('ipv4_forwarding', forwarding)
 
     def set_ipv6_accept_ra(self, accept_ra):
         """
@@ -973,6 +983,11 @@ class Interface(Control):
         tmp = vyos_dict_search('ip.proxy_arp_pvlan', config)
         value = '1' if (tmp != None) else '0'
         self.set_proxy_arp_pvlan(value)
+
+        # IPv4 forwarding
+        tmp = vyos_dict_search('ip.disable_forwarding', config)
+        value = '0' if (tmp != None) else '1'
+        self.set_ipv4_forwarding(value)
 
         # IPv6 forwarding
         tmp = vyos_dict_search('ipv6.disable_forwarding', config)
