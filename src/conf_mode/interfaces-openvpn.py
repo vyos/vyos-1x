@@ -208,7 +208,8 @@ def get_config(config=None):
     openvpn['auth_user_pass_file'] = f"/run/openvpn/{openvpn['intf']}.pw"
 
     # check if interface is member of a bridge
-    openvpn['is_bridge_member'] = is_member(conf, openvpn['intf'], 'bridge')
+    tmp = is_member(conf, openvpn['intf'], 'bridge')
+    if tmp: openvpn['is_bridge_member'] = next(iter(tmp))
 
     # Check if interface instance has been removed
     if not conf.exists('interfaces openvpn ' + openvpn['intf']):

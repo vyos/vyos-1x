@@ -194,11 +194,9 @@ def is_member(conf, interface, intftype=None):
     interface name -> Interface is a member of this interface
     False -> interface type cannot have members
     """
-    from vyos.xml import is_tag
-    from vyos.xml import is_leaf
-
     ret_val = None
     intftypes = ['bonding', 'bridge']
+
     if intftype not in intftypes + [None]:
         raise ValueError((
             f'unknown interface type "{intftype}" or it cannot '
@@ -210,19 +208,13 @@ def is_member(conf, interface, intftype=None):
     old_level = conf.get_level()
     conf.set_level([])
 
-    for it in intftype:
-        base = ['interfaces', it]
+    for iftype in intftype:
+        base = ['interfaces', iftype]
         for intf in conf.list_nodes(base):
-            memberintf = base + [intf, 'member', 'interface']
-            if is_tag(memberintf):
-                if interface in conf.list_nodes(memberintf):
-                    ret_val = intf
-                    break
-            elif is_leaf(memberintf):
-                if ( conf.exists(memberintf) and
-                        interface in conf.return_values(memberintf) ):
-                    ret_val = intf
-                    break
+            member = base + [intf, 'member', 'interface', interface]
+            if conf.exists(member):
+                tmp = conf.get_config_dict(member, key_mangling=('-', '_'), get_first_key=True)
+                ret_val = {intf : tmp}
 
     old_level = conf.set_level(old_level)
     return ret_val

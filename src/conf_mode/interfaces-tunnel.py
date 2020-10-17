@@ -462,7 +462,8 @@ def get_config(config=None):
     options['tunnel'] = {}
 
     # check for bridges
-    options['bridge'] = is_member(config, ifname, 'bridge')
+    tmp = is_member(config, ifname, 'bridge')
+    if tmp: options['bridge'] = next(iter(tmp))
     options['interfaces'] = interfaces()
 
     for name in ct:

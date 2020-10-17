@@ -234,25 +234,33 @@ class BridgeIf(Interface):
             if member in interfaces():
                 self.del_port(member)
 
-        STPBridgeIf = STP.enable(BridgeIf)
         tmp = vyos_dict_search('member.interface', config)
         if tmp:
             for interface, interface_config in tmp.items():
-                # if we've come here we already verified the interface
-                # does not have an addresses configured so just flush
-                # any remaining ones
-                Interface(interface).flush_addrs()
+                # if interface does yet not exist bail out early and
+                # add it later
+                if interface not in interfaces():
+                    continue
+
+                # Bridge lower "physical" interface
+                lower = Interface(interface)
+
+                # If we've come that far we already verified the interface does
+                # not have any addresses configured by CLI so just flush any
+                # remaining ones
+                lower.flush_addrs()
                 # enslave interface port to bridge
                 self.add_port(interface)
 
-                tmp = STPBridgeIf(interface)
                 # set bridge port path cost
-                value = interface_config.get('cost')
-                tmp.set_path_cost(value)
+                if 'cost' in interface_config:
+                    value = interface_config.get('cost')
+                    lower.set_path_cost(value)
 
                 # set bridge port path priority
-                value = interface_config.get('priority')
-                tmp.set_path_priority(value)
+                if 'priority' in interface_config:
+                    value = interface_config.get('priority')
+                    lower.set_path_priority(value)
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()

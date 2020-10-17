@@ -24,6 +24,7 @@ from vyos.configdict import get_interface_dict
 from vyos.configdict import node_changed
 from vyos.configdict import is_member
 from vyos.configdict import is_source_interface
+from vyos.configdict import dict_merge
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
@@ -69,25 +70,26 @@ def get_config(config=None):
         # the default dictionary is not properly paged into the dict (see T2665)
         # thus we will ammend it ourself
         default_member_values = defaults(base + ['member', 'interface'])
-        for interface, interface_config in bridge['member']['interface'].items():
-            interface_config.update(default_member_values)
+        for interface in bridge['member']['interface']:
+            bridge['member']['interface'][interface] = dict_merge(
+                    default_member_values, bridge['member']['interface'][interface])
 
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp and tmp != bridge['ifname']:
-                interface_config.update({'is_bridge_member' : tmp})
+            if tmp and bridge['ifname'] not in tmp:
+                bridge['member']['interface'][interface].update({'is_bridge_member' : tmp})
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
-            if tmp: interface_config.update({'is_bond_member' : tmp})
+            if tmp: bridge['member']['interface'][interface].update({'is_bond_member' : tmp})
 
             # Check if member interface is used as source-interface on another interface
             tmp = is_source_interface(conf, interface)
-            if tmp: interface_config.update({'is_source_interface' : tmp})
+            if tmp: bridge['member']['interface'][interface].update({'is_source_interface' : tmp})
 
             # Bridge members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp: interface_config.update({'has_address' : ''})
+            if tmp: bridge['member']['interface'][interface].update({'has_address' : ''})
 
     return bridge
 
@@ -105,15 +107,12 @@ def verify(bridge):
             if interface == 'lo':
                 raise ConfigError('Loopback interface "lo" can not be added to a bridge')
 
-            if interface not in interfaces():
-                raise ConfigError(error_msg + 'it does not exist!')
-
             if 'is_bridge_member' in interface_config:
-                tmp = interface_config['is_bridge_member']
+                tmp = next(iter(interface_config['is_bridge_member']))
                 raise ConfigError(error_msg + f'it is already a member of bridge "{tmp}"!')
 
             if 'is_bond_member' in interface_config:
-                tmp = interface_config['is_bond_member']
+                tmp = next(iter(interface_config['is_bond_member']))
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
 
             if 'is_source_interface' in interface_config:
