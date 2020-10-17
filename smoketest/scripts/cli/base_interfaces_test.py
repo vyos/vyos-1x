@@ -228,7 +228,7 @@ class BasicInterfaceTest:
                         self._mtu_test(vif)
 
         def test_ip_options(self):
-            """ test IP options like arp """
+            """ Test interface base IPv4 options """
             if not self._test_ip:
                 return None
 
@@ -278,3 +278,27 @@ class BasicInterfaceTest:
 
                 tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/rp_filter')
                 self.assertEqual('2', tmp)
+
+        def test_ipv6_options(self):
+            """ Test interface base IPv6 options """
+            if not self._test_ipv6:
+                return None
+
+            for interface in self._interfaces:
+                dad_transmits = '10'
+                path = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(path + option.split())
+
+                # Options
+                self.session.set(path + ['ipv6', 'disable-forwarding'])
+                self.session.set(path + ['ipv6', 'dup-addr-detect-transmits', dad_transmits])
+
+            self.session.commit()
+
+            for interface in self._interfaces:
+                tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/forwarding')
+                self.assertEqual('0', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
+                self.assertEqual(dad_transmits, tmp)

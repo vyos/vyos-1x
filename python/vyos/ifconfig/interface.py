@@ -46,6 +46,7 @@ from vyos.validate import assert_positive
 from vyos.validate import assert_range
 
 from vyos.ifconfig.control import Control
+from vyos.ifconfig.stp import STP
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
@@ -166,6 +167,18 @@ class Interface(Control):
         'ipv6_dad_transmits': {
             'validate': assert_positive,
             'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
+        },
+        'path_cost': {
+            # XXX: we should set a maximum
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/brport/path_cost',
+            'errormsg': '{ifname} is not a bridge port member'
+        },
+        'path_priority': {
+            # XXX: we should set a maximum
+            'validate': assert_positive,
+            'location': '/sys/class/net/{ifname}/brport/priority',
+            'errormsg': '{ifname} is not a bridge port member'
         },
         'proxy_arp': {
             'validate': assert_boolean,
@@ -628,6 +641,28 @@ class Interface(Control):
             self._admin_state_down_cnt += 1
             return self.set_interface('admin_state', state)
 
+    def set_path_cost(self, cost):
+        """
+        Set interface path cost, only relevant for STP enabled interfaces
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_path_cost(4)
+        """
+        self.set_interface('path_cost', cost)
+
+    def set_path_priority(self, priority):
+        """
+        Set interface path priority, only relevant for STP enabled interfaces
+
+        Example:
+
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_path_priority(4)
+        """
+        self.set_interface('path_priority', priority)
+
     def set_proxy_arp(self, enable):
         """
         Set per interface proxy ARP configuration
@@ -809,24 +844,27 @@ class Interface(Control):
         # flush all addresses
         self._cmd(f'ip addr flush dev "{self.ifname}"')
 
-    def add_to_bridge(self, br):
+    def add_to_bridge(self, bridge_dict):
         """
         Adds the interface to the bridge with the passed port config.
 
         Returns False if bridge doesn't exist.
         """
 
-        # check if the bridge exists (on boot it doesn't)
-        if br not in Section.interfaces('bridge'):
-            return False
-
+        # drop all interface addresses first
         self.flush_addrs()
-        # add interface to bridge - use Section.klass to get BridgeIf class
-        Section.klass(br)(br, create=False).add_port(self.ifname)
 
-        # TODO: port config (STP)
+        for bridge, bridge_config in bridge_dict.items():
+            # add interface to bridge - use Section.klass to get BridgeIf class
+            Section.klass(bridge)(bridge, create=True).add_port(self.ifname)
 
-        return True
+            # set bridge port path cost
+            if 'cost' in bridge_config:
+                self.set_path_cost(bridge_config['cost'])
+
+            # set bridge port path priority
+            if 'priority' in bridge_config:
+                self.set_path_cost(bridge_config['priority'])
 
     def set_dhcp(self, enable):
         """
@@ -1047,8 +1085,8 @@ class Interface(Control):
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
-            bridge = config.get('is_bridge_member')
-            self.add_to_bridge(bridge)
+            bridge_dict = config.get('is_bridge_member')
+            self.add_to_bridge(bridge_dict)
 
         # remove no longer required 802.1ad (Q-in-Q VLANs)
         ifname = config['ifname']

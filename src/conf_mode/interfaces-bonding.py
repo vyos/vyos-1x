@@ -109,7 +109,7 @@ def get_config(config=None):
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
-            if tmp and tmp != bond['ifname']:
+            if tmp and bond['ifname'] not in tmp:
                 interface_config.update({'is_bond_member' : tmp})
 
             # Check if member interface is used as source-interface on another interface
@@ -162,11 +162,11 @@ def verify(bond):
                 raise ConfigError(error_msg + 'it does not exist!')
 
             if 'is_bridge_member' in interface_config:
-                tmp = interface_config['is_bridge_member']
+                tmp = next(iter(interface_config['is_bridge_member']))
                 raise ConfigError(error_msg + f'it is already a member of bridge "{tmp}"!')
 
             if 'is_bond_member' in interface_config:
-                tmp = interface_config['is_bond_member']
+                tmp = next(iter(interface_config['is_bond_member']))
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
 
             if 'is_source_interface' in interface_config:

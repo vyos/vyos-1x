@@ -2,6 +2,23 @@
 <interfaceDefinition>
   <node name="show">
     <children>
+      <node name="arp">
+        <properties>
+          <help>Show Address Resolution Protocol (ARP) information</help>
+        </properties>
+        <command>/usr/sbin/arp -e -n</command>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py -b</script>
+              </completionHelp>
+            </properties>
+            <command>/usr/sbin/arp -e -n -i "$6"</command>
+          </tagNode>
+        </children>
+      </node>
       <node name="protocols">
         <children>
           <node name="static">
