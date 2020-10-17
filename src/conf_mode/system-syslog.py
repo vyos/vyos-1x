@@ -146,6 +146,12 @@ def get_config(config=None):
                 config_data['hosts'][rhost][
                     'port'] = c.return_value(['host', rhost, 'port'])
 
+            # set system syslog host x.x.x.x format octet-counted
+            if c.exists('host ' + rhost + ' format octet-counted'):
+                config_data['hosts'][rhost]['oct_count'] = True
+            else:
+                config_data['hosts'][rhost]['oct_count'] = False
+
     # set system syslog user
     if c.exists('user'):
         usrs = c.list_nodes('user')

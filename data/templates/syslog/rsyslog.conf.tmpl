@@ -22,19 +22,23 @@ $outchannel {{file}},{{files[file]['log-file']}},{{files[file]['max-size']}},{{f
 {% if hosts %}
 ## remote logging
 {% for host in hosts %}
-{% if hosts[host]['proto'] == 'tcp' %}
-{% if hosts[host]['port'] %}
+{%   if hosts[host]['proto'] == 'tcp' %}
+{%     if hosts[host]['port'] %}
+{%       if hosts[host]['oct_count'] %}
+{{hosts[host]['selectors']}} @@(o){{host}}:{{hosts[host]['port']}};RSYSLOG_SyslogProtocol23Format
+{%       else %}
 {{hosts[host]['selectors']}} @@{{host}}:{{hosts[host]['port']}}
-{% else %}
+{%       endif %}
+{%     else %}
 {{hosts[host]['selectors']}} @@{{host}}
-{% endif %}
-{% else %}
-{% if hosts[host]['port'] %}
+{%     endif %}
+{%   else %}
+{%     if hosts[host]['port'] %}
 {{hosts[host]['selectors']}} @{{host}}:{{hosts[host]['port']}}
-{% else %}
+{%     else %}
 {{hosts[host]['selectors']}} @{{host}}
-{% endif %}
-{% endif %}
+{%     endif %}
+{%   endif %}
 {% endfor %}
 {% endif %}
 {% if user %}

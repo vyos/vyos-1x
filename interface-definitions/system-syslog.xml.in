@@ -382,6 +382,19 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <node name="format">
+                <properties>
+                  <help>Logging format</help>
+                </properties>
+                <children>
+                  <leafNode name="octet-counted">
+                    <properties>
+                      <help>Allows for the transmission of all characters inside a syslog message</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </tagNode>
           <node name="global">
