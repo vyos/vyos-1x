@@ -241,6 +241,7 @@ class BasicInterfaceTest:
                 # Options
                 self.session.set(path + ['ip', 'arp-cache-timeout', arp_tmo])
                 self.session.set(path + ['ip', 'disable-arp-filter'])
+                self.session.set(path + ['ip', 'disable-forwarding'])
                 self.session.set(path + ['ip', 'enable-arp-accept'])
                 self.session.set(path + ['ip', 'enable-arp-announce'])
                 self.session.set(path + ['ip', 'enable-arp-ignore'])
@@ -265,6 +266,9 @@ class BasicInterfaceTest:
 
                 tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_ignore')
                 self.assertEqual('1', tmp)
+
+                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/forwarding')
+                self.assertEqual('0', tmp)
 
                 tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp')
                 self.assertEqual('1', tmp)

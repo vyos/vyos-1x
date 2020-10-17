@@ -5,6 +5,7 @@
   </properties>
   <children>
     #include <include/interface-disable-arp-filter.xml.i>
+    #include <include/interface-disable-forwarding.xml.i>
     #include <include/interface-enable-arp-accept.xml.i>
     #include <include/interface-enable-arp-announce.xml.i>
     #include <include/interface-enable-arp-ignore.xml.i>
