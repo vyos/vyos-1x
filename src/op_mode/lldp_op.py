@@ -47,32 +47,31 @@ def get_neighbors():
 
 def parse_data(data):
     output = []
-    for tmp in data:
-        for local_if, values in tmp.items():
-            for chassis, c_value in values.get('chassis', {}).items():
-                capabilities = c_value['capability']
-                if isinstance(capabilities, dict):
-                    capabilities = [capabilities]
+    for local_if, values in data.items():
+        for chassis, c_value in values.get('chassis', {}).items():
+            capabilities = c_value['capability']
+            if isinstance(capabilities, dict):
+                capabilities = [capabilities]
 
-                cap = ''
-                for capability in capabilities:
-                    if capability['enabled']:
-                        if capability['type'] == 'Router':
-                            cap += 'R'
-                        if capability['type'] == 'Bridge':
-                            cap += 'B'
-                        if capability['type'] == 'Wlan':
-                            cap += 'W'
-                        if capability['type'] == 'Station':
-                            cap += 'S'
-                        if capability['type'] == 'Repeater':
-                            cap += 'r'
-                        if capability['type'] == 'Telephone':
-                            cap += 'T'
-                        if capability['type'] == 'Docsis':
-                            cap += 'D'
-                        if capability['type'] == 'Other':
-                            cap += 'O'
+            cap = ''
+            for capability in capabilities:
+                if capability['enabled']:
+                    if capability['type'] == 'Router':
+                        cap += 'R'
+                    if capability['type'] == 'Bridge':
+                        cap += 'B'
+                    if capability['type'] == 'Wlan':
+                        cap += 'W'
+                    if capability['type'] == 'Station':
+                        cap += 'S'
+                    if capability['type'] == 'Repeater':
+                        cap += 'r'
+                    if capability['type'] == 'Telephone':
+                        cap += 'T'
+                    if capability['type'] == 'Docsis':
+                        cap += 'D'
+                    if capability['type'] == 'Other':
+                        cap += 'O'
 
 
         remote_if = 'Unknown'
@@ -109,10 +108,9 @@ if __name__ == '__main__':
         if args.all:
             neighbors = tmp['lldp']['interface']
         elif args.interface:
-            neighbors = []
-            for neighbor in tmp['lldp']['interface']:
-                if args.interface in neighbor:
-                    neighbors.append(neighbor)
+            neighbors = dict()
+            if args.interface in tmp['lldp']['interface']:
+                neighbors[args.interface] = tmp['lldp']['interface'][args.interface]
 
     else:
         parser.print_help()
