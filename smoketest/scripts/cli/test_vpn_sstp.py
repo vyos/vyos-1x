@@ -19,7 +19,6 @@ import unittest
 from base_accel_ppp_test import BasicAccelPPPTest
 from vyos.util import cmd
 
-process_name = 'accel-pppd'
 ca_cert = '/tmp/ca.crt'
 ssl_cert = '/tmp/server.crt'
 ssl_key = '/tmp/server.key'
