@@ -21,7 +21,6 @@ from copy import deepcopy
 from sys import exit,stderr
 from ipaddress import ip_address,ip_network,IPv4Address,IPv4Network,IPv6Address,IPv6Network,summarize_address_range
 from netifaces import interfaces
-from time import sleep
 from shutil import rmtree
 
 from vyos.config import Config
@@ -1035,6 +1034,12 @@ def apply(openvpn):
     interface = openvpn['intf']
     call(f'systemctl stop openvpn@{interface}.service')
 
+    # On configuration change we need to wait for the 'old' interface to
+    # vanish from the Kernel, if it is not gone, OpenVPN will report:
+    # ERROR: Cannot ioctl TUNSETIFF vtun10: Device or resource busy (errno=16)
+    if interface in interfaces():
+        cmd(f'sudo ip link del {interface}')
+
     # Do some cleanup when OpenVPN is disabled/deleted
     if openvpn['deleted'] or openvpn['disable']:
         # cleanup old configuration files
@@ -1048,19 +1053,16 @@ def apply(openvpn):
 
         return None
 
-    # On configuration change we need to wait for the 'old' interface to
-    # vanish from the Kernel, if it is not gone, OpenVPN will report:
-    # ERROR: Cannot ioctl TUNSETIFF vtun10: Device or resource busy (errno=16)
-    while interface in interfaces():
-        sleep(0.250) # 250ms
-
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
     call(f'systemctl start openvpn@{interface}.service')
 
     if interface not in interfaces():
-        dev_type = openvpn['type']
-        cmd(f'sudo openvpn --mktun --dev-type {dev_type} --dev {interface}')
+        try:
+            dev_type = openvpn['type']
+            cmd(f'sudo openvpn --mktun --dev-type {dev_type} --dev {interface}')
+        except:
+            pass
 
     # we need to catch the exception if the interface is not up due to
     # reason stated above
