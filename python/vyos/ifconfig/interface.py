@@ -46,7 +46,6 @@ from vyos.validate import assert_positive
 from vyos.validate import assert_range
 
 from vyos.ifconfig.control import Control
-from vyos.ifconfig.stp import STP
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section

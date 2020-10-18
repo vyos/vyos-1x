@@ -16,7 +16,6 @@
 from netifaces import interfaces
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.stp import STP
 from vyos.validate import assert_boolean
 from vyos.validate import assert_positive
 from vyos.util import cmd
