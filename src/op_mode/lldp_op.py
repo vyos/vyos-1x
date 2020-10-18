@@ -104,13 +104,14 @@ if __name__ == '__main__':
         exit(0)
     elif args.all or args.interface:
         tmp = json.loads(get_neighbors())
+        neighbors = dict()
 
-        if args.all:
-            neighbors = tmp['lldp']['interface']
-        elif args.interface:
-            neighbors = dict()
-            if args.interface in tmp['lldp']['interface']:
-                neighbors[args.interface] = tmp['lldp']['interface'][args.interface]
+        if 'interface' in tmp.get('lldp'):
+            if args.all:
+                neighbors = tmp['lldp']['interface']
+            elif args.interface:
+                if args.interface in tmp['lldp']['interface']:
+                    neighbors[args.interface] = tmp['lldp']['interface'][args.interface]
 
     else:
         parser.print_help()
