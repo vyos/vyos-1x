@@ -32,6 +32,7 @@ from vyos.template import render
 from vyos.util import call, chown, chmod_600, chmod_755
 from vyos.validate import is_addr_assigned, is_ipv4
 from vyos import ConfigError
+from vyos.util import cmd
 
 from vyos import airbag
 airbag.enable()
@@ -1057,56 +1058,41 @@ def apply(openvpn):
     # existed - nevertheless, spawn new OpenVPN process
     call(f'systemctl start openvpn@{interface}.service')
 
-    # better late then sorry ... but we can only set interface alias after
-    # OpenVPN has been launched and created the interface
-    cnt = 0
-    while interface not in interfaces():
-        # If VPN tunnel can't be established because the peer/server isn't
-        # (temporarily) available, the vtun interface never becomes registered
-        # with the kernel, and the commit would hang if there is no bail out
-        # condition
-        cnt += 1
-        if cnt == 50:
-            break
+    if interface not in interfaces():
+        dev_type = openvpn['type']
+        cmd(f'sudo openvpn --mktun --dev-type {dev_type} --dev {interface}')
 
-        # sleep 250ms
-        sleep(0.250)
+    # we need to catch the exception if the interface is not up due to
+    # reason stated above
+    o = VTunIf(interface)
+    # update interface description used e.g. within SNMP
+    o.set_alias(openvpn['description'])
+    # IPv6 accept RA
+    o.set_ipv6_accept_ra(openvpn['ipv6_accept_ra'])
+    # IPv6 address autoconfiguration
+    o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
+    # IPv6 forwarding
+    o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
+    # IPv6 Duplicate Address Detection (DAD) tries
+    o.set_ipv6_dad_messages(openvpn['ipv6_dup_addr_detect'])
 
-    try:
-        # we need to catch the exception if the interface is not up due to
-        # reason stated above
-        o = VTunIf(interface)
-        # update interface description used e.g. within SNMP
-        o.set_alias(openvpn['description'])
-        # IPv6 accept RA
-        o.set_ipv6_accept_ra(openvpn['ipv6_accept_ra'])
-        # IPv6 address autoconfiguration
-        o.set_ipv6_autoconf(openvpn['ipv6_autoconf'])
-        # IPv6 forwarding
-        o.set_ipv6_forwarding(openvpn['ipv6_forwarding'])
-        # IPv6 Duplicate Address Detection (DAD) tries
-        o.set_ipv6_dad_messages(openvpn['ipv6_dup_addr_detect'])
+    # IPv6 EUI-based addresses - only in TAP mode (TUN's have no MAC)
+    # If MAC has changed, old EUI64 addresses won't get deleted,
+    # but this isn't easy to solve, so leave them.
+    # This is even more difficult as openvpn uses a random MAC for the
+    # initial interface creation, unless set by 'lladdr'.
+    # NOTE: right now the interface is always deleted. For future
+    # compatibility when tap's are not deleted, leave the del_ in
+    if openvpn['mode'] == 'tap':
+        for addr in openvpn['ipv6_eui64_prefix_remove']:
+            o.del_ipv6_eui64_address(addr)
+        for addr in openvpn['ipv6_eui64_prefix']:
+            o.add_ipv6_eui64_address(addr)
 
-        # IPv6 EUI-based addresses - only in TAP mode (TUN's have no MAC)
-        # If MAC has changed, old EUI64 addresses won't get deleted,
-        # but this isn't easy to solve, so leave them.
-        # This is even more difficult as openvpn uses a random MAC for the
-        # initial interface creation, unless set by 'lladdr'.
-        # NOTE: right now the interface is always deleted. For future
-        # compatibility when tap's are not deleted, leave the del_ in
-        if openvpn['mode'] == 'tap':
-            for addr in openvpn['ipv6_eui64_prefix_remove']:
-                o.del_ipv6_eui64_address(addr)
-            for addr in openvpn['ipv6_eui64_prefix']:
-                o.add_ipv6_eui64_address(addr)
-
-        # assign/remove VRF (ONLY when not a member of a bridge,
-        # otherwise 'nomaster' removes it from it)
-        if not openvpn['is_bridge_member']:
-            o.set_vrf(openvpn['vrf'])
-
-    except:
-        pass
+    # assign/remove VRF (ONLY when not a member of a bridge,
+    # otherwise 'nomaster' removes it from it)
+    if not openvpn['is_bridge_member']:
+        o.set_vrf(openvpn['vrf'])
 
     # TAP interface needs to be brought up explicitly
     if openvpn['type'] == 'tap':

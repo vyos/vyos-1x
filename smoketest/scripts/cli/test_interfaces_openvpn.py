@@ -17,6 +17,8 @@
 import os
 import unittest
 
+from netifaces import interfaces
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -72,8 +74,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.assertIn(f'remote {remote_host}', config)
         self.assertIn('persist-tun', config)
 
-
         self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertIn(interface, interfaces())
 
 if __name__ == '__main__':
     # Our SSL certificates need a subject ...
