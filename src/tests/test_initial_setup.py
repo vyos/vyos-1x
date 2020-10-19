@@ -13,18 +13,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 import tempfile
 import unittest
-from unittest import TestCase, mock
-
-from vyos import xml
 import vyos.configtree
 import vyos.initialsetup as vis
 
+from unittest import TestCase
+from vyos import xml
 
 class TestInitialSetup(TestCase):
     def setUp(self):
