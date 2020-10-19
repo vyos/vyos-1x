@@ -682,6 +682,8 @@ def vyos_dict_search(path, dict):
     parts = path.split('.')
     inside = parts[:-1]
     if not inside:
+        if path not in dict:
+            return None
         return dict[path]
     c = dict
     for p in parts[:-1]:
