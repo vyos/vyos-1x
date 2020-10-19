@@ -53,10 +53,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         del self.session
 
     def test_client_interfaces(self):
-        """ Create two OpenVPN client interfaces connecting to different
+        """ Create OpenVPN client interfaces connecting to different
             server IP addresses. Validate configuration afterwards. """
 
-        num_range = range(10, 12)
+        num_range = range(10, 15)
         for ii in num_range:
             interface = f'vtun{ii}'
             remote_host = f'192.0.2.{ii}'
@@ -74,10 +74,13 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
             self.session.set(path + ['tls', 'key-file', ssl_key])
+            self.session.set(path + ['vrf', vrf_name])
 
         self.session.commit()
 
         for ii in num_range:
+            interface = f'vtun{ii}'
+            remote_host = f'192.0.2.{ii}'
             config_file = f'/run/openvpn/{interface}.conf'
             config = read_file(config_file)
 
@@ -98,12 +101,21 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertIn(interface, interfaces())
 
+        # check that no interface remained after deleting them
+        self.session.delete(base_path)
+        self.session.commit()
+
+        for ii in num_range:
+            interface = f'vtun{ii}'
+            self.assertNotIn(interface, interfaces())
+
+
     def test_server_interfaces(self):
-        """ Create two OpenVPN server interfaces using different client subnets.
+        """ Create OpenVPN server interfaces using different client subnets.
             Validate configuration afterwards. """
 
         auth_hash = 'sha256'
-        num_range = range(20, 22)
+        num_range = range(20, 25)
         port = ''
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -125,6 +137,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.session.commit()
 
         for ii in num_range:
+            interface = f'vtun{ii}'
+            subnet = f'192.0.{ii}.0/24'
+            port = str(2000 + ii)
+
             config_file = f'/run/openvpn/{interface}.conf'
             config = read_file(config_file)
 
@@ -151,11 +167,18 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertIn(interface, interfaces())
 
+        # check that no interface remained after deleting them
+        self.session.delete(base_path)
+        self.session.commit()
+
+        for ii in num_range:
+            interface = f'vtun{ii}'
+            self.assertNotIn(interface, interfaces())
+
 
     def test_site2site_interfaces(self):
-        """
-        """
-        num_range = range(30, 32)
+        """ Create two OpenVPN site-to-site interfaces """
+        num_range = range(30, 35)
         port = ''
         local_address = ''
         remote_address = ''
@@ -173,10 +196,16 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['remote-port', port])
             self.session.set(path + ['shared-secret-key-file', s2s_key])
             self.session.set(path + ['remote-address', remote_address])
+            self.session.set(path + ['vrf', vrf_name])
 
         self.session.commit()
 
         for ii in num_range:
+            interface = f'vtun{ii}'
+            local_address = f'192.0.{ii}.1'
+            remote_address = f'172.16.{ii}.1'
+            port = str(3000 + ii)
+
             config_file = f'/run/openvpn/{interface}.conf'
             config = read_file(config_file)
 
@@ -189,6 +218,15 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertIn(interface, interfaces())
+
+
+        # check that no interface remained after deleting them
+        self.session.delete(base_path)
+        self.session.commit()
+
+        for ii in num_range:
+            interface = f'vtun{ii}'
+            self.assertNotIn(interface, interfaces())
 
 
 if __name__ == '__main__':
