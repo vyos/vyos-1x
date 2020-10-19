@@ -2,246 +2,215 @@
 #
 # See https://community.openvpn.net/openvpn/wiki/Openvpn24ManPage
 # for individual keyword definition
-
-{% if description -%}
-# {{ description }}
-
-{% endif -%}
+#
+# {{ description if description is defined and description is not none }}
+#
 
 verb 3
-
-user {{ uid }}
-group {{ gid }}
-
-dev-type {{ type }}
-dev {{ intf }}
+user {{ daemon_user }}
+group {{ daemon_group }}
+dev-type {{ device_type }}
+dev {{ ifname }}
 persist-key
 iproute /usr/libexec/vyos/system/unpriv-ip
-
-proto {{ protocol_real }}
-
-{%- if local_host %}
+proto {{ protocol }}
+{% if local_host is defined and local_host is not none %}
 local {{ local_host }}
-{%- endif %}
-
-{%- if mode == 'server' and protocol == 'udp' and not local_host %}
+{% endif %}
+{% if mode is defined and mode == 'server' and protocol == 'udp' and local_host is not defined %}
 multihome
-{%- endif %}
-
-{%- if local_port %}
+{% endif %}
+{% if local_port is defined and local_port is not none %}
 lport {{ local_port }}
-{%- endif %}
-
-{% if remote_port -%}
+{% endif %}
+{% if remote_port is defined and remote_port is not none %}
 rport {{ remote_port }}
 {% endif %}
-
-{%- if remote_host %}
-{%- for remote in remote_host -%}
+{% if remote_host is defined and remote_host is not none %}
+{%   for remote in remote_host %}
 remote {{ remote }}
-{% endfor -%}
-{% endif -%}
-
-{% if shared_secret_file %}
-secret {{ shared_secret_file }}
-{%- endif %}
-
-{%- if persistent_tunnel %}
+{%   endfor %}
+{% endif %}
+{% if shared_secret_key_file is defined and shared_secret_key_file is not none %}
+secret {{ shared_secret_key_file }}
+{% endif %}
+{% if persistent_tunnel is defined %}
 persist-tun
-{%- endif %}
-
-{%- if redirect_gateway %}
-push "redirect-gateway {{ redirect_gateway }}"
-{%- endif %}
-
-{%- if compress_lzo %}
+{% endif %}
+{% if redirect_gateway is defined and redirect_gateway.local is defined %}
+push "redirect-gateway local def1"
+{% elif redirect_gateway is defined %}
+push "redirect-gateway def1"
+{% endif %}
+{% if use_lzo_compression is defined %}
 compress lzo
-{%- endif %}
+{% endif %}
 
-{% if 'client' in mode -%}
+{% if 'client' in mode %}
 #
 # OpenVPN Client mode
 #
 client
 nobind
-
-{% elif 'server' in mode -%}
+{% elif 'server' in mode %}
 #
 # OpenVPN Server mode
 #
-
-{%- if server_topology %}
-topology {% if server_topology == 'point-to-point' %}p2p{% else %}{{ server_topology }}{% endif %}
-{%- endif %}
-
-{%- if is_bridge_member %}
 mode server
 tls-server
-{%- else %}
-server {{ server_subnet[0] }} nopool
-{%- endif %}
-
-{%- if server_pool %}
-ifconfig-pool {{ server_pool_start }} {{ server_pool_stop }}{% if server_pool_netmask %} {{ server_pool_netmask }}{% endif %}
-{%- endif %}
-
-{%- if server_max_conn %}
-max-clients {{ server_max_conn }}
-{%- endif %}
-
-{%- if client %}
-client-config-dir /run/openvpn/ccd/{{ intf }}
-{%- endif %}
-
-{%- if server_reject_unconfigured %}
-ccd-exclusive
-{%- endif %}
-
-keepalive {{ ping_interval }} {{ ping_restart }}
+{%   if server is defined and server is not none %}
+{%     if server.subnet_v4 is defined and server.subnet_v4 is not none %}
+server {{ server.subnet_v4[0] | address_from_cidr }} {{ server.subnet_v4[0] | netmask_from_cidr }} nopool
+{%     endif %}
+{%     if server.topology is defined and server.topology == 'point-to-point' %}
+topology p2p
+{%     elif server.topology is defined and server.topology is not none %}
+topology {{ server.topology }}
+{%     endif %}
+{%     if server.client_ip_pool is defined and server.client_ip_pool is not none and server.client_ip_pool.disable is not defined %}
+ifconfig-pool {{ server.client_ip_pool.start }} {{ server.client_ip_pool.stop }}{{ server.client_ip_pool.subnet_mask if server.client_ip_pool.subnet_mask is defined and server.client_ip_pool.subnet_mask is not none }}
+{%     endif %}
+{%     if server.max_connections is defined and server.max_connections is not none %}
+max-clients {{ server.max_connections }}
+{%     endif %}
+{%     if server.client is defined and server.client is not none %}
+client-config-dir /run/openvpn/ccd/{{ ifname }}
+{%     endif %}
+{%   endif %}
+keepalive {{ keep_alive.interval }} {{ keep_alive.failure_count }}
 management /run/openvpn/openvpn-mgmt-intf unix
-
-{% for route in server_push_route -%}
+{%   if server is defined and server is not none %}
+{%     if server.reject_unconfigured_clients is defined %}
+ccd-exclusive
+{%     endif %}
+{%     if server.push_route is defined and server.push_route is not none %}
+{%       for route in server.push_route %}
 push "route {{ route }}"
-{% endfor -%}
+{%       endfor %}
+{%     endif %}
+{%     if server.name_server is defined and server.name_server is not none %}
+{%       for nameserver in server.name_server %}
+push "dhcp-option DNS {{ nameserver }}"
+{%       endfor %}
+{%     endif %}
+{%     if server.domain_name is defined and server.domain_name is not none %}
+push "dhcp-option DOMAIN {{ server.domain_name }}"
+{%     endif %}
+{%   endif %}
 
-{% for ns in server_dns_nameserver -%}
-push "dhcp-option DNS {{ ns }}"
-{% endfor -%}
-
-{%- if server_domain -%}
-push "dhcp-option DOMAIN {{ server_domain }}"
-{% endif -%}
-
-{%- if server_ipv6_local %}
+{%   if subnet_v6 is defined and subnet_v6 is not none %}
 # IPv6
 push "tun-ipv6"
 ifconfig-ipv6 {{ server_ipv6_local }}/{{ server_ipv6_prefixlen }} {{ server_ipv6_remote }}
-
-{%- if server_ipv6_pool %}
+{%     if server_ipv6_pool %}
 ifconfig-ipv6-pool {{ server_ipv6_pool_base }}/{{ server_ipv6_pool_prefixlen }}
-{%- endif %}
-
-{%- for route6 in server_ipv6_push_route %}
+{%     endif %}
+{%     for route6 in server_ipv6_push_route %}
 push "route-ipv6 {{ route6 }}"
-{%- endfor %}
-
-{%- for ns6 in server_ipv6_dns_nameserver %}
+{%     endfor %}
+{%     for ns6 in server_ipv6_dns_nameserver %}
 push "dhcp-option DNS6 {{ ns6 }}"
-{%- endfor %}
-
-{%- endif %}
-
-{% else -%}
+{%     endfor %}
+{%   endif %}
+{% else %}
 #
 # OpenVPN site-2-site mode
 #
-ping {{ ping_interval }}
-ping-restart {{ ping_restart }}
+ping {{ keep_alive.interval }}
+ping-restart {{ keep_alive.failure_count }}
+{%   if local_address_v4_netmask is defined and local_address_v4_netmask is not none %}
+ifconfig {{ local_address_v4[0] }} {{ local_address_v4_netmask[0] }}
+{%   elif remote_address_v4 is defined and remote_address_v4 is not none %}
+ifconfig {{ local_address_v4[0] }} {{ remote_address_v4[0] }}
+{%   endif %}
+{%   if local_address_v6 is defined and remote_address_v6 is defined and local_address_v6 is not none and remote_address_v6 is not none %}
+ifconfig-ipv6 {{ local_address_v6[0] }} {{ remote_address_v6[0] }}
+{%   endif %}
+{% endif %}
 
-{% if local_address_subnet -%}
-ifconfig {{ local_address[0] }} {{ local_address_subnet }}
-{%- elif remote_address -%}
-ifconfig {{ local_address[0] }} {{ remote_address[0] }}
-{%- endif %}
-
-{% if ipv6_local_address -%}
-ifconfig-ipv6 {{ ipv6_local_address[0] }} {{ ipv6_remote_address[0] }}
-{%- endif %}
-
-{% endif -%}
-
-{% if tls -%}
+{% if tls is defined and tls is not none %}
 # TLS options
-{%- if tls_ca_cert %}
-ca {{ tls_ca_cert }}
-{%- endif %}
-
-{%- if tls_cert %}
-cert {{ tls_cert }}
-{%- endif %}
-
-{%- if tls_key %}
-key {{ tls_key }}
-{%- endif %}
-
-{%- if tls_crypt %}
-tls-crypt {{ tls_crypt }}
-{%- endif %}
-
-{%- if tls_crl %}
-crl-verify {{ tls_crl }}
-{%- endif %}
-
-{%- if tls_version_min %}
-tls-version-min {{tls_version_min}}
-{%- endif %}
-
-{%- if tls_dh %}
-dh {{ tls_dh }}
-{%- endif %}
-
-{%- if tls_auth %}
-{%- if mode == 'client' %}
-tls-auth {{tls_auth}} 1
-{%- elif mode == 'server' %}
-tls-auth {{tls_auth}} 0
-{%- endif %}
-{%- endif %}
-
-{%- if tls_role %}
-{%- if 'active' in tls_role %}
+{%   if tls.ca_cert_file is defined and tls.ca_cert_file is not none %}
+ca {{ tls.ca_cert_file }}
+{%   endif %}
+{%   if tls.cert_file is defined and tls.cert_file is not none %}
+cert {{ tls.cert_file }}
+{%   endif %}
+{%   if tls.key_file is defined and tls.key_file is not none %}
+key {{ tls.key_file }}
+{%   endif %}
+{%   if tls.crypt_file is defined and tls.crypt_file is not none %}
+tls-crypt {{ tls.crypt_file }}
+{%   endif %}
+{%   if tls.crl_file is defined and tls.crl_file is not none %}
+crl-verify {{ tls.crl_file }}
+{%   endif %}
+{%   if tls.tls_version_min is defined and tls.tls_version_min is not none %}
+tls-version-min {{ tls.tls_version_min }}
+{%   endif %}
+{%   if tls.dh_file is defined and tls.dh_file is not none %}
+dh {{ tls.dh_file }}
+{%   endif %}
+{%   if tls.auth_file is defined and tls.auth_file is not none %}
+{%     if mode == 'client' %}
+tls-auth {{ tls.auth_file }} 1
+{%     elif mode == 'server' %}
+tls-auth {{ tls.auth_file }} 0
+{%     endif %}
+{%   endif %}
+{%   if tls.role is defined and tls.role is not none %}
+{%     if tls.role == 'active' %}
 tls-client
-{%- elif 'passive' in tls_role %}
+{%     elif tls.role == 'passive' %}
 tls-server
-{%- endif %}
-{%- endif %}
-
-{%- endif %}
+{%     endif %}
+{%   endif %}
+{% endif %}
 
 # Encryption options
-{%- if encryption %}
-{% if encryption == 'none' -%}
+{% if encryption is defined and encryption is not none %}
+{%   if encryption.cipher is defined and encryption.cipher is not none %}
+{%     if encryption.cipher == 'none' %}
 cipher none
-{%- elif encryption == 'des' -%}
+{%     elif encryption.cipher == 'des' %}
 cipher des-cbc
-{%- elif encryption == '3des' -%}
+{%     elif encryption.cipher == '3des' %}
 cipher des-ede3-cbc
-{%- elif encryption == 'bf128' -%}
+{%     elif encryption.cipher == 'bf128' %}
 cipher bf-cbc
 keysize 128
-{%- elif encryption == 'bf256' -%}
+{%     elif encryption.cipher == 'bf256' %}
 cipher bf-cbc
 keysize 25
-{%- elif encryption == 'aes128gcm' -%}
+{%     elif encryption.cipher == 'aes128gcm' %}
 cipher aes-128-gcm
-{%- elif encryption == 'aes128' -%}
+{%     elif encryption.cipher == 'aes128' %}
 cipher aes-128-cbc
-{%- elif encryption == 'aes192gcm' -%}
+{%     elif encryption.cipher == 'aes192gcm' %}
 cipher aes-192-gcm
-{%- elif encryption == 'aes192' -%}
+{%     elif encryption.cipher == 'aes192' %}
 cipher aes-192-cbc
-{%- elif encryption == 'aes256gcm' -%}
+{%     elif encryption.cipher == 'aes256gcm' %}
 cipher aes-256-gcm
-{%- elif encryption == 'aes256' -%}
+{%     elif encryption.cipher == 'aes256' %}
 cipher aes-256-cbc
-{%- endif -%}
-{%- endif %}
-
-{%- if ncp_ciphers %}
-ncp-ciphers {{ncp_ciphers}}
-{%- endif %}
-{%- if disable_ncp %}
+{%     endif %}
+{%   endif %}
+{%   if encryption.ncp_ciphers is defined and encryption.ncp_ciphers is not none %}
+ncp-ciphers {{ encryption.ncp_ciphers | join(':') }}
+{%   elif encryption.disable_ncp is defined %}
 ncp-disable
-{%- endif %}
+{%   endif %}
+{% endif %}
 
-{% if hash -%}
+{% if hash is defined and hash is not none %}
 auth {{ hash }}
-{%- endif -%}
+{% endif %}
 
-{%- if auth %}
+{% if authentication is defined and authentication is not none %}
 auth-user-pass {{ auth_user_pass_file }}
 auth-retry nointeract
-{%- endif %}
+{% endif %}
 
 # DEPRECATED This option will be removed in OpenVPN 2.5
 # Until OpenVPN v2.3 the format of the X.509 Subject fields was formatted like this:
@@ -257,12 +226,11 @@ auth-retry nointeract
 # See https://phabricator.vyos.net/T1512
 compat-names
 
-{% if options -%}
+{% if openvpn_option is defined and openvpn_option is not none %}
 #
 # Custom options added by user (not validated)
 #
-
-{% for option in options -%}
+{%   for option in openvpn_option %}
 {{ option }}
-{% endfor -%}
-{%- endif %}
+{%   endfor %}
+{% endif %}

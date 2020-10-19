@@ -19,6 +19,7 @@ from vyos.ifconfig.interface import Interface
 class VTunIf(Interface):
     default = {
         'type': 'vtun',
+        'device_type': 'tun',
     }
     definition = {
         **Interface.definition,
@@ -28,15 +29,44 @@ class VTunIf(Interface):
             'bridgeable': True,
         },
     }
-
-    # stub this interface is created in the configure script
+    options = Interface.options + ['device_type']
 
     def _create(self):
-        # we can not create this interface as it is managed outside
-        # it requires configuring OpenVPN
+        """ Depending on OpenVPN operation mode the interface is created
+        immediately (e.g. Server mode) or once the connection to the server is
+        established (client mode). The latter will only be brought up once the
+        server can be reached, thus we might need to create this interface in
+        advance for the service to be operational. """
+        try:
+            cmd = 'openvpn --mktun --dev-type {device_type} --dev {ifname}'.format(**self.config)
+            return self._cmd(cmd)
+        except PermissionError:
+            # interface created by OpenVPN daemon in the meantime ...
+            pass
+
+    def add_addr(self, addr):
+        # IP addresses are managed by OpenVPN daemon
         pass
 
-    def _delete(self):
-        # we can not create this interface as it is managed outside
-        # it requires configuring OpenVPN
+    def del_addr(self, addr):
+        # IP addresses are managed by OpenVPN daemon
         pass
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class first
+        super().update(config)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)

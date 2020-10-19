@@ -36,7 +36,7 @@
           #include <include/interface-description.xml.i>
           <leafNode name="device-type">
             <properties>
-              <help>OpenVPN interface device-type</help>
+              <help>OpenVPN interface device-type (default: tun)</help>
               <completionHelp>
                 <list>tun tap</list>
               </completionHelp>
@@ -49,9 +49,10 @@
                 <description>TAP device, required for OSI layer 2</description>
               </valueHelp>
               <constraint>
-                <regex>(tun|tap)</regex>
+                <regex>^(tun|tap)$</regex>
               </constraint>
             </properties>
+            <defaultValue>tun</defaultValue>
           </leafNode>
           #include <include/interface-disable.xml.i>
           <node name="encryption">
@@ -110,7 +111,7 @@
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(none|des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>^(none|des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -157,7 +158,7 @@
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(none|des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>^(none|des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)$</regex>
                   </constraint>
                   <multi/>
                 </properties>
@@ -204,7 +205,7 @@
                 <description>SHA-512 algorithm</description>
               </valueHelp>
               <constraint>
-                <regex>(md5|sha1|sha256|sha384|sha512)</regex>
+                <regex>^(md5|sha1|sha256|sha384|sha512)$</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -215,7 +216,7 @@
             <children>
               <leafNode name="failure-count">
                 <properties>
-                  <help>Maximum number of keepalive packet failures [default 6]</help>
+                  <help>Maximum number of keepalive packet failures (default: 60)</help>
                   <valueHelp>
                     <format>0-1000</format>
                     <description>Maximum number of keepalive packet failures</description>
@@ -224,10 +225,11 @@
                     <validator name="numeric" argument="--range 0-1000"/>
                   </constraint>
                 </properties>
+                <defaultValue>60</defaultValue>
               </leafNode>
               <leafNode name="interval">
                 <properties>
-                  <help>Keepalive packet interval (seconds) [default 10]</help>
+                  <help>Keepalive packet interval in seconds (default: 10)</help>
                   <valueHelp>
                     <format>0-600</format>
                     <description>Keepalive packet interval (seconds)</description>
@@ -236,6 +238,7 @@
                     <validator name="numeric" argument="--range 0-600"/>
                   </constraint>
                 </properties>
+                <defaultValue>10</defaultValue>
               </leafNode>
             </children>
           </node>
@@ -304,7 +307,7 @@
                 <description>Server in client-server mode</description>
               </valueHelp>
               <constraint>
-                <regex>(site-to-site|client|server)</regex>
+                <regex>^(site-to-site|client|server)$</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -342,9 +345,10 @@
                 <description>TCP and initiates connections actively</description>
               </valueHelp>
               <constraint>
-                <regex>(udp|tcp-passive|tcp-active)</regex>
+                <regex>^(udp|tcp-passive|tcp-active)$</regex>
               </constraint>
             </properties>
+            <defaultValue>udp</defaultValue>
           </leafNode>
           <leafNode name="remote-address">
             <properties>
@@ -613,6 +617,7 @@
               <leafNode name="reject-unconfigured-clients">
                 <properties>
                   <help>Reject connections from clients that are not explicitly configured</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="subnet">
@@ -634,7 +639,7 @@
               </leafNode>
               <leafNode name="topology">
                 <properties>
-                  <help>Topology for clients</help>
+                  <help>Topology for clients (default: net30)</help>
                   <completionHelp>
                     <list>net30 point-to-point subnet</list>
                   </completionHelp>
@@ -651,9 +656,10 @@
                     <description>Subnet topology</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(subnet|point-to-point|net30)</regex>
+                    <regex>^(subnet|point-to-point|net30)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>net30</defaultValue>
               </leafNode>
             </children>
           </node>
@@ -777,13 +783,13 @@
                     <description>TLS v1.2</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(1.0|1.1|1.2)</regex>
+                    <regex>^(1.0|1.1|1.2)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
               <leafNode name="role">
                 <properties>
-                  <help>Private key for this host</help>
+                  <help>TLS negotiation role</help>
                   <completionHelp>
                     <list>active passive</list>
                   </completionHelp>
@@ -793,10 +799,10 @@
                   </valueHelp>
                   <valueHelp>
                     <format>passive</format>
-                    <description>Waiting for TLS connections passively</description>
+                    <description>Wait for incoming TLS connection</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(active|passive)</regex>
+                    <regex>^(active|passive)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
