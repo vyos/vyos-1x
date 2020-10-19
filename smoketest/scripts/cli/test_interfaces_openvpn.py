@@ -17,6 +17,7 @@
 import os
 import unittest
 
+from glob import glob
 from ipaddress import IPv4Network
 from netifaces import interfaces
 
@@ -40,15 +41,26 @@ protocol = 'udp'
 path = []
 interface = ''
 remote_host = ''
+vrf_name = 'mgmt'
+
+def get_vrf(interface):
+    for upper in glob(f'/sys/class/net/{interface}/upper*'):
+        # an upper interface could be named: upper_bond0.1000.1100, thus
+        # we need top drop the upper_ prefix
+        tmp = os.path.basename(upper)
+        tmp = tmp.replace('upper_', '')
+        return tmp
 
 class TestInterfacesOpenVPN(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
         self.session.set(['interfaces', 'dummy', 'dum1328', 'address', '192.0.2.1/24'])
+        self.session.set(['vrf', 'name', vrf_name, 'table', '12345'])
 
     def tearDown(self):
         self.session.delete(base_path)
         self.session.delete(['interfaces', 'dummy', 'dum1328'])
+        self.session.delete(['vrf', 'name', vrf_name])
         self.session.commit()
         del self.session
 
@@ -99,6 +111,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'key {ssl_key}', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
+            self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
 
         # check that no interface remained after deleting them
@@ -133,6 +146,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
             self.session.set(path + ['tls', 'key-file', ssl_key])
             self.session.set(path + ['tls', 'dh-file', dh_pem])
+            self.session.set(path + ['vrf', vrf_name])
 
         self.session.commit()
 
@@ -165,6 +179,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'server {network} {netmask} nopool', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
+            self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
 
         # check that no interface remained after deleting them
@@ -217,6 +232,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'ifconfig {local_address} {remote_address}', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
+            self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
 
 
