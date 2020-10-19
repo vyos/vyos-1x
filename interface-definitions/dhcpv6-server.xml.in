@@ -263,13 +263,13 @@
                             <properties>
                               <help>Length in bits of prefixes to be delegated</help>
                               <valueHelp>
-                                <format>0-255</format>
-                                <description>DHCPv6 server preference (0-255)</description>
+                                <format>32-64</format>
+                                <description>Delagated prefix length (32-64)</description>
                               </valueHelp>
                               <constraint>
-                                <validator name="numeric" argument="--range 0-255"/>
+                                <validator name="numeric" argument="--range 32-64"/>
                               </constraint>
-                              <constraintErrorMessage>Preference must be between 0 and 255</constraintErrorMessage>
+                              <constraintErrorMessage>Delegated prefix length must be between 32 and 64</constraintErrorMessage>
                             </properties>
                           </leafNode>
                           <leafNode name="stop">
