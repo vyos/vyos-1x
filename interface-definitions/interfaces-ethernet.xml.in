@@ -14,10 +14,6 @@
             <format>ethN</format>
             <description>Ethernet interface name</description>
           </valueHelp>
-          <valueHelp>
-            <format>en[ospx]N</format>
-            <description>Ethernet interface name</description>
-          </valueHelp>
         </properties>
         <children>
           #include <include/address-ipv4-ipv6-dhcp.xml.i>
