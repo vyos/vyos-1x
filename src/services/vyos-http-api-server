@@ -261,7 +261,7 @@ def config_file_op(command):
                 path = command['file']
             except KeyError:
                 return error(400, "Missing required field \"file\"")
-            res = session.load_config(path)
+            res = session.migrate_and_load_config(path)
             res = session.commit()
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
