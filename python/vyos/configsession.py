@@ -27,6 +27,7 @@ COMMIT = '/opt/vyatta/sbin/my_commit'
 DISCARD = '/opt/vyatta/sbin/my_discard'
 SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
+MIGRATE_LOAD_CONFIG = ['/usr/libexec/vyos/vyos-load-config.py']
 SAVE_CONFIG = ['/opt/vyatta/sbin/vyatta-save-config.pl']
 INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image', '--url']
 REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
@@ -174,6 +175,10 @@ class ConfigSession(object):
 
     def load_config(self, file_path):
         out = self.__run_command(LOAD_CONFIG + [file_path])
+        return out
+
+    def migrate_and_load_config(self, file_path):
+        out = self.__run_command(MIGRATE_LOAD_CONFIG + [file_path])
         return out
 
     def save_config(self, file_path):
