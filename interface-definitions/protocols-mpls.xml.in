@@ -14,6 +14,25 @@
               <help>LDP options</help>
             </properties>
             <children>
+              <node name="parameters">
+                <properties>
+                  <help>MPLS Label Distribution Protocol (LDP) parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="cisco-interop-tlv">
+                    <properties>
+                      <help>Enable Cisco non-compliant format capability TLV</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="transport-prefer-ipv4">
+                    <properties>
+                      <help>Prefer IPv4 for TCP peer transport connection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="router-id">
                 <properties>
                   <help>x.x.x.x Label Switch Router (LSR) id</help>

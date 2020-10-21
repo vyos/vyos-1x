@@ -51,6 +51,18 @@ no interface {{interface}}
 {% for interface in ldp.interfaces -%}
 interface {{interface}}
 {% endfor -%}
+{% if old_ldp.param_cisco_tlv -%}
+no dual-stack cisco-interop
+{% endif -%}
+{% if ldp.param_cisco_tlv -%}
+dual-stack cisco-interop
+{% endif -%}
+{% if old_ldp.param_transp_pref_ipv4 -%}
+no dual-stack transport-connection prefer ipv4
+{% endif -%}
+{% if ldp.param_transp_pref_ipv4 -%}
+dual-stack transport-connection prefer ipv4
+{% endif -%}
 !
 !
 exit-address-family
@@ -92,3 +104,4 @@ no address-family ipv6
 no mpls ldp
 {% endif -%}
 !
+

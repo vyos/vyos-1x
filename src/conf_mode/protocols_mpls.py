@@ -40,6 +40,8 @@ def get_config(config=None):
         'old_ldp'    : {
                 'interfaces'          : [],
                 'neighbors'           : {},
+                'param_cisco_tlv'     : False,
+                'param_transp_pref_ipv4': False,
                 'd_transp_ipv4'       : None,
                 'd_transp_ipv6'       : None,
                 'hello_holdtime'      : None,
@@ -53,6 +55,8 @@ def get_config(config=None):
         'ldp'        : {
                 'interfaces'          : [],
                 'neighbors'           : {},
+                'param_cisco_tlv'     : False,
+                'param_transp_pref_ipv4': False,
                 'd_transp_ipv4'       : None,
                 'd_transp_ipv6'       : None,
                 'hello_holdtime'      : None,
@@ -155,6 +159,20 @@ def get_config(config=None):
                 'password' : conf.return_value('neighbor {0} password'.format(neighbor))
             }
         })
+
+    # Get parameters cisco-interop-tlv
+    if conf.exists_effective('parameters cisco-interop-tlv'):
+        mpls_conf['old_ldp']['param_cisco_tlv'] = True
+
+    if conf.exists('parameters cisco-interop-tlv'):
+        mpls_conf['ldp']['param_cisco_tlv'] = True
+
+    # Get parameters transport-prefer-ipv4
+    if conf.exists_effective('parameters transport-prefer-ipv4'):
+        mpls_conf['old_ldp']['param_transp_pref_ipv4'] = True
+
+    if conf.exists('parameters transport-prefer-ipv4'):
+        mpls_conf['ldp']['param_transp_pref_ipv4'] = True
 
     return mpls_conf
 
