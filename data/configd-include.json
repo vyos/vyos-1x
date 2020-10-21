@@ -6,7 +6,6 @@
 "dynamic_dns.py",
 "firewall_options.py",
 "host_name.py",
-"http-api.py",
 "https.py",
 "igmp_proxy.py",
 "intel_qat.py",
