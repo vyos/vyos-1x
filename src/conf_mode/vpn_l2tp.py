@@ -161,6 +161,9 @@ def get_config(config=None):
 
             conf.set_level(base_path + ['authentication', 'radius', 'server', server])
 
+            if conf.exists(['disable-accounting']):
+                radius['acct_port'] = '0'
+
             if conf.exists(['fail-time']):
                 radius['fail_time'] = conf.return_value(['fail-time'])
 
