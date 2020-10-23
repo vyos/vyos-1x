@@ -1,0 +1,158 @@
+{%   for dname in isis -%}
+!
+router isis {{dname}}
+{% if isis[dname]['net'] is string -%}
+ net {{ isis[dname]['net'] }}
+{% else -%}
+{%   for net_iso in isis[dname]['net'] -%}
+ net {{ net_iso }}
+{%   endfor -%}
+{% endif -%}
+{#- end isis net -#}
+{% if 'dynamic_hostname' in isis[dname] -%}
+ hostname dynamic
+{% endif -%}
+{% if 'purge_originator' in isis[dname] -%}
+ purge-originator
+{% endif -%}
+{% if 'set_attached_bit' in isis[dname] -%}
+ set-attached-bit
+{% endif -%}
+{% if 'set_overload_bit' in isis[dname] -%}
+ set-overload-bit
+{% endif -%}
+{% if isis[dname].domain_password is defined -%}
+{%   if isis[dname].domain_password.plaintext_password is defined -%}
+ domain-password clear {{ isis[dname].domain_password.plaintext_password }}
+{%   endif -%}
+{% endif -%}
+{#- end isis domain-password -#}
+{% if isis[dname]['lsp_gen_interval'] -%}
+ lsp-gen-interval {{ isis[dname]['lsp_gen_interval'] }}
+{% endif -%}
+{% if isis[dname]['lsp_mtu'] -%}
+ lsp-mtu {{ isis[dname]['lsp_mtu'] }}
+{% endif -%}
+{% if isis[dname]['lsp_refresh_interval'] -%}
+ lsp-mtu {{ isis[dname]['lsp_refresh_interval'] }}
+{% endif -%}
+{% if isis[dname]['max_lsp_lifetime'] -%}
+ lsp-mtu {{ isis[dname]['max_lsp_lifetime'] }}
+{% endif -%}
+{% if isis[dname]['spf_interval'] -%}
+ spf-interval {{ isis[dname]['spf_interval'] }}
+{% endif -%}
+{% for t in isis[dname]['spf_delay_ietf'] -%}
+{% if t == "holddown" -%}
+ spf-delay-ietf holddown {{ isis[dname]['spf_delay_ietf'][t] }}
+{% endif -%}
+{% endfor -%}
+{#- end lsp timers and intervals -#}
+{% if isis[dname]['area_password'] is defined -%}
+{% for password in isis[dname]['area_password'] -%}
+{%   if password == "md5" -%}
+ area-password md5 {{ isis[dname]['area_password'][password] }}
+{%   endif -%}
+{%   if password == "plaintext_password" -%}
+ area-password clear {{ isis[dname]['area_password'][password] }}
+{%   endif -%}
+{% endfor -%}
+{% endif -%}
+{#- end isis area-password -#}
+{% if 'originate' in isis[dname]['default_information'] -%}
+{% for ipv in isis[dname]['default_information']['originate'] -%}
+{%   for lvl in isis[dname]['default_information']['originate'][ipv] -%}
+{%     if ipv == 'ipv4' -%}
+    default-information originate {{ ipv }} {{ lvl | replace('_', '-') }}
+{%     elif ipv == 'ipv6' -%}
+    default-information originate {{ ipv }} {{ lvl | replace('_', '-') }} always
+{%     endif -%}
+{%   endfor -%}
+{% endfor -%}
+{% endif -%}
+{#- end isis default-information originate -#}
+{% if isis[dname]['redistribute'] is defined -%}
+{% for protocol in isis[dname]['redistribute']['ipv4']  -%}
+{%   for lvl in isis[dname]['redistribute']['ipv4'][protocol] -%}
+{%     if isis[dname]['redistribute']['ipv4'][protocol][lvl]['metric'] is defined -%}
+ redistribute ipv4 {{ protocol }} {{ lvl | replace('_', '-') }} metric {{ isis[dname]['redistribute']['ipv4'][protocol][lvl]['metric'] }}
+{%     elif isis[dname]['redistribute']['ipv4'][protocol][lvl]['route_map'] is defined -%}
+ redistribute ipv4 {{ protocol }} {{ lvl | replace('_', '-') }} route-map {{ isis[dname]['redistribute']['ipv4'][protocol][lvl]['route_map'] }}
+{%     else -%}
+ redistribute ipv4 {{ protocol }} {{ lvl | replace('_', '-') }}
+{%     endif -%}
+{%   endfor -%}
+{% endfor -%}
+{% endif -%}
+{#- end isis redistribute -#}
+{% if isis[dname]['level'] -%}
+{%   if isis[dname]['level'] == 'level-1' -%}
+ is-type level-1
+{%   elif isis[dname]['level'] == 'level-2'  -%}
+ is-type level-2-only
+{%   elif isis[dname]['level'] == 'level-1-2'  -%}
+ is-type level-1-2
+{%   endif -%}
+{% endif -%}
+{#- end isis level -#}
+{% if isis[dname]['spf_delay_ietf'] is defined -%}
+{%   if isis[dname]['spf_delay_ietf']['init_delay'] or isis[dname]['spf_delay_ietf']['short_delay'] or isis[dname]['spf_delay_ietf']['long_delay'] or isis[dname]['spf_delay_ietf']['holddown'] or isis[dname]['spf_delay_ietf']['time_to_learn'] -%}
+ init-delay {{ isis[dname]['spf_delay_ietf']['init_delay'] }} short-delay {{ isis[dname]['spf_delay_ietf']['short_delay'] }} long-delay {{ isis[dname]['spf_delay_ietf']['long_delay'] }} holddown {{ isis[dname]['spf_delay_ietf']['holddown'] }} time-to-learn {{ isis[dname]['spf_delay_ietf']['time_to_learn'] }}
+{%   endif -%}
+{% endif -%}
+!
+{% set isis_iface = isis[dname]['interface'] -%}
+{% if isis_iface is string -%}
+interface {{ isis_iface }} 
+ip router isis {{ dname }}
+{% else -%}
+{% for value in isis_iface -%}
+interface {{ value }} 
+ip router isis {{ dname }}
+{%   if 'bfd' in isis_iface[value] -%}
+  isis bfd
+{%   endif -%}
+{%   if 'point_to_point' in isis_iface[value]['network'] -%}
+  isis network point-to-point
+{%   endif -%}
+{%   if isis_iface[value]['circuit_type'] == 'level-1' -%}
+ isis circuit-type level-1
+{%   elif isis_iface[value]['circuit_type'] == 'level-2-only' -%}
+ isis circuit-type level-2-only
+{%   elif isis_iface[value]['circuit_type'] == 'level-1-2' -%}
+ isis circuit-type level-1-2 
+{%   endif -%}
+{%   if isis_iface[value]['hello_interval'] -%}
+ isis hello-interval {{ isis_iface[value]['hello_interval'] }}
+{%   endif -%}
+{%   if isis_iface[value]['hello_multiplier'] -%}
+ isis hello-multiplier {{ isis_iface[value]['hello_multiplier'] }}
+{%   endif -%}
+{%   if 'hello_padding' in isis_iface[value] -%}
+ isis hello padding
+{%   endif -%}
+{%   if isis_iface[value]['metric'] -%}
+ isis metric {{ isis_iface[value]['metric'] }}
+{%   endif -%}
+{%   if 'passive' in isis_iface[value] -%}
+ isis passive
+{%   endif -%}
+{%   if isis_iface[value]['password'] is defined -%}
+{%     if isis_iface[value]['password']['plaintext_password'] is defined -%}
+ isis password clear {{ isis_iface[value]['password']['plaintext_password'] }}
+{%     endif -%}
+{%   endif -%}
+{%   if isis_iface[value]['priority'] -%}
+ isis priority {{ isis_iface[value]['priority'] }}
+{%   endif -%}
+{%   if isis_iface[value]['psnp_interval'] -%}
+ isis psnp-interval {{ isis_iface[value]['psnp_interval'] }}
+{%   endif -%}
+{%   if 'three_way_handshake' in isis_iface[value] -%}
+ isis three-way-handshake
+{%   endif -%}
+{% endfor -%}
+{% endif -%}
+{#- end isis interface -#}
+!
+{%   endfor -%}
