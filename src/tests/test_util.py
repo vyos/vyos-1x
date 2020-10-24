@@ -19,7 +19,6 @@ from unittest import TestCase
 
 import vyos.util
 
-
 class TestVyOSUtil(TestCase):
     def setUp(self):
         pass
@@ -30,3 +29,6 @@ class TestVyOSUtil(TestCase):
         new_data = vyos.util.mangle_dict_keys(data, '-', '_')
         self.assertEqual(new_data, expected_data)
 
+    def test_process_named_running(self):
+        pid = vyos.util.process_named_running('bash')
+        self.assertTrue(isinstance(pid, int))
