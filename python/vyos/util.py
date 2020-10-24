@@ -605,53 +605,6 @@ def ifname_from_config(conf):
     # no vlans
     return level[-1]
 
-def get_bridge_member_config(conf, br, intf):
-    """
-    Gets bridge port (member) configuration
-
-    Arguments:
-    conf: Config
-    br: bridge name
-    intf: interface name
-
-    Returns:
-    dict with the configuration
-    False if bridge or bridge port doesn't exist
-    """
-    old_level = conf.get_level()
-    conf.set_level([])
-
-    bridge = f'interfaces bridge {br}'
-    member = f'{bridge} member interface {intf}'
-    if not ( conf.exists(bridge) and conf.exists(member) ):
-        return False
-
-    # default bridge port configuration
-    # cost and priority initialized with linux defaults
-    # by reading /sys/devices/virtual/net/br0/brif/eth2/{path_cost,priority}
-    # after adding interface to bridge after reboot
-    memberconf = {
-        'cost': 100,
-        'priority': 32,
-        'arp_cache_tmo': 30,
-        'disable_link_detect': 1,
-    }
-
-    if conf.exists(f'{member} cost'):
-        memberconf['cost'] = int(conf.return_value(f'{member} cost'))
-
-    if conf.exists(f'{member} priority'):
-        memberconf['priority'] = int(conf.return_value(f'{member} priority'))
-
-    if conf.exists(f'{bridge} ip arp-cache-timeout'):
-        memberconf['arp_cache_tmo'] = int(conf.return_value(f'{bridge} ip arp-cache-timeout'))
-
-    if conf.exists(f'{bridge} disable-link-detect'):
-        memberconf['disable_link_detect'] = 2
-
-    conf.set_level(old_level)
-    return memberconf
-
 def check_kmod(k_mod):
     """ Common utility function to load required kernel modules on demand """
     from vyos import ConfigError
