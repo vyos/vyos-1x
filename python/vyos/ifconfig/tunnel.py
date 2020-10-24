@@ -179,7 +179,7 @@ class GRETapIf(_Tunnel):
     default = {'type': 'gretap'}
     required = ['local', ]
 
-    options = ['local', 'remote', ]
+    options = ['local', 'remote', 'ttl',]
     updates = ['mtu', ]
 
     create = 'ip link add {ifname} type {type}'
