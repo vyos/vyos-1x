@@ -15,11 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import tempfile
-import unittest
+import vyos.configtree
 
 from unittest import TestCase
-import vyos.configtree
 
 class TestConfigParser(TestCase):
     def setUp(self):

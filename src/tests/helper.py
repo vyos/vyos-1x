@@ -13,12 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import importlib.util
-
 
 def prepare_module(file_path='', module_name=''):
     spec = importlib.util.spec_from_file_location(module_name, file_path)

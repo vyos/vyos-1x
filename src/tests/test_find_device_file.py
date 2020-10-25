@@ -14,9 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 from unittest import TestCase
-
 from vyos.util import find_device_file
 
 class TestDeviceFile(TestCase):
