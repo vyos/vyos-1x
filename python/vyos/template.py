@@ -131,7 +131,7 @@ def vyos_address_from_cidr(text):
     Example:
     192.0.2.0/24 -> 192.0.2.0, 2001:db8::/48 -> 2001:db8::
     """
-    return ip_network(text).network_address
+    return str(ip_network(text).network_address)
 
 
 @register_filter("netmask_from_cidr")
@@ -140,4 +140,4 @@ def vyos_netmask_from_cidr(text):
     Example:
     192.0.2.0/24 -> 255.255.255.0, 2001:db8::/48 -> ffff:ffff:ffff::
     """
-    return ip_network(text).netmask
+    return str(ip_network(text).netmask)
