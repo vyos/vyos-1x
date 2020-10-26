@@ -87,6 +87,7 @@
                   <constraint>
                     <validator name="ipv4-prefix"/>
                   </constraint>
+                  <constraintErrorMessage>Invalid IPv4 subnet definition</constraintErrorMessage>
                 </properties>
                 <children>
                   <leafNode name="bootfile-name">
