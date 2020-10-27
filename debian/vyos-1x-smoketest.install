@@ -1,2 +1,4 @@
 usr/bin/vyos-smoketest
+usr/bin/vyos-configtest
 usr/libexec/vyos/tests/smoke
+usr/libexec/vyos/tests/config
