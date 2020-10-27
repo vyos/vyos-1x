@@ -455,6 +455,11 @@ def get_accel_dict(config, base, chap_secrets):
             dict['authentication']['radius']['server'][server] = dict_merge(
                 default_values, dict['authentication']['radius']['server'][server])
 
+            # Check option "disable-accounting" per server and replace default value from '1813' to '0'
+            # set vpn sstp authentication radius server x.x.x.x disable-accounting
+            if 'disable_accounting' in dict['authentication']['radius']['server'][server]:
+                dict['authentication']['radius']['server'][server]['acct_port'] = '0'
+
     # Add individual local-user default values
     if vyos_dict_search('authentication.local_users.username', dict):
         default_values = defaults(base + ['authentication', 'local-users', 'username'])
