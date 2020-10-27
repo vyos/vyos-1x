@@ -267,7 +267,6 @@
     <leafNode name="unsuppress-map">
       <properties>
         <help>Route-map to selectively unsuppress suppressed IPv4-routes</help>
-        <valueless/>
       </properties>
     </leafNode>
     <leafNode name="weight">

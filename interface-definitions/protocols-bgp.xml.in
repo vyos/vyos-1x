@@ -342,7 +342,6 @@
               <leafNode name="description">
                 <properties>
                   <help>Description for this neighbor</help>
-                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="disable-capability-negotiation">
@@ -916,12 +915,6 @@
                   </tagNode>
                 </children>
               </node>
-              <leafNode name="enforce-first-as">
-                <properties>
-                  <help>Require first AS in the path to match peer AS number</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
               <node name="graceful-restart">
                 <properties>
                   <help>Graceful restart capability parameters</help>

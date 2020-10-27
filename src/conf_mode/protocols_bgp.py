@@ -33,7 +33,7 @@ def get_config():
     base = ['protocols', 'nbgp']
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'))
     if not conf.exists(base):
-        return None
+        bgp = {}
 
     from pprint import pprint
     pprint(bgp)
@@ -44,10 +44,16 @@ def verify(bgp):
     if not bgp:
         return None
 
+    # Check if declared more than one ASN
+    for asn in bgp['nbgp'].items():
+        if len(bgp['nbgp']) > 1:
+            raise ConfigError('Only one bgp ASN process can be definded')
+
     return None
 
 def generate(bgp):
     if not bgp:
+        bgp['new_frr_config'] = ''
         return None
 
     # render(config) not needed, its only for debug
@@ -58,9 +64,6 @@ def generate(bgp):
     return None
 
 def apply(bgp):
-    if bgp is None:
-        return None
-
     # Save original configration prior to starting any commit actions
     bgp['original_config'] = frr.get_configuration(daemon='bgpd')
     bgp['modified_config'] = frr.replace_section(bgp['original_config'], bgp['new_frr_config'], from_re='router bgp .*')
