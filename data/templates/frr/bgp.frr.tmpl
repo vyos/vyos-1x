@@ -14,7 +14,7 @@ router bgp {{ asn }}
 {%-     if type == "ipv4_unicast" %}
  !
  address-family ipv4 unicast
-{# need to check #}
+{#- need to check #}
 {%- if 'aggregate_address' in bgp_afi[type] %}
 {%-   for ip in bgp_afi[type].aggregate_address %}
 {%-      if ( ('as_set' and 'summary_only') in bgp_afi[type].aggregate_address[ip]  ) %}
