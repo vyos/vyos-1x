@@ -13,6 +13,7 @@ no neighbor {{neighbor_id}} password {{old_ldp.neighbors[neighbor_id].password}}
 {% for neighbor_id in ldp.neighbors -%}
 neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
 {% endfor -%}
+!
 address-family ipv4
 label local allocate host-routes
 {% if old_ldp.export_ipv4_exp -%}
@@ -27,20 +28,20 @@ no discovery transport-address {{ old_ldp.d_transp_ipv4 }}
 {% if ldp.d_transp_ipv4 -%}
 discovery transport-address {{ ldp.d_transp_ipv4 }}
 {% endif -%}
-{% if old_ldp.hello_holdtime -%}
-no  discovery hello holdtime {{ old_ldp.hello_holdtime }}
+{% if old_ldp.hello_ipv4_holdtime -%}
+no discovery hello holdtime {{ old_ldp.hello_ipv4_holdtime }}
 {% endif -%}
-{% if ldp.hello_holdtime -%}
-discovery hello holdtime {{ ldp.hello_holdtime }}
+{% if ldp.hello_ipv4_holdtime -%}
+discovery hello holdtime {{ ldp.hello_ipv4_holdtime }}
 {% endif -%}
-{% if old_ldp.hello_interval -%}
-no discovery hello interval {{ old_ldp.hello_interval }}
+{% if old_ldp.hello_ipv4_interval -%}
+no discovery hello interval {{ old_ldp.hello_ipv4_interval }}
 {% endif -%}
-{% if ldp.hello_interval -%}
-discovery hello interval {{ ldp.hello_interval }}
+{% if ldp.hello_ipv4_interval -%}
+discovery hello interval {{ ldp.hello_ipv4_interval }}
 {% endif -%}
 {% if old_ldp.ses_ipv4_hold -%}
-no  session holdtime {{ old_ldp.ses_ipv4_hold }}
+no session holdtime {{ old_ldp.ses_ipv4_hold }}
 {% endif -%}
 {% if ldp.ses_ipv4_hold -%}
 session holdtime {{ ldp.ses_ipv4_hold }}
@@ -65,7 +66,7 @@ no label local advertise explicit-null
 label local advertise explicit-null
 {% endif -%}
 {% if old_ldp.ses_ipv6_hold -%}
-no  session holdtime {{ old_ldp.ses_ipv6_hold }}
+no session holdtime {{ old_ldp.ses_ipv6_hold }}
 {% endif -%}
 {% if ldp.ses_ipv6_hold -%}
 session holdtime {{ ldp.ses_ipv6_hold }}
@@ -75,6 +76,18 @@ no discovery transport-address {{ old_ldp.d_transp_ipv6 }}
 {% endif -%}
 {% if ldp.d_transp_ipv6 -%}
 discovery transport-address {{ ldp.d_transp_ipv6 }}
+{% endif -%}
+{% if old_ldp.hello_ipv6_holdtime -%}
+no discovery hello holdtime {{ old_ldp.hello_ipv6_holdtime }}
+{% endif -%}
+{% if ldp.hello_ipv6_holdtime -%}
+discovery hello holdtime {{ ldp.hello_ipv6_holdtime }}
+{% endif -%}
+{% if old_ldp.hello_ipv6_interval -%}
+no discovery hello interval {{ old_ldp.hello_ipv6_interval }}
+{% endif -%}
+{% if ldp.hello_ipv6_interval -%}
+discovery hello interval {{ ldp.hello_ipv6_interval }}
 {% endif -%}
 {% for interface in old_ldp.interfaces -%}
 no interface {{interface}}
