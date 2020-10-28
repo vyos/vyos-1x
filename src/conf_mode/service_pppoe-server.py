@@ -23,7 +23,7 @@ from vyos.configdict import get_accel_dict
 from vyos.configverify import verify_accel_ppp_base_service
 from vyos.template import render
 from vyos.util import call
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -57,13 +57,13 @@ def verify(pppoe):
         raise ConfigError('At least one listen interface must be defined!')
 
     # local ippool and gateway settings config checks
-    if not (vyos_dict_search('client_ip_pool.subnet', pppoe) or
-           (vyos_dict_search('client_ip_pool.start', pppoe) and
-            vyos_dict_search('client_ip_pool.stop', pppoe))):
+    if not (dict_search('client_ip_pool.subnet', pppoe) or
+           (dict_search('client_ip_pool.start', pppoe) and
+            dict_search('client_ip_pool.stop', pppoe))):
         print('Warning: No PPPoE client pool defined')
 
-    if vyos_dict_search('authentication.radius.dynamic_author.server', pppoe):
-        if not vyos_dict_search('authentication.radius.dynamic_author.key', pppoe):
+    if dict_search('authentication.radius.dynamic_author.server', pppoe):
+        if not dict_search('authentication.radius.dynamic_author.key', pppoe):
             raise ConfigError('DA/CoE server key required!')
 
     return None
@@ -75,7 +75,7 @@ def generate(pppoe):
 
     render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', pppoe, trim_blocks=True)
 
-    if vyos_dict_search('authentication.mode', pppoe) == 'local':
+    if dict_search('authentication.mode', pppoe) == 'local':
         render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
                pppoe, trim_blocks=True, permission=0o640)
     else:

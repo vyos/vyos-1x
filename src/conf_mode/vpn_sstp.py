@@ -23,7 +23,7 @@ from vyos.configdict import get_accel_dict
 from vyos.configverify import verify_accel_ppp_base_service
 from vyos.template import render
 from vyos.util import call
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -56,21 +56,21 @@ def verify(sstp):
     #
     # SSL certificate checks
     #
-    tmp = vyos_dict_search('ssl.ca_cert_file', sstp)
+    tmp = dict_search('ssl.ca_cert_file', sstp)
     if not tmp:
         raise ConfigError(f'SSL CA certificate file required!')
     else:
         if not os.path.isfile(tmp):
             raise ConfigError(f'SSL CA certificate "{tmp}" does not exist!')
 
-    tmp = vyos_dict_search('ssl.cert_file', sstp)
+    tmp = dict_search('ssl.cert_file', sstp)
     if not tmp:
         raise ConfigError(f'SSL public key file required!')
     else:
         if not os.path.isfile(tmp):
             raise ConfigError(f'SSL public key "{tmp}" does not exist!')
 
-    tmp = vyos_dict_search('ssl.key_file', sstp)
+    tmp = dict_search('ssl.key_file', sstp)
     if not tmp:
         raise ConfigError(f'SSL private key file required!')
     else:
@@ -84,7 +84,7 @@ def generate(sstp):
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
     render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp, trim_blocks=True)
 
-    if vyos_dict_search('authentication.mode', sstp) == 'local':
+    if dict_search('authentication.mode', sstp) == 'local':
         render(sstp_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
                sstp, trim_blocks=True, permission=0o640)
     else:

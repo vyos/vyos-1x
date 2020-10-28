@@ -17,7 +17,7 @@ import os
 
 from vyos.ifconfig.interface import Interface
 from vyos.util import cmd
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos.validate import assert_list
 from vyos.validate import assert_positive
 
@@ -360,7 +360,7 @@ class BondIf(Interface):
             self.set_arp_ip_target('-' + addr)
 
         # Add configured ARP target addresses
-        value = vyos_dict_search('arp_monitor.target', config)
+        value = dict_search('arp_monitor.target', config)
         if isinstance(value, str):
             value = [value]
         if value:
@@ -384,7 +384,7 @@ class BondIf(Interface):
                 # Removing an interface from a bond will always place the underlaying
                 # physical interface in admin-down state! If physical interface is
                 # not disabled, re-enable it.
-                if not vyos_dict_search(f'member.interface_remove.{interface}.disable', config):
+                if not dict_search(f'member.interface_remove.{interface}.disable', config):
                     Interface(interface).set_admin_state('up')
 
             # Bonding policy/mode
@@ -392,7 +392,7 @@ class BondIf(Interface):
             if value: self.set_mode(value)
 
             # Add (enslave) interfaces to bond
-            value = vyos_dict_search('member.interface', config)
+            value = dict_search('member.interface', config)
             for interface in (value or []):
                 # if we've come here we already verified the interface
                 # does not have an addresses configured so just flush

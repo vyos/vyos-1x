@@ -33,7 +33,7 @@ from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
 from vyos.ifconfig import Section
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos.validate import has_address_configured
 from vyos import ConfigError
 from vyos import airbag
@@ -101,7 +101,7 @@ def get_config(config=None):
         # also present the interfaces to be removed from the bond as dictionary
         bond['member'].update({'interface_remove': tmp})
 
-    if vyos_dict_search('member.interface', bond):
+    if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
@@ -151,7 +151,7 @@ def verify(bond):
     verify_vlan_config(bond)
 
     bond_name = bond['ifname']
-    if vyos_dict_search('member.interface', bond):
+    if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
             error_msg = f'Can not add interface "{interface}" to bond, '
 

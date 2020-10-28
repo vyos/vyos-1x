@@ -18,7 +18,7 @@ A library for retrieving value dicts from VyOS configs in a declarative fashion.
 """
 import os
 
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 
@@ -174,10 +174,10 @@ def T2665_set_dhcpv6pd_defaults(config_dict):
     pd_defaults = defaults(['interfaces', 'ethernet', 'dhcpv6-options', 'pd'])
 
     # Implant default dictionary for DHCPv6-PD instances
-    if vyos_dict_search('dhcpv6_options.pd.length', config_dict):
+    if dict_search('dhcpv6_options.pd.length', config_dict):
         del config_dict['dhcpv6_options']['pd']['length']
 
-    for pd in (vyos_dict_search('dhcpv6_options.pd', config_dict) or []):
+    for pd in (dict_search('dhcpv6_options.pd', config_dict) or []):
         config_dict['dhcpv6_options']['pd'][pd] = dict_merge(pd_defaults,
             config_dict['dhcpv6_options']['pd'][pd])
 
@@ -332,7 +332,7 @@ def get_interface_dict(config, base, ifname=''):
 
     eui64 = leaf_node_changed(config, ['ipv6', 'address', 'eui64'])
     if eui64:
-        tmp = vyos_dict_search('ipv6.address', dict)
+        tmp = dict_search('ipv6.address', dict)
         if not tmp:
             dict.update({'ipv6': {'address': {'eui64_old': eui64}}})
         else:
@@ -419,12 +419,12 @@ def get_accel_dict(config, base, chap_secrets):
 
     # defaults include RADIUS server specifics per TAG node which need to be
     # added to individual RADIUS servers instead - so we can simply delete them
-    if vyos_dict_search('authentication.radius.server', default_values):
+    if dict_search('authentication.radius.server', default_values):
         del default_values['authentication']['radius']['server']
 
     # defaults include static-ip address per TAG node which need to be added to
     # individual local users instead - so we can simply delete them
-    if vyos_dict_search('authentication.local_users.username', default_values):
+    if dict_search('authentication.local_users.username', default_values):
         del default_values['authentication']['local_users']['username']
 
     dict = dict_merge(default_values, dict)
@@ -448,10 +448,10 @@ def get_accel_dict(config, base, chap_secrets):
         del dict['name_server']
 
     # Add individual RADIUS server default values
-    if vyos_dict_search('authentication.radius.server', dict):
+    if dict_search('authentication.radius.server', dict):
         default_values = defaults(base + ['authentication', 'radius', 'server'])
 
-        for server in vyos_dict_search('authentication.radius.server', dict):
+        for server in dict_search('authentication.radius.server', dict):
             dict['authentication']['radius']['server'][server] = dict_merge(
                 default_values, dict['authentication']['radius']['server'][server])
 
@@ -461,10 +461,10 @@ def get_accel_dict(config, base, chap_secrets):
                 dict['authentication']['radius']['server'][server]['acct_port'] = '0'
 
     # Add individual local-user default values
-    if vyos_dict_search('authentication.local_users.username', dict):
+    if dict_search('authentication.local_users.username', dict):
         default_values = defaults(base + ['authentication', 'local-users', 'username'])
 
-        for username in vyos_dict_search('authentication.local_users.username', dict):
+        for username in dict_search('authentication.local_users.username', dict):
             dict['authentication']['local_users']['username'][username] = dict_merge(
                 default_values, dict['authentication']['local_users']['username'][username])
 

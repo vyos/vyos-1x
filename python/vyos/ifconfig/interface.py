@@ -34,7 +34,7 @@ from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import mac2eui64
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos.validate import is_ipv4
 from vyos.validate import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -880,7 +880,7 @@ class Interface(Control):
         lease_file = f'{config_base}_{ifname}.leases'
 
         if enable and 'disable' not in self._config:
-            if vyos_dict_search('dhcp_options.host_name', self._config) == None:
+            if dict_search('dhcp_options.host_name', self._config) == None:
                 # read configured system hostname.
                 # maybe change to vyos hostd client ???
                 hostname = 'vyos'
@@ -959,7 +959,7 @@ class Interface(Control):
 
         # always ensure DHCPv6 client is stopped (when not configured as client
         # for IPv6 address or prefix delegation
-        dhcpv6pd = vyos_dict_search('dhcpv6_options.pd', config)
+        dhcpv6pd = dict_search('dhcpv6_options.pd', config)
         if 'dhcpv6' not in new_addr or dhcpv6pd == None:
             self.del_addr('dhcpv6')
 
@@ -987,64 +987,64 @@ class Interface(Control):
             self.set_vrf(config.get('vrf', ''))
 
         # Configure ARP cache timeout in milliseconds - has default value
-        tmp = vyos_dict_search('ip.arp_cache_timeout', config)
+        tmp = dict_search('ip.arp_cache_timeout', config)
         value = tmp if (tmp != None) else '30'
         self.set_arp_cache_tmo(value)
 
         # Configure ARP filter configuration
-        tmp = vyos_dict_search('ip.disable_arp_filter', config)
+        tmp = dict_search('ip.disable_arp_filter', config)
         value = '0' if (tmp != None) else '1'
         self.set_arp_filter(value)
 
         # Configure ARP accept
-        tmp = vyos_dict_search('ip.enable_arp_accept', config)
+        tmp = dict_search('ip.enable_arp_accept', config)
         value = '1' if (tmp != None) else '0'
         self.set_arp_accept(value)
 
         # Configure ARP announce
-        tmp = vyos_dict_search('ip.enable_arp_announce', config)
+        tmp = dict_search('ip.enable_arp_announce', config)
         value = '1' if (tmp != None) else '0'
         self.set_arp_announce(value)
 
         # Configure ARP ignore
-        tmp = vyos_dict_search('ip.enable_arp_ignore', config)
+        tmp = dict_search('ip.enable_arp_ignore', config)
         value = '1' if (tmp != None) else '0'
         self.set_arp_ignore(value)
 
         # Enable proxy-arp on this interface
-        tmp = vyos_dict_search('ip.enable_proxy_arp', config)
+        tmp = dict_search('ip.enable_proxy_arp', config)
         value = '1' if (tmp != None) else '0'
         self.set_proxy_arp(value)
 
         # Enable private VLAN proxy ARP on this interface
-        tmp = vyos_dict_search('ip.proxy_arp_pvlan', config)
+        tmp = dict_search('ip.proxy_arp_pvlan', config)
         value = '1' if (tmp != None) else '0'
         self.set_proxy_arp_pvlan(value)
 
         # IPv4 forwarding
-        tmp = vyos_dict_search('ip.disable_forwarding', config)
+        tmp = dict_search('ip.disable_forwarding', config)
         value = '0' if (tmp != None) else '1'
         self.set_ipv4_forwarding(value)
 
         # IPv6 forwarding
-        tmp = vyos_dict_search('ipv6.disable_forwarding', config)
+        tmp = dict_search('ipv6.disable_forwarding', config)
         value = '0' if (tmp != None) else '1'
         self.set_ipv6_forwarding(value)
 
         # IPv6 router advertisements
-        tmp = vyos_dict_search('ipv6.address.autoconf', config)
+        tmp = dict_search('ipv6.address.autoconf', config)
         value = '2' if (tmp != None) else '1'
         if 'dhcpv6' in new_addr:
             value = '2'
         self.set_ipv6_accept_ra(value)
 
         # IPv6 address autoconfiguration
-        tmp = vyos_dict_search('ipv6.address.autoconf', config)
+        tmp = dict_search('ipv6.address.autoconf', config)
         value = '1' if (tmp != None) else '0'
         self.set_ipv6_autoconf(value)
 
         # IPv6 Duplicate Address Detection (DAD) tries
-        tmp = vyos_dict_search('ipv6.dup_addr_detect_transmits', config)
+        tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
         value = tmp if (tmp != None) else '1'
         self.set_ipv6_dad_messages(value)
 
@@ -1053,7 +1053,7 @@ class Interface(Control):
             self.set_mtu(config.get('mtu'))
 
         # Delete old IPv6 EUI64 addresses before changing MAC
-        tmp = vyos_dict_search('ipv6.address.eui64_old', config)
+        tmp = dict_search('ipv6.address.eui64_old', config)
         if tmp:
             for addr in tmp:
                 self.del_ipv6_eui64_address(addr)
@@ -1068,7 +1068,7 @@ class Interface(Control):
                 self.set_mac(mac)
 
         # Manage IPv6 link-local addresses
-        tmp = vyos_dict_search('ipv6.address.no_default_link_local', config)
+        tmp = dict_search('ipv6.address.no_default_link_local', config)
         # we must check explicitly for None type as if the key is set we will
         # get an empty dict (<class 'dict'>)
         if tmp is not None:
@@ -1077,7 +1077,7 @@ class Interface(Control):
             self.add_ipv6_eui64_address('fe80::/64')
 
         # Add IPv6 EUI-based addresses
-        tmp = vyos_dict_search('ipv6.address.eui64', config)
+        tmp = dict_search('ipv6.address.eui64', config)
         if tmp:
             for addr in tmp:
                 self.add_ipv6_eui64_address(addr)

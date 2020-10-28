@@ -22,7 +22,7 @@ import unittest
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 
 base_path = ['nat']
 src_path = base_path + ['source']
@@ -73,10 +73,10 @@ class TestNAT(unittest.TestCase):
             self.assertEqual(data['family'], 'ip')
             self.assertEqual(data['table'], 'nat')
 
-            iface = vyos_dict_search('match.right', data['expr'][0])
-            direction = vyos_dict_search('match.left.payload.field', data['expr'][1])
-            address = vyos_dict_search('match.right.prefix.addr', data['expr'][1])
-            mask = vyos_dict_search('match.right.prefix.len', data['expr'][1])
+            iface = dict_search('match.right', data['expr'][0])
+            direction = dict_search('match.left.payload.field', data['expr'][1])
+            address = dict_search('match.right.prefix.addr', data['expr'][1])
+            mask = dict_search('match.right.prefix.len', data['expr'][1])
 
             if int(rule) < 200:
                 self.assertEqual(direction, 'saddr')
@@ -127,11 +127,11 @@ class TestNAT(unittest.TestCase):
             self.assertEqual(data['family'], 'ip')
             self.assertEqual(data['table'], 'nat')
 
-            iface = vyos_dict_search('match.right', data['expr'][0])
-            direction = vyos_dict_search('match.left.payload.field', data['expr'][1])
-            protocol = vyos_dict_search('match.left.payload.protocol', data['expr'][1])
-            dnat_addr = vyos_dict_search('dnat.addr', data['expr'][3])
-            dnat_port = vyos_dict_search('dnat.port', data['expr'][3])
+            iface = dict_search('match.right', data['expr'][0])
+            direction = dict_search('match.left.payload.field', data['expr'][1])
+            protocol = dict_search('match.left.payload.protocol', data['expr'][1])
+            dnat_addr = dict_search('dnat.addr', data['expr'][3])
+            dnat_port = dict_search('dnat.port', data['expr'][3])
 
             self.assertEqual(direction, 'sport')
             self.assertEqual(dnat_addr, '192.0.2.1')

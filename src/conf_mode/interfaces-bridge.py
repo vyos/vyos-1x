@@ -32,7 +32,7 @@ from vyos.validate import has_address_configured
 from vyos.xml import defaults
 
 from vyos.util import cmd
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos import ConfigError
 
 from vyos import airbag
@@ -58,7 +58,7 @@ def get_config(config=None):
         else:
             bridge.update({'member': {'interface_remove': tmp }})
 
-    if vyos_dict_search('member.interface', bridge):
+    if dict_search('member.interface', bridge):
         # XXX: T2665: we need a copy of the dict keys for iteration, else we will get:
         # RuntimeError: dictionary changed size during iteration
         for interface in list(bridge['member']['interface']):
@@ -100,7 +100,7 @@ def verify(bridge):
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
 
-    if vyos_dict_search('member.interface', bridge):
+    if dict_search('member.interface', bridge):
         for interface, interface_config in bridge['member']['interface'].items():
             error_msg = f'Can not add interface "{interface}" to bridge, '
 

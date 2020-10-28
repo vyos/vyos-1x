@@ -22,7 +22,7 @@
 # makes use of it!
 
 from vyos import ConfigError
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 
 def verify_mtu(config):
     """
@@ -60,17 +60,17 @@ def verify_mtu_ipv6(config):
             error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
                         f'thus the minimum MTU requirement is {min_mtu}!'
 
-            if not vyos_dict_search('ipv6.address.no_default_link_local', config):
+            if not dict_search('ipv6.address.no_default_link_local', config):
                 raise ConfigError('link-local ' + error_msg)
 
-            for address in (vyos_dict_search('address', config) or []):
+            for address in (dict_search('address', config) or []):
                 if address in ['dhcpv6'] or is_ipv6(address):
                     raise ConfigError(error_msg)
 
-            if vyos_dict_search('ipv6.address.autoconf', config):
+            if dict_search('ipv6.address.autoconf', config):
                 raise ConfigError(error_msg)
 
-            if vyos_dict_search('ipv6.address.eui64', config):
+            if dict_search('ipv6.address.eui64', config):
                 raise ConfigError(error_msg)
 
 
@@ -154,7 +154,7 @@ def verify_dhcpv6(config):
     recurring validation of DHCPv6 options which are mutually exclusive.
     """
     if 'dhcpv6_options' in config:
-        from vyos.util import vyos_dict_search
+        from vyos.util import dict_search
 
         if {'parameters_only', 'temporary'} <= set(config['dhcpv6_options']):
             raise ConfigError('DHCPv6 temporary and parameters-only options '
@@ -162,15 +162,15 @@ def verify_dhcpv6(config):
 
         # It is not allowed to have duplicate SLA-IDs as those identify an
         # assigned IPv6 subnet from a delegated prefix
-        for pd in vyos_dict_search('dhcpv6_options.pd', config):
+        for pd in dict_search('dhcpv6_options.pd', config):
             sla_ids = []
 
-            if not vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+            if not dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
                 raise ConfigError('DHCPv6-PD requires an interface where to assign '
                                   'the delegated prefix!')
 
-            for interface in vyos_dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
-                sla_id = vyos_dict_search(
+            for interface in dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+                sla_id = dict_search(
                     f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id', config)
                 sla_ids.append(sla_id)
 
@@ -211,11 +211,11 @@ def verify_accel_ppp_base_service(config):
     on get_config_dict()
     """
     # vertify auth settings
-    if vyos_dict_search('authentication.mode', config) == 'local':
-        if not vyos_dict_search('authentication.local_users', config):
+    if dict_search('authentication.mode', config) == 'local':
+        if not dict_search('authentication.local_users', config):
             raise ConfigError('PPPoE local auth mode requires local users to be configured!')
 
-        for user in vyos_dict_search('authentication.local_users.username', config):
+        for user in dict_search('authentication.local_users.username', config):
             user_config = config['authentication']['local_users']['username'][user]
 
             if 'password' not in user_config:
@@ -227,11 +227,11 @@ def verify_accel_ppp_base_service(config):
                     raise ConfigError(f'User "{user}" has rate-limit configured for only one ' \
                                       'direction but both upload and download must be given!')
 
-    elif vyos_dict_search('authentication.mode', config) == 'radius':
-        if not vyos_dict_search('authentication.radius.server', config):
+    elif dict_search('authentication.mode', config) == 'radius':
+        if not dict_search('authentication.radius.server', config):
             raise ConfigError('RADIUS authentication requires at least one server')
 
-        for server in vyos_dict_search('authentication.radius.server', config):
+        for server in dict_search('authentication.radius.server', config):
             radius_config = config['authentication']['radius']['server'][server]
             if 'key' not in radius_config:
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')

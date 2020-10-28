@@ -32,7 +32,7 @@ from vyos.configverify import verify_vrf
 from vyos.ifconfig import WiFiIf
 from vyos.template import render
 from vyos.util import call
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -80,13 +80,13 @@ def get_config(config=None):
     # Cleanup "delete" default values when required user selectable values are
     # not defined at all
     tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-    if not (vyos_dict_search('security.wpa.passphrase', tmp) or
-            vyos_dict_search('security.wpa.radius', tmp)):
+    if not (dict_search('security.wpa.passphrase', tmp) or
+            dict_search('security.wpa.radius', tmp)):
         del wifi['security']['wpa']
 
     # defaults include RADIUS server specifics per TAG node which need to be
     # added to individual RADIUS servers instead - so we can simply delete them
-    if vyos_dict_search('security.wpa.radius.server.port', wifi):
+    if dict_search('security.wpa.radius.server.port', wifi):
         del wifi['security']['wpa']['radius']['server']['port']
         if not len(wifi['security']['wpa']['radius']['server']):
             del wifi['security']['wpa']['radius']
@@ -119,10 +119,10 @@ def get_config(config=None):
     if tmp: wifi['station_interfaces'] = tmp
 
     # Add individual RADIUS server default values
-    if vyos_dict_search('security.wpa.radius.server', wifi):
+    if dict_search('security.wpa.radius.server', wifi):
         default_values = defaults(base + ['security', 'wpa', 'radius', 'server'])
 
-        for server in vyos_dict_search('security.wpa.radius.server', wifi):
+        for server in dict_search('security.wpa.radius.server', wifi):
             wifi['security']['wpa']['radius']['server'][server] = dict_merge(
                 default_values, wifi['security']['wpa']['radius']['server'][server])
 
@@ -241,7 +241,7 @@ def generate(wifi):
             wifi['mac'] = str(mac)
 
     # XXX: Jinja2 can not operate on a dictionary key when it starts of with a number
-    if '40mhz_incapable' in (vyos_dict_search('capabilities.ht', wifi) or []):
+    if '40mhz_incapable' in (dict_search('capabilities.ht', wifi) or []):
         wifi['capabilities']['ht']['fourtymhz_incapable'] = wifi['capabilities']['ht']['40mhz_incapable']
         del wifi['capabilities']['ht']['40mhz_incapable']
 

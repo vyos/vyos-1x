@@ -603,7 +603,7 @@ def find_device_file(device):
 
     return None
 
-def vyos_dict_search(path, dict):
+def dict_search(path, dict):
     """ Traverse Python dictionary (dict) delimited by dot (.).
     Return value of key if found, None otherwise.
 

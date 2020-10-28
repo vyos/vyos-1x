@@ -23,7 +23,7 @@ from vyos.configdict import dict_merge
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.util import call
 from vyos.util import chown
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos.template import render
 from vyos.xml import defaults
 from vyos.validate import is_ipv6
@@ -94,7 +94,7 @@ def verify(dns):
     if 'allow_from' not in dns:
         raise ConfigError('DNS forwarding requires an allow-from network')
 
-    # we can not use vyos_dict_search() when testing for domain servers
+    # we can not use dict_search() when testing for domain servers
     # as a domain will contains dot's which is out dictionary delimiter.
     if 'domain' in dns:
         for domain in dns['domain']:

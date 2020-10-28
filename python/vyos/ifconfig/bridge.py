@@ -19,7 +19,7 @@ from vyos.ifconfig.interface import Interface
 from vyos.validate import assert_boolean
 from vyos.validate import assert_positive
 from vyos.util import cmd
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 
 @Interface.register
 class BridgeIf(Interface):
@@ -223,17 +223,17 @@ class BridgeIf(Interface):
         self.set_stp(value)
 
         # enable or disable IGMP querier
-        tmp = vyos_dict_search('igmp.querier', config)
+        tmp = dict_search('igmp.querier', config)
         value = '1' if (tmp != None) else '0'
         self.set_multicast_querier(value)
 
         # remove interface from bridge
-        tmp = vyos_dict_search('member.interface_remove', config)
+        tmp = dict_search('member.interface_remove', config)
         for member in (tmp or []):
             if member in interfaces():
                 self.del_port(member)
 
-        tmp = vyos_dict_search('member.interface', config)
+        tmp = dict_search('member.interface', config)
         if tmp:
             for interface, interface_config in tmp.items():
                 # if interface does yet not exist bail out early and

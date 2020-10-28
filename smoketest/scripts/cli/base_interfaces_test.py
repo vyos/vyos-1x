@@ -22,7 +22,7 @@ from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
 from vyos.util import read_file
 from vyos.util import cmd
-from vyos.util import vyos_dict_search
+from vyos.util import dict_search
 from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
 
 class BasicInterfaceTest:
@@ -219,7 +219,7 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 for vif_s in self._qinq_range:
                     tmp = json.loads(cmd(f'ip -d -j link show dev {interface}.{vif_s}'))[0]
-                    self.assertEqual(vyos_dict_search('linkinfo.info_data.protocol', tmp), '802.1ad')
+                    self.assertEqual(dict_search('linkinfo.info_data.protocol', tmp), '802.1ad')
 
                     for vif_c in self._vlan_range:
                         vif = f'{interface}.{vif_s}.{vif_c}'
