@@ -192,3 +192,23 @@ class BasicAccelPPPTest:
 
             # Check for running process
             self.assertTrue(process_named_running(self._process_name))
+
+            #
+            # Disable Radius Accounting
+            #
+            self.delete(['authentication', 'radius', 'server', radius_server, 'acct-port'])
+            self.set(['authentication', 'radius', 'server', radius_server, 'disable-accounting'])
+
+            # commit changes
+            self.session.commit()
+
+            conf.read(self._config_file)
+
+            server = conf['radius']['server'].split(',')
+            self.assertEqual(radius_server, server[0])
+            self.assertEqual(radius_key, server[1])
+            self.assertEqual(f'auth-port={radius_port}', server[2])
+            self.assertEqual(f'acct-port=0', server[3])
+            self.assertEqual(f'req-limit=0', server[4])
+            self.assertEqual(f'fail-time=0', server[5])
+
