@@ -44,7 +44,7 @@
       </children>
     </node>
     #include <include/interface-mac.xml.i>
-    #include <include/interface-mtu-68-9000.xml.i>
+    #include <include/interface-mtu-68-16000.xml.i>
     <tagNode name="vif-c">
       <properties>
         <help>QinQ TAG-C Virtual Local Area Network (VLAN) ID</help>
@@ -61,7 +61,7 @@
         #include <include/interface-disable-link-detect.xml.i>
         #include <include/interface-disable.xml.i>
         #include <include/interface-mac.xml.i>
-        #include <include/interface-mtu-68-9000.xml.i>
+        #include <include/interface-mtu-68-16000.xml.i>
         #include <include/interface-vrf.xml.i>
       </children>
     </tagNode>

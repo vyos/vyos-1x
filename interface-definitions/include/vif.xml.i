@@ -63,7 +63,7 @@
       </children>
     </node>
     #include <include/interface-mac.xml.i>
-    #include <include/interface-mtu-68-9000.xml.i>
+    #include <include/interface-mtu-68-16000.xml.i>
   </children>
 </tagNode>
 <!-- included end -->

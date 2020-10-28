@@ -4,7 +4,7 @@
     <help>Maximum Transmission Unit (MTU)</help>
     <valueHelp>
       <format>68-1500</format>
-      <description>Maximum Transmission Unit</description>
+      <description>Maximum Transmission Unit in byte</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 68-1500"/>

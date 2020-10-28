@@ -66,7 +66,7 @@
             </properties>
           </leafNode>
           #include <include/interface-disable-link-detect.xml.i>
-          #include <include/interface-mtu-68-9000.xml.i>
+          #include <include/interface-mtu-68-16000.xml.i>
           <node name="ipv6">
             <children>
               #include <include/ipv6-address.xml.i>
