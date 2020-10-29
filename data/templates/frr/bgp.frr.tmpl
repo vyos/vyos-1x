@@ -14,10 +14,9 @@ router bgp {{ asn }}
 {%-     if type == "ipv4_unicast" %}
  !
  address-family ipv4 unicast
-{#- need to check #}
 {%- if 'aggregate_address' in bgp_afi[type] %}
 {%-   for ip in bgp_afi[type].aggregate_address %}
-{%-      if ( ('as_set' and 'summary_only') in bgp_afi[type].aggregate_address[ip]  ) %}
+{%-      if ( ('as_set' in bgp_afi[type].aggregate_address[ip]) and ('summary_only' in bgp_afi[type].aggregate_address[ip] ) ) %}
   aggregate-address {{ ip }} as-set summary-only
 {%-      elif 'as_set' in bgp_afi[type].aggregate_address[ip]  %}
   aggregate-address {{ ip  }} as-set
@@ -28,23 +27,20 @@ router bgp {{ asn }}
 {%-      endif %}
 {%-   endfor %}
 {%- endif %}
-{# END aggregate address#}
-{#- redistribute #}
-{# need to check. dont work. 
-   'metric' and 'route_map' match also only 'route_map'
-   'table' parameter also include in protocol, its not what I want #}
+{#- END aggregate address ipv4 #}
+
+{#- redistribute afi ipv4 #}
 {%-  if 'redistribute' in bgp_afi[type] %}
-{%-    if 'table' in bgp_afi[type].redistribute %}
- redistribute table {{bgp_afi[type].redistribute.table}}
-{%-    endif %}
 {%-    for protocol in bgp_afi[type].redistribute %}
-{%-      if ( ('metric' and 'route_map') in bgp_afi[type].redistribute[protocol] ) %}
+{%-      if ( ('route_map' in bgp_afi[type].redistribute[protocol]) and ('metric' in bgp_afi[type].redistribute[protocol] ) ) %}
  redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
 {%-      elif 'metric' in bgp_afi[type].redistribute[protocol] %}
- redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}} 
+ redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}}
 {%-      elif 'route_map' in bgp_afi[type].redistribute[protocol] %}
  redistribute {{protocol}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
-{%-      else %} 
+{%-      elif 'table' in bgp_afi[type].redistribute %}
+ redistribute table {{bgp_afi[type].redistribute.table}}
+{%-      else %}
  redistribute {{protocol}}
 {%-      endif %}
 {%-    endfor %}
@@ -65,7 +61,7 @@ router bgp {{ asn }}
  address-family ipv6 unicast
 {%- if 'aggregate_address' in bgp_afi[type] %}
 {%-   for ip in bgp_afi[type].aggregate_address %}
-{%-      if ( ('as_set' and 'summary_only') in bgp_afi[type].aggregate_address[ip]  ) %}
+{%-      if ( ('as_set' in bgp_afi[type].aggregate_address[ip]) and ('summary_only' in bgp_afi[type].aggregate_address[ip] ) ) %}
   aggregate-address {{ ip }} as-set summary-only
 {%-      elif 'as_set' in bgp_afi[type].aggregate_address[ip]  %}
   aggregate-address {{ ip  }} as-set
@@ -76,22 +72,20 @@ router bgp {{ asn }}
 {%-      endif %}
 {%-   endfor %}
 {%- endif %}
-{# END aggregate address#}
+{#- END aggregate address ipv6 #}
 
-{#- redistribute #}
-{# need to check. doesn't work. 'metric' and 'route_map' match also only 'route_map' #}
+{#- redistribute afi ipv6 #}
 {%-  if 'redistribute' in bgp_afi[type] %}
-{%-    if 'table' in bgp_afi[type].redistribute %}
- redistribute table {{bgp_afi[type].redistribute.table}}
-{%-    endif %}
 {%-    for protocol in bgp_afi[type].redistribute %}
-{%-      if ( ('metric' and 'route_map') in bgp_afi[type].redistribute[protocol] ) %}
+{%-      if ( ('route_map' in bgp_afi[type].redistribute[protocol]) and ('metric' in bgp_afi[type].redistribute[protocol] ) ) %}
  redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
 {%-      elif 'metric' in bgp_afi[type].redistribute[protocol] %}
- redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}} 
+ redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}}
 {%-      elif 'route_map' in bgp_afi[type].redistribute[protocol] %}
  redistribute {{protocol}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
-{%-      else %} 
+{%-      elif 'table' in bgp_afi[type].redistribute %}
+ redistribute table {{bgp_afi[type].redistribute.table}}
+{%-      else %}
  redistribute {{protocol}}
 {%-      endif %}
 {%-    endfor %}
@@ -206,7 +200,7 @@ router bgp {{ asn }}
  neighbor {{ pr_group }} update-source {{ conf_peer_group.update_source }}
 {%- endif %}
 
-{# START peer-group afi; set protocols bgp xxx peer-group FOO address-family #}
+{#- START peer-group afi; set protocols bgp xxx peer-group FOO address-family #}
 {%- if 'address_family' in conf_peer_group %}
 {%- for afi in conf_peer_group.address_family %}
 {%-   if afi == "ipv4_unicast" %}
@@ -236,10 +230,19 @@ router bgp {{ asn }}
 {%- endif %}
 {#- END single params for peer-group #}
 
-{#- Checks need to be done as-path|med|next-hop #}
 {%- if 'attribute_unchanged' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
+{%-   if ( ('as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) and ('med' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) ) %}
+  neighbor {{ pr_group }} attribute-unchanged as-path med
+{%-   elif ( ('as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) ) %}
+  neighbor {{ pr_group }} attribute-unchanged as-path next-hop
+{%-   elif ( ('med' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) ) %}
+  neighbor {{ pr_group }} attribute-unchanged med next-hop
+{%-   elif 'as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
   neighbor {{ pr_group }} attribute-unchanged as-path
+{%-   elif 'med' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
+  neighbor {{ pr_group }} attribute-unchanged med
+{%-   elif 'next_hop' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
+  neighbor {{ pr_group }} attribute-unchanged next-hop
 {%-   else %}
   neighbor {{ pr_group }} attribute-unchanged as-path next-hop med
 {%-   endif %}
@@ -322,7 +325,6 @@ router bgp {{ asn }}
 {%-   endif %}
 {%- endif %}
 
-{#- Need to check. https://phabricator.vyos.net/T2387#73900 #}
 {%- if 'unsuppress_map' in conf_peer_group.address_family.ipv4_unicast %}
   neighbor {{ pr_group }} unsuppress-map {{conf_peer_group.address_family.ipv4_unicast.unsuppress_map}}
 {%- endif %}
@@ -357,14 +359,24 @@ router bgp {{ asn }}
 {%- endif %}
 {#- END single params for peer-group afi6 #}
 
-{#- Checks need to be done as-path|med|next-hop #}
 {%- if 'attribute_unchanged' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
+{%-   if ( ('as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) and ('med' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) ) %}
+  neighbor {{ pr_group }} attribute-unchanged as-path med
+{%-   elif ( ('as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) ) %}
+  neighbor {{ pr_group }} attribute-unchanged as-path next-hop
+{%-   elif ( ('med' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) ) %}
+  neighbor {{ pr_group }} attribute-unchanged med next-hop
+{%-   elif 'as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
   neighbor {{ pr_group }} attribute-unchanged as-path
+{%-   elif 'med' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
+  neighbor {{ pr_group }} attribute-unchanged med
+{%-   elif 'next_hop' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
+  neighbor {{ pr_group }} attribute-unchanged next-hop
 {%-   else %}
   neighbor {{ pr_group }} attribute-unchanged as-path next-hop med
 {%-   endif %}
 {%- endif %}
+{#- END attribute-unchanged ipv6 #}
 
 {%- if 'capability' in conf_peer_group.address_family.ipv6_unicast %}
 {%-   if 'receive' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
@@ -442,7 +454,6 @@ router bgp {{ asn }}
 {%-   endif %}
 {%- endif %}
 
-{#- Checks need to be done. https://phabricator.vyos.net/T2387#73900 #}
 {%- if 'unsuppress_map' in conf_peer_group.address_family.ipv6_unicast %}
   neighbor {{ pr_group }} unsuppress-map {{conf_peer_group.address_family.ipv6_unicast.unsuppress_map}}
 {%- endif %}
@@ -453,7 +464,7 @@ router bgp {{ asn }}
 
 {%- endfor %}
 {%- endif %}
-{# END peer-group afi; set protocols bgp xxx peer-group FOO address-family #}
+{#- END peer-group afi; set protocols bgp xxx peer-group FOO address-family #}
 
 {%-   endfor %}
 {%- endif %}
@@ -564,17 +575,21 @@ router bgp {{ asn }}
  neighbor {{ peer }} strict-capability-match
 {%- endif %}
 
-{#- Need to check #}
+{#- set protocols bgp xxx neighbor x.x.x.x timers #}
 {%- if 'timers' in conf_peer %}
-{%-   if ( ('connect' and 'holdtime' and 'keepalive') in conf_peer.timers ) %}
+{%-   if ( ('connect' in conf_peer.timers) and ('holdtime' in conf_peer.timers) and ('keepalive' in conf_peer.timers ) ) %}
  neighbor {{ peer }} timers {{conf_peer.timers.keepalive}} {{conf_peer.timers.holdtime}}
- neighbor {{ peer }} timers connect {{conf_peer.timers.connect}} 
+ neighbor {{ peer }} timers connect {{conf_peer.timers.connect}}
+{%-   elif ( ('holdtime' in conf_peer.timers) and ('keepalive' in conf_peer.timers ) ) %}
+ neighbor {{ peer }} timers {{conf_peer.timers.keepalive}} {{conf_peer.timers.holdtime}}
+{%-   elif 'connect' in conf_peer.timers %}
+ neighbor {{ peer }} timers connect {{conf_peer.timers.connect}}
 {%-   endif %}
 {%- endif %}
 
 {%- if 'ttl_security' in conf_peer %}
 {%-   if 'hops' in conf_peer.ttl_security %}
- neighbor {{ peer }} ttl-security hops {{conf_peer.ttl_security.hops}} 
+ neighbor {{ peer }} ttl-security hops {{conf_peer.ttl_security.hops}}
 {%-   endif %}
 {%- endif %}
 
@@ -615,10 +630,19 @@ router bgp {{ asn }}
 {%- endif %}
 {#- END single params for neighbor #}
 
-{#- Checks need to be done as-path|med|next-hop #}
 {%- if 'attribute_unchanged' in conf_peer.address_family.ipv4_unicast %}
-{%-   if 'as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
+{%-   if ( ('as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) and ('med' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) ) %}
+  neighbor {{ peer }} attribute-unchanged as-path med
+{%-   elif ( ('as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) ) %}
+  neighbor {{ peer }} attribute-unchanged as-path next-hop
+{%-   elif ( ('med' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) ) %}
+  neighbor {{ peer }} attribute-unchanged med next-hop
+{%-   elif 'as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
   neighbor {{ peer }} attribute-unchanged as-path
+{%-   elif 'med' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
+  neighbor {{ peer }} attribute-unchanged med
+{%-   elif 'next_hop' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
+  neighbor {{ peer }} attribute-unchanged next-hop
 {%-   else %}
   neighbor {{ peer }} attribute-unchanged as-path next-hop med
 {%-   endif %}
@@ -701,7 +725,6 @@ router bgp {{ asn }}
 {%-   endif %}
 {%- endif %}
 
-{#- Checks need to be done. https://phabricator.vyos.net/T2387#73900 #}
 {%- if 'unsuppress_map' in conf_peer.address_family.ipv4_unicast %}
   neighbor {{ peer }} unsuppress-map {{conf_peer.address_family.ipv4_unicast.unsuppress_map}}
 {%- endif %}
@@ -740,10 +763,19 @@ router bgp {{ asn }}
 {%- endif %}
 {#- END single params for neighbor #}
 
-{#- Checks need to be done as-path|med|next-hop #}
 {%- if 'attribute_unchanged' in conf_peer.address_family.ipv6_unicast %}
-{%-   if 'as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
+{%-   if ( ('as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) and ('med' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) ) %}
+  neighbor {{ peer }} attribute-unchanged as-path med
+{%-   elif ( ('as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) ) %}
+  neighbor {{ peer }} attribute-unchanged as-path next-hop
+{%-   elif ( ('med' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) ) %}
+  neighbor {{ peer }} attribute-unchanged med next-hop
+{%-   elif 'as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
   neighbor {{ peer }} attribute-unchanged as-path
+{%-   elif 'med' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
+  neighbor {{ peer }} attribute-unchanged med
+{%-   elif 'next_hop' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
+  neighbor {{ peer }} attribute-unchanged next-hop
 {%-   else %}
   neighbor {{ peer }} attribute-unchanged as-path next-hop med
 {%-   endif %}
@@ -826,7 +858,6 @@ router bgp {{ asn }}
 {%-   endif %}
 {%- endif %}
 
-{#- Checks need to be done. https://phabricator.vyos.net/T2387#73900 #}
 {%- if 'unsuppress_map' in conf_peer.address_family.ipv6_unicast %}
   neighbor {{ peer }} unsuppress-map {{conf_peer.address_family.ipv6_unicast.unsuppress_map}}
 {%- endif %}
@@ -863,7 +894,7 @@ router bgp {{ asn }}
 {%-     endif %}
 {%-   endif %}
 {%-   if 'med' in bgp_params.bestpath %}
-{%-     if ( ('confed' and 'missing_as_worst') in bgp_params.bestpath.med ) %}
+{%-     if ( ('confed' in bgp_params.bestpath.med) and ('missing_as_worst' in bgp_params.bestpath.med ) ) %}
  bgp bestpath med confed missing-as-worst
 {%-     elif 'confed' in bgp_params.bestpath.med %}
  bgp bestpath med confed
@@ -886,9 +917,9 @@ router bgp {{ asn }}
 {%-   endif %}
 {%- endif %}
 
-{#- Doesn't work in current FRR configuration (bgp dampening 16 751 2001 61) #}
+{#- Doesn't work in current FRR configuration; vtysh (bgp dampening 16 751 2001 61) #}
 {%- if 'dampening' in bgp_params %}
-{%-   if ( ('half_life' and 'max_suppress_time' and 're_use' and 'start_suppress_time') in bgp_params.dampening ) %}
+{%-   if ( ('half_life' in bgp_params.dampening) and ('max_suppress_time' in bgp_params.dampening) and ('re_use' in bgp_params.dampening) and ('start_suppress_time' in bgp_params.dampening ) ) %}
  bgp dampening {{ bgp_params.dampening.half_life }} {{ bgp_params.dampening.re_use }} {{ bgp_params.dampening.start_suppress_time }} {{ bgp_params.dampening.max_suppress_time }}
 {%-   endif %}
 {%- endif %}
@@ -909,7 +940,7 @@ router bgp {{ asn }}
 
 {%- if 'distance' in bgp_params %}
 {%-   if 'global' in bgp_params.distance %}
-{%-     if ( ('external' and 'internal' and 'local') in bgp_params.distance.global ) %}
+{%-     if ( ('external' in bgp_params.distance.global) and ('internal' in bgp_params.distance.global) and ('local' in bgp_params.distance.global ) ) %}
  !
  address-family ipv4 unicast
   distance bgp {{ bgp_params.distance.global.external }} {{ bgp_params.distance.global.internal }} {{ bgp_params.distance.global.local }}
@@ -953,7 +984,7 @@ router bgp {{ asn }}
 {#- END parameters; set protocols bgp xxx parameters #}
 
 {%- if 'timers' in conf_bgp[asn] %}
-{%-   if ( ('holdtime' and 'keepalive') in conf_bgp[asn].timers ) %}
+{%-   if ( ('holdtime' in conf_bgp[asn].timers) and ('keepalive' in conf_bgp[asn].timers ) ) %}
  timers bgp {{conf_bgp[asn].timers.keepalive}} {{conf_bgp[asn].timers.holdtime}}
 {%-   endif %}
 {%- endif %}
