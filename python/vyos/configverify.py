@@ -60,19 +60,19 @@ def verify_mtu_ipv6(config):
             error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
                         f'thus the minimum MTU requirement is {min_mtu}!'
 
-            if not dict_search('ipv6.address.no_default_link_local', config):
-                raise ConfigError('link-local ' + error_msg)
-
             for address in (dict_search('address', config) or []):
                 if address in ['dhcpv6'] or is_ipv6(address):
                     raise ConfigError(error_msg)
 
-            if dict_search('ipv6.address.autoconf', config):
+            tmp = dict_search('ipv6.address', config)
+            if tmp and 'no_default_link_local' not in tmp:
+                raise ConfigError('link-local ' + error_msg)
+
+            if tmp and 'autoconf' in tmp:
                 raise ConfigError(error_msg)
 
-            if dict_search('ipv6.address.eui64', config):
+            if tmp and 'eui64' in tmp:
                 raise ConfigError(error_msg)
-
 
 def verify_vrf(config):
     """

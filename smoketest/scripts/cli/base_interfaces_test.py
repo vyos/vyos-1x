@@ -162,15 +162,44 @@ class BasicInterfaceTest:
             """ Testcase if MTU can be changed on interface """
             if not self._test_mtu:
                 return None
+
             for intf in self._interfaces:
                 base = self._base_path + [intf]
                 self.session.set(base + ['mtu', self._mtu])
                 for option in self._options.get(intf, []):
                     self.session.set(base + option.split())
 
+            # commit interface changes
             self.session.commit()
+
+            # verify changed MTU
             for intf in self._interfaces:
                 self._mtu_test(intf)
+
+        def test_change_mtu_1200(self):
+            """ Testcase if MTU can be changed to 1200 on non IPv6 enabled interfaces """
+            if not self._test_mtu:
+                return None
+
+            old_mtu = self._mtu
+            self._mtu = '1200'
+
+            for intf in self._interfaces:
+                base = self._base_path + [intf]
+                self.session.set(base + ['mtu', self._mtu])
+                self.session.set(base + ['ipv6', 'address', 'no-default-link-local'])
+
+                for option in self._options.get(intf, []):
+                    self.session.set(base + option.split())
+
+            # commit interface changes
+            self.session.commit()
+
+            # verify changed MTU
+            for intf in self._interfaces:
+                self._mtu_test(intf)
+
+            self._mtu = old_mtu
 
         def test_8021q_vlan(self):
             """ Testcase for 802.1q VLAN interfaces """
