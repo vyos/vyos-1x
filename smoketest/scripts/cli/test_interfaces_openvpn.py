@@ -54,12 +54,12 @@ def get_vrf(interface):
 class TestInterfacesOpenVPN(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', 'dum1328', 'address', '192.0.2.1/24'])
+        self.session.set(['interfaces', 'dummy', 'dum1301', 'address', '192.0.2.1/32'])
         self.session.set(['vrf', 'name', vrf_name, 'table', '12345'])
 
     def tearDown(self):
         self.session.delete(base_path)
-        self.session.delete(['interfaces', 'dummy', 'dum1328'])
+        self.session.delete(['interfaces', 'dummy', 'dum1301'])
         self.session.delete(['vrf', 'name', vrf_name])
         self.session.commit()
         del self.session
@@ -255,6 +255,48 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
+    def test_site2site_verify(self):
+        """ Create one OpenVPN site2site interface and check required verify() stages """
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.session.set(path + ['mode', 'site-to-site'])
+
+        # check validate() - encryption ncp-ciphers cannot be specified in site-to-site mode
+        self.session.set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['encryption'])
+
+        # check validate() - must specify "local-address" or add interface to bridge
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['local-address', '10.0.0.1'])
+
+        # check validate() - cannot specify more than 1 IPv4 local-address
+        self.session.set(path + ['local-address', '10.0.0.2'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['local-address', '10.0.0.2'])
+
+        # check validate() - IPv4 "local-address" requires IPv4 "remote-address"
+        # or IPv4 "local-address subnet"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['remote-address', '192.168.0.1'])
+
+        # check validate() - Cannot specify more than 1 IPv4 "remote-address"
+        self.session.set(path + ['remote-address', '192.168.0.2'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['remote-address', '192.168.0.2'])
+
+        # check validate() - Must specify one of "shared-secret-key-file" and "tls"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['shared-secret-key-file', s2s_key])
+
+        self.session.commit()
 
     def test_site2site_interfaces(self):
         """ Create two OpenVPN site-to-site interfaces """
