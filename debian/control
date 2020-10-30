@@ -65,6 +65,7 @@ Depends:
   ntpdate,
   ocserv,
   openssh-server,
+  openssl,
   openvpn,
   openvpn-auth-ldap,
   openvpn-auth-radius,
