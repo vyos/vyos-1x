@@ -20,12 +20,14 @@ import unittest
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import read_file
+from vyos.util import cmd
 from vyos.util import process_named_running
+from vyos.util import read_file
 
 PROCESS_NAME = 'sshd'
 SSHD_CONF = '/run/ssh/sshd_config'
 base_path = ['service', 'ssh']
+vrf = 'ssh-test'
 
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
@@ -44,6 +46,8 @@ class TestServiceSSH(unittest.TestCase):
         self.session.delete(base_path)
         # restore "plain" SSH access
         self.session.set(base_path)
+        # delete VRF
+        self.session.delete(['vrf', 'name', vrf])
 
         self.session.commit()
         del self.session
@@ -128,6 +132,32 @@ class TestServiceSSH(unittest.TestCase):
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_ssh_vrf(self):
+        """ Check if SSH service can be bound to given VRF """
+        port = '22'
+        self.session.set(base_path + ['port', port])
+        self.session.set(base_path + ['vrf', vrf])
+
+        # VRF does yet not exist - an error must be thrown
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        self.session.set(['vrf', 'name', vrf, 'table', '1001'])
+
+        # commit changes
+        self.session.commit()
+
+        # Check configured port
+        tmp = get_config_value('Port')
+        self.assertIn(port, tmp)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # Check for process in VRF
+        tmp = cmd(f'ip vrf pids {vrf}')
+        self.assertIn(PROCESS_NAME, tmp)
 
 if __name__ == '__main__':
     unittest.main()
