@@ -21,10 +21,11 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos import ConfigError
+from vyos.configverify import verify_vrf
 from vyos.util import call
 from vyos.template import render
 from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
@@ -54,9 +55,7 @@ def verify(ssh):
     if not ssh:
         return None
 
-    if 'vrf' in ssh.keys() and ssh['vrf'] not in interfaces():
-        raise ConfigError('VRF "{vrf}" does not exist'.format(**ssh))
-
+    verify_vrf(ssh)
     return None
 
 def generate(ssh):
