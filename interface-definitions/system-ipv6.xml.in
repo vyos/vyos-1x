@@ -22,7 +22,7 @@
           </leafNode>
           <node name="multipath">
             <properties>
-              <help>IPv4 multipath settings</help>
+              <help>IPv6 multipath settings</help>
             </properties>
             <children>
               <leafNode name="layer4-hashing">
