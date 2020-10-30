@@ -64,6 +64,71 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.session.commit()
         del self.session
 
+    def test_client_verify(self):
+        """ Create OpenVPN client interface and test verify() steps """
+        interface = 'vtun2000'
+        path = base_path + [interface]
+        self.session.set(path + ['mode', 'client'])
+
+        # check validate() - cannot specify both "encryption disable-ncp" and
+        # "encryption ncp-ciphers" at the same time
+        self.session.set(path + ['encryption', 'disable-ncp'])
+        self.session.set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['encryption', 'ncp-ciphers'])
+
+        # check validate() - cannot specify local-port in client mode
+        self.session.set(path + ['local-port', '5000'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['local-port'])
+
+        # check validate() - cannot specify local-host in client mode
+        self.session.set(path + ['local-host', '127.0.0.1'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['local-host'])
+
+        # check validate() - cannot specify protocol tcp-passive in client mode
+        self.session.set(path + ['protocol', 'tcp-passive'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['protocol'])
+
+        # check validate() - remote-host must be set in client mode
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['remote-host', 'openvpn.vyos.net'])
+
+        # check validate() - cannot specify "tls dh-file" in client mode
+        self.session.set(path + ['tls', 'dh-file', dh_pem])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['tls'])
+
+        # check validate() - must specify one of "shared-secret-key-file" and "tls"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['shared-secret-key-file', s2s_key])
+
+        # check validate() - must specify one of "shared-secret-key-file" and "tls"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['shared-secret-key-file', s2s_key])
+
+        self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
+        self.session.set(path + ['tls', 'cert-file', ssl_cert])
+        self.session.set(path + ['tls', 'key-file', ssl_key])
+
+        # client commit must pass
+        self.session.commit()
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertIn(interface, interfaces())
+
+
     def test_client_interfaces(self):
         """ Create OpenVPN client interfaces connecting to different
             server IP addresses. Validate configuration afterwards. """
