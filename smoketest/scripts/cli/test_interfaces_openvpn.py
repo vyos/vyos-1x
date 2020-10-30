@@ -35,6 +35,7 @@ ssl_cert = '/config/auth/ovpn_test_server.pem'
 ssl_key  = '/config/auth/ovpn_test_server.key'
 dh_pem   = '/config/auth/ovpn_test_dh.pem'
 s2s_key  = '/config/auth/ovpn_test_site2site.key'
+auth_key = '/config/auth/ovpn_test_tls_auth.key'
 
 remote_port = '1194'
 protocol = 'udp'
@@ -254,9 +255,46 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.commit()
         self.session.set(path + ['tls', 'key-file', ssl_key])
 
+        # check validate() - cannot specify "tls role" in client-server mode'
+        self.session.set(path + ['tls', 'role', 'active'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        # check validate() - cannot specify "tls role" in client-server mode'
+        self.session.set(path + ['tls', 'auth-file', auth_key])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        # check validate() - cannot specify "tcp-passive" when "tls role" is "active"
+        self.session.set(path + ['protocol', 'tcp-passive'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['protocol'])
+
+        # check validate() - cannot specify "tls dh-file" when "tls role" is "active"
+        self.session.set(path + ['tls', 'dh-file', dh_pem])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['tls', 'dh-file'])
+
+        # Now test the other path with tls role passive
+        self.session.set(path + ['tls', 'role', 'passive'])
+        # check validate() - cannot specify "tcp-active" when "tls role" is "passive"
+        self.session.set(path + ['protocol', 'tcp-active'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['protocol'])
+
+
+        # check validate() - must specify "tls dh-file" when "tls role" is "passive"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['tls', 'dh-file', dh_pem])
 
         self.session.commit()
 
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertIn(interface, interfaces())
 
     def test_server_interfaces(self):
         """ Create OpenVPN server interfaces using different client subnets.
@@ -427,32 +465,33 @@ if __name__ == '__main__':
     subject = '/C=DE/ST=BY/O=VyOS/localityName=Cloud/commonName=vyos/' \
               'organizationalUnitName=VyOS/emailAddress=maintainers@vyos.io/'
 
-    if (not os.path.isfile(ssl_key) and not os.path.isfile(ssl_cert) and
-        not os.path.isfile(ca_cert) and not os.path.isfile(dh_pem) and
-        not os.path.isfile(s2s_key)):
-
+    if not (os.path.isfile(ssl_key) and os.path.isfile(ssl_cert)):
         # Generate mandatory SSL certificate
         tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
               f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
-        out = cmd(tmp)
-        print(out)
+        print(cmd(tmp))
 
+    if not os.path.isfile(ca_cert):
         # Generate "CA"
         tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} -subj {subject}'
-        out = cmd(tmp)
-        print(out)
+        print(cmd(tmp))
 
+    if not os.path.isfile(dh_pem):
         # Generate "DH" key
         tmp = f'openssl dhparam -out {dh_pem} 2048'
-        out = cmd(tmp)
-        print(out)
+        print(cmd(tmp))
 
+    if not os.path.isfile(s2s_key):
         # Generate site-2-site key
         tmp = f'openvpn --genkey --secret {s2s_key}'
-        out = cmd(tmp)
-        print(out)
+        print(cmd(tmp))
 
-        for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key]:
-            cmd(f'sudo chown openvpn:openvpn {file}')
+    if not os.path.isfile(auth_key):
+        # Generate TLS auth key
+        tmp = f'openvpn --genkey --secret {auth_key}'
+        print(cmd(tmp))
+
+    for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
+        cmd(f'sudo chown openvpn:openvpn {file}')
 
     unittest.main()
