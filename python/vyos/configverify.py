@@ -259,3 +259,27 @@ def verify_accel_ppp_base_service(config):
                 if 'delegation_prefix' not in ipv6_pool['delegate'][delegate]:
                     raise ConfigError('delegation-prefix length required!')
 
+def verify_diffie_hellman_length(file, min_keysize):
+    """ Verify Diffie-Hellamn keypair length given via file. It must be greater
+    then or equal to min_keysize """
+
+    try:
+        keysize = str(min_keysize)
+    except:
+        return False
+
+    import os
+    import re
+    from vyos.util import cmd
+
+    if os.path.exists(file):
+
+        out = cmd(f'openssl dhparam -inform PEM -in {file} -text')
+        prog = re.compile('\d+\s+bit')
+        if prog.search(out):
+            bits = prog.search(out)[0].split()[0]
+            if int(min_keysize) >= int(bits):
+                return True
+
+    return False
+

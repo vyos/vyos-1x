@@ -38,6 +38,7 @@ from vyos.validate import is_addr_assigned
 from vyos.validate import is_ipv6
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_diffie_hellman_length
 
 from vyos import ConfigError
 from vyos import airbag
@@ -229,7 +230,6 @@ def verify(openvpn):
         if 'remote_host' in openvpn:
             raise ConfigError('Cannot specify "remote-host" in server mode')
 
-        tmp = dict_search('tls.dh_file', openvpn)
         if 'tls' in openvpn:
             if 'dh_file' not in openvpn['tls']:
                 if 'key_file' in openvpn['tls'] and not checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls']['key_file']):
@@ -414,6 +414,9 @@ def verify(openvpn):
         file = dict_search('tls.dh_file', openvpn)
         if file and not checkCertHeader('-----BEGIN DH PARAMETERS-----', file):
             raise ConfigError(f'Specified dh-file "{file}" is not valid')
+
+        if file and not verify_diffie_hellman_length(file, 2048):
+            raise ConfigError(f'Minimum DH key-size is 2048 bits')
 
         tmp = dict_search('tls.role', openvpn)
         if tmp:
