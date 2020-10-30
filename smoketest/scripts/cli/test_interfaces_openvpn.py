@@ -187,6 +187,76 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
+    def test_server_verify(self):
+        """ Create one OpenVPN server interface and check required verify() stages """
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        # check validate() - must speciy operating mode
+        self.session.set(path)
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['mode', 'server'])
+
+        # check validate() - cannot specify protocol tcp-active in server mode
+        self.session.set(path + ['protocol', 'tcp-active'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['protocol'])
+
+        # check validate() - cannot specify local-port in client mode
+        self.session.set(path + ['remote-port', '5000'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['remote-port'])
+
+        # check validate() - cannot specify local-host in client mode
+        self.session.set(path + ['remote-host', '127.0.0.1'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['remote-host'])
+
+        # check validate() - must specify "tls dh-file" when not using EC keys
+        # in server mode
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['tls', 'dh-file', dh_pem])
+
+        # check validate() - must specify "server subnet" or add interface to
+        # bridge in server mode
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        # check validate() - server client-ip-pool is too large
+        # [100.64.0.4 -> 100.127.255.251 = 4194295], maximum is 65536 addresses.
+        self.session.set(path + ['server', 'subnet', '100.64.0.0/10'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        # check validate() - cannot specify more than 1 IPv4 and 1 IPv6 server subnet
+        self.session.set(path + ['server', 'subnet', '100.64.0.0/20'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['server', 'subnet', '100.64.0.0/10'])
+
+        # check validate() - must specify "tls ca-cert-file"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
+
+        # check validate() - must specify "tls cert-file"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['tls', 'cert-file', ssl_cert])
+
+        # check validate() - must specify "tls key-file"
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['tls', 'key-file', ssl_key])
+
+
+        self.session.commit()
+
 
     def test_server_interfaces(self):
         """ Create OpenVPN server interfaces using different client subnets.
