@@ -37,9 +37,9 @@ secret {{ shared_secret_key_file }}
 {% if persistent_tunnel is defined %}
 persist-tun
 {% endif %}
-{% if redirect_gateway is defined and redirect_gateway.local is defined %}
+{% if replace_default_route is defined and replace_default_route.local is defined %}
 push "redirect-gateway local def1"
-{% elif redirect_gateway is defined %}
+{% elif replace_default_route is defined %}
 push "redirect-gateway def1"
 {% endif %}
 {% if use_lzo_compression is defined %}
