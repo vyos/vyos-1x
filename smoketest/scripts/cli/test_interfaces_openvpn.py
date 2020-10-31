@@ -351,7 +351,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             # IP pool configuration
             netmask = IPv4Network(subnet).netmask
             network = IPv4Network(subnet).network_address
-            self.assertIn(f'server {network} {netmask} nopool', config)
+            self.assertIn(f'server {network} {netmask}', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
