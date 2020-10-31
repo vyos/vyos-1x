@@ -315,6 +315,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['mode', 'server'])
             self.session.set(path + ['local-port', port])
             self.session.set(path + ['server', 'subnet', subnet])
+            self.session.set(path + ['replace-default-route'])
             self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
             self.session.set(path + ['tls', 'key-file', ssl_key])
@@ -339,6 +340,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'cipher aes-192-cbc', config)
             self.assertIn(f'topology net30', config)
             self.assertIn(f'lport {port}', config)
+            self.assertIn(f'push "redirect-gateway def1"', config)
 
             # TLS options
             self.assertIn(f'ca {ca_cert}', config)
