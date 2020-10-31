@@ -60,7 +60,7 @@ mode server
 tls-server
 {%   if server is defined and server is not none %}
 {%     if server.subnet_v4 is defined and server.subnet_v4 is not none %}
-server {{ server.subnet_v4[0] | address_from_cidr }} {{ server.subnet_v4[0] | netmask_from_cidr }} nopool
+server {{ server.subnet_v4[0] | address_from_cidr }} {{ server.subnet_v4[0] | netmask_from_cidr }}
 {%     endif %}
 {%     if server.topology is defined and server.topology == 'point-to-point' %}
 topology p2p
