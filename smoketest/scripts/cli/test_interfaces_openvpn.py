@@ -45,7 +45,8 @@ protocol = 'udp'
 path = []
 interface = ''
 remote_host = ''
-vrf_name = 'mgmt'
+vrf_name = 'orange'
+dummy_if = 'dum1301'
 
 def get_vrf(interface):
     for upper in glob(f'/sys/class/net/{interface}/upper*'):
@@ -58,18 +59,17 @@ def get_vrf(interface):
 class TestInterfacesOpenVPN(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', 'dum1301', 'address', '192.0.2.1/32'])
+        self.session.set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
         self.session.set(['vrf', 'name', vrf_name, 'table', '12345'])
 
     def tearDown(self):
         self.session.delete(base_path)
-        self.session.delete(['interfaces', 'dummy', 'dum1301'])
-        self.session.delete(['vrf', 'name', vrf_name])
+        self.session.delete(['interfaces', 'dummy', dummy_if])
+        self.session.delete(['vrf'])
         self.session.commit()
         del self.session
 
     def test_client_verify(self):
-        return True
         """
         Create OpenVPN client interface and test verify() steps.
         """
@@ -137,7 +137,6 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
 
     def test_client_interfaces(self):
-        return True
         """
         Create OpenVPN client interfaces connecting to different
         server IP addresses. Validate configuration afterwards.
@@ -197,7 +196,6 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertNotIn(interface, interfaces())
 
     def test_server_verify(self):
-        return True
         """
         Create one OpenVPN server interface and check required verify() stages
         """
@@ -456,7 +454,6 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertNotIn(interface, interfaces())
 
     def test_site2site_verify(self):
-        return True
         """
         Create one OpenVPN site2site interface and check required verify() stages
         """
@@ -516,7 +513,6 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.session.commit()
 
     def test_site2site_interfaces(self):
-        return True
         """
         Create two OpenVPN site-to-site interfaces
         """
