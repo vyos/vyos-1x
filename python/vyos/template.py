@@ -16,7 +16,6 @@
 import functools
 import os
 
-from ipaddress import ip_network
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from vyos.defaults import directories
@@ -131,6 +130,7 @@ def vyos_address_from_cidr(text):
     Example:
     192.0.2.0/24 -> 192.0.2.0, 2001:db8::/48 -> 2001:db8::
     """
+    from ipaddress import ip_network
     return str(ip_network(text).network_address)
 
 
@@ -140,4 +140,17 @@ def vyos_netmask_from_cidr(text):
     Example:
     192.0.2.0/24 -> 255.255.255.0, 2001:db8::/48 -> ffff:ffff:ffff::
     """
+    from ipaddress import ip_network
     return str(ip_network(text).netmask)
+
+@register_filter("ipv4")
+def vyos_ipv4(text):
+    """ Filter IP address, return True on IPv4 address, False otherwise """
+    from ipaddress import ip_interface
+    return ip_interface(text).version == 4
+
+@register_filter("ipv6")
+def vyos_ipv6(text):
+    """ Filter IP address, return True on IPv6 address, False otherwise """
+    from ipaddress import ip_interface
+    return ip_interface(text).version == 6

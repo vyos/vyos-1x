@@ -382,6 +382,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
         self.session.set(path + ['local-address', '10.0.0.1'])
+        self.session.set(path + ['local-address', '2001:db8:1::1'])
 
         # check validate() - cannot specify more than 1 IPv4 local-address
         self.session.set(path + ['local-address', '10.0.0.2'])
@@ -389,17 +390,30 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.commit()
         self.session.delete(path + ['local-address', '10.0.0.2'])
 
+        # check validate() - cannot specify more than 1 IPv6 local-address
+        self.session.set(path + ['local-address', '2001:db8:1::2'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['local-address', '2001:db8:1::2'])
+
         # check validate() - IPv4 "local-address" requires IPv4 "remote-address"
         # or IPv4 "local-address subnet"
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
         self.session.set(path + ['remote-address', '192.168.0.1'])
+        self.session.set(path + ['remote-address', '2001:db8:ffff::1'])
 
         # check validate() - Cannot specify more than 1 IPv4 "remote-address"
         self.session.set(path + ['remote-address', '192.168.0.2'])
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
         self.session.delete(path + ['remote-address', '192.168.0.2'])
+
+        # check validate() - Cannot specify more than 1 IPv6 "remote-address"
+        self.session.set(path + ['remote-address', '2001:db8:ffff::2'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(path + ['remote-address', '2001:db8:ffff::2'])
 
         # check validate() - Must specify one of "shared-secret-key-file" and "tls"
         with self.assertRaises(ConfigSessionError):

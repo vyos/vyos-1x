@@ -59,8 +59,10 @@ nobind
 mode server
 tls-server
 {%   if server is defined and server is not none %}
-{%     if server.subnet_v4 is defined and server.subnet_v4 is not none %}
-server {{ server.subnet_v4[0] | address_from_cidr }} {{ server.subnet_v4[0] | netmask_from_cidr }}
+{%     if server.subnet is defined and server.subnet is not none %}
+{%       for subnet in server.subnet if subnet | ipv4 %}
+server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }}
+{%       endfor %}
 {%     endif %}
 {%     if server.topology is defined and server.topology == 'point-to-point' %}
 topology p2p
@@ -118,14 +120,20 @@ push "dhcp-option DNS6 {{ ns6 }}"
 #
 ping {{ keep_alive.interval }}
 ping-restart {{ keep_alive.failure_count }}
-{%   if local_address_v4_netmask is defined and local_address_v4_netmask is not none %}
-ifconfig {{ local_address_v4[0] }} {{ local_address_v4_netmask[0] }}
-{%   elif remote_address_v4 is defined and remote_address_v4 is not none %}
-ifconfig {{ local_address_v4[0] }} {{ remote_address_v4[0] }}
-{%   endif %}
-{%   if local_address_v6 is defined and remote_address_v6 is defined and local_address_v6 is not none and remote_address_v6 is not none %}
-ifconfig-ipv6 {{ local_address_v6[0] }} {{ remote_address_v6[0] }}
-{%   endif %}
+
+{%   for laddr, laddr_conf in local_address.items() if laddr | ipv4 %}
+{%     if laddr_conf is defined and laddr_conf.subnet_mask is defined and laddr_conf.subnet_mask is not none %}
+ifconfig {{ laddr }} {{ laddr_conf.subnet_mask }}
+{%     else %}
+{%       for raddr in remote_address %}
+{%         if raddr | ipv4 %}
+ifconfig {{ laddr }} {{ raddr }}
+{%         else %}
+ifconfig-ipv6 {{ laddr }} {{ raddr }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
 {% endif %}
 
 {% if tls is defined and tls is not none %}
