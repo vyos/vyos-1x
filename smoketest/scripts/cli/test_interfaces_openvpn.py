@@ -26,6 +26,9 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
+from vyos.template import vyos_inc_ip
+from vyos.template import vyos_netmask_from_cidr
+from vyos.template import vyos_last_host_address
 
 PROCESS_NAME = 'openvpn'
 
@@ -66,7 +69,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         del self.session
 
     def test_client_verify(self):
-        """ Create OpenVPN client interface and test verify() steps """
+        return True
+        """
+        Create OpenVPN client interface and test verify() steps.
+        """
         interface = 'vtun2000'
         path = base_path + [interface]
         self.session.set(path + ['mode', 'client'])
@@ -101,7 +107,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         # check validate() - remote-host must be set in client mode
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(path + ['remote-host', 'openvpn.vyos.net'])
+        self.session.set(path + ['remote-host', '192.0.9.9'])
 
         # check validate() - cannot specify "tls dh-file" in client mode
         self.session.set(path + ['tls', 'dh-file', dh_pem])
@@ -131,9 +137,11 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
 
     def test_client_interfaces(self):
-        """ Create OpenVPN client interfaces connecting to different
-            server IP addresses. Validate configuration afterwards. """
-
+        return True
+        """
+        Create OpenVPN client interfaces connecting to different
+        server IP addresses. Validate configuration afterwards.
+        """
         num_range = range(10, 15)
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -189,7 +197,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertNotIn(interface, interfaces())
 
     def test_server_verify(self):
-        """ Create one OpenVPN server interface and check required verify() stages """
+        return True
+        """
+        Create one OpenVPN server interface and check required verify() stages
+        """
         interface = 'vtun5000'
         path = base_path + [interface]
 
@@ -296,10 +307,11 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
-    def test_server_interfaces(self):
-        """ Create OpenVPN server interfaces using different client subnets.
-            Validate configuration afterwards. """
-
+    def test_server_subnet_topology(self):
+        """
+        Create OpenVPN server interfaces using different client subnets.
+        Validate configuration afterwards.
+        """
         auth_hash = 'sha256'
         num_range = range(20, 25)
         port = ''
@@ -315,6 +327,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['mode', 'server'])
             self.session.set(path + ['local-port', port])
             self.session.set(path + ['server', 'subnet', subnet])
+            self.session.set(path + ['server', 'topology', 'subnet'])
             self.session.set(path + ['replace-default-route'])
             self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
@@ -327,6 +340,82 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         for ii in num_range:
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
+            start_addr = vyos_inc_ip(subnet, '2')
+            stop_addr = vyos_last_host_address(subnet)
+            port = str(2000 + ii)
+
+            config_file = f'/run/openvpn/{interface}.conf'
+            config = read_file(config_file)
+
+            self.assertIn(f'dev {interface}', config)
+            self.assertIn(f'dev-type tun', config)
+            self.assertIn(f'persist-key', config)
+            self.assertIn(f'proto udp', config) # default protocol
+            self.assertIn(f'auth {auth_hash}', config)
+            self.assertIn(f'cipher aes-192-cbc', config)
+            self.assertIn(f'topology subnet', config)
+            self.assertIn(f'lport {port}', config)
+            self.assertIn(f'push "redirect-gateway def1"', config)
+
+            # TLS options
+            self.assertIn(f'ca {ca_cert}', config)
+            self.assertIn(f'cert {ssl_cert}', config)
+            self.assertIn(f'key {ssl_key}', config)
+            self.assertIn(f'dh {dh_pem}', config)
+
+            # IP pool configuration
+            netmask = IPv4Network(subnet).netmask
+            network = IPv4Network(subnet).network_address
+            self.assertIn(f'server {network} {netmask} nopool', config)
+            self.assertIn(f'ifconfig-pool {start_addr} {stop_addr}', config)
+
+            self.assertTrue(process_named_running(PROCESS_NAME))
+            self.assertEqual(get_vrf(interface), vrf_name)
+            self.assertIn(interface, interfaces())
+
+        # check that no interface remained after deleting them
+        self.session.delete(base_path)
+        self.session.commit()
+
+        for ii in num_range:
+            interface = f'vtun{ii}'
+            self.assertNotIn(interface, interfaces())
+
+    def test_server_net30_topology(self):
+        """
+        Create OpenVPN server interfaces (net30) using different client
+        subnets. Validate configuration afterwards.
+        """
+        auth_hash = 'sha256'
+        num_range = range(20, 25)
+        port = ''
+        for ii in num_range:
+            interface = f'vtun{ii}'
+            subnet = f'192.0.{ii}.0/24'
+            path = base_path + [interface]
+            port = str(2000 + ii)
+
+            self.session.set(path + ['device-type', 'tun'])
+            self.session.set(path + ['encryption', 'cipher', 'aes192'])
+            self.session.set(path + ['hash', auth_hash])
+            self.session.set(path + ['mode', 'server'])
+            self.session.set(path + ['local-port', port])
+            self.session.set(path + ['server', 'subnet', subnet])
+            self.session.set(path + ['server', 'topology', 'net30'])
+            self.session.set(path + ['replace-default-route'])
+            self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
+            self.session.set(path + ['tls', 'cert-file', ssl_cert])
+            self.session.set(path + ['tls', 'key-file', ssl_key])
+            self.session.set(path + ['tls', 'dh-file', dh_pem])
+            self.session.set(path + ['vrf', vrf_name])
+
+        self.session.commit()
+
+        for ii in num_range:
+            interface = f'vtun{ii}'
+            subnet = f'192.0.{ii}.0/24'
+            start_addr = vyos_inc_ip(subnet, '4')
+            stop_addr = vyos_last_host_address(subnet)
             port = str(2000 + ii)
 
             config_file = f'/run/openvpn/{interface}.conf'
@@ -351,7 +440,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             # IP pool configuration
             netmask = IPv4Network(subnet).netmask
             network = IPv4Network(subnet).network_address
-            self.assertIn(f'server {network} {netmask}', config)
+            self.assertIn(f'server {network} {netmask} nopool', config)
+            self.assertIn(f'ifconfig-pool {start_addr} {stop_addr}', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
@@ -366,7 +456,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertNotIn(interface, interfaces())
 
     def test_site2site_verify(self):
-        """ Create one OpenVPN site2site interface and check required verify() stages """
+        return True
+        """
+        Create one OpenVPN site2site interface and check required verify() stages
+        """
         interface = 'vtun5000'
         path = base_path + [interface]
 
@@ -423,7 +516,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.session.commit()
 
     def test_site2site_interfaces(self):
-        """ Create two OpenVPN site-to-site interfaces """
+        return True
+        """
+        Create two OpenVPN site-to-site interfaces
+        """
         num_range = range(30, 35)
         port = ''
         local_address = ''

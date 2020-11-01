@@ -61,7 +61,16 @@ tls-server
 {%   if server is defined and server is not none %}
 {%     if server.subnet is defined and server.subnet is not none %}
 {%       for subnet in server.subnet if subnet | ipv4 %}
-server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }}
+server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} nopool
+{# OpenVPN assigns the first IP address to its local interface so the pool used #}
+{# in net30 topology - where each client receives a /30 must start from the second subnet #}
+{%     if server.topology is defined and server.topology == 'net30' %}
+ifconfig-pool {{ subnet | inc_ip('4') }} {{ subnet | last_host_address }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
+{%     else %}
+{# OpenVPN assigns the first IP address to its local interface so the pool must #}
+{# start from the second address and end on the last address #}
+ifconfig-pool {{ subnet | first_host_address | inc_ip('1') }} {{ subnet | last_host_address }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
+{%     endif %}
 {%       endfor %}
 {%     endif %}
 {%     if server.topology is defined and server.topology == 'point-to-point' %}

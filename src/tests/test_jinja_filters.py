@@ -21,6 +21,9 @@ from vyos.template import vyos_address_from_cidr
 from vyos.template import vyos_netmask_from_cidr
 from vyos.template import vyos_ipv4
 from vyos.template import vyos_ipv6
+from vyos.template import vyos_first_host_address
+from vyos.template import vyos_last_host_address
+from vyos.template import vyos_inc_ip
 
 class TestTeamplteHelpers(TestCase):
     def setUp(self):
@@ -55,3 +58,12 @@ class TestTeamplteHelpers(TestCase):
         self.assertTrue(vyos_ipv6('2001:db8::/32'))
         self.assertTrue(vyos_ipv6('2001:db8::/64'))
 
+    def test_helpers_first_host_address(self):
+        self.assertEqual(vyos_first_host_address('10.0.0.0/24'), '10.0.0.1')
+        self.assertEqual(vyos_first_host_address('10.0.0.128/25'), '10.0.0.129')
+        self.assertEqual(vyos_first_host_address('10.0.0.200/29'), '10.0.0.201')
+
+        self.assertEqual(vyos_first_host_address('2001:db8::/64'), '2001:db8::')
+        self.assertEqual(vyos_first_host_address('2001:db8::/112'), '2001:db8::')
+        self.assertEqual(vyos_first_host_address('2001:db8::10/112'), '2001:db8::10')
+        self.assertEqual(vyos_first_host_address('2001:db8::100/112'), '2001:db8::100')

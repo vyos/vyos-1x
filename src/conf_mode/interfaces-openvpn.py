@@ -449,15 +449,6 @@ def generate(openvpn):
     if 'deleted' in openvpn or 'disable' in openvpn:
         return None
 
-    # create config directory on demand
-    directories = []
-    directories.append(f'{directory}/status')
-    directories.append(ccd_dir)
-    for onedir in directories:
-        if not os.path.exists(onedir):
-            os.makedirs(onedir, 0o755)
-        chown(onedir, user, group)
-
     # Fix file permissons for keys
     fix_permissions = []
 
