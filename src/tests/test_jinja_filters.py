@@ -16,6 +16,7 @@
 
 from unittest import TestCase
 
+from ipaddress import ip_network
 from vyos.template import vyos_address_from_cidr
 from vyos.template import vyos_netmask_from_cidr
 from vyos.template import vyos_ipv4
@@ -26,9 +27,9 @@ class TestTeamplteHelpers(TestCase):
         pass
 
     def test_helpers_from_cidr(self):
-        network = '192.0.2.0/26'
-        self.assertEqual(vyos_address_from_cidr(network), '192.0.2.0')
-        self.assertEqual(vyos_netmask_from_cidr(network), '255.255.255.192')
+        network_v4 = '192.0.2.0/26'
+        self.assertEqual(vyos_address_from_cidr(network_v4), str(ip_network(network_v4).network_address))
+        self.assertEqual(vyos_netmask_from_cidr(network_v4), str(ip_network(network_v4).netmask))
 
     def test_helpers_ipv4(self):
         self.assertTrue(vyos_ipv4('192.0.2.1'))
