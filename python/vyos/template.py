@@ -146,20 +146,22 @@ def vyos_netmask_from_cidr(text):
 def vyos_ipv4(text):
     """ Filter IP address, return True on IPv4 address, False otherwise """
     from ipaddress import ip_interface
-    return ip_interface(text).version == 4
+    try: return ip_interface(text).version == 4
+    except: return False
 
 @register_filter('ipv6')
 def vyos_ipv6(text):
     """ Filter IP address, return True on IPv6 address, False otherwise """
     from ipaddress import ip_interface
-    return ip_interface(text).version == 6
+    try: return ip_interface(text).version == 6
+    except: return False
 
 @register_filter('first_host_address')
 def vyos_first_host_address(text):
     """ Return first usable (host) IP address from given prefix.
     Example:
       - 10.0.0.0/24 -> 10.0.0.1
-      - 2001:db8::/64 -> 2001:db8::1
+      - 2001:db8::/64 -> 2001:db8::
     """
     from ipaddress import ip_interface
     from ipaddress import IPv4Network
@@ -174,8 +176,8 @@ def vyos_first_host_address(text):
 def vyos_last_host_address(text):
     """ Return first usable IP address from given prefix.
     Example:
-      - 10.0.0.0/24 -> 10.0.0.1
-      - 2001:db8::/64 -> 2001:db8::1
+      - 10.0.0.0/24 -> 10.0.0.254
+      - 2001:db8::/64 -> 2001:db8::ffff:ffff:ffff:ffff
     """
     from ipaddress import ip_interface
     from ipaddress import IPv4Network
@@ -183,11 +185,9 @@ def vyos_last_host_address(text):
 
     addr = ip_interface(text)
     if addr.version == 4:
-        addr = IPv4Network(addr)
-    else:
-        addr = IPv6Network(addr)
+        return str(IPv4Network(addr).broadcast_address - 1)
 
-    return str(addr.broadcast_address -1)
+    return str(IPv6Network(addr).broadcast_address)
 
 @register_filter('inc_ip')
 def vyos_inc_ip(text, increment):

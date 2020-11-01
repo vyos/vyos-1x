@@ -1,4 +1,4 @@
-# Copyright 2018 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,11 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
-import socket
 import netifaces
-import ipaddress
-
 from vyos.util import cmd
 
 # Important note when you are adding new validation functions:
@@ -29,60 +25,36 @@ from vyos.util import cmd
 # parameters with default will be left unset
 # all other paramters will receive the value to check
 
-
 def is_ip(addr):
-    """
-    Check addr if it is an IPv4 or IPv6 address
-    """
+    """ Check addr if it is an IPv4 or IPv6 address """
     return is_ipv4(addr) or is_ipv6(addr)
 
 def is_ipv4(addr):
-    """
-    Check addr if it is an IPv4 address/network. Returns True/False
-    """
-
-    # With the below statement we can check for IPv4 networks and host
-    # addresses at the same time
-    try:
-        if ipaddress.ip_address(addr.split(r'/')[0]).version == 4:
-            return True
-    except:
-        pass
-
-    return False
+    from vyos.template import vyos_ipv4
+    return vyos_ipv4(addr)
 
 def is_ipv6(addr):
-    """
-    Check addr if it is an IPv6 address/network. Returns True/False
-    """
-
-    # With the below statement we can check for IPv4 networks and host
-    # addresses at the same time
-    try:
-        if ipaddress.ip_network(addr.split(r'/')[0]).version == 6:
-            return True
-    except:
-        pass
-
-    return False
+    from vyos.template import vyos_ipv6
+    return vyos_ipv6(addr)
 
 def is_ipv6_link_local(addr):
-    """
-    Check addr if it is an IPv6 link-local address/network. Returns True/False
-    """
-
+    """ Check if addrsss is an IPv6 link-local address. Returns True/False """
+    from ipaddress import IPv6Address
     addr = addr.split('%')[0]
     if is_ipv6(addr):
-        if ipaddress.IPv6Address(addr).is_link_local:
+        if IPv6Address(addr).is_link_local:
             return True
 
     return False
 
 def _are_same_ip(one, two):
+    from socket import AF_INET
+    from socket import AF_INET6
+    from socket import inet_pton
     # compare the binary representation of the IP
-    f_one = socket.AF_INET if is_ipv4(one) else socket.AF_INET6
-    s_two = socket.AF_INET if is_ipv4(two) else socket.AF_INET6
-    return socket.inet_pton(f_one, one) == socket.inet_pton(f_one, two)
+    f_one = AF_INET if is_ipv4(one) else AF_INET6
+    s_two = AF_INET if is_ipv4(two) else AF_INET6
+    return inet_pton(f_one, one) == inet_pton(f_one, two)
 
 def is_intf_addr_assigned(intf, addr):
     if '/' in addr:
@@ -149,10 +121,9 @@ def is_addr_assigned(addr):
     return False
 
 def is_loopback_addr(addr):
-    """
-    Check if supplied IPv4/IPv6 address is a loopback address
-    """
-    return ipaddress.ip_address(addr).is_loopback
+    """ Check if supplied IPv4/IPv6 address is a loopback address """
+    from ipaddress import ip_address
+    return ip_address(addr).is_loopback
 
 def is_subnet_connected(subnet, primary=False):
     """
@@ -165,6 +136,8 @@ def is_subnet_connected(subnet, primary=False):
 
     Return True/False
     """
+    from ipaddress import ip_address
+    from ipaddress import ip_network
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
     addr_type = netifaces.AF_INET
@@ -180,7 +153,7 @@ def is_subnet_connected(subnet, primary=False):
         # only support the primary address :(
         if primary:
             ip = netifaces.ifaddresses(interface)[addr_type][0]['addr']
-            if ipaddress.ip_address(ip) in ipaddress.ip_network(subnet):
+            if ip_address(ip) in ip_network(subnet):
                 return True
         else:
             # Check every assigned IP address if it is connected to the subnet
@@ -188,7 +161,7 @@ def is_subnet_connected(subnet, primary=False):
             for ip in netifaces.ifaddresses(interface)[addr_type]:
                 # remove interface extension (e.g. %eth0) that gets thrown on the end of _some_ addrs
                 addr = ip['addr'].split('%')[0]
-                if ipaddress.ip_address(addr) in ipaddress.ip_network(subnet):
+                if ip_address(addr) in ip_network(subnet):
                     return True
 
     return False
@@ -224,6 +197,7 @@ def assert_positive(n, smaller=0):
 def assert_mtu(mtu, ifname):
     assert_number(mtu)
 
+    import json
     out = cmd(f'ip -j -d link show dev {ifname}')
     # [{"ifindex":2,"ifname":"eth0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"mtu":1500,"qdisc":"pfifo_fast","operstate":"UP","linkmode":"DEFAULT","group":"default","txqlen":1000,"link_type":"ether","address":"08:00:27:d9:5b:04","broadcast":"ff:ff:ff:ff:ff:ff","promiscuity":0,"min_mtu":46,"max_mtu":16110,"inet6_addr_gen_mode":"none","num_tx_queues":1,"num_rx_queues":1,"gso_max_size":65536,"gso_max_segs":65535}]
     parsed = json.loads(out)[0]
