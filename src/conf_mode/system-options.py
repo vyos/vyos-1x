@@ -100,6 +100,12 @@ def apply(options):
         else:
             f.write('0')
 
+    if 'keyboard_layout' in options.keys():
+        if call('loadkeys {}'.format(options['keyboard_layout'])) != 0:
+            raise ConfigError('Does not possible to set keyboard layout: {}'.format(options['keyboard_layout']))
+    else:
+        call('loadkeys us')
+
 if __name__ == '__main__':
     try:
         c = get_config()

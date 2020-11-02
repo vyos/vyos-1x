@@ -61,6 +61,38 @@
                #include <include/source-address-ipv4-ipv6.xml.i>
              </children>
            </node>
+           <leafNode name="keyboard-layout">
+             <properties>
+               <help>System keyboard layout, type ISO2</help>
+               <completionHelp>
+                 <list>us fr de fi no dk</list>
+               </completionHelp>
+               <valueHelp>
+                 <format>us</format>
+                 <description>United States of America</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>fr</format>
+                 <description>France</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>de</format>
+                 <description>Germany</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>fi</format>
+                 <description>Finland</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>no</format>
+                 <description>Norway</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>dk</format>
+                 <description>Denmark</description>
+               </valueHelp>
+             </properties>
+           </leafNode>
         </children>
       </node>
     </children>
