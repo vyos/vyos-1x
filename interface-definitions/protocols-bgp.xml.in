@@ -282,7 +282,7 @@
               <constraint>
                 <validator name="ipv4-address"/>
                 <validator name="ipv6-address"/>
-                <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+                <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|tun|vxlan|wg|wlan)[0-9]+</regex>
               </constraint>
             </properties>
             <children>
@@ -636,7 +636,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|tun|vxlan|wg|wlan)[0-9]+</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -1142,7 +1142,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|tun|vxlan|wg|wlan)[0-9]+</regex>
                   </constraint>
                 </properties>
               </leafNode>

@@ -59,6 +59,13 @@
         <help>Advertise capabilities to this neighbor (IPv6)</help>
       </properties>
       <children>
+        <!-- Capability dynamic in the afi ipv6 does nothing T3037 -->
+        <leafNode name="dynamic">
+          <properties>
+            <help>Advertise dynamic capability to this neighbor</help>
+            <valueless/>
+          </properties>
+        </leafNode>
         <node name="orf">
           <properties>
             <help>Advertise ORF capability to this neighbor</help>
