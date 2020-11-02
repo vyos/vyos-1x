@@ -250,11 +250,13 @@ router bgp {{ asn }}
 {#- END attribute-unchanged #}
 
 {%- if 'capability' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'receive' in conf_peer_group.address_family.ipv4_unicast.capability.orf.prefix_list %}
+{%-   if 'orf' in conf_peer_group.address_family.ipv4_unicast.capability %}
+{%-     if 'receive' in conf_peer_group.address_family.ipv4_unicast.capability.orf.prefix_list %}
   neighbor {{ pr_group }} capability orf prefix-list receive
-{%-   endif %}
-{%-   if 'send' in conf_peer_group.address_family.ipv4_unicast.capability.orf.prefix_list %}
+{%-     endif %}
+{%-     if 'send' in conf_peer_group.address_family.ipv4_unicast.capability.orf.prefix_list %}
   neighbor {{ pr_group }} capability orf prefix-list send 
+{%-     endif %}
 {%-   endif %}
 {%- endif %}
 
@@ -379,11 +381,13 @@ router bgp {{ asn }}
 {#- END attribute-unchanged ipv6 #}
 
 {%- if 'capability' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'receive' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
+{%-   if 'orf' in conf_peer_group.address_family.ipv6_unicast.capability %}
+{%-     if 'receive' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
   neighbor {{ pr_group }} capability orf prefix-list receive
 {%-   endif %}
-{%-   if 'send' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
+{%-     if 'send' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
   neighbor {{ pr_group }} capability orf prefix-list send 
+{%-     endif %}
 {%-   endif %}
 {%- endif %}
 
@@ -650,11 +654,13 @@ router bgp {{ asn }}
 {#- END attribute-unchanged #}
 
 {%- if 'capability' in conf_peer.address_family.ipv4_unicast %}
-{%-   if 'receive' in conf_peer.address_family.ipv4_unicast.capability.orf.prefix_list %}
+{%-   if 'orf' in conf_peer.address_family.ipv4_unicast.capability %}
+{%-     if 'receive' in conf_peer.address_family.ipv4_unicast.capability.orf.prefix_list %}
   neighbor {{ peer }} capability orf prefix-list receive
-{%-   endif %}
-{%-   if 'send' in conf_peer.address_family.ipv4_unicast.capability.orf.prefix_list %}
+{%-     endif %}
+{%-     if 'send' in conf_peer.address_family.ipv4_unicast.capability.orf.prefix_list %}
   neighbor {{ peer }} capability orf prefix-list send 
+{%-     endif %}
 {%-   endif %}
 {%- endif %}
 
@@ -783,11 +789,13 @@ router bgp {{ asn }}
 {#- END attribute-unchanged #}
 
 {%- if 'capability' in conf_peer.address_family.ipv6_unicast %}
-{%-   if 'receive' in conf_peer.address_family.ipv6_unicast.capability.orf.prefix_list %}
+{%-   if 'orf' in conf_peer.address_family.ipv6_unicast.capability %}
+{%-     if 'receive' in conf_peer.address_family.ipv6_unicast.capability.orf.prefix_list %}
   neighbor {{ peer }} capability orf prefix-list receive
-{%-   endif %}
-{%-   if 'send' in conf_peer.address_family.ipv6_unicast.capability.orf.prefix_list %}
-  neighbor {{ peer }} capability orf prefix-list send 
+{%-     endif %}
+{%-     if 'send' in conf_peer.address_family.ipv6_unicast.capability.orf.prefix_list %}
+  neighbor {{ peer }} capability orf prefix-list send
+{%-     endif %}
 {%-   endif %}
 {%- endif %}
 
