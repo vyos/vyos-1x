@@ -681,7 +681,7 @@
                     <properties>
                       <help>WPA mode</help>
                       <completionHelp>
-                        <list>wpa wpa2 both</list>
+                        <list>wpa wpa2 wpa+wpa2</list>
                       </completionHelp>
                       <valueHelp>
                         <format>wpa</format>
@@ -692,15 +692,15 @@
                         <description>WPA2 (full IEEE 802.11i/RSN)</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>both</format>
+                        <format>wpa+wpa2</format>
                         <description>Allow both WPA and WPA2</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(wpa|wpa2|both)$</regex>
+                        <regex>^(wpa|wpa2|wpa\+wpa2)$</regex>
                       </constraint>
                       <constraintErrorMessage>Unknown WPA mode</constraintErrorMessage>
                     </properties>
-                    <defaultValue>both</defaultValue>
+                    <defaultValue>wpa+wpa2</defaultValue>
                   </leafNode>
                   <leafNode name="passphrase">
                     <properties>

@@ -532,8 +532,11 @@ wep_key{{ loop.index -1 }}={{ security.wep.key }}
 # and/or WPA2 (full IEEE 802.11i/RSN):
 # bit0 = WPA
 # bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
+# Note that WPA3 is also configured with bit1 since it uses RSN just like WPA2.
+# In other words, for WPA3, wpa=2 is used the configuration (and
+# wpa_key_mgmt=SAE for WPA3-Personal instead of wpa_key_mgmt=WPA-PSK).
 {%   if security.wpa.mode is defined %}
-{%     if security.wpa.mode == 'both' %}
+{%     if security.wpa.mode == 'wpa+wpa2' %}
 wpa=3
 {%     elif security.wpa.mode == 'wpa2' %}
 wpa=2
