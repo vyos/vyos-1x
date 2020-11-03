@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Rename Wireless interface security mode 'both' to 'wpa+wpa2'
+# T3043: rename Wireless interface security mode 'both' to 'wpa+wpa2'
+# T3043: move "system wifi-regulatory-domain" to indicidual wireless interface
 
 import os
 
@@ -36,12 +37,21 @@ if __name__ == '__main__':
         # Nothing to do
         exit(0)
 
+    country_code = ''
+    cc_cli = ['system', 'wifi-regulatory-domain']
+    if config.exists(cc_cli):
+        country_code = config.return_value(cc_cli)
+        config.delete(cc_cli)
+
     for wifi in config.list_nodes(base):
         sec_mode = base + [wifi, 'security', 'wpa', 'mode']
         if config.exists(sec_mode):
             mode = config.return_value(sec_mode)
             if mode == 'both':
                 config.set(sec_mode, value='wpa+wpa2', replace=True)
+
+        if country_code:
+            config.set(base + [wifi, 'country-code'], value=country_code)
 
     try:
         with open(file_name, 'w') as f:

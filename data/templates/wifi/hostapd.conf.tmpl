@@ -72,18 +72,18 @@ ssid={{ ssid }}
 channel={{ channel }}
 {% endif %}
 
-{% if mode %}
+{% if mode is defined and mode is not none %}
 # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
 # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
 # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
-# needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
-# to be set to hw_mode=a. When using ACS (see channel parameter), a
+# needs to be set to hw_mode a. For IEEE 802.11ax (HE) on 6 GHz this needs
+# to be set to hw_mode a. When using ACS (see channel parameter), a
 # special value "any" can be used to indicate that any support band can be used.
 # This special case is currently supported only with drivers with which
 # offloaded ACS is used.
-{%   if 'n' in mode %}
+{%   if mode == 'n' %}
 hw_mode=g
-{%   elif 'ac' in mode %}
+{%   elif mode == 'ac' %}
 hw_mode=a
 ieee80211h=1
 ieee80211ac=1
@@ -533,7 +533,7 @@ wep_key{{ loop.index -1 }}={{ security.wep.key }}
 # bit0 = WPA
 # bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
 # Note that WPA3 is also configured with bit1 since it uses RSN just like WPA2.
-# In other words, for WPA3, wpa=2 is used the configuration (and
+# In other words, for WPA3, wpa 2 is used the configuration (and
 # wpa_key_mgmt=SAE for WPA3-Personal instead of wpa_key_mgmt=WPA-PSK).
 {%   if security.wpa.mode is defined %}
 {%     if security.wpa.mode == 'wpa+wpa2' %}

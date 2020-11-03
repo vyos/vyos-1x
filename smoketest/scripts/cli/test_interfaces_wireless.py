@@ -38,15 +38,14 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         self._options = {
             'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
                        'type station', 'address 192.0.2.1/30'],
-            'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1',
+            'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1', 'country-code SE',
                        'type access-point', 'address 192.0.2.5/30', 'channel 0'],
             'wlan10': ['physical-device phy1', 'ssid VyOS-WIFI-2',
                        'type station', 'address 192.0.2.9/30'],
-            'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3',
+            'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3', 'country-code SE',
                        'type access-point', 'address 192.0.2.13/30', 'channel 0'],
         }
         self._interfaces = list(self._options)
-        self.session.set(['system', 'wifi-regulatory-domain', 'SE'])
 
     def test_add_address_single(self):
         """ derived method to check if member interfaces are enslaved properly """
@@ -75,6 +74,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.set(self._base_path + [interface, 'ssid', ssid])
         self.session.set(self._base_path + [interface, 'type', 'access-point'])
         self.session.set(self._base_path + [interface, 'channel', channel])
+        self.session.set(self._base_path + [interface, 'country-code', 'SE'])
         # auto-powersave is special
         self.session.set(self._base_path + [interface, 'capabilities', 'ht', 'auto-powersave'])
 
@@ -152,10 +152,11 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         channel = '0'
         wpa_key = 'VyOSVyOSVyOS'
         mode = 'n'
+        country = 'DE'
 
         self.session.set(self._base_path + [interface, 'physical-device', phy])
         self.session.set(self._base_path + [interface, 'type', 'access-point'])
-        self.session.set(self._base_path + [interface, 'mode', 'mode'])
+        self.session.set(self._base_path + [interface, 'mode', mode])
 
         # SSID must be set
         with self.assertRaises(ConfigSessionError):
@@ -167,6 +168,10 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.commit()
         self.session.set(self._base_path + [interface, 'channel', channel])
 
+        # Country-Code must be set
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(self._base_path + [interface, 'country-code', country])
 
         self.session.set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
         self.session.set(self._base_path + [interface, 'security', 'wpa', 'passphrase', wpa_key])
@@ -180,6 +185,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(interface, tmp)
 
         tmp = get_config_value(interface, 'hw_mode')
+        # rewrite special mode
+        if mode == 'n': mode = 'g'
         self.assertEqual(mode, tmp)
 
         # WPA key
@@ -195,6 +202,10 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         # channel
         tmp = get_config_value(interface, 'channel')
         self.assertEqual(channel, tmp)
+
+        # Country code
+        tmp = get_config_value(interface, 'country_code')
+        self.assertEqual(country, tmp)
 
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
