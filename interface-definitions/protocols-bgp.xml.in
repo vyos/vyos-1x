@@ -282,7 +282,7 @@
               <constraint>
                 <validator name="ipv4-address"/>
                 <validator name="ipv6-address"/>
-                <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|tun|vxlan|wg|wlan)[0-9]+</regex>
+                <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|vxlan|wg|wlan)[0-9]+</regex>
               </constraint>
             </properties>
             <children>
@@ -628,7 +628,11 @@
                   <help>Source IP of routing updates</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IP address of route source</description>
+                    <description>IPv4 address of route source</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of route source</description>
                   </valueHelp>
                   <valueHelp>
                     <format>&lt;interface&gt;</format>
@@ -636,7 +640,8 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|tun|vxlan|wg|wlan)[0-9]+</regex>
+                    <validator name="ipv6-address"/>
+                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|vxlan|wg|wlan)[0-9]+</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -1134,7 +1139,11 @@
                   <help>Source IP of routing updates</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IP address of route source</description>
+                    <description>IPv4 address of route source</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of route source</description>
                   </valueHelp>
                   <valueHelp>
                     <format>&lt;interface&gt;</format>
@@ -1142,7 +1151,8 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|tun|vxlan|wg|wlan)[0-9]+</regex>
+                    <validator name="ipv6-address"/>
+                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|vxlan|wg|wlan)[0-9]+</regex>
                   </constraint>
                 </properties>
               </leafNode>
