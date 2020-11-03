@@ -681,7 +681,7 @@
                     <properties>
                       <help>WPA mode</help>
                       <completionHelp>
-                        <list>wpa wpa2 wpa+wpa2</list>
+                        <list>wpa wpa2 wpa+wpa2 wpa3</list>
                       </completionHelp>
                       <valueHelp>
                         <format>wpa</format>
@@ -696,7 +696,7 @@
                         <description>Allow both WPA and WPA2</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(wpa|wpa2|wpa\+wpa2)$</regex>
+                        <regex>^(wpa|wpa2|wpa\+wpa2|wpa3)$</regex>
                       </constraint>
                       <constraintErrorMessage>Unknown WPA mode</constraintErrorMessage>
                     </properties>

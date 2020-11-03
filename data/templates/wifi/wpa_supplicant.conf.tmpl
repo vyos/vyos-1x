@@ -4,10 +4,78 @@
 # https://w1.fi/cgit/hostap/plain/wpa_supplicant/wpa_supplicant.conf
 
 network={
+    # ssid: SSID (mandatory); network name in one of the optional formats:
+    #   - an ASCII string with double quotation
+    #   - a hex string (two characters per octet of SSID)
+    #   - a printf-escaped ASCII string P"<escaped string>"
+    #
     ssid="{{ ssid }}"
+
+    # scan_ssid:
+    #   0 = do not scan this SSID with specific Probe Request frames (default)
+    #   1 = scan with SSID-specific Probe Request frames (this can be used to
+    #       find APs that do not accept broadcast SSID or use multiple SSIDs;
+    #       this will add latency to scanning, so enable this only when needed)
     scan_ssid=1
+
 {% if security is defined and security.wpa is defined and security.wpa.passphrase is defined %}
-    key_mgmt=WPA-PSK
+    # ieee80211w: whether management frame protection is enabled
+    # 0 = disabled (default unless changed with the global pmf parameter)
+    # 1 = optional
+    # 2 = required
+    # The most common configuration options for this based on the PMF (protected
+    # management frames) certification program are:
+    # PMF enabled: ieee80211w=1 and key_mgmt=WPA-EAP WPA-EAP-SHA256
+    # PMF required: ieee80211w=2 and key_mgmt=WPA-EAP-SHA256
+    # (and similarly for WPA-PSK and WPA-PSK-SHA256 if WPA2-Personal is used)
+    # WPA3-Personal-only mode: ieee80211w=2 and key_mgmt=SAE
+    ieee80211w=1
+
+    # key_mgmt: list of accepted authenticated key management protocols
+    # WPA-PSK = WPA pre-shared key (this requires 'psk' field)
+    # WPA-EAP = WPA using EAP authentication
+    # IEEE8021X = IEEE 802.1X using EAP authentication and (optionally) dynamically
+    #	generated WEP keys
+    # NONE = WPA is not used; plaintext or static WEP could be used
+    # WPA-NONE = WPA-None for IBSS (deprecated; use proto=RSN key_mgmt=WPA-PSK
+    #	instead)
+    # FT-PSK = Fast BSS Transition (IEEE 802.11r) with pre-shared key
+    # FT-EAP = Fast BSS Transition (IEEE 802.11r) with EAP authentication
+    # FT-EAP-SHA384 = Fast BSS Transition (IEEE 802.11r) with EAP authentication
+    #	and using SHA384
+    # WPA-PSK-SHA256 = Like WPA-PSK but using stronger SHA256-based algorithms
+    # WPA-EAP-SHA256 = Like WPA-EAP but using stronger SHA256-based algorithms
+    # SAE = Simultaneous authentication of equals; pre-shared key/password -based
+    #	authentication with stronger security than WPA-PSK especially when using
+    #	not that strong password; a.k.a. WPA3-Personal
+    # FT-SAE = SAE with FT
+    # WPA-EAP-SUITE-B = Suite B 128-bit level
+    # WPA-EAP-SUITE-B-192 = Suite B 192-bit level
+    # OSEN = Hotspot 2.0 Rel 2 online signup connection
+    # FILS-SHA256 = Fast Initial Link Setup with SHA256
+    # FILS-SHA384 = Fast Initial Link Setup with SHA384
+    # FT-FILS-SHA256 = FT and Fast Initial Link Setup with SHA256
+    # FT-FILS-SHA384 = FT and Fast Initial Link Setup with SHA384
+    # OWE = Opportunistic Wireless Encryption (a.k.a. Enhanced Open)
+    # DPP = Device Provisioning Protocol
+    # If not set, this defaults to: WPA-PSK WPA-EAP
+{%   if security.wpa.mode is defined and security.wpa.mode == 'wpa3' %}
+    key_mgmt=SAE
+{%   else %}
+    key_mgmt=WPA-PSK WPA-PSK-SHA256
+{%   endif %}
+
+    # psk: WPA preshared key; 256-bit pre-shared key
+    # The key used in WPA-PSK mode can be entered either as 64 hex-digits, i.e.,
+    # 32 bytes or as an ASCII passphrase (in which case, the real PSK will be
+    # generated using the passphrase and SSID). ASCII passphrase must be between
+    # 8 and 63 characters (inclusive). ext:<name of external PSK field> format can
+    # be used to indicate that the PSK/passphrase is stored in external storage.
+    # This field is not needed, if WPA-EAP is used.
+    # Note: Separate tool, wpa_passphrase, can be used to generate 256-bit keys
+    # from ASCII passphrase. This process uses lot of CPU and wpa_supplicant
+    # startup and reconfiguration time can be optimized by generating the PSK only
+    # only when the passphrase or SSID has actually changed.
     psk="{{ security.wpa.passphrase }}"
 {% else %}
     key_mgmt=NONE

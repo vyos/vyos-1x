@@ -18,14 +18,16 @@ import os
 import re
 import unittest
 
+from vyos.configsession import ConfigSessionError
 from base_interfaces_test import BasicInterfaceTest
+
 from vyos.util import process_named_running
 from vyos.util import check_kmod
 from vyos.util import read_file
 
 def get_config_value(interface, key):
     tmp = read_file(f'/run/hostapd/{interface}.conf')
-    tmp = re.findall(r'\n?{}=+(.*)'.format(key), tmp)
+    tmp = re.findall(f'{key}=+(.*)', tmp)
     return tmp[0]
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -114,6 +116,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         #
         # Validate Config
         #
+        tmp = get_config_value(interface, 'interface')
+        self.assertEqual(interface, tmp)
 
         # ssid
         tmp = get_config_value(interface, 'ssid')
@@ -134,6 +138,63 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         tmp = get_config_value(interface, 'vht_capab')
         for key, value in vht_opt.items():
             self.assertIn(value, tmp)
+
+        # Check for running process
+        self.assertTrue(process_named_running('hostapd'))
+
+    def test_hostapd_wpa_config(self):
+        """ Check if hostapd config is properly generated """
+
+        # Only set the hostapd (access-point) options
+        interface = 'wlan0'
+        phy = 'phy0'
+        ssid = 'ssid'
+        channel = '0'
+        wpa_key = 'VyOSVyOSVyOS'
+        mode = 'n'
+
+        self.session.set(self._base_path + [interface, 'physical-device', phy])
+        self.session.set(self._base_path + [interface, 'type', 'access-point'])
+        self.session.set(self._base_path + [interface, 'mode', 'mode'])
+
+        # SSID must be set
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(self._base_path + [interface, 'ssid', ssid])
+
+        # Channel must be set
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(self._base_path + [interface, 'channel', channel])
+
+
+        self.session.set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
+        self.session.set(self._base_path + [interface, 'security', 'wpa', 'passphrase', wpa_key])
+
+        self.session.commit()
+
+        #
+        # Validate Config
+        #
+        tmp = get_config_value(interface, 'interface')
+        self.assertEqual(interface, tmp)
+
+        tmp = get_config_value(interface, 'hw_mode')
+        self.assertEqual(mode, tmp)
+
+        # WPA key
+        tmp = get_config_value(interface, 'wpa')
+        self.assertEqual('2', tmp)
+        tmp = get_config_value(interface, 'wpa_passphrase')
+        self.assertEqual(wpa_key, tmp)
+
+        # SSID
+        tmp = get_config_value(interface, 'ssid')
+        self.assertEqual(ssid, tmp)
+
+        # channel
+        tmp = get_config_value(interface, 'channel')
+        self.assertEqual(channel, tmp)
 
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))

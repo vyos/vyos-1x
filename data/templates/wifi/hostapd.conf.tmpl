@@ -538,7 +538,7 @@ wep_key{{ loop.index -1 }}={{ security.wep.key }}
 {%   if security.wpa.mode is defined %}
 {%     if security.wpa.mode == 'wpa+wpa2' %}
 wpa=3
-{%     elif security.wpa.mode == 'wpa2' %}
+{%     elif security.wpa.mode == 'wpa2' or security.wpa.mode == 'wpa3' %}
 wpa=2
 {%     elif security.wpa.mode == 'wpa' %}
 wpa=1
@@ -598,7 +598,15 @@ wpa_passphrase={{ security.wpa.passphrase }}
 # added to enable SHA256-based stronger algorithms.
 # WPA-PSK = WPA-Personal / WPA2-Personal
 # WPA-PSK-SHA256 = WPA2-Personal using SHA256
-wpa_key_mgmt=WPA-PSK
+# WPA-EAP = WPA-Enterprise / WPA2-Enterprise
+# WPA-EAP-SHA256 = WPA2-Enterprise using SHA256
+# SAE = SAE (WPA3-Personal)
+# WPA-EAP-SUITE-B-192 = WPA3-Enterprise with 192-bit security/CNSA suite
+{%   if security.wpa.mode is defined and security.wpa.mode == 'wpa3' %}
+wpa_key_mgmt=SAE
+{%   else %}
+wpa_key_mgmt=WPA-PSK WPA-PSK-SHA256
+{%   endif %}
 
 {%   elif security.wpa.radius is defined %}
 ##### IEEE 802.1X-2004 related configuration ##################################
@@ -608,9 +616,17 @@ ieee8021x=1
 # Set of accepted key management algorithms (WPA-PSK, WPA-EAP, or both). The
 # entries are separated with a space. WPA-PSK-SHA256 and WPA-EAP-SHA256 can be
 # added to enable SHA256-based stronger algorithms.
+# WPA-PSK = WPA-Personal / WPA2-Personal
+# WPA-PSK-SHA256 = WPA2-Personal using SHA256
 # WPA-EAP = WPA-Enterprise / WPA2-Enterprise
 # WPA-EAP-SHA256 = WPA2-Enterprise using SHA256
-wpa_key_mgmt=WPA-EAP
+# SAE = SAE (WPA3-Personal)
+# WPA-EAP-SUITE-B-192 = WPA3-Enterprise with 192-bit security/CNSA suite
+{%   if security.wpa.mode is defined and security.wpa.mode == 'wpa3' %}
+wpa_key_mgmt=WPA-EAP-SUITE-B-192
+{%   else %}
+wpa_key_mgmt=WPA-EAP WPA-EAP-SHA256
+{%   endif %}
 
 {%     if security.wpa.radius.server is defined %}
 # RADIUS client forced local IP address for the access point
