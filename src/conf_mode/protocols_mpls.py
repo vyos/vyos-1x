@@ -38,30 +38,32 @@ def get_config(config=None):
         'router_id'  : None,
         'mpls_ldp'   : False,
         'old_ldp'    : {
-                'interfaces'          : [],
-                'neighbors'           : {},
-                'd_transp_ipv4'       : None,
-                'd_transp_ipv6'       : None,
-                'hello_holdtime'      : None,
-                'hello_interval'      : None,
-                'ses_ipv4_hold'       : None,
-                'ses_ipv6_hold'       : None,
-                'export_ipv4_exp'     : False,
-                'export_ipv6_exp'     : False
-
+                'interfaces'               : [],
+                'neighbors'                : {},
+                'd_transp_ipv4'            : None,
+                'd_transp_ipv6'            : None,
+                'hello_ipv4_holdtime'      : None,
+                'hello_ipv4_interval'      : None,
+                'hello_ipv6_holdtime'      : None,
+                'hello_ipv6_interval'      : None,
+                'ses_ipv4_hold'            : None,
+                'ses_ipv6_hold'            : None,
+                'export_ipv4_exp'          : False,
+                'export_ipv6_exp'          : False
         },
         'ldp'        : {
-                'interfaces'          : [],
-                'neighbors'           : {},
-                'd_transp_ipv4'       : None,
-                'd_transp_ipv6'       : None,
-                'hello_holdtime'      : None,
-                'hello_interval'      : None,
-                'ses_ipv4_hold'       : None,
-                'ses_ipv6_hold'       : None,
-                'export_ipv4_exp'     : False,
-                'export_ipv6_exp'     : False
-
+                'interfaces'               : [],
+                'neighbors'                : {},
+                'd_transp_ipv4'            : None,
+                'd_transp_ipv6'            : None,
+                'hello_ipv4_holdtime'      : None,
+                'hello_ipv4_interval'      : None,
+                'hello_ipv6_holdtime'      : None,
+                'hello_ipv6_interval'      : None,
+                'ses_ipv4_hold'            : None,
+                'ses_ipv6_hold'            : None,
+                'export_ipv4_exp'          : False,
+                'export_ipv6_exp'          : False
         }
     }
     if not (conf.exists('protocols mpls') or conf.exists_effective('protocols mpls')):
@@ -78,19 +80,33 @@ def get_config(config=None):
     if conf.exists('router-id'):
         mpls_conf['router_id'] = conf.return_value('router-id')
 
-    # Get hello holdtime
-    if conf.exists_effective('discovery hello-holdtime'):
-        mpls_conf['old_ldp']['hello_holdtime'] = conf.return_effective_value('discovery hello-holdtime')
+    # Get hello-ipv4-holdtime
+    if conf.exists_effective('discovery hello-ipv4-holdtime'):
+        mpls_conf['old_ldp']['hello_ipv4_holdtime'] = conf.return_effective_value('discovery hello-ipv4-holdtime')
 
-    if conf.exists('discovery hello-holdtime'):
-        mpls_conf['ldp']['hello_holdtime'] = conf.return_value('discovery hello-holdtime')
+    if conf.exists('discovery hello-ipv4-holdtime'):
+        mpls_conf['ldp']['hello_ipv4_holdtime'] = conf.return_value('discovery hello-ipv4-holdtime')
 
-    # Get hello interval
-    if conf.exists_effective('discovery hello-interval'):
-        mpls_conf['old_ldp']['hello_interval'] = conf.return_effective_value('discovery hello-interval')
+    # Get hello-ipv4-interval
+    if conf.exists_effective('discovery hello-ipv4-interval'):
+        mpls_conf['old_ldp']['hello_ipv4_interval'] = conf.return_effective_value('discovery hello-ipv4-interval')
 
-    if conf.exists('discovery hello-interval'):
-        mpls_conf['ldp']['hello_interval'] = conf.return_value('discovery hello-interval')
+    if conf.exists('discovery hello-ipv4-interval'):
+        mpls_conf['ldp']['hello_ipv4_interval'] = conf.return_value('discovery hello-ipv4-interval')
+        
+    # Get hello-ipv6-holdtime
+    if conf.exists_effective('discovery hello-ipv6-holdtime'):
+        mpls_conf['old_ldp']['hello_ipv6_holdtime'] = conf.return_effective_value('discovery hello-ipv6-holdtime')
+
+    if conf.exists('discovery hello-ipv6-holdtime'):
+        mpls_conf['ldp']['hello_ipv6_holdtime'] = conf.return_value('discovery hello-ipv6-holdtime')
+
+    # Get hello-ipv6-interval
+    if conf.exists_effective('discovery hello-ipv6-interval'):
+        mpls_conf['old_ldp']['hello_ipv6_interval'] = conf.return_effective_value('discovery hello-ipv6-interval')
+
+    if conf.exists('discovery hello-ipv6-interval'):
+        mpls_conf['ldp']['hello_ipv6_interval'] = conf.return_value('discovery hello-ipv6-interval')
 
     # Get session-ipv4-holdtime
     if conf.exists_effective('discovery session-ipv4-holdtime'):
