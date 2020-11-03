@@ -23,7 +23,10 @@ interface={{ ifname }}
 # added to the bridge automatically (brctl may refuse to do this before hostapd
 # has been started to change the interface mode). If needed, the bridge
 # interface is also created.
-bridge={{ is_bridge_member }}
+{# as there can only be one bridge interface it is save to loop #}
+{%   for bridge in is_bridge_member %}
+bridge={{ bridge }}
+{%   endfor %}
 {% endif %}
 
 # Driver interface type (hostap/wired/none/nl80211/bsd);
