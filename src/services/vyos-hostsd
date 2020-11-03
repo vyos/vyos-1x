@@ -589,7 +589,7 @@ if __name__ == '__main__':
     socket = context.socket(zmq.REP)
 
     # Set the right permissions on the socket, then change it back
-    o_mask = os.umask(0o007)
+    o_mask = os.umask(0o000)
     socket.bind(SOCKET_PATH)
     os.umask(o_mask)
 
