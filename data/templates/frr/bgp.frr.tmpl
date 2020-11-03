@@ -381,6 +381,12 @@ router bgp {{ asn }}
 {#- END attribute-unchanged ipv6 #}
 
 {%- if 'capability' in conf_peer_group.address_family.ipv6_unicast %}
+{%-   if 'dynamic' in conf_peer_group.address_family.ipv6_unicast.capability %}
+{#- exit from afi ipv6 unicast because 'dynamic' its a global parameter for peer-group in afi6. Other checks are ongoing in afi6. Also related T3037 #}
+ exit-address-family
+  neighbor {{ pr_group }} capability dynamic
+ address-family ipv6 unicast
+{%-   endif %}
 {%-   if 'orf' in conf_peer_group.address_family.ipv6_unicast.capability %}
 {%-     if 'receive' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
   neighbor {{ pr_group }} capability orf prefix-list receive
@@ -479,7 +485,7 @@ router bgp {{ asn }}
 {#- set peer-group as conf_peer #}
 {%- set conf_peer = conf_bgp[asn].neighbor[peer] %}
 
-{#- First parameter for peer-group - remote-as #}
+{#- First parameter for peer neighbor - remote-as #}
 {%- if 'remote_as' in conf_peer %}
  neighbor {{ peer }} remote-as {{ conf_peer.remote_as }}
 {%- endif %}
@@ -504,10 +510,6 @@ router bgp {{ asn }}
 {%-   if 'extended_nexthop' in conf_peer.capability %}
  neighbor {{ peer }} capability extended-nexthop
 {%-   endif %}
-{%- endif %}
-
-{%- if 'description' in conf_peer %}
- neighbor {{ peer }} description {{ conf_peer.description }}
 {%- endif %}
 
 {%- if 'disable_capability_negotiation' in conf_peer %}
@@ -599,6 +601,10 @@ router bgp {{ asn }}
 
 {%- if 'update_source' in conf_peer %}
  neighbor {{ peer }} update-source {{ conf_peer.update_source }}
+{%- endif %}
+
+{%- if 'description' in conf_peer %}
+ neighbor {{ peer }} description {{ conf_peer.description }}
 {%- endif %}
 
 {#- START address family for peer; set protocols bgp xxx neighbor x.x.x.x address-family ipvX-unicast #}
@@ -987,6 +993,10 @@ router bgp {{ asn }}
 
 {%- if 'no_fast_external_failover' in bgp_params %}
  no bgp fast-external-failover
+{%- endif %}
+
+{%- if 'router_id' in bgp_params %}
+ bgp router-id {{ bgp_params.router_id }}
 {%- endif %}
 
 {#- END parameters; set protocols bgp xxx parameters #}
