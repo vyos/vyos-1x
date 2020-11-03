@@ -109,11 +109,6 @@ def get_config(config=None):
 
             if tmp: wifi = dict_merge(tmp, wifi)
 
-    # retrieve configured regulatory domain
-    conf.set_level(['system'])
-    if conf.exists(['wifi-regulatory-domain']):
-        wifi['country_code'] = conf.return_value(['wifi-regulatory-domain'])
-
     # Only one wireless interface per phy can be in station mode
     tmp = find_other_stations(conf, base, wifi['ifname'])
     if tmp: wifi['station_interfaces'] = tmp
@@ -144,8 +139,7 @@ def verify(wifi):
 
     if wifi['type'] == 'access-point':
         if 'country_code' not in wifi:
-            raise ConfigError('Wireless regulatory domain is mandatory,\n' \
-                              'use "set system wifi-regulatory-domain" for configuration.')
+            raise ConfigError('Wireless country-code is mandatory')
 
         if 'channel' not in wifi:
             raise ConfigError('Wireless channel must be configured!')

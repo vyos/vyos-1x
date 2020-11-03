@@ -5,7 +5,7 @@
       <tagNode name="wireless" owner="${vyos_conf_scripts_dir}/interfaces-wireless.py">
         <properties>
           <help>Wireless (WiFi/WLAN) Network Interface</help>
-          <priority>400</priority>
+          <priority>318</priority>
           <constraint>
             <regex>^wlan[0-9]+$</regex>
           </constraint>
@@ -58,7 +58,7 @@
                         <description>Supported channel set width both 20 MHz and 40 MHz with secondary channel below primary channel</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(ht20|ht40\+|ht40-)</regex>
+                        <regex>^(ht20|ht40\+|ht40-)$</regex>
                       </constraint>
                       <multi/>
                     </properties>
@@ -108,7 +108,7 @@
                         <description>Set maximum A-MSDU length to 7935 octets</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(3839|7935)</regex>
+                        <regex>^(3839|7935)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -127,7 +127,7 @@
                         <description>Short GI for 40 MHz</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(20|40)</regex>
+                        <regex>^(20|40)$</regex>
                       </constraint>
                       <multi/>
                     </properties>
@@ -147,7 +147,7 @@
                         <description>DYNAMIC Spatial Multiplexing (SM) Power Save</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(static|dynamic)</regex>
+                        <regex>^(static|dynamic)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -164,7 +164,7 @@
                             <description>Number of spacial streams that can use RX STBC</description>
                           </valueHelp>
                           <constraint>
-                            <regex>[1-3]+</regex>
+                            <regex>^[1-3]+$</regex>
                           </constraint>
                           <constraintErrorMessage>Invalid capability item</constraintErrorMessage>
                         </properties>
@@ -243,7 +243,7 @@
                         <description>Support for operation as multi user beamformee</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(single-user-beamformer|single-user-beamformee|multi-user-beamformer|multi-user-beamformee)</regex>
+                        <regex>^(single-user-beamformer|single-user-beamformee|multi-user-beamformer|multi-user-beamformee)$</regex>
                       </constraint>
                       <multi/>
                     </properties>
@@ -329,7 +329,7 @@
                         <description>Station can provide VHT MFB in response to VHT MRQ and unsolicited VHT MFB</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(unsolicited|both)</regex>
+                        <regex>^(unsolicited|both)$</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid capability item</constraintErrorMessage>
                     </properties>
@@ -361,7 +361,7 @@
                         <description>ncrease Maximum MPDU length to 11454 octets</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(7991|11454)</regex>
+                        <regex>^(7991|11454)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -380,7 +380,7 @@
                         <description>Short GI for 160 MHz</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(80|160)</regex>
+                        <regex>^(80|160)$</regex>
                       </constraint>
                       <multi/>
                     </properties>
@@ -398,7 +398,7 @@
                             <description>Number of spacial streams that can use RX STBC</description>
                           </valueHelp>
                           <constraint>
-                            <regex>[1-4]+</regex>
+                            <regex>^[1-4]+$</regex>
                           </constraint>
                           <constraintErrorMessage>Invalid capability item</constraintErrorMessage>
                         </properties>
@@ -441,6 +441,22 @@
               <constraint>
                 <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-173"/>
               </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="country-code">
+            <properties>
+              <help>Indicate country in which device is operating</help>
+              <completionHelp>
+                <list>US EU JP DE UK CN ES FR RU</list>
+              </completionHelp>
+              <valueHelp>
+                <format>&lt;code%gt;</format>
+                <description>ISO/IEC 3166-1 Country Code</description>
+              </valueHelp>
+              <constraint>
+                <regex>^[A-Z][A-Z]$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid ISO/IEC 3166-1 Country Code</constraintErrorMessage>
             </properties>
           </leafNode>
           #include <include/interface-description.xml.i>
@@ -520,7 +536,7 @@
                 <description>MFP enforced</description>
               </valueHelp>
               <constraint>
-                <regex>(disabled|optional|required)</regex>
+                <regex>^(disabled|optional|required)$</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -681,7 +697,7 @@
                     <properties>
                       <help>WPA mode</help>
                       <completionHelp>
-                        <list>wpa wpa2 both</list>
+                        <list>wpa wpa2 wpa+wpa2 wpa3</list>
                       </completionHelp>
                       <valueHelp>
                         <format>wpa</format>
@@ -692,15 +708,15 @@
                         <description>WPA2 (full IEEE 802.11i/RSN)</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>both</format>
+                        <format>wpa+wpa2</format>
                         <description>Allow both WPA and WPA2</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(wpa|wpa2|both)$</regex>
+                        <regex>^(wpa|wpa2|wpa\+wpa2|wpa3)$</regex>
                       </constraint>
                       <constraintErrorMessage>Unknown WPA mode</constraintErrorMessage>
                     </properties>
-                    <defaultValue>both</defaultValue>
+                    <defaultValue>wpa+wpa2</defaultValue>
                   </leafNode>
                   <leafNode name="passphrase">
                     <properties>
@@ -780,27 +796,6 @@
           </leafNode>
         </children>
       </tagNode>
-    </children>
-  </node>
-  <node name="system">
-    <children>
-      <leafNode name="wifi-regulatory-domain" owner="${vyos_conf_scripts_dir}/system-wifi-regdom.py">
-        <properties>
-          <help>Wireless regulatory domain (mandatory)</help>
-          <priority>305</priority>
-          <completionHelp>
-            <list>US EU JP DE UK CN</list>
-          </completionHelp>
-          <valueHelp>
-            <format>&lt;code%gt;</format>
-            <description>Country code (ISO/IEC 3166-1)</description>
-          </valueHelp>
-          <constraint>
-            <regex>[A-Z][A-Z]$</regex>
-          </constraint>
-          <constraintErrorMessage>invalid country code</constraintErrorMessage>
-        </properties>
-      </leafNode>
     </children>
   </node>
 </interfaceDefinition>

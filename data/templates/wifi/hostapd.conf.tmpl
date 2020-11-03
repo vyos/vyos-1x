@@ -23,7 +23,10 @@ interface={{ ifname }}
 # added to the bridge automatically (brctl may refuse to do this before hostapd
 # has been started to change the interface mode). If needed, the bridge
 # interface is also created.
-bridge={{ is_bridge_member }}
+{# as there can only be one bridge interface it is save to loop #}
+{%   for bridge in is_bridge_member %}
+bridge={{ bridge }}
+{%   endfor %}
 {% endif %}
 
 # Driver interface type (hostap/wired/none/nl80211/bsd);
@@ -69,18 +72,18 @@ ssid={{ ssid }}
 channel={{ channel }}
 {% endif %}
 
-{% if mode %}
+{% if mode is defined and mode is not none %}
 # Operation mode (a = IEEE 802.11a (5 GHz), b = IEEE 802.11b (2.4 GHz),
 # g = IEEE 802.11g (2.4 GHz), ad = IEEE 802.11ad (60 GHz); a/g options are used
 # with IEEE 802.11n (HT), too, to specify band). For IEEE 802.11ac (VHT), this
-# needs to be set to hw_mode=a. For IEEE 802.11ax (HE) on 6 GHz this needs
-# to be set to hw_mode=a. When using ACS (see channel parameter), a
+# needs to be set to hw_mode a. For IEEE 802.11ax (HE) on 6 GHz this needs
+# to be set to hw_mode a. When using ACS (see channel parameter), a
 # special value "any" can be used to indicate that any support band can be used.
 # This special case is currently supported only with drivers with which
 # offloaded ACS is used.
-{%   if 'n' in mode %}
+{%   if mode == 'n' %}
 hw_mode=g
-{%   elif 'ac' in mode %}
+{%   elif mode == 'ac' %}
 hw_mode=a
 ieee80211h=1
 ieee80211ac=1
@@ -529,10 +532,13 @@ wep_key{{ loop.index -1 }}={{ security.wep.key }}
 # and/or WPA2 (full IEEE 802.11i/RSN):
 # bit0 = WPA
 # bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
+# Note that WPA3 is also configured with bit1 since it uses RSN just like WPA2.
+# In other words, for WPA3, wpa 2 is used the configuration (and
+# wpa_key_mgmt=SAE for WPA3-Personal instead of wpa_key_mgmt=WPA-PSK).
 {%   if security.wpa.mode is defined %}
-{%     if security.wpa.mode == 'both' %}
+{%     if security.wpa.mode == 'wpa+wpa2' %}
 wpa=3
-{%     elif security.wpa.mode == 'wpa2' %}
+{%     elif security.wpa.mode == 'wpa2' or security.wpa.mode == 'wpa3' %}
 wpa=2
 {%     elif security.wpa.mode == 'wpa' %}
 wpa=1
@@ -592,7 +598,15 @@ wpa_passphrase={{ security.wpa.passphrase }}
 # added to enable SHA256-based stronger algorithms.
 # WPA-PSK = WPA-Personal / WPA2-Personal
 # WPA-PSK-SHA256 = WPA2-Personal using SHA256
-wpa_key_mgmt=WPA-PSK
+# WPA-EAP = WPA-Enterprise / WPA2-Enterprise
+# WPA-EAP-SHA256 = WPA2-Enterprise using SHA256
+# SAE = SAE (WPA3-Personal)
+# WPA-EAP-SUITE-B-192 = WPA3-Enterprise with 192-bit security/CNSA suite
+{%   if security.wpa.mode is defined and security.wpa.mode == 'wpa3' %}
+wpa_key_mgmt=SAE
+{%   else %}
+wpa_key_mgmt=WPA-PSK WPA-PSK-SHA256
+{%   endif %}
 
 {%   elif security.wpa.radius is defined %}
 ##### IEEE 802.1X-2004 related configuration ##################################
@@ -602,9 +616,17 @@ ieee8021x=1
 # Set of accepted key management algorithms (WPA-PSK, WPA-EAP, or both). The
 # entries are separated with a space. WPA-PSK-SHA256 and WPA-EAP-SHA256 can be
 # added to enable SHA256-based stronger algorithms.
+# WPA-PSK = WPA-Personal / WPA2-Personal
+# WPA-PSK-SHA256 = WPA2-Personal using SHA256
 # WPA-EAP = WPA-Enterprise / WPA2-Enterprise
 # WPA-EAP-SHA256 = WPA2-Enterprise using SHA256
-wpa_key_mgmt=WPA-EAP
+# SAE = SAE (WPA3-Personal)
+# WPA-EAP-SUITE-B-192 = WPA3-Enterprise with 192-bit security/CNSA suite
+{%   if security.wpa.mode is defined and security.wpa.mode == 'wpa3' %}
+wpa_key_mgmt=WPA-EAP-SUITE-B-192
+{%   else %}
+wpa_key_mgmt=WPA-EAP WPA-EAP-SHA256
+{%   endif %}
 
 {%     if security.wpa.radius.server is defined %}
 # RADIUS client forced local IP address for the access point

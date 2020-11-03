@@ -48,7 +48,6 @@
 "system-options.py",
 "system-syslog.py",
 "system-timezone.py",
-"system-wifi-regdom.py",
 "system_console.py",
 "system_lcd.py",
 "task_scheduler.py",

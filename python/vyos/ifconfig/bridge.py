@@ -177,6 +177,10 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
+        # Bridge port handling of wireless interfaces is done by hostapd.
+        if 'wlan' in interface:
+            return
+
         return self.set_interface('add_port', interface)
 
     def del_port(self, interface):
