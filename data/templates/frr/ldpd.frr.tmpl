@@ -16,6 +16,9 @@ no neighbor {{neighbor_id}} ttl-security disable
 no neighbor {{neighbor_id}} ttl-security hops {{old_ldp.neighbors[neighbor_id].ttl_security}}
 {%   endif -%}
 {% endif -%}
+{% if 'session_holdtime' is defined -%}
+no neighbor {{neighbor_id}} session holdtime {{old_ldp.neighbors[neighbor_id].session_holdtime}}
+{% endif -%}
 {% endfor -%}
 {% for neighbor_id in ldp.neighbors -%}
 neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
@@ -25,6 +28,9 @@ neighbor {{neighbor_id}} ttl-security disable
 {%   else -%}
 neighbor {{neighbor_id}} ttl-security hops {{ldp.neighbors[neighbor_id].ttl_security}}
 {%   endif -%}
+{% endif -%}
+{% if 'session_holdtime' is defined -%}
+neighbor {{neighbor_id}} session holdtime {{ldp.neighbors[neighbor_id].session_holdtime}}
 {% endif -%}
 {% endfor -%}
 !
