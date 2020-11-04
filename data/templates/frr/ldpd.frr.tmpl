@@ -9,9 +9,23 @@ router-id {{ router_id }}
 {% endif -%}
 {% for neighbor_id in old_ldp.neighbors -%}
 no neighbor {{neighbor_id}} password {{old_ldp.neighbors[neighbor_id].password}}
+{% if 'ttl_security' is defined -%}
+{%   if 'disable' in old_ldp.neighbors[neighbor_id].ttl_security %}
+no neighbor {{neighbor_id}} ttl-security disable
+{%   else -%}
+no neighbor {{neighbor_id}} ttl-security hops {{old_ldp.neighbors[neighbor_id].ttl_security}}
+{%   endif -%}
+{% endif -%}
 {% endfor -%}
 {% for neighbor_id in ldp.neighbors -%}
 neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
+{% if 'ttl_security' is defined -%}
+{%   if 'disable' in ldp.neighbors[neighbor_id].ttl_security %}
+neighbor {{neighbor_id}} ttl-security disable
+{%   else -%}
+neighbor {{neighbor_id}} ttl-security hops {{ldp.neighbors[neighbor_id].ttl_security}}
+{%   endif -%}
+{% endif -%}
 {% endfor -%}
 !
 address-family ipv4
