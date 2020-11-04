@@ -43,6 +43,22 @@
                       <help>Peer password</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="ttl-security">
+                    <properties>
+                      <help>Neighbor TTL security</help>
+                      <completionHelp>
+                        <list>disable</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>&lt;1-254&gt;</format>
+                        <description>TTL</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>disable</format>
+                        <description>Disable neighbor TTL security</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
               <node name="discovery">

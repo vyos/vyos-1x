@@ -161,14 +161,16 @@ def get_config(config=None):
     for neighbor in conf.list_effective_nodes('neighbor'):
         mpls_conf['old_ldp']['neighbors'].update({
             neighbor : {
-                'password' : conf.return_effective_value('neighbor {0} password'.format(neighbor))
+                'password' : conf.return_effective_value('neighbor {0} password'.format(neighbor), default=''),
+                'ttl_security' : conf.return_effective_value('neighbor {0} ttl-security'.format(neighbor), default=''),
             }
         })
 
     for neighbor in conf.list_nodes('neighbor'):
         mpls_conf['ldp']['neighbors'].update({
             neighbor : {
-                'password' : conf.return_value('neighbor {0} password'.format(neighbor))
+                'password' : conf.return_value('neighbor {0} password'.format(neighbor), default=''),
+                'ttl_security' : conf.return_value('neighbor {0} ttl-security'.format(neighbor), default=''),
             }
         })
 
