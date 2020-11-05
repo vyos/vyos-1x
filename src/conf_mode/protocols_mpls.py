@@ -163,6 +163,7 @@ def get_config(config=None):
             neighbor : {
                 'password' : conf.return_effective_value('neighbor {0} password'.format(neighbor), default=''),
                 'ttl_security' : conf.return_effective_value('neighbor {0} ttl-security'.format(neighbor), default=''),
+                'session_holdtime' : conf.return_effective_value('neighbor {0} session-holdtime'.format(neighbor), default='')
             }
         })
 
@@ -171,6 +172,7 @@ def get_config(config=None):
             neighbor : {
                 'password' : conf.return_value('neighbor {0} password'.format(neighbor), default=''),
                 'ttl_security' : conf.return_value('neighbor {0} ttl-security'.format(neighbor), default=''),
+                'session_holdtime' : conf.return_value('neighbor {0} session-holdtime'.format(neighbor), default='')
             }
         })
 
