@@ -217,8 +217,9 @@ def run_show_intf_brief(ifnames, iftypes, vif, vrrp):
         admin_state = interface.get_admin_state()
 
         intf = [interface.ifname,]
-        oper = ['u', ] if oper_state in ('up', 'unknown') else ['A', ]
-        admin = ['u', ] if oper_state in ('up', 'unknown') else ['D', ]
+
+        oper = ['u', ] if oper_state in ('up', 'unknown') else ['D', ]
+        admin = ['u', ] if admin_state in ('up', 'unknown') else ['A', ]
         addrs = [_ for _ in interface.get_addr() if not _.startswith('fe80::')] or ['-', ]
         descs = list(split_text(interface.get_alias(),0))
 
@@ -226,8 +227,8 @@ def run_show_intf_brief(ifnames, iftypes, vif, vrrp):
             i = intf.pop(0) if intf else ''
             a = addrs.pop(0) if addrs else ''
             d = descs.pop(0) if descs else ''
-            s = [oper.pop(0)] if oper else []
-            l = [admin.pop(0)] if admin else []
+            s = [admin.pop(0)] if admin else []
+            l = [oper.pop(0)] if oper else []
             if len(a) < 33:
                 print(format1 % (i, a, '/'.join(s+l), d))
             else:
