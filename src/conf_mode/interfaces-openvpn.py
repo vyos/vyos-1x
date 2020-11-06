@@ -481,7 +481,11 @@ def generate(openvpn):
             client_file = os.path.join(ccd_dir, client)
 
             # Our client need's to know its subnet mask ...
-            client_config['subnet'] = dict_search('server.subnet', openvpn)
+            client_config['server_subnet'] = dict_search('server.subnet', openvpn)
+
+            import pprint
+            pprint.pprint(client_config)
+
             render(client_file, 'openvpn/client.conf.tmpl', client_config,
                    trim_blocks=True, user=user, group=group)
 

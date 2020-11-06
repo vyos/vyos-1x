@@ -27,8 +27,10 @@ from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 from vyos.template import vyos_inc_ip
+from vyos.template import vyos_address_from_cidr
 from vyos.template import vyos_netmask_from_cidr
 from vyos.template import vyos_last_host_address
+from vyos.template import vyos_inc_ip
 
 PROCESS_NAME = 'openvpn'
 
@@ -313,9 +315,11 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         auth_hash = 'sha256'
         num_range = range(20, 25)
         port = ''
+        client1_routes = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
         for ii in num_range:
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
+            client_ip = vyos_inc_ip(subnet, '5')
             path = base_path + [interface]
             port = str(2000 + ii)
 
@@ -326,6 +330,12 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['local-port', port])
             self.session.set(path + ['server', 'subnet', subnet])
             self.session.set(path + ['server', 'topology', 'subnet'])
+
+            # clients
+            self.session.set(path + ['server', 'client', 'client1', 'ip', client_ip])
+            for route in client1_routes:
+                self.session.set(path + ['server', 'client', 'client1', 'subnet', route])
+
             self.session.set(path + ['replace-default-route'])
             self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
@@ -338,11 +348,17 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         for ii in num_range:
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
+
             start_addr = vyos_inc_ip(subnet, '2')
             stop_addr = vyos_last_host_address(subnet)
+
+            client_ip = vyos_inc_ip(subnet, '5')
+            client_netmask = vyos_netmask_from_cidr(subnet)
+
             port = str(2000 + ii)
 
             config_file = f'/run/openvpn/{interface}.conf'
+            client_config_file = f'/run/openvpn/ccd/{interface}/client1'
             config = read_file(config_file)
 
             self.assertIn(f'dev {interface}', config)
@@ -365,7 +381,13 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             netmask = IPv4Network(subnet).netmask
             network = IPv4Network(subnet).network_address
             self.assertIn(f'server {network} {netmask} nopool', config)
-            self.assertIn(f'ifconfig-pool {start_addr} {stop_addr}', config)
+
+            # Verify client
+            client_config = read_file(client_config_file)
+
+            self.assertIn(f'ifconfig-push {client_ip} {client_netmask}', client_config)
+            for route in client1_routes:
+                self.assertIn('iroute {} {}'.format(vyos_address_from_cidr(route), vyos_netmask_from_cidr(route)), client_config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
