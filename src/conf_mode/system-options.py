@@ -102,10 +102,10 @@ def apply(options):
 
     # tuned - performance tuning
     if 'performance' in options:
-        cmd('systemctl enable vyos-beep.service')
+        cmd('systemctl enable tuned.service')
         cmd('tuned-adm profile network-{performance}'.format(**options))
     else:
-        cmd('systemctl disable vyos-beep.service')
+        cmd('systemctl disable tuned.service')
 
 if __name__ == '__main__':
     try:
