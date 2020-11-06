@@ -1,0 +1,15 @@
+[Unit]
+Description=NDP Proxy Daemon
+After=network.target vyos-router.service
+ConditionPathExists=/run/ndppd/ndppd.conf
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=/usr/sbin/ndppd -d -p /var/run/ndppd/ndppd.pid -c /run/ndppd/ndppd.conf
+Type=forking
+PIDFile=/var/run/ndppd/ndppd.pid
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

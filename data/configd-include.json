@@ -41,6 +41,7 @@
 "service_mdns-repeater.py",
 "service_pppoe-server.py",
 "service_router-advert.py",
+"proxy_ndp.py",
 "ssh.py",
 "system-ip.py",
 "system-ipv6.py",

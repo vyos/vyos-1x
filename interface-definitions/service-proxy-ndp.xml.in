@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+<!-- NDP Proxy configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="proxy-ndp" owner="${vyos_conf_scripts_dir}/proxy_ndp.py">
+        <properties>
+          <help>NDP proxy configuration parameters</help>
+          <priority>220</priority>
+        </properties>
+        <children>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable all NDP proxy rules</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface for NDP proxy [REQUIRED]</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable NDP proxy rules</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="router">
+                <properties>
+                  <help>Whether to broadcast NDP information(default: yes)</help>
+                  <completionHelp>
+                    <list>yes no</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>yes</format>
+                    <description>Actively broadcast NDP information</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no</format>
+                    <description>Do not actively broadcast NDP information</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>yes</defaultValue>
+              </leafNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Set the timeout of the interface ndp</help>
+                  <valueHelp>
+                      <format>&lt;timeout&gt;</format>
+                      <description>Timeout milliseconds configured on the interface (default: 500)</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>500</defaultValue>
+              </leafNode>
+              <leafNode name="ttl">
+                <properties>
+                  <help>Set the ttl of the interface ndp</help>
+                  <valueHelp>
+                      <format>&lt;ttl&gt;</format>
+                      <description>ttl milliseconds configured on the interface (default: 30000)</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>30000</defaultValue>
+              </leafNode>
+              <tagNode name="prefix">
+                <properties>
+                  <help>NDP proxy prefix applied to the interface</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 network prefix</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Specify the running mode of the rule(default: static)</help>
+                      <completionHelp>
+                        <list>static auto iface</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>static</format>
+                        <description>This option tells ndppd that it should immediately respond to a Neighbor Solicitation Message without querying an internal interface.</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>auto</format>
+                        <description>automatic detection</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>iface</format>
+                        <description>Specify which interface the Neighbor Solicitation message will be sent out through.</description>
+                      </valueHelp>
+                    </properties>
+                    <defaultValue>static</defaultValue>
+                  </leafNode>
+                  <leafNode name="iface">
+                    <properties>
+                      <help>When the rule execution mode is set to iface. Need to specify this option to inform the interface that responds to neighbor requests</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
