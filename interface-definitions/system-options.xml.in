@@ -38,11 +38,24 @@
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
            </leafNode>
-           <leafNode name="reboot-on-panic">
-             <properties>
-               <help>Reboot system on kernel panic</help>
-               <valueless/>
-             </properties>
+          <leafNode name="performance">
+            <properties>
+              <help>Tune system performance</help>
+              <completionHelp>
+                <list>throughput latency</list>
+              </completionHelp>
+              <valueHelp>
+                <format>throughput</format>
+                <description>Tune for maximum network throughput</description>
+              </valueHelp>
+              <valueHelp>
+                <format>latency</format>
+                <description>Tune for low network latency</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(throughput|latency)$</regex>
+              </constraint>
+            </properties>
            </leafNode>
            <node name="http-client">
              <properties>
@@ -53,6 +66,12 @@
                #include <include/source-address-ipv4-ipv6.xml.i>
              </children>
            </node>
+           <leafNode name="reboot-on-panic">
+             <properties>
+               <help>Reboot system on kernel panic</help>
+               <valueless/>
+             </properties>
+           </leafNode>
            <node name="ssh-client">
              <properties>
                <help>Global options used for SSH client</help>

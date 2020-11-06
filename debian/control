@@ -106,6 +106,7 @@ Depends:
   telnet,
   tftpd-hpa,
   traceroute,
+  tuned,
   udp-broadcast-relay,
   usb-modeswitch,
   usbutils,

@@ -21,7 +21,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import call
+from vyos.util import cmd
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
@@ -71,9 +71,9 @@ def generate(options):
 def apply(options):
     # Beep action
     if 'beep_if_fully_booted' in options.keys():
-        call('systemctl enable vyos-beep.service')
+        cmd('systemctl enable vyos-beep.service')
     else:
-        call('systemctl disable vyos-beep.service')
+        cmd('systemctl disable vyos-beep.service')
 
     # Ctrl-Alt-Delete action
     if os.path.exists(systemd_action_file):
@@ -99,6 +99,13 @@ def apply(options):
             f.write('60')
         else:
             f.write('0')
+
+    # tuned - performance tuning
+    if 'performance' in options:
+        cmd('systemctl enable vyos-beep.service')
+        cmd('tuned-adm profile network-{performance}'.format(**options))
+    else:
+        cmd('systemctl disable vyos-beep.service')
 
 if __name__ == '__main__':
     try:
