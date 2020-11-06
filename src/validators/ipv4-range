@@ -28,6 +28,8 @@ if [[ "$1" =~ "-" ]]; then
   if [ $start -ge $stop ]; then
     exit 1
   fi
+
+  exit 0
 fi
 
-exit 0
+exit 1
