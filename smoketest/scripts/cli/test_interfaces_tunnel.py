@@ -26,6 +26,7 @@ from base_interfaces_test import BasicInterfaceTest
 remote_ip4 = '192.0.2.100'
 remote_ip6 = '2001:db8::ffff'
 source_if = 'dum2222'
+mtu = 1476
 
 def tunnel_conf(interface):
     tmp = cmd(f'ip -d -j link show {interface}')
@@ -64,8 +65,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'tunnel']
-        self._test_ip = False
-        self._test_mtu = False
+        self._test_mtu = True
 
         self.local_v4 = '192.0.2.1'
         self.local_v6 = '2001:db8::1'
@@ -114,7 +114,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         conf = tunnel_conf(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['link_type'])
-        self.assertEqual(1476, conf['mtu'])
+        self.assertEqual(mtu, conf['mtu'])
         self.assertEqual(source_if, conf['link'])
 
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
@@ -150,7 +150,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         conf = tunnel_conf(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual('tunnel6', conf['link_type'])
-        self.assertEqual(1476, conf['mtu'])
+        self.assertEqual(mtu, conf['mtu'])
         self.assertEqual(source_if, conf['link'])
 
         self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
@@ -186,7 +186,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         conf = tunnel_conf(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual('tunnel6', conf['link_type'])
-        self.assertEqual(1476, conf['mtu'])
+        self.assertEqual(mtu, conf['mtu'])
         self.assertEqual(source_if, conf['link'])
 
         self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
@@ -220,7 +220,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         conf = tunnel_conf(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['link_type'])
-        self.assertEqual(1476, conf['mtu'])
+        self.assertEqual(mtu, conf['mtu'])
         self.assertEqual(source_if, conf['link'])
 
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
@@ -255,7 +255,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             conf = tunnel_conf(interface)
             self.assertEqual(interface, conf['ifname'])
             self.assertEqual(encapsulation, conf['link_type'])
-            self.assertEqual(1476, conf['mtu'])
+            self.assertEqual(mtu, conf['mtu'])
             self.assertEqual(source_if, conf['link'])
 
             self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
@@ -293,7 +293,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         conf = tunnel_conf(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['link_type'])
-        self.assertEqual(1476, conf['mtu'])
+        self.assertEqual(mtu, conf['mtu'])
 
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,     conf['linkinfo']['info_data']['remote'])
