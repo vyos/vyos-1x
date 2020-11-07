@@ -12,8 +12,13 @@ interface "{{ ifname }}" {
 {% if dhcp_options.vendor_class_id is defined and dhcp_options.vendor_class_id is not none %}
     send vendor-class-identifier "{{ dhcp_options.vendor_class_id }}";
 {% endif %}
-    request subnet-mask, broadcast-address, routers, domain-name-servers,
+    # The request statement causes the client to request that any server responding to the
+    # client send the client its values for the specified options.
+    request subnet-mask, broadcast-address,{{ " routers," if dhcp_options.no_default_route is not defined }} domain-name-servers,
         rfc3442-classless-static-routes, domain-name, interface-mtu;
+
+    # The require statement lists options that must be sent in order for an offer to be
+    # accepted. Offers that do not contain all the listed options will be ignored!
     require subnet-mask;
 }
 

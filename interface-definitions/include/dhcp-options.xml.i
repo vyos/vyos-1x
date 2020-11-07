@@ -6,17 +6,23 @@
   <children>
     <leafNode name="client-id">
       <properties>
-        <help>DHCP client identifier</help>
+        <help>Identifier used by client to identify itself to the DHCP server</help>
       </properties>
     </leafNode>
     <leafNode name="host-name">
       <properties>
-        <help>DHCP client host name (overrides system host name)</help>
+        <help>Override system host-name sent to DHCP server</help>
       </properties>
     </leafNode>
     <leafNode name="vendor-class-id">
       <properties>
-        <help>DHCP client vendor type</help>
+        <help>Identify the vendor client type to the DHCP server</help>
+      </properties>
+    </leafNode>
+    <leafNode name="no-default-route">
+      <properties>
+        <help>Do not request routers from DHCP server</help>
+        <valueless/>
       </properties>
     </leafNode>
   </children>
