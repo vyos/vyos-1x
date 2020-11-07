@@ -1,4 +1,4 @@
-<!-- included start from interface-ipv6.xml.i -->
+<!-- included start from interface-ipv6-options.xml.i -->
 <node name="ipv6">
   <properties>
     <help>IPv6 routing parameters</help>

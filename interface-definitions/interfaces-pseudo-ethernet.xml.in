@@ -23,25 +23,8 @@
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-disable.xml.i>
           #include <include/interface-vrf.xml.i>
-          <node name="ip">
-            <children>
-              #include <include/interface-arp-cache-timeout.xml.i>
-              #include <include/interface-disable-arp-filter.xml.i>
-              #include <include/interface-disable-forwarding.xml.i>
-              #include <include/interface-enable-arp-accept.xml.i>
-              #include <include/interface-enable-arp-announce.xml.i>
-              #include <include/interface-enable-arp-ignore.xml.i>
-              #include <include/interface-enable-proxy-arp.xml.i>
-              #include <include/interface-proxy-arp-pvlan.xml.i>
-            </children>
-          </node>
-          <node name="ipv6">
-            <children>
-              #include <include/ipv6-address.xml.i>
-              #include <include/ipv6-disable-forwarding.xml.i>
-              #include <include/ipv6-dup-addr-detect-transmits.xml.i>
-            </children>
-          </node>
+          #include <include/interface-ipv4-options.xml.i>
+          #include <include/interface-ipv6-options.xml.i>
           #include <include/source-interface-ethernet.xml.i>
           #include <include/interface-mac.xml.i>
           <leafNode name="mode">
