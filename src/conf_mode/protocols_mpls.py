@@ -38,32 +38,48 @@ def get_config(config=None):
         'router_id'  : None,
         'mpls_ldp'   : False,
         'old_ldp'    : {
-                'interfaces'               : [],
-                'neighbors'                : {},
-                'd_transp_ipv4'            : None,
-                'd_transp_ipv6'            : None,
-                'hello_ipv4_holdtime'      : None,
-                'hello_ipv4_interval'      : None,
-                'hello_ipv6_holdtime'      : None,
-                'hello_ipv6_interval'      : None,
-                'ses_ipv4_hold'            : None,
-                'ses_ipv6_hold'            : None,
-                'export_ipv4_exp'          : False,
-                'export_ipv6_exp'          : False
+                'interfaces'                  : [],
+                'neighbors'                   : {},
+                'd_transp_ipv4'               : None,
+                'd_transp_ipv6'               : None,
+                'hello_ipv4_holdtime'         : None,
+                'hello_ipv4_interval'         : None,
+                'hello_ipv6_holdtime'         : None,
+                'hello_ipv6_interval'         : None,
+                'ses_ipv4_hold'               : None,
+                'ses_ipv6_hold'               : None,
+                'export_ipv4_exp'             : False,
+                'export_ipv6_exp'             : False,
+                'target_ipv4_addresses'       : [],
+                'target_ipv6_addresses'       : [],
+                'target_ipv4_enable'          : False,
+                'target_ipv6_enable'          : False,
+                'target_ipv4_hello_int'       : None,
+                'target_ipv6_hello_int'       : None,
+                'target_ipv4_hello_hold'      : None,
+                'target_ipv6_hello_hold'      : None
         },
         'ldp'        : {
-                'interfaces'               : [],
-                'neighbors'                : {},
-                'd_transp_ipv4'            : None,
-                'd_transp_ipv6'            : None,
-                'hello_ipv4_holdtime'      : None,
-                'hello_ipv4_interval'      : None,
-                'hello_ipv6_holdtime'      : None,
-                'hello_ipv6_interval'      : None,
-                'ses_ipv4_hold'            : None,
-                'ses_ipv6_hold'            : None,
-                'export_ipv4_exp'          : False,
-                'export_ipv6_exp'          : False
+                'interfaces'                  : [],
+                'neighbors'                   : {},
+                'd_transp_ipv4'               : None,
+                'd_transp_ipv6'               : None,
+                'hello_ipv4_holdtime'         : None,
+                'hello_ipv4_interval'         : None,
+                'hello_ipv6_holdtime'         : None,
+                'hello_ipv6_interval'         : None,
+                'ses_ipv4_hold'               : None,
+                'ses_ipv6_hold'               : None,
+                'export_ipv4_exp'             : False,
+                'export_ipv6_exp'             : False,
+                'target_ipv4_addresses'       : [],
+                'target_ipv6_addresses'       : [],
+                'target_ipv4_enable'          : False,
+                'target_ipv6_enable'          : False,
+                'target_ipv4_hello_int'       : None,
+                'target_ipv6_hello_int'       : None,
+                'target_ipv4_hello_hold'      : None,
+                'target_ipv6_hello_hold'      : None
         }
     }
     if not (conf.exists('protocols mpls') or conf.exists_effective('protocols mpls')):
@@ -149,6 +165,62 @@ def get_config(config=None):
 
     if conf.exists('export ipv6 explicit-null'):
         mpls_conf['ldp']['export_ipv6_exp'] = True
+
+    # Get target_ipv4_addresses
+    if conf.exists_effective('targeted-neighbor ipv4 address'):
+        mpls_conf['old_ldp']['target_ipv4_addresses'] = conf.return_effective_values('targeted-neighbor ipv4 address')
+
+    if conf.exists('targeted-neighbor ipv4 address'):
+        mpls_conf['ldp']['target_ipv4_addresses'] = conf.return_values('targeted-neighbor ipv4 address')
+
+    # Get target_ipv4_enable
+    if conf.exists_effective('targeted-neighbor ipv4 enable'):
+        mpls_conf['old_ldp']['target_ipv4_enable'] = True
+
+    if conf.exists('targeted-neighbor ipv4 enable'):
+        mpls_conf['ldp']['target_ipv4_enable'] = True
+
+    # Get target_ipv4_hello_int
+    if conf.exists_effective('targeted-neighbor ipv4 hello-interval'):
+        mpls_conf['old_ldp']['target_ipv4_hello_int'] = conf.return_effective_value('targeted-neighbor ipv4 hello-interval')
+
+    if conf.exists('targeted-neighbor ipv4 hello-interval'):
+        mpls_conf['ldp']['target_ipv4_hello_int'] = conf.return_value('targeted-neighbor ipv4 hello-interval')
+
+    # Get target_ipv4_hello_hold
+    if conf.exists_effective('targeted-neighbor ipv4 hello-holdtime'):
+        mpls_conf['old_ldp']['target_ipv4_hello_hold'] = conf.return_effective_value('targeted-neighbor ipv4 hello-holdtime')
+
+    if conf.exists('targeted-neighbor ipv4 hello-holdtime'):
+        mpls_conf['ldp']['target_ipv4_hello_hold'] = conf.return_value('targeted-neighbor ipv4 hello-holdtime')
+
+    # Get target_ipv6_addresses
+    if conf.exists_effective('targeted-neighbor ipv6 address'):
+        mpls_conf['old_ldp']['target_ipv6_addresses'] = conf.return_effective_values('targeted-neighbor ipv6 address')
+
+    if conf.exists('targeted-neighbor ipv6 address'):
+       mpls_conf['ldp']['target_ipv6_addresses'] = conf.return_values('targeted-neighbor ipv6 address')
+
+    # Get target_ipv6_enable
+    if conf.exists_effective('targeted-neighbor ipv6 enable'):
+        mpls_conf['old_ldp']['target_ipv6_enable'] = True
+
+    if conf.exists('targeted-neighbor ipv6 enable'):
+        mpls_conf['ldp']['target_ipv6_enable'] = True
+
+    # Get target_ipv6_hello_int
+    if conf.exists_effective('targeted-neighbor ipv6 hello-interval'):
+        mpls_conf['old_ldp']['target_ipv6_hello_int'] = conf.return_effective_value('targeted-neighbor ipv6 hello-interval')
+
+    if conf.exists('targeted-neighbor ipv6 hello-interval'):
+        mpls_conf['ldp']['target_ipv6_hello_int'] = conf.return_value('targeted-neighbor ipv6 hello-interval')
+
+    # Get target_ipv6_hello_hold
+    if conf.exists_effective('targeted-neighbor ipv6 hello-holdtime'):
+        mpls_conf['old_ldp']['target_ipv6_hello_hold'] = conf.return_effective_value('targeted-neighbor ipv6 hello-holdtime')
+
+    if conf.exists('targeted-neighbor ipv6 hello-holdtime'):
+        mpls_conf['ldp']['target_ipv6_hello_hold'] = conf.return_value('targeted-neighbor ipv6 hello-holdtime')
 
     # Get interfaces
     if conf.exists_effective('interface'):

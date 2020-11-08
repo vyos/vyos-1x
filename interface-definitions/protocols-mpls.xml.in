@@ -180,6 +180,113 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="targeted-neighbor">
+                <properties>
+                  <help>Targeted LDP neighbor/session parameters</help>
+                </properties>
+                <children>
+                  <node name="ipv4">
+                    <properties>
+                      <help>Targeted IPv4 neighbor/session parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>Neighbor/session address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Neighbor/session address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="enable">
+                        <properties>
+                          <help>Accept and respond to targeted hellos</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="hello-interval">
+                        <properties>
+                          <help>Hello interval</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Time in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="hello-holdtime">
+                        <properties>
+                          <help>Hello holdtime</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Time in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="ipv6">
+                    <properties>
+                      <help>Targeted IPv6 neighbor/session parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>Neighbor/session address</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>Neighbor/session address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="enable">
+                        <properties>
+                          <help>Accept and respond to targeted hellos</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="hello-interval">
+                        <properties>
+                          <help>Hello interval</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Time in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="hello-holdtime">
+                        <properties>
+                          <help>Hello holdtime</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Time in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
               <node name="export">
                 <properties>
                   <help>Export parameters</help>

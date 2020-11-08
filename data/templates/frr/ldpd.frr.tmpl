@@ -66,6 +66,30 @@ no session holdtime {{ old_ldp.ses_ipv4_hold }}
 {% if ldp.ses_ipv4_hold -%}
 session holdtime {{ ldp.ses_ipv4_hold }}
 {% endif -%}
+{% if old_ldp.target_ipv4_enable -%}
+no discovery targeted-hello accept
+{% endif -%}
+{% if ldp.target_ipv4_enable -%}
+discovery targeted-hello accept
+{% endif -%}
+{% if old_ldp.target_ipv4_hello_int -%}
+no discovery targeted-hello interval {{ old_ldp.target_ipv4_hello_int }}
+{% endif -%}
+{% if ldp.target_ipv4_hello_int -%}
+discovery targeted-hello interval {{ ldp.target_ipv4_hello_int }}
+{% endif -%}
+{% if old_ldp.target_ipv4_hello_hold -%}
+no discovery targeted-hello holdtime {{ old_ldp.target_ipv4_hello_hold }}
+{% endif -%}
+{% if ldp.target_ipv4_hello_hold -%}
+discovery targeted-hello holdtime {{ ldp.target_ipv4_hello_hold }}
+{% endif -%}
+{% for address in old_ldp.target_ipv4_addresses -%}
+no neighbor {{address}} targeted 
+{% endfor -%}
+{% for address in ldp.target_ipv4_addresses -%}
+neighbor {{address}} targeted 
+{% endfor -%}
 {% for interface in old_ldp.interfaces -%}
 no interface {{interface}}
 {% endfor -%}
@@ -109,6 +133,30 @@ no discovery hello interval {{ old_ldp.hello_ipv6_interval }}
 {% if ldp.hello_ipv6_interval -%}
 discovery hello interval {{ ldp.hello_ipv6_interval }}
 {% endif -%}
+{% if old_ldp.target_ipv6_enable -%}
+no discovery targeted-hello accept
+{% endif -%}
+{% if ldp.target_ipv6_enable -%}
+discovery targeted-hello accept
+{% endif -%}
+{% if old_ldp.target_ipv6_hello_int -%}
+no discovery targeted-hello interval {{ old_ldp.target_ipv6_hello_int }}
+{% endif -%}
+{% if ldp.target_ipv6_hello_int -%}
+discovery targeted-hello interval {{ ldp.target_ipv6_hello_int }}
+{% endif -%}
+{% if old_ldp.target_ipv6_hello_hold -%}
+no discovery targeted-hello holdtime {{ old_ldp.target_ipv6_hello_hold }}
+{% endif -%}
+{% if ldp.target_ipv6_hello_hold -%}
+discovery targeted-hello holdtime {{ ldp.target_ipv6_hello_hold }}
+{% endif -%}
+{% for address in old_ldp.target_ipv6_addresses -%}
+no neighbor {{address}} targeted 
+{% endfor -%}
+{% for address in ldp.target_ipv6_addresses -%}
+neighbor {{address}} targeted 
+{% endfor -%}
 {% for interface in old_ldp.interfaces -%}
 no interface {{interface}}
 {% endfor -%}
