@@ -7,6 +7,18 @@ no router-id {{ old_router_id }}
 {% if router_id -%}
 router-id {{ router_id }}
 {% endif -%}
+{% if old_ldp.cisco_interop_tlv -%}
+no dual-stack cisco-interop
+{% endif -%}
+{% if ldp.cisco_interop_tlv -%}
+dual-stack cisco-interop
+{% endif -%}
+{% if old_ldp.transport_prefer_ipv4 -%}
+no dual-stack transport-connection prefer ipv4
+{% endif -%}
+{% if ldp.transport_prefer_ipv4 -%}
+dual-stack transport-connection prefer ipv4
+{% endif -%}
 {% for neighbor_id in old_ldp.neighbors -%}
 no neighbor {{neighbor_id}} password {{old_ldp.neighbors[neighbor_id].password}}
 {% if 'ttl_security' is defined -%}
