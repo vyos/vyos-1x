@@ -111,6 +111,37 @@
                   </completionHelp>
                 </properties>
                 <children>
+                  <leafNode name="native-vlan">
+                    <properties>
+                      <help>Set the specific VLAN ID in the interface to ACCESS mode</help>
+                      <valueHelp>
+                        <format>1-4094</format>
+                        <description>Virtual Local Area Network (VLAN) ID</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4094"/>
+                      </constraint>
+                      <constraintErrorMessage>VLAN ID must be between 1 and 4094</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="allowed-vlan">
+                    <properties>
+                      <help>Allow the bridge to pass the tagged VLAN tag on this interface</help>
+                      <valueHelp>
+                        <format>&lt;n&gt;</format>
+                        <description>Virtual Local Area Network (VLAN) ID</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;n-m&gt;-&lt;1-4096&gt;</format>
+                        <description>Virtual Local Area Network (VLAN) ID Range</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^([0-9]{1,4}-[0-9]{1,4})|([0-9]{1,4})$</regex>
+                      </constraint>
+                      <constraintErrorMessage>not a valid VLAN ID value or range</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="cost">
                     <properties>
                       <help>Bridge port cost</help>
@@ -163,6 +194,8 @@
               <valueless/>
             </properties>
           </leafNode>
+          #include <include/vif-s.xml.i>
+          #include <include/vif.xml.i>
         </children>
       </tagNode>
     </children>

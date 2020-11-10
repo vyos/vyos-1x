@@ -41,6 +41,7 @@ class BridgeIf(Interface):
             'section': 'bridge',
             'prefixes': ['br', ],
             'broadcast': True,
+            'vlan': True,
         },
     }
 
@@ -72,6 +73,10 @@ class BridgeIf(Interface):
         'stp': {
             'validate': assert_boolean,
             'location': '/sys/class/net/{ifname}/bridge/stp_state',
+        },
+        'vlan_filter': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/bridge/vlan_filtering',
         },
         'multicast_querier': {
             'validate': assert_boolean,
@@ -152,6 +157,16 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').set_stp(1)
         """
         self.set_interface('stp', state)
+    
+    def set_vlan_filter(self, state):
+        """
+        Set bridge Vlan Filter state. 0 -> Vlan Filter disabled, 1 -> Vlan Filter enabled
+
+        Example:
+        >>> from vyos.ifconfig import BridgeIf
+        >>> BridgeIf('br0').set_vlan_filter(1)
+        """
+        self.set_interface('vlan_filter', state)
 
     def set_multicast_querier(self, enable):
         """
@@ -183,6 +198,7 @@ class BridgeIf(Interface):
 
         return self.set_interface('add_port', interface)
 
+
     def del_port(self, interface):
         """
         Remove member port from bridge instance.
@@ -201,6 +217,8 @@ class BridgeIf(Interface):
 
         # call base class first
         super().update(config)
+        
+        ifname = config['ifname']
 
         # Set ageing time
         value = config.get('aging')
@@ -236,6 +254,7 @@ class BridgeIf(Interface):
         for member in (tmp or []):
             if member in interfaces():
                 self.del_port(member)
+        vlan_filter = 0
 
         tmp = dict_search('member.interface', config)
         if tmp:
@@ -264,7 +283,44 @@ class BridgeIf(Interface):
                 if 'priority' in interface_config:
                     value = interface_config.get('priority')
                     lower.set_path_priority(value)
-
+                
+                tmp = dict_search('native_vlan_removed', interface_config)
+                
+                if tmp and 'native_vlan_removed' not in interface_config:
+                    vlan_id = tmp
+                    cmd = f'bridge vlan add dev {interface} vid 1 pvid untagged master'
+                    self._cmd(cmd)
+                    cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
+                    self._cmd(cmd)
+                    
+                tmp = dict_search('allowed_vlan_removed', interface_config)
+                
+                
+                for vlan_id in (tmp or []):
+                    cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
+                    self._cmd(cmd)
+                
+                if 'native_vlan' in interface_config:
+                    vlan_filter = 1
+                    cmd = f'bridge vlan del dev {interface} vid 1'
+                    self._cmd(cmd)
+                    vlan_id = interface_config['native_vlan']
+                    cmd = f'bridge vlan add dev {interface} vid {vlan_id} pvid untagged master'
+                    self._cmd(cmd)
+                else:
+                    cmd = f'bridge vlan del dev {interface} vid 1'
+                    self._cmd(cmd)
+                
+                if 'allowed_vlan' in interface_config:
+                    vlan_filter = 1
+                    for vlan in interface_config['allowed_vlan']:
+                        cmd = f'bridge vlan add dev {interface} vid {vlan} master'
+                        self._cmd(cmd)
+        
+        # enable/disable Vlan Filter
+        self.set_vlan_filter(vlan_filter)
+                        
+                            
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
         # function. We will only enable the interface if 'up' was called as

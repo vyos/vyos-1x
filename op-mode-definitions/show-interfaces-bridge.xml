@@ -33,6 +33,12 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=bridge --action=show</command>
               </leafNode>
+              <leafNode name="vlan">
+                <properties>
+                  <help>View the VLAN filter settings of the bridge</help>
+                </properties>
+                <command>/usr/sbin/bridge -c vlan show</command>
+              </leafNode>
             </children>
           </node>
         </children>
