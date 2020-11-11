@@ -56,7 +56,8 @@ def verify(wwan):
 
     # we can not use isfile() here as Linux device files are no regular files
     # thus the check will return False
-    if not os.path.exists(find_device_file(wwan['device'])):
+    dev_path = find_device_file(wwan['device'])
+    if dev_path is None or not os.path.exists(dev_path):
         raise ConfigError('Device "{device}" does not exist'.format(**wwan))
 
     verify_vrf(wwan)
