@@ -37,6 +37,14 @@ def get_config(config=None):
     mpls_conf = {
         'router_id'  : None,
         'mpls_ldp'   : False,
+        'old_parameters' : {
+                'no_ttl_propagation'          : False,
+                'maximum_ttl'                 : None
+        },
+        'parameters' : {
+                'no_ttl_propagation'          : False,
+                'maximum_ttl'                 : None
+        },
         'old_ldp'    : {
                 'interfaces'                  : [],
                 'neighbors'                   : {},
@@ -50,6 +58,8 @@ def get_config(config=None):
                 'ses_ipv6_hold'               : None,
                 'export_ipv4_exp'             : False,
                 'export_ipv6_exp'             : False,
+                'cisco_interop_tlv'           : False,
+                'transport_prefer_ipv4'       : False,
                 'target_ipv4_addresses'       : [],
                 'target_ipv6_addresses'       : [],
                 'target_ipv4_enable'          : False,
@@ -72,6 +82,8 @@ def get_config(config=None):
                 'ses_ipv6_hold'               : None,
                 'export_ipv4_exp'             : False,
                 'export_ipv6_exp'             : False,
+                'cisco_interop_tlv'           : False,
+                'transport_prefer_ipv4'       : False,
                 'target_ipv4_addresses'       : [],
                 'target_ipv6_addresses'       : [],
                 'target_ipv4_enable'          : False,
@@ -84,15 +96,35 @@ def get_config(config=None):
     }
     if not (conf.exists('protocols mpls') or conf.exists_effective('protocols mpls')):
         return None
-
+    
+    # If LDP is defined then enable LDP portion of code
     if conf.exists('protocols mpls ldp'):
         mpls_conf['mpls_ldp'] = True
 
+    # Set to MPLS hierarchy configuration level
+    conf.set_level('protocols mpls')
+        
+    # Get no_ttl_propagation
+    if conf.exists_effective('parameters no-propagate-ttl'):
+        mpls_conf['old_parameters']['no_ttl_propagation'] = True
+
+    if conf.exists('parameters no-propagate-ttl'):
+        mpls_conf['parameters']['no_ttl_propagation'] = True
+
+    # Get maximum_ttl
+    if conf.exists_effective('parameters maximum-ttl'):
+        mpls_conf['old_parameters']['maximum_ttl'] = conf.return_effective_value('parameters maximum-ttl')
+
+    if conf.exists('parameters maximum-ttl'):
+        mpls_conf['parameters']['maximum_ttl'] = conf.return_value('parameters maximum-ttl')
+
+    # Set to LDP hierarchy configuration level
     conf.set_level('protocols mpls ldp')
 
     # Get router-id
     if conf.exists_effective('router-id'):
         mpls_conf['old_router_id'] = conf.return_effective_value('router-id')
+        
     if conf.exists('router-id'):
         mpls_conf['router_id'] = conf.return_value('router-id')
 
@@ -222,6 +254,20 @@ def get_config(config=None):
     if conf.exists('targeted-neighbor ipv6 hello-holdtime'):
         mpls_conf['ldp']['target_ipv6_hello_hold'] = conf.return_value('targeted-neighbor ipv6 hello-holdtime')
 
+    # Get parameters cisco-interop-tlv
+    if conf.exists_effective('parameters cisco-interop-tlv'):
+        mpls_conf['old_ldp']['cisco_interop_tlv'] = True
+
+    if conf.exists('parameters cisco-interop-tlv'):
+        mpls_conf['ldp']['cisco_interop_tlv'] = True
+
+    # Get parameters transport-prefer-ipv4
+    if conf.exists_effective('parameters transport-prefer-ipv4'):
+        mpls_conf['old_ldp']['transport_prefer_ipv4'] = True
+
+    if conf.exists('parameters transport-prefer-ipv4'):
+        mpls_conf['ldp']['transport_prefer_ipv4'] = True
+
     # Get interfaces
     if conf.exists_effective('interface'):
         mpls_conf['old_ldp']['interfaces'] = conf.return_effective_values('interface')
@@ -264,15 +310,15 @@ def verify(mpls):
         return None
 
     if mpls['mpls_ldp']:
-        # Requre router-id
+        # Require router-id
         if not mpls['router_id']:
             raise ConfigError(f"MPLS ldp router-id is mandatory!")
 
-        # Requre discovery transport-address
+        # Require discovery transport-address
         if not mpls['ldp']['d_transp_ipv4'] and not mpls['ldp']['d_transp_ipv6']:
             raise ConfigError(f"MPLS ldp discovery transport address is mandatory!")
 
-        # Requre interface
+        # Require interface
         if not mpls['ldp']['interfaces']:
             raise ConfigError(f"MPLS ldp interface is mandatory!")
 
@@ -287,15 +333,24 @@ def apply(mpls):
     if mpls is None:
         return None
 
-     # Set number of entries in the platform label table
+    # Set number of entries in the platform label table
     if mpls['mpls_ldp']:
         sysctl('net.mpls.platform_labels', '1048575')
     else:
         sysctl('net.mpls.platform_labels', '0')
 
-    # Do not copy IP TTL to MPLS header
-    sysctl('net.mpls.ip_ttl_propagate', '0')
-
+    # Choose whether to copy IP TTL to MPLS header TTL
+    if mpls['parameters']['no_ttl_propagation']:
+        sysctl('net.mpls.ip_ttl_propagate', '0')
+    else:
+        sysctl('net.mpls.ip_ttl_propagate', '1')
+        
+    # Choose whether to limit maximum MPLS header TTL
+    if mpls['parameters']['maximum_ttl']:
+        sysctl('net.mpls.default_ttl', '%s' %(mpls['parameters']['maximum_ttl']))
+    else:
+        sysctl('net.mpls.default_ttl', '255')    
+    
     # Allow mpls on interfaces
     operate_mpls_on_intfc(mpls['ldp']['interfaces'], 1)
 

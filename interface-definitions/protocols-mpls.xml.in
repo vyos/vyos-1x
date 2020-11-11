@@ -11,15 +11,15 @@
         <children>
           <node name="ldp">
             <properties>
-              <help>LDP options</help>
+              <help>Label Distribution Protocol (LDP)</help>
             </properties>
             <children>
               <leafNode name="router-id">
                 <properties>
-                  <help>x.x.x.x Label Switch Router (LSR) id</help>
+                  <help>Label Distribution Protocol (LDP) router ID</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>LSR ipv4 id</description>
+                    <description>LDP IPv4 ID</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
@@ -28,10 +28,10 @@
               </leafNode>
               <tagNode name="neighbor">
                 <properties>
-                  <help>LDP Id of neighbor</help>
+                  <help>LDP neighbor parameters</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>neighbor IPv4 id</description>
+                    <description>Neighbor IPv4 address</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
@@ -40,7 +40,7 @@
                 <children>
                   <leafNode name="password">
                     <properties>
-                      <help>Peer password</help>
+                      <help>Neighbor password</help>
                     </properties>
                   </leafNode>
                   <leafNode name="ttl-security">
@@ -61,7 +61,7 @@
                   </leafNode>
                   <leafNode name="session-holdtime">
                     <properties>
-                      <help>Session ipv4 holdtime</help>
+                      <help>Session IPv4 hold time</help>
                       <valueHelp>
                         <format>15-65535</format>
                         <description>Time in seconds</description>
@@ -84,7 +84,7 @@
                 <children>
                   <leafNode name="hello-ipv4-holdtime">
                     <properties>
-                      <help>Hello ipv4 holdtime</help>
+                      <help>Hello IPv4 hold time</help>
                       <valueHelp>
                         <format>1-65535</format>
                         <description>Time in seconds</description>
@@ -96,7 +96,7 @@
                   </leafNode>
                   <leafNode name="hello-ipv4-interval">
                     <properties>
-                      <help>Hello ipv4 interval</help>
+                      <help>Hello IPv4 interval</help>
                       <valueHelp>
                         <format>1-65535</format>
                         <description>Time in seconds</description>
@@ -108,7 +108,7 @@
                   </leafNode>
                   <leafNode name="hello-ipv6-holdtime">
                     <properties>
-                      <help>Hello ipv6 holdtime</help>
+                      <help>Hello IPv6 hold time</help>
                       <valueHelp>
                         <format>1-65535</format>
                         <description>Time in seconds</description>
@@ -120,7 +120,7 @@
                   </leafNode>
                   <leafNode name="hello-ipv6-interval">
                     <properties>
-                      <help>Hello ipv6 interval</help>
+                      <help>Hello IPv6 interval</help>
                       <valueHelp>
                         <format>1-65535</format>
                         <description>Time in seconds</description>
@@ -132,7 +132,7 @@
                   </leafNode>
                   <leafNode name="session-ipv4-holdtime">
                     <properties>
-                      <help>Session ipv4 holdtime</help>
+                      <help>Session IPv4 hold time</help>
                       <valueHelp>
                         <format>15-65535</format>
                         <description>Time in seconds</description>
@@ -144,7 +144,7 @@
                   </leafNode>
                   <leafNode name="session-ipv6-holdtime">
                     <properties>
-                      <help>Session ipv6 holdtime</help>
+                      <help>Session IPv6 hold time</help>
                       <valueHelp>
                         <format>15-65535</format>
                         <description>Time in seconds</description>
@@ -156,7 +156,7 @@
                   </leafNode>
                   <leafNode name="transport-ipv4-address">
                     <properties>
-                      <help>Transport ipv4 address</help>
+                      <help>Transport IPv4 address</help>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>IPv4 bind as transport</description>
@@ -168,7 +168,7 @@
                   </leafNode>
                   <leafNode name="transport-ipv6-address">
                     <properties>
-                      <help>Transport ipv6 address</help>
+                      <help>Transport IPv6 address</help>
                       <valueHelp>
                         <format>ipv6</format>
                         <description>IPv6 bind as transport</description>
@@ -223,7 +223,7 @@
                       </leafNode>
                       <leafNode name="hello-holdtime">
                         <properties>
-                          <help>Hello holdtime</help>
+                          <help>Hello hold time</help>
                           <valueHelp>
                             <format>1-65535</format>
                             <description>Time in seconds</description>
@@ -273,7 +273,7 @@
                       </leafNode>
                       <leafNode name="hello-holdtime">
                         <properties>
-                          <help>Hello holdtime</help>
+                          <help>Hello hold time</help>
                           <valueHelp>
                             <format>1-65535</format>
                             <description>Time in seconds</description>
@@ -285,6 +285,25 @@
                       </leafNode>
                     </children>
                   </node>
+                </children>
+              </node>
+              <node name="parameters">
+                <properties>
+                  <help>Label Distribution Protocol (LDP) miscellaneous parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="cisco-interop-tlv">
+                    <properties>
+                      <help>Enable Cisco non-compliant format capability TLV</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="transport-prefer-ipv4">
+                    <properties>
+                      <help>Prefer IPv4 for TCP peer transport connection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <node name="export">
@@ -322,11 +341,36 @@
               </node>
               <leafNode name="interface">
                 <properties>
-                  <help>Listen interface for LDP</help>
+                  <help>Enable LDP and neighbor discovery on interface</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                   <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="parameters">
+            <properties>
+              <help>Multiprotocol Label Switching (MPLS) miscellaneous parameters</help>
+            </properties>
+            <children>
+              <leafNode name="no-propagate-ttl">
+                <properties>
+                  <help>Disable copy of IP TTL to MPLS TTL</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="maximum-ttl">
+                <properties>
+                  <help>Maximum TTL for MPLS packets</help>
+                  <valueHelp>
+                    <format>1-255</format>
+                    <description>Maximum hops allowed</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>
