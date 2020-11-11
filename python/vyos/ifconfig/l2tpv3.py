@@ -68,8 +68,9 @@ class L2TPv3If(Interface):
         cmd += ' peer_session_id {peer_session_id}'
         self._cmd(cmd.format(**self.config))
 
-        # interface is always A/D down. It needs to be enabled explicitly
-        self.set_admin_state('down')
+        # No need for interface shut down. There exist no function to permanently enable tunnel.
+        # But you can disable interface permanently with shutdown/disable command.
+        self.set_admin_state('up')
 
     def remove(self):
         """
