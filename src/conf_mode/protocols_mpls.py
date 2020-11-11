@@ -38,11 +38,11 @@ def get_config(config=None):
         'router_id'  : None,
         'mpls_ldp'   : False,
         'old_parameters' : {
-                'no-ttl-propagation'          : False,
+                'no_ttl_propagation'          : False,
                 'maximum_ttl'                 : None
         },
         'parameters' : {
-                'no-ttl-propagation'          : False,
+                'no_ttl_propagation'          : False,
                 'maximum_ttl'                 : None
         },
         'old_ldp'    : {
@@ -104,12 +104,12 @@ def get_config(config=None):
     # Set to MPLS hierarchy configuration level
     conf.set_level('protocols mpls')
         
-    # Get no-ttl-propagation
+    # Get no_ttl_propagation
     if conf.exists_effective('parameters no-propagate-ttl'):
-        mpls_conf['old_parameters']['no-ttl-propagation'] = True
+        mpls_conf['old_parameters']['no_ttl_propagation'] = True
 
     if conf.exists('parameters no-propagate-ttl'):
-        mpls_conf['parameters']['no-ttl-propagation'] = True
+        mpls_conf['parameters']['no_ttl_propagation'] = True
 
     # Get maximum_ttl
     if conf.exists_effective('parameters maximum-ttl'):
@@ -340,7 +340,7 @@ def apply(mpls):
         sysctl('net.mpls.platform_labels', '0')
 
     # Choose whether to copy IP TTL to MPLS header TTL
-    if mpls['parameters']['no-ttl-propagation']:
+    if mpls['parameters']['no_ttl_propagation']:
         sysctl('net.mpls.ip_ttl_propagate', '0')
     else:
         sysctl('net.mpls.ip_ttl_propagate', '1')
