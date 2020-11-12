@@ -113,7 +113,7 @@
                 <children>
                   <leafNode name="native-vlan">
                     <properties>
-                      <help>Set the specific VLAN ID in the interface to ACCESS mode</help>
+                      <help>Specify VLAN id which should natively be present on the link</help>
                       <valueHelp>
                         <format>1-4094</format>
                         <description>Virtual Local Area Network (VLAN) ID</description>
@@ -126,14 +126,14 @@
                   </leafNode>
                   <leafNode name="allowed-vlan">
                     <properties>
-                      <help>Allow the bridge to pass the tagged VLAN tag on this interface</help>
+                      <help>Specify VLAN id which is allowed in this trunk interface</help>
                       <valueHelp>
-                        <format>&lt;n&gt;</format>
-                        <description>Virtual Local Area Network (VLAN) ID</description>
+                        <format>&lt;id&gt;</format>
+                        <description>VLAN id allowed to pass this interface</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>&lt;n-m&gt;-&lt;1-4096&gt;</format>
-                        <description>Virtual Local Area Network (VLAN) ID Range</description>
+                        <format>&lt;idN&gt;-&lt;idM&gt;</format>
+                        <description>VLAN id range allowed on this interface (use '-' as delimiter)</description>
                       </valueHelp>
                       <constraint>
                         <regex>^([0-9]{1,4}-[0-9]{1,4})|([0-9]{1,4})$</regex>
