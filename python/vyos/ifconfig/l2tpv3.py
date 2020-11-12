@@ -68,8 +68,9 @@ class L2TPv3If(Interface):
         cmd += ' peer_session_id {peer_session_id}'
         self._cmd(cmd.format(**self.config))
 
-        # interface is always A/D down. It needs to be enabled explicitly
-        self.set_admin_state('down')
+        # No need for interface shut down. There exist no function to permanently enable tunnel.
+        # But you can disable interface permanently with shutdown/disable command.
+        self.set_admin_state('up')
 
     def remove(self):
         """
@@ -93,4 +94,24 @@ class L2TPv3If(Interface):
             if self.config['tunnel_id']:
                 cmd = 'ip l2tp del tunnel tunnel_id {tunnel_id}'
                 self._cmd(cmd.format(**self.config))
+    
+    
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class first
+        super().update(config)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)
 
