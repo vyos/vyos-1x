@@ -219,6 +219,28 @@ def is_member(conf, interface, intftype=None):
     old_level = conf.set_level(old_level)
     return ret_val
 
+def has_vlan_subinterface_configured(conf, intf):
+    """
+    Checks if interface has an VLAN subinterface configured.
+    Checks the following config nodes:
+    'vif', 'vif-s'
+
+    Returns True if interface has VLAN subinterface configured, False if it doesn't.
+    """
+    from vyos.ifconfig import Section
+    ret = False
+
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    intfpath = 'interfaces ' + Section.get_config_path(intf)
+    if ( conf.exists(f'{intfpath} vif') or
+            conf.exists(f'{intfpath} vif-s')):
+        ret = True
+
+    conf.set_level(old_level)
+    return ret
+
 def is_source_interface(conf, interface, intftype=None):
     """
     Checks if passed interface is configured as source-interface of other

@@ -239,7 +239,6 @@ def assert_mac(m):
     if octets[:5] == (0, 0, 94, 0, 1):
         raise ValueError(f'{m} is a VRRP MAC address')
 
-
 def has_address_configured(conf, intf):
     """
     Checks if interface has an address configured.
