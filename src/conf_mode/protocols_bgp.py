@@ -32,8 +32,13 @@ def get_config():
     conf = Config()
     base = ['protocols', 'nbgp']
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'))
+
     if not conf.exists(base):
         bgp = {}
+        call('vtysh -c \"conf t\" -c \"no ip protocol bgp\" ')
+
+    if not conf.exists(base + ['route-map']):
+        call('vtysh -c \"conf t\" -c \"no ip protocol bgp\" ')
 
     from pprint import pprint
     pprint(bgp)
