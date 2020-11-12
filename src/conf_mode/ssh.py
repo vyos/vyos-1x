@@ -16,7 +16,6 @@
 
 import os
 
-from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
