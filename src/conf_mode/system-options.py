@@ -107,6 +107,15 @@ def apply(options):
     else:
         cmd('systemctl disable tuned.service')
 
+    # Keyboard layout
+    if 'keyboard_layout' in options.keys():
+        try:
+            cmd('loadkeys {}'.format(options['keyboard_layout']))
+        except OSError:
+            raise ConfigError('Dos not possible to set {} as keyboard layout'.format(options['keyboard_layout']))
+    else:
+        cmd('loadkeys us')
+
 if __name__ == '__main__':
     try:
         c = get_config()
