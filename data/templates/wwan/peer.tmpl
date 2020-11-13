@@ -4,15 +4,19 @@
 ifname {{ ifname }}
 ipparam {{ ifname }}
 linkname {{ ifname }}
+
 {{ "usepeerdns" if no_peer_dns is defined }}
 # physical device
 {{ device }}
 lcp-echo-failure 0
 115200
 debug
-debug
 mtu {{ mtu }}
 mru {{ mtu }}
+{% if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
++ipv6
+ipv6cp-use-ipaddr
+{% endif %}
 nodefaultroute
 ipcp-max-failure 4
 ipcp-accept-local

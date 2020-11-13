@@ -42,6 +42,7 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'wirelessmodem']
     wwan = get_interface_dict(conf, base)
+
     return wwan
 
 def verify(wwan):
@@ -90,21 +91,21 @@ def generate(wwan):
         wwan['device'] = find_device_file(wwan['device'])
 
         # Create PPP configuration files
-        render(config_wwan, 'wwan/peer.tmpl', wwan)
+        render(config_wwan, 'wwan/peer.tmpl', wwan, trim_blocks=True)
         # Create PPP chat script
-        render(config_wwan_chat, 'wwan/chat.tmpl', wwan)
+        render(config_wwan_chat, 'wwan/chat.tmpl', wwan, trim_blocks=True)
 
         # generated script file must be executable
 
         # Create script for ip-pre-up.d
         render(script_wwan_pre_up, 'wwan/ip-pre-up.script.tmpl',
-               wwan, permission=0o755)
+               wwan, trim_blocks=True, permission=0o755)
         # Create script for ip-up.d
         render(script_wwan_ip_up, 'wwan/ip-up.script.tmpl',
-               wwan, permission=0o755)
+               wwan, trim_blocks=True, permission=0o755)
         # Create script for ip-down.d
         render(script_wwan_ip_down, 'wwan/ip-down.script.tmpl',
-               wwan, permission=0o755)
+               wwan, trim_blocks=True, permission=0o755)
 
     return None
 

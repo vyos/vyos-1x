@@ -1,6 +1,10 @@
 ABORT 'NO DIAL TONE' ABORT 'NO ANSWER' ABORT 'NO CARRIER' ABORT DELAYED
 '' AT
 OK ATZ
+{% if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
+OK 'AT+CGDCONT=1,"IPV4V6","{{ apn }}"'
+{% else %}
 OK 'AT+CGDCONT=1,"IP","{{ apn }}"'
+{% endif %}
 OK ATD*99#
 CONNECT ''
