@@ -317,6 +317,13 @@ class BridgeIf(Interface):
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
         
+        
+        vif = dict_search('vif', config)
+        if vif:
+            for vlan_id,vif_config in vif.items():
+                cmd = f'bridge vlan add dev {ifname} vid {vlan_id} self master'
+                self._cmd(cmd)
+        
         # enable/disable Vlan Filter
         self.set_vlan_filter(vlan_filter)
                         
