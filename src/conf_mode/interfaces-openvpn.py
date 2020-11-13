@@ -320,7 +320,7 @@ def verify(openvpn):
         if 'local_port' in openvpn:
             raise ConfigError('Cannot specify "local-port" with "tcp-active"')
 
-        if 'remote_host' in openvpn:
+        if 'remote_host' not in openvpn:
             raise ConfigError('Must specify "remote-host" with "tcp-active"')
 
     # shared secret and TLS
