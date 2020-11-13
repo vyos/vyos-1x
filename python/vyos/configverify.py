@@ -278,7 +278,7 @@ def verify_diffie_hellman_length(file, min_keysize):
         prog = re.compile('\d+\s+bit')
         if prog.search(out):
             bits = prog.search(out)[0].split()[0]
-            if int(min_keysize) >= int(bits):
+            if int(bits) >= int(min_keysize):
                 return True
 
     return False
