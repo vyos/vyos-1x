@@ -26,11 +26,11 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
-from vyos.template import inc_ip
 from vyos.template import address_from_cidr
-from vyos.template import netmask_from_cidr
-from vyos.template import last_host_address
+from vyos.template import dec_ip
 from vyos.template import inc_ip
+from vyos.template import last_host_address
+from vyos.template import netmask_from_cidr
 
 PROCESS_NAME = 'openvpn'
 
@@ -435,7 +435,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
             start_addr = inc_ip(subnet, '4')
-            stop_addr = last_host_address(subnet)
+            stop_addr = dec_ip(last_host_address(subnet), '1')
             port = str(2000 + ii)
 
             config_file = f'/run/openvpn/{interface}.conf'
