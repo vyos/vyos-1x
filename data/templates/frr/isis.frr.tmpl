@@ -1,158 +1,121 @@
-{%   for dname in isis -%}
 !
-router isis {{dname}}
-{% if isis[dname]['net'] is string -%}
- net {{ isis[dname]['net'] }}
-{% else -%}
-{%   for net_iso in isis[dname]['net'] -%}
- net {{ net_iso }}
-{%   endfor -%}
-{% endif -%}
-{#- end isis net -#}
-{% if 'dynamic_hostname' in isis[dname] -%}
+router isis {{ process }}
+ net {{ net }}
+{% if dynamic_hostname is defined %}
  hostname dynamic
-{% endif -%}
-{% if 'purge_originator' in isis[dname] -%}
+{% endif %}
+{% if purge_originator is defined %}
  purge-originator
-{% endif -%}
-{% if 'set_attached_bit' in isis[dname] -%}
+{% endif %}
+{% if set_attached_bit is defined %}
  set-attached-bit
-{% endif -%}
-{% if 'set_overload_bit' in isis[dname] -%}
+{% endif %}
+{% if set_overload_bit is defined %}
  set-overload-bit
-{% endif -%}
-{% if isis[dname].domain_password is defined -%}
-{%   if isis[dname].domain_password.plaintext_password is defined -%}
- domain-password clear {{ isis[dname].domain_password.plaintext_password }}
-{%   endif -%}
-{% endif -%}
-{#- end isis domain-password -#}
-{% if isis[dname]['lsp_gen_interval'] -%}
- lsp-gen-interval {{ isis[dname]['lsp_gen_interval'] }}
-{% endif -%}
-{% if isis[dname]['lsp_mtu'] -%}
- lsp-mtu {{ isis[dname]['lsp_mtu'] }}
-{% endif -%}
-{% if isis[dname]['lsp_refresh_interval'] -%}
- lsp-mtu {{ isis[dname]['lsp_refresh_interval'] }}
-{% endif -%}
-{% if isis[dname]['max_lsp_lifetime'] -%}
- lsp-mtu {{ isis[dname]['max_lsp_lifetime'] }}
-{% endif -%}
-{% if isis[dname]['spf_interval'] -%}
- spf-interval {{ isis[dname]['spf_interval'] }}
-{% endif -%}
-{% for t in isis[dname]['spf_delay_ietf'] -%}
-{% if t == "holddown" -%}
- spf-delay-ietf holddown {{ isis[dname]['spf_delay_ietf'][t] }}
-{% endif -%}
-{% endfor -%}
-{#- end lsp timers and intervals -#}
-{% if isis[dname]['area_password'] is defined -%}
-{% for password in isis[dname]['area_password'] -%}
-{%   if password == "md5" -%}
- area-password md5 {{ isis[dname]['area_password'][password] }}
-{%   endif -%}
-{%   if password == "plaintext_password" -%}
- area-password clear {{ isis[dname]['area_password'][password] }}
-{%   endif -%}
-{% endfor -%}
-{% endif -%}
-{#- end isis area-password -#}
-{% if 'originate' in isis[dname]['default_information'] -%}
-{% for ipv in isis[dname]['default_information']['originate'] -%}
-{%   for lvl in isis[dname]['default_information']['originate'][ipv] -%}
-{%     if ipv == 'ipv4' -%}
-    default-information originate {{ ipv }} {{ lvl | replace('_', '-') }}
-{%     elif ipv == 'ipv6' -%}
-    default-information originate {{ ipv }} {{ lvl | replace('_', '-') }} always
-{%     endif -%}
-{%   endfor -%}
-{% endfor -%}
-{% endif -%}
-{#- end isis default-information originate -#}
-{% if isis[dname]['redistribute'] is defined -%}
-{% for protocol in isis[dname]['redistribute']['ipv4']  -%}
-{%   for lvl in isis[dname]['redistribute']['ipv4'][protocol] -%}
-{%     if isis[dname]['redistribute']['ipv4'][protocol][lvl]['metric'] is defined -%}
- redistribute ipv4 {{ protocol }} {{ lvl | replace('_', '-') }} metric {{ isis[dname]['redistribute']['ipv4'][protocol][lvl]['metric'] }}
-{%     elif isis[dname]['redistribute']['ipv4'][protocol][lvl]['route_map'] is defined -%}
- redistribute ipv4 {{ protocol }} {{ lvl | replace('_', '-') }} route-map {{ isis[dname]['redistribute']['ipv4'][protocol][lvl]['route_map'] }}
-{%     else -%}
- redistribute ipv4 {{ protocol }} {{ lvl | replace('_', '-') }}
-{%     endif -%}
-{%   endfor -%}
-{% endfor -%}
-{% endif -%}
-{#- end isis redistribute -#}
-{% if isis[dname]['level'] -%}
-{%   if isis[dname]['level'] == 'level-1' -%}
+{% endif %}
+{% if domain_password is defined and domain_password.plaintext_password is defined and domain_password.plaintext_password is not none %}
+ domain-password clear {{ domain_password.plaintext_password }}
+{% endif %}
+{% if lsp_gen_interval is defined and lsp_gen_interval is not none %}
+ lsp-gen-interval {{ lsp_gen_interval }}
+{% endif %}
+{% if lsp_mtu is defined and lsp_mtu is not none %}
+ lsp-mtu {{ lsp_mtu }}
+{% endif %}
+{% if lsp_refresh_interval is defined and lsp_refresh_interval is not none %}
+ lsp-refresh-interval  {{ lsp_refresh_interval }}
+{% endif %}
+{% if max_lsp_lifetime is defined and max_lsp_lifetime is not none %}
+ max-lsp-lifetime {{ max_lsp_lifetime }}
+{% endif %}
+{% if spf_interval is defined and spf_interval is not none %}
+ spf-interval {{ spf_interval }}
+{% endif %}
+{% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.init_delay is not none %}
+ spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }}
+{% endif %}
+{% if area_password is defined and area_password.md5 is defined and area_password.md5 is not none %}
+ area-password md5 {{ area_password.md5 }}
+{% elif area_password is defined and area_password.plaintext_password is defined and area_password.plaintext_password is not none %}
+ area-password clear {{ area_password.plaintext_password }}
+{% endif %}
+{% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
+{%   for level in default_information.originate.ipv4 if default_information.originate.ipv4 is defined %}
+ default-information originate ipv4 {{ level | replace('_', '-') }}
+{%   endfor %}
+{%   for level in default_information.originate.ipv6 if default_information.originate.ipv6 is defined %}
+ default-information originate ipv6 {{ level | replace('_', '-') }} always
+{%   endfor %}
+{% endif %}
+{% if redistribute is defined and redistribute.ipv4 is defined and redistribute.ipv4 is not none %}
+{%   for protocol in redistribute.ipv4 %}
+{%     for level, level_config in redistribute.ipv4[protocol].items() %}
+{%       if level_config.metric is defined and level_config.metric is not none %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
+{%       elif level_config.route_map is defined and level_config.route_map is not none %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
+{%       else %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }}
+{%       endif %}
+{%     endfor %}
+{%   endfor %}
+{% endif %}
+{% if level is defined and level is not none %}
+{%   if level == 'level-1' %}
  is-type level-1
-{%   elif isis[dname]['level'] == 'level-2'  -%}
+{%   elif level == 'level-2'  %}
  is-type level-2-only
-{%   elif isis[dname]['level'] == 'level-1-2'  -%}
+{%   elif level == 'level-1-2'  %}
  is-type level-1-2
-{%   endif -%}
-{% endif -%}
-{#- end isis level -#}
-{% if isis[dname]['spf_delay_ietf'] is defined -%}
-{%   if isis[dname]['spf_delay_ietf']['init_delay'] or isis[dname]['spf_delay_ietf']['short_delay'] or isis[dname]['spf_delay_ietf']['long_delay'] or isis[dname]['spf_delay_ietf']['holddown'] or isis[dname]['spf_delay_ietf']['time_to_learn'] -%}
- init-delay {{ isis[dname]['spf_delay_ietf']['init_delay'] }} short-delay {{ isis[dname]['spf_delay_ietf']['short_delay'] }} long-delay {{ isis[dname]['spf_delay_ietf']['long_delay'] }} holddown {{ isis[dname]['spf_delay_ietf']['holddown'] }} time-to-learn {{ isis[dname]['spf_delay_ietf']['time_to_learn'] }}
-{%   endif -%}
-{% endif -%}
+{%   endif %}
+{% endif %}
 !
-{% set isis_iface = isis[dname]['interface'] -%}
-{% if isis_iface is string -%}
-interface {{ isis_iface }} 
-ip router isis {{ dname }}
-{% else -%}
-{% for value in isis_iface -%}
-interface {{ value }} 
-ip router isis {{ dname }}
-{%   if 'bfd' in isis_iface[value] -%}
-  isis bfd
-{%   endif -%}
-{%   if 'point_to_point' in isis_iface[value]['network'] -%}
-  isis network point-to-point
-{%   endif -%}
-{%   if isis_iface[value]['circuit_type'] == 'level-1' -%}
- isis circuit-type level-1
-{%   elif isis_iface[value]['circuit_type'] == 'level-2-only' -%}
- isis circuit-type level-2-only
-{%   elif isis_iface[value]['circuit_type'] == 'level-1-2' -%}
- isis circuit-type level-1-2 
-{%   endif -%}
-{%   if isis_iface[value]['hello_interval'] -%}
- isis hello-interval {{ isis_iface[value]['hello_interval'] }}
-{%   endif -%}
-{%   if isis_iface[value]['hello_multiplier'] -%}
- isis hello-multiplier {{ isis_iface[value]['hello_multiplier'] }}
-{%   endif -%}
-{%   if 'hello_padding' in isis_iface[value] -%}
+{% if interface_remove is defined and interface_remove is not none %}
+{%   for iface in interface_remove %}
+interface {{ iface }}
+ no ip router isis
+{%   endfor %}
+{% endif %}
+!
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+ ip router isis {{ process }}
+{%     if iface_config.bfd is defined %}
+ isis bfd
+{%     endif %}
+{%     if iface_config.network is defined and iface_config.network.point_to_point is defined %}
+ isis network point-to-point
+{%     endif %}
+{%     if iface_config.circuit_type is defined %}
+ isis circuit-type {{ iface_config.circuit_type }}
+{%     endif %}
+{%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
+ isis hello-interval {{ iface_config.hello_interval }}
+{%     endif %}
+{%     if iface_config.hello_multiplier is defined and iface_config.hello_multiplier is not none %}
+ isis hello-multiplier {{ iface_config.hello_multiplier }}
+{%     endif %}
+{%     if iface_config.hello_padding is defined %}
  isis hello padding
-{%   endif -%}
-{%   if isis_iface[value]['metric'] -%}
- isis metric {{ isis_iface[value]['metric'] }}
-{%   endif -%}
-{%   if 'passive' in isis_iface[value] -%}
+{%     endif %}
+{%     if iface_config.metric is defined and iface_config.metric is not none %}
+ isis metric {{ iface_config.metric }}
+{%     endif %}
+{%     if iface_config.passive is defined %}
  isis passive
-{%   endif -%}
-{%   if isis_iface[value]['password'] is defined -%}
-{%     if isis_iface[value]['password']['plaintext_password'] is defined -%}
- isis password clear {{ isis_iface[value]['password']['plaintext_password'] }}
-{%     endif -%}
-{%   endif -%}
-{%   if isis_iface[value]['priority'] -%}
- isis priority {{ isis_iface[value]['priority'] }}
-{%   endif -%}
-{%   if isis_iface[value]['psnp_interval'] -%}
- isis psnp-interval {{ isis_iface[value]['psnp_interval'] }}
-{%   endif -%}
-{%   if 'three_way_handshake' in isis_iface[value] -%}
+{%     endif %}
+{%     if iface_config.password is defined and iface_config.password.plaintext_password is defined and iface_config.password.plaintext_password is not none %}
+ isis password clear {{ iface_config.password.plaintext_password }}
+{%     endif %}
+{%     if iface_config.priority is defined and iface_config.priority is not none %}
+ isis priority {{ iface_config.priority }}
+{%     endif %}
+{%     if iface_config.psnp_interval is defined and iface_config.psnp_interval is not none %}
+ isis psnp-interval {{ iface_config.psnp_interval }}
+{%     endif %}
+{%     if iface_config.three_way_handshake is defined %}
  isis three-way-handshake
-{%   endif -%}
-{% endfor -%}
-{% endif -%}
-{#- end isis interface -#}
-!
-{%   endfor -%}
+{%     endif %}
+{%   endfor %}
+{% endif %}

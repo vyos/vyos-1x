@@ -30,6 +30,7 @@
 "nat.py",
 "ntp.py",
 "protocols_igmp.py",
+"protocols_isis.py",
 "protocols_mpls.py",
 "protocols_pim.py",
 "protocols_rip.py",
