@@ -25,21 +25,10 @@ from vyos.util import cmd
 # parameters with default will be left unset
 # all other paramters will receive the value to check
 
-def is_ip(addr):
-    """ Check addr if it is an IPv4 or IPv6 address """
-    return is_ipv4(addr) or is_ipv6(addr)
-
-def is_ipv4(addr):
-    from vyos.template import vyos_ipv4
-    return vyos_ipv4(addr)
-
-def is_ipv6(addr):
-    from vyos.template import vyos_ipv6
-    return vyos_ipv6(addr)
-
 def is_ipv6_link_local(addr):
     """ Check if addrsss is an IPv6 link-local address. Returns True/False """
     from ipaddress import IPv6Address
+    from vyos.template import is_ipv6
     addr = addr.split('%')[0]
     if is_ipv6(addr):
         if IPv6Address(addr).is_link_local:
@@ -51,6 +40,7 @@ def _are_same_ip(one, two):
     from socket import AF_INET
     from socket import AF_INET6
     from socket import inet_pton
+    from vyos.template import is_ipv4
     # compare the binary representation of the IP
     f_one = AF_INET if is_ipv4(one) else AF_INET6
     s_two = AF_INET if is_ipv4(two) else AF_INET6
@@ -68,6 +58,7 @@ def _is_intf_addr_assigned(intf, address, netmask=''):
     It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
     address 192.0.2.1/24.
     """
+    from vyos.template import is_ipv4
 
     # check if the requested address type is configured at all
     # {
@@ -138,6 +129,7 @@ def is_subnet_connected(subnet, primary=False):
     """
     from ipaddress import ip_address
     from ipaddress import ip_network
+    from vyos.template import is_ipv6
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
     addr_type = netifaces.AF_INET

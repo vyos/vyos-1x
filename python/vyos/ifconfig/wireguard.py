@@ -24,7 +24,7 @@ from hurry.filesize import alternative
 from vyos.config import Config
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
-from vyos.validate import is_ipv6
+from vyos.template import is_ipv6
 
 class WireGuardOperational(Operational):
     def _dump(self):

@@ -20,10 +20,10 @@ from configparser import ConfigParser
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.template import is_ipv4
 from vyos.util import cmd
 from vyos.util import get_half_cpus
 from vyos.util import process_named_running
-from vyos.validate import is_ipv4
 
 class BasicAccelPPPTest:
     class BaseTest(unittest.TestCase):

@@ -24,7 +24,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 from vyos.util import process_named_running
-from vyos.validate import is_ipv6
+from vyos.template import is_ipv6
 
 PROCESS_NAME = 'in.tftpd'
 base_path = ['service', 'tftp-server']

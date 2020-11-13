@@ -20,11 +20,11 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
-from vyos.validate import is_ipv6_link_local, is_ipv6
-from vyos import ConfigError
-from vyos.util import call
+from vyos.template import is_ipv6
 from vyos.template import render
-
+from vyos.util import call
+from vyos.validate import is_ipv6_link_local
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 

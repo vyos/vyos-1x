@@ -25,10 +25,10 @@ from time import sleep
 from ipaddress import ip_network
 
 from vyos.config import Config
-from vyos.util import call, get_half_cpus
-from vyos.validate import is_ipv4
-from vyos import ConfigError
+from vyos.template import is_ipv4
 from vyos.template import render
+from vyos.util import call, get_half_cpus
+from vyos import ConfigError
 
 from vyos import airbag
 airbag.enable()

@@ -22,10 +22,11 @@ from copy import deepcopy
 
 from vyos.config import Config
 from vyos.template import render
+from vyos.template import is_ipv6
 from vyos.util import call
-from vyos.validate import is_subnet_connected, is_ipv6
-from vyos import ConfigError
+from vyos.validate import is_subnet_connected
 
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 

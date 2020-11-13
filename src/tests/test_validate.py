@@ -21,29 +21,6 @@ class TestVyOSValidate(TestCase):
     def setUp(self):
         pass
 
-    def test_is_ip(self):
-        self.assertTrue(vyos.validate.is_ip('192.0.2.1'))
-        self.assertTrue(vyos.validate.is_ip('2001:db8::1'))
-        self.assertFalse(vyos.validate.is_ip('VyOS'))
-
-    def test_is_ipv4(self):
-        self.assertTrue(vyos.validate.is_ipv4('192.0.2.1'))
-        self.assertTrue(vyos.validate.is_ipv4('192.0.2.0/24'))
-        self.assertTrue(vyos.validate.is_ipv4('192.0.2.1/32'))
-
-        self.assertFalse(vyos.validate.is_ipv4('2001:db8::1'))
-        self.assertFalse(vyos.validate.is_ipv4('2001:db8::/64'))
-        self.assertFalse(vyos.validate.is_ipv4('VyOS'))
-
-    def test_is_ipv6(self):
-        self.assertFalse(vyos.validate.is_ipv6('192.0.2.1'))
-        self.assertFalse(vyos.validate.is_ipv6('192.0.2.0/24'))
-        self.assertFalse(vyos.validate.is_ipv6('192.0.2.1/32'))
-        self.assertTrue(vyos.validate.is_ipv6('2001:db8::1'))
-        self.assertTrue(vyos.validate.is_ipv6('2001:db8::/64'))
-        self.assertTrue(vyos.validate.is_ipv6('2001:db8::1/64'))
-        self.assertFalse(vyos.validate.is_ipv6('VyOS'))
-
     def test_is_ipv6_link_local(self):
         self.assertFalse(vyos.validate.is_ipv6_link_local('169.254.0.1'))
         self.assertTrue(vyos.validate.is_ipv6_link_local('fe80::'))

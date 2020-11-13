@@ -26,11 +26,11 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
-from vyos.template import vyos_inc_ip
-from vyos.template import vyos_address_from_cidr
-from vyos.template import vyos_netmask_from_cidr
-from vyos.template import vyos_last_host_address
-from vyos.template import vyos_inc_ip
+from vyos.template import inc_ip
+from vyos.template import address_from_cidr
+from vyos.template import netmask_from_cidr
+from vyos.template import last_host_address
+from vyos.template import inc_ip
 
 PROCESS_NAME = 'openvpn'
 
@@ -319,7 +319,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         for ii in num_range:
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
-            client_ip = vyos_inc_ip(subnet, '5')
+            client_ip = inc_ip(subnet, '5')
             path = base_path + [interface]
             port = str(2000 + ii)
 
@@ -349,11 +349,11 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
 
-            start_addr = vyos_inc_ip(subnet, '2')
-            stop_addr = vyos_last_host_address(subnet)
+            start_addr = inc_ip(subnet, '2')
+            stop_addr = last_host_address(subnet)
 
-            client_ip = vyos_inc_ip(subnet, '5')
-            client_netmask = vyos_netmask_from_cidr(subnet)
+            client_ip = inc_ip(subnet, '5')
+            client_netmask = netmask_from_cidr(subnet)
 
             port = str(2000 + ii)
 
@@ -387,7 +387,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
             self.assertIn(f'ifconfig-push {client_ip} {client_netmask}', client_config)
             for route in client1_routes:
-                self.assertIn('iroute {} {}'.format(vyos_address_from_cidr(route), vyos_netmask_from_cidr(route)), client_config)
+                self.assertIn('iroute {} {}'.format(address_from_cidr(route), netmask_from_cidr(route)), client_config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
@@ -434,8 +434,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         for ii in num_range:
             interface = f'vtun{ii}'
             subnet = f'192.0.{ii}.0/24'
-            start_addr = vyos_inc_ip(subnet, '4')
-            stop_addr = vyos_last_host_address(subnet)
+            start_addr = inc_ip(subnet, '4')
+            stop_addr = last_host_address(subnet)
             port = str(2000 + ii)
 
             config_file = f'/run/openvpn/{interface}.conf'

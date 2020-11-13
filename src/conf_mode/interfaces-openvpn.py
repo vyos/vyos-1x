@@ -33,13 +33,13 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_diffie_hellman_length
 from vyos.ifconfig import VTunIf
 from vyos.template import render
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.util import call
 from vyos.util import chown
 from vyos.util import chmod_600
 from vyos.util import dict_search
 from vyos.validate import is_addr_assigned
-from vyos.validate import is_ipv4
-from vyos.validate import is_ipv6
 
 from vyos import ConfigError
 from vyos import airbag

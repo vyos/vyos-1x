@@ -13,7 +13,6 @@ push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }}"
 iroute {{ network | address_from_cidr }} {{ network | netmask_from_cidr }}
 {%   endfor %}
 {% endif %}
-
 {# ipv6_remote is only set when IPv6 server is enabled #}
 {% if ipv6_remote %}
 # IPv6
@@ -27,7 +26,6 @@ push "route-ipv6 {{ route6 }}"
 iroute {{ net6 }}
 {%   endfor %}
 {% endif %}
-
 {% if disable is defined %}
 disable
 {% endif %}

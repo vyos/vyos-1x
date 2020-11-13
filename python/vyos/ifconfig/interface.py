@@ -35,8 +35,8 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
-from vyos.validate import is_ipv4
-from vyos.validate import is_ipv6
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import assert_boolean
 from vyos.validate import assert_list

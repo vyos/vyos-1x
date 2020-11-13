@@ -124,7 +124,7 @@ def render(
 ##################################
 
 @register_filter('address_from_cidr')
-def vyos_address_from_cidr(text):
+def address_from_cidr(text):
     """ Take an IPv4/IPv6 CIDR prefix and convert the network to an "address".
     Example:
     192.0.2.0/24 -> 192.0.2.0, 2001:db8::/48 -> 2001:db8::
@@ -133,7 +133,7 @@ def vyos_address_from_cidr(text):
     return str(ip_network(text).network_address)
 
 @register_filter('netmask_from_cidr')
-def vyos_netmask_from_cidr(text):
+def netmask_from_cidr(text):
     """ Take CIDR prefix and convert the prefix length to a "subnet mask".
     Example:
       - 192.0.2.0/24 -> 255.255.255.0
@@ -142,22 +142,27 @@ def vyos_netmask_from_cidr(text):
     from ipaddress import ip_network
     return str(ip_network(text).netmask)
 
-@register_filter('ipv4')
-def vyos_ipv4(text):
+@register_filter('is_ip')
+def is_ip(addr):
+    """ Check addr if it is an IPv4 or IPv6 address """
+    return is_ipv4(addr) or is_ipv6(addr)
+
+@register_filter('is_ipv4')
+def is_ipv4(text):
     """ Filter IP address, return True on IPv4 address, False otherwise """
     from ipaddress import ip_interface
     try: return ip_interface(text).version == 4
     except: return False
 
 @register_filter('ipv6')
-def vyos_ipv6(text):
+def is_ipv6(text):
     """ Filter IP address, return True on IPv6 address, False otherwise """
     from ipaddress import ip_interface
     try: return ip_interface(text).version == 6
     except: return False
 
 @register_filter('first_host_address')
-def vyos_first_host_address(text):
+def first_host_address(text):
     """ Return first usable (host) IP address from given prefix.
     Example:
       - 10.0.0.0/24 -> 10.0.0.1
@@ -173,7 +178,7 @@ def vyos_first_host_address(text):
     return str(addr.ip)
 
 @register_filter('last_host_address')
-def vyos_last_host_address(text):
+def last_host_address(text):
     """ Return first usable IP address from given prefix.
     Example:
       - 10.0.0.0/24 -> 10.0.0.254
@@ -190,7 +195,7 @@ def vyos_last_host_address(text):
     return str(IPv6Network(addr).broadcast_address)
 
 @register_filter('inc_ip')
-def vyos_inc_ip(address, increment):
+def inc_ip(address, increment):
     """ Increment given IP address by 'increment'
 
     Example (inc by 2):
@@ -201,7 +206,7 @@ def vyos_inc_ip(address, increment):
     return str(ip_interface(address).ip + int(increment))
 
 @register_filter('dec_ip')
-def vyos_dec_ip(address, decrement):
+def dec_ip(address, decrement):
     """ Decrement given IP address by 'decrement'
 
     Example (inc by 2):

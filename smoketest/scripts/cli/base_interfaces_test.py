@@ -23,7 +23,8 @@ from vyos.ifconfig import Interface
 from vyos.util import read_file
 from vyos.util import cmd
 from vyos.util import dict_search
-from vyos.validate import is_intf_addr_assigned, is_ipv6_link_local
+from vyos.validate import is_intf_addr_assigned
+from vyos.validate import is_ipv6_link_local
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):

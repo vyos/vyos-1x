@@ -25,9 +25,9 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
+from vyos.template import is_ipv4
 from vyos.util import call
 from vyos.util import chmod_755
-from vyos.validate import is_ipv4
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError

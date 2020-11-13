@@ -51,7 +51,7 @@ def verify_mtu_ipv6(config):
     recurring validation if the specified MTU can be used when IPv6 is
     configured on the interface. IPv6 requires a 1280 bytes MTU.
     """
-    from vyos.validate import is_ipv6
+    from vyos.template import is_ipv6
     if 'mtu' in config:
         # IPv6 minimum required link mtu
         min_mtu = 1280

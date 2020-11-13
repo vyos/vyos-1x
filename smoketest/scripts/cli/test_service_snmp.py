@@ -18,10 +18,10 @@ import os
 import re
 import unittest
 
-from vyos.validate import is_ipv4
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.template import is_ipv4
 from vyos.util import read_file
 from vyos.util import process_named_running
 

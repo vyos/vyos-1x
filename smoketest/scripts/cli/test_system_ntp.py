@@ -20,8 +20,8 @@ import unittest
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.template import vyos_address_from_cidr
-from vyos.template import vyos_netmask_from_cidr
+from vyos.template import address_from_cidr
+from vyos.template import netmask_from_cidr
 from vyos.util import read_file
 from vyos.util import process_named_running
 
@@ -86,8 +86,8 @@ class TestSystemNTP(unittest.TestCase):
 
         # Check generated client address configuration
         for network in networks:
-            network_address = vyos_address_from_cidr(network)
-            network_netmask = vyos_netmask_from_cidr(network)
+            network_address = address_from_cidr(network)
+            network_netmask = netmask_from_cidr(network)
 
             tmp = get_config_value(f'restrict {network_address}')[0]
             test = f'mask {network_netmask} nomodify notrap nopeer'
