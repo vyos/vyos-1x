@@ -102,16 +102,6 @@ class _Tunnel(Interface):
                             for k in self.options if k in self.config and self.config[k]])
         self._cmd('{} {}'.format(self.create.format(**self.config), options))
         self.set_admin_state('down')
-        
-        # Linux Kernel does not generate IPv6 Link Local address do to missing MAC
-        # We have to generate address manually and assign to interface
-        net = IPv6Network("FE80::/16")
-        rand_net = IPv6Network((net.network_address + (random.getrandbits(64 - net.prefixlen) << 64 ),64))
-        network = IPv6Network(rand_net)
-        address = str(IPv6Address(network.network_address + getrandbits(network.max_prefixlen - network.prefixlen)))+'/'+str(network.prefixlen)
-        
-        # Assign generated IPv6 Link Local address to the interface
-        self.add_addr(address)
 
     def _delete(self):
         self.set_admin_state('down')
@@ -136,6 +126,16 @@ class _Tunnel(Interface):
     @classmethod
     def get_config(cls):
         return dict(zip(cls.options, ['']*len(cls.options)))
+        
+    def generate_link_local():
+        # Linux Kernel does not generate IPv6 Link Local address do to missing MAC
+        # We have to generate address manually and assign to interface
+        net = IPv6Network("FE80::/16")
+        rand_net = IPv6Network((net.network_address + (random.getrandbits(64 - net.prefixlen) << 64 ),64))
+        network = IPv6Network(rand_net)
+        address = str(IPv6Address(network.network_address + getrandbits(network.max_prefixlen - network.prefixlen)))+'/'+str(network.prefixlen)
+        
+        return address
 
 
 class GREIf(_Tunnel):
@@ -168,6 +168,12 @@ class GREIf(_Tunnel):
     create = 'ip tunnel add {ifname} mode {type}'
     change = 'ip tunnel cha {ifname}'
     delete = 'ip tunnel del {ifname}'
+    
+    
+    def _create(self):
+        super()._create(self)
+        # Assign generated IPv6 Link Local address to the interface
+        self.add_addr(self.generate_link_local())
 
 
 # GreTap also called GRE Bridge
@@ -233,6 +239,11 @@ class IP6GREIf(_Tunnel):
     # sudo ip tunnel cha tun100 local: : 2
     # Error: an IP address is expected rather than "::2"
     # works if mode is explicit
+    
+    def _create(self):
+        super()._create(self)
+        # Assign generated IPv6 Link Local address to the interface
+        self.add_addr(self.generate_link_local())
 
 
 class IPIPIf(_Tunnel):
@@ -284,6 +295,11 @@ class IPIP6If(_Tunnel):
     create = 'ip -6 tunnel add {ifname} mode {type}'
     change = 'ip -6 tunnel cha {ifname}'
     delete = 'ip -6 tunnel del {ifname}'
+    
+    def _create(self):
+        super()._create(self)
+        # Assign generated IPv6 Link Local address to the interface
+        self.add_addr(self.generate_link_local())
 
 
 class IP6IP6If(IPIP6If):
@@ -297,6 +313,11 @@ class IP6IP6If(IPIP6If):
     ip = [IP6,]
 
     default = {'type': 'ip6ip6'}
+    
+    def _create(self):
+        super()._create(self)
+        # Assign generated IPv6 Link Local address to the interface
+        self.add_addr(self.generate_link_local())
 
 
 class SitIf(_Tunnel):
@@ -320,6 +341,11 @@ class SitIf(_Tunnel):
     create = 'ip tunnel add {ifname} mode {type}'
     change = 'ip tunnel cha {ifname}'
     delete = 'ip tunnel del {ifname}'
+    
+    def _create(self):
+        super()._create(self)
+        # Assign generated IPv6 Link Local address to the interface
+        self.add_addr(self.generate_link_local())
 
 
 class Sit6RDIf(SitIf):
