@@ -34,7 +34,11 @@ def utc2local(datetime):
 def parse_time(s):
     try:
         if re.match(r'^\d{1,2}$', s):
-            return datetime.strptime(s, "%M").time()
+            if (int(s) > 59):
+                s = str(int(s)//60) + ":" + str(int(s)%60)
+                return datetime.strptime(s, "%H:%M").time()
+            else:
+                return datetime.strptime(s, "%M").time()
         else:
             return datetime.strptime(s, "%H:%M").time()
     except ValueError:
