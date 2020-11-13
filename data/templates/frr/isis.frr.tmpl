@@ -1,0 +1,121 @@
+!
+router isis {{ process }}
+ net {{ net }}
+{% if dynamic_hostname is defined %}
+ hostname dynamic
+{% endif %}
+{% if purge_originator is defined %}
+ purge-originator
+{% endif %}
+{% if set_attached_bit is defined %}
+ set-attached-bit
+{% endif %}
+{% if set_overload_bit is defined %}
+ set-overload-bit
+{% endif %}
+{% if domain_password is defined and domain_password.plaintext_password is defined and domain_password.plaintext_password is not none %}
+ domain-password clear {{ domain_password.plaintext_password }}
+{% endif %}
+{% if lsp_gen_interval is defined and lsp_gen_interval is not none %}
+ lsp-gen-interval {{ lsp_gen_interval }}
+{% endif %}
+{% if lsp_mtu is defined and lsp_mtu is not none %}
+ lsp-mtu {{ lsp_mtu }}
+{% endif %}
+{% if lsp_refresh_interval is defined and lsp_refresh_interval is not none %}
+ lsp-refresh-interval  {{ lsp_refresh_interval }}
+{% endif %}
+{% if max_lsp_lifetime is defined and max_lsp_lifetime is not none %}
+ max-lsp-lifetime {{ max_lsp_lifetime }}
+{% endif %}
+{% if spf_interval is defined and spf_interval is not none %}
+ spf-interval {{ spf_interval }}
+{% endif %}
+{% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.init_delay is not none %}
+ spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }}
+{% endif %}
+{% if area_password is defined and area_password.md5 is defined and area_password.md5 is not none %}
+ area-password md5 {{ area_password.md5 }}
+{% elif area_password is defined and area_password.plaintext_password is defined and area_password.plaintext_password is not none %}
+ area-password clear {{ area_password.plaintext_password }}
+{% endif %}
+{% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
+{%   for level in default_information.originate.ipv4 if default_information.originate.ipv4 is defined %}
+ default-information originate ipv4 {{ level | replace('_', '-') }}
+{%   endfor %}
+{%   for level in default_information.originate.ipv6 if default_information.originate.ipv6 is defined %}
+ default-information originate ipv6 {{ level | replace('_', '-') }} always
+{%   endfor %}
+{% endif %}
+{% if redistribute is defined and redistribute.ipv4 is defined and redistribute.ipv4 is not none %}
+{%   for protocol in redistribute.ipv4 %}
+{%     for level, level_config in redistribute.ipv4[protocol].items() %}
+{%       if level_config.metric is defined and level_config.metric is not none %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
+{%       elif level_config.route_map is defined and level_config.route_map is not none %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
+{%       else %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }}
+{%       endif %}
+{%     endfor %}
+{%   endfor %}
+{% endif %}
+{% if level is defined and level is not none %}
+{%   if level == 'level-1' %}
+ is-type level-1
+{%   elif level == 'level-2'  %}
+ is-type level-2-only
+{%   elif level == 'level-1-2'  %}
+ is-type level-1-2
+{%   endif %}
+{% endif %}
+!
+{% if interface_remove is defined and interface_remove is not none %}
+{%   for iface in interface_remove %}
+interface {{ iface }}
+ no ip router isis
+{%   endfor %}
+{% endif %}
+!
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+ ip router isis {{ process }}
+{%     if iface_config.bfd is defined %}
+ isis bfd
+{%     endif %}
+{%     if iface_config.network is defined and iface_config.network.point_to_point is defined %}
+ isis network point-to-point
+{%     endif %}
+{%     if iface_config.circuit_type is defined %}
+ isis circuit-type {{ iface_config.circuit_type }}
+{%     endif %}
+{%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
+ isis hello-interval {{ iface_config.hello_interval }}
+{%     endif %}
+{%     if iface_config.hello_multiplier is defined and iface_config.hello_multiplier is not none %}
+ isis hello-multiplier {{ iface_config.hello_multiplier }}
+{%     endif %}
+{%     if iface_config.hello_padding is defined %}
+ isis hello padding
+{%     endif %}
+{%     if iface_config.metric is defined and iface_config.metric is not none %}
+ isis metric {{ iface_config.metric }}
+{%     endif %}
+{%     if iface_config.passive is defined %}
+ isis passive
+{%     endif %}
+{%     if iface_config.password is defined and iface_config.password.plaintext_password is defined and iface_config.password.plaintext_password is not none %}
+ isis password clear {{ iface_config.password.plaintext_password }}
+{%     endif %}
+{%     if iface_config.priority is defined and iface_config.priority is not none %}
+ isis priority {{ iface_config.priority }}
+{%     endif %}
+{%     if iface_config.psnp_interval is defined and iface_config.psnp_interval is not none %}
+ isis psnp-interval {{ iface_config.psnp_interval }}
+{%     endif %}
+{%     if iface_config.three_way_handshake is defined %}
+ isis three-way-handshake
+{%     endif %}
+{%   endfor %}
+{% endif %}
