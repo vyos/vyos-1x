@@ -60,23 +60,23 @@ mode server
 tls-server
 {%   if server is defined and server is not none %}
 {%     if server.subnet is defined and server.subnet is not none %}
+{%     if server.topology is defined and server.topology == 'point-to-point' %}
+topology p2p
+{%     elif server.topology is defined and server.topology is not none %}
+topology {{ server.topology }}
+{%     endif %}
 {%       for subnet in server.subnet if subnet | ipv4 %}
 server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} nopool
 {# OpenVPN assigns the first IP address to its local interface so the pool used #}
 {# in net30 topology - where each client receives a /30 must start from the second subnet #}
 {%     if server.topology is defined and server.topology == 'net30' %}
-ifconfig-pool {{ subnet | inc_ip('4') }} {{ subnet | last_host_address }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
+ifconfig-pool {{ subnet | inc_ip('4') }} {{ subnet | last_host_address | dec_ip('1') }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
 {%     else %}
 {# OpenVPN assigns the first IP address to its local interface so the pool must #}
 {# start from the second address and end on the last address #}
-ifconfig-pool {{ subnet | first_host_address | inc_ip('1') }} {{ subnet | last_host_address }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
+ifconfig-pool {{ subnet | first_host_address | inc_ip('1') }} {{ subnet | last_host_address | dec_ip('1') }} {{ subnet | netmask_from_cidr if device_type == 'tun' else '' }}
 {%     endif %}
 {%       endfor %}
-{%     endif %}
-{%     if server.topology is defined and server.topology == 'point-to-point' %}
-topology p2p
-{%     elif server.topology is defined and server.topology is not none %}
-topology {{ server.topology }}
 {%     endif %}
 {%     if server.client_ip_pool is defined and server.client_ip_pool is not none and server.client_ip_pool.disable is not defined %}
 ifconfig-pool {{ server.client_ip_pool.start }} {{ server.client_ip_pool.stop }}{{ server.client_ip_pool.subnet_mask if server.client_ip_pool.subnet_mask is defined and server.client_ip_pool.subnet_mask is not none }}

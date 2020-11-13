@@ -190,11 +190,23 @@ def vyos_last_host_address(text):
     return str(IPv6Network(addr).broadcast_address)
 
 @register_filter('inc_ip')
-def vyos_inc_ip(text, increment):
-    """ Return first usable IP address from given prefix.
-    Example:
-      - 10.0.0.0/24 -> 10.0.0.1
-      - 2001:db8::/64 -> 2001:db8::1
+def vyos_inc_ip(address, increment):
+    """ Increment given IP address by 'increment'
+
+    Example (inc by 2):
+      - 10.0.0.0/24 -> 10.0.0.2
+      - 2001:db8::/64 -> 2001:db8::2
     """
     from ipaddress import ip_interface
-    return str(ip_interface(text).ip + int(increment))
+    return str(ip_interface(address).ip + int(increment))
+
+@register_filter('dec_ip')
+def vyos_dec_ip(address, decrement):
+    """ Decrement given IP address by 'decrement'
+
+    Example (inc by 2):
+      - 10.0.0.0/24 -> 10.0.0.2
+      - 2001:db8::/64 -> 2001:db8::2
+    """
+    from ipaddress import ip_interface
+    return str(ip_interface(address).ip - int(decrement))
