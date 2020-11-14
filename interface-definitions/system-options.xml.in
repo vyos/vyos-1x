@@ -111,6 +111,7 @@
                  <description>Denmark</description>
                </valueHelp>
              </properties>
+             <defaultValue>us</defaultValue>
            </leafNode>
         </children>
       </node>

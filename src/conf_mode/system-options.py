@@ -20,9 +20,11 @@ from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import cmd
 from vyos.validate import is_addr_assigned
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -38,6 +40,12 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'options']
     options = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    options = dict_merge(default_values, options)
+
     return options
 
 def verify(options):
@@ -70,7 +78,7 @@ def generate(options):
 
 def apply(options):
     # Beep action
-    if 'beep_if_fully_booted' in options.keys():
+    if 'beep_if_fully_booted' in options:
         cmd('systemctl enable vyos-beep.service')
     else:
         cmd('systemctl disable vyos-beep.service')
@@ -95,7 +103,7 @@ def apply(options):
 
     # Reboot system on kernel panic
     with open('/proc/sys/kernel/panic', 'w') as f:
-        if 'reboot_on_panic' in options.keys():
+        if 'reboot_on_panic' in options:
             f.write('60')
         else:
             f.write('0')
@@ -107,14 +115,10 @@ def apply(options):
     else:
         cmd('systemctl disable tuned.service')
 
-    # Keyboard layout
-    if 'keyboard_layout' in options.keys():
-        try:
-            cmd('loadkeys {}'.format(options['keyboard_layout']))
-        except OSError:
-            raise ConfigError('Dos not possible to set {} as keyboard layout'.format(options['keyboard_layout']))
-    else:
-        cmd('loadkeys us')
+    # Keyboard layout - there will be always the default key inside the dict
+    # but we check for key existence anyway
+    if 'keyboard_layout' in options:
+        cmd('loadkeys -C /dev/console {keyboard_layout}'.format(**options))
 
 if __name__ == '__main__':
     try:

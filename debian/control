@@ -28,6 +28,7 @@ Depends:
   conntrack,
   conserver-client,
   conserver-server,
+  console-data,
   crda,
   cron,
   dbus,
