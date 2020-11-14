@@ -1,0 +1,225 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <node name="tinc">
+            <properties>
+              <help>Show Tinc VPN interface information</help>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed Tinc VPN interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=tinc --action=show</command>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="tinc">
+            <properties>
+              <help>Show Tinc VPN interface information</help>
+              <completionHelp>
+                <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf=$4</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of specified Tinc VPN interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+              </leafNode>
+              <tagNode name="info">
+                <properties>
+                  <help>Show information about a particular node, subnet or address</help>
+                </properties>
+                <command>sudo tinc -n "$4" info "$6"</command>
+              </tagNode>
+              <leafNode name="nodes">
+                <properties>
+                  <help>Display all Tinc Nodes information</help>
+                </properties>
+                <command>
+                    hosts = "/etc/tinc/$4/hosts"
+                    for node in $(sudo ls ${hosts})
+                    do
+                        if test -f ${hosts}/${node};then
+                            sudo tinc -n "$4" info ${node}
+                            echo "\n"
+                        fi
+                    done
+                </command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="set">
+    <children>
+      <tagNode name="tinc">
+        <properties>
+          <help>Set tinc VPN option</help>
+          <completionHelp>
+            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <tagNode name="invite">
+            <properties>
+              <help>Invite a specific node into the network</help>
+            </properties>
+            <command>sudo tinc -n "$3" invite "$5"</command>
+          </tagNode>
+          <tagNode name="debug">
+            <properties>
+              <help>Sets debug level to level</help>
+            </properties>
+            <command>sudo tinc -n "$3" debug "$5"</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="monitor">
+    <children>
+      <tagNode name="tinc">
+        <properties>
+          <help>Monitor Tinc VPN</help>
+          <completionHelp>
+            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <tagNode name="log">
+            <properties>
+              <help>Monitor Tinc VPN</help>
+            </properties>
+            <command>sudo tinc -n "$3" log "$5"</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="force">
+    <children>
+      <tagNode name="tinc">
+        <properties>
+          <help>Mandatory connection to all uplinks of Tinc VPN</help>
+          <completionHelp>
+            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+          </completionHelp>
+        </properties>
+        <command>sudo tinc -n "$3" retry</command>
+        <children>
+          <node name="dump">
+            <properties>
+              <help>Export tinc VPN runtime data</help>
+            </properties>
+            <children>
+              <node name="nodes">
+                <properties>
+                  <help>Dump Tinc VPN nodes</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump nodes</command>
+                <children>
+                  <node name="reachable">
+                    <properties>
+                      <help>Only accessible nodes are listed</help>
+                    </properties>
+                  </node>
+                </children>
+              </node>
+              <node name="edges">
+                <properties>
+                  <help>Dump a list of all known connections in the Tinc VPN</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump edges</command>
+              </node>
+              <node name="subnets">
+                <properties>
+                  <help>Dump a list of all known subnets in the Tinc VPN</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump subnets</command>
+              </node>
+              <node name="connections">
+                <properties>
+                  <help>Dump the list of all meta-connections of Tinc VPN</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump connections</command>
+              </node>
+              <node name="digraph">
+                <properties>
+                  <help>Dump the node to the digraph of the Tinc VPN node (you can use dot rendering)</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump digraph</command>
+              </node>
+              <node name="graph">
+                <properties>
+                  <help>Dump the node to the graph of the Tinc VPN node (you can use dot rendering)</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump graph</command>
+              </node>
+              <node name="invitations">
+                <properties>
+                  <help>Dump a list of outstanding invitations. The filename of the invitation, as well as the name of the node that is being invited is shown for each invitation</help>
+                </properties>
+                <command>sudo tinc -n "$3" dump invitations</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="clear">
+    <children>
+      <tagNode name="tinc">
+        <properties>
+          <help>Clear all information about the node that cannot be accessed by tinc VPN.</help>
+          <completionHelp>
+            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+          </completionHelp>
+        </properties>
+        <command>sudo tinc -n "$3" purge</command>
+      </tagNode>
+    </children>
+  </node>
+  <node name="disconnect">
+    <children>
+      <tagNode name="tinc">
+        <properties>
+          <help>Cut the connection between Tinc VPN and a specific node</help>
+          <completionHelp>
+            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <tagNode name="node">
+            <properties>
+              <help>Node to be disconnected</help>
+            </properties>
+            <command>sudo tinc -n "$3" disconnect "$5"</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="reset">
+    <children>
+      <tagNode name="tinc">
+        <properties>
+          <help>Reset tinc VPN configuration parameters and client connections</help>
+          <completionHelp>
+            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
+          </completionHelp>
+        </properties>
+        <command>sudo tinc -n "$3" reload</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

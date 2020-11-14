@@ -1,0 +1,125 @@
+Name = {{ node_name }}
+Interface = {{ ifname }}
+{%- if bridge is defined  %}
+Mode = {{ bridge }}
+{%- else %}
+Mode = router
+{%- endif %}
+{%- if disable_auto_connect is defined  %}
+AutoConnect = no
+{%- endif %}
+Compression = {{ compression_level }}
+Cipher  = {{ encryption.cipher }}
+Digest  = {{ encryption.digset }}
+{%- if resolve_hostname is defined  %}
+Hostnames = yes
+{%- endif %}
+Broadcast = {{ broadcast_type }}
+{%- if decrement_ttl is defined  %}
+DecrementTTL = yes
+{%- endif %}
+{%- if direct_only is defined  %}
+DirectOnly = yes
+{%- endif %}
+Forwarding = {{ forwarding_option }}
+KeyExpire = {{ key_expire }}
+{%- if local_discovery is defined  %}
+LocalDiscovery = yes
+{%- endif %}
+MACExpire = {{ mac_expire}}
+PingInterval = {{ ping_interval }}
+PingTimeout = {{ ping_timeout }}
+{%- if priority_inheritance is defined  %}
+PriorityInheritance = yes
+{%- endif %}
+{%- if priority is defined  %}
+ProcessPriority = {{ priority }}
+{%- endif %}
+ReplayWindow = {{ replay_window }}
+{%- if strict_subnets is defined  %}
+StrictSubnets = yes
+{%- endif %}
+{%- if tunnel_server is defined  %}
+TunnelServer = yes
+{%- endif %}
+{%- if disable_clamp_mss is defined  %}
+ClampMSS = no
+{%- endif %}
+{%- if indirect_data is defined  %}
+IndirectData = yes
+{%- endif %}
+{%- if disable_experimental_protocol is defined  %}
+ExperimentalProtocol = no
+{%- endif %}
+MACLength = {{ mac_length }}
+PMTU = {{ mtu }}
+FWMark = {{ fw_mark }}
+{%- if disable_PMTU_Discovery is defined  %}
+PMTUDiscovery = no
+{%- else %}
+PMTUDiscovery = yes
+{%- endif %}
+{%- if mtu_info_nterval is defined  %}
+MTUInfoInterval = {{ mtu_info_nterval }}
+{%- endif %}
+{%- if TCP_Only is defined  %}
+TCPonly = yes
+{%- endif %}
+{%- if udp is defined  %}
+{%- if udp.discovery is defined  %}
+{%- if udp.discovery.connect is defined  %}
+UDPDiscovery = yes
+{%- if udp.discovery.keepalive_interval is defined  %}
+UDPDiscoveryKeepaliveInterval = {{ udp.discovery.keepalive_interval }}
+{%- endif %}
+{%- if udp.discovery.interval is defined  %}
+UDPDiscoveryInterval = {{ udp.discovery.interval }}
+{%- endif %}
+{%- if udp.discovery.timeout is defined  %}
+UDPDiscoveryTimeout = {{ udp.discovery.timeout }}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- if udp.rcv_buf is defined  %}
+UDPRcvBuf = {{ udp.rcv_buf }}
+{%- endif %}
+{%- if udp.snd_buf is defined  %}
+UDPSndBuf = {{ udp.snd_buf }}
+{%- endif %}
+{%- if udp_info_interval is defined  %}
+UDPInfoInterval = {{ udp.udp_info_interval }}
+{%- endif %}
+{%- endif %}
+{%- if upnp is defined  %}
+{%- if upnp.enable is defined  %}
+UPnP = yes
+{%- if upnp.discover_wait is defined  %}
+UPnPDiscoverWait = {{ upnp.discover_wait }}
+{%- endif %}
+{%- if upnp.refresh_period is defined  %}
+UPnPRefreshPeriod = {{ upnp.refresh_period }}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- if proxy is defined  and proxy.type is defined  %}
+{%- if proxy.type == 'socks5' %}
+Proxy = {{ proxy.type }} {{ proxy.address }} {{ proxy.port }} {{ proxy.username }} { proxy.password }}
+{%- elif proxy.type == 'socks4' %}
+Proxy = {{ proxy.type }} {{ proxy.address }} {{ proxy.port }}{{ proxy.username }} 
+{%- elif proxy.type == 'http' %}
+Proxy = {{ proxy.type }} {{ proxy.address }} {{ proxy.port }}
+{%- elif proxy.type == 'exec' %}
+Proxy = {{ proxy.type }} {{ proxy.exec }}
+{%- endif %}
+{%- endif %}
+{%- for conn in connect %}
+ConnectTo = {{ conn }}
+{%- endfor %}
+{%- if bind_address is defined  %}
+BindToAddress = {{ bind_address }}
+{%- endif %}
+{%- if bind_interface is defined  %}
+BindToInterface = {{ bind_interface }}
+{%- endif %}
+Ed25519PrivateKeyFile= {{ed25516_private_key}}
+PrivateKeyFile = {{rsa_private_key}}
