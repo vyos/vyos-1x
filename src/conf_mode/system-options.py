@@ -18,6 +18,7 @@ import os
 
 from netifaces import interfaces
 from sys import exit
+from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -77,7 +78,7 @@ def generate(options):
     return None
 
 def apply(options):
-    # Beep action
+    # System bootup beep
     if 'beep_if_fully_booted' in options:
         cmd('systemctl enable vyos-beep.service')
     else:
@@ -86,17 +87,18 @@ def apply(options):
     # Ctrl-Alt-Delete action
     if os.path.exists(systemd_action_file):
         os.unlink(systemd_action_file)
-
     if 'ctrl_alt_del_action' in options:
         if options['ctrl_alt_del_action'] == 'reboot':
             os.symlink('/lib/systemd/system/reboot.target', systemd_action_file)
         elif options['ctrl_alt_del_action'] == 'poweroff':
             os.symlink('/lib/systemd/system/poweroff.target', systemd_action_file)
 
+    # Configure HTTP client
     if 'http_client' not in options:
         if os.path.exists(curlrc_config):
             os.unlink(curlrc_config)
 
+    # Configure SSH client
     if 'ssh_client' not in options:
         if os.path.exists(ssh_config):
             os.unlink(ssh_config)
@@ -110,10 +112,13 @@ def apply(options):
 
     # tuned - performance tuning
     if 'performance' in options:
-        cmd('systemctl enable tuned.service')
+        cmd('systemctl restart tuned.service')
+        # wait until daemon has started before sending configuration
+        while (int(os.system('systemctl is-active --quiet tuned.service')) != 0):
+            sleep(0.250)
         cmd('tuned-adm profile network-{performance}'.format(**options))
     else:
-        cmd('systemctl disable tuned.service')
+        cmd('systemctl stop tuned.service')
 
     # Keyboard layout - there will be always the default key inside the dict
     # but we check for key existence anyway
