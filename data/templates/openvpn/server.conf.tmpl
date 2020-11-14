@@ -18,7 +18,7 @@ proto tcp6-client
 {% elif protocol == 'tcp-passive' %}
 proto tcp6-server
 {% else %}
-proto udp6
+proto udp
 {% endif %}
 {% if local_host is defined and local_host is not none %}
 local {{ local_host }}
