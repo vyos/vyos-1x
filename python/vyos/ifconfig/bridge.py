@@ -255,6 +255,9 @@ class BridgeIf(Interface):
             if member in interfaces():
                 self.del_port(member)
         vlan_filter = 0
+        
+        vlan_del = set()
+        vlan_add = set()
 
         tmp = dict_search('member.interface', config)
         if tmp:
@@ -286,12 +289,13 @@ class BridgeIf(Interface):
                 
                 tmp = dict_search('native_vlan_removed', interface_config)
                 
-                if tmp and 'native_vlan_removed' not in interface_config:
-                    vlan_id = tmp
-                    cmd = f'bridge vlan add dev {interface} vid 1 pvid untagged master'
-                    self._cmd(cmd)
+                for vlan_id in (tmp or []):
                     cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
                     self._cmd(cmd)
+                    cmd = f'bridge vlan add dev {interface} vid 1 pvid untagged master'
+                    self._cmd(cmd)
+                    vlan_del.add(vlan_id)
+                    vlan_add.add(1)
                     
                 tmp = dict_search('allowed_vlan_removed', interface_config)
                 
@@ -299,30 +303,47 @@ class BridgeIf(Interface):
                 for vlan_id in (tmp or []):
                     cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
                     self._cmd(cmd)
+                    vlan_del.add(vlan_id)
                 
                 if 'native_vlan' in interface_config:
                     vlan_filter = 1
                     cmd = f'bridge vlan del dev {interface} vid 1'
                     self._cmd(cmd)
+                    vlan_del.add(1)
                     vlan_id = interface_config['native_vlan']
                     cmd = f'bridge vlan add dev {interface} vid {vlan_id} pvid untagged master'
                     self._cmd(cmd)
+                    vlan_add.add(vlan_id)
                 else:
                     cmd = f'bridge vlan del dev {interface} vid 1'
                     self._cmd(cmd)
+                    vlan_del.add(1)
                 
                 if 'allowed_vlan' in interface_config:
                     vlan_filter = 1
                     for vlan in interface_config['allowed_vlan']:
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
+                        vlan_add.add(vlan)
         
         
-        vif = dict_search('vif', config)
-        if vif:
-            for vlan_id,vif_config in vif.items():
-                cmd = f'bridge vlan add dev {ifname} vid {vlan_id} self master'
+        for vlan in vlan_del:
+            if isinstance(vlan,str) and vlan.isnumeric():
+                if int(vlan) == 1:
+                    cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
+                    self._cmd(cmd)
+                    cmd = f'bridge vlan add dev {ifname} vid {vlan} pvid untagged self'
+                    self._cmd(cmd)
+                else:
+                    cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
+                    self._cmd(cmd)
+            else:
+                cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
                 self._cmd(cmd)
+        
+        for vlan in vlan_add:
+            cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
+            self._cmd(cmd)
         
         # enable/disable Vlan Filter
         self.set_vlan_filter(vlan_filter)

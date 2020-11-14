@@ -87,7 +87,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         """ Add member interface to bridge and set VLAN filter """
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['address', '192.0.2.1/24'])
+            self.session.set(base + ['vif', '1','address', '192.0.2.1/24'])
             self.session.set(base + ['vif', '2','address','192.0.3.1/24'])
 
             vlan_id = 101
