@@ -26,10 +26,6 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
 
-import random
-from random import seed, getrandbits
-from ipaddress import IPv6Network, IPv6Address
-
 class WireGuardOperational(Operational):
     def _dump(self):
         """Dump wireguard data in a python friendly way."""
@@ -172,23 +168,7 @@ class WireGuardIf(Interface):
     options = Interface.options + \
         ['port', 'private_key', 'pubkey', 'psk',
          'allowed_ips', 'fwmark', 'endpoint', 'keepalive']
-         
-    
-    def generate_link_local():
-        # Linux Kernel does not generate IPv6 Link Local address do to missing MAC
-        # We have to generate address manually and assign to interface
-        net = IPv6Network("FE80::/16")
-        rand_net = IPv6Network((net.network_address + (random.getrandbits(64 - net.prefixlen) << 64 ),64))
-        network = IPv6Network(rand_net)
-        address = str(IPv6Address(network.network_address + getrandbits(network.max_prefixlen - network.prefixlen)))+'/'+str(network.prefixlen)
-        
-        return address
-    
-    def _create(self):
-        super()._create(self)
-        # Assign generated IPv6 Link Local address to the interface
-        self.add_addr(self.generate_link_local())
-    
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
