@@ -115,7 +115,8 @@ Depends:
   wireguard-tools,
   wireguard-modules,
   wireless-regdb,
-  wpasupplicant (>= 0.6.7)
+  wpasupplicant (>= 0.6.7),
+  console-data
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
