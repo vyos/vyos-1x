@@ -156,6 +156,64 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
 
+    def test_ipv4_local_remove_addr(self):
+        """ When running tests ensure that for certain encapsulation types the
+        local and remote IP address is actually an IPv4 address """
+
+        interface = f'tun1000'
+        local_if_addr = f'10.10.200.1/24'
+        for encapsulation in ['ipip', 'sit', 'gre']:
+            self.session.set(self._base_path + [interface, 'address', local_if_addr])
+            self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
+            self.session.set(self._base_path + [interface, 'local-ip', self.local_v6])
+            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip6])
+
+            # Encapsulation mode requires IPv6 local-ip
+            with self.assertRaises(ConfigSessionError):
+                self.session.commit()
+            self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+
+            # Encapsulation mode requires IPv6 local-ip
+            with self.assertRaises(ConfigSessionError):
+                self.session.commit()
+            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+
+            # Check if commit is ok
+            self.session.commit()
+
+            # cleanup this instance
+            self.session.delete(self._base_path + [interface])
+            self.session.commit()
+
+    def test_ipv6_local_remove_addr(self):
+        """ When running tests ensure that for certain encapsulation types the
+        local and remote IP address is actually an IPv6 address """
+
+        interface = f'tun1010'
+        local_if_addr = f'10.10.200.1/24'
+        for encapsulation in ['ipip6', 'ip6ip6', 'ip6gre']:
+            self.session.set(self._base_path + [interface, 'address', local_if_addr])
+            self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
+            self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+
+            # Encapsulation mode requires IPv6 local-ip
+            with self.assertRaises(ConfigSessionError):
+                self.session.commit()
+            self.session.set(self._base_path + [interface, 'local-ip', self.local_v6])
+
+            # Encapsulation mode requires IPv6 local-ip
+            with self.assertRaises(ConfigSessionError):
+                self.session.commit()
+            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip6])
+
+            # Check if commit is ok
+            self.session.commit()
+
+            # cleanup this instance
+            self.session.delete(self._base_path + [interface])
+            self.session.commit()
+
     def test_ip6ip6(self):
         interface = 'tun120'
         encapsulation = 'ip6ip6'
