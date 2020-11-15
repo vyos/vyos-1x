@@ -156,7 +156,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
 
-    def test_ipv4_local_remove_addr(self):
+    def test_verify_ipv4_local_remote_addr(self):
         """ When running tests ensure that for certain encapsulation types the
         local and remote IP address is actually an IPv4 address """
 
@@ -185,7 +185,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.delete(self._base_path + [interface])
             self.session.commit()
 
-    def test_ipv6_local_remove_addr(self):
+    def test_verify_ipv6_local_remote_addr(self):
         """ When running tests ensure that for certain encapsulation types the
         local and remote IP address is actually an IPv6 address """
 
@@ -213,6 +213,26 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             # cleanup this instance
             self.session.delete(self._base_path + [interface])
             self.session.commit()
+
+    def test_verify_local_dhcp(self):
+        """ We can not use local-ip and dhcp-interface at the same time """
+
+        interface = f'tun1020'
+        local_if_addr = f'10.0.0.1/24'
+
+        self.session.set(self._base_path + [interface, 'address', local_if_addr])
+        self.session.set(self._base_path + [interface, 'encapsulation', 'gre'])
+        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+        self.session.set(self._base_path + [interface, 'dhcp-interface', 'eth0'])
+
+        # local-ip and dhcp-interface can not be used at the same time
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(self._base_path + [interface, 'dhcp-interface'])
+
+        # Check if commit is ok
+        self.session.commit()
 
     def test_ip6ip6(self):
         interface = 'tun120'
