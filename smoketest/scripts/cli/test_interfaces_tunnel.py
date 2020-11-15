@@ -168,12 +168,12 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.set(self._base_path + [interface, 'local-ip', self.local_v6])
             self.session.set(self._base_path + [interface, 'remote-ip', remote_ip6])
 
-            # Encapsulation mode requires IPv6 local-ip
+            # Encapsulation mode requires IPv4 local-ip
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
             self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
 
-            # Encapsulation mode requires IPv6 local-ip
+            # Encapsulation mode requires IPv4 local-ip
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
             self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
@@ -360,7 +360,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # No assertion is raised for GRE remote-ip when missing
         self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
 
-        # Source interface can not be used with si
+        # Source interface can not be used with sit
         self.session.set(self._base_path + [interface, 'source-interface', source_if])
         with self.assertRaises(ConfigSessionError):
             self.session.commit()

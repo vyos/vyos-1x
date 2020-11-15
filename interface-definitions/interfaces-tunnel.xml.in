@@ -112,36 +112,40 @@
             <properties>
               <help>Encapsulation of this tunnel interface</help>
               <completionHelp>
-                <list>gre gre-bridge ipip sit ipip6 ip6ip6 ip6gre</list>
+                <list>gre gre-bridge ip6gre ip6ip6 ipip ipip6 sit</list>
               </completionHelp>
+              <valueHelp>
+                <format>gre</format>
+                <description>Generic Routing Encapsulation</description>
+              </valueHelp>
               <valueHelp>
                 <format>gre-bridge</format>
                 <description>Generic Routing Encapsulation bridge interface</description>
               </valueHelp>
               <valueHelp>
-                <format>ipip</format>
-                <description>IP in IP encapsulation</description>
-              </valueHelp>
-              <valueHelp>
-                <format>sit</format>
-                <description>Simple Internet Transition encapsulation</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipip6</format>
-                <description>IP in IP6 encapsulation</description>
+                <format>ip6gre</format>
+                <description>GRE over IPv6 network</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6ip6</format>
                 <description>IP6 in IP6 encapsulation</description>
               </valueHelp>
               <valueHelp>
-                <format>ip6gre</format>
-                <description>GRE over IPv6 network</description>
+                <format>ipip</format>
+                <description>IP in IP encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipip6</format>
+                <description>IP in IP6 encapsulation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sit</format>
+                <description>Simple Internet Transition encapsulation</description>
               </valueHelp>
               <constraint>
-                <regex>(gre|gre-bridge|ipip|sit|ipip6|ip6ip6|ip6gre)</regex>
+                <regex>^(gre|gre-bridge|ip6gre|ip6ip6|ipip|ipip6|sit)$</regex>
               </constraint>
-              <constraintErrorMessage>Must be one of 'gre' 'gre-bridge' 'ipip' 'sit' 'ipip6' 'ip6ip6' 'ip6gre'</constraintErrorMessage>
+              <constraintErrorMessage>Invalid encapsulation mode, must be one of: gre gre-bridge ip6gre ip6ip6 ipip ipip6 sit</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="multicast">
@@ -186,6 +190,7 @@
                       </constraint>
                       <constraintErrorMessage>TTL must be between 0 and 255</constraintErrorMessage>
                     </properties>
+                    <defaultValue>255</defaultValue>
                   </leafNode>
                   <leafNode name="tos">
                     <properties>
@@ -199,6 +204,7 @@
                       </constraint>
                       <constraintErrorMessage>TOS must be between 0 and 99</constraintErrorMessage>
                     </properties>
+                    <defaultValue>inherit</defaultValue>
                   </leafNode>
                   <leafNode name="key">
                     <properties>
@@ -232,6 +238,7 @@
                       </constraint>
                       <constraintErrorMessage>key must be between 0-255</constraintErrorMessage>
                     </properties>
+                    <defaultValue>4</defaultValue>
                   </leafNode>
                   <leafNode name="flowlabel">
                     <properties>
@@ -245,6 +252,7 @@
                       </constraint>
                       <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
                     </properties>
+                    <defaultValue>inherit</defaultValue>
                   </leafNode>
                   <leafNode name="hoplimit">
                     <properties>
@@ -258,6 +266,7 @@
                       </constraint>
                       <constraintErrorMessage>hoplimit must be between 0-255</constraintErrorMessage>
                     </properties>
+                    <defaultValue>64</defaultValue>
                   </leafNode>
                   <leafNode name="tclass">
                     <properties>
@@ -271,6 +280,7 @@
                       </constraint>
                       <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
                     </properties>
+                    <defaultValue>inherit</defaultValue>
                   </leafNode>
                 </children>
               </node>
