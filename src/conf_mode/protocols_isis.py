@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2020 VyOS maintainers and contributors
+# Copyright (C) 2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -106,9 +106,6 @@ def generate(isis):
     process = list(isis.keys())[0]
     isis[process]['process'] = process
 
-    import pprint
-    pprint.pprint(isis[process])
-
     # render(config) not needed, its only for debug
     render(config_file, 'frr/isis.frr.tmpl', isis[process], trim_blocks=True)
 
@@ -122,15 +119,16 @@ def apply(isis):
     # Save original configration prior to starting any commit actions
     frr_cfg = {}
     frr_cfg['original_config'] = frr.get_configuration(daemon='isisd')
-    frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], isis['new_frr_config'], from_re='router isis .*')
+    frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], isis['new_frr_config'], from_re='interface .*')
 
     # Debugging
+    '''
     print('')
     print('--------- DEBUGGING ----------')
     print(f'Existing config:\n{frr_cfg["original_config"]}\n\n')
     print(f'Replacement config:\n{isis["new_frr_config"]}\n\n')
     print(f'Modified config:\n{frr_cfg["modified_config"]}\n\n')
-
+   '''
     # FRR mark configuration will test for syntax errors and throws an
     # exception if any syntax errors is detected
     frr.mark_configuration(frr_cfg['modified_config'])

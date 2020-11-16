@@ -5,7 +5,7 @@
     <children>
       <tagNode name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py">
         <properties>
-          <help>Intermediate System to Intermediate System (ISIS)</help>
+          <help>Intermediate System to Intermediate System (IS-IS)</help>
           <valueHelp>
             <format>text(TAG)</format>
             <description>ISO Routing area tag</description>
@@ -264,7 +264,7 @@
                   </node>
                   <node name="connected">
                     <properties>
-                      <help>Redistribute connected routes into ISIS</help>
+                      <help>Redistribute connected routes into IS-IS</help>
                     </properties>
                     <children>
                       #include <include/isis-redistribute-ipv4.xml.i>
@@ -272,7 +272,7 @@
                   </node>
                   <node name="kernel">
                     <properties>
-                      <help>Redistribute kernel routes into ISIS</help>
+                      <help>Redistribute kernel routes into IS-IS</help>
                     </properties>
                     <children>
                       #include <include/isis-redistribute-ipv4.xml.i>
@@ -280,7 +280,7 @@
                   </node>
                   <node name="ospf">
                     <properties>
-                      <help>Redistribute OSPF routes into ISIS</help>
+                      <help>Redistribute OSPF routes into IS-IS</help>
                     </properties>
                     <children>
                       #include <include/isis-redistribute-ipv4.xml.i>
@@ -288,7 +288,7 @@
                   </node>
                   <node name="rip">
                     <properties>
-                      <help>Redistribute RIP routes into ISIS</help>
+                      <help>Redistribute RIP routes into IS-IS</help>
                     </properties>
                     <children>
                       #include <include/isis-redistribute-ipv4.xml.i>
@@ -296,7 +296,7 @@
                   </node>
                   <node name="static">
                     <properties>
-                      <help>Redistribute static routes into ISIS</help>
+                      <help>Redistribute static routes into IS-IS</help>
                     </properties>
                     <children>
                       #include <include/isis-redistribute-ipv4.xml.i>
