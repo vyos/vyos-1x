@@ -771,12 +771,6 @@
           </leafNode>
           #include <include/vif.xml.i>
           #include <include/vif-s.xml.i>
-          <leafNode name="wds">
-            <properties>
-              <help>Enable WDS (Wireless Distribution System)</help>
-              <valueless/>
-            </properties>
-          </leafNode>
         </children>
       </tagNode>
     </children>

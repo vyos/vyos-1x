@@ -261,7 +261,6 @@ def apply(wifi):
 
         # Assign WiFi instance configuration parameters to config dict
         conf['phy'] = wifi['physical_device']
-        conf['wds'] = 'on' if 'wds' in wifi else 'off'
 
         # Finally create the new interface
         w = WiFiIf(interface, **conf)
