@@ -942,6 +942,15 @@ class Interface(Control):
         # method to apply()?
         self._config = config
 
+        # Change interface MAC address - re-set to real hardware address (hw-id)
+        # if custom mac is removed. Skip if bond member.
+        if 'is_bond_member' not in config:
+            mac = config.get('hw_id')
+            if 'mac' in config:
+                mac = config.get('mac')
+            if mac:
+                self.set_mac(mac)
+
         # Update interface description
         self.set_alias(config.get('description', ''))
 
@@ -1057,15 +1066,6 @@ class Interface(Control):
         if tmp:
             for addr in tmp:
                 self.del_ipv6_eui64_address(addr)
-
-        # Change interface MAC address - re-set to real hardware address (hw-id)
-        # if custom mac is removed. Skip if bond member.
-        if 'is_bond_member' not in config:
-            mac = config.get('hw_id')
-            if 'mac' in config:
-                mac = config.get('mac')
-            if mac:
-                self.set_mac(mac)
 
         # Manage IPv6 link-local addresses
         tmp = dict_search('ipv6.address.no_default_link_local', config)
