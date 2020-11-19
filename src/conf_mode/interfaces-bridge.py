@@ -123,11 +123,11 @@ def get_config(config=None):
             
             # VLAN-aware bridge members must not have VLAN interface configuration
             if 'native_vlan' in interface_config:
-                if 'disable' not in interface_config['native_vlan']:
-                    vlan_aware = True
+                vlan_aware = True
             
             if 'allowed_vlan' in interface_config:
                 vlan_aware = True
+            
             
             if vlan_aware:
                 tmp = has_vlan_subinterface_configured(conf,interface)
@@ -142,6 +142,8 @@ def verify(bridge):
 
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
+    
+    vlan_aware = False 
 
     if dict_search('member.interface', bridge):
         for interface, interface_config in bridge['member']['interface'].items():
@@ -167,6 +169,16 @@ def verify(bridge):
             
             if 'has_vlan' in interface_config:
                 raise ConfigError(error_msg + 'it has an VLAN subinterface assigned!')
+            
+            # VLAN-aware bridge members must not have VLAN interface configuration
+            if 'native_vlan' in interface_config:
+                vlan_aware = True
+            
+            if 'allowed_vlan' in interface_config:
+                vlan_aware = True
+            
+            if vlan_aware and 'wlan' in interface:
+                raise ConfigError(error_msg + 'VLAN aware cannot be set!')
             
             if 'allowed_vlan' in interface_config:
                 for vlan in interface_config['allowed_vlan']:
