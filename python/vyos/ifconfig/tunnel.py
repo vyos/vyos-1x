@@ -82,7 +82,6 @@ class _Tunnel(Interface):
         # add " option-name option-name-value ..." for all options set
         options = " ".join(["{} {}".format(k, self.config[k])
                             for k in self.options if k in self.config and self.config[k]])
-        print(options)
         self._cmd('{} {}'.format(change.format(**self.config), options))
 
     @classmethod
