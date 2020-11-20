@@ -76,6 +76,7 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ip/node.def
 	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/interfaces/wirelessmodem/node.tag/ipv6/node.def
+	rm -f $(TMPL_DIR)/interfaces/wireguard/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -rf $(TMPL_DIR)/protocols/nbgp
 	rm -rf $(TMPL_DIR)/protocols/isis
