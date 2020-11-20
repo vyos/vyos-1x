@@ -142,9 +142,9 @@ class _Tunnel(Interface):
         """
         # we choose 40 random bytes for the MAC address, this gives
         # us e.g. EUI('00-EA-EE-D6-A3-C8') or EUI('00-41-B9-0D-F2-2A')
-        tmp = EUI(getrandbits(40)).value
+        tmp = EUI(getrandbits(48)).value
         # set locally administered bit in MAC address
-        tmp |= 0x020000000000
+        tmp |= 0xf20000000000
         # convert integer to "real" MAC address representation
         mac = EUI(hex(tmp).split('x')[-1])
         # change dialect to use : as delimiter instead of -
