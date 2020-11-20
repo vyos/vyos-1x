@@ -248,7 +248,7 @@ class WireGuardIf(Interface):
 
             # Endpoint configuration is optional
             if {'address', 'port'} <= set(peer):
-                if is_ipv6(config['address']):
+                if is_ipv6(peer['address']):
                     cmd += ' endpoint [{address}]:{port}'
                 else:
                     cmd += ' endpoint {address}:{port}'
