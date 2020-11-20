@@ -17,6 +17,9 @@ import os
 import time
 
 from datetime import timedelta
+from netaddr import EUI
+from netaddr import mac_unix_expanded
+from random import getrandbits
 
 from hurry.filesize import size
 from hurry.filesize import alternative
@@ -168,6 +171,30 @@ class WireGuardIf(Interface):
     options = Interface.options + \
         ['port', 'private_key', 'pubkey', 'psk',
          'allowed_ips', 'fwmark', 'endpoint', 'keepalive']
+
+    def get_mac(self):
+        """
+        Get current interface MAC (Media Access Contrl) address used.
+
+        NOTE: Tunnel interfaces have no "MAC" address by default. The content
+              of the 'address' file in /sys/class/net/device contains the
+              local-ip thus we generate a random MAC address instead
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_mac()
+        '00:50:ab:cd:ef:00'
+        """
+        # we choose 40 random bytes for the MAC address, this gives
+        # us e.g. EUI('00-EA-EE-D6-A3-C8') or EUI('00-41-B9-0D-F2-2A')
+        tmp = EUI(getrandbits(48)).value
+        # set locally administered bit in MAC address
+        tmp |= 0xf20000000000
+        # convert integer to "real" MAC address representation
+        mac = EUI(hex(tmp).split('x')[-1])
+        # change dialect to use : as delimiter instead of -
+        mac.dialect = mac_unix_expanded
+        return str(mac)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
