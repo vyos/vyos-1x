@@ -39,7 +39,6 @@
                 <script>${vyos_completion_dir}/list_local.py</script>
               </completionHelp>
               <constraint>
-                <!-- does it need fixing/changing to be more restrictive ? -->
                 <validator name="ip-address"/>
               </constraint>
             </properties>
@@ -104,7 +103,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
               <constraint>
-                <regex>(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+</regex>
+                <regex>^(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+$</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -145,7 +144,7 @@
               <constraint>
                 <regex>^(gre|gre-bridge|ip6gre|ip6ip6|ipip|ipip6|sit)$</regex>
               </constraint>
-              <constraintErrorMessage>Invalid encapsulation mode, must be one of: gre gre-bridge ip6gre ip6ip6 ipip ipip6 sit</constraintErrorMessage>
+              <constraintErrorMessage>Invalid encapsulation, must be one of: gre, gre-bridge, ipip, sit, ipip6, ip6ip6, ip6gre</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="multicast">
@@ -163,7 +162,7 @@
                 <description>Disable Multicast (default)</description>
               </valueHelp>
               <constraint>
-                <regex>(enable|disable)</regex>
+                <regex>^(enable|disable)$</regex>
               </constraint>
               <constraintErrorMessage>Must be 'disable' or 'enable'</constraintErrorMessage>
             </properties>
