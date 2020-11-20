@@ -17,6 +17,9 @@
 # https://community.hetzner.com/tutorials/linux-setup-gre-tunnel
 
 from copy import deepcopy
+from netaddr import EUI
+from netaddr import mac_unix_expanded
+from random import getrandbits
 
 from vyos.ifconfig.interface import Interface
 from vyos.ifconfig.afi import IP4, IP6
@@ -119,10 +122,53 @@ class _Tunnel(Interface):
                 self.change.format(**self.config), option, value))
         return True
 
+
     @classmethod
     def get_config(cls):
         return dict(zip(cls.options, ['']*len(cls.options)))
 
+    def get_mac(self):
+        """
+        Get current interface MAC (Media Access Contrl) address used.
+
+        NOTE: Tunnel interfaces have no "MAC" address by default. The content
+              of the 'address' file in /sys/class/net/device contains the
+              local-ip thus we generate a random MAC address instead
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_mac()
+        '00:50:ab:cd:ef:00'
+        """
+        # we choose 40 random bytes for the MAC address, this gives
+        # us e.g. EUI('00-EA-EE-D6-A3-C8') or EUI('00-41-B9-0D-F2-2A')
+        tmp = EUI(getrandbits(48)).value
+        # set locally administered bit in MAC address
+        tmp |= 0xf20000000000
+        # convert integer to "real" MAC address representation
+        mac = EUI(hex(tmp).split('x')[-1])
+        # change dialect to use : as delimiter instead of -
+        mac.dialect = mac_unix_expanded
+        return str(mac)
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class first
+        super().update(config)
+
+        # Enable/Disable of an interface must always be done at the end of the
+        # derived class to make use of the ref-counting set_admin_state()
+        # function. We will only enable the interface if 'up' was called as
+        # often as 'down'. This is required by some interface implementations
+        # as certain parameters can only be changed when the interface is
+        # in admin-down state. This ensures the link does not flap during
+        # reconfiguration.
+        state = 'down' if 'disable' in config else 'up'
+        self.set_admin_state(state)
 
 class GREIf(_Tunnel):
     """
