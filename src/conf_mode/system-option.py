@@ -39,7 +39,7 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['system', 'options']
+    base = ['system', 'option']
     options = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
     # We have gathered the dict representation of the CLI, but there are default
@@ -79,7 +79,7 @@ def generate(options):
 
 def apply(options):
     # System bootup beep
-    if 'beep_if_fully_booted' in options:
+    if 'startup_beep' in options:
         cmd('systemctl enable vyos-beep.service')
     else:
         cmd('systemctl disable vyos-beep.service')
@@ -87,10 +87,10 @@ def apply(options):
     # Ctrl-Alt-Delete action
     if os.path.exists(systemd_action_file):
         os.unlink(systemd_action_file)
-    if 'ctrl_alt_del_action' in options:
-        if options['ctrl_alt_del_action'] == 'reboot':
+    if 'ctrl_alt_del' in options:
+        if options['ctrl_alt_del'] == 'reboot':
             os.symlink('/lib/systemd/system/reboot.target', systemd_action_file)
-        elif options['ctrl_alt_del_action'] == 'poweroff':
+        elif options['ctrl_alt_del'] == 'poweroff':
             os.symlink('/lib/systemd/system/poweroff.target', systemd_action_file)
 
     # Configure HTTP client
@@ -134,4 +134,3 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         exit(1)
-

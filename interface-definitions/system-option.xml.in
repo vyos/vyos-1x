@@ -2,35 +2,29 @@
 <interfaceDefinition>
   <node name="system">
     <children>
-      <node name="options" owner="${vyos_conf_scripts_dir}/system-options.py">
+      <node name="option" owner="${vyos_conf_scripts_dir}/system-option.py">
         <properties>
           <help>System Options</help>
           <priority>9999</priority>
         </properties>
         <children>
-          <leafNode name="beep-if-fully-booted">
+          <leafNode name="ctrl-alt-delete">
             <properties>
-              <help>plays sound via system speaker when you can login</help>
-              <valueless/>
-            </properties>
-          </leafNode>
-          <leafNode name="ctrl-alt-del-action">
-            <properties>
-              <help>Ctrl-Alt-Delete action</help>
+              <help>System action on Ctrl-Alt-Delete keystroke</help>
               <completionHelp>
                 <list>ignore reboot poweroff</list>
               </completionHelp>
               <valueHelp>
                 <format>ignore</format>
-                <description>Ignore Ctrl-Alt-Delete</description>
+                <description>Ignore key sequence</description>
               </valueHelp>
               <valueHelp>
                 <format>reboot</format>
-                <description>Reboot VyOS</description>
+                <description>Reboot system</description>
               </valueHelp>
               <valueHelp>
                 <format>poweroff</format>
-                <description>Poweroff VyOS</description>
+                <description>Poweroff system</description>
               </valueHelp>
               <constraint>
                 <regex>^(ignore|reboot|poweroff)$</regex>
@@ -38,7 +32,40 @@
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
            </leafNode>
-          <leafNode name="performance">
+           <leafNode name="keyboard-layout">
+             <properties>
+               <help>System keyboard layout, type ISO2</help>
+               <completionHelp>
+                 <list>us fr de fi no dk</list>
+               </completionHelp>
+               <valueHelp>
+                 <format>us</format>
+                 <description>United States of America</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>fr</format>
+                 <description>France</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>de</format>
+                 <description>Germany</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>fi</format>
+                 <description>Finland</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>no</format>
+                 <description>Norway</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>dk</format>
+                 <description>Denmark</description>
+               </valueHelp>
+             </properties>
+             <defaultValue>us</defaultValue>
+           </leafNode>
+           <leafNode name="performance">
             <properties>
               <help>Tune system performance</help>
               <completionHelp>
@@ -80,38 +107,11 @@
                #include <include/source-address-ipv4-ipv6.xml.i>
              </children>
            </node>
-           <leafNode name="keyboard-layout">
+           <leafNode name="startup-beep">
              <properties>
-               <help>System keyboard layout, type ISO2</help>
-               <completionHelp>
-                 <list>us fr de fi no dk</list>
-               </completionHelp>
-               <valueHelp>
-                 <format>us</format>
-                 <description>United States of America</description>
-               </valueHelp>
-               <valueHelp>
-                 <format>fr</format>
-                 <description>France</description>
-               </valueHelp>
-               <valueHelp>
-                 <format>de</format>
-                 <description>Germany</description>
-               </valueHelp>
-               <valueHelp>
-                 <format>fi</format>
-                 <description>Finland</description>
-               </valueHelp>
-               <valueHelp>
-                 <format>no</format>
-                 <description>Norway</description>
-               </valueHelp>
-               <valueHelp>
-                 <format>dk</format>
-                 <description>Denmark</description>
-               </valueHelp>
+               <help>plays sound via system speaker when you can login</help>
+               <valueless/>
              </properties>
-             <defaultValue>us</defaultValue>
            </leafNode>
         </children>
       </node>

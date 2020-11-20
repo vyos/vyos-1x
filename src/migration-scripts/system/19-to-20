@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3048: remove smp-affinity node from ethernet and use tuned instead
+
+import os
+
+from sys import exit, argv
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['system', 'options']
+base_new = ['system', 'option']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+if config.exists(base_new):
+    for node in config.list_nodes(base):
+        config.copy(base + [node], base_new + [node])
+else:
+    config.copy(base, base_new)
+
+config.delete(base)
+
+# Rename "system option beep-if-fully-booted" -> "system option startup-beep"
+base_beep = base_new + ['beep-if-fully-booted']
+if config.exists(base_beep):
+    config.rename(base_beep, 'startup-beep')
+
+# Rename "system option ctrl-alt-del-action" -> "system option ctrl-alt-delete"
+base_ctrl_alt_del = base_new + ['ctrl-alt-del-action']
+if config.exists(base_ctrl_alt_del):
+    config.rename(base_ctrl_alt_del, 'ctrl-alt-delete')
+
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
