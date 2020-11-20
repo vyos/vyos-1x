@@ -17,7 +17,7 @@
 import os
 
 from sys import exit
-from copy import deepcopy
+from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -46,8 +46,8 @@ airbag.enable()
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
-    interface name will be added or a deleted flag
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least
+    the interface name will be added or a deleted flag
     """
     if config:
         conf = config
@@ -61,6 +61,9 @@ def get_config(config=None):
     tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
     if 'mtu' not in tmp:
         tunnel['mtu'] = '1476'
+
+    tmp = leaf_node_changed(conf, ['encapsulation'])
+    if tmp: tunnel.update({'encapsulation_changed': {}})
 
     # We must check if our interface is configured to be a DMVPN member
     nhrp_base = ['protocols', 'nhrp', 'tunnel']
@@ -123,10 +126,12 @@ def generate(tunnel):
     return None
 
 def apply(tunnel):
-    if 'deleted' in tunnel:
-        tmp = Interface(tunnel['ifname'])
-        tmp.remove()
-        return None
+    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel:
+        if tunnel['ifname'] in interfaces():
+            tmp = Interface(tunnel['ifname'])
+            tmp.remove()
+        if 'deleted' in tunnel:
+            return None
 
     dispatch = {
         'gre': GREIf,
@@ -173,10 +178,10 @@ def apply(tunnel):
         if dict_search(our_key, tunnel) and their_key in conf:
             conf[their_key] = dict_search(our_key, tunnel)
 
-    # TODO: support encapsulation change per tunnel
-
     tun = klass(tunnel['ifname'], **conf)
+    tun.change_options()
     tun.update(tunnel)
+
     return None
 
 if __name__ == '__main__':

@@ -85,7 +85,6 @@ class _Tunnel(Interface):
     updates = []
 
     create = ''
-    change = ''
     delete = ''
 
     ip = []     # AFI of the families which can be used in the tunnel
@@ -107,21 +106,14 @@ class _Tunnel(Interface):
         cmd = self.delete.format(**self.config)
         return self._cmd(cmd)
 
-    def set_interface(self, option, value):
-        try:
-            return Interface.set_interface(self, option, value)
-        except Exception:
-            pass
+    def change_options(self):
+        change = 'ip tunnel cha {ifname} mode {type}'
 
-        if value == '':
-            # remove the value so that it is not used
-            self.config.pop(option, '')
-
-        if self.change:
-            self._cmd('{} {} {}'.format(
-                self.change.format(**self.config), option, value))
-        return True
-
+        # add " option-name option-name-value ..." for all options set
+        options = " ".join(["{} {}".format(k, self.config[k])
+                            for k in self.options if k in self.config and self.config[k]])
+        print(options)
+        self._cmd('{} {}'.format(change.format(**self.config), options))
 
     @classmethod
     def get_config(cls):
@@ -229,7 +221,6 @@ class GRETapIf(_Tunnel):
     updates = ['mtu', ]
 
     create = 'ip link add {ifname} type {type}'
-    change = ''
     delete = 'ip link del {ifname}'
 
 
@@ -255,17 +246,7 @@ class IP6GREIf(_Tunnel):
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
-    change = 'ip tunnel cha {ifname} mode {type}'
     delete = 'ip tunnel del {ifname}'
-
-    # using "ip tunnel change" without using "mode" causes errors
-    # sudo ip tunnel add tun100 mode ip6gre local ::1 remote 1::1
-    # sudo ip tunnel cha tun100 hoplimit 100
-    # *** stack smashing detected ** *: < unknown > terminated
-    # sudo ip tunnel cha tun100 local: : 2
-    # Error: an IP address is expected rather than "::2"
-    # works if mode is explicit
-
 
 class IPIPIf(_Tunnel):
     """
@@ -289,7 +270,6 @@ class IPIPIf(_Tunnel):
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
-    change = 'ip tunnel cha {ifname}'
     delete = 'ip tunnel del {ifname}'
 
 
@@ -314,7 +294,6 @@ class IPIP6If(_Tunnel):
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip -6 tunnel add {ifname} mode {type}'
-    change = 'ip -6 tunnel cha {ifname}'
     delete = 'ip -6 tunnel del {ifname}'
 
 
@@ -350,7 +329,6 @@ class SitIf(_Tunnel):
                'mtu', 'multicast', 'allmulticast']
 
     create = 'ip tunnel add {ifname} mode {type}'
-    change = 'ip tunnel cha {ifname}'
     delete = 'ip tunnel del {ifname}'
 
 
