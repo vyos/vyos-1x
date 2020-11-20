@@ -29,6 +29,7 @@
 "lldp.py",
 "nat.py",
 "ntp.py",
+"policy-local-route.py",
 "protocols_igmp.py",
 "protocols_isis.py",
 "protocols_mpls.py",

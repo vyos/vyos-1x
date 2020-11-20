@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!-- Policy local-route -->
+<interfaceDefinition>
+  <node name="policy">
+    <children>
+      <node name="local-route" owner="${vyos_conf_scripts_dir}/policy-local-route.py">
+        <properties>
+          <help>IPv4 policy route of local traffic</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Policy local-route rule set number</help>
+              <valueHelp>
+                <!-- table main with prio 32766 -->
+                <format>&lt;1-32765&gt;</format>
+                <description>Local-route rule number (1-219)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-32765"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="set">
+                <properties>
+                  <help>Packet modifications</help>
+                </properties>
+                <children>
+                  <leafNode name="table">
+                    <properties>
+                      <help>Routing table to forward packet with</help>
+                      <valueHelp>
+                        <format>&lt;1-200&gt;</format>
+                        <description>Table number</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <list>main</list>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="source">
+                <properties>
+                  <help>Source address or prefix</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Address to match against</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Prefix to match against</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
