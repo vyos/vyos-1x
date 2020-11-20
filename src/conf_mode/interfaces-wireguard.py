@@ -80,9 +80,6 @@ def verify(wireguard):
         raise ConfigError('Wireguard private-key not found! Execute: ' \
                           '"run generate wireguard [default-keypair|named-keypairs]"')
 
-    if 'address' not in wireguard:
-        raise ConfigError('IP address required!')
-
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
 
