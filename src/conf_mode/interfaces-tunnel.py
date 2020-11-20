@@ -119,7 +119,7 @@ def verify(tunnel):
             raise ConfigError('Option source-interface can not be used with ' \
                               'encapsulation "sit" or "gre-bridge"')
     elif tunnel['encapsulation'] == 'gre':
-        if is_ipv6(tunnel['local_ip']):
+        if 'local_ip' in tunnel and is_ipv6(tunnel['local_ip']):
             raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
 
 def generate(tunnel):
