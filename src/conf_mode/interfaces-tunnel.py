@@ -62,12 +62,21 @@ def get_config(config=None):
     if 'mtu' not in tmp:
         tunnel['mtu'] = '1476'
 
+    # We must check if our interface is configured to be a DMVPN member
+    nhrp_base = ['protocols', 'nhrp', 'tunnel']
+    conf.set_level(nhrp_base)
+    nhrp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    if nhrp: tunnel.update({'nhrp' : list(nhrp.keys())})
+
     return tunnel
 
 def verify(tunnel):
     if 'deleted' in tunnel:
         verify_bridge_delete(tunnel)
-        # TODO: check for NHRP tunnel member
+
+        if 'nhrp' in tunnel and tunnel['ifname'] in tunnel['nhrp']:
+            raise ConfigError('Tunnel used for NHRP, it can not be deleted!')
+
         return None
 
     if 'encapsulation' not in tunnel:
