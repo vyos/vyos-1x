@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@ from netaddr import mac_unix_expanded
 from random import getrandbits
 
 from vyos.ifconfig.interface import Interface
-from vyos.ifconfig.afi import IP4, IP6
 from vyos.validate import assert_list
 
 def enable_to_on(value):
@@ -64,47 +63,18 @@ class _Tunnel(Interface):
         },
     }}
 
-    # use for "options" and "updates"
-    # If an key is only in the options list, it can only be set at creation time
-    # the create comand will only be make using the key in options
-
-    # If an option is in the updates list, it can be updated
-    # upon, the creation, all key not yet applied will be updated
-
-    # multicast/allmulticast can not be part of the create command
-
-    # options matrix:
-    # with ip = 4,     we have multicast
-    # wiht ip = 6,     nothing
-    # with tunnel = 4, we have tos, ttl, key
-    # with tunnel = 6, we have encaplimit, hoplimit, tclass, flowlabel
-
-    # TODO: For multicast, it is allowed on IP6IP6 and Sit6RD
-    # TODO: to match vyatta but it should be checked for correctness
-
-    updates = []
-
-    create = ''
-    delete = ''
-
-    ip = []     # AFI of the families which can be used in the tunnel
-    tunnel = 0  # invalid - need to be set by subclasses
-
     def __init__(self, ifname, **config):
         self.config = deepcopy(config) if config else {}
         super().__init__(ifname, **config)
 
     def _create(self):
+        create = 'ip tunnel add {ifname} mode {type}'
+
         # add " option-name option-name-value ..." for all options set
         options = " ".join(["{} {}".format(k, self.config[k])
                             for k in self.options if k in self.config and self.config[k]])
-        self._cmd('{} {}'.format(self.create.format(**self.config), options))
+        self._cmd('{} {}'.format(create.format(**self.config), options))
         self.set_admin_state('down')
-
-    def _delete(self):
-        self.set_admin_state('down')
-        cmd = self.delete.format(**self.config)
-        return self._cmd(cmd)
 
     def change_options(self):
         change = 'ip tunnel cha {ifname} mode {type}'
@@ -179,20 +149,8 @@ class GREIf(_Tunnel):
         },
     }
 
-    ip = [IP4, IP6]
-    tunnel = IP4
-
     default = {'type': 'gre'}
-    required = ['local', ]  # mGRE is a GRE without remote endpoint
-
     options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
-    updates = ['local', 'remote', 'dev', 'ttl', 'tos',
-               'mtu', 'multicast', 'allmulticast']
-
-    create = 'ip tunnel add {ifname} mode {type}'
-    change = 'ip tunnel cha {ifname}'
-    delete = 'ip tunnel del {ifname}'
-
 
 # GreTap also called GRE Bridge
 class GRETapIf(_Tunnel):
@@ -211,18 +169,8 @@ class GRETapIf(_Tunnel):
         },
     }
 
-    ip = [IP4, ]
-    tunnel = IP4
-
     default = {'type': 'gretap'}
-    required = ['local', ]
-
     options = ['local', 'remote', 'ttl',]
-    updates = ['mtu', ]
-
-    create = 'ip link add {ifname} type {type}'
-    delete = 'ip link del {ifname}'
-
 
 class IP6GREIf(_Tunnel):
     """
@@ -233,20 +181,9 @@ class IP6GREIf(_Tunnel):
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre6.c
     """
 
-    ip = [IP4, IP6]
-    tunnel = IP6
-
     default = {'type': 'ip6gre'}
-    required = ['local', 'remote']
-
     options = ['local', 'remote', 'dev', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel']
-    updates = ['local', 'remote', 'dev', 'encaplimit',
-               'hoplimit', 'tclass', 'flowlabel',
-               'mtu', 'multicast', 'allmulticast']
-
-    create = 'ip tunnel add {ifname} mode {type}'
-    delete = 'ip tunnel del {ifname}'
 
 class IPIPIf(_Tunnel):
     """
@@ -259,19 +196,8 @@ class IPIPIf(_Tunnel):
     # IPIP does not allow to pass multicast, unlike GRE
     # but the interface itself can be set with multicast
 
-    ip = [IP4,]
-    tunnel = IP4
-
     default = {'type': 'ipip'}
-    required = ['local', 'remote']
-
     options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
-    updates = ['local', 'remote', 'dev', 'ttl', 'tos',
-               'mtu', 'multicast', 'allmulticast']
-
-    create = 'ip tunnel add {ifname} mode {type}'
-    delete = 'ip tunnel del {ifname}'
-
 
 class IPIP6If(_Tunnel):
     """
@@ -281,21 +207,9 @@ class IPIP6If(_Tunnel):
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_ip6tnl.c
     """
 
-    ip = [IP4,]
-    tunnel = IP6
-
     default = {'type': 'ipip6'}
-    required = ['local', 'remote']
-
     options = ['local', 'remote', 'dev', 'encaplimit',
                'hoplimit', 'tclass', 'flowlabel']
-    updates = ['local', 'remote', 'dev', 'encaplimit',
-               'hoplimit', 'tclass', 'flowlabel',
-               'mtu', 'multicast', 'allmulticast']
-
-    create = 'ip -6 tunnel add {ifname} mode {type}'
-    delete = 'ip -6 tunnel del {ifname}'
-
 
 class IP6IP6If(IPIP6If):
     """
@@ -304,9 +218,6 @@ class IP6IP6If(IPIP6If):
     For more information please refer to:
     https://tools.ietf.org/html/rfc2473
     """
-
-    ip = [IP6,]
-
     default = {'type': 'ip6ip6'}
 
 
@@ -318,19 +229,8 @@ class SitIf(_Tunnel):
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_iptnl.c
     """
 
-    ip = [IP6, IP4]
-    tunnel = IP4
-
     default = {'type': 'sit'}
-    required = ['local', 'remote']
-
     options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
-    updates = ['local', 'remote', 'dev', 'ttl', 'tos',
-               'mtu', 'multicast', 'allmulticast']
-
-    create = 'ip tunnel add {ifname} mode {type}'
-    delete = 'ip tunnel del {ifname}'
-
 
 class Sit6RDIf(SitIf):
     """
@@ -338,15 +238,8 @@ class Sit6RDIf(SitIf):
 
     https://en.wikipedia.org/wiki/IPv6_rapid_deployment
     """
-
-    ip = [IP6,]
-
-    required = ['remote', '6rd-prefix']
-
     # TODO: check if key can really be used with 6RD
     options = ['remote', 'ttl', 'tos', 'key', '6rd-prefix', '6rd-relay-prefix']
-    updates = ['remote', 'ttl', 'tos',
-               'mtu', 'multicast', 'allmulticast']
 
     def _create(self):
         # do not call _Tunnel.create, building fully here
