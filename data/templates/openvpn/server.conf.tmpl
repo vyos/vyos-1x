@@ -14,9 +14,9 @@ dev {{ ifname }}
 persist-key
 iproute /usr/libexec/vyos/system/unpriv-ip
 {% if protocol == 'tcp-active' %}
-proto tcp6-client
+proto tcp-client
 {% elif protocol == 'tcp-passive' %}
-proto tcp6-server
+proto tcp-server
 {% else %}
 proto udp
 {% endif %}
