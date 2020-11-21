@@ -318,15 +318,19 @@ class BridgeIf(Interface):
                 
                 if 'allowed_vlan' in interface_config:
                     vlan_filter = 1
-                    for vlan in interface_config['allowed_vlan']:
-                        cmd = f'bridge vlan add dev {interface} vid {vlan} master'
-                        self._cmd(cmd)
-                        vlan_add.add(vlan)
                 
                 if vlan_filter:
                     if 'native_vlan' not in interface_config:
                         cmd = f'bridge vlan del dev {interface} vid 1'
                         self._cmd(cmd)
+                
+                if 'allowed_vlan' in interface_config:
+                    for vlan in interface_config['allowed_vlan']:
+                        cmd = f'bridge vlan add dev {interface} vid {vlan} master'
+                        self._cmd(cmd)
+                        vlan_add.add(vlan)
+                
+                
         
         
         for vlan in vlan_del:
