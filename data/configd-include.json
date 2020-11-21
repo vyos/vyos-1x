@@ -47,7 +47,7 @@
 "system-ip.py",
 "system-ipv6.py",
 "system-login-banner.py",
-"system-options.py",
+"system-option.py",
 "system-syslog.py",
 "system-timezone.py",
 "system_console.py",
