@@ -131,6 +131,12 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.session.set(path + ['tls', 'cert-file', ssl_cert])
         self.session.set(path + ['tls', 'key-file', ssl_key])
 
+        # check validate() - can not have auth username without a password
+        self.session.set(path + ['authentication', 'username', 'vyos'])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(path + ['authentication', 'password', 'vyos'])
+
         # client commit must pass
         self.session.commit()
 
@@ -162,6 +168,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
             self.session.set(path + ['tls', 'key-file', ssl_key])
             self.session.set(path + ['vrf', vrf_name])
+            self.session.set(path + ['authentication', 'username', interface+'user'])
+            self.session.set(path + ['authentication', 'password', interface+'secretpw'])
 
         self.session.commit()
 
@@ -169,6 +177,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             remote_host = f'192.0.2.{ii}'
             config_file = f'/run/openvpn/{interface}.conf'
+            pw_file = f'/run/openvpn/{interface}.pw'
             config = read_file(config_file)
 
             self.assertIn(f'dev {interface}', config)
@@ -188,6 +197,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
+
+            pw = cmd(f'sudo cat {pw_file}')
+            self.assertIn(f'{interface}user', pw)
+            self.assertIn(f'{interface}secretpw', pw)
 
         # check that no interface remained after deleting them
         self.session.delete(base_path)
