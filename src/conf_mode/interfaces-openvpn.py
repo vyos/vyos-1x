@@ -464,12 +464,9 @@ def generate(openvpn):
     if tmp: fix_permissions.append(tmp)
 
     # Generate User/Password authentication file
-    if 'auth' in openvpn:
-        with open(openvpn['auth_user_pass_file'], 'w') as f:
-            f.write('{}\n{}'.format(openvpn['auth_user'], openvpn['auth_pass']))
-        # also change permission on auth file
-        fix_permissions.append(openvpn['auth_user_pass_file'])
-
+    if 'authentication' in openvpn:
+        render(openvpn['auth_user_pass_file'], 'openvpn/auth.pw.tmpl', openvpn,
+               trim_blocks=True, user=user, group=group, permission=0o600)
     else:
         # delete old auth file if present
         if os.path.isfile(openvpn['auth_user_pass_file']):
@@ -482,9 +479,6 @@ def generate(openvpn):
 
             # Our client need's to know its subnet mask ...
             client_config['server_subnet'] = dict_search('server.subnet', openvpn)
-
-            import pprint
-            pprint.pprint(client_config)
 
             render(client_file, 'openvpn/client.conf.tmpl', client_config,
                    trim_blocks=True, user=user, group=group)
