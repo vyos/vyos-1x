@@ -103,7 +103,6 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/show/ipv6/node.def
 	rm -f $(OP_TMPL_DIR)/show/ipv6/bgp/node.def
 	rm -f $(OP_TMPL_DIR)/show/ipv6/route/node.def
-	rm -f $(OP_TMPL_DIR)/restart/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
