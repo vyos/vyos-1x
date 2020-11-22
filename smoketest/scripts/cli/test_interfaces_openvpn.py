@@ -189,6 +189,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'persist-tun', config)
             self.assertIn(f'auth {auth_hash}', config)
             self.assertIn(f'cipher aes-256-cbc', config)
+
             # TLS options
             self.assertIn(f'ca {ca_cert}', config)
             self.assertIn(f'cert {ssl_cert}', config)
@@ -343,6 +344,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['local-port', port])
             self.session.set(path + ['server', 'subnet', subnet])
             self.session.set(path + ['server', 'topology', 'subnet'])
+            self.session.set(path + ['keep-alive', 'failure-count', '5'])
+            self.session.set(path + ['keep-alive', 'interval', '5'])
 
             # clients
             self.session.set(path + ['server', 'client', 'client1', 'ip', client_ip])
@@ -383,6 +386,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'topology subnet', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'push "redirect-gateway def1"', config)
+            self.assertIn(f'keepalive 5 25', config)
 
             # TLS options
             self.assertIn(f'ca {ca_cert}', config)
@@ -436,6 +440,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.session.set(path + ['server', 'subnet', subnet])
             self.session.set(path + ['server', 'topology', 'net30'])
             self.session.set(path + ['replace-default-route'])
+            self.session.set(path + ['keep-alive', 'failure-count', '10'])
+            self.session.set(path + ['keep-alive', 'interval', '5'])
             self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
             self.session.set(path + ['tls', 'cert-file', ssl_cert])
             self.session.set(path + ['tls', 'key-file', ssl_key])
@@ -463,6 +469,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'topology net30', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'push "redirect-gateway def1"', config)
+            self.assertIn(f'keepalive 5 50', config)
 
             # TLS options
             self.assertIn(f'ca {ca_cert}', config)
@@ -637,4 +644,4 @@ if __name__ == '__main__':
     for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
         cmd(f'sudo chown openvpn:openvpn {file}')
 
-    unittest.main()
+    unittest.main(failfast=True)
