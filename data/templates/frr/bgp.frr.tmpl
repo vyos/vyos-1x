@@ -1,1016 +1,287 @@
-{% set conf_bgp = nbgp -%}
-{% for asn in nbgp -%}
+{### MACRO definition for recurring peer patter, this can be either fed by a ###}
+{### peer-group or an individual BGP neighbor ###}
+{% macro bgp_neighbor(neighbor, config, peer_group=false) %}
+{%   if peer_group == true %}
+ neighbor {{ neighbor }} peer-group
+{%   elif config.peer_group is defined and config.peer_group is not none %}
+ neighbor {{ neighbor }} peer-group {{ config.peer_group }}
+{%   endif %}
+{%   if config.remote_as is defined and config.remote_as is not none %}
+ neighbor {{ neighbor }} remote-as {{ config.remote_as }}
+{%   endif %}
+{%   if config.bfd is defined %}
+ neighbor {{ neighbor }} bfd
+{%   endif %}
+{%   if config.capability is defined and config.capability is not none %}
+{%     if config.capability.dynamic is defined %}
+ neighbor {{ neighbor }} capability dynamic
+{%     endif %}
+{%     if config.capability.extended_nexthop is defined %}
+ neighbor {{ neighbor }} capability extended-nexthop
+{%     endif %}
+{%   endif %}
+{%   if config.description is defined and config.description is not none %}
+ neighbor {{ neighbor }} description {{ config.description }}
+{%   endif %}
+{%   if config.disable_capability_negotiation is defined %}
+ neighbor {{ neighbor }} disable-capability-negotiation
+{%   endif %}
+{%   if config.ebgp_multihop is defined and config.ebgp_multihop is not none %}
+ neighbor {{ neighbor }} ebgp-multihop {{ config.ebgp_multihop }}
+{%   endif %}
+{%   if config.local_as is defined and config.local_as is not none %}
+{%     for local_asn in config.local_as %}
+ neighbor {{ neighbor }} local-as {{ local_asn }} {{ 'no-prepend' if config.local_as[local_asn].no_prepend is defined }}
+{%     endfor %}
+{%   endif %}
+{%   if config.override_capability is defined %}
+ neighbor {{ neighbor }} override-capability
+{%   endif %}
+{%   if config.passive is defined %}
+ neighbor {{ neighbor }} passive
+{%   endif %}
+{%   if config.password is defined and config.password is not none %}
+ neighbor {{ neighbor }} password {{ config.password }}
+{%   endif %}
+{%   if config.shutdown is defined %}
+ neighbor {{ neighbor }} shutdown
+{%   endif %}
+{%   if config.ttl_security is defined and config.ttl_security.hops is defined and config.ttl_security.hops is not none %}
+ neighbor {{ neighbor }} ttl-security hops {{ config.ttl_security.hops }}
+{%   endif %}
+{%   if config.update_source is defined and config.update_source is not none %}
+ neighbor {{ neighbor }} update-source {{ config.update_source }}
+{%   endif %}
+ !
+{%   if config.address_family is defined and config.address_family is not none %}
+{%     for af in config.address_family %}
+{%       if af == 'ipv4_unicast' %}
+ address-family ipv4 unicast
+{%       elif af == 'ipv6_unicast' %}
+ address-family ipv6 unicast
+{%       endif %}
+{%       if config.address_family[af].allowas_in is defined and config.address_family[af].allowas_in is not none %}
+  neighbor {{ neighbor }} allowas-in {{ config.address_family[af].allowas_in.number if config.address_family[af].allowas_in.number is defined }}
+{%       endif %}
+{%       if config.address_family[af].remove_private_as is defined %}
+  neighbor {{ neighbor }} remove-private-AS
+{%       endif %}
+{%       if config.address_family[af].route_reflector_client is defined %}
+  neighbor {{ neighbor }} route-reflector-client
+{%       endif %}
+{%       if config.address_family[af].weight is defined and config.address_family[af].weight is not none %}
+  neighbor {{ neighbor }} weight {{ config.address_family[af].weight }}
+{%       endif %}
+{%       if config.address_family[af].attribute_unchanged is defined and config.address_family[af].attribute_unchanged is not none %}
+  neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if config.address_family[af].attribute_unchanged.as_path is defined }}{{ 'med ' if config.address_family[af].attribute_unchanged.med is defined }}{{ 'next-hop ' if config.address_family[af].attribute_unchanged.next_hop is defined }}
+{%       endif %}
+{%       if config.address_family[af].capability is defined and config.address_family[af].capability.orf is defined and config.address_family[af].capability.orf.prefix_list is defined and config.address_family[af].capability.orf.prefix_list is not none %}
+  neighbor {{ neighbor }} capability orf prefix-list {{ config.address_family[af].capability.orf.prefix_list }}
+{%       endif %}
+{%       if config.address_family[af].default_originate is defined %}
+  neighbor {{ neighbor }} default-originate {{ 'route-map ' + config.address_family[af].default_originate.route_map if config.address_family[af].default_originate.route_map is defined }}
+{%       endif %}
+{%       if config.address_family[af].distribute_list is defined and config.address_family[af].distribute_list is not none %}
+{%         if config.address_family[af].distribute_list.export is defined and config.address_family[af].distribute_list.export is not none %}
+  neighbor {{ neighbor }} distribute-list {{ config.address_family[af].distribute_list.export }} out
+{%         elif config.address_family[af].distribute_list.import is defined and config.address_family[af].distribute_list.import is not none %}
+  neighbor {{ neighbor }} distribute-list {{ config.address_family[af].distribute_list.export }} in
+{%         endif %}
+{%       endif %}
+{%       if config.address_family[af].filter_list is defined and config.address_family[af].filter_list is not none %}
+{%         if config.address_family[af].filter_list.export is defined and config.address_family[af].filter_list.export is not none %}
+  neighbor {{ neighbor }} filter-list {{ config.address_family[af].filter_list.export }} out
+{%         elif config.address_family[af].filter_list.import is defined and config.address_family[af].filter_list.import is not none %}
+  neighbor {{ neighbor }} filter-list {{ config.address_family[af].filter_list.import }} in
+{%         endif %}
+{%       endif %}
+{%       if config.address_family[af].maximum_prefix is defined and config.address_family[af].maximum_prefix is not none %}
+  neighbor {{ neighbor }} maximum-prefix {{ config.address_family[af].maximum_prefix }}
+{%       endif %}
+{%       if config.address_family[af].nexthop_self is defined %}
+{#         https://phabricator.vyos.net/T1817 #}
+  neighbor {{ neighbor }} next-hop-self {{ 'force' if config.address_family[af].nexthop_self.force is defined }}
+{%       endif %}
+{%       if config.address_family[af].route_server_client is defined %}
+  neighbor {{ neighbor }} route-server-client
+{%       endif %}
+{%       if config.address_family[af].route_map is defined and config.address_family[af].route_map is not none %}
+{%         if config.address_family[af].route_map.export is defined and config.address_family[af].route_map.export is not none %}
+  neighbor {{ neighbor }} route-map {{ config.address_family[af].route_map.export }} out
+{%         elif config.address_family[af].route_map.import is defined and config.address_family[af].route_map.import is not none %}
+  neighbor {{ neighbor }} route-map {{ config.address_family[af].route_map.import }} in
+{%         endif %}
+{%       endif %}
+{%       if config.address_family[af].prefix_list is defined and config.address_family[af].prefix_list is not none %}
+{%         if config.address_family[af].prefix_list.export is defined and config.address_family[af].prefix_list.export is not none %}
+  neighbor {{ neighbor }} route-map {{ config.address_family[af].prefix_list.export }} out
+{%         elif config.address_family[af].prefix_list.import is defined and config.address_family[af].prefix_list.import is not none %}
+  neighbor {{ neighbor }} route-map {{ config.address_family[af].prefix_list.export }} in
+{%         endif %}
+{%       endif %}
+{%       if config.address_family[af].soft_reconfiguration is defined and config.address_family[af].soft_reconfiguration.inbound is defined %}
+  neighbor {{ neighbor }} soft-reconfiguration inbound
+{%       endif %}
+{%       if config.address_family[af].unsuppress_map is defined and config.address_family[af].unsuppress_map is not none %}
+  neighbor {{ neighbor }} unsuppress-map {{ config.address_family[af].unsuppress_map }}
+{%       endif %}
+  neighbor {{ neighbor }} activate
+ exit-address-family
+ !
+{%     endfor %}
+{%   endif %}
+{% endmacro %}
 !
 router bgp {{ asn }}
  no bgp default ipv4-unicast
-
-{#- set 'conf_bgp[asn].parameters' as bgp_params #}
-{%- set bgp_params = conf_bgp[asn].parameters %}
-{%- set bgp_afi = conf_bgp[asn].address_family %}
-
-{#- START Global ASN address-family section; set protocol bgp xxx address-family #}
-{%- if 'address_family' in conf_bgp[asn] %}
-{%-   for type in bgp_afi %}
-{%-     if type == "ipv4_unicast" %}
+{% if address_family is defined and address_family is not none %}
+{%   for af in address_family %}
  !
+{%     if af == 'ipv4_unicast' %}
  address-family ipv4 unicast
-{%- if 'aggregate_address' in bgp_afi[type] %}
-{%-   for ip in bgp_afi[type].aggregate_address %}
-{%-      if ( ('as_set' in bgp_afi[type].aggregate_address[ip]) and ('summary_only' in bgp_afi[type].aggregate_address[ip] ) ) %}
-  aggregate-address {{ ip }} as-set summary-only
-{%-      elif 'as_set' in bgp_afi[type].aggregate_address[ip]  %}
-  aggregate-address {{ ip  }} as-set
-{%-      elif 'summary_only' in bgp_afi[type].aggregate_address[ip]  %}
-  aggregate-address {{ ip }} summary-only
-{%-      else %}
-  aggregate-address {{ ip }}
-{%-      endif %}
-{%-   endfor %}
-{%- endif %}
-{#- END aggregate address ipv4 #}
-
-{#- redistribute afi ipv4 #}
-{%-  if 'redistribute' in bgp_afi[type] %}
-{%-    for protocol in bgp_afi[type].redistribute %}
-{%-      if ( ('route_map' in bgp_afi[type].redistribute[protocol]) and ('metric' in bgp_afi[type].redistribute[protocol] ) ) %}
- redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
-{%-      elif 'metric' in bgp_afi[type].redistribute[protocol] %}
- redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}}
-{%-      elif 'route_map' in bgp_afi[type].redistribute[protocol] %}
- redistribute {{protocol}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
-{%-      elif 'table' in bgp_afi[type].redistribute %}
- redistribute table {{bgp_afi[type].redistribute.table}}
-{%-      else %}
- redistribute {{protocol}}
-{%-      endif %}
-{%-    endfor %}
-{%-  endif %}
-{#- END redistribute #}
-
-{%-  if 'network' in bgp_afi[type] %}
-{%-    for net in bgp_afi[type].network %}
-  network {{ net }}
-{%-    endfor %}
-{%-       endif %}
- exit-address-family
- !
-{%-  endif %}
-
-{%-  if type == "ipv6_unicast" %}
- !
+{%     elif af == 'ipv6_unicast' %}
  address-family ipv6 unicast
-{%- if 'aggregate_address' in bgp_afi[type] %}
-{%-   for ip in bgp_afi[type].aggregate_address %}
-{%-      if ( ('as_set' in bgp_afi[type].aggregate_address[ip]) and ('summary_only' in bgp_afi[type].aggregate_address[ip] ) ) %}
-  aggregate-address {{ ip }} as-set summary-only
-{%-      elif 'as_set' in bgp_afi[type].aggregate_address[ip]  %}
-  aggregate-address {{ ip  }} as-set
-{%-      elif 'summary_only' in bgp_afi[type].aggregate_address[ip]  %}
-  aggregate-address {{ ip }} summary-only
-{%-      else %}
-  aggregate-address {{ ip }}
-{%-      endif %}
-{%-   endfor %}
-{%- endif %}
-{#- END aggregate address ipv6 #}
+{%     endif %}
+{%     if address_family[af].aggregate_address is defined and address_family[af].aggregate_address is not none %}
+{%       for ip in address_family[af].aggregate_address %}
+  aggregate-address {{ ip }}{{ ' as-set' if address_family[af].aggregate_address[ip].as_set is defined }}{{ ' summary-only' if address_family[af].aggregate_address[ip].summary_only is defined }}
+{%       endfor %}
+{%     endif %}
+{%     if address_family[af].redistribute is defined and address_family[af].redistribute is not none %}
+{%       for protocol in address_family[af].redistribute %}
+{%         if protocol == 'table' %}
+  redistribute table {{ address_family[af].redistribute[protocol].table }}
+{%         else %}
+  redistribute {{ protocol }}{% if address_family[af].redistribute[protocol].metric is defined %} metric {{ address_family[af].redistribute[protocol].metric }}{% endif %}{% if address_family[af].redistribute[protocol].route_map is defined %} route-map {{ address_family[af].redistribute[protocol].route_map }}{% endif %}
+{#######   we need this blank line!! #######}
 
-{#- redistribute afi ipv6 #}
-{%-  if 'redistribute' in bgp_afi[type] %}
-{%-    for protocol in bgp_afi[type].redistribute %}
-{%-      if ( ('route_map' in bgp_afi[type].redistribute[protocol]) and ('metric' in bgp_afi[type].redistribute[protocol] ) ) %}
- redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
-{%-      elif 'metric' in bgp_afi[type].redistribute[protocol] %}
- redistribute {{protocol}} metric {{bgp_afi[type].redistribute[protocol].metric}}
-{%-      elif 'route_map' in bgp_afi[type].redistribute[protocol] %}
- redistribute {{protocol}} route-map {{bgp_afi[type].redistribute[protocol].route_map}}
-{%-      elif 'table' in bgp_afi[type].redistribute %}
- redistribute table {{bgp_afi[type].redistribute.table}}
-{%-      else %}
- redistribute {{protocol}}
-{%-      endif %}
-{%-    endfor %}
-{%-  endif %}
-{#- END redistribute #}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%     if address_family[af].network is defined and address_family[af].network is not none %}
+{%       for network in address_family[af].network %}
+  network {{ network }}{% if address_family[af].network[network].route_map is defined %} route-map {{ address_family[af].network[network].route_map }}{% endif %}{% if address_family[af].network[network].backdoor is defined %} backdoor{% endif %}
+{#######   we need this blank line!! #######}
 
-{%-       if 'network' in bgp_afi[type] %}
-{%-         for net in bgp_afi[type].network %}
-  network {{ net }}
-{%-         endfor %}
-{%-       endif %}
+{%       endfor %}
+{%     endif %}
  exit-address-family
-!
-{%-     endif %}
-{%-   endfor %}
-{%- endif %}
-{#- END Global ASN address-family section; set protocols bgp 65001 address-family #}
-
-{#- set protocols nbgp xxxx maximum-paths ibgp x, Generated by default for afi_4 #}
-{#- We don't have this parameter in afi_6. But this is supported in the FRR #}
-{%- if 'maximum_paths' in conf_bgp[asn] %}
-{%-   if 'ebgp' in conf_bgp[asn].maximum_paths %}
+{%   endfor %}
+{% endif %}
+ !
+{# set protocols bgp xxxx maximum-paths ibgp x, Generated by default for afi_4 #}
+{# We don't have this parameter in afi_6. But this is supported in FRR #}
+{% if maximum_paths is defined and maximum_paths is not none %}
+{%   if maximum_paths.ebgp is defined and maximum_paths.ebgp is not none %}
  !
  address-family ipv4 unicast
-  maximum-paths {{ conf_bgp[asn].maximum_paths.ebgp }}
+  maximum-paths {{ maximum_paths.ebgp }}
  exit-address-family
  !
-{%-   endif %}
-{%-   if 'ibgp' in conf_bgp[asn].maximum_paths %}
+{%   endif %}
+{%   if maximum_paths.ibgp is defined and maximum_paths.ibgp is not none %}
  !
  address-family ipv4 unicast
-  maximum-paths ibgp {{ conf_bgp[asn].maximum_paths.ibgp }}
+  maximum-paths ibgp {{ maximum_paths.ibgp }}
  exit-address-family
  !
-{%-   endif %}
-{%- endif %}
-
-{#- START peer-group; set protocol bgp xxx peer-group #}
-{%- if 'peer_group' in conf_bgp[asn] %}
-{%-   for pr_group in conf_bgp[asn].peer_group %}
-{%- set conf_peer_group = conf_bgp[asn].peer_group[pr_group] %}
- neighbor {{pr_group}} peer-group
-
-{#- First parameter for peer-group - remote-as #}
-{%- if 'remote_as' in conf_peer_group %}
- neighbor {{ pr_group }} remote-as {{ conf_peer_group.remote_as }}
-{%- endif %}
-
-{%- if 'bfd' in conf_peer_group %}
- neighbor {{ pr_group }} bfd
-{%- endif %}
-
-{%- if 'capability' in conf_peer_group %}
-{%-   if 'dynamic' in conf_peer_group.capability %}
- neighbor {{ pr_group }} capability dynamic
-{%-   endif %}
-{%-   if 'extended_nexthop' in conf_peer_group.capability %}
- neighbor {{ pr_group }} capability extended-nexthop
-{%-   endif %}
-{%- endif %}
-
-{%- if 'description' in conf_peer_group %}
- neighbor {{ pr_group }} description {{ conf_peer_group.description }}
-{%- endif %}
-
-{%- if 'disable_capability_negotiation' in conf_peer_group %}
- neighbor {{ pr_group }} disable-capability-negotiation
-{%- endif %}
-
-{#- https://phabricator.vyos.net/T2844. 'disable-send-community' only for afi #}
-{%- if 'disable_send_community' in conf_peer_group %}
+{%   endif %}
+{% endif %}
  !
-{%- endif %}
-
-{%- if 'ebgp_multihop' in conf_peer_group %}
- neighbor {{ pr_group }} ebgp-multihop {{conf_peer_group.ebgp_multihop}}
-{%- endif %}
-
-{%- if 'local_as' in conf_peer_group %}
-{%-   for loc_asn in conf_peer_group.local_as %}
-{%-     if 'no_prepend' in conf_peer_group.local_as[loc_asn] %}
- neighbor {{ pr_group }} local-as {{loc_asn}} no-prepend
-{%-     else %}
- neighbor {{ pr_group }} local-as {{loc_asn}} 
-{%-     endif %}
-{%-   endfor %}
-{%- endif %}
-
-{%- if 'override_capability' in conf_peer_group %}
- neighbor {{ pr_group }} override-capability
-{%- endif %}
-
-{%- if 'passive' in conf_peer_group %}
- neighbor {{ pr_group }} passive
-{%- endif %}
-
-{%- if 'password' in conf_peer_group %}
- neighbor {{ pr_group }} password {{ conf_peer_group.password }}
-{%- endif %}
-
-{%- if 'shutdown' in conf_peer_group %}
- neighbor {{ pr_group }} shutdown
-{%- endif %}
-
-{%- if 'ttl_security' in conf_peer_group %}
-{%-   if 'hops' in conf_peer_group.ttl_security %}
- neighbor {{ pr_group }} ttl-security hops {{conf_peer_group.ttl_security.hops}} 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'update_source' in conf_peer_group %}
- neighbor {{ pr_group }} update-source {{ conf_peer_group.update_source }}
-{%- endif %}
-
-{#- START peer-group afi; set protocols bgp xxx peer-group FOO address-family #}
-{%- if 'address_family' in conf_peer_group %}
-{%- for afi in conf_peer_group.address_family %}
-{%-   if afi == "ipv4_unicast" %}
+{% if peer_group is defined and peer_group is not none %}
+{%   for peer, config in peer_group.items() %}
+{{ bgp_neighbor(peer, config, true) }}
+{%   endfor %}
+{% endif %}
  !
- address-family ipv4 unicast
-
-{%- if 'allowas_in' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'number' in conf_peer_group.address_family.ipv4_unicast.allowas_in %}
-  neighbor {{ pr_group }} allowas-in {{ conf_peer_group.address_family.ipv4_unicast.allowas_in.number }}
-{%-   else %}
-  neighbor {{ pr_group }} allowas-in
-{%-   endif %}
-{%- endif %}
-
-{#- START Single Params for peer-group; set protocols bgp xxx peer-group FOO address-family ipv4-unicast #}
-
-{%- if 'remove_private_as' in conf_peer_group.address_family.ipv4_unicast %}
-  neighbor {{ pr_group }} remove-private-AS
-{%- endif %}
-
-{%- if 'route_reflector_client' in conf_peer_group.address_family.ipv4_unicast %}
-  neighbor {{ pr_group }} route-reflector-client
-{%- endif %}
-
-{%- if 'weight' in conf_peer_group.address_family.ipv4_unicast %}
-  neighbor {{ pr_group }} weight {{ conf_peer_group.address_family.ipv4_unicast.weight }}
-{%- endif %}
-{#- END single params for peer-group #}
-
-{%- if 'attribute_unchanged' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if ( ('as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) and ('med' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) ) %}
-  neighbor {{ pr_group }} attribute-unchanged as-path med
-{%-   elif ( ('as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) ) %}
-  neighbor {{ pr_group }} attribute-unchanged as-path next-hop
-{%-   elif ( ('med' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged) ) %}
-  neighbor {{ pr_group }} attribute-unchanged med next-hop
-{%-   elif 'as_path' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
-  neighbor {{ pr_group }} attribute-unchanged as-path
-{%-   elif 'med' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
-  neighbor {{ pr_group }} attribute-unchanged med
-{%-   elif 'next_hop' in conf_peer_group.address_family.ipv4_unicast.attribute_unchanged %}
-  neighbor {{ pr_group }} attribute-unchanged next-hop
-{%-   else %}
-  neighbor {{ pr_group }} attribute-unchanged as-path next-hop med
-{%-   endif %}
-{%- endif %}
-{#- END attribute-unchanged #}
-
-{%- if 'capability' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'orf' in conf_peer_group.address_family.ipv4_unicast.capability %}
-{%-     if 'receive' in conf_peer_group.address_family.ipv4_unicast.capability.orf.prefix_list %}
-  neighbor {{ pr_group }} capability orf prefix-list receive
-{%-     endif %}
-{%-     if 'send' in conf_peer_group.address_family.ipv4_unicast.capability.orf.prefix_list %}
-  neighbor {{ pr_group }} capability orf prefix-list send 
-{%-     endif %}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'default_originate' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'route_map' in conf_peer_group.address_family.ipv4_unicast.default_originate %}
-  neighbor {{ pr_group }} default-originate route-map {{ conf_peer_group.address_family.ipv4_unicast.default_originate.route_map }}
-{%-   else %}
-  neighbor {{ pr_group }} default-originate 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'distribute_list' in  conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv4_unicast.distribute_list  %}
-  neighbor {{ pr_group }} distribute-list {{conf_peer_group.address_family.ipv4_unicast.distribute_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv4_unicast.distribute_list  %}
-  neighbor {{ pr_group }} distribute-list {{conf_peer_group.address_family.ipv4_unicast.distribute_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'filter_list' in  conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv4_unicast.filter_list  %}
-  neighbor {{ pr_group }} filter-list {{conf_peer_group.address_family.ipv4_unicast.filter_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv4_unicast.filter_list  %}
-  neighbor {{ pr_group }} filter-list {{conf_peer_group.address_family.ipv4_unicast.filter_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'maximum_prefix' in conf_peer_group.address_family.ipv4_unicast %}
-  neighbor {{ pr_group }} maximum-prefix {{ conf_peer_group.address_family.ipv4_unicast.maximum_prefix }}
-{%- endif %}
-
-{#- https://phabricator.vyos.net/T1817 #}
-{%- if 'nexthop_self' in conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'force' in conf_peer_group.address_family.ipv4_unicast.nexthop_self %}
-  neighbor {{ pr_group }} next-hop-self force
-  neighbor {{ pr_group }} next-hop-self
-{%-   else %}
-  neighbor {{ pr_group }} next-hop-self
-{%-   endif %}
-{%- endif %}
-
-{%- if 'route_server_client' in conf_peer_group.address_family.ipv4_unicast %}
-  neighbor {{ pr_group }} route-server-client
-{%- endif %}
-
-{%- if 'route_map' in  conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv4_unicast.route_map  %}
-  neighbor {{ pr_group }} route-map {{conf_peer_group.address_family.ipv4_unicast.route_map.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv4_unicast.route_map  %}
-  neighbor {{ pr_group }} route-map {{conf_peer_group.address_family.ipv4_unicast.route_map.import}} in
-{%-   endif %}
-{%- endif %}
-{%- if 'prefix_list' in  conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv4_unicast.prefix_list  %}
-  neighbor {{ pr_group }} prefix-list {{conf_peer_group.address_family.ipv4_unicast.prefix_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv4_unicast.prefix_list  %}
-  neighbor {{ pr_group }} prefix-list {{conf_peer_group.address_family.ipv4_unicast.prefix_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'soft_reconfiguration' in  conf_peer_group.address_family.ipv4_unicast %}
-{%-   if 'inbound' is defined %}
-  neighbor {{ pr_group }} soft-reconfiguration inbound 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'unsuppress_map' in conf_peer_group.address_family.ipv4_unicast %}
-  neighbor {{ pr_group }} unsuppress-map {{conf_peer_group.address_family.ipv4_unicast.unsuppress_map}}
-{%- endif %}
-  neighbor {{ pr_group }} activate
- exit-address-family
+{% if neighbor is defined and neighbor is not none %}
+{%   for n, config in neighbor.items() %}
+{{ bgp_neighbor(n, config) }}
+{%   endfor %}
+{% endif %}
  !
-{%-   endif %}
-
-{%-   if afi == "ipv6_unicast" %}
- !
- address-family ipv6 unicast
-
-{%- if 'allowas_in' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'number' in conf_peer_group.address_family.ipv6_unicast.allowas_in %}
-  neighbor {{ pr_group }} allowas-in {{ conf_peer_group.address_family.ipv6_unicast.allowas_in.number }}
-{%-   else %}
-  neighbor {{ pr_group }} allowas-in
-{%-   endif %}
-{%- endif %}
-
-{#- START Single Params for peer-group afi6; set protocols bgp xxx peer-group FOO address-family ipv6-unicast #}
-{%- if 'remove_private_as' in conf_peer_group.address_family.ipv6_unicast %}
-  neighbor {{ pr_group }} remove-private-AS
-{%- endif %}
-
-{%- if 'route_reflector_client' in conf_peer_group.address_family.ipv6_unicast %}
-  neighbor {{ pr_group }} route-reflector-client
-{%- endif %}
-
-{%- if 'weight' in conf_peer_group.address_family.ipv6_unicast %}
-  neighbor {{ pr_group }} weight {{ conf_peer_group.address_family.ipv6_unicast.weight }}
-{%- endif %}
-{#- END single params for peer-group afi6 #}
-
-{%- if 'attribute_unchanged' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if ( ('as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) and ('med' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) ) %}
-  neighbor {{ pr_group }} attribute-unchanged as-path med
-{%-   elif ( ('as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) ) %}
-  neighbor {{ pr_group }} attribute-unchanged as-path next-hop
-{%-   elif ( ('med' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged) ) %}
-  neighbor {{ pr_group }} attribute-unchanged med next-hop
-{%-   elif 'as_path' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
-  neighbor {{ pr_group }} attribute-unchanged as-path
-{%-   elif 'med' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
-  neighbor {{ pr_group }} attribute-unchanged med
-{%-   elif 'next_hop' in conf_peer_group.address_family.ipv6_unicast.attribute_unchanged %}
-  neighbor {{ pr_group }} attribute-unchanged next-hop
-{%-   else %}
-  neighbor {{ pr_group }} attribute-unchanged as-path next-hop med
-{%-   endif %}
-{%- endif %}
-{#- END attribute-unchanged ipv6 #}
-
-{%- if 'capability' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'dynamic' in conf_peer_group.address_family.ipv6_unicast.capability %}
-{#- exit from afi ipv6 unicast because 'dynamic' its a global parameter for peer-group in afi6. Other checks are ongoing in afi6. Also related T3037 #}
- exit-address-family
-  neighbor {{ pr_group }} capability dynamic
- address-family ipv6 unicast
-{%-   endif %}
-{%-   if 'orf' in conf_peer_group.address_family.ipv6_unicast.capability %}
-{%-     if 'receive' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
-  neighbor {{ pr_group }} capability orf prefix-list receive
-{%-   endif %}
-{%-     if 'send' in conf_peer_group.address_family.ipv6_unicast.capability.orf.prefix_list %}
-  neighbor {{ pr_group }} capability orf prefix-list send 
-{%-     endif %}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'default_originate' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'route_map' in conf_peer_group.address_family.ipv6_unicast.default_originate %}
-  neighbor {{ pr_group }} default-originate route-map {{ conf_peer_group.address_family.ipv6_unicast.default_originate.route_map }}
-{%-   else %}
-  neighbor {{ pr_group }} default-originate 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'distribute_list' in  conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv6_unicast.distribute_list  %}
-  neighbor {{ pr_group }} distribute-list {{conf_peer_group.address_family.ipv6_unicast.distribute_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv6_unicast.distribute_list  %}
-  neighbor {{ pr_group }} distribute-list {{conf_peer_group.address_family.ipv6_unicast.distribute_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'filter_list' in  conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv6_unicast.filter_list  %}
-  neighbor {{ pr_group }} filter-list {{conf_peer_group.address_family.ipv6_unicast.filter_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv6_unicast.filter_list  %}
-  neighbor {{ pr_group }} filter-list {{conf_peer_group.address_family.ipv6_unicast.filter_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'maximum_prefix' in conf_peer_group.address_family.ipv6_unicast %}
-  neighbor {{ pr_group }} maximum-prefix {{ conf_peer_group.address_family.ipv6_unicast.maximum_prefix }}
-{%- endif %}
-
-{#- https://phabricator.vyos.net/T1817 #}
-{%- if 'nexthop_self' in conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'force' in conf_peer_group.address_family.ipv6_unicast.nexthop_self %}
-  neighbor {{ pr_group }} next-hop-self force
-  neighbor {{ pr_group }} next-hop-self
-{%-   else %}
-  neighbor {{ pr_group }} next-hop-self
-{%-   endif %}
-{%- endif %}
-
-{%- if 'route_server_client' in conf_peer_group.address_family.ipv6_unicast %}
-  neighbor {{ pr_group }} route-server-client
-{%- endif %}
-
-{%- if 'route_map' in  conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv6_unicast.route_map  %}
-  neighbor {{ pr_group }} route-map {{conf_peer_group.address_family.ipv6_unicast.route_map.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv6_unicast.route_map  %}
-  neighbor {{ pr_group }} route-map {{conf_peer_group.address_family.ipv6_unicast.route_map.import}} in
-{%-   endif %}
-{%- endif %}
-{%- if 'prefix_list' in  conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer_group.address_family.ipv6_unicast.prefix_list  %}
-  neighbor {{ pr_group }} prefix-list {{conf_peer_group.address_family.ipv6_unicast.prefix_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer_group.address_family.ipv6_unicast.prefix_list  %}
-  neighbor {{ pr_group }} prefix-list {{conf_peer_group.address_family.ipv6_unicast.prefix_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'soft_reconfiguration' in  conf_peer_group.address_family.ipv6_unicast %}
-{%-   if 'inbound' is defined %}
-  neighbor {{ pr_group }} soft-reconfiguration inbound 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'unsuppress_map' in conf_peer_group.address_family.ipv6_unicast %}
-  neighbor {{ pr_group }} unsuppress-map {{conf_peer_group.address_family.ipv6_unicast.unsuppress_map}}
-{%- endif %}
-  neighbor {{ pr_group }} activate
- exit-address-family
- !
-{%-   endif %}
-
-{%- endfor %}
-{%- endif %}
-{#- END peer-group afi; set protocols bgp xxx peer-group FOO address-family #}
-
-{%-   endfor %}
-{%- endif %}
-{#- END peer-group; set protocol bgp xxx peer-group #}
-
-{#- START peer section; set protocol bgp xxx neighbor #}
-{%-  for peer in conf_bgp[asn].neighbor %}
-{#- set peer-group as conf_peer #}
-{%- set conf_peer = conf_bgp[asn].neighbor[peer] %}
-
-{#- First parameter for peer neighbor - remote-as #}
-{%- if 'remote_as' in conf_peer %}
- neighbor {{ peer }} remote-as {{ conf_peer.remote_as }}
-{%- endif %}
-
-{%- if 'advertisement_interval' in conf_peer %}
- neighbor {{ peer }} advertisement-interval {{ conf_peer.advertisement_interval }}
-{%- endif %}
-
-{%- if 'bfd' in conf_peer %}
-{%-   if 'check_control_plane_failure' in conf_peer.bfd %}
- neighbor {{ peer }} bfd
- neighbor {{ peer }} bfd check-control-plane-failure
-{%-   else %}
- neighbor {{ peer }} bfd
-{%-   endif %}
-{%- endif %}
-
-{%- if 'capability' in conf_peer %}
-{%-   if 'dynamic' in conf_peer.capability %}
- neighbor {{ peer }} capability dynamic
-{%-   endif %}
-{%-   if 'extended_nexthop' in conf_peer.capability %}
- neighbor {{ peer }} capability extended-nexthop
-{%-   endif %}
-{%- endif %}
-
-{%- if 'disable_capability_negotiation' in conf_peer %}
- neighbor {{ peer }} disable-capability-negotiation
-{%- endif %}
-
-{#- https://phabricator.vyos.net/T2844. 'disable-send-community' only for afi #}
-{%- if 'disable_send_community' in conf_peer %}
- !
-{%- endif %}
-
-{%- if 'ebgp_multihop' in conf_peer %}
- neighbor {{ peer }} ebgp-multihop {{conf_peer.ebgp_multihop}}
-{%- endif %}
-
-{#- Need to check. 'Peer-group' needs to define before this section #}
-{%- if 'interface' in conf_peer %}
-{%-   if 'peer_group' in conf_peer.interface %}
- neighbor {{ peer }} interface peer-group {{conf_peer.interface.peer_group}}
-{%-   endif %}
-{%-   if 'remote_as' in conf_peer.interface %}
- neighbor {{ peer }} interface remote-as {{conf_peer.interface.remote_as}}
-{%-   endif %}
-{%-   if 'v6only' in conf_peer.interface %}
-{%-     if 'peer_group' in conf_peer.interface.v6only %}
- neighbor {{ peer }} peer-group {{conf_peer.interface.peer_group}}
-{%-     endif %}
-{%-     if 'remote_as' in conf_peer.interface.v6only %}
- neighbor {{ peer }} interface v6only remote-as {{conf_peer.interface.v6only.remote_as}}
-{%-     endif %}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'local_as' in conf_peer %}
-{%-   for loc_asn in conf_peer.local_as %}
-{%-     if 'no_prepend' in conf_peer.local_as[loc_asn] %}
- neighbor {{ peer }} local-as {{loc_asn}} no-prepend
-{%-     else %}
- neighbor {{ peer }} local-as {{loc_asn}} 
-{%-     endif %}
-{%-   endfor %}
-{%- endif %}
-
-{%- if 'override_capability' in conf_peer %}
- neighbor {{ peer }} override-capability
-{%- endif %}
-
-{%- if 'passive' in conf_peer %}
- neighbor {{ peer }} passive
-{%- endif %}
-
-{%- if 'password' in conf_peer %}
- neighbor {{ peer }} password {{ conf_peer.password }}
-{%- endif %}
-
-{%- if 'peer_group' in conf_peer %}
- neighbor {{ peer }} peer-group {{ conf_peer.peer_group }}
-{%- endif %}
-
-{%- if 'port' in conf_peer %}
- neighbor {{ peer }} port {{ conf_peer.port }}
-{%- endif %}
-
-{%- if 'shutdown' in conf_peer %}
- neighbor {{ peer }} shutdown
-{%- endif %}
-
-{%- if 'strict_capability_match' in conf_peer %}
- neighbor {{ peer }} strict-capability-match
-{%- endif %}
-
-{#- set protocols bgp xxx neighbor x.x.x.x timers #}
-{%- if 'timers' in conf_peer %}
-{%-   if ( ('connect' in conf_peer.timers) and ('holdtime' in conf_peer.timers) and ('keepalive' in conf_peer.timers ) ) %}
- neighbor {{ peer }} timers {{conf_peer.timers.keepalive}} {{conf_peer.timers.holdtime}}
- neighbor {{ peer }} timers connect {{conf_peer.timers.connect}}
-{%-   elif ( ('holdtime' in conf_peer.timers) and ('keepalive' in conf_peer.timers ) ) %}
- neighbor {{ peer }} timers {{conf_peer.timers.keepalive}} {{conf_peer.timers.holdtime}}
-{%-   elif 'connect' in conf_peer.timers %}
- neighbor {{ peer }} timers connect {{conf_peer.timers.connect}}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'ttl_security' in conf_peer %}
-{%-   if 'hops' in conf_peer.ttl_security %}
- neighbor {{ peer }} ttl-security hops {{conf_peer.ttl_security.hops}}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'update_source' in conf_peer %}
- neighbor {{ peer }} update-source {{ conf_peer.update_source }}
-{%- endif %}
-
-{%- if 'description' in conf_peer %}
- neighbor {{ peer }} description {{ conf_peer.description }}
-{%- endif %}
-
-{#- START address family for peer; set protocols bgp xxx neighbor x.x.x.x address-family ipvX-unicast #}
-{%- if 'address_family' in conf_peer %}
-{%- for afi in conf_peer.address_family %}
-{%-   if afi == "ipv4_unicast" %}
- !
- address-family ipv4 unicast
-
-{%- if 'allowas_in' in conf_peer.address_family.ipv4_unicast %}
-{%-   if 'number' in conf_peer.address_family.ipv4_unicast.allowas_in %}
-  neighbor {{ peer }} allowas-in {{ conf_peer.address_family.ipv4_unicast.allowas_in.number }}
-{%-   else %}
-  neighbor {{ peer }} allowas-in
-{%-   endif %}
-{%- endif %}
-
-{#- START Single Params for neighbor;  #}
-{%- if 'as_override' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} as-override
-{%- endif %}
-
-{%- if 'remove_private_as' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} remove-private-AS
-{%- endif %}
-
-{%- if 'route_reflector_client' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} route-reflector-client
-{%- endif %}
-
-{%- if 'weight' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} weight {{ conf_peer.address_family.ipv4_unicast.weight }}
-{%- endif %}
-{#- END single params for neighbor #}
-
-{%- if 'attribute_unchanged' in conf_peer.address_family.ipv4_unicast %}
-{%-   if ( ('as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) and ('med' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) ) %}
-  neighbor {{ peer }} attribute-unchanged as-path med
-{%-   elif ( ('as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) ) %}
-  neighbor {{ peer }} attribute-unchanged as-path next-hop
-{%-   elif ( ('med' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv4_unicast.attribute_unchanged) ) %}
-  neighbor {{ peer }} attribute-unchanged med next-hop
-{%-   elif 'as_path' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
-  neighbor {{ peer }} attribute-unchanged as-path
-{%-   elif 'med' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
-  neighbor {{ peer }} attribute-unchanged med
-{%-   elif 'next_hop' in conf_peer.address_family.ipv4_unicast.attribute_unchanged %}
-  neighbor {{ peer }} attribute-unchanged next-hop
-{%-   else %}
-  neighbor {{ peer }} attribute-unchanged as-path next-hop med
-{%-   endif %}
-{%- endif %}
-{#- END attribute-unchanged #}
-
-{%- if 'capability' in conf_peer.address_family.ipv4_unicast %}
-{%-   if 'orf' in conf_peer.address_family.ipv4_unicast.capability %}
-{%-     if 'receive' in conf_peer.address_family.ipv4_unicast.capability.orf.prefix_list %}
-  neighbor {{ peer }} capability orf prefix-list receive
-{%-     endif %}
-{%-     if 'send' in conf_peer.address_family.ipv4_unicast.capability.orf.prefix_list %}
-  neighbor {{ peer }} capability orf prefix-list send 
-{%-     endif %}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'default_originate' in conf_peer.address_family.ipv4_unicast %}
-{%-   if 'route_map' in conf_peer.address_family.ipv4_unicast.default_originate %}
-  neighbor {{ peer }} default-originate route-map {{ conf_peer.address_family.ipv4_unicast.default_originate.route_map }}
-{%-   else %}
-  neighbor {{ peer }} default-originate 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'distribute_list' in  conf_peer.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv4_unicast.distribute_list  %}
-  neighbor {{ peer }} distribute-list {{conf_peer.address_family.ipv4_unicast.distribute_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv4_unicast.distribute_list  %}
-  neighbor {{ peer }} distribute-list {{conf_peer.address_family.ipv4_unicast.distribute_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'filter_list' in  conf_peer.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv4_unicast.filter_list  %}
-  neighbor {{ peer }} filter-list {{conf_peer.address_family.ipv4_unicast.filter_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv4_unicast.filter_list  %}
-  neighbor {{ peer }} filter-list {{conf_peer.address_family.ipv4_unicast.filter_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'maximum_prefix' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} maximum-prefix {{ conf_peer.address_family.ipv4_unicast.maximum_prefix }}
-{%- endif %}
-
-{#- https://phabricator.vyos.net/T1817 #}
-{%- if 'nexthop_self' in conf_peer.address_family.ipv4_unicast %}
-{%-   if 'force' in conf_peer.address_family.ipv4_unicast.nexthop_self %}
-  neighbor {{ peer }} next-hop-self force
-  neighbor {{ peer }} next-hop-self
-{%-   else %}
-  neighbor {{ peer }} next-hop-self
-{%-   endif %}
-{%- endif %}
-
-{%- if 'route_server_client' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} route-server-client
-{%- endif %}
-
-{%- if 'route_map' in  conf_peer.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv4_unicast.route_map  %}
-  neighbor {{ peer }} route-map {{conf_peer.address_family.ipv4_unicast.route_map.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv4_unicast.route_map  %}
-  neighbor {{ peer }} route-map {{conf_peer.address_family.ipv4_unicast.route_map.import}} in
-{%-   endif %}
-{%- endif %}
-{%- if 'prefix_list' in  conf_peer.address_family.ipv4_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv4_unicast.prefix_list  %}
-  neighbor {{ peer }} prefix-list {{conf_peer.address_family.ipv4_unicast.prefix_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv4_unicast.prefix_list  %}
-  neighbor {{ peer }} prefix-list {{conf_peer.address_family.ipv4_unicast.prefix_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'soft_reconfiguration' in  conf_peer.address_family.ipv4_unicast %}
-{%-   if 'inbound' is defined %}
-  neighbor {{ peer }} soft-reconfiguration inbound 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'unsuppress_map' in conf_peer.address_family.ipv4_unicast %}
-  neighbor {{ peer }} unsuppress-map {{conf_peer.address_family.ipv4_unicast.unsuppress_map}}
-{%- endif %}
-  neighbor {{ peer }} activate
- exit-address-family
- !
-{%-   endif %}
-
-{%-   if afi == "ipv6_unicast" %}
- !
- address-family ipv6 unicast
-
-{%- if 'allowas_in' in conf_peer.address_family.ipv6_unicast %}
-{%-   if 'number' in conf_peer.address_family.ipv6_unicast.allowas_in %}
-  neighbor {{ peer }} allowas-in {{ conf_peer.address_family.ipv6_unicast.allowas_in.number }}
-{%-   else %}
-  neighbor {{ peer }} allowas-in
-{%-   endif %}
-{%- endif %}
-
-{#- START Single Params for neighbor #}
-{%- if 'as_override' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} as-override
-{%- endif %}
-
-{%- if 'remove_private_as' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} remove-private-AS
-{%- endif %}
-
-{%- if 'route_reflector_client' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} route-reflector-client
-{%- endif %}
-
-{%- if 'weight' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} weight {{ conf_peer.address_family.ipv6_unicast.weight }}
-{%- endif %}
-{#- END single params for neighbor #}
-
-{%- if 'attribute_unchanged' in conf_peer.address_family.ipv6_unicast %}
-{%-   if ( ('as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) and ('med' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) ) %}
-  neighbor {{ peer }} attribute-unchanged as-path med
-{%-   elif ( ('as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) ) %}
-  neighbor {{ peer }} attribute-unchanged as-path next-hop
-{%-   elif ( ('med' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) and ('next_hop' in conf_peer.address_family.ipv6_unicast.attribute_unchanged) ) %}
-  neighbor {{ peer }} attribute-unchanged med next-hop
-{%-   elif 'as_path' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
-  neighbor {{ peer }} attribute-unchanged as-path
-{%-   elif 'med' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
-  neighbor {{ peer }} attribute-unchanged med
-{%-   elif 'next_hop' in conf_peer.address_family.ipv6_unicast.attribute_unchanged %}
-  neighbor {{ peer }} attribute-unchanged next-hop
-{%-   else %}
-  neighbor {{ peer }} attribute-unchanged as-path next-hop med
-{%-   endif %}
-{%- endif %}
-{#- END attribute-unchanged #}
-
-{%- if 'capability' in conf_peer.address_family.ipv6_unicast %}
-{%-   if 'orf' in conf_peer.address_family.ipv6_unicast.capability %}
-{%-     if 'receive' in conf_peer.address_family.ipv6_unicast.capability.orf.prefix_list %}
-  neighbor {{ peer }} capability orf prefix-list receive
-{%-     endif %}
-{%-     if 'send' in conf_peer.address_family.ipv6_unicast.capability.orf.prefix_list %}
-  neighbor {{ peer }} capability orf prefix-list send
-{%-     endif %}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'default_originate' in conf_peer.address_family.ipv6_unicast %}
-{%-   if 'route_map' in conf_peer.address_family.ipv6_unicast.default_originate %}
-  neighbor {{ peer }} default-originate route-map {{ conf_peer.address_family.ipv6_unicast.default_originate.route_map }}
-{%-   else %}
-  neighbor {{ peer }} default-originate 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'distribute_list' in  conf_peer.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv6_unicast.distribute_list  %}
-  neighbor {{ peer }} distribute-list {{conf_peer.address_family.ipv6_unicast.distribute_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv6_unicast.distribute_list  %}
-  neighbor {{ peer }} distribute-list {{conf_peer.address_family.ipv6_unicast.distribute_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'filter_list' in  conf_peer.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv6_unicast.filter_list  %}
-  neighbor {{ peer }} filter-list {{conf_peer.address_family.ipv6_unicast.filter_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv6_unicast.filter_list  %}
-  neighbor {{ peer }} filter-list {{conf_peer.address_family.ipv6_unicast.filter_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'maximum_prefix' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} maximum-prefix {{ conf_peer.address_family.ipv6_unicast.maximum_prefix }}
-{%- endif %}
-
-{#- https://phabricator.vyos.net/T1817 #}
-{%- if 'nexthop_self' in conf_peer.address_family.ipv6_unicast %}
-{%-   if 'force' in conf_peer.address_family.ipv6_unicast.nexthop_self %}
-  neighbor {{ peer }} next-hop-self force
-  neighbor {{ peer }} next-hop-self
-{%-   else %}
-  neighbor {{ peer }} next-hop-self
-{%-   endif %}
-{%- endif %}
-
-{%- if 'route_server_client' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} route-server-client
-{%- endif %}
-
-{%- if 'route_map' in  conf_peer.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv6_unicast.route_map  %}
-  neighbor {{ peer }} route-map {{conf_peer.address_family.ipv6_unicast.route_map.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv6_unicast.route_map  %}
-  neighbor {{ peer }} route-map {{conf_peer.address_family.ipv6_unicast.route_map.import}} in
-{%-   endif %}
-{%- endif %}
-{%- if 'prefix_list' in  conf_peer.address_family.ipv6_unicast %}
-{%-   if 'export' in conf_peer.address_family.ipv6_unicast.prefix_list  %}
-  neighbor {{ peer }} prefix-list {{conf_peer.address_family.ipv6_unicast.prefix_list.export}} out
-{%-   endif %}
-{%-   if 'import' in conf_peer.address_family.ipv6_unicast.prefix_list  %}
-  neighbor {{ peer }} prefix-list {{conf_peer.address_family.ipv6_unicast.prefix_list.import}} in
-{%-   endif %}
-{%- endif %}
-
-{%- if 'soft_reconfiguration' in  conf_peer.address_family.ipv6_unicast %}
-{%-   if 'inbound' is defined %}
-  neighbor {{ peer }} soft-reconfiguration inbound 
-{%-   endif %}
-{%- endif %}
-
-{%- if 'unsuppress_map' in conf_peer.address_family.ipv6_unicast %}
-  neighbor {{ peer }} unsuppress-map {{conf_peer.address_family.ipv6_unicast.unsuppress_map}}
-{%- endif %}
-  neighbor {{ peer }} activate
- exit-address-family
- !
-{%-   endif %}
-
-{%- endfor %}
-{%- endif %}
-{#- END address family for peer #}
-
-{%-  endfor %}
-{#- END peer section; set protocols bgp xxx neighbor #}
-
-{#- START parameters section; set protocol bgp xxx parameters #}
-{%- if 'always_compare_med' in bgp_params %}
+{% if parameters is defined %}
+{%   if parameters.always_compare_med is defined %}
  bgp always-compare-med
-{%- endif %}
-
-{%- if 'bestpath' in bgp_params %}
-{%-   if 'compare_routerid' in bgp_params.bestpath %}
+{%   endif %}
+{%   if parameters.bestpath is defined and parameters.bestpath is not none %}
+{%     if parameters.bestpath.compare_routerid is defined %}
  bgp bestpath compare-routerid
-{%-   endif %}
-{%-   if 'as_path' in bgp_params.bestpath %}
-{%-     if 'confed' in bgp_params.bestpath.as_path %}
- bgp bestpath as-path confed
-{%-     endif %}
-{%-     if 'ignore' in bgp_params.bestpath.as_path %}
- bgp bestpath as-path ignore
-{%-     endif %}
-{%-     if 'multipath_relax' in bgp_params.bestpath.as_path %}
- bgp bestpath as-path multipath-relax
-{%-     endif %}
-{%-   endif %}
-{%-   if 'med' in bgp_params.bestpath %}
-{%-     if ( ('confed' in bgp_params.bestpath.med) and ('missing_as_worst' in bgp_params.bestpath.med ) ) %}
- bgp bestpath med confed missing-as-worst
-{%-     elif 'confed' in bgp_params.bestpath.med %}
- bgp bestpath med confed
-{%-     elif 'missing_as_worst' in bgp_params.bestpath.med %}
- bgp bestpath med missing-as-worst
-{%-     endif%}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'cluster_id' in bgp_params %}
- bgp cluster-id {{ bgp_params.cluster_id }}
-{%- endif %}
-
-{%- if 'confederation' in bgp_params %}
-{%-   if 'identifier' in bgp_params.confederation %}
- bgp confederation identifier {{ bgp_params.confederation.identifier }}
-{%-   endif %}
-{%-   if 'peers' in bgp_params.confederation %}
- bgp confederation peers {{ bgp_params.confederation.peers }}
-{%-   endif %}
-{%- endif %}
-
-{#- Doesn't work in current FRR configuration; vtysh (bgp dampening 16 751 2001 61) #}
-{%- if 'dampening' in bgp_params %}
-{%-   if ( ('half_life' in bgp_params.dampening) and ('max_suppress_time' in bgp_params.dampening) and ('re_use' in bgp_params.dampening) and ('start_suppress_time' in bgp_params.dampening ) ) %}
- bgp dampening {{ bgp_params.dampening.half_life }} {{ bgp_params.dampening.re_use }} {{ bgp_params.dampening.start_suppress_time }} {{ bgp_params.dampening.max_suppress_time }}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'default' in bgp_params %}
-{%-   if 'local_pref' in bgp_params.default %}
- bgp default local-preference {{ bgp_params.default.local_pref }}
-{%-   endif %}
-{#- We use this is parameter as default in template (5-th string) #}
-{%-   if 'no_ipv4_unicast' in bgp_params.default %}
+{%     endif %}
+{%     if parameters.bestpath.as_path is defined and parameters.bestpath.as_path is not none %}
+{%       for option in parameters.bestpath.as_path %}
+ bgp bestpath as-path {{ option|replace('_', '-') }}
+{%       endfor %}
+{%     endif %}
+{%     if parameters.bestpath.med is defined and parameters.bestpath.med is not none %}
+ bgp bestpath med {{ 'confed' if parameters.bestpath.med.confed is defined }} {{ 'missing-as-worst' if parameters.bestpath.med.missing_as_worst is defined }}
+{%     endif %}
+{%   endif %}
+{%   if parameters.cluster_id is defined and parameters.cluster_id is not none %}
+ bgp cluster-id {{ parameters.cluster_id }}
+{%   endif %}
+{%   if parameters.confederation is defined and parameters.confederation is not none %}
+{%     if parameters.confederation.identifier is defined and parameters.confederation.identifier is not none %}
+ bgp confederation identifier {{ parameters.confederation.identifier }}
+{%     endif %}
+{%     if parameters.confederation.peers is defined and parameters.confederation.peers is not none %}
+ bgp confederation peers {{ parameters.confederation.peers }}
+{%     endif %}
+{%   endif %}
+{%   if parameters.dampening is defined and parameters.dampening is defined and parameters.dampening.half_life is defined and parameters.dampening.half_life is not none %}
+{# Doesn't work in current FRR configuration; vtysh (bgp dampening 16 751 2001 61) #}
+ bgp dampening {{ parameters.dampening.half_life }} {{ parameters.dampening.re_use if parameters.dampening.re_use is defined }} {{ parameters.dampening.start_suppress_time if parameters.dampening.start_suppress_time is defined }} {{ parameters.dampening.max_suppress_time if parameters.dampening.max_suppress_time is defined }}
+{%   endif %}
+{%   if parameters.default is defined and parameters.default is not none %}
+{%     if parameters.default.local_pref is defined and parameters.default.local_pref is not none %}
+ bgp default local-preference {{ parameters.default.local_pref }}
+{%     endif %}
+{%     if parameters.default.no_ipv4_unicast is defined %}
+{#     We use this is parameter as default in template (5-th string) #}
  no bgp default ipv4-unicast
-{%-   endif %}
-{%- endif %}
-
-{%- if 'deterministic_med' in bgp_params %}
- bgp deterministic-med 
-{%- endif %}
-
-{%- if 'distance' in bgp_params %}
-{%-   if 'global' in bgp_params.distance %}
-{%-     if ( ('external' in bgp_params.distance.global) and ('internal' in bgp_params.distance.global) and ('local' in bgp_params.distance.global ) ) %}
+{%     endif %}
+{%   endif %}
+{%   if parameters.deterministic_med is defined %}
+ bgp deterministic-med
+{%   endif %}
+{%   if parameters.distance is defined and parameters.distance is not none %}
  !
  address-family ipv4 unicast
-  distance bgp {{ bgp_params.distance.global.external }} {{ bgp_params.distance.global.internal }} {{ bgp_params.distance.global.local }}
+{%     if parameters.distance.global is defined and parameters.distance.global.external is defined and parameters.distance.global.internal is defined and parameters.distance.global.local is defined %}
+  distance bgp {{ parameters.distance.global.external }} {{ parameters.distance.global.internal }} {{ parameters.distance.global.local }}
+{%     endif %}
+{%     if parameters.distance.prefix is defined and parameters.distance.prefix is not none %}
+{%       for prefix in parameters.distance.prefix %}
+  distance {{ parameters.distance.prefix[prefix].distance }} {{ prefix }}
+{%       endfor %}
+{%     endif %}
  exit-address-family
-!
-{%-     endif %}
-{%-   endif %}
-{%-   if 'prefix' in bgp_params.distance %}
  !
- address-family ipv4 unicast
-{%- for prfx in bgp_params.distance.prefix %}
-  distance {{ bgp_params.distance.prefix[prfx].distance }} {{ prfx }}
-{%- endfor %}
- exit-address-family
-!
-{%-   endif %}
-{%- endif %}
-
-{%- if 'graceful_restart' in bgp_params %}
-{%-   if 'stalepath_time' in bgp_params.graceful_restart %}
- bgp graceful-restart stalepath-time {{ bgp_params.graceful_restart.stalepath_time }}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'log_neighbor_changes' in bgp_params %}
+{%   endif %}
+{%   if parameters.graceful_restart is defined %}
+ bgp graceful-restart {{ 'stalepath-time ' + parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}
+{%   endif %}
+{%   if parameters.log_neighbor_changes is defined %}
  bgp log-neighbor-changes
-{%- endif %}
-
-{%- if 'network_import_check' in bgp_params %}
- bgp network import-check 
-{%- endif %}
-
-{%- if 'no_client_to_client_reflection' in bgp_params %}
+{%   endif %}
+{%   if parameters.network_import_check is defined %}
+ bgp network import-check
+{%   endif %}
+{%   if parameters.no_client_to_client_reflection is defined %}
  no bgp client-to-client reflection
-{%- endif %}
-
-{%- if 'no_fast_external_failover' in bgp_params %}
+{%   endif %}
+{%   if parameters.no_fast_external_failover is defined %}
  no bgp fast-external-failover
-{%- endif %}
-
-{%- if 'router_id' in bgp_params %}
- bgp router-id {{ bgp_params.router_id }}
-{%- endif %}
-
-{#- END parameters; set protocols bgp xxx parameters #}
-
-{%- if 'timers' in conf_bgp[asn] %}
-{%-   if ( ('holdtime' in conf_bgp[asn].timers) and ('keepalive' in conf_bgp[asn].timers ) ) %}
- timers bgp {{conf_bgp[asn].timers.keepalive}} {{conf_bgp[asn].timers.holdtime}}
-{%-   endif %}
-{%- endif %}
-
-{%- if 'route_map' in conf_bgp[asn] %}
-!
-ip protocol bgp route-map {{conf_bgp[asn].route_map}}
-{%- endif %}
-!
-{%- endfor -%}
-{#- END asn; router bgp xxx #}
+{%   endif %}
+{%   if parameters.router_id is defined and parameters.router_id is not none %}
+ bgp router-id {{ parameters.router_id }}
+{%   endif %}
+{% endif %}
+{% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}
+ timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
+{% endif %}
+ !
+{% if route_map is defined and route_map is not none %}
+ ip protocol bgp route-map {{ route_map }}
+{% endif %}
+ !
