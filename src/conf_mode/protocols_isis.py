@@ -106,9 +106,6 @@ def generate(isis):
     process = list(isis.keys())[0]
     isis[process]['process'] = process
 
-    import pprint
-    pprint.pprint(isis[process])
-
     # render(config) not needed, its only for debug
     render(config_file, 'frr/isis.frr.tmpl', isis[process], trim_blocks=True)
 
@@ -118,8 +115,7 @@ def generate(isis):
     return None
 
 def apply(isis):
-
-    # Save original configration prior to starting any commit actions
+    # Save original configuration prior to starting any commit actions
     frr_cfg = {}
     frr_cfg['original_config'] = frr.get_configuration(daemon='isisd')
     frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], isis['new_frr_config'], from_re='router isis .*')
