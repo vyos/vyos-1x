@@ -94,7 +94,7 @@ max-clients {{ server.max_connections }}
 client-config-dir /run/openvpn/ccd/{{ ifname }}
 {%     endif %}
 {%   endif %}
-keepalive {{ keep_alive.interval }} {{ keep_alive.failure_count }}
+keepalive {{ keep_alive.interval }} {{ keep_alive.interval|int * keep_alive.failure_count|int }}
 management /run/openvpn/openvpn-mgmt-intf unix
 {%   if server is defined and server is not none %}
 {%     if server.reject_unconfigured_clients is defined %}
