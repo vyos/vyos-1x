@@ -120,7 +120,7 @@ def verify(openvpn):
     # OpenVPN site-to-site - VERIFY
     #
     elif openvpn['mode'] == 'site-to-site':
-        if not 'local_address' in openvpn:
+        if 'local_address' not in openvpn and 'is_bridge_member' not in openvpn:
             raise ConfigError('Must specify "local-address" or add interface to bridge')
 
         if len([addr for addr in openvpn['local_address'] if is_ipv4(addr)]) > 1:
@@ -166,15 +166,16 @@ def verify(openvpn):
             if dict_search('remote_host', openvpn) in dict_search('remote_address', openvpn):
                 raise ConfigError('"remote-address" and "remote-host" can not be the same')
 
-
-        if 'local_address' in openvpn:
+        if openvpn['device_type'] == 'tap':
             # we can only have one local_address, this is ensured above
             v4addr = None
             for laddr in openvpn['local_address']:
-                if is_ipv4(laddr): v4addr = laddr
+                if is_ipv4(laddr):
+                    v4addr = laddr
+                    break
 
-            if 'remote_address' not in openvpn and (v4addr not in openvpn['local_address'] or 'subnet_mask' not in openvpn['local_address'][v4addr]):
-                raise ConfigError('IPv4 "local-address" requires IPv4 "remote-address" or IPv4 "local-address subnet"')
+            if v4addr in openvpn['local_address'] and 'subnet_mask' not in openvpn['local_address'][v4addr]:
+                raise ConfigError('Must specify IPv4 "subnet-mask" for local-address')
 
         if dict_search('encryption.ncp_ciphers', openvpn):
             raise ConfigError('NCP ciphers can only be used in client or server mode')

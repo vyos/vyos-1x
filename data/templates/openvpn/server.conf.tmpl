@@ -52,13 +52,14 @@ push "redirect-gateway def1"
 compress lzo
 {% endif %}
 
-{% if 'client' in mode %}
+{% if mode == 'client' %}
 #
 # OpenVPN Client mode
 #
 client
 nobind
-{% elif 'server' in mode %}
+
+{% elif mode == 'server' %}
 #
 # OpenVPN Server mode
 #
@@ -129,6 +130,7 @@ push "route-ipv6 {{ route6 }}"
 push "dhcp-option DNS6 {{ ns6 }}"
 {%     endfor %}
 {%   endif %}
+
 {% else %}
 #
 # OpenVPN site-2-site mode
@@ -136,19 +138,24 @@ push "dhcp-option DNS6 {{ ns6 }}"
 ping {{ keep_alive.interval }}
 ping-restart {{ keep_alive.failure_count }}
 
-{%   for laddr, laddr_conf in local_address.items() if laddr | is_ipv4 %}
-{%     if laddr_conf is defined and laddr_conf.subnet_mask is defined and laddr_conf.subnet_mask is not none %}
+{%   if device_type == 'tap' %}
+{%     for laddr, laddr_conf in local_address.items() if laddr | is_ipv4 %}
+{%       if laddr_conf is defined and laddr_conf.subnet_mask is defined and laddr_conf.subnet_mask is not none %}
 ifconfig {{ laddr }} {{ laddr_conf.subnet_mask }}
-{%     else %}
-{%       for raddr in remote_address %}
-{%         if raddr | is_ipv4 %}
+{%       endif %}
+{%     endfor %}
+{%   else %}
+{%     for laddr in local_address if laddr | is_ipv4 %}
+{%       for raddr in remote_address if raddr | is_ipv4 %}
 ifconfig {{ laddr }} {{ raddr }}
-{%         else %}
-ifconfig-ipv6 {{ laddr }} {{ raddr }}
-{%         endif %}
 {%       endfor %}
-{%     endif %}
-{%   endfor %}
+{%     endfor %}
+{%     for laddr in local_address if laddr | is_ipv6 %}
+{%       for raddr in remote_address if raddr | is_ipv6 %}
+ifconfig-ipv6 {{ laddr }} {{ raddr }}
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
 {% endif %}
 
 {% if tls is defined and tls is not none %}

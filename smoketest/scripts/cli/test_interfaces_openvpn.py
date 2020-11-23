@@ -554,7 +554,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
         self.session.commit()
 
-    def test_site2site_interfaces(self):
+    def test_site2site_interfaces_tun(self):
         """
         Create two OpenVPN site-to-site interfaces
         """
@@ -566,13 +566,22 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         for ii in num_range:
             interface = f'vtun{ii}'
             local_address = f'192.0.{ii}.1'
+            local_address_subnet = '255.255.255.252'
             remote_address = f'172.16.{ii}.1'
             path = base_path + [interface]
             port = str(3000 + ii)
 
+            self.session.set(path + ['local-address', local_address])
+
+            # even numbers use tun type, odd numbers use tap type
+            if ii % 2 == 0:
+                self.session.set(path + ['device-type', 'tun'])
+            else:
+                self.session.set(path + ['device-type', 'tap'])
+                self.session.set(path + ['local-address', local_address, 'subnet-mask', local_address_subnet])
+
             self.session.set(path + ['mode', 'site-to-site'])
             self.session.set(path + ['local-port', port])
-            self.session.set(path + ['local-address', local_address])
             self.session.set(path + ['remote-port', port])
             self.session.set(path + ['shared-secret-key-file', s2s_key])
             self.session.set(path + ['remote-address', remote_address])
@@ -589,12 +598,19 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             config_file = f'/run/openvpn/{interface}.conf'
             config = read_file(config_file)
 
+            # even numbers use tun type, odd numbers use tap type
+            if ii % 2 == 0:
+                self.assertIn(f'dev-type tun', config)
+                self.assertIn(f'ifconfig {local_address} {remote_address}', config)
+            else:
+                self.assertIn(f'dev-type tap', config)
+                self.assertIn(f'ifconfig {local_address} {local_address_subnet}', config)
+
             self.assertIn(f'dev {interface}', config)
-            self.assertIn(f'dev-type tun', config)
             self.assertIn(f'secret {s2s_key}', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'rport {port}', config)
-            self.assertIn(f'ifconfig {local_address} {remote_address}', config)
+
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
@@ -644,4 +660,4 @@ if __name__ == '__main__':
     for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
         cmd(f'sudo chown openvpn:openvpn {file}')
 
-    unittest.main(failfast=True)
+    unittest.main()
