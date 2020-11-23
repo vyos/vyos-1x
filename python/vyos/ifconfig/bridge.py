@@ -157,7 +157,7 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').set_stp(1)
         """
         self.set_interface('stp', state)
-    
+
     def set_vlan_filter(self, state):
         """
         Set bridge Vlan Filter state. 0 -> Vlan Filter disabled, 1 -> Vlan Filter enabled
@@ -192,12 +192,11 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
-        # Bridge port handling of wireless interfaces is done by hostapd.
-        if 'wlan' in interface:
-            return
-
-        return self.set_interface('add_port', interface)
-
+        try:
+            return self.set_interface('add_port', interface)
+        except:
+            from vyos import ConfigError
+            raise ConfigError('Error: Device does not allow enslaving to a bridge.')
 
     def del_port(self, interface):
         """
@@ -217,7 +216,7 @@ class BridgeIf(Interface):
 
         # call base class first
         super().update(config)
-        
+
         ifname = config['ifname']
 
         # Set ageing time
@@ -255,7 +254,7 @@ class BridgeIf(Interface):
             if member in interfaces():
                 self.del_port(member)
         vlan_filter = 0
-        
+
         vlan_del = set()
         vlan_add = set()
 
@@ -286,9 +285,9 @@ class BridgeIf(Interface):
                 if 'priority' in interface_config:
                     value = interface_config.get('priority')
                     lower.set_path_priority(value)
-                
+
                 tmp = dict_search('native_vlan_removed', interface_config)
-                
+
                 for vlan_id in (tmp or []):
                     cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
                     self._cmd(cmd)
@@ -296,15 +295,15 @@ class BridgeIf(Interface):
                     self._cmd(cmd)
                     vlan_del.add(vlan_id)
                     vlan_add.add(1)
-                    
+
                 tmp = dict_search('allowed_vlan_removed', interface_config)
-                
-                
+
+
                 for vlan_id in (tmp or []):
                     cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
                     self._cmd(cmd)
                     vlan_del.add(vlan_id)
-                
+
                 if 'native_vlan' in interface_config:
                     vlan_filter = 1
                     cmd = f'bridge vlan del dev {interface} vid 1'
@@ -315,24 +314,24 @@ class BridgeIf(Interface):
                     cmd = f'bridge vlan add dev {interface} vid {vlan_id} pvid untagged master'
                     self._cmd(cmd)
                     vlan_add.add(vlan_id)
-                
+
                 if 'allowed_vlan' in interface_config:
                     vlan_filter = 1
-                
+
                 if vlan_filter:
                     if 'native_vlan' not in interface_config:
                         cmd = f'bridge vlan del dev {interface} vid 1'
                         self._cmd(cmd)
-                
+
                 if 'allowed_vlan' in interface_config:
                     for vlan in interface_config['allowed_vlan']:
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
                         vlan_add.add(vlan)
-                
-                
-        
-        
+
+
+
+
         for vlan in vlan_del:
             if isinstance(vlan,str) and vlan.isnumeric():
                 if int(vlan) == 1:
@@ -346,15 +345,15 @@ class BridgeIf(Interface):
             else:
                 cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
                 self._cmd(cmd)
-        
+
         for vlan in vlan_add:
             cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
             self._cmd(cmd)
-        
+
         # enable/disable Vlan Filter
         self.set_vlan_filter(vlan_filter)
-                        
-                            
+
+
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
         # function. We will only enable the interface if 'up' was called as
