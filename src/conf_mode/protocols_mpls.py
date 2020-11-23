@@ -100,7 +100,7 @@ def apply(mpls):
     labels = '0'
     if 'interface' in mpls:
         labels = '1048575'
-    call('sysctl -wq net.mpls.platform_labels={labels}')
+    call(f'sysctl -wq net.mpls.platform_labels={labels}')
 
     # Check for changes in global MPLS options
     if 'parameters' in mpls:
