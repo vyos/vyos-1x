@@ -20,10 +20,10 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import node_changed
-from vyos import ConfigError
-from vyos.util import call
-from vyos.template import render
 from vyos.template import render_to_string
+from vyos.util import call
+from vyos.util import dict_search
+from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
@@ -36,36 +36,29 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['protocols', 'mpls']
+
     mpls = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     return mpls
 
 def verify(mpls):
-    # If no config, then just bail out early. 
+    # If no config, then just bail out early.
     if not mpls:
         return None
 
     # Checks to see if LDP is properly configured
     if 'ldp' in mpls:
         # If router ID not defined
-        if 'router_id' in mpls['ldp']:
-            pass
-        else:
+        if 'router_id' not in mpls['ldp']:
             raise ConfigError('Router ID missing. An LDP router id is mandatory!')
+
         # If interface not set
-        if 'interface' in mpls['ldp']:
-            pass
-        else:
+        if 'interface' not in mpls['ldp']:
             raise ConfigError('LDP interfaces are missing. An LDP interface is mandatory!')
+
         # If transport addresses are not set
-        if 'discovery' in mpls['ldp']:
-            if 'transport_ipv4_address' in mpls['ldp']['discovery']:
-                pass
-            elif 'transport_ipv6_address' in mpls['ldp']['discovery']:
-                pass
-            else:
-                raise ConfigError('LDP transport address is missing. Add an LDP transport address!')
-        else:
-            raise ConfigError('LDP transport address is missing. Add an LDP transport address!')
+        if not dict_search('ldp.discovery.transport_ipv4_address', mpls) and \
+           not dict_search('ldp.discovery.transport_ipv6_address', mpls):
+                raise ConfigError('LDP transport address missing!')
 
     return None
 
@@ -75,14 +68,15 @@ def generate(mpls):
         mpls['new_frr_config'] = ''
         return None
 
-    mpls['new_frr_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls, trim_blocks=True)
+    mpls['new_frr_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls,
+                                              trim_blocks=True)
     return None
 
 def apply(mpls):
     # Define dictionary that will load FRR config
     frr_cfg = {}
-    # Save original configuration prior to starting any commit actions    
-    frr_cfg['original_config'] = frr.get_configuration(daemon='ldpd')    
+    # Save original configuration prior to starting any commit actions
+    frr_cfg['original_config'] = frr.get_configuration(daemon='ldpd')
     frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], mpls['new_frr_config'], from_re='mpls.*')
 
     # If FRR config is blank, rerun the blank commit three times due to frr-reload
