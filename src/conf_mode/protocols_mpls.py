@@ -106,15 +106,15 @@ def apply(mpls):
     if 'parameters' in mpls:
             # Choose whether to copy IP TTL to MPLS header TTL
         if 'no_propagate_ttl' in mpls['parameters']:
-            call(f'sysctl -wq net.mpls.ip_ttl_propagate=0')
+            call('sysctl -wq net.mpls.ip_ttl_propagate=0')
             # Choose whether to limit maximum MPLS header TTL
         if 'maximum_ttl' in mpls['parameters']:
             ttl = mpls['parameters']['maximum_ttl']
             call(f'sysctl -wq net.mpls.default_ttl={ttl}')
     else:
         # Set default global MPLS options if not defined.
-        call(f'sysctl -wq net.mpls.ip_ttl_propagate=1')
-        call(f'sysctl -wq net.mpls.default_ttl=255')
+        call('sysctl -wq net.mpls.ip_ttl_propagate=1')
+        call('sysctl -wq net.mpls.default_ttl=255')
 
     # Enable and disable MPLS processing on interfaces per configuration
     if 'interface' in mpls:
