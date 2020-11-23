@@ -1,187 +1,120 @@
 !
-{% if mpls_ldp -%}
+{% if ldp is defined -%}
 mpls ldp
-{% if old_router_id -%}
-no router-id {{ old_router_id }}
-{% endif -%}
-{% if router_id -%}
-router-id {{ router_id }}
-{% endif -%}
-{% if old_ldp.cisco_interop_tlv -%}
-no dual-stack cisco-interop
-{% endif -%}
-{% if ldp.cisco_interop_tlv -%}
+{%     if ldp.router_id is defined -%}
+router-id {{ ldp.router_id }}
+{%     endif -%}
+{%     if ldp.parameters is defined -%}
+{%         if ldp.parameters.cisco_interop_tlv is defined -%}
 dual-stack cisco-interop
-{% endif -%}
-{% if old_ldp.transport_prefer_ipv4 -%}
-no dual-stack transport-connection prefer ipv4
-{% endif -%}
-{% if ldp.transport_prefer_ipv4 -%}
+{%         endif -%}
+{%         if ldp.parameters.transport_prefer_ipv4 is defined-%}
 dual-stack transport-connection prefer ipv4
-{% endif -%}
-{% for neighbor_id in old_ldp.neighbors -%}
-no neighbor {{neighbor_id}} password {{old_ldp.neighbors[neighbor_id].password}}
-{% if 'ttl_security' is defined -%}
-{%   if 'disable' in old_ldp.neighbors[neighbor_id].ttl_security %}
-no neighbor {{neighbor_id}} ttl-security disable
-{%   else -%}
-no neighbor {{neighbor_id}} ttl-security hops {{old_ldp.neighbors[neighbor_id].ttl_security}}
-{%   endif -%}
-{% endif -%}
-{% if 'session_holdtime' is defined -%}
-no neighbor {{neighbor_id}} session holdtime {{old_ldp.neighbors[neighbor_id].session_holdtime}}
-{% endif -%}
-{% endfor -%}
-{% for neighbor_id in ldp.neighbors -%}
-neighbor {{neighbor_id}} password {{ldp.neighbors[neighbor_id].password}}
-{% if 'ttl_security' is defined -%}
-{%   if 'disable' in ldp.neighbors[neighbor_id].ttl_security %}
-neighbor {{neighbor_id}} ttl-security disable
-{%   else -%}
-neighbor {{neighbor_id}} ttl-security hops {{ldp.neighbors[neighbor_id].ttl_security}}
-{%   endif -%}
-{% endif -%}
-{% if 'session_holdtime' is defined -%}
-neighbor {{neighbor_id}} session holdtime {{ldp.neighbors[neighbor_id].session_holdtime}}
-{% endif -%}
-{% endfor -%}
+{%         endif -%}
+{%     endif -%}
+{%     if ldp.neighbor is defined -%}
+{%         for neighbors in ldp.neighbor -%}
+{%             if ldp.neighbor[neighbors].password is defined -%}
+neighbor {{neighbors}} password {{ldp.neighbor[neighbors].password}}
+{%             endif -%}
+{%             if ldp.neighbor[neighbors].ttl_security is defined -%}
+{%                 if 'disable' in ldp.neighbor[neighbors].ttl_security %}
+neighbor {{neighbors}} ttl-security disable
+{%                 else -%}
+neighbor {{neighbors}} ttl-security hops {{ldp.neighbor[neighbors].ttl_security}}
+{%                 endif -%}
+{%             endif -%}
+{%             if ldp.neighbor[neighbors].session_holdtime is defined -%}
+neighbor {{neighbors}} session holdtime {{ldp.neighbor[neighbors].session_holdtime}}
+{%             endif -%}
+{%         endfor -%}
+{%     endif -%}
 !
+{%     if ldp.discovery is defined -%}
+{%         if ldp.discovery.transport_ipv4_address is defined -%}
 address-family ipv4
 label local allocate host-routes
-{% if old_ldp.export_ipv4_exp -%}
-no label local advertise explicit-null
-{% endif -%}
-{% if ldp.export_ipv4_exp -%}
+{%             if ldp.discovery.transport_ipv4_address is defined -%}
+discovery transport-address {{ ldp.discovery.transport_ipv4_address }}
+{%             endif -%}
+{%             if ldp.discovery.hello_ipv4_holdtime is defined -%}
+discovery hello holdtime {{ ldp.discovery.hello_ipv4_holdtime }}
+{%             endif -%}
+{%             if ldp.discovery.hello_ipv4_interval is defined -%}
+discovery hello interval {{ ldp.discovery.hello_ipv4_interval }}
+{%             endif -%}
+{%             if ldp.discovery.session_ipv4_holdtime is defined -%}
+session holdtime {{ ldp.discovery.session_ipv4_holdtime }}
+{%             endif -%}
+{%             if ldp.export is defined -%}
+{%                 if ldp.export.ipv4.explicit_null is defined -%}
 label local advertise explicit-null
-{% endif -%}
-{% if old_ldp.d_transp_ipv4 -%}
-no discovery transport-address {{ old_ldp.d_transp_ipv4 }}
-{% endif -%}
-{% if ldp.d_transp_ipv4 -%}
-discovery transport-address {{ ldp.d_transp_ipv4 }}
-{% endif -%}
-{% if old_ldp.hello_ipv4_holdtime -%}
-no discovery hello holdtime {{ old_ldp.hello_ipv4_holdtime }}
-{% endif -%}
-{% if ldp.hello_ipv4_holdtime -%}
-discovery hello holdtime {{ ldp.hello_ipv4_holdtime }}
-{% endif -%}
-{% if old_ldp.hello_ipv4_interval -%}
-no discovery hello interval {{ old_ldp.hello_ipv4_interval }}
-{% endif -%}
-{% if ldp.hello_ipv4_interval -%}
-discovery hello interval {{ ldp.hello_ipv4_interval }}
-{% endif -%}
-{% if old_ldp.ses_ipv4_hold -%}
-no session holdtime {{ old_ldp.ses_ipv4_hold }}
-{% endif -%}
-{% if ldp.ses_ipv4_hold -%}
-session holdtime {{ ldp.ses_ipv4_hold }}
-{% endif -%}
-{% if old_ldp.target_ipv4_enable -%}
-no discovery targeted-hello accept
-{% endif -%}
-{% if ldp.target_ipv4_enable -%}
+{%                 endif -%}
+{%             endif -%}
+{%             if ldp.targeted_neighbor is defined -%}
+{%                 if ldp.targeted_neighbor.ipv4.enable is defined -%}
 discovery targeted-hello accept
-{% endif -%}
-{% if old_ldp.target_ipv4_hello_int -%}
-no discovery targeted-hello interval {{ old_ldp.target_ipv4_hello_int }}
-{% endif -%}
-{% if ldp.target_ipv4_hello_int -%}
-discovery targeted-hello interval {{ ldp.target_ipv4_hello_int }}
-{% endif -%}
-{% if old_ldp.target_ipv4_hello_hold -%}
-no discovery targeted-hello holdtime {{ old_ldp.target_ipv4_hello_hold }}
-{% endif -%}
-{% if ldp.target_ipv4_hello_hold -%}
-discovery targeted-hello holdtime {{ ldp.target_ipv4_hello_hold }}
-{% endif -%}
-{% for address in old_ldp.target_ipv4_addresses -%}
-no neighbor {{address}} targeted 
-{% endfor -%}
-{% for address in ldp.target_ipv4_addresses -%}
-neighbor {{address}} targeted 
-{% endfor -%}
-{% for interface in old_ldp.interfaces -%}
-no interface {{interface}}
-{% endfor -%}
-{% for interface in ldp.interfaces -%}
-interface {{interface}}
-{% endfor -%}
-!
-!
+{%                 endif -%}
+{%                 if ldp.targeted_neighbor.ipv4.hello_holdtime is defined -%}
+discovery targeted-hello holdtime {{ ldp.targeted_neighbor.ipv4.hello_holdtime }}
+{%                 endif -%}
+{%                 if ldp.targeted_neighbor.ipv4.hello_interval is defined -%}
+discovery targeted-hello interval {{ ldp.targeted_neighbor.ipv4.hello_interval }}
+{%                 endif -%}
+{%                 for addresses in ldp.targeted_neighbor.ipv4.address -%}
+neighbor {{addresses}} targeted
+{%                 endfor -%}
+{%             endif -%}
+{%             for interfaces in ldp.interface -%}
+interface {{interfaces}}
+{%             endfor -%}
 exit-address-family
+{%         else -%}
+no address-family ipv4
+{%         endif -%}
+{%     endif -%}
 !
-{% if ldp.d_transp_ipv6 -%}
+{%     if ldp.discovery is defined -%}
+{%         if ldp.discovery.transport_ipv6_address is defined -%}
 address-family ipv6
 label local allocate host-routes
-{% if old_ldp.export_ipv6_exp -%}
-no label local advertise explicit-null
-{% endif -%}
-{% if ldp.export_ipv6_exp -%}
+{%             if ldp.discovery.transport_ipv6_address is defined -%}
+discovery transport-address {{ ldp.discovery.transport_ipv6_address }}
+{%             endif -%}
+{%             if ldp.discovery.hello_ipv6_holdtime is defined -%}
+discovery hello holdtime {{ ldp.discovery.hello_ipv6_holdtime }}
+{%             endif -%}
+{%             if ldp.discovery.hello_ipv6_interval is defined -%}
+discovery hello interval {{ ldp.discovery.hello_ipv6_interval }}
+{%             endif -%}
+{%             if ldp.discovery.session_ipv6_holdtime is defined -%}
+session holdtime {{ ldp.discovery.session_ipv6_holdtime }}
+{%             endif -%}
+{%             if ldp.export is defined -%}
+{%                 if ldp.export.ipv6.explicit_null is defined -%}
 label local advertise explicit-null
-{% endif -%}
-{% if old_ldp.ses_ipv6_hold -%}
-no session holdtime {{ old_ldp.ses_ipv6_hold }}
-{% endif -%}
-{% if ldp.ses_ipv6_hold -%}
-session holdtime {{ ldp.ses_ipv6_hold }}
-{% endif -%}
-{% if old_ldp.d_transp_ipv6 -%}
-no discovery transport-address {{ old_ldp.d_transp_ipv6 }}
-{% endif -%}
-{% if ldp.d_transp_ipv6 -%}
-discovery transport-address {{ ldp.d_transp_ipv6 }}
-{% endif -%}
-{% if old_ldp.hello_ipv6_holdtime -%}
-no discovery hello holdtime {{ old_ldp.hello_ipv6_holdtime }}
-{% endif -%}
-{% if ldp.hello_ipv6_holdtime -%}
-discovery hello holdtime {{ ldp.hello_ipv6_holdtime }}
-{% endif -%}
-{% if old_ldp.hello_ipv6_interval -%}
-no discovery hello interval {{ old_ldp.hello_ipv6_interval }}
-{% endif -%}
-{% if ldp.hello_ipv6_interval -%}
-discovery hello interval {{ ldp.hello_ipv6_interval }}
-{% endif -%}
-{% if old_ldp.target_ipv6_enable -%}
-no discovery targeted-hello accept
-{% endif -%}
-{% if ldp.target_ipv6_enable -%}
+{%                 endif -%}
+{%             endif -%}
+{%             if ldp.targeted_neighbor is defined -%}
+{%                 if ldp.targeted_neighbor.ipv6.enable is defined -%}
 discovery targeted-hello accept
-{% endif -%}
-{% if old_ldp.target_ipv6_hello_int -%}
-no discovery targeted-hello interval {{ old_ldp.target_ipv6_hello_int }}
-{% endif -%}
-{% if ldp.target_ipv6_hello_int -%}
-discovery targeted-hello interval {{ ldp.target_ipv6_hello_int }}
-{% endif -%}
-{% if old_ldp.target_ipv6_hello_hold -%}
-no discovery targeted-hello holdtime {{ old_ldp.target_ipv6_hello_hold }}
-{% endif -%}
-{% if ldp.target_ipv6_hello_hold -%}
-discovery targeted-hello holdtime {{ ldp.target_ipv6_hello_hold }}
-{% endif -%}
-{% for address in old_ldp.target_ipv6_addresses -%}
-no neighbor {{address}} targeted 
-{% endfor -%}
-{% for address in ldp.target_ipv6_addresses -%}
-neighbor {{address}} targeted 
-{% endfor -%}
-{% for interface in old_ldp.interfaces -%}
-no interface {{interface}}
-{% endfor -%}
-{% for interface in ldp.interfaces -%}
-interface {{interface}}
-{% endfor -%}
-!
+{%                 endif -%}
+{%                 if ldp.targeted_neighbor.ipv6.hello_holdtime is defined -%}
+discovery targeted-hello holdtime {{ ldp.targeted_neighbor.ipv6.hello_holdtime }}
+{%                 endif -%}
+{%                 if ldp.targeted_neighbor.ipv6.hello_interval is defined -%}
+discovery targeted-hello interval {{ ldp.targeted_neighbor.ipv6.hello_interval }}
+{%                 endif -%}
+{%                 for addresses in ldp.targeted_neighbor.ipv6.address -%}
+neighbor {{addresses}} targeted
+{%                 endfor -%}
+{%             endif -%}
+{%             for interfaces in ldp.interface -%}
+interface {{interfaces}}
+{%             endfor -%}
 exit-address-family
-{% else -%}
+{%         else -%}
 no address-family ipv6
+{%         endif -%}
+{%     endif -%}
 {% endif -%}
-!
-{% else -%}
-no mpls ldp
-{% endif -%}
-!
