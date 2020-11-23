@@ -375,6 +375,15 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="interface">
+            <properties>
+              <help>Enable MPLS packet processing on interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
