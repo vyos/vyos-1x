@@ -17,6 +17,7 @@
 # https://community.hetzner.com/tutorials/linux-setup-gre-tunnel
 
 from copy import deepcopy
+
 from netaddr import EUI
 from netaddr import mac_unix_expanded
 from random import getrandbits
@@ -140,13 +141,6 @@ class GREIf(_Tunnel):
     https://tools.ietf.org/html/rfc2784
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre.c
     """
-
-    definition = {
-        **_Tunnel.definition,
-        **{
-            'bridgeable': True,
-        },
-    }
 
     default = {'type': 'gre'}
     options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
