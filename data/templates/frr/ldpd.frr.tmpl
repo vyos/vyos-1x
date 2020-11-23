@@ -1,120 +1,120 @@
 !
-{% if ldp is defined -%}
+{% if ldp is defined %}
 mpls ldp
-{%     if ldp.router_id is defined -%}
+{%     if ldp.router_id is defined %}
 router-id {{ ldp.router_id }}
-{%     endif -%}
-{%     if ldp.parameters is defined -%}
-{%         if ldp.parameters.cisco_interop_tlv is defined -%}
+{%     endif %}
+{%     if ldp.parameters is defined %}
+{%         if ldp.parameters.cisco_interop_tlv is defined %}
 dual-stack cisco-interop
-{%         endif -%}
-{%         if ldp.parameters.transport_prefer_ipv4 is defined-%}
+{%         endif %}
+{%         if ldp.parameters.transport_prefer_ipv4 is defined%}
 dual-stack transport-connection prefer ipv4
-{%         endif -%}
-{%     endif -%}
-{%     if ldp.neighbor is defined -%}
-{%         for neighbors in ldp.neighbor -%}
-{%             if ldp.neighbor[neighbors].password is defined -%}
+{%         endif %}
+{%     endif %}
+{%     if ldp.neighbor is defined %}
+{%         for neighbors in ldp.neighbor %}
+{%             if ldp.neighbor[neighbors].password is defined %}
 neighbor {{neighbors}} password {{ldp.neighbor[neighbors].password}}
-{%             endif -%}
-{%             if ldp.neighbor[neighbors].ttl_security is defined -%}
+{%             endif %}
+{%             if ldp.neighbor[neighbors].ttl_security is defined %}
 {%                 if 'disable' in ldp.neighbor[neighbors].ttl_security %}
 neighbor {{neighbors}} ttl-security disable
-{%                 else -%}
+{%                 else %}
 neighbor {{neighbors}} ttl-security hops {{ldp.neighbor[neighbors].ttl_security}}
-{%                 endif -%}
-{%             endif -%}
-{%             if ldp.neighbor[neighbors].session_holdtime is defined -%}
+{%                 endif %}
+{%             endif %}
+{%             if ldp.neighbor[neighbors].session_holdtime is defined %}
 neighbor {{neighbors}} session holdtime {{ldp.neighbor[neighbors].session_holdtime}}
-{%             endif -%}
-{%         endfor -%}
-{%     endif -%}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
 !
-{%     if ldp.discovery is defined -%}
-{%         if ldp.discovery.transport_ipv4_address is defined -%}
+{%     if ldp.discovery is defined %}
+{%         if ldp.discovery.transport_ipv4_address is defined %}
 address-family ipv4
 label local allocate host-routes
-{%             if ldp.discovery.transport_ipv4_address is defined -%}
+{%             if ldp.discovery.transport_ipv4_address is defined %}
 discovery transport-address {{ ldp.discovery.transport_ipv4_address }}
-{%             endif -%}
-{%             if ldp.discovery.hello_ipv4_holdtime is defined -%}
+{%             endif %}
+{%             if ldp.discovery.hello_ipv4_holdtime is defined %}
 discovery hello holdtime {{ ldp.discovery.hello_ipv4_holdtime }}
-{%             endif -%}
-{%             if ldp.discovery.hello_ipv4_interval is defined -%}
+{%             endif %}
+{%             if ldp.discovery.hello_ipv4_interval is defined %}
 discovery hello interval {{ ldp.discovery.hello_ipv4_interval }}
-{%             endif -%}
-{%             if ldp.discovery.session_ipv4_holdtime is defined -%}
+{%             endif %}
+{%             if ldp.discovery.session_ipv4_holdtime is defined %}
 session holdtime {{ ldp.discovery.session_ipv4_holdtime }}
-{%             endif -%}
-{%             if ldp.export is defined -%}
-{%                 if ldp.export.ipv4.explicit_null is defined -%}
+{%             endif %}
+{%             if ldp.export is defined %}
+{%                 if ldp.export.ipv4.explicit_null is defined %}
 label local advertise explicit-null
-{%                 endif -%}
-{%             endif -%}
-{%             if ldp.targeted_neighbor is defined -%}
-{%                 if ldp.targeted_neighbor.ipv4.enable is defined -%}
+{%                 endif %}
+{%             endif %}
+{%             if ldp.targeted_neighbor is defined %}
+{%                 if ldp.targeted_neighbor.ipv4.enable is defined %}
 discovery targeted-hello accept
-{%                 endif -%}
-{%                 if ldp.targeted_neighbor.ipv4.hello_holdtime is defined -%}
+{%                 endif %}
+{%                 if ldp.targeted_neighbor.ipv4.hello_holdtime is defined %}
 discovery targeted-hello holdtime {{ ldp.targeted_neighbor.ipv4.hello_holdtime }}
-{%                 endif -%}
-{%                 if ldp.targeted_neighbor.ipv4.hello_interval is defined -%}
+{%                 endif %}
+{%                 if ldp.targeted_neighbor.ipv4.hello_interval is defined %}
 discovery targeted-hello interval {{ ldp.targeted_neighbor.ipv4.hello_interval }}
-{%                 endif -%}
-{%                 for addresses in ldp.targeted_neighbor.ipv4.address -%}
+{%                 endif %}
+{%                 for addresses in ldp.targeted_neighbor.ipv4.address %}
 neighbor {{addresses}} targeted
-{%                 endfor -%}
-{%             endif -%}
-{%             for interfaces in ldp.interface -%}
+{%                 endfor %}
+{%             endif %}
+{%             for interfaces in ldp.interface %}
 interface {{interfaces}}
-{%             endfor -%}
+{%             endfor %}
 exit-address-family
-{%         else -%}
+{%         else %}
 no address-family ipv4
-{%         endif -%}
-{%     endif -%}
+{%         endif %}
+{%     endif %}
 !
-{%     if ldp.discovery is defined -%}
-{%         if ldp.discovery.transport_ipv6_address is defined -%}
+{%     if ldp.discovery is defined %}
+{%         if ldp.discovery.transport_ipv6_address is defined %}
 address-family ipv6
 label local allocate host-routes
-{%             if ldp.discovery.transport_ipv6_address is defined -%}
+{%             if ldp.discovery.transport_ipv6_address is defined %}
 discovery transport-address {{ ldp.discovery.transport_ipv6_address }}
-{%             endif -%}
-{%             if ldp.discovery.hello_ipv6_holdtime is defined -%}
+{%             endif %}
+{%             if ldp.discovery.hello_ipv6_holdtime is defined %}
 discovery hello holdtime {{ ldp.discovery.hello_ipv6_holdtime }}
-{%             endif -%}
-{%             if ldp.discovery.hello_ipv6_interval is defined -%}
+{%             endif %}
+{%             if ldp.discovery.hello_ipv6_interval is defined %}
 discovery hello interval {{ ldp.discovery.hello_ipv6_interval }}
-{%             endif -%}
-{%             if ldp.discovery.session_ipv6_holdtime is defined -%}
+{%             endif %}
+{%             if ldp.discovery.session_ipv6_holdtime is defined %}
 session holdtime {{ ldp.discovery.session_ipv6_holdtime }}
-{%             endif -%}
-{%             if ldp.export is defined -%}
-{%                 if ldp.export.ipv6.explicit_null is defined -%}
+{%             endif %}
+{%             if ldp.export is defined %}
+{%                 if ldp.export.ipv6.explicit_null is defined %}
 label local advertise explicit-null
-{%                 endif -%}
-{%             endif -%}
-{%             if ldp.targeted_neighbor is defined -%}
-{%                 if ldp.targeted_neighbor.ipv6.enable is defined -%}
+{%                 endif %}
+{%             endif %}
+{%             if ldp.targeted_neighbor is defined %}
+{%                 if ldp.targeted_neighbor.ipv6.enable is defined %}
 discovery targeted-hello accept
-{%                 endif -%}
-{%                 if ldp.targeted_neighbor.ipv6.hello_holdtime is defined -%}
+{%                 endif %}
+{%                 if ldp.targeted_neighbor.ipv6.hello_holdtime is defined %}
 discovery targeted-hello holdtime {{ ldp.targeted_neighbor.ipv6.hello_holdtime }}
-{%                 endif -%}
-{%                 if ldp.targeted_neighbor.ipv6.hello_interval is defined -%}
+{%                 endif %}
+{%                 if ldp.targeted_neighbor.ipv6.hello_interval is defined %}
 discovery targeted-hello interval {{ ldp.targeted_neighbor.ipv6.hello_interval }}
-{%                 endif -%}
-{%                 for addresses in ldp.targeted_neighbor.ipv6.address -%}
+{%                 endif %}
+{%                 for addresses in ldp.targeted_neighbor.ipv6.address %}
 neighbor {{addresses}} targeted
-{%                 endfor -%}
-{%             endif -%}
-{%             for interfaces in ldp.interface -%}
+{%                 endfor %}
+{%             endif %}
+{%             for interfaces in ldp.interface %}
 interface {{interfaces}}
-{%             endfor -%}
+{%             endfor %}
 exit-address-family
-{%         else -%}
+{%         else %}
 no address-family ipv6
-{%         endif -%}
-{%     endif -%}
-{% endif -%}
+{%         endif %}
+{%     endif %}
+{% endif %}
