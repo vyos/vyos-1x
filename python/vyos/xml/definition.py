@@ -255,7 +255,7 @@ class XML(dict):
 
         if not flat:
             # _flatten will make this conversion
-            d = self.multi_to_list(lpath, d)
+            d = self.multi_to_list(lpath, d, defaults=True)
 
             r = {}
             for k in d:
@@ -284,7 +284,7 @@ class XML(dict):
 
         return _flatten(lpath, len(lpath), d)
 
-    def multi_to_list(self, lpath, conf):
+    def multi_to_list(self, lpath, conf, defaults=False):
         r = {}
         for k in conf:
             # key mangling could also be done here
@@ -293,11 +293,14 @@ class XML(dict):
             under = k
             fpath = lpath + [k]
             if isinstance(conf[k],dict):
-                r[under] = self.multi_to_list(fpath, conf[k])
+                r[under] = self.multi_to_list(fpath, conf[k], defaults)
                 continue
             value = conf[k]
             if self.is_multi(fpath) and not isinstance(value, list):
-                value = [value]
+                if not defaults:
+                    value = [value]
+                else:
+                    value = value.split(' ')
             r[under] = value
         return r
 
