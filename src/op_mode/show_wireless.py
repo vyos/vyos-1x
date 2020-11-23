@@ -28,7 +28,6 @@ parser.add_argument("-s", "--scan", help="Scan for Wireless APs on given interfa
 parser.add_argument("-b", "--brief", action="store_true", help="Show wireless configuration")
 parser.add_argument("-c", "--stations", help="Show wireless clients connected on interface, e.g. 'wlan0'")
 
-
 def show_brief():
     config = Config()
     if len(config.list_effective_nodes('interfaces wireless')) == 0:
@@ -37,17 +36,11 @@ def show_brief():
 
     interfaces = []
     for intf in config.list_effective_nodes('interfaces wireless'):
-        config.set_level('interfaces wireless {}'.format(intf))
-        data = {
-            'name': intf,
-            'type': '',
-            'ssid': '',
-            'channel': ''
-        }
-        data['type'] = config.return_effective_value('type')
-        data['ssid'] = config.return_effective_value('ssid')
-        data['channel'] = config.return_effective_value('channel')
-
+        config.set_level(f'interfaces wireless {intf}')
+        data = { 'name': intf }
+        data['type'] = config.return_effective_value('type') or '-'
+        data['ssid'] = config.return_effective_value('ssid') or '-'
+        data['channel'] = config.return_effective_value('channel') or '-'
         interfaces.append(data)
 
     return interfaces
