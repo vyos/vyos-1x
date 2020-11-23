@@ -114,7 +114,6 @@ Depends:
   vyos-utils,
   wide-dhcpv6-client,
   wireguard-tools,
-  wireguard-modules,
   wireless-regdb,
   wpasupplicant (>= 0.6.7)
 Description: VyOS configuration scripts and data
