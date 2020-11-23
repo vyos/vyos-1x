@@ -154,7 +154,7 @@ def is_ipv4(text):
     try: return ip_interface(text).version == 4
     except: return False
 
-@register_filter('ipv6')
+@register_filter('is_ipv6')
 def is_ipv6(text):
     """ Filter IP address, return True on IPv6 address, False otherwise """
     from ipaddress import ip_interface
