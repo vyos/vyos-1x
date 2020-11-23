@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2020 VyOS maintainers and contributors
+# Copyright (C) 2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -103,23 +103,24 @@ def apply(mpls):
         frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
 
     # Set number of entries in the platform label tables
+    labels = '0'
     if 'interface' in mpls:
-        os.system('sysctl -wq net.mpls.platform_labels=1048575')
-    else:
-        os.system('sysctl -wq net.mpls.platform_labels=0')
+        labels = '1048575'
+    call('sysctl -wq net.mpls.platform_labels={labels}')
 
     # Check for changes in global MPLS options
     if 'parameters' in mpls:
             # Choose whether to copy IP TTL to MPLS header TTL
         if 'no_propagate_ttl' in mpls['parameters']:
-            os.system('sysctl -wq net.mpls.ip_ttl_propagate=0')
+            call('sysctl -wq net.mpls.ip_ttl_propagate=0')
             # Choose whether to limit maximum MPLS header TTL
         if 'maximum_ttl' in mpls['parameters']:
-            os.system('sysctl -wq net.mpls.default_ttl=%s' %(mpls['parameters'].get('maximum_ttl')))
+            ttl = mpls['parameters']['maximum_ttl']
+            call(f'sysctl -wq net.mpls.default_ttl={ttl}')
     else:
         # Set default global MPLS options if not defined.
-        os.system('sysctl -wq net.mpls.ip_ttl_propagate=1')
-        os.system('sysctl -wq net.mpls.default_ttl=255')
+        call('sysctl -wq net.mpls.ip_ttl_propagate=1')
+        call('sysctl -wq net.mpls.default_ttl=255')
 
     # Enable and disable MPLS processing on interfaces per configuration
     if 'interface' in mpls:
@@ -129,17 +130,17 @@ def apply(mpls):
         for configured_interface in mpls['interface']:
             for system_interface in system_interfaces[0]:
                 if configured_interface in system_interface:
-                    os.system('sysctl -wq net.mpls.conf.%s.input=1' %(configured_interface))
+                    call(f'sysctl -wq net.mpls.conf.{configured_interface}.input=1')
                 elif system_interface.endswith(' = 1'):
                     system_interface = system_interface.replace(' = 1', '=0')
-                    os.system('sysctl -wq %s' %(system_interface))
+                    call(f'sysctl -wq {system_interface}')
     else:
         # If MPLS interfaces are not configured, set MPLS processing disabled
         system_interfaces = []
         system_interfaces.append(((os.popen('sysctl net.mpls.conf').read()).replace(" = 1", "=0")).split('\n'))
         del system_interfaces[0][-1]
         for interface in (system_interfaces[0]):
-            os.system('sysctl -wq %s' %(interface))
+            call(f'sysctl -wq {interface}')
 
     return None
 
