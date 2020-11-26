@@ -165,7 +165,7 @@ class WireGuardIf(Interface):
         **{
             'section': 'wireguard',
             'prefixes': ['wg', ],
-            'bridgeable': True,
+            'bridgeable': False,
         }
     }
     options = Interface.options + \
