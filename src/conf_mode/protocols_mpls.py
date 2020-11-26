@@ -121,19 +121,31 @@ def apply(mpls):
         system_interfaces = []
         system_interfaces.append(((os.popen('sysctl net.mpls.conf').read()).split('\n')))
         del system_interfaces[0][-1]
-        for configured_interface in mpls['interface']:
-            for system_interface in system_interfaces[0]:
-                if configured_interface in system_interface:
-                    call(f'sysctl -wq net.mpls.conf.{configured_interface}.input=1')
-                elif system_interface.endswith(' = 1'):
-                    system_interface = system_interface.replace(' = 1', '=0')
-                    call(f'sysctl -wq {system_interface}')
+        system_interfaces = system_interfaces[0]
+        for system_interface in system_interfaces:
+            if system_interface.endswith(' = 1'):
+                replaced_once_system_interface = system_interface.replace('net.mpls.conf.', '')
+                replaced_twice_system_interface = replaced_once_system_interface.replace('.input = 1', '')
+                parsed_system_interface = replaced_twice_system_interface.replace('/', '.')
+                if parsed_system_interface in mpls['interface']:
+                    pass
+                else:
+                    call(f'sysctl -wq net.mpls.conf.{replaced_twice_system_interface}.input=0')
+            elif system_interface.endswith(' = 0'):
+                replaced_once_system_interface = system_interface.replace('net.mpls.conf.', '')
+                replaced_twice_system_interface = replaced_once_system_interface.replace('.input = 0', '')
+                parsed_system_interface = replaced_twice_system_interface.replace('/', '.')
+                if parsed_system_interface in mpls['interface']:
+                    call(f'sysctl -wq net.mpls.conf.{replaced_twice_system_interface}.input=1')
+                else:
+                    call(f'sysctl -wq net.mpls.conf.{replaced_twice_system_interface}.input=0')
     else:
         # If MPLS interfaces are not configured, set MPLS processing disabled
         system_interfaces = []
         system_interfaces.append(((os.popen('sysctl net.mpls.conf').read()).replace(" = 1", "=0")).split('\n'))
         del system_interfaces[0][-1]
-        for interface in (system_interfaces[0]):
+        system_interfaces = system_interfaces[0]
+        for interface in system_interfaces:
             call(f'sysctl -wq {interface}')
 
     return None
