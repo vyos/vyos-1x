@@ -45,7 +45,6 @@ class _Tunnel(Interface):
         **{
             'section': 'tunnel',
             'prefixes': ['tun',],
-            'bridgeable': False,
         },
     }
 
