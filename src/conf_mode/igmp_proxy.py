@@ -17,99 +17,65 @@
 import os
 
 from sys import exit
-from copy import deepcopy
-
 from netifaces import interfaces
-from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
-from vyos.template import render
 
+from vyos.config import Config
+from vyos.configdict import dict_merge
+from vyos.template import render
+from vyos.util import call
+from vyos.util import dict_search
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/igmpproxy.conf'
 
-default_config_data = {
-    'disable': False,
-    'disable_quickleave': False,
-    'igmp_conf': False,
-    'pim_conf': False,
-    'interfaces': [],
-}
-
 def get_config(config=None):
-    igmp_proxy = deepcopy(default_config_data)
     if config:
         conf = config
     else:
         conf = Config()
 
-    if conf.exists('protocols igmp'):
-        igmp_proxy['igmp_conf'] = True
-
-    if conf.exists('protocols pim'):
-        igmp_proxy['pim_conf'] = True
-
     base = ['protocols', 'igmp-proxy']
-    if not conf.exists(base):
-        return None
-    else:
-        conf.set_level(base)
+    igmp_proxy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    # Network interfaces to listen on
-    if conf.exists(['disable']):
-        igmp_proxy['disable'] = True
+    if 'interface' in igmp_proxy:
+        # T2665: we must add the tagNode defaults individually until this is
+        # moved to the base class
+        default_values = defaults(base + ['interface'])
+        for interface in igmp_proxy['interface']:
+            igmp_proxy['interface'][interface] = dict_merge(default_values,
+                igmp_proxy['interface'][interface])
 
-    # Option to disable "quickleave"
-    if conf.exists(['disable-quickleave']):
-        igmp_proxy['disable_quickleave'] = True
 
-    for intf in conf.list_nodes(['interface']):
-        conf.set_level(base + ['interface', intf])
-        interface = {
-            'name': intf,
-            'alt_subnet': [],
-            'role': 'downstream',
-            'threshold': '1',
-            'whitelist': []
-        }
+    if conf.exists(['protocols', 'igmp']):
+        igmp_proxy.update({'igmp_configured': ''})
 
-        if conf.exists(['alt-subnet']):
-            interface['alt_subnet'] = conf.return_values(['alt-subnet'])
-
-        if conf.exists(['role']):
-            interface['role'] = conf.return_value(['role'])
-
-        if conf.exists(['threshold']):
-            interface['threshold'] = conf.return_value(['threshold'])
-
-        if conf.exists(['whitelist']):
-            interface['whitelist'] = conf.return_values(['whitelist'])
-
-        # Append interface configuration to global configuration list
-        igmp_proxy['interfaces'].append(interface)
+    if conf.exists(['protocols', 'pim']):
+        igmp_proxy.update({'pim_configured': ''})
 
     return igmp_proxy
 
 def verify(igmp_proxy):
     # bail out early - looks like removal from running config
-    if igmp_proxy is None:
+    if not igmp_proxy or 'disable' in igmp_proxy:
         return None
 
-    # bail out early - service is disabled
-    if igmp_proxy['disable']:
-        return None
+    if 'igmp_configured' in igmp_proxy or 'pim_configured' in igmp_proxy:
+        raise ConfigError('Can not configure both IGMP proxy and PIM '\
+                          'at the same time')
 
     # at least two interfaces are required, one upstream and one downstream
-    if len(igmp_proxy['interfaces']) < 2:
-        raise ConfigError('Must define an upstream and at least 1 downstream interface!')
+    if 'interface' not in igmp_proxy or len(igmp_proxy['interface']) < 2:
+        raise ConfigError('Must define exactly one upstream and at least one ' \
+                          'downstream interface!')
 
     upstream = 0
-    for interface in igmp_proxy['interfaces']:
-        if interface['name'] not in interfaces():
-            raise ConfigError('Interface "{}" does not exist'.format(interface['name']))
-        if "upstream" == interface['role']:
+    for interface, config in igmp_proxy['interface'].items():
+        if interface not in interfaces():
+            raise ConfigError(f'Interface "{interface}" does not exist')
+        if dict_search('role', config) == 'upstream':
             upstream += 1
 
     if upstream == 0:
@@ -121,27 +87,26 @@ def verify(igmp_proxy):
 
 def generate(igmp_proxy):
     # bail out early - looks like removal from running config
-    if igmp_proxy is None:
+    if not igmp_proxy:
         return None
 
     # bail out early - service is disabled, but inform user
-    if igmp_proxy['disable']:
-        print('Warning: IGMP Proxy will be deactivated because it is disabled')
+    if 'disable' in igmp_proxy:
+        print('WARNING: IGMP Proxy will be deactivated because it is disabled')
         return None
 
-    render(config_file, 'igmp-proxy/igmpproxy.conf.tmpl', igmp_proxy)
+    render(config_file, 'igmp-proxy/igmpproxy.conf.tmpl', igmp_proxy,
+           trim_blocks=True)
+
     return None
 
 def apply(igmp_proxy):
-    if igmp_proxy is None or igmp_proxy['disable']:
-        # IGMP Proxy support is removed in the commit
-        call('systemctl stop igmpproxy.service')
-        if os.path.exists(config_file):
-            os.unlink(config_file)
+    if not igmp_proxy or 'disable' in igmp_proxy:
+         # IGMP Proxy support is removed in the commit
+         call('systemctl stop igmpproxy.service')
+         if os.path.exists(config_file):
+             os.unlink(config_file)
     else:
-        if igmp_proxy['igmp_conf'] or igmp_proxy['pim_conf']:
-            raise ConfigError('IGMP proxy and PIM cannot be both configured at the same time')
-
         call('systemctl restart igmpproxy.service')
 
     return None

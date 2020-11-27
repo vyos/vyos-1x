@@ -44,7 +44,7 @@
               </leafNode>
               <leafNode name="role">
                 <properties>
-                  <help>Role of this IGMP interface</help>
+                  <help>IGMP interface role (default: downstream)</help>
                   <completionHelp>
                     <list>upstream downstream disabled</list>
                   </completionHelp>
@@ -61,13 +61,14 @@
                     <description>Disabled interface</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(upstream|downstream|disabled)</regex>
+                    <regex>^(upstream|downstream|disabled)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>downstream</defaultValue>
               </leafNode>
               <leafNode name="threshold">
                 <properties>
-                  <help>TTL threshold</help>
+                  <help>TTL threshold (default: 1)</help>
                   <valueHelp>
                     <format>1-255</format>
                     <description>TTL threshold for the interfaces (default: 1)</description>
@@ -75,8 +76,9 @@
                   <constraint>
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
-                  <constraintErrorMessage>threshold must be between 1 and 255</constraintErrorMessage>
+                  <constraintErrorMessage>Threshold must be between 1 and 255</constraintErrorMessage>
                 </properties>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <leafNode name="whitelist">
                 <properties>
