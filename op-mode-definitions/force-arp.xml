@@ -72,6 +72,30 @@
               </tagNode>
             </children>
           </node>
+          <node name="duplicate">
+            <properties>
+              <help>Send ARP for DAD detection</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Send ARP for DAD detection on specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>Send ARP for DAD detection for specified address</help>
+                    </properties>
+                    <command>sudo /usr/bin/arping -I $5 -c 1 -D $7</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+
         </children>
       </node>
     </children>
