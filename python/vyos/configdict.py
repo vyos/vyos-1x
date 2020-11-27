@@ -439,13 +439,13 @@ def get_accel_dict(config, base, chap_secrets):
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
 
-    # defaults include RADIUS server specifics per TAG node which need to be
-    # added to individual RADIUS servers instead - so we can simply delete them
+    # T2665: defaults include RADIUS server specifics per TAG node which need to
+    # be added to individual RADIUS servers instead - so we can simply delete them
     if dict_search('authentication.radius.server', default_values):
         del default_values['authentication']['radius']['server']
 
-    # defaults include static-ip address per TAG node which need to be added to
-    # individual local users instead - so we can simply delete them
+    # T2665: defaults include static-ip address per TAG node which need to be
+    # added to individual local users instead - so we can simply delete them
     if dict_search('authentication.local_users.username', default_values):
         del default_values['authentication']['local_users']['username']
 
@@ -471,6 +471,7 @@ def get_accel_dict(config, base, chap_secrets):
 
     # Add individual RADIUS server default values
     if dict_search('authentication.radius.server', dict):
+        # T2665
         default_values = defaults(base + ['authentication', 'radius', 'server'])
 
         for server in dict_search('authentication.radius.server', dict):
@@ -484,6 +485,7 @@ def get_accel_dict(config, base, chap_secrets):
 
     # Add individual local-user default values
     if dict_search('authentication.local_users.username', dict):
+        # T2665
         default_values = defaults(base + ['authentication', 'local-users', 'username'])
 
         for username in dict_search('authentication.local_users.username', dict):
