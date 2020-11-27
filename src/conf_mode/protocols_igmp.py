@@ -21,8 +21,9 @@ from sys import exit
 
 from vyos import ConfigError
 from vyos.config import Config
-from vyos.util import call
+from vyos.util import call, process_named_running
 from vyos.template import render
+from signal import SIGTERM
 
 from vyos import airbag
 airbag.enable()
@@ -36,11 +37,19 @@ def get_config(config=None):
         conf = Config()
     igmp_conf = {
         'igmp_conf' : False,
+        'pim_conf'  : False,
+        'igmp_proxy_conf' : False,
         'old_ifaces'    : {},
         'ifaces'    : {}
     }
     if not (conf.exists('protocols igmp') or conf.exists_effective('protocols igmp')):
         return None
+
+    if conf.exists('protocols igmp-proxy'):
+        igmp_conf['igmp_proxy_conf'] = True
+
+    if conf.exists('protocols pim'):
+        igmp_conf['pim_conf'] = True
 
     if conf.exists('protocols igmp'):
         igmp_conf['igmp_conf'] = True
@@ -79,6 +88,10 @@ def verify(igmp):
         return None
 
     if igmp['igmp_conf']:
+        # Check conflict with IGMP-Proxy
+        if igmp['igmp_proxy_conf']:
+            raise ConfigError(f"IGMP proxy and PIM cannot be both configured at the same time")
+
         # Check interfaces
         if not igmp['ifaces']:
             raise ConfigError(f"IGMP require defined interfaces!")
@@ -99,9 +112,16 @@ def apply(igmp):
     if igmp is None:
         return None
 
-    if os.path.exists(config_file):
-        call(f'vtysh -d pimd -f {config_file}')
-        os.remove(config_file)
+    pim_pid = process_named_running('pimd')
+    if igmp['igmp_conf'] or igmp['pim_conf']:
+        if not pim_pid:
+            call(f'pimd -d -F traditional --daemon -A 127.0.0.1')
+
+        if os.path.exists(config_file):
+            call(f'vtysh -d pimd -f {config_file}')
+            os.remove(config_file)
+    elif pim_pid:
+        os.kill(int(pim_pid), SIGTERM)
 
     return None
 

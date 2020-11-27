@@ -33,6 +33,8 @@ config_file = r'/etc/igmpproxy.conf'
 default_config_data = {
     'disable': False,
     'disable_quickleave': False,
+    'igmp_conf': False,
+    'pim_conf': False,
     'interfaces': [],
 }
 
@@ -42,6 +44,13 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
+    if conf.exists('protocols igmp'):
+        igmp_proxy['igmp_conf'] = True
+
+    if conf.exists('protocols pim'):
+        igmp_proxy['pim_conf'] = True
+
     base = ['protocols', 'igmp-proxy']
     if not conf.exists(base):
         return None
@@ -125,11 +134,14 @@ def generate(igmp_proxy):
 
 def apply(igmp_proxy):
     if igmp_proxy is None or igmp_proxy['disable']:
-         # IGMP Proxy support is removed in the commit
-         call('systemctl stop igmpproxy.service')
-         if os.path.exists(config_file):
-             os.unlink(config_file)
+        # IGMP Proxy support is removed in the commit
+        call('systemctl stop igmpproxy.service')
+        if os.path.exists(config_file):
+            os.unlink(config_file)
     else:
+        if igmp_proxy['igmp_conf'] or igmp_proxy['pim_conf']:
+            raise ConfigError('IGMP proxy and PIM cannot be both configured at the same time')
+
         call('systemctl restart igmpproxy.service')
 
     return None
