@@ -18,11 +18,13 @@ import os
 
 from sys import exit
 
+from glob import glob
 from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import read_file
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -119,34 +121,28 @@ def apply(mpls):
     # Enable and disable MPLS processing on interfaces per configuration
     if 'interface' in mpls:
         system_interfaces = []
-        system_interfaces.append(((os.popen('sysctl net.mpls.conf').read()).split('\n')))
-        del system_interfaces[0][-1]
-        system_interfaces = system_interfaces[0]
+        # Populate system interfaces list with local MPLS capable interfaces
+        for interface in glob('/proc/sys/net/mpls/conf/*'):
+            system_interfaces.append(interface.replace('/proc/sys/net/mpls/conf/', ''))    
+        # This is where the comparison is done on if an interface needs to be enabled/disabled.
         for system_interface in system_interfaces:
-            if system_interface.endswith(' = 1'):
-                replaced_once_system_interface = system_interface.replace('net.mpls.conf.', '')
-                replaced_twice_system_interface = replaced_once_system_interface.replace('.input = 1', '')
-                parsed_system_interface = replaced_twice_system_interface.replace('/', '.')
-                if parsed_system_interface in mpls['interface']:
-                    pass
-                else:
-                    call(f'sysctl -wq net.mpls.conf.{replaced_twice_system_interface}.input=0')
-            elif system_interface.endswith(' = 0'):
-                replaced_once_system_interface = system_interface.replace('net.mpls.conf.', '')
-                replaced_twice_system_interface = replaced_once_system_interface.replace('.input = 0', '')
-                parsed_system_interface = replaced_twice_system_interface.replace('/', '.')
-                if parsed_system_interface in mpls['interface']:
-                    call(f'sysctl -wq net.mpls.conf.{replaced_twice_system_interface}.input=1')
-                else:
-                    call(f'sysctl -wq net.mpls.conf.{replaced_twice_system_interface}.input=0')
+            interface_state = read_file(f'/proc/sys/net/mpls/conf/%s/input' %(system_interface))
+            if '1' in interface_state:
+                if system_interface not in mpls['interface']:
+                    system_interface = system_interface.replace('.', '/')
+                    call(f'sysctl -wq net.mpls.conf.{system_interface}.input=0')
+            elif '0' in interface_state:
+                if system_interface in mpls['interface']:
+                    system_interface = system_interface.replace('.', '/')
+                    call(f'sysctl -wq net.mpls.conf.{system_interface}.input=1')
     else:
-        # If MPLS interfaces are not configured, set MPLS processing disabled
         system_interfaces = []
-        system_interfaces.append(((os.popen('sysctl net.mpls.conf').read()).replace(" = 1", "=0")).split('\n'))
-        del system_interfaces[0][-1]
-        system_interfaces = system_interfaces[0]
-        for interface in system_interfaces:
-            call(f'sysctl -wq {interface}')
+        # If MPLS interfaces are not configured, set MPLS processing disabled
+        for interface in glob('/proc/sys/net/mpls/conf/*'):
+            system_interfaces.append(interface.replace('/proc/sys/net/mpls/conf/', '')) 
+        for system_interface in system_interfaces:
+            system_interface = system_interface.replace('.', '/')
+            call(f'sysctl -wq net.mpls.conf.{system_interface}.input=0')
 
     return None
 
