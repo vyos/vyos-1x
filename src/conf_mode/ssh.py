@@ -66,8 +66,8 @@ def generate(ssh):
 
         return None
 
-    render(config_file, 'ssh/sshd_config.tmpl', ssh, trim_blocks=True)
-    render(systemd_override, 'ssh/override.conf.tmpl', ssh, trim_blocks=True)
+    render(config_file, 'ssh/sshd_config.tmpl', ssh)
+    render(systemd_override, 'ssh/override.conf.tmpl', ssh)
 
     return None
 

@@ -61,9 +61,9 @@ def generate(lcd):
         lcd['device'] = find_device_file(lcd['device'])
 
     # Render config file for daemon LCDd
-    render(lcdd_conf, 'lcd/LCDd.conf.tmpl', lcd, trim_blocks=True)
+    render(lcdd_conf, 'lcd/LCDd.conf.tmpl', lcd)
     # Render config file for client lcdproc
-    render(lcdproc_conf, 'lcd/lcdproc.conf.tmpl', lcd, trim_blocks=True)
+    render(lcdproc_conf, 'lcd/lcdproc.conf.tmpl', lcd)
 
     return None
 

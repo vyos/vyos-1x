@@ -34,11 +34,9 @@ ocserv_passwd  = cfg_dir + '/ocpasswd'
 radius_cfg     = cfg_dir + '/radiusclient.conf'
 radius_servers = cfg_dir + '/radius_servers'
 
-
 # Generate hash from user cleartext password
 def get_hash(password):
     return crypt(password, mksalt(METHOD_SHA512))
-
 
 def get_config():
     conf = Config()
@@ -47,10 +45,12 @@ def get_config():
         return None
 
     ocserv = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
-    return ocserv
 
+    return ocserv
 
 def verify(ocserv):
     if ocserv is None:
@@ -88,7 +88,7 @@ def verify(ocserv):
                 ocserv["network_settings"]["push_route"].remove("0.0.0.0/0")
                 ocserv["network_settings"]["push_route"].append("default")
         else:
-            ocserv["network_settings"]["push_route"] = "default"  
+            ocserv["network_settings"]["push_route"] = "default"
     else:
         raise ConfigError('openconnect network settings required')
 
@@ -99,19 +99,18 @@ def generate(ocserv):
 
     if "radius" in ocserv["authentication"]["mode"]:
         # Render radius client configuration
-        render(radius_cfg, 'ocserv/radius_conf.tmpl', ocserv["authentication"]["radius"], trim_blocks=True)
+        render(radius_cfg, 'ocserv/radius_conf.tmpl', ocserv["authentication"]["radius"])
         # Render radius servers
-        render(radius_servers, 'ocserv/radius_servers.tmpl', ocserv["authentication"]["radius"], trim_blocks=True)
+        render(radius_servers, 'ocserv/radius_servers.tmpl', ocserv["authentication"]["radius"])
     else:
         if "local_users" in ocserv["authentication"]:
             for user in ocserv["authentication"]["local_users"]["username"]:
                 ocserv["authentication"]["local_users"]["username"][user]["hash"] = get_hash(ocserv["authentication"]["local_users"]["username"][user]["password"])
             # Render local users
-            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"], trim_blocks=True)
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
 
     # Render config
-    render(ocserv_conf, 'ocserv/ocserv_config.tmpl', ocserv, trim_blocks=True)
-    
+    render(ocserv_conf, 'ocserv/ocserv_config.tmpl', ocserv)
 
 
 def apply(ocserv):

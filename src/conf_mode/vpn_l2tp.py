@@ -357,7 +357,7 @@ def generate(l2tp):
     if not l2tp:
         return None
 
-    render(l2tp_conf, 'accel-ppp/l2tp.config.tmpl', l2tp, trim_blocks=True)
+    render(l2tp_conf, 'accel-ppp/l2tp.config.tmpl', l2tp)
 
     if l2tp['auth_mode'] == 'local':
         render(l2tp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', l2tp)

@@ -256,7 +256,7 @@ def generate(login):
 
     if len(login['radius_server']) > 0:
         render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl',
-               login, trim_blocks=True)
+               login)
 
         uid = getpwnam('root').pw_uid
         gid = getpwnam('root').pw_gid

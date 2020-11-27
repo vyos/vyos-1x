@@ -268,7 +268,8 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat, trim_blocks=True, permission=0o755)
+    render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat,
+           permission=0o755)
     return None
 
 def apply(nat):

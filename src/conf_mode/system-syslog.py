@@ -203,12 +203,12 @@ def generate(c):
         return None
 
     conf = '/etc/rsyslog.d/vyos-rsyslog.conf'
-    render(conf, 'syslog/rsyslog.conf.tmpl', c, trim_blocks=True)
+    render(conf, 'syslog/rsyslog.conf.tmpl', c)
 
     # eventually write for each file its own logrotate file, since size is
     # defined it shouldn't matter
     conf = '/etc/logrotate.d/vyos-rsyslog'
-    render(conf, 'syslog/logrotate.tmpl', c, trim_blocks=True)
+    render(conf, 'syslog/logrotate.tmpl', c)
 
 
 def verify(c):

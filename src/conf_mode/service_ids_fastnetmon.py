@@ -56,7 +56,7 @@ def verify(fastnetmon):
             if not os.access(fastnetmon["alert_script"], os.X_OK):
                 raise ConfigError('Script {0} does not have permissions for execution'.format(fastnetmon["alert_script"]))
         else:
-           raise ConfigError('File {0} does not exists!'.format(fastnetmon["alert_script"])) 
+           raise ConfigError('File {0} does not exists!'.format(fastnetmon["alert_script"]))
 
 def generate(fastnetmon):
     if not fastnetmon:
@@ -67,8 +67,8 @@ def generate(fastnetmon):
 
         return
 
-    render(config_file, 'ids/fastnetmon.tmpl', fastnetmon, trim_blocks=True)
-    render(networks_list, 'ids/fastnetmon_networks_list.tmpl', fastnetmon, trim_blocks=True)
+    render(config_file, 'ids/fastnetmon.tmpl', fastnetmon)
+    render(networks_list, 'ids/fastnetmon_networks_list.tmpl', fastnetmon)
 
     return None
 

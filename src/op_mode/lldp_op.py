@@ -117,7 +117,7 @@ if __name__ == '__main__':
         parser.print_help()
         exit(1)
 
-    tmpl = jinja2.Template(lldp_out, trim_blocks=True)
+    tmpl = jinja2.Template(lldp_out)
     config_text = tmpl.render(parse_data(neighbors))
     print(config_text)
 

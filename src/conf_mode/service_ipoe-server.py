@@ -283,7 +283,7 @@ def generate(ipoe):
     if not ipoe:
         return None
 
-    render(ipoe_conf, 'accel-ppp/ipoe.config.tmpl', ipoe, trim_blocks=True)
+    render(ipoe_conf, 'accel-ppp/ipoe.config.tmpl', ipoe)
 
     if ipoe['auth_mode'] == 'local':
         render(ipoe_chap_secrets, 'accel-ppp/chap-secrets.ipoe.tmpl', ipoe)

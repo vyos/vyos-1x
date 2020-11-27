@@ -82,11 +82,11 @@ def generate(sstp):
         return None
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp, trim_blocks=True)
+    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp)
 
     if dict_search('authentication.mode', sstp) == 'local':
         render(sstp_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
-               sstp, trim_blocks=True, permission=0o640)
+               sstp, permission=0o640)
     else:
         if os.path.exists(sstp_chap_secrets):
              os.unlink(sstp_chap_secrets)

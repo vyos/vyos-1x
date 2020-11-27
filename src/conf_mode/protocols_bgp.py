@@ -80,10 +80,8 @@ def generate(bgp):
     bgp[asn]['asn'] = asn
 
     # render(config) not needed, its only for debug
-    render(config_file, 'frr/bgp.frr.tmpl', bgp[asn], trim_blocks=True)
-
-    bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn],
-                                             trim_blocks=True)
+    render(config_file, 'frr/bgp.frr.tmpl', bgp[asn])
+    bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn])
 
     return None
 

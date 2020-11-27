@@ -68,8 +68,7 @@ def generate(mpls):
         mpls['new_frr_config'] = ''
         return None
 
-    mpls['new_frr_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls,
-                                              trim_blocks=True)
+    mpls['new_frr_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls)
     return None
 
 def apply(mpls):

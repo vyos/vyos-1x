@@ -890,9 +890,9 @@ class Interface(Control):
                     self._config = dict_merge(tmp, self._config)
 
             render(options_file, 'dhcp-client/daemon-options.tmpl',
-                   self._config, trim_blocks=True)
+                   self._config)
             render(config_file, 'dhcp-client/ipv4.tmpl',
-                   self._config, trim_blocks=True)
+                   self._config)
 
             # 'up' check is mandatory b/c even if the interface is A/D, as soon as
             # the DHCP client is started the interface will be placed in u/u state.
@@ -919,7 +919,7 @@ class Interface(Control):
 
         if enable and 'disable' not in self._config:
             render(config_file, 'dhcp-client/ipv6.tmpl',
-                   self._config, trim_blocks=True)
+                   self._config)
 
             # We must ignore any return codes. This is required to enable DHCPv6-PD
             # for interfaces which are yet not up and running.

@@ -95,8 +95,7 @@ def generate(igmp_proxy):
         print('WARNING: IGMP Proxy will be deactivated because it is disabled')
         return None
 
-    render(config_file, 'igmp-proxy/igmpproxy.conf.tmpl', igmp_proxy,
-           trim_blocks=True)
+    render(config_file, 'igmp-proxy/igmpproxy.conf.tmpl', igmp_proxy)
 
     return None
 

@@ -92,7 +92,7 @@ def generate(tftpd):
             config['listen_address'] = f'[{address}]:{port} -6'
 
         file = config_file + str(idx)
-        render(file, 'tftp-server/default.tmpl', config, trim_blocks=True)
+        render(file, 'tftp-server/default.tmpl', config)
         idx = idx + 1
 
     return None

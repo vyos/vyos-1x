@@ -73,11 +73,11 @@ def generate(pppoe):
     if not pppoe:
         return None
 
-    render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', pppoe, trim_blocks=True)
+    render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', pppoe)
 
     if dict_search('authentication.mode', pppoe) == 'local':
         render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
-               pppoe, trim_blocks=True, permission=0o640)
+               pppoe, permission=0o640)
     else:
         if os.path.exists(pppoe_chap_secrets):
             os.unlink(pppoe_chap_secrets)

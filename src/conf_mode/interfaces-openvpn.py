@@ -467,7 +467,7 @@ def generate(openvpn):
     # Generate User/Password authentication file
     if 'authentication' in openvpn:
         render(openvpn['auth_user_pass_file'], 'openvpn/auth.pw.tmpl', openvpn,
-               trim_blocks=True, user=user, group=group, permission=0o600)
+               user=user, group=group, permission=0o600)
     else:
         # delete old auth file if present
         if os.path.isfile(openvpn['auth_user_pass_file']):
@@ -482,13 +482,12 @@ def generate(openvpn):
             client_config['server_subnet'] = dict_search('server.subnet', openvpn)
 
             render(client_file, 'openvpn/client.conf.tmpl', client_config,
-                   trim_blocks=True, user=user, group=group)
+                   user=user, group=group)
 
     # we need to support quoting of raw parameters from OpenVPN CLI
     # see https://phabricator.vyos.net/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
-           trim_blocks=True, formater=lambda _: _.replace("&quot;", '"'),
-           user=user, group=group)
+           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
 
     # Fixup file permissions
     for file in fix_permissions:

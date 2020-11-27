@@ -159,7 +159,7 @@ def generate(https):
     if 'server_block_list' not in https or not https['server_block_list']:
         https['server_block_list'] = [default_server_block]
 
-    render(config_file, 'https/nginx.default.tmpl', https, trim_blocks=True)
+    render(config_file, 'https/nginx.default.tmpl', https)
 
     return None
 

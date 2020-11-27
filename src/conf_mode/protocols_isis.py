@@ -107,10 +107,10 @@ def generate(isis):
     isis[process]['process'] = process
 
     # render(config) not needed, its only for debug
-    render(config_file, 'frr/isis.frr.tmpl', isis[process], trim_blocks=True)
+    render(config_file, 'frr/isis.frr.tmpl', isis[process])
 
     isis['new_frr_config'] = render_to_string('frr/isis.frr.tmpl',
-                                              isis[process], trim_blocks=True)
+                                              isis[process])
 
     return None
 

@@ -73,8 +73,8 @@ def verify(options):
     return None
 
 def generate(options):
-    render(curlrc_config, 'system/curlrc.tmpl', options, trim_blocks=True)
-    render(ssh_config, 'system/ssh_config.tmpl', options, trim_blocks=True)
+    render(curlrc_config, 'system/curlrc.tmpl', options)
+    render(ssh_config, 'system/ssh_config.tmpl', options)
     return None
 
 def apply(options):

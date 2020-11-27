@@ -93,25 +93,25 @@ def generate(pppoe):
         return None
 
     # Create PPP configuration files
-    render(config_pppoe, 'pppoe/peer.tmpl',
-           pppoe, trim_blocks=True, permission=0o755)
+    render(config_pppoe, 'pppoe/peer.tmpl', pppoe, permission=0o755)
+
     # Create script for ip-pre-up.d
-    render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl',
-           pppoe, trim_blocks=True, permission=0o755)
+    render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl', pppoe,
+           permission=0o755)
     # Create script for ip-up.d
-    render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl',
-           pppoe, trim_blocks=True, permission=0o755)
+    render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl', pppoe,
+           permission=0o755)
     # Create script for ip-down.d
-    render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl',
-           pppoe, trim_blocks=True, permission=0o755)
+    render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl', pppoe,
+           permission=0o755)
     # Create script for ipv6-up.d
-    render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl',
-           pppoe, trim_blocks=True, permission=0o755)
+    render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl', pppoe,
+           permission=0o755)
 
     if 'dhcpv6_options' in pppoe and 'pd' in pppoe['dhcpv6_options']:
         # ipv6.tmpl relies on ifname - this should be made consitent in the
         # future better then double key-ing the same value
-        render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe, trim_blocks=True)
+        render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe)
 
     return None
 
