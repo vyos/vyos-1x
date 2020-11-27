@@ -123,10 +123,10 @@ def apply(mpls):
         system_interfaces = []
         # Populate system interfaces list with local MPLS capable interfaces
         for interface in glob('/proc/sys/net/mpls/conf/*'):
-            system_interfaces.append(interface.replace('/proc/sys/net/mpls/conf/', ''))    
+            system_interfaces.append(os.path.basename(interface))   
         # This is where the comparison is done on if an interface needs to be enabled/disabled.
         for system_interface in system_interfaces:
-            interface_state = read_file(f'/proc/sys/net/mpls/conf/%s/input' %(system_interface))
+            interface_state = read_file(f'/proc/sys/net/mpls/conf/{system_interface}/input')
             if '1' in interface_state:
                 if system_interface not in mpls['interface']:
                     system_interface = system_interface.replace('.', '/')
@@ -139,7 +139,7 @@ def apply(mpls):
         system_interfaces = []
         # If MPLS interfaces are not configured, set MPLS processing disabled
         for interface in glob('/proc/sys/net/mpls/conf/*'):
-            system_interfaces.append(interface.replace('/proc/sys/net/mpls/conf/', '')) 
+            system_interfaces.append(os.path.basename(interface)) 
         for system_interface in system_interfaces:
             system_interface = system_interface.replace('.', '/')
             call(f'sysctl -wq net.mpls.conf.{system_interface}.input=0')
