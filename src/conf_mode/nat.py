@@ -18,18 +18,19 @@ import jmespath
 import json
 import os
 
-from copy import deepcopy
 from distutils.version import LooseVersion
 from platform import release as kernel_version
 from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.template import render
-from vyos.util import call
 from vyos.util import cmd
 from vyos.util import check_kmod
+from vyos.util import dict_search
 from vyos.validate import is_addr_assigned
+from vyos.xml import defaults
 from vyos import ConfigError
 
 from vyos import airbag
@@ -39,17 +40,6 @@ if LooseVersion(kernel_version()) > LooseVersion('5.1'):
     k_mod = ['nft_nat', 'nft_chain_nat']
 else:
     k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
-
-default_config_data = {
-    'deleted': False,
-    'destination': [],
-    'helper_functions': None,
-    'pre_ct_helper': '',
-    'pre_ct_conntrack': '',
-    'out_ct_helper': '',
-    'out_ct_conntrack': '',
-    'source': []
-}
 
 iptables_nat_config = '/tmp/vyos-nat-rules.nft'
 
@@ -66,113 +56,42 @@ def get_handler(json, chain, target):
     return None
 
 
-def verify_rule(rule, err_msg):
+def verify_rule(config, err_msg):
     """ Common verify steps used for both source and destination NAT """
-    if rule['translation_port'] or rule['dest_port'] or rule['source_port']:
-        if rule['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
-            proto = rule['protocol']
-            raise ConfigError(f'{err_msg} ports can only be specified when protocol is "tcp", "udp" or "tcp_udp" (currently "{proto}")')
 
-        if '/' in rule['translation_address']:
+    if (dict_search('translation.port', config) != None or
+        dict_search('destination.port', config) != None or
+        dict_search('source.port', config)):
+
+        if config['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
+            raise ConfigError(f'{err_msg}\n' \
+                              'ports can only be specified when protocol is '\
+                              'either tcp, udp or tcp_udp!')
+
+        if '/' in (dict_search('translation.address', config) or []):
             raise ConfigError(f'{err_msg}\n' \
                              'Cannot use ports with an IPv4net type translation address as it\n' \
                              'statically maps a whole network of addresses onto another\n' \
                              'network of addresses')
 
-
-def parse_configuration(conf, source_dest):
-    """ Common wrapper to read in both NAT source and destination CLI """
-    ruleset = []
-    base_level = ['nat', source_dest]
-    conf.set_level(base_level)
-    for number in conf.list_nodes(['rule']):
-        rule = {
-            'description': '',
-            'dest_address': '',
-            'dest_port': '',
-            'disabled': False,
-            'exclude': False,
-            'interface_in': '',
-            'interface_out': '',
-            'log': False,
-            'protocol': 'all',
-            'number': number,
-            'source_address': '',
-            'source_prefix': '',
-            'source_port': '',
-            'translation_address': '',
-            'translation_prefix': '',
-            'translation_port': ''
-        }
-        conf.set_level(base_level + ['rule', number])
-
-        if conf.exists(['description']):
-            rule['description'] = conf.return_value(['description'])
-
-        if conf.exists(['destination', 'address']):
-            tmp = conf.return_value(['destination', 'address'])
-            if tmp.startswith('!'):
-                tmp = tmp.replace('!', '!=')
-            rule['dest_address'] = tmp
-
-        if conf.exists(['destination', 'port']):
-            tmp = conf.return_value(['destination', 'port'])
-            if tmp.startswith('!'):
-                tmp = tmp.replace('!', '!=')
-            rule['dest_port'] = tmp
-
-        if conf.exists(['disable']):
-            rule['disabled'] = True
-
-        if conf.exists(['exclude']):
-            rule['exclude'] = True
-
-        if conf.exists(['inbound-interface']):
-            rule['interface_in'] = conf.return_value(['inbound-interface'])
-
-        if conf.exists(['outbound-interface']):
-            rule['interface_out'] = conf.return_value(['outbound-interface'])
-
-        if conf.exists(['log']):
-            rule['log'] = True
-
-        if conf.exists(['protocol']):
-            rule['protocol'] = conf.return_value(['protocol'])
-
-        if conf.exists(['source', 'address']):
-            tmp = conf.return_value(['source', 'address'])
-            if tmp.startswith('!'):
-                tmp = tmp.replace('!', '!=')
-            rule['source_address'] = tmp
-
-        if conf.exists(['source', 'prefix']):
-            rule['source_prefix'] = conf.return_value(['source', 'prefix'])
-
-        if conf.exists(['source', 'port']):
-            tmp = conf.return_value(['source', 'port'])
-            if tmp.startswith('!'):
-                tmp = tmp.replace('!', '!=')
-            rule['source_port'] = tmp
-
-        if conf.exists(['translation', 'address']):
-            rule['translation_address'] = conf.return_value(['translation', 'address'])
-
-        if conf.exists(['translation', 'prefix']):
-            rule['translation_prefix'] = conf.return_value(['translation', 'prefix'])
-
-        if conf.exists(['translation', 'port']):
-            rule['translation_port'] = conf.return_value(['translation', 'port'])
-
-        ruleset.append(rule)
-
-    return ruleset
-
 def get_config(config=None):
-    nat = deepcopy(default_config_data)
     if config:
         conf = config
     else:
         conf = Config()
+
+    base = ['nat']
+    nat = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # T2665: we must add the tagNode defaults individually until this is
+    # moved to the base class
+    for direction in ['source', 'destination']:
+        if direction in nat:
+            default_values = defaults(base + [direction, 'rule'])
+            for rule in nat[direction]['rule']:
+                nat[direction]['rule'][rule] = dict_merge(default_values,
+                    nat[direction]['rule'][rule])
+
 
     # read in current nftable (once) for further processing
     tmp = cmd('nft -j list table raw')
@@ -182,7 +101,7 @@ def get_config(config=None):
     pattern = 'nftables[?rule].rule[?expr[].jump].{chain: chain, handle: handle, target: expr[].jump.target | [0]}'
     condensed_json = jmespath.search(pattern, nftable_json)
 
-    if not conf.exists(['nat']):
+    if not conf.exists(base):
         nat['helper_functions'] = 'remove'
 
         # Retrieve current table handler positions
@@ -190,9 +109,7 @@ def get_config(config=None):
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
         nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_HELPER')
         nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
-
-        nat['deleted'] = True
-
+        nat['deleted'] = ''
         return nat
 
     # check if NAT connection tracking helpers need to be set up - this has to
@@ -206,19 +123,10 @@ def get_config(config=None):
         nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_IGNORE')
         nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
 
-    # set config level for parsing in NAT configuration
-    conf.set_level(['nat'])
-
-    # use a common wrapper function to read in the source / destination
-    # tree from the config - thus we do not need to replicate almost the
-    # same code :-)
-    for tgt in ['source', 'destination', 'nptv6']:
-        nat[tgt] = parse_configuration(conf, tgt)
-
     return nat
 
 def verify(nat):
-    if nat['deleted']:
+    if not nat or 'deleted' in nat:
         # no need to verify the CLI as NAT is going to be deactivated
         return None
 
@@ -226,44 +134,49 @@ def verify(nat):
         if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
             raise Exception('could not determine nftable ruleset handlers')
 
-    for rule in nat['source']:
-        interface = rule['interface_out']
-        err_msg = f'Source NAT configuration error in rule "{rule["number"]}":'
+    if dict_search('source.rule', nat):
+        for rule, config in dict_search('source.rule', nat).items():
+            err_msg = f'Source NAT configuration error in rule {rule}:'
+            if 'outbound_interface' not in config:
+                raise ConfigError(f'{err_msg}\n' \
+                                  'outbound-interface not specified')
+            else:
+                if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
+                    print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
-        if interface and interface not in 'any' and interface not in interfaces():
-            print(f'Warning: rule "{rule["number"]}" interface "{interface}" does not exist on this system')
 
-        if not rule['interface_out']:
-            raise ConfigError(f'{err_msg} outbound-interface not specified')
+            addr = dict_search('translation.address', config)
+            if addr != None:
+                if addr != 'masquerade':
+                    for ip in addr.split('-'):
+                        if not is_addr_assigned(ip):
+                            print(f'WARNING: IP address {ip} does not exist on the system!')
+            elif 'exclude' not in config:
+                raise ConfigError(f'{err_msg}\n' \
+                                  'translation address not specified')
 
-        if rule['translation_address']:
-            addr = rule['translation_address']
-            if addr != 'masquerade':
-                for ip in addr.split('-'):
-                    if not is_addr_assigned(ip):
-                        print(f'Warning: IP address {ip} does not exist on the system!')
+            # common rule verification
+            verify_rule(config, err_msg)
 
-        elif not rule['exclude']:
-            raise ConfigError(f'{err_msg} translation address not specified')
 
-        # common rule verification
-        verify_rule(rule, err_msg)
+    if dict_search('destination.rule', nat):
+        for rule, config in dict_search('destination.rule', nat).items():
+            err_msg = f'Destination NAT configuration error in rule {rule}:'
 
-    for rule in nat['destination']:
-        interface = rule['interface_in']
-        err_msg = f'Destination NAT configuration error in rule "{rule["number"]}":'
+            if 'inbound_interface' not in config:
+                raise ConfigError(f'{err_msg}\n' \
+                                  'inbound-interface not specified')
+            else:
+                if config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
+                    print(f'WARNING: rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
-        if interface and interface not in 'any' and interface not in interfaces():
-            print(f'Warning: rule "{rule["number"]}" interface "{interface}" does not exist on this system')
 
-        if not rule['interface_in']:
-            raise ConfigError(f'{err_msg} inbound-interface not specified')
+            if dict_search('translation.address', config) == None and 'exclude' not in config:
+                raise ConfigError(f'{err_msg}\n' \
+                                  'translation address not specified')
 
-        if not rule['translation_address'] and not rule['exclude']:
-            raise ConfigError(f'{err_msg} translation address not specified')
-
-        # common rule verification
-        verify_rule(rule, err_msg)
+            # common rule verification
+            verify_rule(config, err_msg)
 
     return None
 
