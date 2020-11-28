@@ -123,7 +123,7 @@ def apply(options):
     # Keyboard layout - there will be always the default key inside the dict
     # but we check for key existence anyway
     if 'keyboard_layout' in options:
-        cmd('loadkeys -C /dev/console {keyboard_layout}'.format(**options))
+        cmd('loadkeys {keyboard_layout}'.format(**options))
 
 if __name__ == '__main__':
     try:
