@@ -22,12 +22,9 @@ from base_accel_ppp_test import BasicAccelPPPTest
 from configparser import ConfigParser
 from vyos.configsession import ConfigSessionError
 from vyos.util import process_named_running
-from vyos.util import cmd
 
 local_if = ['interfaces', 'dummy', 'dum667']
-
 ac_name = 'ACN'
-
 interface = 'eth0'
 
 class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
