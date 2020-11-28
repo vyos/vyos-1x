@@ -26,13 +26,13 @@ from vyos.util import call
 cache_file = r'/run/ddclient/ddclient.cache'
 
 OUT_TMPL_SRC = """
-{%- for entry in hosts -%}
+{% for entry in hosts %}
 ip address   : {{ entry.ip }}
 host-name    : {{ entry.host }}
 last update  : {{ entry.time }}
 update-status: {{ entry.status }}
 
-{% endfor -%}
+{% endfor %}
 """
 
 def show_status():

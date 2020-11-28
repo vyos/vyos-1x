@@ -27,34 +27,34 @@ enable_subnet_counters = off
 
 {% if "mirror" in mode %}
 mirror_afpacket = on
-{% endif -%}
+{% endif %}
 
 {% if "in" in direction %}
 process_incoming_traffic = on
-{% endif -%}
+{% endif %}
 {% if "out" in direction %}
 process_outgoing_traffic = on
-{% endif -%}
+{% endif %}
 {% for th in threshold %}
 {% if th == "fps" %}
 ban_for_flows = on
 threshold_flows = {{ threshold[th] }}
-{% endif -%}
+{% endif %}
 {% if th == "mbps" %}
 ban_for_bandwidth = on
 threshold_mbps = {{ threshold[th] }}
-{% endif -%}
+{% endif %}
 {% if th == "pps" %}
 ban_for_pps = on
 threshold_pps = {{ threshold[th] }}
-{% endif -%}
-{% endfor -%}
+{% endif %}
+{% endfor %}
 
 {% if listen_interface %}
 {% set value = listen_interface if listen_interface is string else listen_interface | join(',') %}
 interfaces = {{ value }}
-{% endif -%}
+{% endif %}
 
 {% if alert_script %}
 notify_script_path = {{ alert_script }}
-{% endif -%}
+{% endif %}

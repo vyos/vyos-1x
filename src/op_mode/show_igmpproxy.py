@@ -36,9 +36,9 @@ import vyos.config
 # eth0.3     0.0b         0            0.0b         0            xxx.xxx.x.7
 # tun1       0.0b         0            0.0b         0            xxx.xxx.xxx.2
 vif_out_tmpl = """
-{%- for r in data %}
+{% for r in data %}
 {{ "%-10s"|format(r.interface) }} {{ "%-12s"|format(r.bytes_in) }} {{ "%-12s"|format(r.pkts_in) }} {{ "%-12s"|format(r.bytes_out) }} {{ "%-12s"|format(r.pkts_out) }} {{ "%-15s"|format(r.loc) }}
-{%- endfor %}
+{% endfor %}
 """
 
 # Output Template for "show ip multicast mfc" command
@@ -48,9 +48,9 @@ vif_out_tmpl = """
 # xxx.xxx.xxx.250   xxx.xx.xxx.75     --
 # xxx.xxx.xx.124    xx.xxx.xxx.26     --
 mfc_out_tmpl = """
-{%- for r in data %}
+{% for r in data %}
 {{ "%-15s"|format(r.group) }} {{ "%-15s"|format(r.origin) }} {{ "%-12s"|format(r.pkts) }} {{ "%-12s"|format(r.bytes) }} {{ "%-12s"|format(r.wrong) }} {{ "%-10s"|format(r.iif) }} {{ "%-20s"|format(r.oifs|join(', ')) }}
-{%- endfor %}
+{% endfor %}
 """
 
 parser = argparse.ArgumentParser()

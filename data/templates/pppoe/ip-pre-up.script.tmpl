@@ -12,7 +12,7 @@ logger -t pppd[$DIALER_PID] "executing $0"
 
 echo "{{ description }}" > /sys/class/net/{{ ifname }}/ifalias
 
-{% if vrf -%}
+{% if vrf %}
 logger -t pppd[$DIALER_PID] "configuring dialer interface $6 for VRF {{ vrf }}"
 ip link set dev {{ ifname }} master {{ vrf }}
 {% endif %}

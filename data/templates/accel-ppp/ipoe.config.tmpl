@@ -35,7 +35,7 @@ password=csid
 {% endif %}
 proxy-arp=1
 
-{%- for interface in interfaces %}
+{% for interface in interfaces %}
 {% if (interface.shared == '0') and (interface.vlan_mon) %}
 vlan-mon={{ interface.name }},{{ interface.vlan_mon | join(',') }}
 {% endif %}
@@ -43,16 +43,16 @@ vlan-mon={{ interface.name }},{{ interface.vlan_mon | join(',') }}
 
 {% if dnsv4 %}
 [dns]
-{% for dns in dnsv4 -%}
+{% for dns in dnsv4 %}
 dns{{ loop.index }}={{ dns }}
-{% endfor -%}
+{% endfor %}
 {% endif %}
 
 {% if dnsv6 %}
 [ipv6-dns]
-{% for dns in dnsv6 -%}
+{% for dns in dnsv6 %}
 {{ dns }}
-{% endfor -%}
+{% endfor %}
 {% endif %}
 
 [ipv6-nd]
@@ -79,7 +79,7 @@ chap-secrets={{ chap_secrets_file }}
 verbose=1
 {% for r in radius_server %}
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
-{% endfor -%}
+{% endfor %}
 
 {% if radius_acct_inter_jitter %}
 acct-interim-jitter={{ radius_acct_inter_jitter }}
@@ -90,17 +90,17 @@ timeout={{ radius_timeout }}
 max-try={{ radius_max_try }}
 {% if radius_nas_id %}
 nas-identifier={{ radius_nas_id }}
-{% endif -%}
+{% endif %}
 {% if radius_nas_ip %}
 nas-ip-address={{ radius_nas_ip }}
-{% endif -%}
+{% endif %}
 {% if radius_source_address %}
 bind={{ radius_source_address }}
-{% endif -%}
+{% endif %}
 
 {% if radius_dynamic_author %}
 dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
-{% endif -%}
+{% endif %}
 
 {% if radius_shaper_attr %}
 [shaper]
@@ -108,8 +108,8 @@ verbose=1
 attr={{ radius_shaper_attr }}
 {% if radius_shaper_vendor %}
 vendor={{ radius_shaper_vendor }}
-{% endif -%}
-{% endif -%}
+{% endif %}
+{% endif %}
 {% endif %}
 
 [cli]

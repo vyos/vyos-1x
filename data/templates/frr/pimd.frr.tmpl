@@ -1,34 +1,34 @@
 !
-{% for rp_addr in old_pim.rp -%}
-{% for group in old_pim.rp[rp_addr] -%}
+{% for rp_addr in old_pim.rp %}
+{% for group in old_pim.rp[rp_addr] %}
 no ip pim rp {{ rp_addr }} {{ group }}
-{% endfor -%}
-{% endfor -%}
-{% if old_pim.rp_keep_alive -%}
+{% endfor %}
+{% endfor %}
+{% if old_pim.rp_keep_alive %}
 no ip pim rp keep-alive-timer {{ old_pim.rp_keep_alive }}
-{% endif -%}
-{% for iface in old_pim.ifaces -%}
+{% endif %}
+{% for iface in old_pim.ifaces %}
 interface {{ iface }}
 no ip pim
 !
-{% endfor -%}
-{% for iface in pim.ifaces -%}
+{% endfor %}
+{% for iface in pim.ifaces %}
 interface {{ iface }}
 ip pim
-{% if pim.ifaces[iface].dr_prio -%}
+{% if pim.ifaces[iface].dr_prio %}
 ip pim drpriority {{ pim.ifaces[iface].dr_prio }}
-{% endif -%}
-{% if pim.ifaces[iface].hello -%}
+{% endif %}
+{% if pim.ifaces[iface].hello %}
 ip pim hello {{ pim.ifaces[iface].hello }}
-{% endif -%}
+{% endif %}
 !
-{% endfor -%}
-{% for rp_addr in pim.rp -%}
-{% for group in pim.rp[rp_addr] -%}
+{% endfor %}
+{% for rp_addr in pim.rp %}
+{% for group in pim.rp[rp_addr] %}
 ip pim rp {{ rp_addr }} {{ group }}
-{% endfor -%}
-{% endfor -%}
-{% if pim.rp_keep_alive -%}
+{% endfor %}
+{% endfor %}
+{% if pim.rp_keep_alive %}
 ip pim rp keep-alive-timer {{ pim.rp_keep_alive }}
-{% endif -%}
+{% endif %}
 !

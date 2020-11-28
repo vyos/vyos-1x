@@ -3,6 +3,6 @@
 # Routing table ID to name mapping reference
 
 # id       vrf name         comment
-{% for vrf in vrf_add -%}
+{% for vrf in vrf_add %}
 {{ "%-10s" | format(vrf.table) }} {{ "%-16s" | format(vrf.name) }} # {{ vrf.description }}
-{% endfor -%}
+{% endfor %}

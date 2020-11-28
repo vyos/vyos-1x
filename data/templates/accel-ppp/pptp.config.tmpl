@@ -7,7 +7,7 @@ ippool
 chap-secrets
 {% elif auth_mode == 'radius' %}
 radius
-{% endif -%}
+{% endif %}
 {% for proto in auth_proto %}
 {{proto}}
 {% endfor %}
@@ -22,16 +22,16 @@ level=5
 
 {% if dnsv4 %}
 [dns]
-{% for dns in dnsv4 -%}
+{% for dns in dnsv4 %}
 dns{{ loop.index }}={{ dns }}
-{% endfor -%}
+{% endfor %}
 {% endif %}
 
 {% if wins %}
 [wins]
-{% for server in wins -%}
+{% for server in wins %}
 wins{{ loop.index }}={{ server }}
-{% endfor -%}
+{% endfor %}
 {% endif %}
 
 
@@ -67,7 +67,7 @@ chap-secrets={{ chap_secrets_file }}
 verbose=1
 {% for r in radius_server %}
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
-{% endfor -%}
+{% endfor %}
 
 {% if radius_acct_inter_jitter %}
 acct-interim-jitter={{ radius_acct_inter_jitter }}
@@ -79,13 +79,13 @@ max-try={{ radius_max_try }}
 
 {% if radius_nas_id %}
 nas-identifier={{ radius_nas_id }}
-{% endif -%}
+{% endif %}
 {% if radius_nas_ip %}
 nas-ip-address={{ radius_nas_ip }}
-{% endif -%}
+{% endif %}
 {% if radius_source_address %}
 bind={{ radius_source_address }}
-{% endif -%}
+{% endif %}
 {% endif %}
 
 [cli]

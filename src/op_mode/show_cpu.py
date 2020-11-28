@@ -21,16 +21,16 @@ from sys import exit
 from vyos.util import popen, DEVNULL
 
 OUT_TMPL_SRC = """
-{%- if cpu -%}
-{% if 'vendor' in cpu %}CPU Vendor:       {{cpu.vendor}}{%- endif %}
-{% if 'model' in cpu %}Model:            {{cpu.model}}{%- endif %}
-{% if 'cpus' in cpu %}Total CPUs:       {{cpu.cpus}}{%- endif %}
-{% if 'sockets' in cpu %}Sockets:          {{cpu.sockets}}{%- endif %}
-{% if 'cores' in cpu %}Cores:            {{cpu.cores}}{%- endif %}
-{% if 'threads' in cpu %}Threads:          {{cpu.threads}}{%- endif %}
-{% if 'mhz' in cpu %}Current MHz:      {{cpu.mhz}}{%- endif %}
-{% if 'mhz_min' in cpu %}Minimum MHz:      {{cpu.mhz_min}}{%- endif %}
-{% if 'mhz_max' in cpu %}Maximum MHz:      {{cpu.mhz_max}}{%- endif %}
+{% if cpu %}
+{% if 'vendor' in cpu %}CPU Vendor:       {{cpu.vendor}}{% endif %}
+{% if 'model' in cpu %}Model:            {{cpu.model}}{% endif %}
+{% if 'cpus' in cpu %}Total CPUs:       {{cpu.cpus}}{% endif %}
+{% if 'sockets' in cpu %}Sockets:          {{cpu.sockets}}{% endif %}
+{% if 'cores' in cpu %}Cores:            {{cpu.cores}}{% endif %}
+{% if 'threads' in cpu %}Threads:          {{cpu.threads}}{% endif %}
+{% if 'mhz' in cpu %}Current MHz:      {{cpu.mhz}}{% endif %}
+{% if 'mhz_min' in cpu %}Minimum MHz:      {{cpu.mhz_min}}{% endif %}
+{% if 'mhz_max' in cpu %}Maximum MHz:      {{cpu.mhz_max}}{% endif %}
 {% endif %}
 """
 

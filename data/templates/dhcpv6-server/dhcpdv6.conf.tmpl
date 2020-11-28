@@ -4,87 +4,87 @@
 # https://www.isc.org/wp-content/uploads/2017/08/dhcp43options.html
 
 log-facility local7;
-{%- if preference %}
+{% if preference %}
 option dhcp6.preference {{ preference }};
-{%- endif %}
+{% endif %}
 
 # Shared network configration(s)
 {% for network in shared_network %}
-{%- if not network.disabled -%}
+{% if not network.disabled %}
 shared-network {{ network.name }} {
-    {%- if network.common.info_refresh_time %}
+    {% if network.common.info_refresh_time %}
     option dhcp6.info-refresh-time {{ network.common.info_refresh_time }};
-    {%- endif %}
-    {%- if network.common.domain_search %}
+    {% endif %}
+    {% if network.common.domain_search %}
     option dhcp6.domain-search "{{ network.common.domain_search | join('", "') }}";
-    {%- endif %}
-    {%- if network.common.dns_server %}
+    {% endif %}
+    {% if network.common.dns_server %}
     option dhcp6.name-servers {{ network.common.dns_server | join(', ') }};
-    {%- endif %}
-    {%- for subnet in network.subnet %}
+    {% endif %}
+    {% for subnet in network.subnet %}
     subnet6 {{ subnet.network }} {
-        {%- for range in subnet.range6_prefix %}
+        {% for range in subnet.range6_prefix %}
         range6 {{ range.prefix }}{{ " temporary" if range.temporary }};
-        {%- endfor %}
-        {%- for range in subnet.range6 %}
+        {% endfor %}
+        {% for range in subnet.range6 %}
         range6 {{ range.start }} {{ range.stop }};
-        {%- endfor %}
-        {%- if subnet.domain_search %}
+        {% endfor %}
+        {% if subnet.domain_search %}
         option dhcp6.domain-search "{{ subnet.domain_search | join('", "') }}";
-        {%- endif %}
-        {%- if subnet.lease_def %}
+        {% endif %}
+        {% if subnet.lease_def %}
         default-lease-time {{ subnet.lease_def }};
-        {%- endif %}
-        {%- if subnet.lease_max %}
+        {% endif %}
+        {% if subnet.lease_max %}
         max-lease-time {{ subnet.lease_max }};
-        {%- endif %}
-        {%- if subnet.lease_min %}
+        {% endif %}
+        {% if subnet.lease_min %}
         min-lease-time {{ subnet.lease_min }};
-        {%- endif %}
-        {%- if subnet.dns_server %}
+        {% endif %}
+        {% if subnet.dns_server %}
         option dhcp6.name-servers {{ subnet.dns_server | join(', ') }};
-        {%- endif %}
-        {%- if subnet.nis_domain %}
+        {% endif %}
+        {% if subnet.nis_domain %}
         option dhcp6.nis-domain-name "{{ subnet.nis_domain }}";
-        {%- endif %}
-        {%- if subnet.nis_server %}
+        {% endif %}
+        {% if subnet.nis_server %}
         option dhcp6.nis-servers {{ subnet.nis_server | join(', ') }};
-        {%- endif %}
-        {%- if subnet.nisp_domain %}
+        {% endif %}
+        {% if subnet.nisp_domain %}
         option dhcp6.nisp-domain-name "{{ subnet.nisp_domain }}";
-        {%- endif %}
-        {%- if subnet.nisp_server %}
+        {% endif %}
+        {% if subnet.nisp_server %}
         option dhcp6.nisp-servers {{ subnet.nisp_server | join(', ') }};
-        {%- endif %}
-        {%- if subnet.sip_address %}
+        {% endif %}
+        {% if subnet.sip_address %}
         option dhcp6.sip-servers-addresses {{ subnet.sip_address | join(', ') }};
-        {%- endif %}
-        {%- if subnet.sip_hostname %}
+        {% endif %}
+        {% if subnet.sip_hostname %}
         option dhcp6.sip-servers-names "{{ subnet.sip_hostname | join('", "') }}";
-        {%- endif %}
-        {%- if subnet.sntp_server %}
+        {% endif %}
+        {% if subnet.sntp_server %}
         option dhcp6.sntp-servers {{ subnet.sntp_server | join(', ') }};
-        {%- endif %}
-        {%- for prefix in subnet.prefix_delegation %}
+        {% endif %}
+        {% for prefix in subnet.prefix_delegation %}
         prefix6 {{ prefix.start }} {{ prefix.stop }} /{{ prefix.length }};
-        {%- endfor %}
-        {%- for host in subnet.static_mapping %}
-        {% if not host.disabled -%}
+        {% endfor %}
+        {% for host in subnet.static_mapping %}
+        {% if not host.disabled %}
         host {{ network.name }}_{{ host.name }} {
-            {%- if host.client_identifier %}
+            {% if host.client_identifier %}
             host-identifier option dhcp6.client-id {{ host.client_identifier }};
-            {%- endif %}
-            {%- if host.ipv6_address %}
+            {% endif %}
+            {% if host.ipv6_address %}
             fixed-address6 {{ host.ipv6_address }};
-            {%- endif %}
+            {% endif %}
         }
-        {%- endif %}
-        {%- endfor %}
+        {% endif %}
+        {% endfor %}
     }
-    {%- endfor %}
+    {% endfor %}
     on commit {
         set shared-networkname = "{{ network.name }}";
     }
 }
-{%- endif %}
+{% endif %}
 {% endfor %}

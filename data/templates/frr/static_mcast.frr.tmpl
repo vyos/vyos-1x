@@ -1,20 +1,20 @@
 !
-{% for route_gr in old_mroute -%}
-{% for nh in old_mroute[route_gr] -%}
-{% if old_mroute[route_gr][nh] -%}
+{% for route_gr in old_mroute %}
+{% for nh in old_mroute[route_gr] %}
+{% if old_mroute[route_gr][nh] %}
 no ip mroute {{ route_gr }} {{ nh }} {{ old_mroute[route_gr][nh] }}
-{% else -%}
+{% else %}
 no ip mroute {{ route_gr }} {{ nh }}
-{% endif -%}
-{% endfor -%}
-{% endfor -%}
-{% for route_gr in mroute -%}
-{% for nh in mroute[route_gr] -%}
-{% if mroute[route_gr][nh] -%}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% for route_gr in mroute %}
+{% for nh in mroute[route_gr] %}
+{% if mroute[route_gr][nh] %}
 ip mroute {{ route_gr }} {{ nh }} {{ mroute[route_gr][nh] }}
-{% else -%}
+{% else %}
 ip mroute {{ route_gr }} {{ nh }}
-{% endif -%}
-{% endfor -%}
-{% endfor -%}
+{% endif %}
+{% endfor %}
+{% endfor %}
 !

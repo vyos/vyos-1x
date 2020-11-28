@@ -22,9 +22,9 @@ from sys import exit
 
 OUT_TMPL_SRC = """Device           Model               Vendor
 ------           ------              ------
-{%- for d in devices %}
+{% for d in devices %}
 {{ "%-16s" | format(d.device) }} {{ "%-19s" | format(d.model)}} {{d.vendor}}
-{%- endfor %}
+{% endfor %}
 
 """
 

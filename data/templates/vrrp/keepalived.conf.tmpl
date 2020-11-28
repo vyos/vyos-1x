@@ -9,9 +9,9 @@ global_defs {
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
 
-{% for group in groups -%}
+{% for group in groups %}
 
-{% if group.health_check_script -%}
+{% if group.health_check_script %}
 vrrp_script healthcheck_{{ group.name }} {
     script "{{ group.health_check_script }}"
     interval {{ group.health_check_interval }}
@@ -22,9 +22,9 @@ vrrp_script healthcheck_{{ group.name }} {
 {% endif %}
 
 vrrp_instance {{ group.name }} {
-    {% if group.description -%}
+    {% if group.description %}
     # {{ group.description }}
-    {% endif -%}
+    {% endif %}
 
     state BACKUP
     interface {{ group.interface }}
@@ -32,74 +32,74 @@ vrrp_instance {{ group.name }} {
     priority {{ group.priority }}
     advert_int {{ group.advertise_interval }}
 
-    {% if group.preempt -%}
+    {% if group.preempt %}
     preempt_delay {{ group.preempt_delay }}
-    {% else -%}
+    {% else %}
     nopreempt
-    {% endif -%}
+    {% endif %}
 
-    {% if group.peer_address -%}
+    {% if group.peer_address %}
     unicast_peer { {{ group.peer_address }} }
-    {% endif -%}
+    {% endif %}
 
-    {% if group.hello_source -%}
-      {%- if group.peer_address -%}
+    {% if group.hello_source %}
+      {% if group.peer_address %}
       unicast_src_ip {{ group.hello_source }}
-      {%- else -%}
+      {% else %}
       mcast_src_ip {{ group.hello_source }}
-      {%- endif %}
-    {% endif -%}
+      {% endif %}
+    {% endif %}
 
-    {% if group.use_vmac and group.peer_address -%}
+    {% if group.use_vmac and group.peer_address %}
       use_vmac {{group.interface}}v{{group.vrid}}
       vmac_xmit_base
-    {% elif group.use_vmac -%}
+    {% elif group.use_vmac %}
       use_vmac {{group.interface}}v{{group.vrid}}
-    {% endif -%}
+    {% endif %}
 
-    {% if group.auth_password -%}
+    {% if group.auth_password %}
       authentication {
         auth_pass "{{ group.auth_password }}"
         auth_type {{ group.auth_type }}
       }
-    {% endif -%}
+    {% endif %}
 
     virtual_ipaddress {
-    {% for addr in group.virtual_addresses -%}
+    {% for addr in group.virtual_addresses %}
         {{ addr }}
-    {% endfor -%}
+    {% endfor %}
     }
 
-    {% if group.virtual_addresses_excluded -%}
+    {% if group.virtual_addresses_excluded %}
     virtual_ipaddress_excluded {
-    {% for addr in group.virtual_addresses_excluded -%}
+    {% for addr in group.virtual_addresses_excluded %}
         {{ addr }}
-    {% endfor -%}
+    {% endfor %}
     }
-    {% endif -%}
+    {% endif %}
 
-    {% if group.health_check_script -%}
+    {% if group.health_check_script %}
     track_script {
         healthcheck_{{ group.name }}
     }
-    {% endif -%}
+    {% endif %}
 }
 
-{% endfor -%}
+{% endfor %}
 
-{% for sync_group in sync_groups -%}
+{% for sync_group in sync_groups %}
 vrrp_sync_group {{ sync_group.name }} {
        group {
-            {% for member in sync_group.members -%}
+            {% for member in sync_group.members %}
                 {{ member }}
-            {% endfor -%}
+            {% endfor %}
         }
 
-        {% if sync_group.conntrack_sync -%}
+        {% if sync_group.conntrack_sync %}
             notify_master "/opt/vyatta/sbin/vyatta-vrrp-conntracksync.sh master {{ sync_group.name }}"
             notify_backup "/opt/vyatta/sbin/vyatta-vrrp-conntracksync.sh backup {{ sync_group.name }}"
             notify_fault "/opt/vyatta/sbin/vyatta-vrrp-conntracksync.sh fault {{ sync_group.name }}"
-        {% endif -%}
+        {% endif %}
 }
 
-{% endfor -%}
+{% endfor %}

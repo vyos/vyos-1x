@@ -108,7 +108,7 @@ interface=re:{{ interface.name }}\.\d+
 
 {% if service_name %}
 service-name={{ service_name | join(',') }}
-{% endif -%}
+{% endif %}
 
 {% if pado_delay %}
 pado-delay={{ pado_delay }}

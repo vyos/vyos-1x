@@ -26,14 +26,14 @@ OUT_TMPL_SRC="""
 rule      pkts        bytes   interface
 ----      ----        -----   ---------
 {% for r in output %}
-{%- if r.comment -%}
-{%- set packets   = r.counter.packets -%}
-{%- set bytes     = r.counter.bytes -%}
-{%- set interface = r.interface -%}
+{% if r.comment %}
+{% set packets   = r.counter.packets %}
+{% set bytes     = r.counter.bytes %}
+{% set interface = r.interface %}
 {# remove rule comment prefix #}
-{%- set comment   = r.comment | replace('SRC-NAT-', '') | replace('DST-NAT-', '') | replace(' tcp_udp', '') -%}
+{% set comment   = r.comment | replace('SRC-NAT-', '') | replace('DST-NAT-', '') | replace(' tcp_udp', '') %}
 {{ "%-4s" | format(comment) }} {{ "%9s" | format(packets) }} {{ "%12s" | format(bytes) }}   {{ interface }}
-{%- endif %}
+{% endif %}
 {% endfor %}
 """
 

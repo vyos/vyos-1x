@@ -53,12 +53,12 @@ mru {{ mtu }}
 
 {{ "usepeerdns" if no_peer_dns is not defined }}
 
-{% if ipv6 is defined and ipv6.enable is defined -%}
+{% if ipv6 is defined and ipv6.enable is defined %}
 +ipv6
 ipv6cp-use-ipaddr
 {% endif %}
 
-{% if service_name is defined -%}
+{% if service_name is defined %}
 rp_pppoe_service "{{ service_name }}"
 {% endif %}
 
@@ -67,9 +67,9 @@ demand
 # See T2249. PPP default route options should only be set when in on-demand
 # mode. As soon as we are not in on-demand mode the default-route handling is
 # passed to the ip-up.d/ip-down.s scripts which is required for VRF support.
-{%   if 'auto' in default_route -%}
+{%   if 'auto' in default_route %}
 defaultroute
-{%   elif 'force' in default_route -%}
+{%   elif 'force' in default_route %}
 defaultroute
 replacedefaultroute
 {%   endif %}

@@ -149,13 +149,13 @@ add rule ip raw NAT_CONNTRACK counter accept
 #
 # Destination NAT rules build up here
 #
-{% for rule in destination if not rule.disabled -%}
+{% for rule in destination if not rule.disabled %}
 {{ nat_rule(rule, 'PREROUTING') }}
 {% endfor %}
 
 #
 # Source NAT rules build up here
 #
-{% for rule in source if not rule.disabled -%}
+{% for rule in source if not rule.disabled %}
 {{ nat_rule(rule, 'POSTROUTING') }}
 {% endfor %}
