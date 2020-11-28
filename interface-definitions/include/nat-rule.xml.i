@@ -290,6 +290,7 @@
           <validator name="ip-protocol"/>
         </constraint>
       </properties>
+      <defaultValue>all</defaultValue>
     </leafNode>
     <node name="source">
       <properties>

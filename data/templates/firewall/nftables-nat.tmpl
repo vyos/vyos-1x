@@ -1,11 +1,110 @@
 #!/usr/sbin/nft -f
 
+{% macro nat_rule(rule, config, chain) %}
+{%   set comment  = "" %}
+{%   set base_log = "" %}
+{%   set src_addr  = "ip saddr " + config.source.address if config.source is defined and config.source.address is defined and config.source.address is not none %}
+{%   set dst_addr  = "ip daddr " + config.destination.address if config.destination is defined and config.destination.address is defined and config.destination.address is not none %}
+{#   negated port groups need special treatment, move != in front of { } group #}
+{%   if config.source is defined and config.source.port is defined and config.source.port is not none and config.source.port.startswith('!=') %}
+{%     set src_port  = "sport != { " + config.source.port.replace('!=','') +" }" %}
+{%   else %}
+{%     set src_port  = "sport { " + config.source.port +" }" if config.source is defined and config.source.port is defined and config.source.port is not none %}
+{%   endif %}
+{#   negated port groups need special treatment, move != in front of { } group #}
+{%   if config.destination is defined and config.destination.port is defined and config.destination.port is not none and config.destination.port.startswith('!=') %}
+{%     set dst_port  = "dport != { " + config.destination.port.replace('!=','') +" }" %}
+{%   else %}
+{%     set dst_port  = "dport { " + config.destination.port +" }" if config.destination is defined and config.destination.port is defined and config.destination.port is not none %}
+{%   endif %}
+{%   if chain == "PREROUTING" %}
+{%     set comment   = "DST-NAT-" + rule %}
+{%     set base_log  = "[NAT-DST-" + rule %}
+{%     set interface = " iifname \"" + config.inbound_interface + "\"" if config.inbound_interface is defined and config.inbound_interface != 'any' else '' %}
+{%     set trns_addr = "dnat to " + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
+{%   elif chain == "POSTROUTING" %}
+{%     set comment   = "SRC-NAT-" + rule %}
+{%     set base_log  = "[NAT-SRC-" + rule %}
+{%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined and config.outbound_interface != 'any' else '' %}
+{%     if config.translation is defined and config.translation.address is defined and config.translation.address == 'masquerade' %}
+{%       set trns_addr = config.translation.address %}
+{%       if config.translation.port is defined and config.translation.port is not none %}
+{%         set trns_addr = trns_addr + " to " %}
+{%       endif %}
+{%     else %}
+{%       set trns_addr = "snat to " + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
+{%     endif %}
+{%   endif %}
+{%   set trns_port = ":" + config.translation.port if config.translation is defined and config.translation.port is defined and config.translation.port is not none %}
+{#   protocol has a default value thus it is always present #}
+{%   if config.protocol == "tcp_udp" %}
+{%     set protocol  = "tcp" %}
+{%     set comment   = comment + " tcp_udp" %}
+{%   else %}
+{%     set protocol  = config.protocol %}
+{%   endif %}
+{%   if config.log is defined %}
+{%     if config.exclude is defined %}
+{%       set log = base_log + "-EXCL]" %}
+{%     elif config.translation is defined and config.translation.address is defined and config.translation.address == 'masquerade' %}
+{%       set log = base_log + "-MASQ]" %}
+{%     else %}
+{%       set log = base_log + "]" %}
+{%     endif %}
+{%   endif %}
+{%   if config.exclude is defined %}
+{#     rule has been marked as "exclude" thus we simply return here #}
+{%     set trns_addr = "return" %}
+{%     set trns_port = "" %}
+{%   endif %}
+{%   set output = "add rule ip nat " + chain + interface %}
+{%   if protocol != "all" %}
+{%     set output = output + " ip protocol " + protocol %}
+{%   endif %}
+{%   if src_addr %}
+{%     set output = output + " " + src_addr %}
+{%   endif %}
+{%   if src_port %}
+{%     set output = output + " " + protocol + " " + src_port %}
+{%   endif %}
+{%   if dst_addr %}
+{%     set output = output + " " + dst_addr %}
+{%   endif %}
+{%   if dst_port %}
+{%     set output = output + " " + protocol + " " + dst_port %}
+{%   endif %}
+{#   Count packets #}
+{%     set output = output + " counter" %}
+{#   Special handling of log option, we must repeat the entire rule before the #}
+{#   NAT translation options are added, this is essential                      #}
+{%   if log %}
+{%     set log_output = output + " log prefix \"" + log + "\" comment \"" + comment + "\"" %}
+{%   endif %}
+{%   if trns_addr %}
+{%     set output = output + " " + trns_addr %}
+{%   endif %}
+{%   if trns_port %}
+{#     Do not add a whitespace here, translation port must be directly added after IP address #}
+{#     e.g. 192.0.2.10:3389                                                                   #}
+{%     set output = output + trns_port %}
+{%   endif %}
+{%   if comment %}
+{%     set output = output + " comment \"" + comment + "\"" %}
+{%   endif %}
+{{ log_output if log_output }}
+{{ output }}
+{#   Special handling if protocol is tcp_udp, we must repeat the entire rule with udp as protocol #}
+{%   if config.protocol == "tcp_udp" %}
+{#     Beware of trailing whitespace, without it the comment tcp_udp will be changed to udp_udp   #}
+{{ log_output | replace("tcp ", "udp ") if log_output }}
+{{ output | replace("tcp ", "udp ") }}
+{%   endif %}
+{% endmacro %}
+
 # Start with clean NAT table
 flush table nat
-
 {% if helper_functions == 'remove' %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
-
 {%   set base_command = "delete rule ip raw" %}
 {{ base_command }} PREROUTING handle {{ pre_ct_ignore }}
 {{ base_command }} OUTPUT     handle {{ out_ct_ignore }}
@@ -18,144 +117,27 @@ delete chain ip raw NAT_CONNTRACK
 {# NAT if enabled - add targets to nftables #}
 add chain ip raw NAT_CONNTRACK
 add rule ip raw NAT_CONNTRACK counter accept
-
 {%   set base_command = "add rule ip raw" %}
-
 {{ base_command }} PREROUTING position {{ pre_ct_ignore }}    counter jump VYATTA_CT_HELPER
 {{ base_command }} OUTPUT     position {{ out_ct_ignore }}    counter jump VYATTA_CT_HELPER
 {{ base_command }} PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
 {{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}
 
-{% macro nat_rule(rule, chain) %}
-{%   set comment  = "" %}
-{%   set base_log = "" %}
-
-{%   set src_addr  = "ip saddr " + rule.source_address if rule.source_address %}
-{%   set dst_addr  = "ip daddr " + rule.dest_address if rule.dest_address %}
-
-{#   negated port groups need special treatment, move != in front of { } group #}
-{%   if rule.source_port.startswith('!=') %}
-{%     set src_port  = "sport != { " + rule.source_port.replace('!=','') +" }" if rule.source_port %}
-{%   else %}
-{%     set src_port  = "sport { " + rule.source_port +" }" if rule.source_port %}
-{%   endif %}
-
-{#   negated port groups need special treatment, move != in front of { } group #}
-{%   if rule.dest_port.startswith('!=') %}
-{%     set dst_port  = "dport != { " + rule.dest_port.replace('!=','') +" }" if rule.dest_port %}
-{%   else %}
-{%     set dst_port  = "dport { " + rule.dest_port +" }" if rule.dest_port %}
-{%   endif %}
-
-{%   if chain == "PREROUTING" %}
-{%     set comment   = "DST-NAT-" + rule.number %}
-{%     set base_log  = "[NAT-DST-" + rule.number %}
-{%     set interface = " iifname \"" + rule.interface_in + "\"" if rule.interface_in is defined and rule.interface_in != 'any' else '' %}
-{%     set trns_addr = "dnat to " + rule.translation_address %}
-
-{%   elif chain == "POSTROUTING" %}
-{%     set comment   = "SRC-NAT-" + rule.number %}
-{%     set base_log  = "[NAT-SRC-" + rule.number %}
-{%     set interface = " oifname \"" + rule.interface_out + "\"" if rule.interface_out is defined and rule.interface_out != 'any' else '' %}
-{%     if rule.translation_address == 'masquerade' %}
-{%       set trns_addr = rule.translation_address %}
-{%       if rule.translation_port %}
-{%         set trns_addr = trns_addr + " to " %}
-{%       endif %}
-{%     else %}
-{%       set trns_addr = "snat to " + rule.translation_address %}
-{%     endif %}
-{%   endif %}
-{%   set trns_port = ":" + rule.translation_port if rule.translation_port %}
-
-{%   if rule.protocol == "tcp_udp" %}
-{%     set protocol  = "tcp" %}
-{%     set comment   = comment + " tcp_udp" %}
-{%   else %}
-{%     set protocol  = rule.protocol %}
-{%   endif %}
-
-{%   if rule.log %}
-{%     if rule.exclude %}
-{%       set log = base_log + "-EXCL]" %}
-{%     elif rule.translation_address == 'masquerade' %}
-{%       set log = base_log + "-MASQ]" %}
-{%     else %}
-{%       set log = base_log + "]" %}
-{%     endif %}
-{%   endif %}
-
-{%   if rule.exclude %}
-{#     rule has been marked as "exclude" thus we simply return here #}
-{%     set trns_addr = "return" %}
-{%     set trns_port = "" %}
-{%   endif %}
-
-{%   set output = "add rule ip nat " + chain + interface %}
-
-{%   if protocol != "all" %}
-{%     set output = output + " ip protocol " + protocol %}
-{%   endif %}
-
-{%   if src_addr %}
-{%     set output = output + " " + src_addr %}
-{%   endif %}
-{%   if src_port %}
-{%     set output = output + " " + protocol + " " + src_port %}
-{%   endif %}
-
-{%   if dst_addr %}
-{%     set output = output + " " + dst_addr %}
-{%   endif %}
-{%   if dst_port %}
-{%     set output = output + " " + protocol + " " + dst_port %}
-{%   endif %}
-
-{#   Count packets #}
-{%     set output = output + " counter" %}
-
-{#   Special handling of log option, we must repeat the entire rule before the #}
-{#   NAT translation options are added, this is essential                      #}
-{%   if log %}
-{%     set log_output = output + " log prefix \"" + log + "\" comment \"" + comment + "\"" %}
-{%   endif %}
-
-{%   if trns_addr %}
-{%     set output = output + " " + trns_addr %}
-{%   endif %}
-
-{%   if trns_port %}
-{#     Do not add a whitespace here, translation port must be directly added after IP address #}
-{#     e.g. 192.0.2.10:3389                                                                   #}
-{%     set output = output + trns_port %}
-{%   endif %}
-
-{%   if comment %}
-{%     set output = output + " comment \"" + comment + "\"" %}
-{%   endif %}
-
-{{ log_output if log_output }}
-{{ output }}
-
-{#   Special handling if protocol is tcp_udp, we must repeat the entire rule with udp as protocol #}
-{%   if rule.protocol == "tcp_udp" %}
-{#     Beware of trailing whitespace, without it the comment tcp_udp will be changed to udp_udp   #}
-{{ log_output | replace("tcp ", "udp ") if log_output }}
-{{ output | replace("tcp ", "udp ") }}
-{%   endif %}
-{% endmacro %}
-
 #
 # Destination NAT rules build up here
 #
-{% for rule in destination if not rule.disabled %}
-{{ nat_rule(rule, 'PREROUTING') }}
-{% endfor %}
+{% if destination is defined and destination.rule is defined and destination.rule is not none %}
+{%   for rule, config in destination.rule.items() if config.disable is not defined %}
+{{ nat_rule(rule, config, 'PREROUTING') }}
+{%   endfor %}
+{% endif %}
 
 #
 # Source NAT rules build up here
 #
-{% for rule in source if not rule.disabled %}
-{{ nat_rule(rule, 'POSTROUTING') }}
-{% endfor %}
+{% if source is defined and source.rule is defined and source.rule is not none %}
+{%   for rule, config in source.rule.items() if config.disable is not defined %}
+{{ nat_rule(rule, config, 'POSTROUTING') }}
+{%   endfor %}
+{% endif %}
