@@ -20,9 +20,11 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.validate import is_ipv6_link_local
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -54,9 +56,24 @@ def verify(relay):
 
     if 'upstream_interface' not in relay:
         raise ConfigError('At least one upstream interface required!')
+    for interface, config in relay['upstream_interface'].items():
+        if 'address' not in config:
+            raise ConfigError('DHCPv6 server required for upstream ' \
+                              f'interface {interface}!')
 
     if 'listen_interface' not in relay:
         raise ConfigError('At least one listen interface required!')
+
+    # DHCPv6 relay requires at least one global unicat address assigned to the
+    # interface
+    for interface in relay['listen_interface']:
+        has_global = False
+        for addr in Interface(interface).get_addr():
+            if not is_ipv6_link_local(addr.split('/')[0]):
+                has_global = True
+        if not has_global:
+            raise ConfigError(f'Interface {interface} does not have global '\
+                              'IPv6 address assigned!')
 
     return None
 

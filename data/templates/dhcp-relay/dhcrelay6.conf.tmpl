@@ -10,7 +10,11 @@
 {# listen_interface is mandatory so it's always present #}
 {% set listen = namespace(value='')  %}
 {% for interface, config in listen_interface.items() %}
-{%   set listen.value = listen.value + '-l ' + config.address + '%' + interface + ' ' %}
+{%   if config.address is defined and config.address is not none %}
+{%     set listen.value = listen.value + '-l ' + config.address + '%' + interface + ' ' %}
+{%   else %}
+{%     set listen.value = listen.value + '-l ' + interface + ' ' %}
+{%   endif %}
 {% endfor %}
 
 OPTIONS="{{ listen.value }} {{ upstream.value }} -c {{ max_hop_count }} {{ '-I' if use_interface_id_option is defined }}"
