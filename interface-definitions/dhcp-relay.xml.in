@@ -35,6 +35,7 @@
                   </constraint>
                   <constraintErrorMessage>hop-count must be a value between 1 and 255</constraintErrorMessage>
                 </properties>
+                <defaultValue>10</defaultValue>
               </leafNode>
               <leafNode name="max-size">
                 <properties>
@@ -72,9 +73,10 @@
                     <description>discard packet (default action if giaddr not set in packet)</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(append|replace|forward|discard)</regex>
+                    <regex>^(append|replace|forward|discard)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>forward</defaultValue>
               </leafNode>
             </children>
           </node>

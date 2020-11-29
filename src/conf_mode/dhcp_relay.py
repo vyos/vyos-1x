@@ -19,81 +19,43 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
+from vyos.util import dict_search
+from vyos.xml import defaults
 from vyos import ConfigError
-
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/run/dhcp-relay/dhcp.conf'
-
-default_config_data = {
-    'interface': [],
-    'server': [],
-    'options': [],
-    'hop_count': '10',
-    'relay_agent_packets': 'forward'
-}
+config_file = r'/run/dhcp-relay/dhcrelay.conf'
 
 def get_config(config=None):
-    relay = default_config_data
     if config:
         conf = config
     else:
         conf = Config()
-    if not conf.exists(['service', 'dhcp-relay']):
+    base = ['service', 'dhcp-relay']
+    if not conf.exists(base):
         return None
-    else:
-        conf.set_level(['service', 'dhcp-relay'])
 
-    # Network interfaces to listen on
-    if conf.exists(['interface']):
-        relay['interface'] = conf.return_values(['interface'])
-
-    # Servers equal to the address of the DHCP server(s)
-    if conf.exists(['server']):
-        relay['server'] = conf.return_values(['server'])
-
-    conf.set_level(['service', 'dhcp-relay', 'relay-options'])
-
-    if conf.exists(['hop-count']):
-        count = '-c ' + conf.return_value(['hop-count'])
-        relay['options'].append(count)
-
-    # Specify the maximum packet size to send to a DHCPv4/BOOTP server.
-    # This might be done to allow sufficient space for addition of relay agent
-    # options while still fitting into the Ethernet MTU size.
-    #
-    # Available in DHCPv4 mode only:
-    if conf.exists(['max-size']):
-        size = '-A ' + conf.return_value(['max-size'])
-        relay['options'].append(size)
-
-    # Control the handling of incoming DHCPv4 packets which already contain
-    # relay agent options. If such a packet does not have giaddr set in its
-    # header, the DHCP standard requires that the packet be discarded. However,
-    # if giaddr is set, the relay agent may handle the situation in four ways:
-    # It may append its own set of relay options to the packet, leaving the
-    # supplied option field intact; it may replace the existing agent option
-    # field; it may forward the packet unchanged; or, it may discard it.
-    #
-    # Available in DHCPv4 mode only:
-    if conf.exists(['relay-agents-packets']):
-        pkt = '-a -m ' + conf.return_value(['relay-agents-packets'])
-        relay['options'].append(pkt)
+    relay = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    relay = dict_merge(default_values, relay)
 
     return relay
 
 def verify(relay):
     # bail out early - looks like removal from running config
-    if relay is None:
+    if not relay:
         return None
 
-    if 'lo' in relay['interface']:
+    if 'lo' in (dict_search('interface', relay) or []):
         raise ConfigError('DHCP relay does not support the loopback interface.')
 
-    if len(relay['server']) == 0:
+    if 'server' not in relay :
         raise ConfigError('No DHCP relay server(s) configured.\n' \
                           'At least one DHCP relay server required.')
 
@@ -104,17 +66,18 @@ def generate(relay):
     if not relay:
         return None
 
-    render(config_file, 'dhcp-relay/config.tmpl', relay)
+    render(config_file, 'dhcp-relay/dhcrelay.conf.tmpl', relay)
     return None
 
 def apply(relay):
-    if relay:
-        call('systemctl restart isc-dhcp-relay.service')
-    else:
-        # DHCP relay support is removed in the commit
+    # bail out early - looks like removal from running config
+    if not relay:
         call('systemctl stop isc-dhcp-relay.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
+        return None
+
+    call('systemctl restart isc-dhcp-relay.service')
 
     return None
 
