@@ -43,6 +43,7 @@
               </constraint>
               <constraintErrorMessage>max-hop-count must be a value between 1 and 255</constraintErrorMessage>
             </properties>
+            <defaultValue>10</defaultValue>
           </leafNode>
           <tagNode name="upstream-interface">
             <properties>

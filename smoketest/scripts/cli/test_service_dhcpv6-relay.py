@@ -27,7 +27,7 @@ from vyos.util import process_named_running
 from vyos.util import read_file
 
 PROCESS_NAME = 'dhcrelay'
-RELAY_CONF = '/run/dhcp-relay/dhcpv6.conf'
+RELAY_CONF = '/run/dhcp-relay/dhcrelay6.conf'
 base_path = ['service', 'dhcpv6-relay']
 
 upstream_if = 'eth0'

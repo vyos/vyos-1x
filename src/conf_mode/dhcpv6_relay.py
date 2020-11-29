@@ -17,90 +17,67 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
+from vyos.configdict import dict_merge
 from vyos.template import render
-
+from vyos.util import call
+from vyos.util import dict_search
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = '/run/dhcp-relay/dhcpv6.conf'
-
-default_config_data = {
-    'listen_addr': [],
-    'upstream_addr': [],
-    'options': [],
-}
+config_file = '/run/dhcp-relay/dhcrelay6.conf'
 
 def get_config(config=None):
-    relay = deepcopy(default_config_data)
     if config:
         conf = config
     else:
         conf = Config()
-    if not conf.exists('service dhcpv6-relay'):
+    base = ['service', 'dhcpv6-relay']
+    if not conf.exists(base):
         return None
-    else:
-        conf.set_level('service dhcpv6-relay')
 
-    # Network interfaces/address to listen on for DHCPv6 query(s)
-    if conf.exists('listen-interface'):
-        interfaces = conf.list_nodes('listen-interface')
-        for intf in interfaces:
-            if conf.exists('listen-interface {0} address'.format(intf)):
-                addr = conf.return_value('listen-interface {0} address'.format(intf))
-                listen = addr + '%' + intf
-                relay['listen_addr'].append(listen)
-
-    # Upstream interface/address for remote DHCPv6 server
-    if conf.exists('upstream-interface'):
-        interfaces = conf.list_nodes('upstream-interface')
-        for intf in interfaces:
-            addresses = conf.return_values('upstream-interface {0} address'.format(intf))
-            for addr in addresses:
-                server = addr + '%' + intf
-                relay['upstream_addr'].append(server)
-
-    # Maximum hop count. When forwarding packets, dhcrelay discards packets
-    # which have reached a hop count of COUNT. Default is 10. Maximum is 255.
-    if conf.exists('max-hop-count'):
-        count = '-c ' + conf.return_value('max-hop-count')
-        relay['options'].append(count)
-
-    if conf.exists('use-interface-id-option'):
-        relay['options'].append('-I')
+    relay = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    relay = dict_merge(default_values, relay)
 
     return relay
 
 def verify(relay):
     # bail out early - looks like removal from running config
-    if relay is None:
+    if not relay:
         return None
 
-    if len(relay['listen_addr']) == 0 or len(relay['upstream_addr']) == 0:
-        raise ConfigError('Must set at least one listen and upstream interface addresses.')
+    if 'upstream_interface' not in relay:
+        raise ConfigError('At least one upstream interface required!')
+
+    if 'listen_interface' not in relay:
+        raise ConfigError('At least one listen interface required!')
 
     return None
 
 def generate(relay):
     # bail out early - looks like removal from running config
-    if relay is None:
+    if not relay:
         return None
 
-    render(config_file, 'dhcpv6-relay/config.tmpl', relay)
+    render(config_file, 'dhcp-relay/dhcrelay6.conf.tmpl', relay)
     return None
 
 def apply(relay):
-    if relay is not None:
-        call('systemctl restart isc-dhcp-relay6.service')
-    else:
+    # bail out early - looks like removal from running config
+    if not relay:
         # DHCPv6 relay support is removed in the commit
         call('systemctl stop isc-dhcp-relay6.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
+        return None
+
+    call('systemctl restart isc-dhcp-relay6.service')
 
     return None
 
