@@ -51,10 +51,14 @@ class TestSystemNTP(unittest.TestCase):
         """ Test basic NTP support with multiple servers and their options """
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['noselect', 'preempt', 'prefer']
+        ntp_pool = 'pool.vyos.io'
 
         for server in servers:
             for option in options:
                 self.session.set(base_path + ['server', server, option])
+
+        # Test NTP pool
+        self.session.set(base_path + ['server', ntp_pool, 'pool'])
 
         # commit changes
         self.session.commit()
@@ -64,6 +68,9 @@ class TestSystemNTP(unittest.TestCase):
         for server in servers:
             test = f'{server} iburst ' + ' '.join(options)
             self.assertTrue(test in tmp)
+
+        tmp = get_config_value('pool')
+        self.assertTrue(f'{ntp_pool} iburst' in tmp)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

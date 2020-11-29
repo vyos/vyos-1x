@@ -20,6 +20,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="pool">
+                <properties>
+                  <help>Associate with a number of remote servers</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="preempt">
                 <properties>
                   <help>Specifies the association as preemptable rather than the default persistent</help>
