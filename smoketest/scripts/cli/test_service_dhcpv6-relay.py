@@ -59,9 +59,19 @@ class TestServiceDHCPv6Relay(unittest.TestCase):
         dhcpv6_server = '2001:db8::ffff'
         hop_count = '20'
 
-        self.session.set(base_path + ['upstream-interface', upstream_if, 'address', dhcpv6_server])
         self.session.set(base_path + ['use-interface-id-option'])
         self.session.set(base_path + ['max-hop-count', hop_count])
+
+        # check validate() - Must set at least one listen and upstream
+        # interface addresses.
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(base_path + ['upstream-interface', upstream_if, 'address', dhcpv6_server])
+
+        # check validate() - Must set at least one listen and upstream
+        # interface addresses.
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
 
         # add listener on all ethernet interfaces except the upstream interface
         for tmp in interfaces:
