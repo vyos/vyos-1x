@@ -29,17 +29,9 @@ PROCESS_NAME = 'dhcrelay'
 RELAY_CONF = '/run/dhcp-relay/dhcrelay.conf'
 base_path = ['service', 'dhcp-relay']
 
-def get_config_value(key):
-    tmp = read_file(SSHD_CONF)
-    tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
-    return tmp
-
 class TestServiceDHCPRelay(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        # ensure we can also run this test on a live system - so lets clean
-        # out the current configuration :)
-        self.session.delete(base_path)
 
     def tearDown(self):
         self.session.delete(base_path)

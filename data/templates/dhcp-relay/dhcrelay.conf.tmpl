@@ -2,5 +2,5 @@
 
 {% set max_size = '-A ' + relay_options.max_size if relay_options.max_size is defined and relay_options.max_size is not none %}
 {# hop_count and relay_agents_packets is a default option, thus it is always present #}
-OPTIONS="-4 -c {{ relay_options.hop_count }} -a -m {{ relay_options.relay_agents_packets }} {{ max_size }} -i {{ interface | join(' -i ') }} {{ server | join(' ') }}"
+OPTIONS="-c {{ relay_options.hop_count }} -a -m {{ relay_options.relay_agents_packets }} {{ max_size }} -i {{ interface | join(' -i ') }} {{ server | join(' ') }}"
 
