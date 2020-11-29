@@ -27,7 +27,7 @@ from vyos.template import render
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/run/dhcp-relay/dhcpv6.conf'
+config_file = '/run/dhcp-relay/dhcpv6.conf'
 
 default_config_data = {
     'listen_addr': [],
