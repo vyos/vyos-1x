@@ -26,7 +26,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/run/dhcp-relay/dhcp.conf'
+config_file = r'/run/dhcp-relay/dhcrelay.conf'
 
 default_config_data = {
     'interface': [],
@@ -104,7 +104,7 @@ def generate(relay):
     if not relay:
         return None
 
-    render(config_file, 'dhcp-relay/config.tmpl', relay)
+    render(config_file, 'dhcp-relay/dhcrelay.conf.tmpl', relay)
     return None
 
 def apply(relay):
