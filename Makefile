@@ -85,6 +85,7 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/system/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
+	rm -rf $(TMPL_DIR)/vpn/nipsec
 
 .PHONY: op_mode_definitions
 .ONESHELL:
