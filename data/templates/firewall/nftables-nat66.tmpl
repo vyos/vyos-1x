@@ -1,0 +1,101 @@
+#!/usr/sbin/nft -f
+
+{% macro nptv6_rule(rule,config, chain) %}
+
+{%     set src_prefix  = "ip6 saddr " + config.source.prefix if config.source is defined and config.source.prefix is defined and config.source.prefix is not none  %}
+{%     set dest_address  = "ip6 daddr " + config.destination.address if config.destination is defined and config.destination.address is defined and config.destination.address is not none %}
+
+{%   if chain == "PREROUTING" %}
+{%     set interface = " iifname \"" + config.inbound_interface + "\"" if config.inbound_interface is defined and config.inbound_interface != 'any' else '' %}
+{%     set trns_address = "dnat to " + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
+{%   elif chain == "POSTROUTING" %}
+{%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined and config.outbound_interface != 'any' else '' %}
+{%     set trns_prefix = "snat prefix to " + config.translation.prefix if config.translation is defined and config.translation.prefix is defined and config.translation.prefix is not none %}
+{%   endif %}
+{%   set comment   = "NPT-NAT-" + rule %}
+{%   if rule.log %}
+{%     set base_log = "[NPT-DST-" + rule %}
+{%     set log = base_log + "]" %}
+{%   endif %}
+{%   set output = "add rule ip6 nat " + chain + interface %}
+{#   Count packets #}
+{%     set output = output + " counter" %}
+
+{#   Special handling of log option, we must repeat the entire rule before the #}
+{#   NAT translation options are added, this is essential                      #}
+{%   if log %}
+{%     set log_output = output + " log prefix \"" + log + "\" comment \"" + comment + "\"" %}
+{%   endif %}
+
+{%   if src_prefix %}
+{%     set output = output + " " + src_prefix %}
+{%   endif %}
+
+
+{%   if dest_address %}
+{%     set output = output + " " + dest_address %}
+{%   endif %}
+
+{%   if trns_prefix %}
+{%     set output = output + " " + trns_prefix %}
+{%   endif %}
+
+{%   if trns_address %}
+{%     set output = output + " " + trns_address %}
+{%   endif %}
+
+
+{%   if comment %}
+{%     set output = output + " comment \"" + comment + "\"" %}
+{%   endif %}
+
+{{ log_output if log_output }}
+{{ output }}
+{% endmacro %}
+
+# Start with clean NAT table
+flush table ip6 nat
+
+{% if helper_functions == 'remove' %}
+{# NAT if going to be disabled - remove rules and targets from nftables #}
+
+
+
+{%   set base_command = "delete rule ip6 raw" %}
+
+{{base_command}} PREROUTING handle {{ pre_ct_conntrack }}
+{{base_command}} OUTPUT handle {{ out_ct_conntrack }}
+
+delete chain ip6 raw NAT_CONNTRACK
+
+{% elif helper_functions == 'add' %}
+{# NAT if enabled - add targets to nftables #}
+add chain ip6 raw NAT_CONNTRACK
+add rule ip6 raw NAT_CONNTRACK counter accept
+
+{%   set base_command = "add rule ip6 raw" %}
+
+
+{{ base_command }} PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
+{{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
+
+{% endif %}
+
+#
+# Destination NAT66 rules build up here
+#
+{% if destination is defined and destination.rule is defined and destination.rule is not none %}
+{%   for rule, config in destination.rule.items() if config.disable is not defined %}
+{{ nptv6_rule(rule, config, 'PREROUTING') }}
+{%   endfor %}
+{% endif %}
+
+#
+# Source NAT66 rules build up here
+#
+{% if source is defined and source.rule is defined and source.rule is not none %}
+{%   for rule, config in source.rule.items() if config.disable is not defined %}
+{{ nptv6_rule(rule, config, 'POSTROUTING') }}
+{%   endfor %}
+{% endif %}
+
