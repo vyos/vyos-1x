@@ -55,6 +55,12 @@
                 </properties>
                 <command>ip -s route list $5</command>
               </tagNode>
+              <leafNode name="isis">
+                <properties>
+                  <help>Show IP IS-IS routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show ip route isis"</command>
+              </leafNode>
               <leafNode name="kernel">
                 <properties>
                   <help>Show IP kernel routes</help>
