@@ -93,6 +93,81 @@ class TestServiceDHCPServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_single_pool_options(self):
+        shared_net_name = 'SMOKE-0815'
+
+        range_0_start   = inc_ip(subnet, 10)
+        range_0_stop    = inc_ip(subnet, 20)
+        smtp_server     = '1.2.3.4'
+        time_server     = '4.3.2.1'
+        tftp_server     = 'tftp.vyos.io'
+        search_domain   = 'foo.vyos.net'
+        bootfile_name   = 'vyos'
+        bootfile_server = '192.0.2.1'
+        wpad            = 'http://wpad.vyos.io/foo/bar'
+        server_identifier = bootfile_server
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        # we use the first subnet IP address as default gateway
+        self.session.set(pool + ['default-router', router])
+        self.session.set(pool + ['dns-server', dns_1])
+        self.session.set(pool + ['dns-server', dns_2])
+        self.session.set(pool + ['domain-name', domain_name])
+        self.session.set(pool + ['ip-forwarding'])
+        self.session.set(pool + ['smtp-server', smtp_server])
+        self.session.set(pool + ['pop-server', smtp_server])
+        self.session.set(pool + ['time-server', time_server])
+        self.session.set(pool + ['tftp-server-name', tftp_server])
+        self.session.set(pool + ['domain-search', search_domain])
+        self.session.set(pool + ['bootfile-name', bootfile_name])
+        self.session.set(pool + ['bootfile-server', bootfile_server])
+        self.session.set(pool + ['wpad-url', wpad])
+        self.session.set(pool + ['server-identifier', server_identifier])
+
+        self.session.set(pool + ['static-route', 'destination-subnet', '10.0.0.0/24'])
+        self.session.set(pool + ['static-route', 'router', '192.0.2.1'])
+
+
+        # check validate() - No DHCP address range or active static-mapping set
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(pool + ['range', '0', 'start', range_0_start])
+        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(DHCPD_CONF)
+        network = address_from_cidr(subnet)
+        netmask = netmask_from_cidr(subnet)
+        self.assertIn(f'ddns-update-style none;', config)
+        self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
+        self.assertIn(f'option domain-name-servers {dns_1}, {dns_2};', config)
+        self.assertIn(f'option routers {router};', config)
+        self.assertIn(f'option domain-name "{domain_name}";', config)
+        self.assertIn(f'option domain-search "{search_domain}";', config)
+        self.assertIn(f'option ip-forwarding true;', config)
+        self.assertIn(f'option smtp-server {smtp_server};', config)
+        self.assertIn(f'option pop-server {smtp_server};', config)
+        self.assertIn(f'option time-servers {time_server};', config)
+        self.assertIn(f'option wpad-url "{wpad}";', config)
+        self.assertIn(f'option dhcp-server-identifier {server_identifier};', config)
+        self.assertIn(f'option tftp-server-name "{tftp_server}";', config)
+        self.assertIn(f'option bootfile-name "{bootfile_name}";', config)
+        self.assertIn(f'filename "{bootfile_name}";', config)
+        self.assertIn(f'next-server {bootfile_server};', config)
+        self.assertIn(f'default-lease-time 86400;', config)
+        self.assertIn(f'max-lease-time 86400;', config)
+        self.assertIn(f'range {range_0_start} {range_0_stop};', config)
+        self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+
+        # weird syntax for those static routes
+        self.assertIn(f'option rfc3442-static-route 24,10,0,0,192,0,2,1, 0,192,0,2,1;', config)
+        self.assertIn(f'option windows-static-route 24,10,0,0,192,0,2,1;', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
     def test_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
 
