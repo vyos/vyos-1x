@@ -32,6 +32,9 @@ DHCPD_CONF = '/run/dhcp-server/dhcpd.conf'
 base_path = ['service', 'dhcp-server']
 subnet = '192.0.2.0/25'
 router = inc_ip(subnet, 1)
+dns_1 = inc_ip(subnet, 2)
+dns_2 = inc_ip(subnet, 3)
+domain_name = 'vyos.net'
 
 class TestServiceDHCPServer(unittest.TestCase):
     def setUp(self):
@@ -48,13 +51,12 @@ class TestServiceDHCPServer(unittest.TestCase):
     def test_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
 
-        dns_1 = inc_ip(subnet, 2)
-        dns_2 = inc_ip(subnet, 3)
-        domain_name = 'vyos.net'
         range_0_start = inc_ip(subnet, 10)
         range_0_stop  = inc_ip(subnet, 20)
         range_1_start = inc_ip(subnet, 40)
         range_1_stop  = inc_ip(subnet, 50)
+
+        self.session.set(base_path + ['dynamic-dns-update'])
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
@@ -77,7 +79,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         config = read_file(DHCPD_CONF)
         network = address_from_cidr(subnet)
         netmask = netmask_from_cidr(subnet)
-        self.assertIn(f'ddns-update-style none;', config)
+        self.assertIn(f'ddns-update-style interim;', config)
         self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
         self.assertIn(f'option domain-name-servers {dns_1}, {dns_2};', config)
         self.assertIn(f'option routers {router};', config)
@@ -93,10 +95,6 @@ class TestServiceDHCPServer(unittest.TestCase):
 
     def test_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
-
-        dns_1 = inc_ip(subnet, 2)
-        dns_2 = inc_ip(subnet, 3)
-        domain_name = 'vyos.net'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
@@ -140,6 +138,80 @@ class TestServiceDHCPServer(unittest.TestCase):
             client_base += 1
 
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_multi_pools(self):
+        lease_time = '14400'
+
+        for network in ['0', '1', '2', '3']:
+            shared_net_name = f'VyOS-SMOKETEST-{network}'
+            subnet = f'192.0.{network}.0/24'
+            router = inc_ip(subnet, 1)
+            dns_1 = inc_ip(subnet, 2)
+
+            range_0_start = inc_ip(subnet, 10)
+            range_0_stop  = inc_ip(subnet, 20)
+            range_1_start = inc_ip(subnet, 30)
+            range_1_stop  = inc_ip(subnet, 40)
+
+            pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+            # we use the first subnet IP address as default gateway
+            self.session.set(pool + ['default-router', router])
+            self.session.set(pool + ['dns-server', dns_1])
+            self.session.set(pool + ['domain-name', domain_name])
+            self.session.set(pool + ['lease', lease_time])
+
+            self.session.set(pool + ['range', '0', 'start', range_0_start])
+            self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+            self.session.set(pool + ['range', '1', 'start', range_1_start])
+            self.session.set(pool + ['range', '1', 'stop', range_1_stop])
+
+            client_base = 60
+            for client in ['client1', 'client2', 'client3', 'client4']:
+                mac = '02:50:00:00:00:{}'.format(client_base)
+                self.session.set(pool + ['static-mapping', client, 'mac-address', mac])
+                self.session.set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
+                client_base += 1
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(DHCPD_CONF)
+        for network in ['0', '1', '2', '3']:
+            shared_net_name = f'VyOS-SMOKETEST-{network}'
+            subnet = f'192.0.{network}.0/24'
+            router = inc_ip(subnet, 1)
+            dns_1 = inc_ip(subnet, 2)
+
+            range_0_start = inc_ip(subnet, 10)
+            range_0_stop  = inc_ip(subnet, 20)
+            range_1_start = inc_ip(subnet, 30)
+            range_1_stop  = inc_ip(subnet, 40)
+
+            network = address_from_cidr(subnet)
+            netmask = netmask_from_cidr(subnet)
+
+            self.assertIn(f'ddns-update-style none;', config)
+            self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
+            self.assertIn(f'option domain-name-servers {dns_1};', config)
+            self.assertIn(f'option routers {router};', config)
+            self.assertIn(f'option domain-name "{domain_name}";', config)
+            self.assertIn(f'default-lease-time {lease_time};', config)
+            self.assertIn(f'max-lease-time {lease_time};', config)
+            self.assertIn(f'range {range_0_start} {range_0_stop};', config)
+            self.assertIn(f'range {range_1_start} {range_1_stop};', config)
+            self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+
+            client_base = 60
+            for client in ['client1', 'client2', 'client3', 'client4']:
+                mac = '02:50:00:00:00:{}'.format(client_base)
+                ip = inc_ip(subnet, client_base)
+                self.assertIn(f'host {shared_net_name}_{client}' + ' {', config)
+                self.assertIn(f'fixed-address {ip};', config)
+                self.assertIn(f'hardware ethernet {mac};', config)
+                client_base += 1
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
