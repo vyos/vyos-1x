@@ -5,7 +5,7 @@
 #
 # log-facility local7;
 
-{% if hostfile_update %}
+{% if hostfile_update is defined %}
 on release {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
     set ClientIp = binary-to-ascii(10, 8, ".",leased-address);
@@ -23,170 +23,187 @@ on expiry {
 }
 {% endif %}
 
-{% if host_decl_name %}
-use-host-decl-names on;
-{% endif %}
+{{ 'use-host-decl-names on;' if host_decl_name is defined }}
+ddns-update-style {{ 'interim' if dynamic_dns_update is defined else 'none' }};
 
-ddns-update-style {{ 'interim' if ddns_enable else 'none' }};
-{% if static_route %}
 option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
-{% endif %}
-{% if wpad %}
 option wpad-url code 252 = text;
-{% endif %}
 
-{% if global_parameters %}
-# The following {{ global_parameters | length }} line(s) were added as global-parameters in the CLI and have not been validated
-{%   for param in global_parameters %}
-{{ param }}
+{% if global_parameters is defined and global_parameters is not none %}
+# The following {{ global_parameters | length }} line(s) have been added as
+# global-parameters in the CLI and have not been validated !!!
+{%   for parameter in global_parameters %}
+{{ parameter }}
 {%   endfor %}
-{% endif %}
 
+{% endif %}
 # Failover configuration
-{% for network in shared_network %}
-{%   if not network.disabled %}
-{%     for subnet in network.subnet %}
-{%       if subnet.failover_name %}
-failover peer "{{ subnet.failover_name }}" {
-{%         if subnet.failover_status == 'primary' %}
+{% if shared_network_name is defined and shared_network_name is not none %}
+{%   for network, network_config in shared_network_name.items() if network_config.disable is not defined %}
+{%     if network_config.subnet is defined and network_config.subnet is not none %}
+{%       for subnet, subnet_config in network_config.subnet.items() %}
+{%         if subnet_config.failover is defined and subnet_config.failover is defined and subnet_config.failover.name is defined and subnet_config.failover.name is not none %}
+failover peer "{{ subnet_config.failover.name }}" {
+{%           if subnet_config.failover.status == 'primary' %}
     primary;
     mclt 1800;
     split 128;
-{%         elif subnet.failover_status == 'secondary' %}
+{%           elif subnet_config.failover.status == 'secondary' %}
     secondary;
-{%         endif %}
-    address {{ subnet.failover_local_addr }};
+{%           endif %}
+    address {{ subnet_config.failover.local_address }};
     port 520;
-    peer address {{ subnet.failover_peer_addr }};
+    peer address {{ subnet_config.failover.peer_address }};
     peer port 520;
     max-response-delay 30;
     max-unacked-updates 10;
     load balance max seconds 3;
 }
-{%       endif %}
-{%     endfor %}
-{%   endif %}
-{% endfor %}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
 
 # Shared network configration(s)
-{% for network in shared_network if not network.disabled %}
-shared-network {{ network.name }} {
-{%   if network.authoritative %}
+{% if shared_network_name is defined and shared_network_name is not none %}
+{%   for network, network_config in shared_network_name.items() if network_config.disable is not defined %}
+shared-network {{ network | replace('_','-') }} {
+{%     if network_config.authoritative is defined %}
     authoritative;
-{%   endif %}
-{%   if network.network_parameters %}
-    # The following {{ network.network_parameters | length }} line(s) were added as shared-network-parameters in the CLI and have not been validated
-{%     for param in network.network_parameters %}
-    {{ param }}
-{%     endfor %}
-{%   endif %}
-{%   for subnet in network.subnet %}
-    subnet {{ subnet.address }} netmask {{ subnet.netmask }} {
-{%     if subnet.dns_server %}
-        option domain-name-servers {{ subnet.dns_server | join(', ') }};
 {%     endif %}
-{%     if subnet.domain_search %}
-        option domain-search {{ subnet.domain_search | join(', ') }};
+{%     if network_config.shared_network_parameters is defined and network_config.shared_network_parameters is not none %}
+    # The following {{ network_config.shared_network_parameters | length }} line(s)
+    # were added as shared-network-parameters in the CLI and have not been validated
+{%       for parameter in network_config.shared_network_parameters %}
+    {{ parameter }}
+{%       endfor %}
 {%     endif %}
-{%     if subnet.ntp_server %}
-        option ntp-servers {{ subnet.ntp_server | join(', ') }};
-{%     endif %}
-{%     if subnet.pop_server %}
-        option pop-server {{ subnet.pop_server | join(', ') }};
-{%     endif %}
-{%     if subnet.smtp_server %}
-        option smtp-server {{ subnet.smtp_server | join(', ') }};
-{%     endif %}
-{%     if subnet.time_server %}
-        option time-servers {{ subnet.time_server | join(', ') }};
-{%     endif %}
-{%     if subnet.wins_server %}
-        option netbios-name-servers {{ subnet.wins_server | join(', ') }};
-{%     endif %}
-{%     if subnet.static_route %}
-        option rfc3442-static-route {{ subnet.static_route }}{% if subnet.rfc3442_default_router %}, {{ subnet.rfc3442_default_router }}{% endif %};
-        option windows-static-route {{ subnet.static_route }};
-{%     endif %}
-{%     if subnet.ip_forwarding %}
+{%     if network_config.subnet is defined and network_config.subnet is not none %}
+{%       for subnet, subnet_config in network_config.subnet.items() %}
+    subnet {{ subnet | address_from_cidr }} netmask {{ subnet | netmask_from_cidr }} {
+{%         if subnet_config.dns_server is defined and subnet_config.dns_server is not none %}
+        option domain-name-servers {{ subnet_config.dns_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.domain_search is defined and subnet_config.domain_search is not none %}
+        option domain-search "{{ subnet_config.domain_search | join(', ') }}";
+{%         endif %}
+{%         if subnet_config.ntp_server is defined and subnet_config.ntp_server is not none %}
+        option ntp-servers {{ subnet_config.ntp_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.pop_server is defined and subnet_config.pop_server is not none %}
+        option pop-server {{ subnet_config.pop_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.smtp_server is defined and subnet_config.smtp_server is not none %}
+        option smtp-server {{ subnet_config.smtp_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.time_server is defined and subnet_config.time_server is not none %}
+        option time-servers {{ subnet_config.time_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.wins_server is defined and subnet_config.wins_server is not none %}
+        option netbios-name-servers {{ subnet_config.wins_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.static_route is defined and subnet_config.static_route is not none %}
+{%           set static_default_route = '' %}
+{%           if subnet_config.default_router and subnet_config.default_router is not none %}
+{%             set static_default_route = ', ' + '0.0.0.0/0' | isc_static_route(subnet_config.default_router) %}
+{%           endif %}
+{%           if subnet_config.static_route.router is defined and subnet_config.static_route.router is not none and subnet_config.static_route.destination_subnet is defined and subnet_config.static_route.destination_subnet is not none %}
+        option rfc3442-static-route {{ subnet_config.static_route.destination_subnet | isc_static_route(subnet_config.static_route.router) }}{{ static_default_route }};
+        option windows-static-route {{ subnet_config.static_route.destination_subnet | isc_static_route(subnet_config.static_route.router) }};
+{%           endif %}
+{%         endif %}
+{%         if subnet_config.ip_forwarding is defined %}
         option ip-forwarding true;
-{%     endif %}
-{%     if subnet.default_router %}
-        option routers {{ subnet.default_router }};
-{%     endif %}
-{%     if subnet.server_identifier %}
-        option dhcp-server-identifier {{ subnet.server_identifier }};
-{%     endif %}
-{%     if subnet.domain_name %}
-        option domain-name "{{ subnet.domain_name }}";
-{%     endif %}
-{%     if subnet.subnet_parameters %}
-        # The following {{ subnet.subnet_parameters | length }} line(s) were added as subnet-parameters in the CLI and have not been validated
-{%       for param in subnet.subnet_parameters %}
-        {{ param }}
-{%       endfor %}
-{%     endif %}
-{%     if subnet.tftp_server %}
-        option tftp-server-name "{{ subnet.tftp_server }}";
-{%     endif %}
-{%     if subnet.bootfile_name %}
-        option bootfile-name "{{ subnet.bootfile_name }}";
-        filename "{{ subnet.bootfile_name }}";
-{%     endif %}
-{%     if subnet.bootfile_server %}
-        next-server {{ subnet.bootfile_server }};
-{%     endif %}
-{%     if subnet.time_offset %}
-        option time-offset {{ subnet.time_offset }};
-{%     endif %}
-{%     if subnet.wpad_url %}
-        option wpad-url "{{ subnet.wpad_url }}";
-{%     endif %}
-{%     if subnet.client_prefix_length %}
-        option subnet-mask {{ subnet.client_prefix_length }};
-{%     endif %}
-{%     if subnet.lease %}
-        default-lease-time {{ subnet.lease }};
-        max-lease-time {{ subnet.lease }};
-{%     endif %}
-{%     for host in subnet.static_mapping if not host.disabled %}
-        host {{ host.name if host_decl_name else network.name + '_' + host.name }} {
-{%       if host.ip_address %}
-            fixed-address {{ host.ip_address }};
-{%       endif %}
-            hardware ethernet {{ host.mac_address }};
-{%       if host.static_parameters %}
-            # The following {{ host.static_parameters | length }} line(s) were added as static-mapping-parameters in the CLI and have not been validated
-{%         for param in host.static_parameters %}
-            {{ param }}
-{%         endfor %}
-{%       endif %}
+{%         endif %}
+{%         if subnet_config.default_router and subnet_config.default_router is not none %}
+        option routers {{ subnet_config.default_router }};
+{%         endif %}
+{%         if subnet_config.server_identifier is defined and subnet_config.server_identifier is not none %}
+        option dhcp-server-identifier {{ subnet_config.server_identifier }};
+{%         endif %}
+{%         if subnet_config.domain_name is defined and subnet_config.domain_name is not none %}
+        option domain-name "{{ subnet_config.domain_name }}";
+{%         endif %}
+{%         if subnet_config.subnet_parameters is defined and subnet_config.subnet_parameters is not none %}
+        # The following {{ subnet_config.subnet_parameters | length }} line(s) were added as
+        # subnet-parameters in the CLI and have not been validated!!!
+{%           for parameter in subnet_config.subnet_parameters %}
+        {{ parameter }}
+{%           endfor %}
+{%         endif %}
+{%         if subnet_config.tftp_server_name is defined and subnet_config.tftp_server_name is not none %}
+        option tftp-server-name "{{ subnet_config.tftp_server_name }}";
+{%         endif %}
+{%         if subnet_config.bootfile_name is defined and subnet_config.bootfile_name is not none %}
+        option bootfile-name "{{ subnet_config.bootfile_name }}";
+        filename "{{ subnet_config.bootfile_name }}";
+{%         endif %}
+{%         if subnet_config.bootfile_server is defined and subnet_config.bootfile_server is not none %}
+        next-server {{ subnet_config.bootfile_server }};
+{%         endif %}
+{%         if subnet_config.time_offset is defined and subnet_config.time_offset is not none %}
+        option time-offset {{ subnet_config.time_offset }};
+{%         endif %}
+{%         if subnet_config.wpad_url is defined and subnet_config.wpad_url is not none %}
+        option wpad-url "{{ subnet_config.wpad_url }}";
+{%         endif %}
+{%         if subnet_config.client_prefix_length is defined and subnet_config.client_prefix_length is not none %}
+        option subnet-mask {{ subnet_config.client_prefix_length }};
+{%         endif %}
+{%         if subnet_config.lease is defined and subnet_config.lease is not none %}
+        default-lease-time {{ subnet_config.lease }};
+        max-lease-time {{ subnet_config.lease }};
+{%         endif %}
+{%         if subnet_config.static_mapping is defined and subnet_config.static_mapping is not none %}
+{%           for host, host_config in subnet_config.static_mapping.items() if host_config.disable is not defined %}
+        host {{ host | replace('_','-') if host_decl_name is defined else network | replace('_','-') + '_' + host | replace('_','-') }} {
+{%             if host_config.ip_address is defined and host_config.ip_address is not none %}
+            fixed-address {{ host_config.ip_address }};
+{%             endif %}
+            hardware ethernet {{ host_config.mac_address }};
+{%             if host_config.static_mapping_parameters is defined and host_config.static_mapping_parameters is not none %}
+            # The following {{ host_config.static_mapping_parameters | length }} line(s) were added
+            # as static-mapping-parameters in the CLI and have not been validated
+{%               for parameter in host_config.static_mapping_parameters %}
+            {{ parameter }}
+{%               endfor %}
+{%             endif %}
         }
-{%     endfor %}
-{%     if subnet.failover_name %}
+{%           endfor %}
+{%         endif %}
+{%         if subnet_config.failover is defined and subnet_config.failover.name is defined and subnet_config.failover.name is not none %}
         pool {
-            failover peer "{{ subnet.failover_name }}";
+            failover peer "{{ subnet_config.failover.name }}";
             deny dynamic bootp clients;
-            {% for range in subnet.range %}
-            range {{ range.start }} {{ range.stop }};
-            {% endfor %}
+{%           if subnet_config.range is defined and subnet_config.range is not none %}
+{%             for range, range_options in subnet_config.range.items() %}
+            range {{ range_options.start }} {{ range_options.stop }};
+{%             endfor %}
+{%           endif %}
         }
-{%     else %}
-{%       for range in subnet.range %}
-        range {{ range.start }} {{ range.stop }};
+{%         else %}
+{%           if subnet_config.range is defined and subnet_config.range is not none %}
+{%             for range, range_options in subnet_config.range.items() %}
+        range {{ range_options.start }} {{ range_options.stop }};
+{%             endfor %}
+{%           endif %}
+{%         endif %}
+    }
 {%       endfor %}
 {%     endif %}
-    }
-{%   endfor %}
     on commit {
-        set shared-networkname = "{{ network.name }}";
-{%   if hostfile_update %}
+        set shared-networkname = "{{ network | replace('_','-') }}";
+{%     if hostfile_update is defined %}
         set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
         set ClientIp = binary-to-ascii(10, 8, ".", leased-address);
         set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
         set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
         execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "commit", ClientName, ClientIp, ClientMac, ClientDomain);
-{%   endif %}
+{%     endif %}
     }
 }
-{% endfor %}
+
+{%   endfor %}
+{% endif %}

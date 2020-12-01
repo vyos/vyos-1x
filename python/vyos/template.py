@@ -214,3 +214,26 @@ def dec_ip(address, decrement):
     """
     from ipaddress import ip_interface
     return str(ip_interface(address).ip - int(decrement))
+
+
+@register_filter('isc_static_route')
+def isc_static_route(subnet, router):
+    # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
+    # Option format is:
+    # <netmask>, <network-byte1>, <network-byte2>, <network-byte3>, <router-byte1>, <router-byte2>, <router-byte3>
+    # where bytes with the value 0 are omitted.
+    from ipaddress import ip_network
+    net = ip_network(subnet)
+    # add netmask
+    string = str(net.prefixlen) + ','
+    # add network bytes
+    if net.prefixlen:
+        width = net.prefixlen // 8
+        if net.prefixlen % 8:
+            width += 1
+        string += ','.join(map(str,tuple(net.network_address.packed)[:width])) + ','
+
+    # add router bytes
+    string += ','.join(router.split('.'))
+
+    return string

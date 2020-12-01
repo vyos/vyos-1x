@@ -232,6 +232,7 @@
                       </constraint>
                       <constraintErrorMessage>DHCP lease time must be between 0 and 4294967295 (49 days)</constraintErrorMessage>
                     </properties>
+                    <defaultValue>86400</defaultValue>
                   </leafNode>
                   <leafNode name="ntp-server">
                     <properties>
