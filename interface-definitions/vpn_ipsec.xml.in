@@ -1,0 +1,1188 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vpn">
+    <children>
+      <node name="nipsec" owner="${vyos_conf_scripts_dir}/vpn_ipsec.py">
+        <properties>
+          <help>VPN IP security (IPsec) parameters</help>
+        </properties>
+        <children>
+          <leafNode name="auto-update">
+            <properties>
+              <help>Set auto-update interval for IPsec daemon</help>
+              <valueHelp>
+                <format>30-65535</format>
+                <description>Auto-update interval (s)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 30-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-uniqreqids">
+            <properties>
+              <help>Option to disable requirement for unique IDs in the Security Database</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <tagNode name="esp-group">
+            <properties>
+              <help>Name of Encapsulating Security Payload (ESP) group</help>
+            </properties>
+            <children>
+              <leafNode name="compression">
+                <properties>
+                  <help>ESP compression</help>
+                  <completionHelp>
+                    <list>disable enable</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>Disable ESP compression (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>enable</format>
+                    <description>Enable ESP compression</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(disable|enable)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="lifetime">
+                <properties>
+                  <help>ESP lifetime</help>
+                  <valueHelp>
+                    <format>30-86400</format>
+                    <description>ESP lifetime in seconds (default 3600)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-86400"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="mode">
+                <properties>
+                  <help>ESP mode</help>
+                  <completionHelp>
+                    <list>tunnel transport</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>tunnel</format>
+                    <description>Tunnel mode (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>transport</format>
+                    <description>Transport mode</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(tunnel|transport)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="pfs">
+                <properties>
+                  <help>ESP Perfect Forward Secrecy</help>
+                  <completionHelp>
+                    <list>enable dh-group1 dh-group2 dh-group5 dh-group14 dh-group15 dh-group16 dh-group17 dh-group18 dh-group19 dh-group20 dh-group21 dh-group22 dh-group23 dh-group24 dh-group25 dh-group26 dh-group27 dh-group28 dh-group29 dh-group30 dh-group31 dh-group32 disable</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>enable</format>
+                    <description>Enable PFS. Use ike-groups dh-group (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group1</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 1 (modp768)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group2</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 2 (modp1024)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group5</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 5 (modp1536)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group14</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 14 (modp2048)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group15</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 15 (modp3072)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group16</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 16 (modp4096)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group17</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 17 (modp6144)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group18</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 18 (modp8192)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group19</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 19 (ecp256)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group20</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 20 (ecp384)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group21</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 21 (ecp521)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group22</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 22 (modp1024s160)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group23</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 23 (modp2048s224)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group24</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 24 (modp2048s256)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group25</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 25 (ecp192)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group26</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 26 (ecp224)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group27</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 27 (ecp224bp)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group28</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 28 (ecp256bp)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group29</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 29 (ecp384bp)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group30</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 30 (ecp512bp)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group31</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 31 (curve25519)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group32</format>
+                    <description>Enable PFS. Use Diffie-Hellman group 32 (curve448)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>Disable PFS</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(enable|dh-group1|dh-group2|dh-group5|dh-group14|dh-group15|dh-group16|dh-group17|dh-group18|dh-group19|dh-group20|dh-group21|dh-group22|dh-group23|dh-group24|dh-group25|dh-group26|dh-group27|dh-group28|dh-group29|dh-group30|dh-group31|dh-group32|disable)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="proposal">
+                <properties>
+                  <help>ESP-group proposal [REQUIRED]</help>
+                  <valueHelp>
+                    <format>&lt;1-65535&gt;</format>
+                    <description>ESP-group proposal number</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  #include <include/vpn-ipsec-encryption.xml.i>
+                  #include <include/vpn-ipsec-hash.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="ike-group">
+            <properties>
+              <help>Name of Internet Key Exchange (IKE) group</help>
+            </properties>
+            <children>
+              <leafNode name="close-action">
+                <properties>
+                  <help>close-action_help</help>
+                  <completionHelp>
+                    <list>none hold clear restart</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>none</format>
+                    <description>Set action to none (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>hold</format>
+                    <description>Set action to hold</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>clear</format>
+                    <description>Set action to clear</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>restart</format>
+                    <description>Set action to restart</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(none|hold|clear|restart)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="dead-peer-detection">
+                <properties>
+                  <help>Dead Peer Detection (DPD)</help>
+                </properties>
+                <children>
+                  <leafNode name="action">
+                    <properties>
+                      <help>Keep-alive failure action</help>
+                      <completionHelp>
+                        <list>hold clear restart</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>hold</format>
+                        <description>Set action to hold (default)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>clear</format>
+                        <description>Set action to clear</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>restart</format>
+                        <description>Set action to restart</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(hold|clear|restart)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>Keep-alive interval</help>
+                      <valueHelp>
+                        <format>&lt;2-86400&gt;</format>
+                        <description>Keep-alive interval in seconds (default 30)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-86400"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Dead-Peer-Detection keep-alive timeout (IKEv1 only)</help>
+                      <valueHelp>
+                        <format>&lt;2-86400&gt;</format>
+                        <description>Keep-alive timeout in seconds (default 120)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-86400"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="ikev2-reauth">
+                <properties>
+                  <help>ikev2-reauth_help</help>
+                  <completionHelp>
+                    <list>yes no</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>yes</format>
+                    <description>Enable remote host re-autentication during an IKE rekey. Currently broken due to a strong swan bug</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no</format>
+                    <description>Disable remote host re-authenticaton during an IKE rekey. (Default)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(yes|no)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="key-exchange">
+                <properties>
+                  <help>Key Exchange Version</help>
+                  <completionHelp>
+                    <list>ikev1 ikev2</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ikev1</format>
+                    <description>Use IKEv1 for Key Exchange [DEFAULT]</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ikev2</format>
+                    <description>Use IKEv2 for Key Exchange</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(ikev1|ikev2)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="lifetime">
+                <properties>
+                  <help>IKE lifetime</help>
+                  <valueHelp>
+                    <format>&lt;30-86400&gt;</format>
+                    <description>IKE lifetime in seconds (default 28800)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-86400"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="mobike">
+                <properties>
+                  <help>Enable MOBIKE Support. MOBIKE is only available for IKEv2.</help>
+                  <completionHelp>
+                    <list>enable disable</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>enable</format>
+                    <description>Enable MOBIKE (default for IKEv2)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>Disable MOBIKE</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(enable|disable)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="mode">
+                <properties>
+                  <help>IKEv1 Phase 1 Mode Selection</help>
+                  <completionHelp>
+                    <list>main aggressive</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>main</format>
+                    <description>Use Main mode for Key Exchanges in the IKEv1 Protocol (Recommended Default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aggressive</format>
+                    <description>Use Aggressive mode for Key Exchanges in the IKEv1 protocol - We do not recommend users to use aggressive mode as it is much more insecure compared to Main mode.</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(main|aggressive)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="proposal">
+                <properties>
+                  <help>proposal_help</help>
+                  <valueHelp>
+                    <format>&lt;1-65535&gt;</format>
+                    <description>IKE-group proposal</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="dh-group">
+                    <properties>
+                      <help>dh-grouphelp</help>
+                      <completionHelp>
+                        <list>1 2 5 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>1</format>
+                        <description>Diffie-Hellman group 1 (modp768)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>2</format>
+                        <description>Diffie-Hellman group 2 (modp1024)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>5</format>
+                        <description>Diffie-Hellman group 5 (modp1536)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>14</format>
+                        <description>Diffie-Hellman group 14 (modp2048)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>15</format>
+                        <description>Diffie-Hellman group 15 (modp3072)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>16</format>
+                        <description>Diffie-Hellman group 16 (modp4096)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>17</format>
+                        <description>Diffie-Hellman group 17 (modp6144)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>18</format>
+                        <description>Diffie-Hellman group 18 (modp8192)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>19</format>
+                        <description>Diffie-Hellman group 19 (ecp256)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>20</format>
+                        <description>Diffie-Hellman group 20 (ecp384)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>21</format>
+                        <description>Diffie-Hellman group 21 (ecp521)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>22</format>
+                        <description>Diffie-Hellman group 22 (modp1024s160)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>23</format>
+                        <description>Diffie-Hellman group 23 (modp2048s224)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>24</format>
+                        <description>Diffie-Hellman group 24 (modp2048s256)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>25</format>
+                        <description>Diffie-Hellman group 25 (ecp192)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>26</format>
+                        <description>Diffie-Hellman group 26 (ecp224)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>27</format>
+                        <description>Diffie-Hellman group 27 (ecp224bp)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>28</format>
+                        <description>Diffie-Hellman group 28 (ecp256bp)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>29</format>
+                        <description>Diffie-Hellman group 29 (ecp384bp)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>30</format>
+                        <description>Diffie-Hellman group 30 (ecp512bp)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>31</format>
+                        <description>Diffie-Hellman group 31 (curve25519)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>32</format>
+                        <description>Diffie-Hellman group 32 (curve448)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(1|2|5|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/vpn-ipsec-encryption.xml.i>
+                  #include <include/vpn-ipsec-hash.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <leafNode name="include-ipsec-conf">
+            <properties>
+              <help>Sets to include an additional configuration directive file for strongSwan. Use an absolute path to specify the included file</help>
+            </properties>
+          </leafNode>
+          <leafNode name="include-ipsec-secrets">
+            <properties>
+              <help>Sets to include an additional secrets file for strongSwan. Use an absolute path to specify the included file.</help>
+            </properties>
+          </leafNode>
+          <node name="ipsec-interfaces">
+            <properties>
+              <help>Interface to use for VPN [REQUIRED]</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>IPsec interface [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="logging">
+            <properties>
+              <help>IPsec logging</help>
+            </properties>
+            <children>
+              <leafNode name="log-level">
+                <properties>
+                  <help>strongSwan Logger Level</help>
+                  <valueHelp>
+                    <format>&lt;0-2&gt;</format>
+                    <description>Logger Verbosity Level (default 0)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-2"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="log-modes">
+                <properties>
+                  <help>Log mode. To see what each log mode exactly does, please refer to the strongSwan documentation</help>
+                  <completionHelp>
+                    <list>dmn mgr ike chd job cfg knl net asn enc lib esp tls tnc imc imv pts any</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>dmn</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mgr</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ike</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>chd</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>job</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>cfg</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>knl</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>net</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>asn</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>enc</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>lib</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>esp</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tls</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tnc</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>imc</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>imv</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>pts</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>any</format>
+                    <description>Debug log option for strongSwan</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(dmn|mgr|ike|chd|job|cfg|knl|net|asn|enc|lib|esp|tls|tnc|imc|imv|pts|any)$</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="nat-networks">
+            <properties>
+              <help>Network Address Translation (NAT) networks</help>
+            </properties>
+            <children>
+              <tagNode name="allowed-network">
+                <properties>
+                  <help>NAT networks to allow</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>NAT networks to allow</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="exclude">
+                    <properties>
+                      <help>NAT networks to exclude from allowed-networks</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>NAT networks to exclude from allowed-networks</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <leafNode name="nat-traversal">
+            <properties>
+              <help>Network Address Translation (NAT) traversal</help>
+              <completionHelp>
+                <list>disable enable</list>
+              </completionHelp>
+              <valueHelp>
+                <format>disable</format>
+                <description>Disable NAT-T</description>
+              </valueHelp>
+              <valueHelp>
+                <format>enable</format>
+                <description>Enable NAT-T</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(disable|enable)$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="options">
+            <properties>
+              <help>Global IPsec settings</help>
+            </properties>
+            <children>
+              <leafNode name="disable-route-autoinstall">
+                <properties>
+                  <help>Do not automatically install routes to remote networks</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="profile">
+            <properties>
+              <help>VPN IPSec Profile</help>
+            </properties>
+            <children>
+              <node name="authentication">
+                <properties>
+                  <help>Authentication [REQUIRED]</help>
+                </properties>
+                <children>
+                  <node name="mode">
+                    <properties>
+                      <help>Authentication mode</help>
+                    </properties>
+                    <children>
+                      <leafNode name="pre-shared-secret">
+                        <properties>
+                          <help>Use pre-shared secret key</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="pre-shared-secret">
+                    <properties>
+                      <help>Pre-shared secret key</help>
+                      <valueHelp>
+                        <format>&lt;text&gt;</format>
+                        <description>Pre-shared secret key</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="bind">
+                <properties>
+                  <help>DMVPN crypto configuration</help>
+                </properties>
+                <children>
+                  <leafNode name="bind_child">
+                    <properties>
+                      <help>bind_child_help</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="esp-group">
+                <properties>
+                  <help>Esp group name [REQUIRED]</help>
+                  <completionHelp>
+                    <path>vpn ipsec esp-group</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="ike-group">
+                <properties>
+                  <help>Ike group name [REQUIRED]</help>
+                  <completionHelp>
+                    <path>vpn ipsec ike-group</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="site-to-site">
+            <properties>
+              <help>Site to site VPN</help>
+            </properties>
+            <children>
+              <tagNode name="peer">
+                <properties>
+                  <help>VPN peer</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address of the peer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of the peer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;text&gt;</format>
+                    <description>Hostname of the peer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;@text&gt;</format>
+                    <description>ID of the peer</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <node name="authentication">
+                    <properties>
+                      <help>Peer authentication [REQUIRED]</help>
+                    </properties>
+                    <children>
+                      <leafNode name="id">
+                        <properties>
+                          <help>ID for peer authentication</help>
+                          <valueHelp>
+                            <format>&lt;text&gt;</format>
+                            <description>ID used for peer authentication</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="mode">
+                        <properties>
+                          <help>Authentication mode</help>
+                          <completionHelp>
+                            <list>pre-shared-secret rsa x509</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>pre-shared-secret</format>
+                            <description>pre-shared-secret_description</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>rsa</format>
+                            <description>rsa_description</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>x509</format>
+                            <description>x509_description</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(pre-shared-secret|rsa|x509)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="pre-shared-secret">
+                        <properties>
+                          <help>Pre-shared secret key</help>
+                          <valueHelp>
+                            <format>&lt;text&gt;</format>
+                            <description>Pre-shared secret key</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="remote-id">
+                        <properties>
+                          <help>ID for remote authentication</help>
+                          <valueHelp>
+                            <format>&lt;text&gt;</format>
+                            <description>ID used for peer authentication</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="rsa-key-name">
+                        <properties>
+                          <help>RSA key name</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="use-x509-id">
+                        <properties>
+                          <help>Use certificate common name as ID</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <node name="x509">
+                        <properties>
+                          <help>X.509 certificate</help>
+                        </properties>
+                        <children>
+                          <leafNode name="ca-cert-file">
+                            <properties>
+                              <help>File containing the X.509 certificate for the Certificate Authority (CA)</help>
+                              <valueHelp>
+                                <format>&lt;text&gt;</format>
+                                <description>File in /config/auth</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="cert-file">
+                            <properties>
+                              <help>File containing the X.509 certificate for this host</help>
+                              <valueHelp>
+                                <format>&lt;text&gt;</format>
+                                <description>File in /config/auth</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="crl-file">
+                            <properties>
+                              <help>File containing the X.509 Certificate Revocation List (CRL)</help>
+                              <valueHelp>
+                                <format>&lt;text&gt;</format>
+                                <description>File in /config/auth</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <node name="key">
+                            <properties>
+                              <help>Key file and password to open it</help>
+                            </properties>
+                            <children>
+                              <leafNode name="file">
+                                <properties>
+                                  <help>File containing the private key for the X.509 certificate for this host</help>
+                                  <valueHelp>
+                                    <format>&lt;text&gt;</format>
+                                    <description>File in /config/auth</description>
+                                  </valueHelp>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="password">
+                                <properties>
+                                  <help>Password that protects the private key</help>
+                                  <valueHelp>
+                                    <format>&lt;text&gt;</format>
+                                    <description>Password that protects the private key</description>
+                                  </valueHelp>
+                                </properties>
+                              </leafNode>
+                            </children>
+                          </node>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <leafNode name="connection-type">
+                    <properties>
+                      <help>Connection type</help>
+                      <completionHelp>
+                        <list>initiate respond</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>initiate</format>
+                        <description>initiate_description</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>respond</format>
+                        <description>respond_description</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(initiate|respond)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="default-esp-group">
+                    <properties>
+                      <help>Defult ESP group name</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="description">
+                    <properties>
+                      <help>VPN peer description</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dhcp-interface">
+                    <properties>
+                      <help>DHCP interface to listen on</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="force-encapsulation">
+                    <properties>
+                      <help>Force UDP Encapsulation for ESP Payloads</help>
+                      <completionHelp>
+                        <list>enable disable</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>enable</format>
+                        <description>This endpoint will force UDP encapsulation for this peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>disable</format>
+                        <description>This endpoint will not force UDP encapsulation for this peer</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(enable|disable)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ike-group">
+                    <properties>
+                      <help>Internet Key Exchange (IKE) group name [REQUIRED]</help>
+                      <completionHelp>
+                        <path>vpn ipsec ike-group</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ikev2-reauth">
+                    <properties>
+                      <help>Re-authentication of the remote peer during an IKE re-key.  IKEv2 option only</help>
+                      <completionHelp>
+                        <list>yes no inherit</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>yes</format>
+                        <description>Enable remote host re-autentication during an IKE re-key. Currently broken due to a strong swan bug</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>no</format>
+                        <description>Disable remote host re-authenticaton during an IKE re-key.</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>inherit</format>
+                        <description>Inherit the reauth configuration form your IKE-group (Default)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(yes|no|inherit)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="local-address">
+                    <properties>
+                      <help>IPv4 or IPv6 address of a local interface to use for VPN</help>
+                      <completionHelp>
+                        <list>any</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address of a local interface for VPN</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of a local interface for VPN</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>any</format>
+                        <description>Allow any IPv4 address present on the system to be used for VPN</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
+                        <regex>^(any)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="tunnel">
+                    <properties>
+                      <help>Peer tunnel [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;0-4294967295&gt;</format>
+                        <description>Peer tunnel [REQUIRED]</description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="allow-nat-networks">
+                        <properties>
+                          <help>Option to allow NAT networks</help>
+                          <completionHelp>
+                            <list>enable disable</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>enable</format>
+                            <description>Enable NAT networks</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>disable</format>
+                            <description>Disable NAT networks (default)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(enable|disable)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="allow-public-networks">
+                        <properties>
+                          <help>Option to allow public networks</help>
+                          <completionHelp>
+                            <list>enable disable</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>enable</format>
+                            <description>Enable public networks</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>disable</format>
+                            <description>Disable public networks (default)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(enable|disable)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="disable">
+                        <properties>
+                          <help>Option to disable vpn tunnel</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="esp-group">
+                        <properties>
+                          <help>ESP group name</help>
+                          <completionHelp>
+                            <path>vpn ipsec esp-group</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <node name="local">
+                        <properties>
+                          <help>Local parameters for interesting traffic</help>
+                        </properties>
+                        <children>
+                          <leafNode name="port">
+                            <properties>
+                              <help>Any TCP or UDP port</help>
+                              <valueHelp>
+                                <format>&lt;port name&gt;</format>
+                                <description>Named port (any name in /etc/services, e.g., http)</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>&lt;1-65535&gt;</format>
+                                <description>Numbered port</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix">
+                            <properties>
+                              <help>Local IPv4 or IPv6 prefix</help>
+                              <valueHelp>
+                                <format>ipv4</format>
+                                <description>Local IPv4 prefix</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>Local IPv6 prefix</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv4-prefix"/>
+                                <validator name="ipv6-prefix"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <leafNode name="protocol">
+                        <properties>
+                          <help>Protocol to encrypt</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <node name="remote">
+                        <properties>
+                          <help>Remote parameters for interesting traffic</help>
+                        </properties>
+                        <children>
+                          <leafNode name="port">
+                            <properties>
+                              <help>Any TCP or UDP port</help>
+                              <valueHelp>
+                                <format>&lt;port name&gt;</format>
+                                <description>Named port (any name in /etc/services, e.g., http)</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>&lt;1-65535&gt;</format>
+                                <description>Numbered port</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix">
+                            <properties>
+                              <help>Remote IPv4 or IPv6 prefix</help>
+                              <valueHelp>
+                                <format>ipv4</format>
+                                <description>Remote IPv4 prefix</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>Remote IPv6 prefix</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv4-prefix"/>
+                                <validator name="ipv6-prefix"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </tagNode>
+                  <node name="vti">
+                    <properties>
+                      <help>Virtual tunnel interface [REQUIRED]</help>
+                    </properties>
+                    <children>
+                      <leafNode name="bind">
+                        <properties>
+                          <help>VTI tunnel interface associated with this configuration [REQUIRED]</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="esp-group">
+                        <properties>
+                          <help>ESP group name [REQUIRED]</help>
+                          <completionHelp>
+                            <path>vpn ipsec esp-group</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
