@@ -45,7 +45,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_single_pool(self):
+    def test_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
 
         dns_1 = inc_ip(subnet, 2)
@@ -86,6 +86,59 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.assertIn(f'max-lease-time 86400;', config)
         self.assertIn(f'range {range_0_start} {range_0_stop};', config)
         self.assertIn(f'range {range_1_start} {range_1_stop};', config)
+        self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_single_pool_static_mapping(self):
+        shared_net_name = 'SMOKE-2'
+
+        dns_1 = inc_ip(subnet, 2)
+        dns_2 = inc_ip(subnet, 3)
+        domain_name = 'vyos.net'
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        # we use the first subnet IP address as default gateway
+        self.session.set(pool + ['default-router', router])
+        self.session.set(pool + ['dns-server', dns_1])
+        self.session.set(pool + ['dns-server', dns_2])
+        self.session.set(pool + ['domain-name', domain_name])
+
+        # check validate() - No DHCP address range or active static-mapping set
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        client_base = 10
+        for client in ['client1', 'client2', 'client3']:
+            mac = '00:50:00:00:00:{}'.format(client_base)
+            self.session.set(pool + ['static-mapping', client, 'mac-address', mac])
+            self.session.set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
+            client_base += 1
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(DHCPD_CONF)
+        network = address_from_cidr(subnet)
+        netmask = netmask_from_cidr(subnet)
+        self.assertIn(f'ddns-update-style none;', config)
+        self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
+        self.assertIn(f'option domain-name-servers {dns_1}, {dns_2};', config)
+        self.assertIn(f'option routers {router};', config)
+        self.assertIn(f'option domain-name "{domain_name}";', config)
+        self.assertIn(f'default-lease-time 86400;', config)
+        self.assertIn(f'max-lease-time 86400;', config)
+
+        client_base = 10
+        for client in ['client1', 'client2', 'client3']:
+            mac = '00:50:00:00:00:{}'.format(client_base)
+            ip = inc_ip(subnet, client_base)
+            self.assertIn(f'host {shared_net_name}_{client}' + ' {', config)
+            self.assertIn(f'fixed-address {ip};', config)
+            self.assertIn(f'hardware ethernet {mac};', config)
+            client_base += 1
+
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
 
         # Check for running process

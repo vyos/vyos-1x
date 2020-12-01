@@ -150,7 +150,7 @@ shared-network {{ network.name }} {
         max-lease-time {{ subnet.lease }};
 {%     endif %}
 {%     for host in subnet.static_mapping if not host.disabled %}
-        host {% if host_decl_name %} {{ host.name }} {% else %} {{ network.name }}_{{ host.name }} {% endif %} {
+        host {{ host.name if host_decl_name else network.name + '_' + host.name }} {
 {%       if host.ip_address %}
             fixed-address {{ host.ip_address }};
 {%       endif %}
