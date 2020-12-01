@@ -130,7 +130,7 @@ def verify(nat):
         # no need to verify the CLI as NAT is going to be deactivated
         return None
 
-    if nat['helper_functions']:
+    if 'helper_functions' in nat:
         if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
             raise Exception('could not determine nftable ruleset handlers')
 
