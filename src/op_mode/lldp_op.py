@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -45,47 +45,51 @@ Device ID                 Local     Proto  Cap   Platform             Port ID
 def get_neighbors():
     return cmd('/usr/sbin/lldpcli -f json show neighbors')
 
-def parse_data(data):
+def parse_data(data, interface):
     output = []
-    for local_if, values in data.items():
-        for chassis, c_value in values.get('chassis', {}).items():
-            capabilities = c_value['capability']
-            if isinstance(capabilities, dict):
-                capabilities = [capabilities]
+    if not isinstance(data, list):
+        data = [data]
 
-            cap = ''
-            for capability in capabilities:
-                if capability['enabled']:
-                    if capability['type'] == 'Router':
-                        cap += 'R'
-                    if capability['type'] == 'Bridge':
-                        cap += 'B'
-                    if capability['type'] == 'Wlan':
-                        cap += 'W'
-                    if capability['type'] == 'Station':
-                        cap += 'S'
-                    if capability['type'] == 'Repeater':
-                        cap += 'r'
-                    if capability['type'] == 'Telephone':
-                        cap += 'T'
-                    if capability['type'] == 'Docsis':
-                        cap += 'D'
-                    if capability['type'] == 'Other':
-                        cap += 'O'
+    for neighbor in data:
+        for local_if, values in neighbor.items():
+            if interface is not None and local_if != interface:
+                continue
+            for chassis, c_value in values.get('chassis', {}).items():
+                capabilities = c_value['capability']
+                if isinstance(capabilities, dict):
+                    capabilities = [capabilities]
 
+                cap = ''
+                for capability in capabilities:
+                    if capability['enabled']:
+                        if capability['type'] == 'Router':
+                            cap += 'R'
+                        if capability['type'] == 'Bridge':
+                            cap += 'B'
+                        if capability['type'] == 'Wlan':
+                            cap += 'W'
+                        if capability['type'] == 'Station':
+                            cap += 'S'
+                        if capability['type'] == 'Repeater':
+                            cap += 'r'
+                        if capability['type'] == 'Telephone':
+                            cap += 'T'
+                        if capability['type'] == 'Docsis':
+                            cap += 'D'
+                        if capability['type'] == 'Other':
+                            cap += 'O'
 
-        remote_if = 'Unknown'
-        if 'descr' in values.get('port', {}):
-            remote_if = values.get('port', {}).get('descr')
-        elif 'id' in values.get('port', {}):
-            remote_if = values.get('port', {}).get('id').get('value', 'Unknown')
+            remote_if = 'Unknown'
+            if 'descr' in values.get('port', {}):
+                remote_if = values.get('port', {}).get('descr')
+            elif 'id' in values.get('port', {}):
+                remote_if = values.get('port', {}).get('id').get('value', 'Unknown')
 
-        output.append({local_if: {'chassis': chassis,
-                                   'remote_if': remote_if,
-                                   'proto': values.get('via','Unknown'),
-                                   'platform': c_value.get('descr', 'Unknown'),
-                                   'capabilities': cap}})
-
+            output.append({local_if: {'chassis': chassis,
+                                       'remote_if': remote_if,
+                                       'proto': values.get('via','Unknown'),
+                                       'platform': c_value.get('descr', 'Unknown'),
+                                       'capabilities': cap}})
 
     output = {'neighbors': output}
     return output
@@ -107,18 +111,14 @@ if __name__ == '__main__':
         neighbors = dict()
 
         if 'interface' in tmp.get('lldp'):
-            if args.all:
-                neighbors = tmp['lldp']['interface']
-            elif args.interface:
-                if args.interface in tmp['lldp']['interface']:
-                    neighbors[args.interface] = tmp['lldp']['interface'][args.interface]
+            neighbors = tmp['lldp']['interface']
 
     else:
         parser.print_help()
         exit(1)
 
-    tmpl = jinja2.Template(lldp_out)
-    config_text = tmpl.render(parse_data(neighbors))
+    tmpl = jinja2.Template(lldp_out, trim_blocks=True)
+    config_text = tmpl.render(parse_data(neighbors, interface=args.interface))
     print(config_text)
 
     exit(0)
