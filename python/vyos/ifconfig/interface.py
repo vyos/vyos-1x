@@ -35,6 +35,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
+from vyos.util import cmd
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -929,7 +930,39 @@ class Interface(Control):
 
             if os.path.isfile(config_file):
                 os.remove(config_file)
+    
+    def get_tc_config(self,objectname):
+        # Parse configuration
+        get_tc_cmd = f'tc -j {objectname}'
+        tmp = cmd(get_tc_cmd, shell=True)
+        return json.loads(tmp)
+    
+    def del_tc_qdisc(self,dev,kind,handle):
+        tc_qdisc = self.get_tc_config('qdisc')
+        for rule in tc_qdisc:
+            old_dev = rule['dev']
+            old_handle = rule['handle']
+            old_kind = rule['kind']
+            if old_dev == dev and old_handle == handle and old_kind == kind:
+                delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} {kind}'
+                self._cmd(delete_tc_cmd)
+                    
+                
 
+    def apply_mirror(self,config):
+        ifname = config['ifname']
+        
+        # Remove existing mirroring rules
+        self.del_tc_qdisc(ifname,'ingress','ffff:')
+        
+        # Setting up packet mirroring
+        mirror = dict_search('mirror', config)
+        if mirror:
+            for interface in mirror:
+                mirror_cmd = f'tc qdisc add dev {ifname} handle ffff: ingress'
+                self._cmd(mirror_cmd)
+                mirror_cmd = f'tc filter add dev {ifname} parent ffff: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {interface}'
+                self._cmd(mirror_cmd)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -1136,6 +1169,9 @@ class Interface(Control):
             vif_config['ifname'] = vif_ifname
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
+        
+        self.apply_mirror(config)
+        
 
 
 class VLANIf(Interface):

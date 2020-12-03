@@ -30,6 +30,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_vlan = True
         self._test_qinq = True
         self._test_ipv6 = True
+        self._test_mirror = True
         self._interfaces = []
 
         # we need to filter out VLAN interfaces identified by a dot (.)

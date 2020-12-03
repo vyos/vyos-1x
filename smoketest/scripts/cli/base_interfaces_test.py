@@ -33,6 +33,7 @@ class BasicInterfaceTest:
         _test_vlan = False
         _test_qinq = False
         _test_ipv6 = False
+        _test_mirror = False
         _base_path = []
 
         _options = {}
@@ -66,6 +67,33 @@ class BasicInterfaceTest:
 
             self.session.commit()
             del self.session
+        
+        def test_mirror(self):
+            Success = 0
+            i = 0
+            if self._test_mirror:
+                for interface in self._interfaces:
+                    self.session.set(self._base_path + [interface, 'mirror', 'lo'])
+                    i+=1
+                self.session.commit()
+                # Parse configuration
+                for interface in self._interfaces:
+                    get_tc_cmd = 'tc -j qdisc'
+                    tmp = cmd(get_tc_cmd, shell=True)
+                    data = json.loads(tmp)
+                    for rule in data:
+                        dev = rule['dev']
+                        handle = rule['handle']
+                        kind = rule['kind']
+                        if dev == interface and handle == "ffff:" and kind == "ingress":
+                            Success+=1
+                if Success == i:
+                    self.assertTrue(True)
+                else:
+                    self.assertTrue(False)
+            else:
+                return None
+                            
 
         def test_add_description(self):
             """

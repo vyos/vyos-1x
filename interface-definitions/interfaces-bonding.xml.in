@@ -55,6 +55,7 @@
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-disable.xml.i>
           #include <include/interface-vrf.xml.i>
+          #include <include/interface-mirror.xml.i>
           <leafNode name="hash-policy">
             <properties>
               <help>Bonding transmit hash policy</help>
