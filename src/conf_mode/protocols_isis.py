@@ -28,8 +28,6 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/isis.frr'
-
 def get_config(config=None):
     if config:
         conf = config
@@ -38,13 +36,6 @@ def get_config(config=None):
     base = ['protocols', 'isis']
 
     isis = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
-    # determine which members have been removed
-    for instance in isis:
-        conf.set_level(base + [instance])
-        tmp = node_changed(conf, ['interface'])
-        if tmp:
-            isis[instance].update({'interface_remove': tmp})
 
     return isis
 
@@ -106,9 +97,6 @@ def generate(isis):
     process = list(isis.keys())[0]
     isis[process]['process'] = process
 
-    # render(config) not needed, its only for debug
-    render(config_file, 'frr/isis.frr.tmpl', isis[process])
-
     isis['new_frr_config'] = render_to_string('frr/isis.frr.tmpl',
                                               isis[process])
 
@@ -116,9 +104,18 @@ def generate(isis):
 
 def apply(isis):
     # Save original configuration prior to starting any commit actions
-    frr_cfg = {}
-    frr_cfg['original_config'] = frr.get_configuration(daemon='isisd')
-    frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], isis['new_frr_config'], from_re='interface .*')
+    frr_cfg = frr.FRRConfig()
+    frr_cfg.load_configuration(daemon='isisd')
+    frr_cfg.modify_section(r'interface \S+', '')
+    frr_cfg.modify_section(f'router isis \S+', '')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['new_frr_config'])
+    frr_cfg.commit_configuration(daemon='isisd')
+
+    # If FRR config is blank, rerun the blank commit x times due to frr-reload
+    # behavior/bug not properly clearing out on one commit.
+    if isis['new_frr_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(daemon='isisd')
 
     # Debugging
     '''
@@ -128,13 +125,6 @@ def apply(isis):
     print(f'Replacement config:\n{isis["new_frr_config"]}\n\n')
     print(f'Modified config:\n{frr_cfg["modified_config"]}\n\n')
    '''
-    # FRR mark configuration will test for syntax errors and throws an
-    # exception if any syntax errors is detected
-    frr.mark_configuration(frr_cfg['modified_config'])
-
-    # Commit resulting configuration to FRR, this will throw CommitError
-    # on failure
-    frr.reload_configuration(frr_cfg['modified_config'], daemon='isisd')
 
     return None
 
