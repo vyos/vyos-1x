@@ -12,15 +12,13 @@ ff00::0         ip6-mcastprefix
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 
-{% if hosts %}
+{% if hosts is defined and hosts is not none %}
 # From 'system static-host-mapping' and DHCP server
-{% for tag, taghosts in hosts.items() %}
+{%   for tag, taghosts in hosts.items() %}
 # {{ tag }}
-{% for host, hostprops in taghosts.items() %}
-{% if hostprops['address'] %}
-{{ hostprops['address'] }}	{{ host }}{% for a in hostprops['aliases'] %} {{ a }}{% endfor %}
-{% endif %}
-{% endfor %}
-{% endfor %}
+{%     for host, hostprops in taghosts.items() if hostprops.address is defined %}
+{{ "%-15s" | format(hostprops.address) }} {{ host }} {{ hostprops.aliases|join(' ') if hostprops.aliases is defined }}
+{%     endfor %}
+{%   endfor %}
 {% endif %}
 
