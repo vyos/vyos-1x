@@ -28,6 +28,9 @@ from signal import SIGTERM
 from vyos import airbag
 airbag.enable()
 
+# Required to use the full path to pimd, in another case daemon will not be started
+pimd_cmd = f'/usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1'
+
 config_file = r'/tmp/pimd.frr'
 
 def get_config(config=None):
@@ -142,7 +145,7 @@ def apply(pim):
     pim_pid = process_named_running('pimd')
     if pim['igmp_conf'] or pim['pim_conf']:
         if not pim_pid:
-            call(f'pimd -d -F traditional --daemon -A 127.0.0.1')
+            call(pimd_cmd)
 
         if os.path.exists(config_file):
             call("vtysh -d pimd -f " + config_file)
