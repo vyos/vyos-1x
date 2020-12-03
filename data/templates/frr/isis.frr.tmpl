@@ -70,13 +70,6 @@ router isis {{ process }}
 {%   endif %}
 {% endif %}
 !
-{% if interface_remove is defined and interface_remove is not none %}
-{%   for iface in interface_remove %}
-interface {{ iface }}
- no ip router isis
-{%   endfor %}
-{% endif %}
-!
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
 interface {{ iface }}
