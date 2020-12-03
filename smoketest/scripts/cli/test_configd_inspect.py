@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import json
 import unittest
 import warnings
@@ -78,7 +79,8 @@ class TestConfigdInclude(unittest.TestCase):
                 if not f:
                     continue
                 str_f = getsource(f)
-                n = str_f.count('Config()')
+                # Regex not XXXConfig() T3108
+                n = len(re.findall(r'[^a-zA-Z]Config\(\)', str_f))
                 if i == 'get_config':
                     self.assertEqual(n, 1,
                             f"'{s}': '{i}' no instance of Config")
@@ -91,7 +93,8 @@ class TestConfigdInclude(unittest.TestCase):
         for s in self.inc_list:
             m = import_script(s)
             str_m = getsource(m)
-            n = str_m.count('Config()')
+            # Regex not XXXConfig T3108
+            n = len(re.findall(r'[^a-zA-Z]Config\(\)', str_m))
             self.assertEqual(n, 1,
                     f"'{s}' more than one instance of Config")
 
