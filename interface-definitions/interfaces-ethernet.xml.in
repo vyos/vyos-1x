@@ -59,6 +59,7 @@
           #include <include/interface-ipv6-options.xml.i>
           #include <include/interface-mac.xml.i>
           #include <include/interface-mtu-68-16000.xml.i>
+          #include <include/interface-mirror.xml.i>
           <node name="offload-options">
             <properties>
               <help>Configurable offload options</help>

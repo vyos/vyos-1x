@@ -31,6 +31,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_ipv6 = True
         self._test_vlan = True
         self._test_qinq = True
+        self._test_mirror = True
 
         self._base_path = ['interfaces', 'bridge']
         self._interfaces = ['br0']
