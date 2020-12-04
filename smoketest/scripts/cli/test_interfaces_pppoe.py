@@ -108,7 +108,7 @@ class PPPoEInterfaceTest(unittest.TestCase):
             self.session.set(base_path + [interface, 'default-route', 'none'])
             self.session.set(base_path + [interface, 'no-peer-dns'])
             self.session.set(base_path + [interface, 'source-interface', self._source_interface])
-            self.session.set(base_path + [interface, 'ipv6', 'enable'])
+            self.session.set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
 
             # prefix delegation stuff
             dhcpv6_pd_base = base_path + [interface, 'dhcpv6-options', 'pd', '0']

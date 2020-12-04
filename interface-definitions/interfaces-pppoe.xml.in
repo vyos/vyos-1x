@@ -102,12 +102,6 @@
                   #include <include/ipv6-address-autoconf.xml.i>
                 </children>
               </node>
-              <leafNode name="enable">
-                <properties>
-                  <help>Activate IPv6 support on this connection</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
             </children>
           </node>
           <leafNode name="source-interface">

@@ -25,7 +25,7 @@ fi
 
 # Always delete default route when interface goes down
 vtysh -c "conf t" ${VRF_NAME} -c "no ip route 0.0.0.0/0 {{ ifname }} ${VRF_NAME}"
-{%   if ipv6_enable %}
+{%   if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
 vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
 {%   endif %}
 {% endif %}

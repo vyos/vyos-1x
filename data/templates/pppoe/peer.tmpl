@@ -53,9 +53,11 @@ mru {{ mtu }}
 
 {{ "usepeerdns" if no_peer_dns is not defined }}
 
-{% if ipv6 is defined and ipv6.enable is defined %}
+{% if ipv6 is defined %}
 +ipv6
+{%   if ipv6.address is defined and ipv6.address.autoconf is defined %}
 ipv6cp-use-ipaddr
+{%   endif %}
 {% endif %}
 
 {% if service_name is defined %}
