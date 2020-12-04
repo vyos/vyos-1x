@@ -35,14 +35,8 @@
       </properties>
       <defaultValue>802.1ad</defaultValue>
     </leafNode>
-    <node name="ip">
-      <children>
-        #include <include/interface-disable-arp-filter.xml.i>
-        #include <include/interface-enable-arp-accept.xml.i>
-        #include <include/interface-enable-arp-announce.xml.i>
-        #include <include/interface-enable-arp-ignore.xml.i>
-      </children>
-    </node>
+    #include <include/interface-ipv4-options.xml.i>
+    #include <include/interface-ipv6-options.xml.i>
     #include <include/interface-mac.xml.i>
     #include <include/interface-mtu-68-16000.xml.i>
     <tagNode name="vif-c">
@@ -60,6 +54,8 @@
         #include <include/dhcpv6-options.xml.i>
         #include <include/interface-disable-link-detect.xml.i>
         #include <include/interface-disable.xml.i>
+        #include <include/interface-ipv4-options.xml.i>
+        #include <include/interface-ipv6-options.xml.i>
         #include <include/interface-mac.xml.i>
         #include <include/interface-mtu-68-16000.xml.i>
         #include <include/interface-vrf.xml.i>
