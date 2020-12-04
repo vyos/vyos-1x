@@ -23,6 +23,11 @@ from sys import exit
 
 from vyos import ConfigError
 from vyos.config import Config
+from vyos.util import process_named_running
+from signal import SIGTERM
+
+# Required to use the full path to pimd, in another case daemon will not be started
+pimd_cmd = 'sudo /usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1'
 
 config_file = r'/tmp/igmp.frr'
 
@@ -73,15 +78,22 @@ ip igmp join {{ group }}
 def get_config():
     conf = Config()
     igmp_conf = {
-        'igmp_conf'  : False,
+        'igmp_configured' : False,
+        'pim_configured'  : False,
         'old_ifaces' : {},
         'ifaces'     : {}
     }
     if not (conf.exists('protocols igmp') or conf.exists_effective('protocols igmp')):
         return None
 
+    if conf.exists('protocols igmp-proxy'):
+        igmp_conf['igmp_proxy_configured'] = True
+
+    if conf.exists('protocols pim'):
+        igmp_conf['pim_configured'] = True
+
     if conf.exists('protocols igmp'):
-        igmp_conf['igmp_conf'] = True
+        igmp_conf['igmp_configured'] = True
 
     conf.set_level('protocols igmp')
 
@@ -116,7 +128,10 @@ def verify(igmp):
     if igmp is None:
         return None
 
-    if igmp['igmp_conf']:
+    if 'igmp_proxy_configured' in igmp:
+        raise ConfigError('Can not configure both IGMP proxy and PIM at the same time')
+
+    if igmp['igmp_configured']:
         # Check interfaces
         if not igmp['ifaces']:
             raise ConfigError("IGMP require defined interfaces!")
@@ -141,9 +156,16 @@ def apply(igmp):
     if igmp is None:
         return None
 
-    if os.path.exists(config_file):
-        os.system("sudo vtysh -d pimd -f " + config_file)
-        os.remove(config_file)
+    pim_pid = process_named_running('pimd')
+    if igmp['igmp_configured'] or igmp['pim_configured']:
+        if not pim_pid:
+            os.system(pimd_cmd)
+
+        if os.path.exists(config_file):
+            os.system('vtysh -d pimd -f ' + config_file)
+            os.remove(config_file)
+    elif pim_pid:
+        os.kill(int(pim_pid), SIGTERM)
 
     return None
 
