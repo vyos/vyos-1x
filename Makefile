@@ -47,7 +47,7 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/vpn/nipsec
 
-	# Requires until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
+	# XXX: required until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
 	mkdir $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
 	mkdir $(TMPL_DIR)/interfaces/dummy/node.tag/ipv6
 	mkdir $(TMPL_DIR)/interfaces/openvpn/node.tag/ip
