@@ -81,6 +81,14 @@
               </valueHelp>
             </properties>
           </leafNode>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface-source-validation.xml.i>
+            </children>
+          </node>
           <node name="ipv6">
             <children>
               <node name="address">

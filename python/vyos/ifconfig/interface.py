@@ -36,6 +36,7 @@ from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
 from vyos.util import cmd
+from vyos.util import read_file
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -151,6 +152,10 @@ class Interface(Control):
         'ipv4_forwarding': {
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/forwarding',
+        },
+        'rp_filter': {
+            'validate': lambda flt: assert_range(flt,0,3),
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/rp_filter',
         },
         'ipv6_accept_ra': {
             'validate': lambda ara: assert_range(ara,0,3),
@@ -483,6 +488,34 @@ class Interface(Control):
         Configure IPv4 forwarding.
         """
         return self.set_interface('ipv4_forwarding', forwarding)
+
+    def set_ipv4_source_validation(self, value):
+        """
+        Help prevent attacks used by Spoofing IP Addresses. Reverse path
+        filtering is a Kernel feature that, when enabled, is designed to ensure
+        packets that are not routable to be dropped. The easiest example of this
+        would be and IP Address of the range 10.0.0.0/8, a private IP Address,
+        being received on the Internet facing interface of the router.
+
+        As per RFC3074.
+        """
+        if value == 'strict':
+            value = 1
+        elif value == 'loose':
+            value = 2
+        else:
+            value = 0
+
+        all_rp_filter = int(read_file('/proc/sys/net/ipv4/conf/all/rp_filter'))
+        if all_rp_filter > value:
+            global_setting = 'disable'
+            if   all_rp_filter == 1: global_setting = 'strict'
+            elif all_rp_filter == 2: global_setting = 'loose'
+
+            print(f'WARNING: Global source-validation is set to "{global_setting}\n"' \
+                   'this overrides per interface setting!')
+
+        return self.set_interface('rp_filter', value)
 
     def set_ipv6_accept_ra(self, accept_ra):
         """
@@ -930,13 +963,13 @@ class Interface(Control):
 
             if os.path.isfile(config_file):
                 os.remove(config_file)
-    
+
     def get_tc_config(self,objectname):
         # Parse configuration
         get_tc_cmd = f'tc -j {objectname}'
         tmp = cmd(get_tc_cmd, shell=True)
         return json.loads(tmp)
-    
+
     def del_tc_qdisc(self,dev,kind,handle):
         tc_qdisc = self.get_tc_config('qdisc')
         for rule in tc_qdisc:
@@ -946,15 +979,15 @@ class Interface(Control):
             if old_dev == dev and old_handle == handle and old_kind == kind:
                 delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} {kind}'
                 self._cmd(delete_tc_cmd)
-                    
-                
+
+
 
     def apply_mirror(self,config):
         ifname = config['ifname']
-        
+
         # Remove existing mirroring rules
         self.del_tc_qdisc(ifname,'ingress','ffff:')
-        
+
         # Setting up packet mirroring
         mirror = dict_search('mirror', config)
         if mirror:
@@ -1068,6 +1101,11 @@ class Interface(Control):
         value = '0' if (tmp != None) else '1'
         self.set_ipv4_forwarding(value)
 
+        # IPv4 source-validation
+        tmp = dict_search('ip.source_validation', config)
+        value = tmp if (tmp != None) else '0'
+        self.set_ipv4_source_validation(value)
+
         # IPv6 forwarding
         tmp = dict_search('ipv6.disable_forwarding', config)
         value = '0' if (tmp != None) else '1'
@@ -1169,9 +1207,9 @@ class Interface(Control):
             vif_config['ifname'] = vif_ifname
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
-        
+
         self.apply_mirror(config)
-        
+
 
 
 class VLANIf(Interface):

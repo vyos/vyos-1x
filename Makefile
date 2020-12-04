@@ -38,45 +38,6 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/interfaces/node.def
-	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif-s/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/bonding/node.tag/vif-s/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/bridge/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/bridge/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/l2tpv3/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/l2tpv3/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/openvpn/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/pppoe/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/pppoe/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/pseudo-ethernet/node.tag/vif-s/node.tag/vif-c/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/tunnel/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/tunnel/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/vxlan/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ip/node.def
-	rm -f $(TMPL_DIR)/interfaces/wireless/node.tag/vif/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/wirelessmodem/node.tag/ipv6/node.def
-	rm -f $(TMPL_DIR)/interfaces/wireguard/node.tag/ipv6/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
 	rm -rf $(TMPL_DIR)/protocols/nbgp
 	rm -f $(TMPL_DIR)/protocols/static/node.def
@@ -85,6 +46,14 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/vpn/nipsec
+
+	# Requires until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
+	mkdir $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
+	mkdir $(TMPL_DIR)/interfaces/dummy/node.tag/ipv6
+	mkdir $(TMPL_DIR)/interfaces/openvpn/node.tag/ip
+	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
+	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/dummy/node.tag/ipv6
+	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ip/node.def $(TMPL_DIR)/interfaces/openvpn/node.tag/ip
 
 .PHONY: op_mode_definitions
 .ONESHELL:

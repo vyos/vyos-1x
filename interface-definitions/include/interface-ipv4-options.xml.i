@@ -12,6 +12,7 @@
     #include <include/interface-enable-arp-ignore.xml.i>
     #include <include/interface-enable-proxy-arp.xml.i>
     #include <include/interface-proxy-arp-pvlan.xml.i>
+    #include <include/interface-source-validation.xml.i>
   </children>
 </node>
 <!-- included end -->
