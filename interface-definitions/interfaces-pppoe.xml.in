@@ -90,18 +90,16 @@
             </children>
           </node>
           <node name="ipv6">
+            <properties>
+              <help>IPv6 routing parameters</help>
+            </properties>
             <children>
               <node name="address">
                 <properties>
                   <help>IPv6 address configuration modes</help>
                 </properties>
                 <children>
-                  <leafNode name="autoconf">
-                    <properties>
-                      <help>Enable Stateless Address Autoconfiguration (SLAAC)</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipv6-address-autoconf.xml.i>
                 </children>
               </node>
               <leafNode name="enable">
