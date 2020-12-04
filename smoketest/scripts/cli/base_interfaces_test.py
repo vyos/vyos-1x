@@ -61,13 +61,12 @@ class BasicInterfaceTest:
                     self.session.delete(self._base_path + [interface])
                     self.session.set(self._base_path + [interface, 'duplex', 'auto'])
                     self.session.set(self._base_path + [interface, 'speed', 'auto'])
-                    self.session.set(self._base_path + [interface, 'smp-affinity', 'auto'])
             else:
                 self.session.delete(self._base_path)
 
             self.session.commit()
             del self.session
-        
+
         def test_mirror(self):
             Success = 0
             i = 0
@@ -93,7 +92,7 @@ class BasicInterfaceTest:
                     self.assertTrue(False)
             else:
                 return None
-                            
+
 
         def test_add_description(self):
             """

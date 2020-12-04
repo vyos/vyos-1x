@@ -167,31 +167,6 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="smp-affinity">
-            <properties>
-              <help>CPU interrupt affinity mask</help>
-              <completionHelp>
-                <list>auto 10 100 1000 2500 5000 10000</list>
-              </completionHelp>
-              <valueHelp>
-                <format>auto</format>
-                <description>Auto negotiation (default)</description>
-              </valueHelp>
-              <valueHelp>
-                <format>hex</format>
-                <description>Bitmask representing CPUs that this NIC will interrupt</description>
-              </valueHelp>
-              <valueHelp>
-                <format>hex,hex</format>
-                <description>Bitmasks representing CPUs for interrupt and receive processing</description>
-              </valueHelp>
-              <constraint>
-                <regex>(auto)</regex>
-                <regex>[0-9a-f]+(|,[0-9a-f]+)$</regex>
-              </constraint>
-              <constraintErrorMessage>IRQ affinity mask must be hex value or auto</constraintErrorMessage>
-            </properties>
-          </leafNode>
           <leafNode name="speed">
             <properties>
               <help>Link speed</help>
