@@ -33,14 +33,14 @@ airbag.enable()
 
 config_file = '/run/dhcp-server/dhcpd.conf'
 
-def dhcp_slice_range(exclude_list, range_list):
+def dhcp_slice_range(exclude_list, range_dict):
     """
     This function is intended to slice a DHCP range. What does it mean?
 
     Lets assume we have a DHCP range from '192.0.2.1' to '192.0.2.100'
     but want to exclude address '192.0.2.74' and '192.0.2.75'. We will
-    pass an input 'range_list' in the format:
-      [{'start' : '192.0.2.1', 'stop' : '192.0.2.100' }]
+    pass an input 'range_dict' in the format:
+      {'start' : '192.0.2.1', 'stop' : '192.0.2.100' }
     and we will receive an output list of:
       [{'start' : '192.0.2.1' , 'stop' : '192.0.2.73'  },
        {'start' : '192.0.2.76', 'stop' : '192.0.2.100' }]
@@ -50,49 +50,49 @@ def dhcp_slice_range(exclude_list, range_list):
     output = []
     # exclude list must be sorted for this to work
     exclude_list = sorted(exclude_list)
-    for ra in range_list:
-        range_start = ra['start']
-        range_stop = ra['stop']
-        range_last_exclude = ''
+    range_start = range_dict['start']
+    range_stop = range_dict['stop']
+    range_last_exclude = ''
 
-        for e in exclude_list:
-            if (ip_address(e) >= ip_address(range_start)) and \
-               (ip_address(e) <= ip_address(range_stop)):
-                range_last_exclude = e
+    for e in exclude_list:
+        if (ip_address(e) >= ip_address(range_start)) and \
+           (ip_address(e) <= ip_address(range_stop)):
+            range_last_exclude = e
 
-        for e in exclude_list:
-            if (ip_address(e) >= ip_address(range_start)) and \
-               (ip_address(e) <= ip_address(range_stop)):
+    for e in exclude_list:
+        if (ip_address(e) >= ip_address(range_start)) and \
+           (ip_address(e) <= ip_address(range_stop)):
 
-                # Build new IP address range ending one IP address before exclude address
+            # Build new address range ending one address before exclude address
+            r = {
+                'start' : range_start,
+                'stop' : str(ip_address(e) -1)
+            }
+            # On the next run our address range will start one address after
+            # the exclude address
+            range_start = str(ip_address(e) + 1)
+
+            # on subsequent exclude addresses we can not
+            # append them to our output
+            if not (ip_address(r['start']) > ip_address(r['stop'])):
+                # Everything is fine, add range to result
+                output.append(r)
+
+            # Take care of last IP address range spanning from the last exclude
+            # address (+1) to the end of the initial configured range
+            if ip_address(e) == ip_address(range_last_exclude):
                 r = {
-                    'start' : range_start,
-                    'stop' : str(ip_address(e) -1)
+                  'start': str(ip_address(e) + 1),
+                  'stop': str(range_stop)
                 }
-                # On the next run our IP address range will start one address after the exclude address
-                range_start = str(ip_address(e) + 1)
-
-                # on subsequent exclude addresses we can not
-                # append them to our output
                 if not (ip_address(r['start']) > ip_address(r['stop'])):
-                    # Everything is fine, add range to result
                     output.append(r)
-
-                # Take care of last IP address range spanning from the last exclude
-                # address (+1) to the end of the initial configured range
-                if ip_address(e) == ip_address(range_last_exclude):
-                    r = {
-                      'start': str(ip_address(e) + 1),
-                      'stop': str(range_stop)
-                    }
-                    if not (ip_address(r['start']) > ip_address(r['stop'])):
-                        output.append(r)
-            else:
-              # if we have no exclude in the whole range - we just take the range
-              # as it is
-              if not range_last_exclude:
-                  if ra not in output:
-                      output.append(ra)
+        else:
+          # if we have no exclude in the whole range - we just take the range
+          # as it is
+          if not range_last_exclude:
+              if ra not in output:
+                  output.append(ra)
 
     return output
 
@@ -101,22 +101,31 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-
     base = ['service', 'dhcp-server']
     if not conf.exists(base):
         return None
 
     dhcp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
     # T2665: defaults include lease time per TAG node which need to be added to
     # individual subnet definitions
     default_values = defaults(base + ['shared-network-name', 'subnet'])
     for network, network_config in (dict_search('shared_network_name', dhcp).items() or {}):
-        print(network)
         for subnet, subnet_config in (dict_search('subnet', network_config).items() or {}):
             if 'lease' not in subnet_config:
                 dhcp['shared_network_name'][network]['subnet'][subnet] = dict_merge(
                     default_values, dhcp['shared_network_name'][network]['subnet'][subnet])
+
+            # If exclude IP addresses are defined we need to slice them out of
+            # the defined ranges
+            if {'exclude', 'range'} <= set(subnet_config):
+                new_range_id = 0
+                new_range_dict = {}
+                for r, r_config in subnet_config['range'].items():
+                    for slice in dhcp_slice_range(subnet_config['exclude'], r_config):
+                        new_range_dict.update({new_range_id : slice})
+                        new_range_id +=1
+
+                subnet_config.update({'range' : new_range_dict})
 
     return dhcp
 
