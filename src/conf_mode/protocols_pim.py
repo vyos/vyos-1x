@@ -23,6 +23,11 @@ from sys import exit
 
 from vyos import ConfigError
 from vyos.config import Config
+from vyos.util import process_named_running
+from signal import SIGTERM
+
+# Required to use the full path to pimd, in another case daemon will not be started
+pimd_cmd = 'sudo /usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1'
 
 config_file = r'/tmp/pimd.frr'
 
@@ -66,7 +71,8 @@ ip pim rp keep-alive-timer {{ pim.rp_keep_alive }}
 def get_config():
     conf = Config()
     pim_conf = {
-        'pim_conf' : False,
+        'pim_configured'  : False,
+        'igmp_configured' : False,
         'old_pim'  : {
             'ifaces' : {},
             'rp'     : {}
@@ -80,7 +86,13 @@ def get_config():
         return None
 
     if conf.exists('protocols pim'):
-        pim_conf['pim_conf'] = True
+        pim_conf['pim_configured'] = True
+
+    if conf.exists('protocols igmp-proxy'):
+        pim_conf['igmp_proxy_configured'] = True
+
+    if conf.exists('protocols igmp'):
+        pim_conf['igmp_configured'] = True
 
     conf.set_level('protocols pim')
 
@@ -122,7 +134,10 @@ def verify(pim):
     if pim is None:
         return None
 
-    if pim['pim_conf']:
+    if 'igmp_proxy_configured' in pim:
+        raise ConfigError('Can not configure both IGMP proxy and PIM at the same time')
+
+    if pim['pim_configured']:
         # Check interfaces
         if not pim['pim']['ifaces']:
             raise ConfigError("PIM require defined interfaces!")
@@ -161,9 +176,16 @@ def apply(pim):
     if pim is None:
         return None
 
-    if os.path.exists(config_file):
-        os.system("sudo vtysh -d pimd -f " + config_file)
-        os.remove(config_file)
+    pim_pid = process_named_running('pimd')
+    if pim['igmp_configured'] or pim['pim_configured']:
+        if not pim_pid:
+            os.system(pimd_cmd)
+
+        if os.path.exists(config_file):
+            os.system('vtysh -d pimd -f ' + config_file)
+            os.remove(config_file)
+    elif pim_pid:
+        os.kill(int(pim_pid), SIGTERM)
 
     return None
 

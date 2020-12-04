@@ -76,6 +76,13 @@ default_config_data = {
 def get_config():
     igmp_proxy = default_config_data
     conf = Config()
+
+    if conf.exists('protocols igmp'):
+        igmp_proxy['igmp_configured'] = True
+
+    if conf.exists('protocols pim'):
+        igmp_proxy['pim_configured'] = True
+
     if not conf.exists('protocols igmp-proxy'):
         return None
     else:
@@ -124,6 +131,10 @@ def verify(igmp_proxy):
     # bail out early - service is disabled
     if igmp_proxy['disable']:
         return None
+
+    if 'igmp_configured' in igmp_proxy or 'pim_configured' in igmp_proxy:
+        raise ConfigError('Can not configure both IGMP proxy and PIM '\
+                          'at the same time')
 
     # at least two interfaces are required, one upstream and one downstream
     if len(igmp_proxy['interfaces']) < 2:

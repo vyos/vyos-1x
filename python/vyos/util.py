@@ -191,3 +191,12 @@ def ask_yes_no(question, default=False) -> bool:
             return False
         else:
             sys.stdout.write("Please respond with yes/y or no/n\n")
+
+def process_named_running(name):
+    """ Checks if process with given name is running and returns its PID.
+    If Process is not running, return None
+    """
+    for p in psutil.process_iter():
+        if name in p.name():
+            return p.pid
+    return None
