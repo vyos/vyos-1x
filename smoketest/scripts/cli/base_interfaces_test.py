@@ -16,7 +16,9 @@ import os
 import unittest
 import json
 
-from netifaces import ifaddresses, AF_INET, AF_INET6
+from netifaces import ifaddresses
+from netifaces import AF_INET
+from netifaces import AF_INET6
 
 from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
@@ -99,7 +101,7 @@ class BasicInterfaceTest:
             Check if description can be added to interface
             """
             for intf in self._interfaces:
-                test_string='Description-Test-{}'.format(intf)
+                test_string=f'Description-Test-{intf}'
                 self.session.set(self._base_path + [intf, 'description', test_string])
                 for option in self._options.get(intf, []):
                     self.session.set(self._base_path + [intf] + option.split())
@@ -108,8 +110,8 @@ class BasicInterfaceTest:
 
             # Validate interface description
             for intf in self._interfaces:
-                test_string='Description-Test-{}'.format(intf)
-                with open('/sys/class/net/{}/ifalias'.format(intf), 'r') as f:
+                test_string=f'Description-Test-{intf}'
+                with open(f'/sys/class/net/{intf}/ifalias', 'r') as f:
                     tmp = f.read().rstrip()
                     self.assertTrue(tmp, test_string)
 
@@ -182,7 +184,7 @@ class BasicInterfaceTest:
 
         def _mtu_test(self, intf):
             """ helper function to verify MTU size """
-            with open('/sys/class/net/{}/mtu'.format(intf), 'r') as f:
+            with open(f'/sys/class/net/{intf}/mtu', 'r') as f:
                 tmp = f.read().rstrip()
                 self.assertEqual(tmp, self._mtu)
 
