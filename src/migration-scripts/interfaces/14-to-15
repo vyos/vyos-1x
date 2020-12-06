@@ -16,8 +16,6 @@
 
 # T3048: remove smp-affinity node from ethernet and use tuned instead
 
-import os
-
 from sys import exit, argv
 from vyos.configtree import ConfigTree
 

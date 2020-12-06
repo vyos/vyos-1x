@@ -17,8 +17,6 @@
 # T3043: rename Wireless interface security mode 'both' to 'wpa+wpa2'
 # T3043: move "system wifi-regulatory-domain" to indicidual wireless interface
 
-import os
-
 from sys import exit, argv
 from vyos.configtree import ConfigTree
 
