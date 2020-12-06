@@ -26,6 +26,51 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <node name="allocation">
+                <properties>
+                  <help>Forwarding equivalence class (FEC) allocation from local routes</help>
+                </properties>
+                <children>
+                  <node name="ipv4">
+                    <properties>
+                      <help>IPv4 routes</help>
+                    </properties>
+                    <children>
+                      <leafNode name="access-list">
+                        <properties>
+                          <help>Access-list number</help>
+                          <valueHelp>
+                            <format>1-2699</format>
+                            <description>Access list number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-2699"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="ipv6">
+                    <properties>
+                      <help>IPv6 routes</help>
+                    </properties>
+                    <children>
+                      <leafNode name="access-list6">
+                        <properties>
+                          <help>Access-list6 number</help>
+                          <valueHelp>
+                            <format>1-2699</format>
+                            <description>Access list number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-2699"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
               <tagNode name="neighbor">
                 <properties>
                   <help>LDP neighbor parameters</help>
