@@ -40,7 +40,6 @@ from vyos.util import read_file
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
-from vyos.validate import is_ipv6_link_local
 from vyos.validate import assert_boolean
 from vyos.validate import assert_list
 from vyos.validate import assert_mac
@@ -1043,10 +1042,7 @@ class Interface(Control):
         # list of addresses which are no longer in the dict so they can be removed
         cur_addr = self.get_addr()
         for addr in list_diff(cur_addr, new_addr):
-            # do not clean out link-local IPv6 addresses - it makes no sense
-            # as they will be readded so this prevents any flapping links
-            if not is_ipv6_link_local(addr):
-                self.del_addr(addr)
+            self.del_addr(addr)
 
         for addr in new_addr:
             self.add_addr(addr)
