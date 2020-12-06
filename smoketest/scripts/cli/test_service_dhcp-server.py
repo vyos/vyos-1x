@@ -101,7 +101,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         smtp_server     = '1.2.3.4'
         time_server     = '4.3.2.1'
         tftp_server     = 'tftp.vyos.io'
-        search_domain   = 'foo.vyos.net'
+        search_domains  = ['foo.vyos.net', 'bar.vyos.net']
         bootfile_name   = 'vyos'
         bootfile_server = '192.0.2.1'
         wpad            = 'http://wpad.vyos.io/foo/bar'
@@ -118,7 +118,8 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.session.set(pool + ['pop-server', smtp_server])
         self.session.set(pool + ['time-server', time_server])
         self.session.set(pool + ['tftp-server-name', tftp_server])
-        self.session.set(pool + ['domain-search', search_domain])
+        for search in search_domains:
+            self.session.set(pool + ['domain-search', search])
         self.session.set(pool + ['bootfile-name', bootfile_name])
         self.session.set(pool + ['bootfile-server', bootfile_server])
         self.session.set(pool + ['wpad-url', wpad])
@@ -168,7 +169,10 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.assertIn(f'option domain-name-servers {dns_1}, {dns_2};', config)
         self.assertIn(f'option routers {router};', config)
         self.assertIn(f'option domain-name "{domain_name}";', config)
-        self.assertIn(f'option domain-search "{search_domain}";', config)
+
+        search = '"' + ('", "').join(search_domains) + '"'
+        self.assertIn(f'option domain-search {search};', config)
+
         self.assertIn(f'option ip-forwarding true;', config)
         self.assertIn(f'option smtp-server {smtp_server};', config)
         self.assertIn(f'option pop-server {smtp_server};', config)

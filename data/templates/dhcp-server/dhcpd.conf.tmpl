@@ -4,7 +4,6 @@
 # https://www.isc.org/wp-content/uploads/2017/08/dhcp43options.html
 #
 # log-facility local7;
-
 {% if hostfile_update is defined %}
 on release {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
@@ -13,7 +12,6 @@ on release {
     set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
     execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "release", ClientName, ClientIp, ClientMac, ClientDomain);
 }
-
 on expiry {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
     set ClientIp = binary-to-ascii(10, 8, ".",leased-address);
@@ -25,7 +23,6 @@ on expiry {
 
 {{ 'use-host-decl-names on;' if host_decl_name is defined }}
 ddns-update-style {{ 'interim' if dynamic_dns_update is defined else 'none' }};
-
 option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
 option wpad-url code 252 = text;
@@ -87,7 +84,7 @@ shared-network {{ network | replace('_','-') }} {
         option domain-name-servers {{ subnet_config.dns_server | join(', ') }};
 {%         endif %}
 {%         if subnet_config.domain_search is defined and subnet_config.domain_search is not none %}
-        option domain-search "{{ subnet_config.domain_search | join(', ') }}";
+        option domain-search "{{ subnet_config.domain_search | join('", "') }}";
 {%         endif %}
 {%         if subnet_config.ntp_server is defined and subnet_config.ntp_server is not none %}
         option ntp-servers {{ subnet_config.ntp_server | join(', ') }};
