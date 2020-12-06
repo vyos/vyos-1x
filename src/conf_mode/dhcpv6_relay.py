@@ -69,7 +69,7 @@ def verify(relay):
     for interface in relay['listen_interface']:
         has_global = False
         for addr in Interface(interface).get_addr():
-            if not is_ipv6_link_local(addr.split('/')[0]):
+            if not is_ipv6_link_local(addr):
                 has_global = True
         if not has_global:
             raise ConfigError(f'Interface {interface} does not have global '\
