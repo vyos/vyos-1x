@@ -27,11 +27,11 @@ from vyos.util import cmd
 
 def is_ipv6_link_local(addr):
     """ Check if addrsss is an IPv6 link-local address. Returns True/False """
-    from ipaddress import IPv6Address
+    from ipaddress import ip_interface
     from vyos.template import is_ipv6
     addr = addr.split('%')[0]
     if is_ipv6(addr):
-        if IPv6Address(addr).is_link_local:
+        if ip_interface(addr).is_link_local:
             return True
 
     return False
