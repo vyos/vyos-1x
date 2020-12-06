@@ -48,7 +48,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_single_pool_range(self):
+    def test_single_pool(self):
         shared_net_name = 'SMOKE-1'
         search_domains  = ['foo.vyos.net', 'bar.vyos.net']
         lease_time = '1200'
@@ -121,6 +121,32 @@ class TestServiceDHCPServer(unittest.TestCase):
             self.assertIn(f'fixed-address6 {ip};', config)
             self.assertIn(f'host-identifier option dhcp6.client-id {cid};', config)
             client_base += 1
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+
+    def test_prefix_delegation(self):
+        shared_net_name = 'SMOKE-2'
+        range_start = inc_ip(subnet, 256)  # ::100
+        range_stop = inc_ip(subnet, 65535) # ::ffff
+        delegate_start = '2001:db8:ee::'
+        delegate_stop = '2001:db8:ee:ff00::'
+        delegate_len = '56'
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+
+        self.session.set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
+        self.session.set(pool + ['prefix-delegation', 'start', delegate_start, 'stop', delegate_stop])
+        self.session.set(pool + ['prefix-delegation', 'start', delegate_start, 'prefix-length', delegate_len])
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(DHCPD_CONF)
+        self.assertIn(f'subnet6 {subnet}' + r' {', config)
+        self.assertIn(f'range6 {range_start} {range_stop};', config)
+        self.assertIn(f'prefix6 {delegate_start} {delegate_stop} /{delegate_len};', config)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
