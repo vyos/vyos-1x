@@ -4,87 +4,114 @@
 # https://www.isc.org/wp-content/uploads/2017/08/dhcp43options.html
 
 log-facility local7;
-{% if preference %}
+{% if preference is defined and preference is not none %}
 option dhcp6.preference {{ preference }};
 {% endif %}
 
 # Shared network configration(s)
-{% for network in shared_network %}
-{% if not network.disabled %}
-shared-network {{ network.name }} {
-    {% if network.common.info_refresh_time %}
-    option dhcp6.info-refresh-time {{ network.common.info_refresh_time }};
-    {% endif %}
-    {% if network.common.domain_search %}
-    option dhcp6.domain-search "{{ network.common.domain_search | join('", "') }}";
-    {% endif %}
-    {% if network.common.dns_server %}
-    option dhcp6.name-servers {{ network.common.dns_server | join(', ') }};
-    {% endif %}
-    {% for subnet in network.subnet %}
-    subnet6 {{ subnet.network }} {
-        {% for range in subnet.range6_prefix %}
-        range6 {{ range.prefix }}{{ " temporary" if range.temporary }};
-        {% endfor %}
-        {% for range in subnet.range6 %}
-        range6 {{ range.start }} {{ range.stop }};
-        {% endfor %}
-        {% if subnet.domain_search %}
-        option dhcp6.domain-search "{{ subnet.domain_search | join('", "') }}";
-        {% endif %}
-        {% if subnet.lease_def %}
-        default-lease-time {{ subnet.lease_def }};
-        {% endif %}
-        {% if subnet.lease_max %}
-        max-lease-time {{ subnet.lease_max }};
-        {% endif %}
-        {% if subnet.lease_min %}
-        min-lease-time {{ subnet.lease_min }};
-        {% endif %}
-        {% if subnet.dns_server %}
-        option dhcp6.name-servers {{ subnet.dns_server | join(', ') }};
-        {% endif %}
-        {% if subnet.nis_domain %}
-        option dhcp6.nis-domain-name "{{ subnet.nis_domain }}";
-        {% endif %}
-        {% if subnet.nis_server %}
-        option dhcp6.nis-servers {{ subnet.nis_server | join(', ') }};
-        {% endif %}
-        {% if subnet.nisp_domain %}
-        option dhcp6.nisp-domain-name "{{ subnet.nisp_domain }}";
-        {% endif %}
-        {% if subnet.nisp_server %}
-        option dhcp6.nisp-servers {{ subnet.nisp_server | join(', ') }};
-        {% endif %}
-        {% if subnet.sip_address %}
-        option dhcp6.sip-servers-addresses {{ subnet.sip_address | join(', ') }};
-        {% endif %}
-        {% if subnet.sip_hostname %}
-        option dhcp6.sip-servers-names "{{ subnet.sip_hostname | join('", "') }}";
-        {% endif %}
-        {% if subnet.sntp_server %}
-        option dhcp6.sntp-servers {{ subnet.sntp_server | join(', ') }};
-        {% endif %}
-        {% for prefix in subnet.prefix_delegation %}
-        prefix6 {{ prefix.start }} {{ prefix.stop }} /{{ prefix.length }};
-        {% endfor %}
-        {% for host in subnet.static_mapping %}
-        {% if not host.disabled %}
-        host {{ network.name }}_{{ host.name }} {
-            {% if host.client_identifier %}
-            host-identifier option dhcp6.client-id {{ host.client_identifier }};
-            {% endif %}
-            {% if host.ipv6_address %}
-            fixed-address6 {{ host.ipv6_address }};
-            {% endif %}
+{% if shared_network_name is defined and shared_network_name is not none %}
+{%   for network, network_config in shared_network_name.items() if network_config.disable is not defined %}
+shared-network {{ network | replace('_','-') }} {
+{%     if network_config.common_options is defined and network_config.common_options is not none %}
+{%       if network_config.common_options.info_refresh_time is defined and network_config.common_options.info_refresh_time is not none %}
+    option dhcp6.info-refresh-time {{ network_config.common_options.info_refresh_time }};
+{%       endif %}
+{%       if network_config.common_options.domain_search is defined and network_config.common_options.domain_search is not none %}
+    option dhcp6.domain-search "{{ network_config.common_options.domain_search | join('", "') }}";
+{%       endif %}
+{%       if network_config.common_options.name_server is defined and network_config.common_options.name_server is not none %}
+    option dhcp6.name-servers {{ network_config.common_options.name_server | join(', ') }};
+{%       endif %}
+{%     endif %}
+{%     if network_config.subnet is defined and network_config.subnet is not none %}
+{%       for subnet, subnet_config in network_config.subnet.items() %}
+    subnet6 {{ subnet }} {
+{%         if subnet_config.address_range is defined and subnet_config.address_range is not none %}
+{%           if subnet_config.address_range.prefix is defined and subnet_config.address_range.prefix is not none %}
+{%             for prefix, prefix_config in subnet_config.address_range.prefix.items() %}
+        range6 {{ prefix }} {{ "temporary" if prefix_config.temporary is defined }};
+{%             endfor %}
+{%           endif %}
+{%           if subnet_config.address_range.start is defined and subnet_config.address_range.start is not none %}
+{%             for address, address_config in subnet_config.address_range.start.items() %}
+        range6 {{ address }} {{ address_config.stop }};
+{%             endfor %}
+{%           endif %}
+{%         endif %}
+{%         if subnet_config.domain_search is defined and subnet_config.domain_search is not none %}
+        option dhcp6.domain-search "{{ subnet_config.domain_search | join('", "') }}";
+{%         endif %}
+{%         if subnet_config.lease_time is defined and subnet_config.lease_time is not none %}
+{%           if subnet_config.lease_time.default is defined and subnet_config.lease_time.default is not none %}
+        default-lease-time {{ subnet_config.lease_time.default }};
+{%           endif %}
+{%           if subnet_config.lease_time.maximum is defined and subnet_config.lease_time.maximum is not none %}
+        max-lease-time {{ subnet_config.lease_time.maximum }};
+{%           endif %}
+{%           if subnet_config.lease_time.minimum is defined and subnet_config.lease_time.minimum is not none %}
+        min-lease-time {{ subnet_config.lease_time.minimum }};
+{%           endif %}
+{%         endif %}
+{%         if subnet_config.name_server is defined and subnet_config.name_server is not none %}
+        option dhcp6.name-servers {{ subnet_config.name_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.nis_domain is defined and subnet_config.nis_domain is not none %}
+        option dhcp6.nis-domain-name "{{ subnet_config.nis_domain }}";
+{%         endif %}
+{%         if subnet_config.nis_server is defined and subnet_config.nis_server is not none %}
+        option dhcp6.nis-servers {{ subnet_config.nis_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.nisplus_domain is defined and subnet_config.nisplus_domain is not none %}
+        option dhcp6.nisp-domain-name "{{ subnet_config.nisplus_domain }}";
+{%         endif %}
+{%         if subnet_config.nisplus_server is defined and subnet_config.nisplus_server is not none %}
+        option dhcp6.nisp-servers {{ subnet_config.nisplus_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.sip_server is defined and subnet_config.sip_server is not none %}
+{%           set server_ip = [] %}
+{%           set server_fqdn = [] %}
+{%           for address in subnet_config.sip_server %}
+{%             if address | is_ipv6 %}
+{%               set server_ip = server_ip.append(address) %}
+{%             else %}
+{%               set server_fqdn = server_fqdn.append(address) %}
+{%             endif %}
+{%           endfor %}
+{%           if server_ip is defined and server_ip | length > 0 %}
+        option dhcp6.sip-servers-addresses {{ server_ip | join(', ') }};
+{%           endif %}
+{%           if server_fqdn is defined and server_fqdn | length > 0 %}
+        option dhcp6.sip-servers-names "{{ server_fqdn | join('", "') }}";
+{%           endif %}
+{%         endif %}
+{%         if subnet_config.sntp_server is defined and subnet_config.sntp_server is not none %}
+        option dhcp6.sntp-servers {{ subnet_config.sntp_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.prefix_delegation is defined and subnet_config.prefix_delegation.start is defined and subnet_config.prefix_delegation.start is not none %}
+{%           for prefix, prefix_config in subnet_config.prefix_delegation.start.items() %}
+        prefix6 {{ prefix }} {{ prefix_config.stop }} /{{ prefix_config.prefix_length }};
+{%           endfor %}
+{%         endif %}
+{%         if subnet_config.static_mapping is defined and subnet_config.static_mapping is not none %}
+
+        # begin configuration of static client mappings
+{%           for host, host_config in subnet_config.static_mapping.items() if host_config.disable is not defined %}
+        host {{ network | replace('_','-') }}_{{ host | replace('_','-') }} {
+{%             if host_config.identifier is defined and host_config.identifier is not none %}
+            host-identifier option dhcp6.client-id {{ host_config.identifier }};
+{%             endif %}
+{%             if host_config.ipv6_address is defined and host_config.ipv6_address is not none %}
+            fixed-address6 {{ host_config.ipv6_address }};
+{%             endif %}
         }
-        {% endif %}
-        {% endfor %}
+{%           endfor %}
+{%         endif %}
     }
-    {% endfor %}
+{%       endfor %}
+{%     endif %}
     on commit {
-        set shared-networkname = "{{ network.name }}";
+        set shared-networkname = "{{ network | replace('_','-') }}";
     }
 }
+{%   endfor %}
 {% endif %}
-{% endfor %}
