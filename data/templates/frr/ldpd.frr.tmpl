@@ -33,7 +33,17 @@ neighbor {{neighbors}} session holdtime {{ldp.neighbor[neighbors].session_holdti
 {%     if ldp.discovery is defined %}
 {%         if ldp.discovery.transport_ipv4_address is defined %}
 address-family ipv4
+{%             if ldp.allocation is defined %}
+{%               if ldp.allocation.ipv4 is defined %}
+{%                 if ldp.allocation.ipv4.access_list is defined %}
+label local allocate for {{ ldp.allocation.ipv4.access_list }}
+{%                 endif %}
 label local allocate host-routes
+{%               endif %}
+label local allocate host-routes
+{%             else %}
+label local allocate host-routes
+{%             endif %}
 {%             if ldp.discovery.transport_ipv4_address is defined %}
 discovery transport-address {{ ldp.discovery.transport_ipv4_address }}
 {%             endif %}
@@ -77,7 +87,17 @@ no address-family ipv4
 {%     if ldp.discovery is defined %}
 {%         if ldp.discovery.transport_ipv6_address is defined %}
 address-family ipv6
+{%             if ldp.allocation is defined %}
+{%               if ldp.allocation.ipv6 is defined %}
+{%                 if ldp.allocation.ipv6.access_list6 is defined %}
+label local allocate for {{ ldp.allocation.ipv6.access_list6 }}
+{%                 endif %}
 label local allocate host-routes
+{%               endif %}
+label local allocate host-routes
+{%             else %}
+label local allocate host-routes
+{%             endif %}
 {%             if ldp.discovery.transport_ipv6_address is defined %}
 discovery transport-address {{ ldp.discovery.transport_ipv6_address }}
 {%             endif %}
