@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,68 +14,65 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
-from copy import deepcopy
-from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
 
+from vyos.config import Config
+from vyos.configdict import dict_merge
+from vyos.util import call
+from vyos.util import dict_search
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-default_config_data = {
-    'arp_table': 8192,
-    'ipv4_forward': '1',
-    'mp_unreach_nexthop': '0',
-    'mp_layer4_hashing': '0'
-}
-
 def sysctl(name, value):
-    call('sysctl -wq {}={}'.format(name, value))
+    call(f'sysctl -wq {name}={value}')
 
 def get_config(config=None):
-    ip_opt = deepcopy(default_config_data)
     if config:
         conf = config
     else:
         conf = Config()
-    conf.set_level('system ip')
-    if conf.exists(''):
-        if conf.exists('arp table-size'):
-            ip_opt['arp_table'] = int(conf.return_value('arp table-size'))
+    base = ['system', 'ip']
 
-        if conf.exists('disable-forwarding'):
-            ip_opt['ipv4_forward'] = '0'
+    opt = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    opt = dict_merge(default_values, opt)
 
-        if conf.exists('multipath ignore-unreachable-nexthops'):
-            ip_opt['mp_unreach_nexthop'] = '1'
+    return opt
 
-        if conf.exists('multipath layer4-hashing'):
-            ip_opt['mp_layer4_hashing'] = '1'
-
-    return ip_opt
-
-def verify(ip_opt):
+def verify(opt):
     pass
 
-def generate(ip_opt):
+def generate(opt):
     pass
 
-def apply(ip_opt):
-    # apply ARP threshold values
-    sysctl('net.ipv4.neigh.default.gc_thresh3', ip_opt['arp_table'])
-    sysctl('net.ipv4.neigh.default.gc_thresh2', ip_opt['arp_table'] // 2)
-    sysctl('net.ipv4.neigh.default.gc_thresh1', ip_opt['arp_table'] // 8)
+def apply(opt):
+    size = int(dict_search('arp.table_size', opt))
+    if size:
+        # apply ARP threshold values
+        sysctl('net.ipv4.neigh.default.gc_thresh3', str(size))
+        sysctl('net.ipv4.neigh.default.gc_thresh2', str(size // 2))
+        sysctl('net.ipv4.neigh.default.gc_thresh1', str(size // 8))
 
     # enable/disable IPv4 forwarding
-    with open('/proc/sys/net/ipv4/conf/all/forwarding', 'w') as f:
-        f.write(ip_opt['ipv4_forward'])
+    tmp = '1'
+    if 'disable_forwarding' in opt:
+        tmp = '0'
+    sysctl('net.ipv4.conf.all.forwarding', tmp)
 
-    # configure multipath
-    sysctl('net.ipv4.fib_multipath_use_neigh', ip_opt['mp_unreach_nexthop'])
-    sysctl('net.ipv4.fib_multipath_hash_policy', ip_opt['mp_layer4_hashing'])
+    tmp = '0'
+    # configure multipath - dict_search() returns an empty dict if key was found
+    if isinstance(dict_search('multipath.ignore_unreachable_nexthops', opt), dict):
+        tmp = '1'
+    sysctl('net.ipv4.fib_multipath_use_neigh', tmp)
+
+    tmp = '0'
+    if isinstance(dict_search('multipath.ignore_unreachable_nexthops', opt), dict):
+        tmp = '1'
+    sysctl('net.ipv4.fib_multipath_hash_policy', tmp)
 
 if __name__ == '__main__':
     try:
