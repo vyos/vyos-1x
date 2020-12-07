@@ -40,6 +40,7 @@ from vyos.util import read_file
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
+from vyos.validate import is_ipv6_link_local
 from vyos.validate import assert_boolean
 from vyos.validate import assert_list
 from vyos.validate import assert_mac
@@ -564,7 +565,6 @@ class Interface(Control):
         prefixlen = prefix.split('/')[1]
         self.del_addr(f'{eui64}/{prefixlen}')
 
-
     def set_ipv6_forwarding(self, forwarding):
         """
         Configure IPv6 interface-specific Host/Router behaviour.
@@ -1042,7 +1042,14 @@ class Interface(Control):
         # list of addresses which are no longer in the dict so they can be removed
         cur_addr = self.get_addr()
         for addr in list_diff(cur_addr, new_addr):
-            self.del_addr(addr)
+            # we will delete all interface specific IP addresses if they are not
+            # explicitly configured on the CLI
+            if is_ipv6_link_local(addr):
+                eui64 = mac2eui64(self.get_mac(), 'fe80::/64')
+                if addr != f'{eui64}/64':
+                    self.del_addr(addr)
+            else:
+                self.del_addr(addr)
 
         for addr in new_addr:
             self.add_addr(addr)
@@ -1142,7 +1149,7 @@ class Interface(Control):
         tmp = dict_search('ipv6.address.no_default_link_local', config)
         # we must check explicitly for None type as if the key is set we will
         # get an empty dict (<class 'dict'>)
-        if tmp is not None:
+        if isinstance(tmp, dict):
             self.del_ipv6_eui64_address('fe80::/64')
         else:
             self.add_ipv6_eui64_address('fe80::/64')
