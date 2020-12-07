@@ -11,13 +11,13 @@
         <children>
           <leafNode name="disable">
             <properties>
-              <help>Option to disable DHCP server</help>
+              <help>Disable DHCP server</help>
               <valueless/>
             </properties>
           </leafNode>
           <leafNode name="dynamic-dns-update">
             <properties>
-              <help>DHCP server to dynamically update the Domain Name System (DNS)</help>
+              <help>Dynamically update Domain Name System (RFC4702)</help>
               <valueless/>
             </properties>
           </leafNode>
@@ -32,19 +32,20 @@
           </leafNode>
           <leafNode name="hostfile-update">
             <properties>
-              <help>Enable DHCP server updating /etc/hosts (per client lease)</help>
+              <help>Updating /etc/hosts file (per client lease)</help>
               <valueless/>
             </properties>
           </leafNode>
           <leafNode name="host-decl-name">
             <properties>
-              <help>Instruct server to use host declaration name for forward DNS name</help>
+              <help>Use host declaration name for forward DNS name</help>
               <valueless/>
             </properties>
           </leafNode>
+          #include <include/listen-address.xml.i>
           <tagNode name="shared-network-name">
             <properties>
-              <help>DHCP shared network name [REQUIRED]</help>
+              <help>Name of DHCP shared network</help>
               <constraint>
                 <regex>[-_a-zA-Z0-9.]+</regex>
               </constraint>

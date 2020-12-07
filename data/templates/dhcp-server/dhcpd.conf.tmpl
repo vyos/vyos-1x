@@ -62,6 +62,14 @@ failover peer "{{ subnet_config.failover.name }}" {
 {%     endif %}
 {%   endfor %}
 {% endif %}
+{% if listen_address is defined and listen_address is not none %}
+
+# DHCP server serving relay subnet, we need a connector to the real world
+{%   for address in listen_address %}
+# Connected subnet statement for listen-address {{ address }}
+subnet {{ address | network_from_ipv4 }} netmask {{ address | netmask_from_ipv4 }} { }
+{%   endfor %}
+{% endif %}
 
 # Shared network configration(s)
 {% if shared_network_name is defined and shared_network_name is not none %}

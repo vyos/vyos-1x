@@ -123,23 +123,56 @@ def render(
 ##################################
 
 @register_filter('address_from_cidr')
-def address_from_cidr(text):
+def address_from_cidr(prefix):
     """ Take an IPv4/IPv6 CIDR prefix and convert the network to an "address".
     Example:
     192.0.2.0/24 -> 192.0.2.0, 2001:db8::/48 -> 2001:db8::
     """
     from ipaddress import ip_network
-    return str(ip_network(text).network_address)
+    return str(ip_network(prefix).network_address)
 
 @register_filter('netmask_from_cidr')
-def netmask_from_cidr(text):
+def netmask_from_cidr(prefix):
     """ Take CIDR prefix and convert the prefix length to a "subnet mask".
     Example:
       - 192.0.2.0/24 -> 255.255.255.0
       - 2001:db8::/48 -> ffff:ffff:ffff::
     """
     from ipaddress import ip_network
-    return str(ip_network(text).netmask)
+    return str(ip_network(prefix).netmask)
+
+@register_filter('netmask_from_ipv4')
+def netmask_from_ipv4(address):
+    """ Take IP address and search all attached interface IP addresses for the
+    given one. After address has been found, return the associated netmask.
+
+    Example:
+      - 172.18.201.10 -> 255.255.255.128
+    """
+    from netifaces import interfaces, ifaddresses, AF_INET
+    for interface in interfaces():
+        tmp = ifaddresses(interface)
+        if AF_INET in tmp:
+            for af_addr in tmp[AF_INET]:
+                if 'addr' in af_addr:
+                    if af_addr['addr'] == address:
+                        return af_addr['netmask']
+
+    raise ValueError
+
+@register_filter('network_from_ipv4')
+def network_from_ipv4(address):
+    """ Take IP address and search all attached interface IP addresses for the
+    given one. After address has been found, return the associated network
+    address.
+
+    Example:
+      - 172.18.201.10 has mask 255.255.255.128 -> network is 172.18.201.0
+    """
+    netmask = netmask_from_ipv4(address)
+    from ipaddress import ip_interface
+    cidr_prefix = ip_interface(f'{address}/{netmask}').network
+    return address_from_cidr(cidr_prefix)
 
 @register_filter('is_ip')
 def is_ip(addr):

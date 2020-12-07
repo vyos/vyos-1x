@@ -26,6 +26,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.validate import is_subnet_connected
+from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -246,10 +247,19 @@ def verify(dhcp):
                     if net.overlaps(net2):
                         raise ConfigError('Conflicting subnet ranges: "{net}" overlaps "{net2}"!')
 
+    for address in (dict_search('listen_address', dhcp) or []):
+        if is_addr_assigned(address):
+            listen_ok = True
+            # no need to probe further networks, we have one that is valid
+            continue
+        else:
+            raise ConfigError(f'listen-address "{address}" not configured on any interface')
+
+
     if not listen_ok:
-        raise ConfigError('DHCP server configuration error! None of the configured\n' \
-                          'subnets have an appropriate primary IP address on any\n'
-                          'broadcast interface.')
+        raise ConfigError('None of the configured subnets have an appropriate primary IP address on any\n'
+                          'broadcast interface configured, nor was there an explicit listen-address\n'
+                          'configured for serving DHCP relay packets!')
 
     return None
 
