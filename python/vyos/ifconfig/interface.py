@@ -977,25 +977,40 @@ class Interface(Control):
             old_handle = rule['handle']
             old_kind = rule['kind']
             if old_dev == dev and old_handle == handle and old_kind == kind:
-                delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} {kind}'
-                self._cmd(delete_tc_cmd)
+                if 'root' in rule and rule['root']:
+                    delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} root {kind}'
+                    self._cmd(delete_tc_cmd)
+                else:
+                    delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} {kind}'
+                    self._cmd(delete_tc_cmd)
 
-
-
-    def apply_mirror(self,config):
-        ifname = config['ifname']
-
+    def apply_mirror(self):
+        # Please refer to the document for details
+        # https://man7.org/linux/man-pages/man8/tc.8.html
+        # https://man7.org/linux/man-pages/man8/tc-mirred.8.html
+        ifname = self._config['ifname']
         # Remove existing mirroring rules
         self.del_tc_qdisc(ifname,'ingress','ffff:')
-
+        self.del_tc_qdisc(ifname,'prio','1:')
+        
         # Setting up packet mirroring
-        mirror = dict_search('mirror', config)
-        if mirror:
-            for interface in mirror:
-                mirror_cmd = f'tc qdisc add dev {ifname} handle ffff: ingress'
-                self._cmd(mirror_cmd)
-                mirror_cmd = f'tc filter add dev {ifname} parent ffff: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {interface}'
-                self._cmd(mirror_cmd)
+        ingress_mirror = dict_search('mirror.ingress', self._config)
+        if ingress_mirror:
+            # Mirror ingress traffic
+            mirror_cmd = f'tc qdisc add dev {ifname} handle ffff: ingress'
+            self._cmd(mirror_cmd)
+            # Export the mirrored traffic to the interface
+            mirror_cmd = f'tc filter add dev {ifname} parent ffff: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {ingress_mirror}'
+            self._cmd(mirror_cmd)
+        
+        egress_mirror = dict_search('mirror.egress', self._config)
+        if egress_mirror:
+            # Mirror egress traffic
+            mirror_cmd = f'tc qdisc add dev {ifname} handle 1: root prio'
+            self._cmd(mirror_cmd)
+            # Export the mirrored traffic to the interface
+            mirror_cmd = f'tc filter add dev {ifname} parent 1: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {egress_mirror}'
+            self._cmd(mirror_cmd)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -1215,7 +1230,7 @@ class Interface(Control):
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
 
-        self.apply_mirror(config)
+        self.apply_mirror()
 
 
 
