@@ -28,6 +28,22 @@ from vyos.util import dict_search
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 
+def read_mirror_rule(interfaces):
+    Success = 0
+    for interface in interfaces:
+        get_tc_cmd = 'tc -j qdisc'
+        tmp = cmd(get_tc_cmd, shell=True)
+        data = json.loads(tmp)
+        for rule in data:
+            dev = rule['dev']
+            handle = rule['handle']
+            kind = rule['kind']
+            if dev == interface and handle == "ffff:" and kind == "ingress":
+                Success+=1
+            elif dev == interface and handle == "1:" and kind == "prio":
+                Success+=1
+    return Success
+
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
         _test_ip = False
@@ -73,25 +89,19 @@ class BasicInterfaceTest:
             Success = 0
             i = 0
             if self._test_mirror:
+                # Check the two-way mirror rules of ingress and egress
                 for interface in self._interfaces:
-                    self.session.set(self._base_path + [interface, 'mirror', 'lo'])
+                    self.session.set(self._base_path + [interface, 'mirror', 'ingress', 'lo'])
+                    self.session.set(self._base_path + [interface, 'mirror', 'egress', 'lo'])
                     i+=1
                 self.session.commit()
                 # Parse configuration
-                for interface in self._interfaces:
-                    get_tc_cmd = 'tc -j qdisc'
-                    tmp = cmd(get_tc_cmd, shell=True)
-                    data = json.loads(tmp)
-                    for rule in data:
-                        dev = rule['dev']
-                        handle = rule['handle']
-                        kind = rule['kind']
-                        if dev == interface and handle == "ffff:" and kind == "ingress":
-                            Success+=1
-                if Success == i:
+                Success = read_mirror_rule(self._interfaces)
+                if Success == i*2:
                     self.assertTrue(True)
                 else:
                     self.assertTrue(False)
+                i=0
             else:
                 return None
 
