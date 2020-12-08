@@ -114,9 +114,9 @@
 {%       endif %}
 {%       if config.address_family[af].prefix_list is defined and config.address_family[af].prefix_list is not none %}
 {%         if config.address_family[af].prefix_list.export is defined and config.address_family[af].prefix_list.export is not none %}
-  neighbor {{ neighbor }} route-map {{ config.address_family[af].prefix_list.export }} out
+  neighbor {{ neighbor }} prefix-list  {{ config.address_family[af].prefix_list.export }} out
 {%         elif config.address_family[af].prefix_list.import is defined and config.address_family[af].prefix_list.import is not none %}
-  neighbor {{ neighbor }} route-map {{ config.address_family[af].prefix_list.export }} in
+  neighbor {{ neighbor }} prefix-list  {{ config.address_family[af].prefix_list.import }} in
 {%         endif %}
 {%       endif %}
 {%       if config.address_family[af].soft_reconfiguration is defined and config.address_family[af].soft_reconfiguration.inbound is defined %}
