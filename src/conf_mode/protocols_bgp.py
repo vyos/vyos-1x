@@ -60,12 +60,22 @@ def verify(bgp):
             if neigh not in asn_config:
                 continue
 
-            for neighbor, config in asn_config[neigh].items():
-                if 'remote_as' not in config and 'peer_group' not in config:
-                    raise ConfigError(f'BGP remote-as must be specified for "{neighbor}"!')
+            #for neighbor, config in asn_config[neigh].items():
+                '''
+                # These checks need to be modified. Because peer-group can be declared without 'remote-as'.
+                # When 'remote-as' configured for specific neighbor in peer-group. For example
+                #
 
-                if 'remote_as' in config and 'peer_group' in config:
-                    raise ConfigError(f'BGP peer-group member "{neighbor}" cannot override remote-as of peer-group!')
+                set protocols nbgp 65001 neighbor 100.64.0.2 peer-group 'FOO'
+                set protocols nbgp 65001 neighbor 100.64.0.2 remote-as '65002'
+                set protocols nbgp 65001 peer-group FOO
+
+                '''
+                #if 'remote_as' not in config and 'peer_group' not in config:
+                #    raise ConfigError(f'BGP remote-as must be specified for "{neighbor}"!')
+
+                #if 'remote_as' in config and 'peer_group' in config:
+                #    raise ConfigError(f'BGP peer-group member "{neighbor}" cannot override remote-as of peer-group!')
 
     return None
 
@@ -87,24 +97,26 @@ def generate(bgp):
 
 def apply(bgp):
     # Save original configuration prior to starting any commit actions
-    frr_cfg = {}
-    frr_cfg['original_config'] = frr.get_configuration(daemon='bgpd')
-    frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], bgp['new_frr_config'], from_re='router bgp .*')
+    frr_cfg = frr.FRRConfig()
+    frr_cfg.load_configuration(daemon='bgpd')
+    frr_cfg.modify_section(f'router bgp \S+', '')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
+    frr_cfg.commit_configuration(daemon='bgpd')
+
+    # If FRR config is blank, rerun the blank commit x times due to frr-reload
+    # behavior/bug not properly clearing out on one commit.
+    if bgp['new_frr_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(daemon='bgpd')
 
     # Debugging
+    '''
     print('')
     print('--------- DEBUGGING ----------')
     print(f'Existing config:\n{frr_cfg["original_config"]}\n\n')
     print(f'Replacement config:\n{bgp["new_frr_config"]}\n\n')
     print(f'Modified config:\n{frr_cfg["modified_config"]}\n\n')
-
-    # FRR mark configuration will test for syntax errors and throws an
-    # exception if any syntax errors is detected
-    frr.mark_configuration(frr_cfg['modified_config'])
-
-    # Commit resulting configuration to FRR, this will throw CommitError
-    # on failure
-    frr.reload_configuration(frr_cfg['modified_config'], daemon='bgpd')
+    '''
 
     return None
 
