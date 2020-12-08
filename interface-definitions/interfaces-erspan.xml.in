@@ -1,0 +1,190 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="erspan" owner="${vyos_conf_scripts_dir}/interfaces-erspan.py">
+        <properties>
+          <help>Encapsulated Remote SPAN over GRE and IPv4/IPv6 Tunnel Interface</help>
+          <priority>310</priority>
+          <constraint>
+            <regex>^ersp[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>ERSPAN tunnel interface must be named erspN</constraintErrorMessage>
+          <valueHelp>
+            <format>erspN</format>
+            <description>ERSPAN Tunnel interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface-description.xml.i>
+          #include <include/address-ipv4-ipv6.xml.i>
+          #include <include/interface-disable.xml.i>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-vrf.xml.i>
+          #include <include/interface-mtu-64-8024.xml.i>
+          #include <include/interface-ipv4-options.xml.i>
+          #include <include/interface-ipv6-options.xml.i>
+          <leafNode name="local-ip">
+            <properties>
+              <help>Local IP address for this tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Local IPv4 address for this ERSPAN tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Local IPv6 address for this tunnel [NOTICE: unavailable for mGRE tunnels]</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_local.py</script>
+              </completionHelp>
+              <constraint>
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="remote-ip">
+            <properties>
+              <help>Remote IP address for this ERSPAN tunnel</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote IPv4 address for this tunnel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote IPv6 address for this tunnel</description>
+              </valueHelp>
+              <constraint>
+                <!-- does it need fixing/changing to be more restrictive ? -->
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="encapsulation">
+            <properties>
+              <help>Encapsulation of this ERSPAN tunnel interface</help>
+              <completionHelp>
+                <list>erspan ip6erspan</list>
+              </completionHelp>
+              <valueHelp>
+                <format>erspan</format>
+                <description>Encapsulated Remote SPAN over GRE and IPv4</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ip6erspan</format>
+                <description>Encapsulated Remote SPAN over GRE and IPv6</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(erspan|ip6erspan)$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid encapsulation, must be one of: erspan, ip6erspan</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="parameters">
+            <properties>
+              <help>ERSPAN Tunnel parameters</help>
+            </properties>
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>IP specific ERSPAN tunnel parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="ttl">
+                    <properties>
+                      <help>Time to live field</help>
+                      <valueHelp>
+                        <format>0-255</format>
+                        <description>Time to live (default 255)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                      <constraintErrorMessage>TTL must be between 0 and 255</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>255</defaultValue>
+                  </leafNode>
+                  <leafNode name="tos">
+                    <properties>
+                      <help>Type of Service (TOS)</help>
+                      <valueHelp>
+                        <format>0-99</format>
+                        <description>Type of Service (TOS)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-99"/>
+                      </constraint>
+                      <constraintErrorMessage>TOS must be between 0 and 99</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>inherit</defaultValue>
+                  </leafNode>
+                  <leafNode name="key">
+                    <properties>
+                      <help>ERSPAN Tunnel key</help>
+                      <valueHelp>
+                        <format>0-4294967295</format>
+                        <description>Tunnel key</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                      <constraintErrorMessage>key must be between 0-4294967295</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="version">
+                <properties>
+                  <help>ERSPAN version number setting(default:1)</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-2"/>
+                  </constraint>
+                  <constraintErrorMessage>The version number of ERSPAN must be 1 or 2</constraintErrorMessage>
+                </properties>
+                <defaultValue>1</defaultValue>
+              </leafNode>
+              <leafNode name="direction">
+                <properties>
+                  <help>specifies the ERSPAN mirrored traffic's direction</help>
+                  <completionHelp>
+                    <list>ingress egress</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ingress</format>
+                    <description>Mirror ingress direction</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>egress</format>
+                    <description>Mirror egress direction</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(ingress|egress)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>The mirror direction of ERSPAN must be ingress or egress</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="hwid">
+                <properties>
+                  <help>an unique identifier of an ERSPAN v2 engine within a system</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-1048575"/>
+                  </constraint>
+                  <constraintErrorMessage>ERSPAN hwid must be a number(range:0-1048575)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="idx">
+                <properties>
+                  <help>specifies the ERSPAN v1 index field</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-63"/>
+                  </constraint>
+                  <constraintErrorMessage>ERSPAN idx must be a number(range:0-63)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

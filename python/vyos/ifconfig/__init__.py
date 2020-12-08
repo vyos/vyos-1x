@@ -39,6 +39,8 @@ from vyos.ifconfig.tunnel import IPIP6If
 from vyos.ifconfig.tunnel import IP6IP6If
 from vyos.ifconfig.tunnel import SitIf
 from vyos.ifconfig.tunnel import Sit6RDIf
+from vyos.ifconfig.erspan import ERSpanIf
+from vyos.ifconfig.erspan import ER6SpanIf
 from vyos.ifconfig.wireless import WiFiIf
 from vyos.ifconfig.l2tpv3 import L2TPv3If
 from vyos.ifconfig.macsec import MACsecIf
