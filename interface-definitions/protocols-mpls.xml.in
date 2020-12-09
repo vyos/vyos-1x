@@ -367,6 +367,37 @@
                           <valueless/>
                         </properties>
                       </leafNode>
+                      <node name="export-filter">
+                        <properties>
+                          <help>Forwarding equivalence class (FEC) export filter</help>
+                        </properties>
+                        <children>
+                          <leafNode name="filter-access-list">
+                            <properties>
+                              <help>Access-list number to apply FEC filtering</help>
+                                <valueHelp>
+                                  <format>1-2699</format>
+                                  <description>Access list number</description>
+                                </valueHelp>
+                                <constraint>
+                                  <validator name="numeric" argument="--range 1-2699"/>
+                                </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="neighbor-access-list">
+                            <properties>
+                              <help>Access-list number for IPv4 neighbor selection to apply filtering</help>
+                              <valueHelp>
+                                <format>1-2699</format>
+                                <description>Access list number</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-2699"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>  
                     </children>
                   </node>
                   <node name="ipv6">
@@ -380,6 +411,120 @@
                           <valueless/>
                         </properties>
                       </leafNode>
+                      <node name="export-filter">
+                        <properties>
+                          <help>Forwarding equivalence class (FEC) export filter</help>
+                        </properties>
+                        <children>
+                          <leafNode name="filter-access-list6">
+                            <properties>
+                              <help>Access-list6 number to apply FEC filtering</help>
+                                <valueHelp>
+                                  <format>1-2699</format>
+                                  <description>Access list number</description>
+                                </valueHelp>
+                                <constraint>
+                                  <validator name="numeric" argument="--range 1-2699"/>
+                                </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="neighbor-access-list6">
+                            <properties>
+                              <help>Access-list6 number for IPv6 neighbor selection to apply filtering</help>
+                              <valueHelp>
+                                <format>1-2699</format>
+                                <description>Access list number</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-2699"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>   
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="import">
+                <properties>
+                  <help>Import parameters</help>
+                </properties>
+                <children>
+                  <node name="ipv4">
+                    <properties>
+                      <help>IPv4 parameters</help>
+                    </properties>
+                    <children>
+                      <node name="import-filter">
+                        <properties>
+                          <help>Forwarding equivalence class (FEC) import filter</help>
+                        </properties>
+                        <children>
+                          <leafNode name="filter-access-list">
+                            <properties>
+                              <help>Access-list number to apply FEC filtering</help>
+                                <valueHelp>
+                                  <format>1-2699</format>
+                                  <description>Access list number</description>
+                                </valueHelp>
+                                <constraint>
+                                  <validator name="numeric" argument="--range 1-2699"/>
+                                </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="neighbor-access-list">
+                            <properties>
+                              <help>Access-list number for IPv4 neighbor selection to apply filtering</help>
+                              <valueHelp>
+                                <format>1-2699</format>
+                                <description>Access list number</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-2699"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node> 
+                    </children>
+                  </node>
+                  <node name="ipv6">
+                    <properties>
+                      <help>IPv6 parameters</help>
+                    </properties>
+                    <children>
+                      <node name="import-filter">
+                        <properties>
+                          <help>Forwarding equivalence class (FEC) export filter</help>
+                        </properties>
+                        <children>
+                          <leafNode name="filter-access-list6">
+                            <properties>
+                              <help>Access-list6 number to apply FEC filtering</help>
+                                <valueHelp>
+                                  <format>1-2699</format>
+                                  <description>Access list number</description>
+                                </valueHelp>
+                                <constraint>
+                                  <validator name="numeric" argument="--range 1-2699"/>
+                                </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="neighbor-access-list6">
+                            <properties>
+                              <help>Access-list6 number for IPv6 neighbor selection to apply filtering</help>
+                              <valueHelp>
+                                <format>1-2699</format>
+                                <description>Access list number</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-2699"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>  
                     </children>
                   </node>
                 </children>

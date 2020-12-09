@@ -34,13 +34,11 @@ neighbor {{neighbors}} session holdtime {{ldp.neighbor[neighbors].session_holdti
 {%         if ldp.discovery.transport_ipv4_address is defined %}
 address-family ipv4
 {%             if ldp.allocation is defined %}
-{%               if ldp.allocation.ipv4 is defined %}
-{%                 if ldp.allocation.ipv4.access_list is defined %}
+{%                 if ldp.allocation.ipv4 is defined %}
+{%                     if ldp.allocation.ipv4.access_list is defined %}
 label local allocate for {{ ldp.allocation.ipv4.access_list }}
+{%                     endif %}
 {%                 endif %}
-label local allocate host-routes
-{%               endif %}
-label local allocate host-routes
 {%             else %}
 label local allocate host-routes
 {%             endif %}
@@ -56,9 +54,33 @@ discovery hello interval {{ ldp.discovery.hello_ipv4_interval }}
 {%             if ldp.discovery.session_ipv4_holdtime is defined %}
 session holdtime {{ ldp.discovery.session_ipv4_holdtime }}
 {%             endif %}
+{%             if ldp.import is defined %}
+{%                 if ldp.import.ipv4 is defined %}
+{%                     if ldp.import.ipv4.import_filter is defined %}
+{%                         if ldp.import.ipv4.import_filter.filter_access_list is defined %}
+{%                             if ldp.import.ipv4.import_filter.neighbor_access_list is defined %}
+label remote accept for {{ ldp.import.ipv4.import_filter.filter_access_list }} from {{ ldp.import.ipv4.import_filter.neighbor_access_list }}
+{%                             else %}
+label remote accept for {{ ldp.import.ipv4.import_filter.filter_access_list }}
+{%                             endif %}
+{%                         endif %}
+{%                     endif %}
+{%                 endif %}
+{%             endif %}
 {%             if ldp.export is defined %}
-{%                 if ldp.export.ipv4.explicit_null is defined %}
+{%                 if ldp.export.ipv4 is defined %}
+{%                     if ldp.export.ipv4.explicit_null is defined %}
 label local advertise explicit-null
+{%                     endif %}
+{%                     if ldp.export.ipv4.export_filter is defined %}
+{%                         if ldp.export.ipv4.export_filter.filter_access_list is defined %}
+{%                             if ldp.export.ipv4.export_filter.neighbor_access_list is defined %}
+label local advertise for {{ ldp.export.ipv4.export_filter.filter_access_list }} to {{ ldp.export.ipv4.export_filter.neighbor_access_list }}
+{%                             else %}
+label local advertise for {{ ldp.export.ipv4.export_filter.filter_access_list }}
+{%                             endif %}
+{%                         endif %}
+{%                     endif %}
 {%                 endif %}
 {%             endif %}
 {%             if ldp.targeted_neighbor is defined %}
@@ -88,13 +110,11 @@ no address-family ipv4
 {%         if ldp.discovery.transport_ipv6_address is defined %}
 address-family ipv6
 {%             if ldp.allocation is defined %}
-{%               if ldp.allocation.ipv6 is defined %}
-{%                 if ldp.allocation.ipv6.access_list6 is defined %}
+{%                 if ldp.allocation.ipv6 is defined %}
+{%                     if ldp.allocation.ipv6.access_list6 is defined %}
 label local allocate for {{ ldp.allocation.ipv6.access_list6 }}
+{%                     endif %}
 {%                 endif %}
-label local allocate host-routes
-{%               endif %}
-label local allocate host-routes
 {%             else %}
 label local allocate host-routes
 {%             endif %}
@@ -110,9 +130,33 @@ discovery hello interval {{ ldp.discovery.hello_ipv6_interval }}
 {%             if ldp.discovery.session_ipv6_holdtime is defined %}
 session holdtime {{ ldp.discovery.session_ipv6_holdtime }}
 {%             endif %}
+{%             if ldp.import is defined %}
+{%                 if ldp.import.ipv6 is defined %}
+{%                     if ldp.import.ipv6.import_filter is defined %}
+{%                         if ldp.import.ipv6.import_filter.filter_access_list6 is defined %}
+{%                             if ldp.import.ipv6.import_filter.neighbor_access_list6 is defined %}
+label remote accept for {{ ldp.import.ipv6.import_filter.filter_access_list6 }} from {{ ldp.import.ipv6.import_filter.neighbor_access_list6 }}
+{%                             else %}
+label remote accept for {{ ldp.import.ipv6.import_filter.filter_access_list6 }}
+{%                             endif %}
+{%                         endif %}
+{%                     endif %}
+{%                 endif %}
+{%             endif %}
 {%             if ldp.export is defined %}
-{%                 if ldp.export.ipv6.explicit_null is defined %}
+{%                 if ldp.export.ipv6 is defined %}
+{%                     if ldp.export.ipv6.explicit_null is defined %}
 label local advertise explicit-null
+{%                     endif %}
+{%                     if ldp.export.ipv6.export_filter is defined %}
+{%                         if ldp.export.ipv6.export_filter.filter_access_list6 is defined %}
+{%                             if ldp.export.ipv6.export_filter.neighbor_access_list6 is defined %}
+label local advertise for {{ ldp.export.ipv6.export_filter.filter_access_list6 }} to {{ ldp.export.ipv6.export_filter.neighbor_access_list6 }}
+{%                             else %}
+label local advertise for {{ ldp.export.ipv6.export_filter.filter_access_list6 }}
+{%                             endif %}
+{%                         endif %}
+{%                     endif %}
 {%                 endif %}
 {%             endif %}
 {%             if ldp.targeted_neighbor is defined %}
