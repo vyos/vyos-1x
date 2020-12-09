@@ -22,7 +22,7 @@
 {% if forward_zones is defined %}
 # zones added via 'service dns forwarding domain'
 {%   for zone, zonedata in forward_zones.items() %}
-{{ "+" if zonedata['recursion_desired'] is defined }}{{ zone }}={{ zonedata['server']|join(', ') }}
+{{ "+" if zonedata['recursion_desired'] is defined }}{{ zone | replace('_', '-') }}={{ zonedata['server']|join(', ') }}
 {%   endfor %}
 {% endif %}
 
