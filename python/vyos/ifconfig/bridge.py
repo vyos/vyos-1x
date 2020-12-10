@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from netifaces import interfaces
+import json
 
 from vyos.ifconfig.interface import Interface
 from vyos.validate import assert_boolean
@@ -208,6 +209,35 @@ class BridgeIf(Interface):
         """
         return self.set_interface('del_port', interface)
 
+    def get_vlan_ids(self):
+        """
+        Get the VLAN ID of the interface bound to the bridge
+        
+        is_trunk is 1 means to obtain the VLAN ID of Trunk mode, otherwise obtain the VLAN ID of Access mode
+
+        Example:
+        >>> from vyos.ifconfig import BridgeIf
+        >>> Interface('br0').get_vlan_id()
+        None
+        """
+        interface = self.config['ifname']
+        
+        vlan_ids = []
+        
+        bridge_status = cmd('bridge -j vlan show', shell=True)
+        vlan_filter_status = json.loads(bridge_status)
+        
+        if vlan_filter_status is not None:
+            for interface_status in vlan_filter_status:
+                ifname = interface_status['ifname']
+                if interface == ifname:
+                    vlans_status = interface_status['vlans']
+                    for vlan_status in vlans_status:
+                        vlan_id = vlan_status['vlan']
+                        vlan_ids.append(vlan_id)
+        
+        return vlan_ids
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -309,7 +339,7 @@ class BridgeIf(Interface):
                     cmd = f'bridge vlan del dev {interface} vid 1'
                     self._cmd(cmd)
                     vlan_id = interface_config['native_vlan']
-                    if vlan_id != 1:
+                    if int(vlan_id) != 1:
                         vlan_del.add(1)
                     cmd = f'bridge vlan add dev {interface} vid {vlan_id} pvid untagged master'
                     self._cmd(cmd)
@@ -329,15 +359,10 @@ class BridgeIf(Interface):
                         self._cmd(cmd)
                         vlan_add.add(vlan)
 
-
-
-
         for vlan in vlan_del:
             if isinstance(vlan,str) and vlan.isnumeric():
                 if int(vlan) == 1:
                     cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
-                    self._cmd(cmd)
-                    cmd = f'bridge vlan add dev {ifname} vid {vlan} pvid untagged self'
                     self._cmd(cmd)
                 else:
                     cmd = f'bridge vlan del dev {ifname} vid {vlan} self'

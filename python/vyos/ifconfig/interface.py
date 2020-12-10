@@ -731,6 +731,7 @@ class Interface(Control):
         >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
         self.set_interface('proxy_arp_pvlan', enable)
+    
 
     def get_addr(self):
         """
@@ -898,6 +899,64 @@ class Interface(Control):
             # set bridge port path priority
             if 'priority' in bridge_config:
                 self.set_path_cost(bridge_config['priority'])
+            
+            vlan_filter = 0
+            
+            vlan_del = set()
+            vlan_add = set()
+
+            if 'native_vlan' in bridge_config:
+                vlan_filter = 1
+                cmd = f'bridge vlan del dev {self.ifname} vid 1'
+                self._cmd(cmd)
+                vlan_id = bridge_config['native_vlan']
+                if int(vlan_id) != 1:
+                    vlan_del.add(1)
+                cmd = f'bridge vlan add dev {self.ifname} vid {vlan_id} pvid untagged master'
+                self._cmd(cmd)
+                vlan_add.add(vlan_id)
+
+            if 'allowed_vlan' in bridge_config:
+                vlan_filter = 1
+
+            if vlan_filter:
+                if 'native_vlan' not in bridge_config:
+                    cmd = f'bridge vlan del dev {self.ifname} vid 1'
+                    self._cmd(cmd)
+
+            if 'allowed_vlan' in bridge_config:
+                for vlan in bridge_config['allowed_vlan']:
+                    cmd = f'bridge vlan add dev {self.ifname} vid {vlan} master'
+                    self._cmd(cmd)
+                    vlan_add.add(vlan)
+            
+            vlan_bridge_ids = Section.klass(bridge)(bridge, create=True).get_vlan_ids()
+            
+            # Delete VLAN ID for the bridge
+            for vlan in vlan_del:
+                if int(vlan) == 1:
+                    cmd = f'bridge vlan del dev {bridge} vid {vlan} self'
+                    self._cmd(cmd)
+            
+            # Setting VLAN ID for the bridge
+            for vlan in vlan_add:
+                if isinstance(vlan,str) and vlan.isnumeric():
+                    if int(vlan) not in vlan_bridge_ids:
+                        cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
+                        self._cmd(cmd)
+                elif isinstance(vlan,str) and not vlan.isnumeric():
+                    vlan_range = vlan.split('-')
+                    for vlan_id in range(int(vlan_range[0]),int(vlan_range[1]) + 1):
+                        if int(vlan_id) not in vlan_bridge_ids:
+                            cmd = f'bridge vlan add dev {bridge} vid {vlan_id} self'
+                            self._cmd(cmd)
+                else:
+                    if vlan not in vlan_bridge_ids:
+                        cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
+                        self._cmd(cmd)
+            
+            # enable/disable Vlan Filter
+            Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
 
     def set_dhcp(self, enable):
         """
