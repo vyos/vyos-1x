@@ -950,10 +950,6 @@ class Interface(Control):
                         if int(vlan_id) not in vlan_bridge_ids:
                             cmd = f'bridge vlan add dev {bridge} vid {vlan_id} self'
                             self._cmd(cmd)
-                else:
-                    if vlan not in vlan_bridge_ids:
-                        cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
-                        self._cmd(cmd)
             
             # enable/disable Vlan Filter
             Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
