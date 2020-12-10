@@ -64,6 +64,14 @@ class TestServiceWebProxy(unittest.TestCase):
             self.assertIn(f'acl Safe_ports port {port}', config)
         self.assertIn(f'acl CONNECT method CONNECT', config)
 
+        self.assertIn(f'http_access allow manager localhost', config)
+        self.assertIn(f'http_access deny manager', config)
+        self.assertIn(f'http_access deny !Safe_ports', config)
+        self.assertIn(f'http_access deny CONNECT !SSL_ports', config)
+        self.assertIn(f'http_access allow localhost', config)
+        self.assertIn(f'http_access allow net', config)
+        self.assertIn(f'http_access deny all', config)
+
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
@@ -97,7 +105,6 @@ class TestServiceWebProxy(unittest.TestCase):
 
         config = read_file(PROXY_CONF)
         self.assertIn(f'http_port {listen_ip}:{port} intercept', config)
-        self.assertIn(f'http_port 127.0.0.1:{port}', config)
         self.assertIn(f'append_domain {domain}', config)
         self.assertIn(f'cache_dir ufs /var/spool/squid {cache_size} 16 256', config)
         self.assertIn(f'access_log none', config)
