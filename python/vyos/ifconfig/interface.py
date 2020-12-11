@@ -948,7 +948,9 @@ class Interface(Control):
                             self._cmd(cmd)
             
             # enable/disable Vlan Filter
-            Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
+            # When the VLAN aware option is not detected, the setting of `bridge` should not be overwritten
+            if vlan_filter:
+                Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
 
     def set_dhcp(self, enable):
         """
