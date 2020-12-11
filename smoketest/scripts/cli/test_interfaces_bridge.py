@@ -48,13 +48,9 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             
             self.session.set(['interfaces','dummy','dum0'])
             self.session.set(['interfaces','dummy','dum1'])
-            self.session.commit()
             self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
             self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
-            self.session.commit()
-            for tmp in Section.interfaces("bonding"):
-                if not '.' in tmp:
-                    self._members.append(tmp)
+            self._members.append('bond1')
 
         self._options['br0'] = []
         for member in self._members:
@@ -71,7 +67,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             base = self._base_path + [interface]
             self.session.set(base + ['stp'])
             self.session.set(base + ['address', '192.0.2.1/24'])
-            self.session.commit()
 
             cost = 1000
             priority = 10
