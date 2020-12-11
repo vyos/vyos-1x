@@ -918,13 +918,9 @@ class Interface(Control):
 
             if 'allowed_vlan' in bridge_config:
                 vlan_filter = 1
-
-            if vlan_filter:
                 if 'native_vlan' not in bridge_config:
                     cmd = f'bridge vlan del dev {self.ifname} vid 1'
                     self._cmd(cmd)
-
-            if 'allowed_vlan' in bridge_config:
                 for vlan in bridge_config['allowed_vlan']:
                     cmd = f'bridge vlan add dev {self.ifname} vid {vlan} master'
                     self._cmd(cmd)
