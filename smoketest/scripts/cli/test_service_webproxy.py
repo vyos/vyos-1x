@@ -136,17 +136,25 @@ class TestServiceWebProxy(unittest.TestCase):
         self.session.set(base_path + ['authentication', 'children', auth_children])
         self.session.set(base_path + ['authentication', 'credentials-ttl', cred_ttl])
 
-        # check validate() - LDAP authentication is enabled, but server not set
-        self.session.set(base_path + ['authentication', 'method', 'ldap'])
         self.session.set(base_path + ['authentication', 'realm', realm])
+        self.session.set(base_path + ['authentication', 'method', 'ldap'])
+        # check validate() - LDAP authentication is enabled, but server not set
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-
-        self.session.set(base_path + ['authentication', 'ldap', 'base-dn', ldap_base_dn])
         self.session.set(base_path + ['authentication', 'ldap', 'server', ldap_server])
+
+        # check validate() - LDAP password can not be set when bind-dn is not define
         self.session.set(base_path + ['authentication', 'ldap', 'password', ldap_password])
-        self.session.set(base_path + ['authentication', 'ldap', 'username-attribute', ldap_attr])
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
         self.session.set(base_path + ['authentication', 'ldap', 'bind-dn', ldap_bind_dn])
+
+        # check validate() - LDAP base-dn must be set
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(base_path + ['authentication', 'ldap', 'base-dn', ldap_base_dn])
+
+        self.session.set(base_path + ['authentication', 'ldap', 'username-attribute', ldap_attr])
         self.session.set(base_path + ['authentication', 'ldap', 'filter-expression', ldap_filter])
 
         # commit changes
