@@ -45,10 +45,21 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             for tmp in Section.interfaces("ethernet"):
                 if not '.' in tmp:
                     self._members.append(tmp)
+            
+            self.session.set(['interfaces','dummy','dum0'])
+            self.session.set(['interfaces','dummy','dum1'])
+            self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
+            self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
+            self._members.append('bond1')
 
         self._options['br0'] = []
         for member in self._members:
             self._options['br0'].append(f'member interface {member}')
+    
+    def tearDown(self):
+        self.session.delete(['interfaces','bonding'])
+        self.session.delete(['interfaces','dummy'])
+        super().tearDown()
 
     def test_add_remove_member(self):
         """ Add member interfaces to bridge and set STP cost/priority """

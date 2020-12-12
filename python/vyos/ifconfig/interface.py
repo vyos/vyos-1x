@@ -32,6 +32,7 @@ from netifaces import AF_INET6
 from vyos import ConfigError
 from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
+from vyos.configdict import get_vlan_ids
 from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
@@ -731,6 +732,7 @@ class Interface(Control):
         >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
         self.set_interface('proxy_arp_pvlan', enable)
+    
 
     def get_addr(self):
         """
@@ -886,6 +888,8 @@ class Interface(Control):
 
         # drop all interface addresses first
         self.flush_addrs()
+        
+        ifname = self.ifname
 
         for bridge, bridge_config in bridge_dict.items():
             # add interface to bridge - use Section.klass to get BridgeIf class
@@ -898,6 +902,50 @@ class Interface(Control):
             # set bridge port path priority
             if 'priority' in bridge_config:
                 self.set_path_cost(bridge_config['priority'])
+            
+            vlan_filter = 0
+            vlan_add = set()
+            
+            del_ifname_vlan_ids = get_vlan_ids(ifname)
+            bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
+            
+            if bridge_vlan_filter:
+                if 1 in del_ifname_vlan_ids:
+                    del_ifname_vlan_ids.remove(1)
+                vlan_filter = 1
+            
+            for vlan in del_ifname_vlan_ids:
+                cmd = f'bridge vlan del dev {ifname} vid {vlan}'
+                self._cmd(cmd)
+
+            if 'native_vlan' in bridge_config:
+                vlan_filter = 1
+                cmd = f'bridge vlan del dev {self.ifname} vid 1'
+                self._cmd(cmd)
+                vlan_id = bridge_config['native_vlan']
+                cmd = f'bridge vlan add dev {self.ifname} vid {vlan_id} pvid untagged master'
+                self._cmd(cmd)
+                vlan_add.add(vlan_id)
+
+            if 'allowed_vlan' in bridge_config:
+                vlan_filter = 1
+                if 'native_vlan' not in bridge_config:
+                    cmd = f'bridge vlan del dev {self.ifname} vid 1'
+                    self._cmd(cmd)
+                for vlan in bridge_config['allowed_vlan']:
+                    cmd = f'bridge vlan add dev {self.ifname} vid {vlan} master'
+                    self._cmd(cmd)
+                    vlan_add.add(vlan)
+            
+            if vlan_filter:
+                # Setting VLAN ID for the bridge
+                for vlan in vlan_add:
+                    cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
+                    self._cmd(cmd)
+                
+                # enable/disable Vlan Filter
+                # When the VLAN aware option is not detected, the setting of `bridge` should not be overwritten
+                Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
 
     def set_dhcp(self, enable):
         """

@@ -17,10 +17,12 @@
 A library for retrieving value dicts from VyOS configs in a declarative fashion.
 """
 import os
+import json
 
 from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
+from vyos.util import cmd
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -419,6 +421,26 @@ def get_interface_dict(config, base, ifname=''):
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
     return dict
+
+def get_vlan_ids(interface):
+    """
+    Get the VLAN ID of the interface bound to the bridge
+    """
+    vlan_ids = set()
+        
+    bridge_status = cmd('bridge -j vlan show', shell=True)
+    vlan_filter_status = json.loads(bridge_status)
+
+    if vlan_filter_status is not None:
+        for interface_status in vlan_filter_status:
+            ifname = interface_status['ifname']
+            if interface == ifname:
+                vlans_status = interface_status['vlans']
+                for vlan_status in vlans_status:
+                    vlan_id = vlan_status['vlan']
+                    vlan_ids.add(vlan_id)
+        
+    return vlan_ids
 
 
 def get_accel_dict(config, base, chap_secrets):
