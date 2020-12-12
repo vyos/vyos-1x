@@ -928,6 +928,8 @@ class Interface(Control):
             
             vlan_bridge_ids = Section.klass(bridge)(bridge, create=True).get_vlan_ids()
             
+            apply_vlan_ids = set()
+            
             # Delete VLAN ID for the bridge
             for vlan in vlan_del:
                 if int(vlan) == 1:
@@ -936,16 +938,16 @@ class Interface(Control):
             
             # Setting VLAN ID for the bridge
             for vlan in vlan_add:
-                if isinstance(vlan,str) and vlan.isnumeric():
-                    if int(vlan) not in vlan_bridge_ids:
-                        cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
-                        self._cmd(cmd)
-                elif isinstance(vlan,str) and not vlan.isnumeric():
-                    vlan_range = vlan.split('-')
-                    for vlan_id in range(int(vlan_range[0]),int(vlan_range[1]) + 1):
+                vlan_range = vlan.split('-')
+                apply_vlan_ids.add(int(vlan_range[0]))
+                if(len(vlan_range) == 2):
+                    for vlan_id in range(int(vlan_range[0])+1,int(vlan_range[1]) + 1):
                         if int(vlan_id) not in vlan_bridge_ids:
-                            cmd = f'bridge vlan add dev {bridge} vid {vlan_id} self'
-                            self._cmd(cmd)
+                            apply_vlan_ids.add(int(vlan_id))
+            
+            for vlan in apply_vlan_ids:
+                cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
+                self._cmd(cmd)
             
             # enable/disable Vlan Filter
             # When the VLAN aware option is not detected, the setting of `bridge` should not be overwritten
