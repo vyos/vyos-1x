@@ -242,7 +242,7 @@
                     <properties>
                       <help>NetFlow port number</help>
                       <valueHelp>
-                        <format>1025-65535</format>
+                        <format>u32:1025-65535</format>
                         <description>NetFlow port number (default 2055)</description>
                       </valueHelp>
                       <constraint>
@@ -412,7 +412,7 @@
                     <properties>
                       <help>sFlow port number</help>
                       <valueHelp>
-                        <format>1025-65535</format>
+                        <format>u32:1025-65535</format>
                         <description>sFlow port number (default 6343)</description>
                       </valueHelp>
                       <constraint>

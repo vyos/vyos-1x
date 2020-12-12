@@ -106,7 +106,7 @@
                 <properties>
                   <help>Port for SNMP service (default: '161')</help>
                   <valueHelp>
-                    <format>1-65535</format>
+                    <format>u32:1-65535</format>
                     <description>Numeric IP port</description>
                   </valueHelp>
                   <constraint>
@@ -179,7 +179,7 @@
                 <properties>
                   <help>Destination port used for trap notification</help>
                   <valueHelp>
-                    <format>1-65535</format>
+                    <format>u32:1-65535</format>
                     <description>Numeric IP port</description>
                   </valueHelp>
                   <constraint>
@@ -327,7 +327,7 @@
                     <properties>
                       <help>Specifies TCP/UDP port of destination SNMP traps/informs (default: '162')</help>
                       <valueHelp>
-                        <format>1-65535</format>
+                        <format>u32:1-65535</format>
                         <description>Numeric IP port</description>
                       </valueHelp>
                       <constraint>

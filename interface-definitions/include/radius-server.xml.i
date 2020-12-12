@@ -43,7 +43,7 @@
           <properties>
             <help>Authentication port</help>
             <valueHelp>
-              <format>1-65535</format>
+              <format>u32:1-65535</format>
               <description>Numeric IP port (default: 1812)</description>
             </valueHelp>
             <constraint>

@@ -1084,11 +1084,11 @@
                             <properties>
                               <help>Any TCP or UDP port</help>
                               <valueHelp>
-                                <format>&lt;port name&gt;</format>
+                                <format>port name</format>
                                 <description>Named port (any name in /etc/services, e.g., http)</description>
                               </valueHelp>
                               <valueHelp>
-                                <format>&lt;1-65535&gt;</format>
+                                <format>u32:1-65535</format>
                                 <description>Numbered port</description>
                               </valueHelp>
                             </properties>
@@ -1127,11 +1127,11 @@
                             <properties>
                               <help>Any TCP or UDP port</help>
                               <valueHelp>
-                                <format>&lt;port name&gt;</format>
+                                <format>port name</format>
                                 <description>Named port (any name in /etc/services, e.g., http)</description>
                               </valueHelp>
                               <valueHelp>
-                                <format>&lt;1-65535&gt;</format>
+                                <format>u32:1-65535</format>
                                 <description>Numbered port</description>
                               </valueHelp>
                             </properties>

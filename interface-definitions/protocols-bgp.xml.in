@@ -507,7 +507,7 @@
                 <properties>
                   <help>Neighbor BGP port</help>
                   <valueHelp>
-                    <format>&lt;1-65535&gt;</format>
+                    <format>u32:1-65535</format>
                     <description>Neighbor BGP port number</description>
                   </valueHelp>
                   <constraint>

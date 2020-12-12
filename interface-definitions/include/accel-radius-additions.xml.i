@@ -132,7 +132,7 @@
           <properties>
             <help>Port for Dynamic Authorization Extension server (DM/CoA) (default: 1700)</help>
             <valueHelp>
-              <format>number</format>
+              <format>u32:1-65535</format>
               <description>TCP port</description>
             </valueHelp>
             <constraint>

@@ -24,7 +24,7 @@
             <properties>
               <help>Port number used to listen for connections</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>

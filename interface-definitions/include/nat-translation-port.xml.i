@@ -3,7 +3,7 @@
   <properties>
     <help>Port number</help>
     <valueHelp>
-      <format>1-65535</format>
+      <format>u32:1-65535</format>
       <description>Numeric IP port</description>
     </valueHelp>
     <valueHelp>
