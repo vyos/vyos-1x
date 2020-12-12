@@ -21,6 +21,7 @@ from vyos.validate import assert_boolean
 from vyos.validate import assert_positive
 from vyos.util import cmd
 from vyos.util import dict_search
+from vyos.configdict import get_vlan_ids
 
 @Interface.register
 class BridgeIf(Interface):
@@ -44,6 +45,14 @@ class BridgeIf(Interface):
             'broadcast': True,
             'vlan': True,
         },
+    }
+    
+    _sysfs_get = {
+        **Interface._sysfs_get,**{
+            'vlan_filter': {
+                'location': '/sys/class/net/{ifname}/bridge/vlan_filtering'
+            }
+        }
     }
 
     _sysfs_set = {**Interface._sysfs_set, **{
@@ -93,6 +102,13 @@ class BridgeIf(Interface):
             'shellcmd': 'ip link set dev {value} nomaster',
         },
     }}
+    
+    def get_vlan_filter(self):
+        """
+        Get the status of the bridge VLAN filter
+        """
+        
+        return self.get_interface('vlan_filter')
 
 
     def set_ageing_time(self, time):
@@ -209,35 +225,6 @@ class BridgeIf(Interface):
         """
         return self.set_interface('del_port', interface)
 
-    def get_vlan_ids(self):
-        """
-        Get the VLAN ID of the interface bound to the bridge
-        
-        is_trunk is 1 means to obtain the VLAN ID of Trunk mode, otherwise obtain the VLAN ID of Access mode
-
-        Example:
-        >>> from vyos.ifconfig import BridgeIf
-        >>> Interface('br0').get_vlan_id()
-        None
-        """
-        interface = self.config['ifname']
-        
-        vlan_ids = []
-        
-        bridge_status = cmd('bridge -j vlan show', shell=True)
-        vlan_filter_status = json.loads(bridge_status)
-        
-        if vlan_filter_status is not None:
-            for interface_status in vlan_filter_status:
-                ifname = interface_status['ifname']
-                if interface == ifname:
-                    vlans_status = interface_status['vlans']
-                    for vlan_status in vlans_status:
-                        vlan_id = vlan_status['vlan']
-                        vlan_ids.append(vlan_id)
-        
-        return vlan_ids
-
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -290,6 +277,14 @@ class BridgeIf(Interface):
 
         tmp = dict_search('member.interface', config)
         if tmp:
+            if self.get_vlan_filter():
+                bridge_vlan_ids = get_vlan_ids(ifname)
+                # Delete VLAN ID for the bridge
+                if 1 in bridge_vlan_ids:
+                    bridge_vlan_ids.remove(1)
+                for vlan in bridge_vlan_ids:
+                    vlan_del.add(str(vlan))
+            
             for interface, interface_config in tmp.items():
                 # if interface does yet not exist bail out early and
                 # add it later
@@ -340,32 +335,31 @@ class BridgeIf(Interface):
                     self._cmd(cmd)
                     vlan_id = interface_config['native_vlan']
                     if int(vlan_id) != 1:
+                        if 1 in vlan_add:
+                            vlan_add.remove(1)
                         vlan_del.add(1)
                     cmd = f'bridge vlan add dev {interface} vid {vlan_id} pvid untagged master'
                     self._cmd(cmd)
                     vlan_add.add(vlan_id)
+                    if vlan_id in vlan_del:
+                        vlan_del.remove(vlan_id)
 
                 if 'allowed_vlan' in interface_config:
                     vlan_filter = 1
                     if 'native_vlan' not in interface_config:
                         cmd = f'bridge vlan del dev {interface} vid 1'
                         self._cmd(cmd)
+                        vlan_del.add(1)
                     for vlan in interface_config['allowed_vlan']:
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
                         vlan_add.add(vlan)
+                        if vlan in vlan_del:
+                            vlan_del.remove(vlan)
 
         for vlan in vlan_del:
-            if isinstance(vlan,str) and vlan.isnumeric():
-                if int(vlan) == 1:
-                    cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
-                    self._cmd(cmd)
-                else:
-                    cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
-                    self._cmd(cmd)
-            else:
-                cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
-                self._cmd(cmd)
+            cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
+            self._cmd(cmd)
 
         for vlan in vlan_add:
             cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
