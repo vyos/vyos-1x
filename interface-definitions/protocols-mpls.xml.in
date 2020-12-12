@@ -496,7 +496,7 @@
                     <children>
                       <node name="import-filter">
                         <properties>
-                          <help>Forwarding equivalence class (FEC) export filter</help>
+                          <help>Forwarding equivalence class (FEC) import filter</help>
                         </properties>
                         <children>
                           <leafNode name="filter-access-list6">
