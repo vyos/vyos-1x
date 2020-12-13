@@ -167,7 +167,7 @@ class ER6SpanIf(_ERSpan):
                 
         self._cmd(command)
     
-    def change_options(self, config):
+    def change_options(self):
         ifname = self.config['ifname']
         local_ip = self.config['local_ip']
         remote_ip = self.config['remote_ip']

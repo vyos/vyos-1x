@@ -29,6 +29,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
 from vyos.ifconfig import GREIf
 from vyos.ifconfig import GRETapIf
@@ -84,38 +85,7 @@ def verify(tunnel):
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
     verify_vrf(tunnel)
-
-    if 'local_ip' not in tunnel and 'dhcp_interface' not in tunnel:
-        raise ConfigError('local-ip is mandatory for tunnel')
-
-    if 'remote_ip' not in tunnel and tunnel['encapsulation'] != 'gre':
-        raise ConfigError('remote-ip is mandatory for tunnel')
-
-    if {'local_ip', 'dhcp_interface'} <= set(tunnel):
-        raise ConfigError('Can not use both local-ip and dhcp-interface')
-
-    if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
-        error_ipv6 = 'Encapsulation mode requires IPv6'
-        if 'local_ip' in tunnel and not is_ipv6(tunnel['local_ip']):
-            raise ConfigError(f'{error_ipv6} local-ip')
-
-        if 'remote_ip' in tunnel and not is_ipv6(tunnel['remote_ip']):
-            raise ConfigError(f'{error_ipv6} remote-ip')
-    else:
-        error_ipv4 = 'Encapsulation mode requires IPv4'
-        if 'local_ip' in tunnel and not is_ipv4(tunnel['local_ip']):
-            raise ConfigError(f'{error_ipv4} local-ip')
-
-        if 'remote_ip' in tunnel and not is_ipv4(tunnel['remote_ip']):
-            raise ConfigError(f'{error_ipv4} remote-ip')
-
-    if tunnel['encapsulation'] in ['sit', 'gre-bridge']:
-        if 'source_interface' in tunnel:
-            raise ConfigError('Option source-interface can not be used with ' \
-                              'encapsulation "sit" or "gre-bridge"')
-    elif tunnel['encapsulation'] == 'gre':
-        if 'local_ip' in tunnel and is_ipv6(tunnel['local_ip']):
-            raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
+    verify_tunnel(tunnel)
 
     if 'source_interface' in tunnel:
         verify_interface_exists(tunnel['source_interface'])

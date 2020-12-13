@@ -93,24 +93,11 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     def test_erspan_ipv4(self):
         interface = 'ersp100'
         encapsulation = 'erspan'
-        address_v4 = '10.1.1.1/24'
         key = 123
 
-        self.session.set(self._base_path + [interface, 'address', address_v4])
-
-        # Must configure the ERSPAN tunnel encapsulation for ersp100
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
         self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-
-        # local-ip is mandatory for ERSPAN tunnel
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
         self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
-
-        
         self.session.set(self._base_path + [interface, 'remote-ip', self.remote_v4])
-
         self.session.set(self._base_path + [interface, 'parameters', 'ip' , 'key', str(key)])
 
         self.session.commit()
@@ -127,24 +114,11 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     def test_erspan_ipv6(self):
         interface = 'ersp1000'
         encapsulation = 'ip6erspan'
-        address_v6 = '2001:db8::1/24'
         key = 123
 
-        self.session.set(self._base_path + [interface, 'address', address_v6])
-
-        # Must configure the ERSPAN tunnel encapsulation for ersp100
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
         self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-
-        # local-ip is mandatory for ERSPAN tunnel
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
         self.session.set(self._base_path + [interface, 'local-ip', self.local_v6])
-
-        
         self.session.set(self._base_path + [interface, 'remote-ip', self.remote_v6])
-
         self.session.set(self._base_path + [interface, 'parameters', 'ip' , 'key', str(key)])
 
         self.session.commit()
@@ -158,4 +132,4 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(self.remote_v6,     conf['linkinfo']['info_data']['remote'])
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

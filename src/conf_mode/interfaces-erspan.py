@@ -25,9 +25,8 @@ from vyos.configdict import dict_merge
 from vyos.configdict import get_interface_dict
 from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
-from vyos.configverify import verify_vrf
-from vyos.configverify import verify_address
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
 from vyos.ifconfig import ERSpanIf
 from vyos.ifconfig import ER6SpanIf
@@ -51,7 +50,7 @@ def get_config(config=None):
     erspan = get_interface_dict(conf, base)
     
     tmp = leaf_node_changed(conf, ['encapsulation'])
-    if tmp: 
+    if tmp:
         erspan.update({'encapsulation_changed': {}})
 
     return erspan
@@ -61,57 +60,28 @@ def verify(erspan):
         return None
     
     if 'encapsulation' not in erspan:
-        raise ConfigError('Must configure the ERSPAN tunnel encapsulation for '\
+        raise ConfigError('Unable to detect the following ERSPAN tunnel encapsulation'\
                           '{ifname}!'.format(**erspan))
 
     verify_mtu_ipv6(erspan)
-    verify_address(erspan)
-    verify_vrf(erspan)
-
-    if 'local_ip' not in erspan:
-        raise ConfigError('local-ip is mandatory for ERSPAN tunnel')
-
-    if 'remote_ip' not in erspan:
-        raise ConfigError('remote-ip is mandatory for ERSPAN tunnel')
-
-    if erspan['encapsulation'] in ['ip6erspan']:
-        error_ipv6 = 'Encapsulation mode requires IPv6'
-        if 'local_ip' in erspan and not is_ipv6(erspan['local_ip']):
-            raise ConfigError(f'{error_ipv6} local-ip')
-
-        if 'remote_ip' in erspan and not is_ipv6(erspan['remote_ip']):
-            raise ConfigError(f'{error_ipv6} remote-ip')
-    else:
-        error_ipv4 = 'Encapsulation mode requires IPv4'
-        if 'local_ip' in erspan and not is_ipv4(erspan['local_ip']):
-            raise ConfigError(f'{error_ipv4} local-ip')
-
-        if 'remote_ip' in erspan and not is_ipv4(erspan['remote_ip']):
-            raise ConfigError(f'{error_ipv4} remote-ip')
-    
-    if 'parameters' not in erspan:
-        raise ConfigError('parameters is mandatory for ERSPAN tunnel')
+    verify_tunnel(erspan)
     
     key = dict_search('parameters.ip.key',erspan)
     if key == None:
         raise ConfigError('parameters.ip.key is mandatory for ERSPAN tunnel')
-    
-    if erspan['encapsulation'] == 'erspan':
-        if 'local_ip' in erspan and is_ipv6(erspan['local_ip']):
-            raise ConfigError('Can not use local IPv6 address is for ERSPAN tunnels')
             
 
 def generate(erspan):
     return None
 
 def apply(erspan):
-    if 'deleted' in erspan or 'encapsulation_changed' in erspan:
-        if erspan['ifname'] in interfaces():
-            tmp = Interface(erspan['ifname'])
-            tmp.remove()
-        if 'deleted' in erspan:
-            return None
-
+    if 'deleted' in erspan or 'encapsulation_changed' in erspan: 
+        if erspan['ifname'] in interfaces(): 
+            tmp = Interface(erspan['ifname']) 
+            tmp.remove() 
+        if 'deleted' in erspan: 
+            return None 
+    
     dispatch = {
         'erspan': ERSpanIf,
         'ip6erspan': ER6SpanIf
