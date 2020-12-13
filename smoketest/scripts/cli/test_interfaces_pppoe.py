@@ -45,7 +45,7 @@ def get_dhcp6c_config_value(interface, key):
 class PPPoEInterfaceTest(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        self._interfaces = ['pppoe0', 'pppoe50']
+        self._interfaces = ['pppoe10', 'pppoe20', 'pppoe30']
         self._source_interface = 'eth0'
 
     def tearDown(self):
