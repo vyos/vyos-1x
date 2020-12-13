@@ -86,13 +86,21 @@ class BasicInterfaceTest:
             del self.session
 
         def test_mirror(self):
-            Success = 0
-            i = 0
+            
             if self._test_mirror:
+                
+                # Create test dependency interface
+                self.session.set(['interfaces','dummy','dum0'])
+                self.session.set(['interfaces','dummy','dum1'])
+                self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
+                self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
+                
+                Success = 0
+                i = 0
                 # Check the two-way mirror rules of ingress and egress
                 for interface in self._interfaces:
-                    self.session.set(self._base_path + [interface, 'mirror', 'ingress', 'lo'])
-                    self.session.set(self._base_path + [interface, 'mirror', 'egress', 'lo'])
+                    self.session.set(self._base_path + [interface, 'mirror', 'ingress', 'bond1'])
+                    self.session.set(self._base_path + [interface, 'mirror', 'egress', 'bond1'])
                     i+=1
                 self.session.commit()
                 # Parse configuration
@@ -102,6 +110,8 @@ class BasicInterfaceTest:
                 else:
                     self.assertTrue(False)
                 i=0
+                self.session.delete(['interfaces','dummy'])
+                self.session.delete(['interfaces','bonding'])
             else:
                 return None
 

@@ -221,6 +221,44 @@ def is_member(conf, interface, intftype=None):
     old_level = conf.set_level(old_level)
     return ret_val
 
+def is_monitor_intf(conf,interface,direction=None):
+    """
+    Check whether the passed interface is the mirror monitoring interface of 
+    other interfaces of the specified type.
+    direction is optional, if not passed it will search all known direction
+    (currently ingress and egress)
+
+    Returns:
+    None -> Interface is not a monitor interface
+    Array() -> This interface is a monitor interface of interfaces
+    """
+    
+    directions = ['ingress', 'egress']
+    if direction not in directions + [None]:
+        raise ValueError(f'unknown interface mirror direction "{direction}"')
+    
+    direction = directions if direction == None else [direction]
+    
+    ret_val = []
+    old_level = conf.get_level()
+    conf.set_level([])
+    base = ['interfaces']
+    
+    for dire in direction:
+        for iftype in conf.list_nodes(base):
+            iftype_base = base + [iftype]
+            for intf in conf.list_nodes(iftype_base):
+                mirror = iftype_base + [intf, 'mirror', dire, interface]
+                if conf.exists(mirror):
+                    ret_val.append({intf : dire})
+    
+    old_level = conf.set_level(old_level)
+    if len(ret_val) == 0:
+        return None
+    else:
+        return ret_val
+    
+
 def has_vlan_subinterface_configured(conf, intf):
     """
     Checks if interface has an VLAN subinterface configured.
@@ -334,6 +372,10 @@ def get_interface_dict(config, base, ifname=''):
     # Check if we are a member of a bridge device
     bridge = is_member(config, ifname, 'bridge')
     if bridge: dict.update({'is_bridge_member' : bridge})
+    
+    # Check if it is a monitor interface
+    mirror = is_monitor_intf(config, ifname)
+    if mirror: dict.update({'is_monitor_intf' : mirror})
 
     # Check if we are a member of a bond device
     bond = is_member(config, ifname, 'bonding')
