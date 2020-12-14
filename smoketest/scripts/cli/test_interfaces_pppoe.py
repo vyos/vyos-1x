@@ -155,7 +155,7 @@ class PPPoEInterfaceTest(unittest.TestCase):
             # after the PPP interface gets a link to the ISP - but we can see if
             # it would be started by the scripts
             tmp = read_file(f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{interface}')
-            tmp = re.findall(f'systemctl start dhcp6c@{interface}.service', tmp)
+            tmp = re.findall(f'systemctl restart dhcp6c@{interface}.service', tmp)
             self.assertTrue(tmp)
 
 if __name__ == '__main__':
