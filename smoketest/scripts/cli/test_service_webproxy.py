@@ -173,7 +173,36 @@ class TestServiceWebProxy(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_04_basic_squidguard(self):
+    def test_04_cache_peer(self):
+        self.session.set(base_path + ['listen-address', listen_ip])
+
+        cache_peers = {
+            'foo' : '192.0.2.1',
+            'bar' : '192.0.2.2',
+            'baz' : '192.0.2.3',
+        }
+        for peer in cache_peers:
+            self.session.set(base_path + ['cache-peer', peer, 'address', cache_peers[peer]])
+            if peer == 'baz':
+                self.session.set(base_path + ['cache-peer', peer, 'type', 'sibling'])
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(PROXY_CONF)
+        self.assertIn('never_direct allow all', config)
+
+        for peer in cache_peers:
+            address = cache_peers[peer]
+            if peer == 'baz':
+                self.assertIn(f'cache_peer {address} sibling 3128 0 no-query default', config)
+            else:
+                self.assertIn(f'cache_peer {address} parent 3128 0 no-query default', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_05_basic_squidguard(self):
         default_cache = '100'
         local_block = ['192.0.0.1', '10.0.0.1', 'block.vyos.net']
 
