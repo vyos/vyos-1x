@@ -61,6 +61,7 @@ Depends:
   lsscsi,
   mdns-repeater,
   mtr-tiny,
+  netplug,
   nftables (>= 0.9.3),
   nginx-light,
   ntp,

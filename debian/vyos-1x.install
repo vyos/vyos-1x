@@ -1,4 +1,5 @@
 etc/dhcp
+etc/netplug
 etc/ppp
 etc/rsyslog.d
 etc/systemd

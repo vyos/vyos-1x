@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+#
+# Module: dhclient
+#
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licenses/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at `http://www.gnu.org/copyleft/gpl.html'.
+# You can also obtain it by writing to the Free Software Foundation,
+# Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+# MA 02110-1301, USA.
+#
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2008 Vyatta, Inc.
+# All Rights Reserved.
+#
+# Author: Mohit Mehta
+# Date: November 2008
+# Description: Script to release lease on link down
+#
+# **** End License ****
+#
+
+use lib "/opt/vyatta/share/perl5/";
+use Vyatta::Config;
+use Vyatta::Misc;
+
+use strict;
+use warnings;
+
+sub stop_dhclient {
+    my $intf = shift;
+    my $dhcp_daemon = '/sbin/dhclient';
+    my ($intf_config_file, $intf_process_id_file, $intf_leases_file) = Vyatta::Misc::generate_dhclient_intf_files($intf);
+    my $release_cmd = "sudo $dhcp_daemon -q -cf $intf_config_file -pf $intf_process_id_file -lf $intf_leases_file -r $intf 2> /dev/null;";
+    $release_cmd .= "sudo rm -f $intf_process_id_file 2> /dev/null";
+    system ($release_cmd);
+}
+
+
+#
+# main
+#
+
+my $dev=shift;
+
+# only do this if interface is configured to use dhcp for getting IP address
+if (Vyatta::Misc::is_dhcp_enabled($dev, "outside_cli")) {
+   # do a dhcp lease release for interface
+   stop_dhclient($dev);
+}
+
+exit 0;
+
+# end of file
+
