@@ -157,10 +157,9 @@
               </leafNode>
             </children>
           </node>
-
           <tagNode name="cache-peer">
             <properties>
-              <help>cache-peer hostname</help>
+              <help>Specify other caches in a hierarchy</help>
               <valueHelp>
                 <format>hostname</format>
                 <description>Cache peers FQDN</description>
@@ -169,39 +168,57 @@
             <children>
               <leafNode name="address">
                 <properties>
-                  <help>IPv4 address of peer-cache</help>
+                  <help>Hostname or IP address of peer</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IPv4 address of the cache peer</description>
+                    <description>Remote syslog server IPv4 address</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>hostname</format>
+                    <description>Remote syslog server FQDN</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid FQDN or IP address</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="http-port">
                 <properties>
-                  <help>Cache peer http port (default 3128)</help>
+                  <help>Default Proxy Port (default: 3128)</help>
                   <valueHelp>
-                    <format>1-65535</format>
-                    <description>Cache peer http port (default 3128)</description>
+                    <format>u32:1025-65535</format>
+                    <description>Default port number</description>
                   </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1025-65535"/>
+                  </constraint>
                 </properties>
+                <defaultValue>3128</defaultValue>
               </leafNode>
                <leafNode name="icp-port">
                 <properties>
-                  <help>Cache peer icp port (default disabled)</help>
+                  <help>Cache peer ICP port (default: disabled)</help>
                   <valueHelp>
-                    <format>1-65535</format>
-                    <description>Cache peer icp port (default disabled)</description>
+                    <format>u32:1-65535</format>
+                    <description>Cache peer ICP port</description>
                   </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
                 </properties>
+                <defaultValue>0</defaultValue>
               </leafNode>
               <leafNode name="options">
                 <properties>
-                  <help>Cache peer options</help>
+                  <help>Cache peer options (default: "no-query default")</help>
                   <valueHelp>
                     <format>text</format>
                     <description>Cache peer options</description>
                   </valueHelp>
                 </properties>
+                <defaultValue>no-query default</defaultValue>
               </leafNode>
               <leafNode name="type">
                 <properties>
@@ -225,6 +242,7 @@
                     <regex>^(parent|sibling|multicast)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>parent</defaultValue>
               </leafNode>
             </children>
           </tagNode>
@@ -249,6 +267,9 @@
                 <format>u32:1025-65535</format>
                 <description>Default port number</description>
               </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1025-65535"/>
+              </constraint>
             </properties>
             <defaultValue>3128</defaultValue>
           </leafNode>
@@ -286,6 +307,9 @@
                     <format>u32:1025-65535</format>
                     <description>Default port number</description>
                   </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1025-65535"/>
+                  </constraint>
                 </properties>
               </leafNode>
               <leafNode name="disable-transparent">
@@ -378,18 +402,7 @@
                   <help>URL filtering via squidGuard redirector</help>
                 </properties>
                 <children>
-                  <leafNode name="allow-category">
-                    <properties>
-                      <help>Category to allow</help>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="allow-ipaddr-url">
-                    <properties>
-                      <help>Allow IP address URLs</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/webproxy-squidguard.xml.i>
                   <node name="auto-update">
                     <properties>
                       <help>Auto update settings</help>
@@ -410,107 +423,6 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="block-category">
-                    <properties>
-                      <help>Category to block</help>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="default-action">
-                    <properties>
-                      <help>Default action</help>
-                      <completionHelp>
-                        <list>allow block</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>allow</format>
-                        <description>Default filter action to allow (default)</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>block</format>
-                        <description>Default filter action to allow (default)</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(allow|block)$</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="enable-safe-search">
-                    <properties>
-                      <help>Enable safe-mode search on popular search engines</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="local-block-keyword">
-                    <properties>
-                      <help>Local keyword to block</help>
-                      <valueHelp>
-                        <format>keyword</format>
-                        <description>Keyword (or regex) to block</description>
-                      </valueHelp>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="local-block-url">
-                    <properties>
-                      <help>Local URL to block</help>
-                      <valueHelp>
-                        <format>url</format>
-                        <description>Local URL to block (without http:\/\/</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(https?:\/\/)$</regex>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="local-block">
-                    <properties>
-                      <help>Local site to block</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IP address of site to block</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-prefix"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="local-ok-url">
-                    <properties>
-                      <help>Local URL to allow</help>
-                      <valueHelp>
-                        <format>url</format>
-                        <description>Local URL to allow (without http:\/\/</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(https?:\/\/)$</regex>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="local-ok">
-                    <properties>
-                      <help>Local site to allow</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IP address of site to allow</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-prefix"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="log">
-                    <properties>
-                      <help>Log block category</help>
-                      <completionHelp>
-                        <list>all</list>
-                      </completionHelp>
-                      <multi/>
-                    </properties>
-                  </leafNode>
                   <leafNode name="redirect-url">
                     <properties>
                       <help>Redirect URL for filtered websites (default: http:\/\/block.vyos.net)</help>
@@ -521,7 +433,203 @@
                     </properties>
                     <defaultValue>http:\/\/block.vyos.net</defaultValue>
                   </leafNode>
-                  <!-- not completed -->
+                  <tagNode name="rule">
+                    <properties>
+                      <help>URL filter rule for a source-group</help>
+                      <valueHelp>
+                        <format>u32:1-1024</format>
+                        <description>Rule Number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-1024"/>
+                      </constraint>
+                      <constraintErrorMessage>SquidGuard rule must between 1-1024</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/webproxy-squidguard.xml.i>
+                      <leafNode name="redirect-url">
+                        <properties>
+                          <help>Redirect URL for filtered websites (default: http:\/\/block.vyos.net)</help>
+                          <valueHelp>
+                            <format>url</format>
+                            <description>URL for redirect</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="source-group">
+                        <properties>
+                          <help>Source-group for this rule [REQUIRED]</help>
+                          <valueHelp>
+                            <format>group</format>
+                            <description>Source group identifier for this rule</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>service webproxy url-filtering squidguard source-group</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="time-period">
+                        <properties>
+                          <help>Time-period for this rule</help>
+                          <valueHelp>
+                            <format>period</format>
+                            <description>Time period for this rule</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>service webproxy url-filtering squidguard time-period</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="source-group">
+                    <properties>
+                      <help>Source group name</help>
+                      <valueHelp>
+                        <format>name</format>
+                        <description>Name of source group</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[^0-9]</regex>
+                      </constraint>
+                      <constraintErrorMessage>URL-filter source-group cannot start with a number!</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>Address for source-group</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address to match</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv4net</format>
+                            <description>IPv4 prefix to match</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv4range</format>
+                            <description>IPv4 address range to match</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                            <validator name="ipv4-prefix"/>
+                            <validator name="ipv4-range"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="description">
+                        <properties>
+                          <help>Description for source-group</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="domain">
+                        <properties>
+                          <help>Domain for source-group</help>
+                          <valueHelp>
+                            <format>domain</format>
+                            <description>Domain name for the source-group</description>
+                          </valueHelp>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ldap-ip-search">
+                        <properties>
+                          <help>LDAP search expression for an IP address list</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ldap-user-search">
+                        <properties>
+                          <help>LDAP search expression for a user group</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="user">
+                        <properties>
+                          <help>List of user names</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="time-period">
+                    <properties>
+                      <help>Time period name</help>
+                    </properties>
+                    <children>
+                      <tagNode name="days">
+                        <properties>
+                          <help>Time-period days</help>
+                          <completionHelp>
+                            <list>Sun Mon Tue Wed Thu Fri Sat weekdays weekend all</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>Sun</format>
+                            <description>Sunday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Mon</format>
+                            <description>Monday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Tue</format>
+                            <description>Tuesday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Wed</format>
+                            <description>Wednesday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Thu</format>
+                            <description>Thursday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Fri</format>
+                            <description>Friday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Sat</format>
+                            <description>Saturday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>weekdays</format>
+                            <description>Monday through Friday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>weekend</format>
+                            <description>Saturday and Sunday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>All days of the week</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(Sun|Mon|Tue|Wed|Thu|Fri|Sat|weekdays|weekend|all)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="time">
+                            <properties>
+                              <help>Time for time-period</help>
+                              <valueHelp>
+                                <format>&lt;hh:mm - hh:mm&gt;</format>
+                                <description>Time range in 24hr time</description>
+                              </valueHelp>
+                              <constraint>
+                                <!-- time range example: 12:00-13:00 -->
+                                <regex>^(\d\d:\d\d)-(\d\d:\d\d)$</regex>
+                              </constraint>
+                              <constraintErrorMessage>Expected time format hh:mm - hh:mm in 24hr time</constraintErrorMessage>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <leafNode name="description">
+                        <properties>
+                          <help>Time-period description</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
                 </children>
               </node>
             </children>

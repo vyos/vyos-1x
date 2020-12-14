@@ -44,15 +44,25 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
+
     # if no authentication method is supplid, no need to add defaults
     if not dict_search('authentication.method', proxy):
         default_values.pop('authentication')
+
+    # XXX: T2665: blend in proper cache-peer default values later
+    default_values.pop('cache_peer')
     proxy = dict_merge(default_values, proxy)
+
+    # XXX: T2665: blend in proper cache-peer default values
+    if 'cache_peer' in proxy:
+        default_values = defaults(base + ['cache-peer'])
+        for peer in proxy['cache_peer']:
+            proxy['cache_peer'][peer] = dict_merge(default_values,
+                proxy['cache_peer'][peer])
 
     import pprint
     pprint.pprint(proxy)
     return proxy
-
 
 def verify(proxy):
     if not proxy:
@@ -98,6 +108,11 @@ def verify(proxy):
 
             if 'base_dn' not in ldap_config:
                 raise ConfigError('LDAP base-dn must be set!')
+
+    if 'cache_peer' in proxy:
+        for peer, config in proxy['cache_peer'].items():
+            if 'address' not in config:
+                raise ConfigError(f'Cache-peer "{peer}" address must be set!')
 
 def generate(proxy):
     if not proxy:

@@ -100,29 +100,7 @@ forwarded_for off
 
 {% if cache_peer is defined and cache_peer is not none %}
 {%   for peer, config in cache_peer.items() %}
-{%     if not 'type' in webproxy['cache-peer'][peer] %}
-{%       set p_type = "parent" %}
-{%     else %}
-{%       set p_type = webproxy['cache-peer'][peer]['type'] %}
-{%     endif %}
-
-{%     if not 'http-port' in webproxy['cache-peer'][peer] %}
-{%       set p_http_port = 3128 %}
-{%     else %}
-{%       set p_http_port = webproxy['cache-peer'][peer]['http-port'] %}
-{%     endif %}
-
-{%     if not 'icp-port' in webproxy['cache-peer'][peer] %}
-{%       set p_icp_port = 0 %}
-{%     else %}
-{%       set p_icp_port = webproxy['cache-peer'][peer]['icp-port'] %}
-{%     endif %}
-
-{%     if not 'options' in webproxy['cache-peer'][peer] %}
-{%       set p_options = "no-query default" %}
-{%     else %}
-{%       set p_options = webproxy['cache-peer'][peer]['options'] %}
-{%     endif %}
-cache_peer {{ config.address }} {{p_type}} {{p_http_port}} {{p_icp_port}} {{p_options}}
+cache_peer {{ config.address }} {{ config.type }} {{ config.http_port }} {{ config.icp_port }} {{ config.options }}
 {%   endfor %}
+never_direct allow all
 {% endif %}
