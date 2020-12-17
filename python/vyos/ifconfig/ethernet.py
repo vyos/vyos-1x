@@ -257,16 +257,11 @@ class EthernetIf(Interface):
         ifname = self.config['ifname']
         cmd = f'ip link set dev {ifname} xdp off'
         if enabled:
-            # use 'xdpgeneric' for the time beeing until we can detect supported
-            # drivers or have a lookup table of whatever kind. This then can be
-            # replaced by xdpdrv
-            cmd = f'ip -force link set dev {ifname} xdpgeneric obj /usr/share/vyos/ebpf/xdp_router.o'
-        try:
-            return self._cmd(cmd)
-        except:
-            from vyos import ConfigError
-            raise ConfigError('Error: Device does not allow enslaving to a bridge.')
-
+            # Using 'xdp' will automatically decide if the driver supports
+            # 'xdpdrv' or only 'xdpgeneric'. A user later sees which driver is
+            # actually in use by calling 'ip a' or 'show interfaces ethernet'
+            cmd = f'ip -force link set dev {ifname} xdp obj /usr/share/vyos/ebpf/xdp_router.o'
+        return self._cmd(cmd)
 
     def set_ring_buffer(self, b_type, b_size):
         """
