@@ -21,6 +21,12 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="enable-egress">
+            <properties>
+              <help>Enable egress flow accounting</help>
+              <valueless />
+            </properties>
+          </leafNode>
           <leafNode name="disable-imt">
             <properties>
               <help>Disable in memory table plugin</help>
