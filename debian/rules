@@ -78,6 +78,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_DATA_DIR)
 	cp -r data/* $(DIR)/$(VYOS_DATA_DIR)
 
+	# Install eBPF plugins
+	mkdir -p $(DIR)/$(VYOS_DATA_DIR)/ebpf
+	cp -r src/ebpf/*.o $(DIR)/$(VYOS_DATA_DIR)/ebpf
+
 	# Install etc configuration files
 	mkdir -p $(DIR)/etc
 	cp -r src/etc/* $(DIR)/etc

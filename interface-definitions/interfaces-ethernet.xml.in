@@ -165,6 +165,12 @@
                   <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
                 </properties>
               </leafNode>
+              <leafNode name="xdp">
+                <properties>
+                  <help>Enable eXpress Data Path</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <leafNode name="speed">

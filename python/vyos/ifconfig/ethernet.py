@@ -251,6 +251,23 @@ class EthernetIf(Interface):
         """
         return self.set_interface('ufo', state)
 
+    def set_xdp(self, enabled):
+        """
+        """
+        ifname = self.config['ifname']
+        cmd = f'ip link set dev {ifname} xdp off'
+        if enabled:
+            # use 'xdpgeneric' for the time beeing until we can detect supported
+            # drivers or have a lookup table of whatever kind. This then can be
+            # replaced by xdpdrv
+            cmd = f'ip -force link set dev {ifname} xdpgeneric obj /usr/share/vyos/ebpf/xdp_router.o'
+        try:
+            return self._cmd(cmd)
+        except:
+            from vyos import ConfigError
+            raise ConfigError('Error: Device does not allow enslaving to a bridge.')
+
+
     def set_ring_buffer(self, b_type, b_size):
         """
         Example:
@@ -305,6 +322,10 @@ class EthernetIf(Interface):
         tmp = dict_search('offload_options.udp_fragmentation', config)
         value = tmp if (tmp != None) else 'off'
         self.set_ufo(value)
+
+        # UDP fragmentation offloading
+        tmp = dict_search('offload_options.xdp', config)
+        self.set_xdp(tmp != None) # enable or disable
 
         # Set physical interface speed and duplex
         if {'speed', 'duplex'} <= set(config):
