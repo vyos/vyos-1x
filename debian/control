@@ -5,6 +5,13 @@ Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
 Build-Depends:
   debhelper (>= 9),
   fakeroot,
+  libbpf-dev,
+  gcc-multilib,
+  clang,
+  llvm,
+  libelf-dev (>= 0.2),
+  libpcap-dev,
+  build-essential,
   libvyosconfig0 (>= 0.0.7),
   libzmq3-dev,
   python3,
