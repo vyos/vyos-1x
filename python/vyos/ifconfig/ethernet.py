@@ -44,34 +44,34 @@ class EthernetIf(Interface):
 
     @staticmethod
     def feature(ifname, option, value):
-        run(f'/sbin/ethtool -K {ifname} {option} {value}','ifconfig')
+        run(f'ethtool -K {ifname} {option} {value}','ifconfig')
         return False
 
     _command_set = {**Interface._command_set, **{
         'gro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
-            # 'shellcmd': '/sbin/ethtool -K {ifname} gro {value}',
+            # 'shellcmd': 'ethtool -K {ifname} gro {value}',
         },
         'gso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
-            # 'shellcmd': '/sbin/ethtool -K {ifname} gso {value}',
+            # 'shellcmd': 'ethtool -K {ifname} gso {value}',
         },
         'sg': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
-            # 'shellcmd': '/sbin/ethtool -K {ifname} sg {value}',
+            # 'shellcmd': 'ethtool -K {ifname} sg {value}',
         },
         'tso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
-            # 'shellcmd': '/sbin/ethtool -K {ifname} tso {value}',
+            # 'shellcmd': 'ethtool -K {ifname} tso {value}',
         },
         'ufo': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'ufo', v),
-            # 'shellcmd': '/sbin/ethtool -K {ifname} ufo {value}',
+            # 'shellcmd': 'ethtool -K {ifname} ufo {value}',
         },
     }}
 
@@ -86,8 +86,8 @@ class EthernetIf(Interface):
         >>> i.get_driver_name()
         'vmxnet3'
         """
-        sysfs_file = '/sys/class/net/{}/device/driver/module'.format(
-            self.config['ifname'])
+        ifname = self.config['ifname']
+        sysfs_file = f'/sys/class/net/{ifname}/device/driver/module'
         if os.path.exists(sysfs_file):
             link = os.readlink(sysfs_file)
             return os.path.basename(link)
@@ -116,7 +116,7 @@ class EthernetIf(Interface):
             return
 
         # Get current flow control settings:
-        cmd = f'/sbin/ethtool --show-pause {ifname}'
+        cmd = f'ethtool --show-pause {ifname}'
         output, code = self._popen(cmd)
         if code == 76:
             # the interface does not support it
@@ -142,7 +142,7 @@ class EthernetIf(Interface):
 
         # Assemble command executed on system. Unfortunately there is no way
         # to change this setting via sysfs
-        cmd = f'/sbin/ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
+        cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
         output, code = self._popen(cmd)
         if code:
             print(f'could not set flowcontrol for {ifname}')
@@ -173,7 +173,8 @@ class EthernetIf(Interface):
             return
 
         # Get current speed and duplex settings:
-        cmd = '/sbin/ethtool {0}'.format(self.config['ifname'])
+        ifname = self.config['ifname']
+        cmd = f'ethtool {ifname}'
         tmp = self._cmd(cmd)
 
         if re.search("\tAuto-negotiation: on", tmp):
@@ -198,12 +199,11 @@ class EthernetIf(Interface):
                 # bail out early as nothing is to change
                 return
 
-        cmd = '/sbin/ethtool -s {}'.format(self.config['ifname'])
+        cmd = f'ethtool -s {ifname}'
         if speed == 'auto' or duplex == 'auto':
             cmd += ' autoneg on'
         else:
-            cmd += ' speed {} duplex {} autoneg off'.format(speed, duplex)
-
+            cmd += f' speed {speed} duplex {duplex} autoneg off'
         return self._cmd(cmd)
 
     def set_gro(self, state):
@@ -270,13 +270,14 @@ class EthernetIf(Interface):
         >>> i = EthernetIf('eth0')
         >>> i.set_ring_buffer('rx', '4096')
         """
-        cmd = '/sbin/ethtool -G {0} {1} {2}'.format(self.config['ifname'], b_type, b_size)
+        ifname = self.config['ifname']
+        cmd = f'ethtool -G {ifname} {b_type} {b_size}'
         output, code = self._popen(cmd)
         # ethtool error codes:
         #  80 - value already setted
         #  81 - does not possible to set value
         if code and code != 80:
-            print('could not set {0} ring-buffer for {1}'.format(b_type, self.config['ifname']))
+            print(f'could not set "{b_type}" ring-buffer for {ifname}')
         return output
 
 
