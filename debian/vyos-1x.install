@@ -8,7 +8,7 @@ etc/udev
 etc/vyos
 lib/
 opt/
-usr/sbin/vyshim
+usr/sbin
 usr/bin/initial-setup
 usr/bin/vyos-config-file-query
 usr/bin/vyos-config-to-commands

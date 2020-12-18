@@ -3,7 +3,7 @@ OP_TMPL_DIR := templates-op
 BUILD_DIR := build
 DATA_DIR := data
 SHIM_DIR := src/shim
-EBPF_DIR := src/ebpf
+XDP_DIR := src/xdp
 CC := gcc
 LIBS := -lzmq
 CFLAGS :=
@@ -97,12 +97,12 @@ component_versions: $(BUILD_DIR) $(obj)
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
-.PHONY: vyebpf
-vyebpf:
-	$(MAKE) -C $(EBPF_DIR)
+.PHONY: vyxdp
+vyxdp:
+	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions vyshim vyebpf
+all: clean interface_definitions op_mode_definitions component_versions vyshim vyxdp
 
 .PHONY: clean
 clean:
@@ -110,7 +110,7 @@ clean:
 	rm -rf $(TMPL_DIR)
 	rm -rf $(OP_TMPL_DIR)
 	$(MAKE) -C $(SHIM_DIR) clean
-	$(MAKE) -C $(EBPF_DIR) clean
+	$(MAKE) -C $(XDP_DIR) clean
 
 .PHONY: test
 test:

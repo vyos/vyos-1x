@@ -255,12 +255,15 @@ class EthernetIf(Interface):
         """
         """
         ifname = self.config['ifname']
-        cmd = f'ip link set dev {ifname} xdp off'
+        cmd = f'xdp_loader -d {ifname} -U --auto-mode'
         if enabled:
             # Using 'xdp' will automatically decide if the driver supports
             # 'xdpdrv' or only 'xdpgeneric'. A user later sees which driver is
             # actually in use by calling 'ip a' or 'show interfaces ethernet'
-            cmd = f'ip -force link set dev {ifname} xdp obj /usr/share/vyos/ebpf/xdp_router.o'
+            cmd = f'xdp_loader -d {ifname} --auto-mode -F --progsec xdp_router ' \
+                  f'--filename /usr/share/vyos/xdp/xdp_prog_kern.o && ' \
+                  f'xdp_prog_user -d {ifname}'
+
         return self._cmd(cmd)
 
     def set_ring_buffer(self, b_type, b_size):
