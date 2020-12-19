@@ -39,6 +39,7 @@ Depends:
   crda,
   cron,
   dbus,
+  docker.io,
   dropbear,
   easy-rsa,
   etherwake,

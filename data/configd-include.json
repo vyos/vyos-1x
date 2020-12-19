@@ -1,5 +1,6 @@
 [
 "bcast_relay.py",
+"container.py",
 "dhcp_relay.py",
 "dhcpv6_relay.py",
 "dns_forwarding.py",

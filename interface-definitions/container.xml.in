@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="container" owner="${vyos_conf_scripts_dir}/container.py">
+    <properties>
+      <help>Container applications</help>
+    </properties>
+    <children>
+      <tagNode name="name">
+        <properties>
+          <help>Container name</help>
+        </properties>
+        <children>
+          <leafNode name="allow-host-networks">
+            <properties>
+              <help>Allow host networks in container</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Container description</help>
+            </properties>
+          </leafNode>
+          <leafNode name="image">
+            <properties>
+              <help>Image name in the hub-registry</help>
+            </properties>
+          </leafNode>
+          <tagNode name="network">
+            <properties>
+              <help>Attach user defined network to container</help>
+              <completionHelp>
+                <path>container network</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Set IPv4 static address to container (optional)</help>
+                  <valueHelp>
+                    <format>ipv4</format> 
+                    <description>IPv4 address (x.x.x.1 reserved)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <tagNode name="network">
+        <properties>
+          <help>Network name</help>
+        </properties>
+        <children>
+          <leafNode name="description">
+            <properties>
+              <help>Network description</help>
+            </properties>
+          </leafNode>
+          <leafNode name="ipv4-prefix">
+            <properties>
+              <help>Prefix which allocated to that network</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 network and prefix length</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-prefix"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="type">
+            <properties>
+              <help>Network type</help>
+              <completionHelp>
+                <list>bridge</list>
+              </completionHelp>
+              <valueHelp>
+                <format>bridge</format>
+                <description>Type bridge (by default)</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(bridge)$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

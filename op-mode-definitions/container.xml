@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="add">
+    <children>
+      <node name="container">
+        <properties>
+          <help>Add container image</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Pull a new image for container</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/container_op.sh --pull "${4}"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="delete">
+    <children>
+      <node name="container">
+        <properties>
+          <help>Delete container image</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Delete container image</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/container_op.sh --remove "${4}"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="container">
+        <properties>
+          <help>Show containers</help>
+        </properties>
+        <children>
+          <leafNode name="image">
+            <properties>
+              <help>Delete container image</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/container_op.sh --show-images "${4}"</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
