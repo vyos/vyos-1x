@@ -16,7 +16,7 @@
             <children>
               <leafNode name="router-id">
                 <properties>
-                  <help>Label Distribution Protocol (LDP) router ID</help>
+                  <help>Label Distribution Protocol router ID</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>LDP IPv4 ID</description>
@@ -28,7 +28,7 @@
               </leafNode>
               <node name="allocation">
                 <properties>
-                  <help>Forwarding equivalence class (FEC) allocation from local routes</help>
+                  <help>Forwarding equivalence class allocation from local routes</help>
                 </properties>
                 <children>
                   <node name="ipv4">
@@ -334,7 +334,7 @@
               </node>
               <node name="parameters">
                 <properties>
-                  <help>Label Distribution Protocol (LDP) miscellaneous parameters</help>
+                  <help>Label Distribution Protocol miscellaneous parameters</help>
                 </properties>
                 <children>
                   <leafNode name="cisco-interop-tlv">
@@ -369,7 +369,7 @@
                       </leafNode>
                       <node name="export-filter">
                         <properties>
-                          <help>Forwarding equivalence class (FEC) export filter</help>
+                          <help>Forwarding equivalence class export filter</help>
                         </properties>
                         <children>
                           <leafNode name="filter-access-list">
@@ -413,7 +413,7 @@
                       </leafNode>
                       <node name="export-filter">
                         <properties>
-                          <help>Forwarding equivalence class (FEC) export filter</help>
+                          <help>Forwarding equivalence class export filter</help>
                         </properties>
                         <children>
                           <leafNode name="filter-access-list6">
@@ -458,7 +458,7 @@
                     <children>
                       <node name="import-filter">
                         <properties>
-                          <help>Forwarding equivalence class (FEC) import filter</help>
+                          <help>Forwarding equivalence class import filter</help>
                         </properties>
                         <children>
                           <leafNode name="filter-access-list">
@@ -496,7 +496,7 @@
                     <children>
                       <node name="import-filter">
                         <properties>
-                          <help>Forwarding equivalence class (FEC) import filter</help>
+                          <help>Forwarding equivalence class import filter</help>
                         </properties>
                         <children>
                           <leafNode name="filter-access-list6">
@@ -542,7 +542,7 @@
           </node>
           <node name="parameters">
             <properties>
-              <help>Multiprotocol Label Switching (MPLS) miscellaneous parameters</help>
+              <help>Multiprotocol Label Switching miscellaneous parameters</help>
             </properties>
             <children>
               <leafNode name="no-propagate-ttl">
