@@ -321,9 +321,6 @@ class EthernetIf(Interface):
         # call base class first
         super().update(config)
 
-        import pprint
-        pprint.pprint(config)
-
         # disable ethernet flow control (pause frames)
         value = 'off' if 'disable_flow_control' in config else 'on'
         self.set_flow_control(value)
