@@ -447,14 +447,14 @@
             <properties>
               <help>Indicate country in which device is operating</help>
               <completionHelp>
-                <list>US EU JP DE UK CN ES FR RU</list>
+                <list>us eu jp de uk cn es fr ru</list>
               </completionHelp>
               <valueHelp>
                 <format>&lt;code%gt;</format>
                 <description>ISO/IEC 3166-1 Country Code</description>
               </valueHelp>
               <constraint>
-                <regex>^[A-Z][A-Z]$</regex>
+                <regex>^[a-z][a-z]$</regex>
               </constraint>
               <constraintErrorMessage>Invalid ISO/IEC 3166-1 Country Code</constraintErrorMessage>
             </properties>

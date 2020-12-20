@@ -50,7 +50,7 @@ logger_stdout_level=0
 # Country code (ISO/IEC 3166-1). Used to set regulatory domain.
 # Set as needed to indicate country in which device is operating.
 # This can limit available channels and transmit power.
-country_code={{ country_code }}
+country_code={{ country_code | upper }}
 
 # Enable IEEE 802.11d. This advertises the country_code and the set of allowed
 # channels and transmit power levels based on the regulatory limits. The
