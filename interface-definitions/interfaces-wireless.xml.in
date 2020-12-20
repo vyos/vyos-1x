@@ -429,19 +429,24 @@
           </node>
           <leafNode name="channel">
             <properties>
-              <help>Wireless radio channel (use 0 for ACS auto channel selection)</help>
+              <help>Wireless radio channel (default: 0)</help>
+              <valueHelp>
+                <format>0</format>
+                <description>Automatic Channel Selection (ACS)</description>
+              </valueHelp>
               <valueHelp>
                 <format>&lt;1-14&gt;</format>
                 <description>2.4Ghz (802.11 b/g/n) Channel</description>
               </valueHelp>
               <valueHelp>
-                <format>&lt;0,34-173&gt;</format>
+                <format>&lt;34-173&gt;</format>
                 <description>5Ghz (802.11 a/h/j/n/ac) Channel</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-173"/>
               </constraint>
             </properties>
+            <defaultValue>0</defaultValue>
           </leafNode>
           <leafNode name="country-code">
             <properties>
@@ -557,7 +562,7 @@
           </leafNode>
           <leafNode name="physical-device">
             <properties>
-              <help>Wireless physical device</help>
+              <help>Wireless physical device (default: phy0)</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_wireless_phys.sh</script>
               </completionHelp>
@@ -565,6 +570,7 @@
                 <validator name="wireless-phy"/>
               </constraint>
             </properties>
+            <defaultValue>phy0</defaultValue>
           </leafNode>
           <leafNode name="reduce-transmit-power">
             <properties>
