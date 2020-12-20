@@ -60,109 +60,39 @@
           #include <include/interface-mac.xml.i>
           #include <include/interface-mtu-68-16000.xml.i>
           #include <include/interface-mirror.xml.i>
-          <node name="offload-options">
+          <node name="offload">
             <properties>
               <help>Configurable offload options</help>
             </properties>
             <children>
-              <leafNode name="generic-receive">
+              <leafNode name="gro">
                 <properties>
-                  <help>Configure GRO (generic receive offload)</help>
-                  <completionHelp>
-                    <list>on off</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>on</format>
-                    <description>Enable GRO (generic receive offload)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>off</format>
-                    <description>Disable GRO (generic receive offload)</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(on|off)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                  <help>Enable Generic Receive Offload</help>
+                  <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="generic-segmentation">
+              <leafNode name="gso">
                 <properties>
-                  <help>Configure GSO (generic segmentation offload)</help>
-                  <completionHelp>
-                    <list>on off</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>on</format>
-                    <description>Enable GSO (generic segmentation offload)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>off</format>
-                    <description>Disable GSO (generic segmentation offload)</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(on|off)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                  <help>Enable Generic Segmentation Offload</help>
+                  <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="scatter-gather">
+              <leafNode name="sg">
                 <properties>
-                  <help>Configure scatter-gather option</help>
-                  <completionHelp>
-                    <list>on off</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>on</format>
-                    <description>Enable scatter-gather</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>off</format>
-                    <description>Disable scatter-gather</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(on|off)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                  <help>Enable Scatter-Gather</help>
+                  <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="tcp-segmentation">
+              <leafNode name="tso">
                 <properties>
-                  <help>Configure TSO (TCP segmentation offloading)</help>
-                  <completionHelp>
-                    <list>on off</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>on</format>
-                    <description>Enable TSO (TCP segmentation offloading)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>off</format>
-                    <description>Disable TSO (TCP segmentation offloading)</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(on|off)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                  <help>Enable TCP Segmentation Offloading</help>
+                  <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="udp-fragmentation">
+              <leafNode name="ufo">
                 <properties>
-                  <help>Configure UDP fragmentation offloading</help>
-                  <completionHelp>
-                    <list>on off</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>on</format>
-                    <description>Enable UDP fragmentation offloading</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>off</format>
-                    <description>Disable UDP fragmentation offloading</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(on|off)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Must be either 'on' or 'off'</constraintErrorMessage>
+                  <help>Enable UDP Fragmentation Offloading</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="xdp">

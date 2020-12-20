@@ -16,6 +16,7 @@
 
 # T3043: Move "system wifi-regulatory-domain" to indicidual wireless interface.
 #        Country Code will be migratred from upper to lower case.
+# T3140: Relax ethernet interface offload-options
 
 from sys import exit, argv
 from vyos.configtree import ConfigTree
@@ -31,15 +32,36 @@ if __name__ == '__main__':
 
     config = ConfigTree(config_file)
 
+    # T3140: Cleanup ethernet offload-options, remove on/off value and use
+    # valueless nodes instead.
+    eth_base = ['interfaces', 'ethernet']
+    if config.exists(eth_base):
+        for eth in config.list_nodes(eth_base):
+           offload = eth_base + [eth, 'offload-options']
+           if config.exists(offload):
+                mapping = {
+                    'generic-receive'      : 'gro',
+                    'generic-segmentation' : 'gso',
+                    'scatter-gather'       : 'sg',
+                    'tcp-segmentation'     : 'tso',
+                    'udp-fragmentation'    : 'ufo',
+                }
+                for k, v in mapping.items():
+                    if config.exists(offload + [k]):
+                        tmp = config.return_value(offload + [k])
+                        if tmp == 'on':
+                            config.set(eth_base + [eth, 'offload', v])
+
+                config.delete(offload)
+
     # T3043: WIFI country-code should be lower-case
     wifi_base = ['interfaces', 'wireless']
-    for wifi in config.list_nodes(wifi_base):
-        ccode = wifi_base + [wifi, 'country-code']
-        if config.exists(ccode):
-            tmp = config.return_value(ccode)
-            config.set(ccode, value=tmp.lower(), replace=True)
-
-
+    if config.exists(wifi_base):
+        for wifi in config.list_nodes(wifi_base):
+            ccode = wifi_base + [wifi, 'country-code']
+            if config.exists(ccode):
+                tmp = config.return_value(ccode)
+                config.set(ccode, value=tmp.lower(), replace=True)
 
     try:
         with open(file_name, 'w') as f:

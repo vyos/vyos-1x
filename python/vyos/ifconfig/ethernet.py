@@ -208,55 +208,83 @@ class EthernetIf(Interface):
 
     def set_gro(self, state):
         """
+        Enable Generic Receive Offload. State can be either True or False.
+
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
-        >>> i.set_gro('on')
+        >>> i.set_gro(True)
         """
-        return self.set_interface('gro', state)
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+        return self.set_interface('gro', 'on' if state else 'off')
 
     def set_gso(self, state):
         """
+        Enable Generic Segmentation offload. State can be either True or False.
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
-        >>> i.set_gso('on')
+        >>> i.set_gso(True)
         """
-        return self.set_interface('gso', state)
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+        return self.set_interface('gso', 'on' if state else 'off')
 
     def set_sg(self, state):
         """
+        Enable Scatter-Gather support. State can be either True or False.
+
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
-        >>> i.set_sg('on')
+        >>> i.set_sg(True)
         """
-        return self.set_interface('sg', state)
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+        return self.set_interface('sg', 'on' if state else 'off')
 
     def set_tso(self, state):
         """
+        Enable TCP segmentation offloading. State can be either True or False.
+
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
-        >>> i.set_tso('on')
+        >>> i.set_tso(False)
         """
-        return self.set_interface('tso', state)
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+        return self.set_interface('tso', 'on' if state else 'off')
 
     def set_ufo(self, state):
         """
+        Enable UDP fragmentation offloading. State can be either True or False.
+
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
-        >>> i.set_udp_offload('on')
+        >>> i.set_udp_offload(True)
         """
-        return self.set_interface('ufo', state)
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+        return self.set_interface('ufo', 'on' if state else 'off')
 
-    def set_xdp(self, enabled):
+    def set_xdp(self, state):
         """
+        Enable Kernel XDP support. State can be either True or False.
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_xdp(True)
         """
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+
         ifname = self.config['ifname']
         cmd = f'xdp_loader -d {ifname} -U --auto-mode'
-        if enabled:
+        if state:
             # Using 'xdp' will automatically decide if the driver supports
             # 'xdpdrv' or only 'xdpgeneric'. A user later sees which driver is
             # actually in use by calling 'ip a' or 'show interfaces ethernet'
@@ -293,38 +321,30 @@ class EthernetIf(Interface):
         # call base class first
         super().update(config)
 
+        import pprint
+        pprint.pprint(config)
+
         # disable ethernet flow control (pause frames)
-        value = 'off' if 'disable_flow_control' in config.keys() else 'on'
+        value = 'off' if 'disable_flow_control' in config else 'on'
         self.set_flow_control(value)
 
         # GRO (generic receive offload)
-        tmp = dict_search('offload_options.generic_receive', config)
-        value = tmp if (tmp != None) else 'off'
-        self.set_gro(value)
+        self.set_gro(dict_search('offload.gro', config) != None)
 
         # GSO (generic segmentation offload)
-        tmp = dict_search('offload_options.generic_segmentation', config)
-        value = tmp if (tmp != None) else 'off'
-        self.set_gso(value)
+        self.set_gso(dict_search('offload.gso', config) != None)
 
         # scatter-gather option
-        tmp = dict_search('offload_options.scatter_gather', config)
-        value = tmp if (tmp != None) else 'off'
-        self.set_sg(value)
+        self.set_sg(dict_search('offload.sg', config) != None)
 
         # TSO (TCP segmentation offloading)
-        tmp = dict_search('offload_options.udp_fragmentation', config)
-        value = tmp if (tmp != None) else 'off'
-        self.set_tso(value)
+        self.set_tso(dict_search('offload.tso', config) != None)
 
         # UDP fragmentation offloading
-        tmp = dict_search('offload_options.udp_fragmentation', config)
-        value = tmp if (tmp != None) else 'off'
-        self.set_ufo(value)
+        self.set_ufo(dict_search('offload.ufo', config) != None)
 
-        # UDP fragmentation offloading
-        tmp = dict_search('offload_options.xdp', config)
-        self.set_xdp(tmp != None) # enable or disable
+        # eXpress Data Path - highly experimental
+        self.set_xdp(dict_search('offload.xdp', config) != None)
 
         # Set physical interface speed and duplex
         if {'speed', 'duplex'} <= set(config):
