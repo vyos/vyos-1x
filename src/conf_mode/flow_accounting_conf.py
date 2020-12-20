@@ -42,6 +42,8 @@ default_sflow_agentip = 'auto'
 uacctd_conf_path = '/etc/pmacct/uacctd.conf'
 iptables_nflog_table = 'raw'
 iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
+egress_iptables_nflog_table = 'mangle'
+egress_iptables_nflog_chain = 'POSTROUTING'
 
 # helper functions
 # check if node exists and return True if this is true
@@ -74,32 +76,38 @@ def _sflow_default_agentip(config):
     return None
 
 # get iptables rule dict for chain in table
-def _iptables_get_nflog():
+def _iptables_get_nflog(chain, table):
     # define list with rules
     rules = []
 
     # prepare regex for parsing rules
-    rule_pattern = "^-A (?P<rule_definition>{0} -i (?P<interface>[\w\.\*\-]+).*--comment FLOW_ACCOUNTING_RULE.* -j NFLOG.*$)".format(iptables_nflog_chain)
+    rule_pattern = "^-A (?P<rule_definition>{0} (\-i|\-o) (?P<interface>[\w\.\*\-]+).*--comment FLOW_ACCOUNTING_RULE.* -j NFLOG.*$)".format(chain)
     rule_re = re.compile(rule_pattern)
 
     for iptables_variant in ['iptables', 'ip6tables']:
         # run iptables, save output and split it by lines
-        iptables_command = f'{iptables_variant} -t {iptables_nflog_table} -S {iptables_nflog_chain}'
+        iptables_command = f'{iptables_variant} -t {table} -S {chain}'
         tmp = cmd(iptables_command, message='Failed to get flows list')
 
         # parse each line and add information to list
         for current_rule in tmp.splitlines():
             current_rule_parsed = rule_re.search(current_rule)
             if current_rule_parsed:
-                rules.append({ 'interface': current_rule_parsed.groupdict()["interface"], 'iptables_variant': iptables_variant, 'table': iptables_nflog_table, 'rule_definition': current_rule_parsed.groupdict()["rule_definition"] })
+                rules.append({ 'interface': current_rule_parsed.groupdict()["interface"], 'iptables_variant': iptables_variant, 'table': table, 'rule_definition': current_rule_parsed.groupdict()["rule_definition"] })
 
     # return list with rules
     return rules
 
 # modify iptables rules
-def _iptables_config(configured_ifaces):
+def _iptables_config(configured_ifaces, direction):
     # define list of iptables commands to modify settings
     iptable_commands = []
+    iptables_chain = iptables_nflog_chain
+    iptables_table = iptables_nflog_table
+
+    if direction == "egress":
+        iptables_chain = egress_iptables_nflog_chain
+        iptables_table = egress_iptables_nflog_table
 
     # prepare extended list with configured interfaces
     configured_ifaces_extended = []
@@ -108,7 +116,7 @@ def _iptables_config(configured_ifaces):
         configured_ifaces_extended.append({ 'iface': iface, 'iptables_variant': 'ip6tables' })
 
     # get currently configured interfaces with iptables rules
-    active_nflog_rules = _iptables_get_nflog()
+    active_nflog_rules = _iptables_get_nflog(iptables_chain, iptables_table)
 
     # compare current active list with configured one and delete excessive interfaces, add missed
     active_nflog_ifaces = []
@@ -127,15 +135,19 @@ def _iptables_config(configured_ifaces):
 
     # do not create new rules for already configured interfaces
     for iface in active_nflog_ifaces:
-        if iface in active_nflog_ifaces:
+        if iface in active_nflog_ifaces and iface in configured_ifaces_extended:
             configured_ifaces_extended.remove(iface)
 
     # create missed rules
     for iface_extended in configured_ifaces_extended:
         iface = iface_extended['iface']
         iptables = iface_extended['iptables_variant']
-        rule_definition = f'{iptables_nflog_chain} -i {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {default_captured_packet_size} --nflog-threshold 100'
-        iptable_commands.append(f'{iptables} -t {iptables_nflog_table} -I {rule_definition}')
+        iptables_op = "-i"
+        if direction == "egress":
+            iptables_op = "-o"
+
+        rule_definition = f'{iptables_chain} {iptables_op} {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {default_captured_packet_size} --nflog-threshold 100'
+        iptable_commands.append(f'{iptables} -t {iptables_table} -I {rule_definition}')
 
     # change iptables
     for command in iptable_commands:
@@ -149,6 +161,7 @@ def get_config():
     flow_config = {
         'flow-accounting-configured': vc.exists('system flow-accounting'),
         'buffer-size': vc.return_value('system flow-accounting buffer-size'),
+        'enable-egress': _node_exists('system flow-accounting enable-egress'),
         'disable-imt': _node_exists('system flow-accounting disable-imt'),
         'syslog-facility': vc.return_value('system flow-accounting syslog-facility'),
         'interfaces': None,
@@ -356,9 +369,16 @@ def apply(config):
 
     # configure iptables rules for defined interfaces
     if config['interfaces']:
-        _iptables_config(config['interfaces'])
+        _iptables_config(config['interfaces'], 'ingress')
+
+        # configure egress the same way if configured otherwise remove it
+        if config['enable-egress']:
+            _iptables_config(config['interfaces'], 'egress')
+        else:
+            _iptables_config([], 'egress')
     else:
-        _iptables_config([])
+        _iptables_config([], 'ingress')
+        _iptables_config([], 'egress')
 
 if __name__ == '__main__':
     try:

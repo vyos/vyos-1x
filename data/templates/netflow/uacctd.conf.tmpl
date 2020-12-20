@@ -5,7 +5,11 @@ pidfile: /var/run/uacctd.pid
 uacctd_group: 2
 uacctd_nl_size: 2097152
 snaplen: {{ snaplen }}
+{% if templatecfg['enable-egress'] != none %}
+aggregate: in_iface,out_iface,src_mac,dst_mac,vlan,src_host,dst_host,src_port,dst_port,proto,tos,flows
+{% else %}
 aggregate: in_iface,src_mac,dst_mac,vlan,src_host,dst_host,src_port,dst_port,proto,tos,flows
+{% endif %}
 plugin_pipe_size: {{ templatecfg['plugin_pipe_size'] }}
 plugin_buffer_size: {{ templatecfg['plugin_buffer_size'] }}
 {% if templatecfg['syslog-facility'] != none %}
