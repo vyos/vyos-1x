@@ -38,11 +38,11 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         self._options = {
             'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
                        'type station', 'address 192.0.2.1/30'],
-            'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1', 'country-code SE',
+            'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1', 'country-code se',
                        'type access-point', 'address 192.0.2.5/30', 'channel 0'],
             'wlan10': ['physical-device phy1', 'ssid VyOS-WIFI-2',
                        'type station', 'address 192.0.2.9/30'],
-            'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3', 'country-code SE',
+            'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3', 'country-code se',
                        'type access-point', 'address 192.0.2.13/30', 'channel 0'],
         }
         self._interfaces = list(self._options)
@@ -66,15 +66,12 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Only set the hostapd (access-point) options
         interface = 'wlan0'
-        phy = 'phy0'
         ssid = 'ssid'
-        channel = '1'
 
-        self.session.set(self._base_path + [interface, 'physical-device', phy])
         self.session.set(self._base_path + [interface, 'ssid', ssid])
+        self.session.set(self._base_path + [interface, 'country-code', 'se'])
         self.session.set(self._base_path + [interface, 'type', 'access-point'])
-        self.session.set(self._base_path + [interface, 'channel', channel])
-        self.session.set(self._base_path + [interface, 'country-code', 'SE'])
+
         # auto-powersave is special
         self.session.set(self._base_path + [interface, 'capabilities', 'ht', 'auto-powersave'])
 
@@ -125,7 +122,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # channel
         tmp = get_config_value(interface, 'channel')
-        self.assertEqual(channel, tmp)
+        self.assertEqual('0', tmp) # default is channel 0
 
         # auto-powersave is special
         tmp = get_config_value(interface, 'uapsd_advertisement_enabled')
@@ -149,10 +146,10 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         interface = 'wlan0'
         phy = 'phy0'
         ssid = 'ssid'
-        channel = '0'
+        channel = '1'
         wpa_key = 'VyOSVyOSVyOS'
         mode = 'n'
-        country = 'DE'
+        country = 'de'
 
         self.session.set(self._base_path + [interface, 'physical-device', phy])
         self.session.set(self._base_path + [interface, 'type', 'access-point'])
@@ -205,7 +202,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Country code
         tmp = get_config_value(interface, 'country_code')
-        self.assertEqual(country, tmp)
+        self.assertEqual(country.upper(), tmp)
 
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
