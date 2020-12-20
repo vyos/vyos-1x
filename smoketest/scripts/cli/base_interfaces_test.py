@@ -399,27 +399,6 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
 
-        def test_ipv6_dhcpv6_duid(self):
-            """ Test interface base IPv6 options """
-            if not self._test_ipv6:
-                return None
-
-            for interface in self._interfaces:
-                path = self._base_path + [interface]
-                for option in self._options.get(interface, []):
-                    self.session.set(path + option.split())
-
-                # Options
-                duid = '0e:00:00:01:00:01:27:71:db:f0:00:50:56:bf:c5:6d'
-                self.session.set(path + ['dhcpv6-options', 'duid', duid])
-
-            self.session.commit()
-
-            for interface in self._interfaces:
-                with open('/var/lib/dhcpv6/dhcp6c_duid', 'rb') as f:
-                    tmp = hexlify(f.read()).decode()
-
-                self.assertEqual(duid.replace(':',''), tmp)
 
         def test_ipv6_dhcpv6_pd(self):
             """ Test interface base IPv6 options """

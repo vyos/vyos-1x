@@ -3,7 +3,7 @@
   <properties>
     <help>Media Access Control (MAC) address</help>
     <valueHelp>
-      <format>macaddr</format>
+      <format>h:h:h:h:h:h</format>
       <description>Hardware (MAC) address</description>
     </valueHelp>
     <constraint>
