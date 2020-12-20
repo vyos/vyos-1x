@@ -101,14 +101,18 @@ class BasicInterfaceTest:
             del self.session
 
         def test_mirror(self):
+            # Test is disabled as it contains hardcoded bond interfaces which will
+            # screw up all kinds of live deployments.
+            return None
 
             if self._test_mirror:
-
                 # Create test dependency interface
                 self.session.set(['interfaces','dummy','dum0'])
                 self.session.set(['interfaces','dummy','dum1'])
                 self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
                 self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
+
+                # ^- WHY? There is self._options for that :(
 
                 Success = 0
                 i = 0
@@ -127,8 +131,6 @@ class BasicInterfaceTest:
                 i=0
                 self.session.delete(['interfaces','dummy'])
                 self.session.delete(['interfaces','bonding'])
-            else:
-                return None
 
 
         def test_add_description(self):
