@@ -20,27 +20,28 @@ imt_path: /tmp/uacctd.pipe
 imt_mem_pools_number: 169
 {% endif %}
 plugins:
-{% if templatecfg['netflow']['servers'] != none %}
-    {% for server in templatecfg['netflow']['servers'] %}
-        {% if loop.last %}nfprobe[nf_{{ server['address'] }}]{% else %}nfprobe[nf_{{ server['address'] }}],{% endif %}
-    {% endfor %}
-    {% set plugins_presented = true %}
-{% endif %}
-{% if templatecfg['sflow']['servers'] != none %}
-    {% if plugins_presented %}
-        {% for server in templatecfg['sflow']['servers'] %}
+{%- if templatecfg['netflow']['servers'] != none -%}
+    {%- for server in templatecfg['netflow']['servers'] -%}
+        {%- if loop.last -%}nfprobe[nf_{{ server['address'] }}]{%- else -%}nfprobe[nf_{{ server['address'] }}],{%- endif -%}
+    {%- endfor -%}
+    {%- set plugins_presented = true -%}
+{%- endif -%}
+{%- if templatecfg['sflow']['servers'] != none -%}
+    {%- if plugins_presented -%}
+        {%- for server in templatecfg['sflow']['servers'] -%}
             ,sfprobe[sf_{{ server['address'] }}]
-        {% endfor %}
-    {% else %}
-        {% for server in templatecfg['sflow']['servers'] %}
-            {% if loop.last %}sfprobe[sf_{{ server['address'] }}]{% else %}sfprobe[sf_{{ server['address'] }}],{% endif %}
-        {% endfor %}
-    {% endif %}
-    {% set plugins_presented = true %}
-{% endif %}
-{% if templatecfg['disable-imt'] == none %}
-    {% if plugins_presented %},memory{% else %}memory{% endif %}
-{% endif %}
+        {%- endfor -%}
+    {%- else -%}
+        {%- for server in templatecfg['sflow']['servers'] -%}
+            {%- if loop.last -%}sfprobe[sf_{{ server['address'] }}]{%- else -%}sfprobe[sf_{{ server['address'] }}],{%- endif -%}
+        {%- endfor -%}
+    {%- endif -%}
+    {%- set plugins_presented = true -%}
+{%- endif -%}
+{%- if templatecfg['disable-imt'] == none %}
+    {%- if plugins_presented %},memory{%- else -%}memory{%- endif -%}
+{%- endif -%}
+
 {% if templatecfg['netflow']['servers'] != none %}
 {% for server in templatecfg['netflow']['servers'] %}
 nfprobe_receiver[nf_{{ server['address'] }}]: {{ server['address'] }}:{{ server['port'] }}
@@ -62,6 +63,7 @@ nfprobe_timeouts[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['timeout
 {% endif %}
 {% endfor %}
 {% endif %}
+
 {% if templatecfg['sflow']['servers'] != none %}
 {% for server in templatecfg['sflow']['servers'] %}
 sfprobe_receiver[sf_{{ server['address'] }}]: {{ server['address'] }}:{{ server['port'] }}
