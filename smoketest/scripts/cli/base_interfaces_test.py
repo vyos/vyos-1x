@@ -12,9 +12,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import os
 import unittest
 import json
+
+from binascii import hexlify
 
 from netifaces import ifaddresses
 from netifaces import AF_INET
@@ -25,6 +28,7 @@ from vyos.ifconfig import Interface
 from vyos.util import read_file
 from vyos.util import cmd
 from vyos.util import dict_search
+from vyos.util import process_named_running
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 
@@ -43,6 +47,17 @@ def read_mirror_rule(interfaces):
             elif dev == interface and handle == "1:" and kind == "prio":
                 Success+=1
     return Success
+
+
+dhcp6c_config_file = '/run/dhcp6c/dhcp6c.{}.conf'
+def get_dhcp6c_config_value(interface, key):
+    tmp = read_file(dhcp6c_config_file.format(interface))
+    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+
+    out = []
+    for item in tmp:
+        out.append(item.replace(';',''))
+    return out
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
@@ -86,15 +101,15 @@ class BasicInterfaceTest:
             del self.session
 
         def test_mirror(self):
-            
+
             if self._test_mirror:
-                
+
                 # Create test dependency interface
                 self.session.set(['interfaces','dummy','dum0'])
                 self.session.set(['interfaces','dummy','dum1'])
                 self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
                 self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
-                
+
                 Success = 0
                 i = 0
                 # Check the two-way mirror rules of ingress and egress
@@ -381,3 +396,63 @@ class BasicInterfaceTest:
 
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
+
+        def test_ipv6_dhcpv6_duid(self):
+            """ Test interface base IPv6 options """
+            if not self._test_ipv6:
+                return None
+
+            for interface in self._interfaces:
+                path = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(path + option.split())
+
+                # Options
+                duid = '0e:00:00:01:00:01:27:71:db:f0:00:50:56:bf:c5:6d'
+                self.session.set(path + ['dhcpv6-options', 'duid', duid])
+
+            self.session.commit()
+
+            for interface in self._interfaces:
+                with open('/var/lib/dhcpv6/dhcp6c_duid', 'rb') as f:
+                    tmp = hexlify(f.read()).decode()
+
+                self.assertEqual(duid.replace(':',''), tmp)
+
+        def test_ipv6_dhcpv6_pd(self):
+            """ Test interface base IPv6 options """
+            if not self._test_ipv6:
+                return None
+
+            address = '1'
+            sla_id = '0'
+            sla_len = '8'
+            for interface in self._interfaces:
+                path = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(path + option.split())
+
+                # prefix delegation stuff
+                pd_base = path + ['dhcpv6-options', 'pd', '0']
+                self.session.set(pd_base + ['length', '56'])
+                self.session.set(pd_base + ['interface', interface, 'address', address])
+                self.session.set(pd_base + ['interface', interface, 'sla-id',  sla_id])
+
+            self.session.commit()
+
+            for interface in self._interfaces:
+                # verify DHCPv6 prefix delegation
+                # will return: ['delegation', '::/56 infinity;']
+                tmp = get_dhcp6c_config_value(interface, 'prefix')[1].split()[0] # mind the whitespace
+                self.assertEqual(tmp, '::/56')
+                tmp = get_dhcp6c_config_value(interface, 'prefix-interface')[0].split()[0]
+                self.assertEqual(tmp, interface)
+                tmp = get_dhcp6c_config_value(interface, 'ifid')[0]
+                self.assertEqual(tmp, address)
+                tmp = get_dhcp6c_config_value(interface, 'sla-id')[0]
+                self.assertEqual(tmp, sla_id)
+                tmp = get_dhcp6c_config_value(interface, 'sla-len')[0]
+                self.assertEqual(tmp, sla_len)
+
+            # Check for running process
+            self.assertTrue(process_named_running('dhcp6c'))
