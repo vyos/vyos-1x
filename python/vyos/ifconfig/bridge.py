@@ -46,7 +46,7 @@ class BridgeIf(Interface):
             'vlan': True,
         },
     }
-    
+
     _sysfs_get = {
         **Interface._sysfs_get,**{
             'vlan_filter': {
@@ -102,12 +102,12 @@ class BridgeIf(Interface):
             'shellcmd': 'ip link set dev {value} nomaster',
         },
     }}
-    
+
     def get_vlan_filter(self):
         """
         Get the status of the bridge VLAN filter
         """
-        
+
         return self.get_interface('vlan_filter')
 
 
@@ -209,6 +209,10 @@ class BridgeIf(Interface):
         >>> BridgeIf('br0').add_port('eth0')
         >>> BridgeIf('br0').add_port('eth1')
         """
+        # Bridge port handling of wireless interfaces is done by hostapd.
+        if 'wlan' in interface:
+            return
+
         try:
             return self.set_interface('add_port', interface)
         except:
@@ -284,7 +288,7 @@ class BridgeIf(Interface):
                     bridge_vlan_ids.remove(1)
                 for vlan in bridge_vlan_ids:
                     vlan_del.add(str(vlan))
-            
+
             for interface, interface_config in tmp.items():
                 # if interface does yet not exist bail out early and
                 # add it later
