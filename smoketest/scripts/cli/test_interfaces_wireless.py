@@ -18,9 +18,10 @@ import os
 import re
 import unittest
 
-from vyos.configsession import ConfigSessionError
 from base_interfaces_test import BasicInterfaceTest
+from glob import glob
 
+from vyos.configsession import ConfigSessionError
 from vyos.util import process_named_running
 from vyos.util import check_kmod
 from vyos.util import read_file
@@ -206,6 +207,34 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
+
+    def test_access_point_bridge(self):
+        interface = 'wlan0'
+        ssid = 'VyOS-Test'
+        bridge = 'br42477'
+
+        # We need a bridge where we can hook our access-point interface to
+        bridge_path = ['interfaces', 'bridge', bridge]
+        self.session.set(bridge_path + ['member', 'interface', interface])
+
+        self.session.set(self._base_path + [interface, 'ssid', ssid])
+        self.session.set(self._base_path + [interface, 'country-code', 'se'])
+        self.session.set(self._base_path + [interface, 'type', 'access-point'])
+
+        self.session.commit()
+
+        # Check for running process
+        self.assertTrue(process_named_running('hostapd'))
+
+        bridge_members = []
+        for tmp in glob(f'/sys/class/net/{bridge}/lower_*'):
+            bridge_members.append(os.path.basename(tmp).replace('lower_', ''))
+
+        self.assertIn(interface, bridge_members)
+
+        self.session.delete(bridge_path)
+        self.session.delete(self._base_path)
+        self.session.commit()
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
