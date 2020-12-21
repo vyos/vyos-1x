@@ -22,20 +22,23 @@ from vyos.ifconfig import Section
 
 def get_client_from_interface(interface):
     clients = []
-    with open('/opt/vyatta/etc/openvpn/status/' + interface + '.status', 'r') as f:
-        dump = False
-        for line in f:
-            if line.startswith("Common Name,"):
-                dump = True
-                continue
-            if line.startswith("ROUTING TABLE"):
-                dump = False
-                continue
-            if dump:
-                # client entry in this file looks like
-                # client1,172.18.202.10:47495,2957,2851,Sat Aug 17 00:07:11 2019
-                # we are only interested in the client name 'client1'
-                clients.append(line.split(',')[0])
+    try:
+        with open('/run/openvpn/' + interface + '.status', 'r') as f:
+            dump = False
+            for line in f:
+                if line.startswith("Common Name,"):
+                    dump = True
+                    continue
+                if line.startswith("ROUTING TABLE"):
+                    dump = False
+                    continue
+                if dump:
+                    # client entry in this file looks like
+                    # client1,172.18.202.10:47495,2957,2851,Sat Aug 17 00:07:11 2019
+                    # we are only interested in the client name 'client1'
+                    clients.append(line.split(',')[0])
+    except:
+        pass
 
     return clients
 
