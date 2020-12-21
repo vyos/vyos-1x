@@ -32,23 +32,6 @@ from vyos.util import process_named_running
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 
-def read_mirror_rule(interfaces):
-    Success = 0
-    for interface in interfaces:
-        get_tc_cmd = 'tc -j qdisc'
-        tmp = cmd(get_tc_cmd, shell=True)
-        data = json.loads(tmp)
-        for rule in data:
-            dev = rule['dev']
-            handle = rule['handle']
-            kind = rule['kind']
-            if dev == interface and handle == "ffff:" and kind == "ingress":
-                Success+=1
-            elif dev == interface and handle == "1:" and kind == "prio":
-                Success+=1
-    return Success
-
-
 dhcp6c_config_file = '/run/dhcp6c/dhcp6c.{}.conf'
 def get_dhcp6c_config_value(interface, key):
     tmp = read_file(dhcp6c_config_file.format(interface))
@@ -99,39 +82,6 @@ class BasicInterfaceTest:
 
             self.session.commit()
             del self.session
-
-        def test_mirror(self):
-            # Test is disabled as it contains hardcoded bond interfaces which will
-            # screw up all kinds of live deployments.
-            return None
-
-            if self._test_mirror:
-                # Create test dependency interface
-                self.session.set(['interfaces','dummy','dum0'])
-                self.session.set(['interfaces','dummy','dum1'])
-                self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
-                self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
-
-                # ^- WHY? There is self._options for that :(
-
-                Success = 0
-                i = 0
-                # Check the two-way mirror rules of ingress and egress
-                for interface in self._interfaces:
-                    self.session.set(self._base_path + [interface, 'mirror', 'ingress', 'bond1'])
-                    self.session.set(self._base_path + [interface, 'mirror', 'egress', 'bond1'])
-                    i+=1
-                self.session.commit()
-                # Parse configuration
-                Success = read_mirror_rule(self._interfaces)
-                if Success == i*2:
-                    self.assertTrue(True)
-                else:
-                    self.assertTrue(False)
-                i=0
-                self.session.delete(['interfaces','dummy'])
-                self.session.delete(['interfaces','bonding'])
-
 
         def test_add_description(self):
             """
