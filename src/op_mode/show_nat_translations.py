@@ -193,8 +193,10 @@ def main():
     elif arg.file:
         process(content(arg.file), arg.stats, arg.proto, arg.pipe, arg.verbose, arg.type)
     else:
-        process(run(command(arg.type, arg.proto, arg.ipaddr)), arg.stats, arg.proto, arg.pipe, arg.verbose, arg.type)
-
+        try:
+            process(run(command(arg.type, arg.proto, arg.ipaddr)), arg.stats, arg.proto, arg.pipe, arg.verbose, arg.type)
+        except:
+            pass
 
 if __name__ == '__main__':
     main()
