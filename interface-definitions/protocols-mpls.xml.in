@@ -349,6 +349,12 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="ordered-control">
+                    <properties>
+                      <help>Enable LDP ordered label distribution control mode</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <node name="export">
