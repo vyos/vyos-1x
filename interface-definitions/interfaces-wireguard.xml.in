@@ -90,21 +90,32 @@
               </leafNode>
               <leafNode name="address">
                 <properties>
-                  <help>IP address of tunnel remote end</help>
+                  <help>IP address of tunnel endpoint</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IPv4 address to listen for incoming connections</description>
+                    <description>IPv4 address of remote tunnel endpoint</description>
                   </valueHelp>
                   <valueHelp>
                     <format>ipv6</format>
-                    <description>IPv6 address to listen for incoming connections</description>
+                    <description>IPv6 address of remote tunnel endpoint</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ip-address"/>
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <properties>
+                  <help>Port number used for tunnel endpoint</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Numeric IP port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="persistent-keepalive">
                 <properties>
                   <help>Interval to send keepalive messages</help>

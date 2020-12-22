@@ -1,7 +1,7 @@
 <!-- included start from port-number.xml.i -->
 <leafNode name="port">
   <properties>
-    <help>Port number used to establish connection</help>
+    <help>Port number used by connection</help>
     <valueHelp>
       <format>u32:1-65535</format>
       <description>Numeric IP port</description>
