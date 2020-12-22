@@ -11,6 +11,9 @@ dual-stack cisco-interop
 {%         if ldp.parameters.transport_prefer_ipv4 is defined%}
 dual-stack transport-connection prefer ipv4
 {%         endif %}
+{%         if ldp.parameters.ordered_control is defined%}
+ordered-control
+{%         endif %}
 {%     endif %}
 {%     if ldp.neighbor is defined %}
 {%         for neighbors in ldp.neighbor %}
