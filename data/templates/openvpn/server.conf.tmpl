@@ -103,7 +103,7 @@ ccd-exclusive
 {%     endif %}
 {%     if server.push_route is defined and server.push_route is not none %}
 {%       for route in server.push_route %}
-push "route {{ route }}"
+push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }}"
 {%       endfor %}
 {%     endif %}
 {%     if server.name_server is defined and server.name_server is not none %}
