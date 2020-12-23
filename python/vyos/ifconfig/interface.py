@@ -938,6 +938,10 @@ class Interface(Control):
                 for vlan in vlan_add:
                     cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
                     self._cmd(cmd)
+                
+                # Always set VLAN 1 to the parent bridge interface
+                cmd = f'bridge vlan add dev {bridge} vid 1 pvid untagged self'
+                self._cmd(cmd)
 
                 # enable/disable Vlan Filter
                 # When the VLAN aware option is not detected, the setting of `bridge` should not be overwritten

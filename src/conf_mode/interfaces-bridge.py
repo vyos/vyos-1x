@@ -191,6 +191,11 @@ def verify(bridge):
                     else:
                         if int(vlan) <1 and int(vlan)>4094:
                             raise ConfigError('VLAN ID must be between 1 and 4094')
+    
+    # When the VLAN-aware mode bridge is started, it is not allowed to configure the address on the parent interface
+    if vlan_aware and dict_search('vif.1', bridge):
+        ifname = bridge['ifname']
+        raise ConfigError(f'The bridge {ifname} is a VLAN-aware bridge, please set VLAN 1 on the parent interface!')
 
     return None
 

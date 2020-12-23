@@ -368,6 +368,10 @@ class BridgeIf(Interface):
         for vlan in vlan_add:
             cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
             self._cmd(cmd)
+        
+        # Always set VLAN 1 to the parent bridge interface
+        cmd = f'bridge vlan add dev {ifname} vid 1 pvid untagged self'
+        self._cmd(cmd)
 
         # enable/disable Vlan Filter
         self.set_vlan_filter(vlan_filter)
