@@ -95,12 +95,6 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="xdp">
-                <properties>
-                  <help>Enable eXpress Data Path</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
             </children>
           </node>
           <leafNode name="speed">
@@ -193,6 +187,7 @@
           </node>
           #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>
+          #include <include/interface-xdp.xml.i>
         </children>
       </tagNode>
     </children>

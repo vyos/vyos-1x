@@ -69,7 +69,7 @@ def verify(ethernet):
     verify_vrf(ethernet)
 
     # XDP requires multiple TX queues
-    if dict_search('offload.xdp', ethernet) != None:
+    if 'xdp' in ethernet:
         queues = glob('/sys/class/net/{ifname}/queues/tx-*'.format(**ethernet))
         if len(queues) < 2:
             raise ConfigError('XDP requires additional TX queues, too few available!')
