@@ -165,6 +165,7 @@
           </leafNode>
           #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>
+          #include <include/interface-xdp.xml.i>
         </children>
       </tagNode>
     </children>
