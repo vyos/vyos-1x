@@ -16,6 +16,7 @@
 
 import os
 
+from glob import glob
 from sys import exit
 
 from vyos.config import Config
@@ -28,6 +29,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import EthernetIf
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -65,6 +67,12 @@ def verify(ethernet):
     verify_dhcpv6(ethernet)
     verify_address(ethernet)
     verify_vrf(ethernet)
+
+    # XDP requires multiple TX queues
+    if 'xdp' in ethernet:
+        queues = glob('/sys/class/net/{ifname}/queues/tx-*'.format(**ethernet))
+        if len(queues) < 2:
+            raise ConfigError('XDP requires additional TX queues, too few available!')
 
     if {'is_bond_member', 'mac'} <= set(ethernet):
         print(f'WARNING: changing mac address "{mac}" will be ignored as "{ifname}" '

@@ -733,7 +733,6 @@ class Interface(Control):
         >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
         self.set_interface('proxy_arp_pvlan', enable)
-    
 
     def get_addr(self):
         """
@@ -889,7 +888,7 @@ class Interface(Control):
 
         # drop all interface addresses first
         self.flush_addrs()
-        
+
         ifname = self.ifname
 
         for bridge, bridge_config in bridge_dict.items():
@@ -903,18 +902,18 @@ class Interface(Control):
             # set bridge port path priority
             if 'priority' in bridge_config:
                 self.set_path_cost(bridge_config['priority'])
-            
+
             vlan_filter = 0
             vlan_add = set()
-            
+
             del_ifname_vlan_ids = get_vlan_ids(ifname)
             bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
-            
+
             if bridge_vlan_filter:
                 if 1 in del_ifname_vlan_ids:
                     del_ifname_vlan_ids.remove(1)
                 vlan_filter = 1
-            
+
             for vlan in del_ifname_vlan_ids:
                 cmd = f'bridge vlan del dev {ifname} vid {vlan}'
                 self._cmd(cmd)
@@ -937,13 +936,13 @@ class Interface(Control):
                     cmd = f'bridge vlan add dev {self.ifname} vid {vlan} master'
                     self._cmd(cmd)
                     vlan_add.add(vlan)
-            
+
             if vlan_filter:
                 # Setting VLAN ID for the bridge
                 for vlan in vlan_add:
                     cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
                     self._cmd(cmd)
-                
+
                 # enable/disable Vlan Filter
                 # When the VLAN aware option is not detected, the setting of `bridge` should not be overwritten
                 Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
@@ -1041,7 +1040,7 @@ class Interface(Control):
         # Remove existing mirroring rules
         self.del_tc_qdisc(ifname,'ingress','ffff:')
         self.del_tc_qdisc(ifname,'prio','1:')
-        
+
         # Setting up packet mirroring
         ingress_mirror = dict_search('mirror.ingress', self._config)
         # if interface does yet not exist bail out early and
@@ -1053,7 +1052,7 @@ class Interface(Control):
             # Export the mirrored traffic to the interface
             mirror_cmd = f'tc filter add dev {ifname} parent ffff: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {ingress_mirror}'
             self._cmd(mirror_cmd)
-        
+
         egress_mirror = dict_search('mirror.egress', self._config)
         # if interface does yet not exist bail out early and
         # add it later
@@ -1071,14 +1070,14 @@ class Interface(Control):
         # https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         ifname = self._config['ifname']
         mirror_rules = self._config.get('is_monitor_intf')
-        
+
         # Remove existing mirroring rules
         # The rule must be completely deleted first
         for rule in mirror_rules:
             for intf, dire in rule.items():
                 self.del_tc_qdisc(intf,'ingress','ffff:')
                 self.del_tc_qdisc(intf,'prio','1:')
-        
+
         # Setting mirror rules
         for rule in mirror_rules:
             for intf, dire in rule.items():
@@ -1097,6 +1096,30 @@ class Interface(Control):
                     # Export the mirrored traffic to the interface
                     mirror_cmd = f'tc filter add dev {intf} parent 1: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {ifname}'
                     self._cmd(mirror_cmd)
+
+    def set_xdp(self, state):
+        """
+        Enable Kernel XDP support. State can be either True or False.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> i = Interface('eth0')
+        >>> i.set_xdp(True)
+        """
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+
+        ifname = self.config['ifname']
+        cmd = f'xdp_loader -d {ifname} -U --auto-mode'
+        if state:
+            # Using 'xdp' will automatically decide if the driver supports
+            # 'xdpdrv' or only 'xdpgeneric'. A user later sees which driver is
+            # actually in use by calling 'ip a' or 'show interfaces ethernet'
+            cmd = f'xdp_loader -d {ifname} --auto-mode -F --progsec xdp_router ' \
+                  f'--filename /usr/share/vyos/xdp/xdp_prog_kern.o && ' \
+                  f'xdp_prog_user -d {ifname}'
+
+        return self._cmd(cmd)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -1265,11 +1288,14 @@ class Interface(Control):
         if 'is_bridge_member' in config:
             bridge_dict = config.get('is_bridge_member')
             self.add_to_bridge(bridge_dict)
-        
+
         # Re-set rules for the mirror monitoring interface
         if 'is_monitor_intf' in config:
             self.apply_mirror_of_monitor()
-        
+
+        # eXpress Data Path - highly experimental
+        self.set_xdp('xdp' in config)
+
         # remove no longer required 802.1ad (Q-in-Q VLANs)
         ifname = config['ifname']
         for vif_s_id in config.get('vif_s_remove', {}):
