@@ -197,6 +197,7 @@ static int stats_poll(const char *pin_dir, int map_fd, __u32 id,
 {
 	struct bpf_map_info info = {};
 	struct stats_record prev, record = { 0 };
+	int counter = 0;
 
 	/* Trick to pretty printf with thousands separators use %' */
 	setlocale(LC_NUMERIC, "en_US");
@@ -219,6 +220,10 @@ static int stats_poll(const char *pin_dir, int map_fd, __u32 id,
 		stats_collect(map_fd, map_type, &record);
 		stats_print(&record, &prev);
 		sleep(interval);
+		counter++;
+		if (counter > 1) {
+			return 0;
+		}
 	}
 
 	return 0;
@@ -265,31 +270,29 @@ int main(int argc, char **argv)
 		return EXIT_FAIL_OPTION;
 	}
 
-	for ( ;; ) {
-		stats_map_fd = open_bpf_map_file(pin_dir, "xdp_stats_map", &info);
-		if (stats_map_fd < 0) {
-			return EXIT_FAIL_BPF;
-		}
-
-		/* check map info, e.g. datarec is expected size */
-		err = check_map_fd_info(&info, &map_expect);
-		if (err) {
-			fprintf(stderr, "ERR: map via FD not compatible\n");
-			return err;
-		}
-		if (verbose) {
-			printf("\nCollecting stats from BPF map\n");
-			printf(" - BPF map (bpf_map_type:%d) id:%d name:%s"
-			       " key_size:%d value_size:%d max_entries:%d\n",
-			       info.type, info.id, info.name,
-			       info.key_size, info.value_size, info.max_entries
-			       );
-		}
-
-		err = stats_poll(pin_dir, stats_map_fd, info.id, info.type, interval);
-		if (err < 0)
-			return err;
+	stats_map_fd = open_bpf_map_file(pin_dir, "xdp_stats_map", &info);
+	if (stats_map_fd < 0) {
+		return EXIT_FAIL_BPF;
 	}
+
+	/* check map info, e.g. datarec is expected size */
+	err = check_map_fd_info(&info, &map_expect);
+	if (err) {
+		fprintf(stderr, "ERR: map via FD not compatible\n");
+		return err;
+	}
+	if (verbose) {
+	printf("\nCollecting stats from BPF map\n");
+	printf(" - BPF map (bpf_map_type:%d) id:%d name:%s"
+	       " key_size:%d value_size:%d max_entries:%d\n",
+	       info.type, info.id, info.name,
+	       info.key_size, info.value_size, info.max_entries
+	       );
+	}
+
+	err = stats_poll(pin_dir, stats_map_fd, info.id, info.type, interval);
+	if (err < 0)
+		return err;
 
 	return EXIT_OK;
 }

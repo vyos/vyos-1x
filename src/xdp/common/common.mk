@@ -39,7 +39,7 @@ KERN_USER_H ?= $(wildcard common_kern_user.h)
 CFLAGS ?= -g -I../include/
 BPF_CFLAGS ?= -I../include/
 
-LIBS = -l:libbpf.a -lelf -lz $(USER_LIBS)
+LIBS = -l:libbpf.a -lelf $(USER_LIBS)
 
 all: llvm-check $(USER_TARGETS) $(XDP_OBJ) $(COPY_LOADER) $(COPY_STATS)
 

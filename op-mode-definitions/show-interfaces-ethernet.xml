@@ -68,6 +68,12 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <leafNode name="xdp">
+                <properties>
+                  <help>Show eXpress Data Path statistics</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_xdp_stats.sh ethernet "$4"</command>
+              </leafNode>
             </children>
           </tagNode>
           <node name="ethernet">
