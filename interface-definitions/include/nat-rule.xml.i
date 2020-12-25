@@ -3,7 +3,7 @@
   <properties>
     <help>Rule number for NAT</help>
     <valueHelp>
-      <format>1-999999</format>
+      <format>u32:1-999999</format>
       <description>Number for this NAT rule</description>
     </valueHelp>
     <constraint>
