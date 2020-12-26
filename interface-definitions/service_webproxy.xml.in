@@ -425,13 +425,13 @@
                   </node>
                   <leafNode name="redirect-url">
                     <properties>
-                      <help>Redirect URL for filtered websites (default: http:\/\/block.vyos.net)</help>
+                      <help>Redirect URL for filtered websites (default: block.vyos.net)</help>
                       <valueHelp>
                         <format>url</format>
                         <description>URL for redirect</description>
                       </valueHelp>
                     </properties>
-                    <defaultValue>http:\/\/block.vyos.net</defaultValue>
+                    <defaultValue>block.vyos.net</defaultValue>
                   </leafNode>
                   <tagNode name="rule">
                     <properties>
@@ -449,7 +449,7 @@
                       #include <include/webproxy-squidguard.xml.i>
                       <leafNode name="redirect-url">
                         <properties>
-                          <help>Redirect URL for filtered websites (default: http:\/\/block.vyos.net)</help>
+                          <help>Redirect URL for filtered websites</help>
                           <valueHelp>
                             <format>url</format>
                             <description>URL for redirect</description>

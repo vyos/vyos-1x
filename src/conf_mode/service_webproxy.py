@@ -29,7 +29,8 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = '/etc/squid/squid.conf'
+squid_config_file = '/etc/squid/squid.conf'
+squidguard_config_file = '/etc/squidguard/squidGuard.conf'
 
 def get_config(config=None):
     if config:
@@ -45,9 +46,15 @@ def get_config(config=None):
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
 
-    # if no authentication method is supplid, no need to add defaults
+    # if no authentication method is supplied, no need to add defaults
     if not dict_search('authentication.method', proxy):
         default_values.pop('authentication')
+    # if no url_filteringurl-filtering method is supplied, no need to add defaults
+    if 'url_filtering' not in proxy:
+        default_values.pop('url_filtering')
+    else:
+        # store path to squidGuard config, used when generating Squid config
+        proxy['squidguard_conf'] = squidguard_config_file
 
     # XXX: T2665: blend in proper cache-peer default values later
     default_values.pop('cache_peer')
@@ -118,15 +125,21 @@ def generate(proxy):
     if not proxy:
         return None
 
-    render(config_file, 'squid/squid.conf.tmpl', proxy)
+    render(squid_config_file, 'squid/squid.conf.tmpl', proxy)
+    render(squidguard_config_file, 'squid/squidGuard.conf.tmpl', proxy)
+
     return None
 
 def apply(proxy):
     if not proxy:
         # proxy is removed in the commit
         call('systemctl stop squid.service')
-        if os.path.exists(config_file):
-            os.unlink(config_file)
+
+        if os.path.exists(squid_config_file):
+            os.unlink(squid_config_file)
+        if os.path.exists(squidguard_config_file):
+            os.unlink(squidguard_config_file)
+
         return None
 
     call('systemctl restart squid.service')

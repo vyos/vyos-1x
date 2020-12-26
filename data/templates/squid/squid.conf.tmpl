@@ -98,6 +98,15 @@ http_port 127.0.0.1:{{ default_port }}
 {# NOT insert the client address in X-Forwarded-For header #}
 forwarded_for off
 
+{# SquidGuard #}
+{% if url_filtering is defined and url_filtering.disable is not defined %}
+{%   if url_filtering.squidguard is defined and url_filtering.squidguard is not none %}
+redirect_program /usr/bin/squidGuard -c {{ squidguard_conf }}
+redirect_children 8
+redirector_bypass on
+{%   endif %}
+{% endif %}
+
 {% if cache_peer is defined and cache_peer is not none %}
 {%   for peer, config in cache_peer.items() %}
 cache_peer {{ config.address }} {{ config.type }} {{ config.http_port }} {{ config.icp_port }} {{ config.options }}
