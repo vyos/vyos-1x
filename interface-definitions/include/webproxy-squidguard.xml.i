@@ -2,6 +2,9 @@
 <leafNode name="allow-category">
   <properties>
     <help>Category to allow</help>
+    <completionHelp>
+      <script>${vyos_completion_dir}/list_webproxy_category.sh</script>
+    </completionHelp>
     <multi/>
   </properties>
 </leafNode>
@@ -14,6 +17,9 @@
 <leafNode name="block-category">
   <properties>
     <help>Category to block</help>
+    <completionHelp>
+      <script>${vyos_completion_dir}/list_webproxy_category.sh</script>
+    </completionHelp>
     <multi/>
   </properties>
 </leafNode>
@@ -107,6 +113,7 @@
   <properties>
     <help>Log block category</help>
     <completionHelp>
+      <script>${vyos_completion_dir}/list_webproxy_category.sh</script>
       <list>all</list>
     </completionHelp>
     <multi/>

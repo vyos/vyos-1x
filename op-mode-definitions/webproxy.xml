@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="webproxy">
+        <properties>
+          <help>Monitor WebProxy service</help>
+        </properties>
+        <command>${vyatta_bindir}/vyatta-monitor Webproxy squid</command>
+        <children>
+          <node name="access-log">
+            <properties>
+              <help>Monitor the last lines of the squid access log</help>
+            </properties>
+            <command>if [ -f /var/log/squid3/access.log ]; then sudo tail --follow=name /var/log/squid3/access.log; else echo "WebProxy cache-log does not exist"; fi</command>
+          </node>
+          <node name="background">
+            <properties>
+              <help>Monitor Webproxy in the background</help>
+            </properties>
+            <children>
+              <node name="start">
+                <properties>
+                  <help>Start background monitoring of Webproxy</help>
+                </properties>
+                <command>${vyatta_bindir}/vyatta-monitor-background Webproxy squid</command>
+              </node>
+              <node name="stop">
+                <properties>
+                  <help>Stop background monitoring of Webproxy</help>
+                </properties>
+                <command>${vyatta_bindir}/vyatta-monitor-background-stop Webproxy </command>
+              </node>
+            </children>
+          </node>
+          <node name="cache-log">
+            <properties>
+              <help>Monitor the last lines of the squid cache log</help>
+            </properties>
+            <command>if [ -f /var/log/squid3/cache.log ]; then sudo tail --follow=name /var/log/squid3/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="webproxy">
+        <properties>
+          <help>Restart WebProxy service</help>
+        </properties>
+        <command>if cli-shell-api existsActive service webproxy; then sudo systemctl restart squid.service; else echo "Service WebProxy not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="webproxy">
+        <properties>
+          <help>Show WebProxy information</help>
+        </properties>
+        <children>
+          <!-- missing blacklist command -->
+          <node name="blacklist">
+            <properties>
+              <help>Show webproxy blacklist information</help>
+            </properties>
+            <children>
+              <node name="categories">
+                <properties>
+                  <help>Show webproxy blacklist categories</help>
+                </properties>
+                <command>${vyos_completion_dir}/list_webproxy_category.sh</command>
+              </node>
+            </children>
+          </node>
+          <node name="log">
+            <properties>
+              <help>Show contents of WebProxy access log</help>
+            </properties>
+            <command>if [ -e /var/log/squid/access.log ]; then sudo less $_vyatta_less_options --prompt="file %i of %m, page %dt of %D" -- `printf "%s\n" /var/log/squid/access.log* | sort -nr`; else echo "No WebProxy log"; fi</command>
+          </node>
+          <node name="update-log">
+            <properties>
+              <help>Show update log for url-filter database</help>
+            </properties>
+            <command>if [ -e /config/url-filtering/squidguard/updatestatus ]; then cat /config/url-filtering/squidguard/updatestatus; else echo "Update log not found"; fi</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="update">
+    <children>
+      <node name="webproxy">
+        <properties>
+          <help>Update WebProxy</help>
+        </properties>
+        <children>
+          <node name="blacklists">
+            <properties>
+              <help>Update the webproxy blacklist database</help>
+            </properties>
+            <children>
+              <tagNode name="category">
+                <properties>
+                  <help>Update a category of the webproxy blacklist database</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_webproxy_category.sh</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo /usr/libexec/vyos/legacy/vyatta-sg-blacklist.pl --update-blacklist-category="$5"</command>
+              </tagNode>
+            </children>
+            <command>sudo /usr/libexec/vyos/legacy/vyatta-sg-blacklist.pl --update-blacklist</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

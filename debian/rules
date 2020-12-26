@@ -51,6 +51,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/completion
 	cp -r src/completion/* $(DIR)/$(VYOS_LIBEXEC_DIR)/completion
 
+	# Install legacy components
+	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/legacy
+	cp -r src/legacy/* $(DIR)/$(VYOS_LIBEXEC_DIR)/legacy
+
 	# Install helper scripts
 	cp -r src/helpers/* $(DIR)/$(VYOS_LIBEXEC_DIR)/
 
