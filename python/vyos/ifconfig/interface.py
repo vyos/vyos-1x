@@ -23,8 +23,6 @@ from copy import deepcopy
 from glob import glob
 
 from ipaddress import IPv4Network
-from ipaddress import IPv6Address
-from ipaddress import IPv6Network
 from netifaces import ifaddresses
 # this is not the same as socket.AF_INET/INET6
 from netifaces import AF_INET
@@ -37,10 +35,8 @@ from vyos.configdict import get_vlan_ids
 from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
-from vyos.util import cmd
 from vyos.util import read_file
 from vyos.template import is_ipv4
-from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 from vyos.validate import assert_boolean
@@ -1012,34 +1008,22 @@ class Interface(Control):
             if os.path.isfile(config_file):
                 os.remove(config_file)
 
-    def get_tc_config(self,objectname):
-        # Parse configuration
-        get_tc_cmd = f'tc -j {objectname}'
-        tmp = cmd(get_tc_cmd, shell=True)
-        return json.loads(tmp)
-
-    def del_tc_qdisc(self,dev,kind,handle):
-        tc_qdisc = self.get_tc_config('qdisc')
-        for rule in tc_qdisc:
-            old_dev = rule['dev']
-            old_handle = rule['handle']
-            old_kind = rule['kind']
-            if old_dev == dev and old_handle == handle and old_kind == kind:
-                if 'root' in rule and rule['root']:
-                    delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} root {kind}'
-                    self._cmd(delete_tc_cmd)
-                else:
-                    delete_tc_cmd = f'tc  qdisc del dev {dev} handle {handle} {kind}'
-                    self._cmd(delete_tc_cmd)
-
     def apply_mirror(self):
         # Please refer to the document for details
         # https://man7.org/linux/man-pages/man8/tc.8.html
         # https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         ifname = self._config['ifname']
         # Remove existing mirroring rules
-        self.del_tc_qdisc(ifname,'ingress','ffff:')
-        self.del_tc_qdisc(ifname,'prio','1:')
+        try:
+            delete_tc_cmd = f'tc qdisc del dev {ifname} handle ffff: ingress'
+            self._cmd(delete_tc_cmd)
+        except:
+            pass
+        try:
+            delete_tc_cmd = f'tc qdisc del dev {ifname} handle 1: root prio'
+            self._cmd(delete_tc_cmd)
+        except:
+            pass
 
         # Setting up packet mirroring
         ingress_mirror = dict_search('mirror.ingress', self._config)
@@ -1075,8 +1059,16 @@ class Interface(Control):
         # The rule must be completely deleted first
         for rule in mirror_rules:
             for intf, dire in rule.items():
-                self.del_tc_qdisc(intf,'ingress','ffff:')
-                self.del_tc_qdisc(intf,'prio','1:')
+                try:
+                    delete_tc_cmd = f'tc qdisc del dev {intf} handle ffff: ingress'
+                    self._cmd(delete_tc_cmd)
+                except:
+                    pass
+                try:
+                    delete_tc_cmd = f'tc qdisc del dev {intf} handle 1: root prio'
+                    self._cmd(delete_tc_cmd)
+                except:
+                    pass
 
         # Setting mirror rules
         for rule in mirror_rules:
