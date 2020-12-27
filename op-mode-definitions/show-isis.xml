@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="isis">
+        <children>
+          <node name="database">
+            <properties>
+              <help>Show IS-IS link state database</help>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis database detail"</command>
+              </leafNode>
+            </children>
+            <command>/usr/bin/vtysh -c "show isis database"</command>
+          </node>
+          <tagNode name="database">
+            <properties>
+              <help>Show IS-IS link state database PDU</help>
+              <completionHelp>
+                <list>lsp-id detail</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show isis database $4"</command>
+          </tagNode>
+          <leafNode name="hostname">
+            <properties>
+              <help>Show IS-IS dynamic hostname mapping</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show isis hostname"</command>
+          </leafNode>
+          <node name="interface">
+            <properties>
+              <help>Show IS-IS interfaces</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces.py</script>
+                </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis interface detail"</command>
+              </leafNode>
+            </children>
+            <command>/usr/bin/vtysh -c "show isis interface"</command>
+          </node>
+          <tagNode name="interface">
+            <properties>
+              <help>Show specific IS-IS interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show isis interface $4"</command>
+          </tagNode>
+          <node name="traffic-engineering">
+            <properties>
+              <help>Show IS-IS MPLS traffic engineering information</help>
+            </properties>
+            <children>
+              <leafNode name="router">
+                <properties>
+                  <help>Show router information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis mpls-te router"</command>
+              </leafNode>
+              <leafNode name="interface">
+                <properties>
+                  <help>Show interface information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis mpls-te interface"</command>
+              </leafNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show specific IS-IS interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis mpls-te interface $5"</command>
+              </tagNode>
+            </children>
+          </node>
+          <node name="neighbor">
+            <properties>
+              <help>Show IS-IS neighbor adjacencies</help>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis neighbor detail"</command>
+              </leafNode>
+            </children>
+            <command>/usr/bin/vtysh -c "show isis neighbor"</command>
+          </node>
+          <tagNode name="neighbor">
+            <properties>
+              <help>Show specific IS-IS neighbor adjacency </help>
+              <completionHelp>
+                <list>system-id</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show isis neighbor $4"</command>
+          </tagNode>
+          <node name="route">
+            <properties>
+              <help>Show IS-IS routing table</help>
+            </properties>
+            <children>
+              <leafNode name="level-1">
+                <properties>
+                  <help>Show level-1 routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis route level-1"</command>
+              </leafNode>
+              <leafNode name="level-2">
+                <properties>
+                  <help>Show level-2 routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis route level-2"</command>
+              </leafNode>
+            </children>
+            <command>/usr/bin/vtysh -c "show isis route"</command>
+          </node>
+          <node name="segment-routing">
+            <properties>
+              <help>Show IS-IS Segment-Routing (SPRING) information</help>
+            </properties>
+            <children>
+              <leafNode name="node">
+                <properties>
+                  <help>Show node information</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis segment-routing node"</command>
+              </leafNode>
+              <leafNode name="prefix-sids">
+                <properties>
+                  <help>Show prefix segment IDs</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis segment-routing prefix-sids"</command>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="spf-delay">
+            <properties>
+              <help>Show IS-IS SPF delay parameters</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show isis spf-delay-ietf"</command>
+          </leafNode>
+          <leafNode name="summary">
+            <properties>
+              <help>Show IS-IS information summary</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show isis summary"</command>
+          </leafNode>
+          <node name="topology">
+            <properties>
+              <help>Show IS-IS paths to Intermediate Systems</help>
+            </properties>
+            <children>
+              <leafNode name="level-1">
+                <properties>
+                  <help>Show level-1 routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis topology level-1"</command>
+              </leafNode>
+              <leafNode name="level-2">
+                <properties>
+                  <help>Show level-2 routes</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show isis topology level-2"</command>
+              </leafNode>
+            </children>
+            <command>/usr/bin/vtysh -c "show isis topology"</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
