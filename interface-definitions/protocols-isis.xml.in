@@ -21,7 +21,7 @@
                 <properties>
                   <help>Plain-text authentication type</help>
                   <valueHelp>
-                    <format>&lt;text&gt;</format>
+                    <format>txt</format>
                     <description>Level-wide password</description>
                   </valueHelp>
                 </properties>
@@ -30,7 +30,7 @@
                 <properties>
                   <help>MD5 authentication type</help>
                   <valueHelp>
-                    <format>&lt;md5&gt;</format>
+                    <format>txt</format>
                     <description>Level-wide password</description>
                   </valueHelp>
                 </properties>
@@ -110,20 +110,22 @@
                 <properties>
                   <help>Plain-text authentication type</help>
                   <valueHelp>
-                    <format>&lt;text&gt;</format>
+                    <format>txt</format>
                     <description>Level-wide password</description>
                   </valueHelp>
                 </properties>
               </leafNode>
-   <!--           <leafNode name="md5">
+<!--
+              <leafNode name="md5">
                 <properties>
                   <help>MD5 authentication type</help>
                   <valueHelp>
-                    <format>&lt;md5&gt;</format>
+                    <format>txt</format>
                     <description>Level-wide password</description>
                   </valueHelp>
                 </properties>
-              </leafNode>  -->
+              </leafNode>
+-->
             </children>
           </node>
           <leafNode name="dynamic-hostname">
@@ -159,7 +161,7 @@
             <properties>
               <help>Minimum interval between regenerating same LSP</help>
               <valueHelp>
-                <format>&lt;1-120&gt;</format>
+                <format>u32:1-120</format>
                 <description>Minimum interval in seconds</description>
               </valueHelp>
               <constraint>
@@ -171,7 +173,7 @@
             <properties>
               <help>Configure the maximum size of generated LSPs</help>
               <valueHelp>
-                <format>&lt;128-4352&gt;</format>
+                <format>u32:128-4352</format>
                 <description>Maximum size of generated LSPs</description>
               </valueHelp>
               <constraint>
@@ -183,7 +185,7 @@
             <properties>
               <help>LSP refresh interval</help>
               <valueHelp>
-                <format>&lt;1-65235&gt;</format>
+                <format>u32:1-65235</format>
                 <description>LSP refresh interval in seconds</description>
               </valueHelp>
               <constraint>
@@ -195,7 +197,7 @@
             <properties>
               <help>Maximum LSP lifetime</help>
               <valueHelp>
-                <format>&lt;350-65535&gt;</format>
+                <format>u32:350-65535</format>
                 <description>LSP lifetime in seconds</description>
               </valueHelp>
               <constraint>
@@ -327,7 +329,7 @@
                 <properties>
                   <help>Delay used while in QUIET state</help>
                   <valueHelp>
-                    <format>&lt;0-60000&gt;</format>
+                    <format>u32:0-60000</format>
                     <description>Delay used while in QUIET state (in ms)</description>
                   </valueHelp>
                   <constraint>
@@ -339,7 +341,7 @@
                 <properties>
                   <help>Delay used while in SHORT_WAIT state</help>
                   <valueHelp>
-                    <format>&lt;0-60000&gt;</format>
+                    <format>u32:0-60000</format>
                     <description>Delay used while in SHORT_WAIT state (in ms)</description>
                   </valueHelp>
                   <constraint>
@@ -351,7 +353,7 @@
                 <properties>
                   <help>Delay used while in LONG_WAIT</help>
                   <valueHelp>
-                    <format>&lt;0-60000&gt;</format>
+                    <format>u32:0-60000</format>
                     <description>Delay used while in LONG_WAIT state (in ms)</description>
                   </valueHelp>
                   <constraint>
@@ -363,7 +365,7 @@
                 <properties>
                   <help>Time with no received IGP events before considering IGP stable</help>
                   <valueHelp>
-                    <format>&lt;0-60000&gt;</format>
+                    <format>u32:0-60000</format>
                     <description>Time with no received IGP events before considering IGP stable (in ms)</description>
                   </valueHelp>
                   <constraint>
@@ -375,7 +377,7 @@
                 <properties>
                   <help>Maximum duration needed to learn all the events related to a single failure</help>
                   <valueHelp>
-                    <format>&lt;0-60000&gt;</format>
+                    <format>u32:0-60000</format>
                     <description>Maximum duration needed to learn all the events related to a single failure (in ms)</description>
                   </valueHelp>
                   <constraint>
@@ -389,7 +391,7 @@
             <properties>
               <help>Minimum interval between SPF calculations</help>
               <valueHelp>
-                <format>&lt;1-120&gt;</format>
+                <format>u32:1-120</format>
                 <description>Minimum interval between consecutive SPFs in seconds</description>
               </valueHelp>
               <constraint>
@@ -446,7 +448,7 @@
                 <properties>
                   <help>Set Hello interval</help>
                   <valueHelp>
-                    <format>&lt;1-600&gt;</format>
+                    <format>u32:1-600</format>
                     <description>Set Hello interval</description>
                   </valueHelp>
                   <constraint>
@@ -458,7 +460,7 @@
                 <properties>
                   <help>Set Hello interval</help>
                   <valueHelp>
-                    <format>&lt;2-100&gt;</format>
+                    <format>u32:2-100</format>
                     <description>Set multiplier for Hello holding time</description>
                   </valueHelp>
                   <constraint>
@@ -470,7 +472,7 @@
                 <properties>
                   <help>Set default metric for circuit</help>
                   <valueHelp>
-                    <format>&lt;0-16777215&gt;</format>
+                    <format>u32:0-16777215</format>
                     <description>Default metric value</description>
                   </valueHelp>
                   <constraint>
@@ -506,7 +508,7 @@
                     <properties>
                       <help>Plain-text authentication type</help>
                       <valueHelp>
-                        <format>&lt;text&gt;</format>
+                        <format>txt</format>
                         <description>Circuit password</description>
                       </valueHelp>
                     </properties>
@@ -517,7 +519,7 @@
                 <properties>
                   <help>Set priority for Designated Router election</help>
                   <valueHelp>
-                    <format>&lt;0-127&gt;</format>
+                    <format>u32:0-127</format>
                     <description>Priority value</description>
                   </valueHelp>
                   <constraint>
@@ -529,7 +531,7 @@
                 <properties>
                   <help>Set PSNP interval in seconds</help>
                   <valueHelp>
-                    <format>&lt;0-127&gt;</format>
+                    <format>u32:0-127</format>
                     <description>Priority value</description>
                   </valueHelp>
                   <constraint>

@@ -185,7 +185,7 @@
                         <list>infinity</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>0-4294967295</format>
+                        <format>u32</format>
                         <description>Time in seconds that the prefix will remain preferred</description>
                       </valueHelp>
                       <valueHelp>

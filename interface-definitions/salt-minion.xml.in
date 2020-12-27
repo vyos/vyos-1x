@@ -47,7 +47,7 @@
             <properties>
               <help>Interval in minutes between updates (default: 60)</help>
               <valueHelp>
-                <format>&lt;1-1440&gt;</format>
+                <format>u32:1-1440</format>
                 <description>Update interval in minutes</description>
               </valueHelp>
               <constraint>

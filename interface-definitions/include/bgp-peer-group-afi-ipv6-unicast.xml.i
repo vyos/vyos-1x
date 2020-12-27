@@ -13,7 +13,7 @@
           <properties>
             <help>Number of occurrences of AS number</help>
             <valueHelp>
-              <format>&lt;1-10&gt;</format>
+              <format>u32:1-10</format>
               <description>Number of times AS is allowed in path</description>
             </valueHelp>
             <constraint>
@@ -133,7 +133,7 @@
               <path>policy access-list6</path>
             </completionHelp>
             <valueHelp>
-              <format>&lt;1-65535&gt;</format>
+              <format>u32:1-65535</format>
               <description>Access-list to filter outgoing route updates to this peer-group</description>
             </valueHelp>
             <constraint>
@@ -148,7 +148,7 @@
               <path>policy access-list6</path>
             </completionHelp>
             <valueHelp>
-              <format>&lt;1-65535&gt;</format>
+              <format>u32:1-65535</format>
               <description>Access-list to filter incoming route updates from this peer-group</description>
             </valueHelp>
             <constraint>
@@ -185,7 +185,7 @@
       <properties>
         <help>Maximum number of prefixes to accept from this peer-group</help>
         <valueHelp>
-          <format>&lt;1-4294967295&gt;</format>
+          <format>u32:1-4294967295</format>
           <description>Prefix limit</description>
         </valueHelp>
         <constraint>
@@ -306,7 +306,7 @@
       <properties>
         <help>Default weight for routes from this peer-group</help>
         <valueHelp>
-          <format>&lt;1-65535&gt;</format>
+          <format>u32:1-65535</format>
           <description>Weight for routes from this peer-group</description>
         </valueHelp>
         <constraint>

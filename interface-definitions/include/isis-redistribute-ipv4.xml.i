@@ -8,7 +8,7 @@
       <properties>
         <help>Metric for redistributed routes</help>
         <valueHelp>
-          <format>&lt;0-16777215&gt;</format>
+          <format>u32:0-16777215</format>
           <description>ISIS default metric</description>
         </valueHelp>
         <constraint>
@@ -35,7 +35,7 @@
       <properties>
         <help>Metric for redistributed routes</help>
         <valueHelp>
-          <format>&lt;0-16777215&gt;</format>
+          <format>u32:0-16777215</format>
           <description>ISIS default metric</description>
         </valueHelp>
         <constraint>

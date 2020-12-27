@@ -257,7 +257,7 @@
                         <properties>
                           <help>VHT operating channel center frequency - center freq 1 (for use with 80, 80+80 and 160 modes)</help>
                           <valueHelp>
-                            <format>&lt;34-173&gt;</format>
+                            <format>u32:34-173</format>
                             <description>5Ghz (802.11 a/h/j/n/ac) center channel index (use 42 for primary 80MHz channel 36)</description>
                           </valueHelp>
                           <constraint>
@@ -270,7 +270,7 @@
                         <properties>
                           <help>VHT operating channel center frequency - center freq 2 (for use with the 80+80 mode)</help>
                           <valueHelp>
-                            <format>34-173</format>
+                            <format>u32:34-173</format>
                             <description>5Ghz (802.11 a/h/j/n/ac) center channel index (use 58 for primary 80MHz channel 52)</description>
                           </valueHelp>
                           <constraint>
@@ -338,7 +338,7 @@
                     <properties>
                       <help>Set the maximum length of A-MPDU pre-EOF padding that the station can receive</help>
                       <valueHelp>
-                        <format>&lt;0-7&gt;</format>
+                        <format>u32:0-7</format>
                         <description>Maximum length of A-MPDU pre-EOF padding = 2 pow(13 + x) -1 octets</description>
                       </valueHelp>
                       <constraint>
@@ -435,11 +435,11 @@
                 <description>Automatic Channel Selection (ACS)</description>
               </valueHelp>
               <valueHelp>
-                <format>&lt;1-14&gt;</format>
+                <format>u32:1-14</format>
                 <description>2.4Ghz (802.11 b/g/n) Channel</description>
               </valueHelp>
               <valueHelp>
-                <format>&lt;34-173&gt;</format>
+                <format>u32:34-173</format>
                 <description>5Ghz (802.11 a/h/j/n/ac) Channel</description>
               </valueHelp>
               <constraint>
@@ -455,7 +455,7 @@
                 <list>us eu jp de uk cn es fr ru</list>
               </completionHelp>
               <valueHelp>
-                <format>&lt;code%gt;</format>
+                <format>txt</format>
                 <description>ISO/IEC 3166-1 Country Code</description>
               </valueHelp>
               <constraint>
@@ -496,7 +496,7 @@
             <properties>
               <help>Maximum number of wireless radio stations. Excess stations will be rejected upon authentication request.</help>
               <valueHelp>
-                <format>&lt;1-2007&gt;</format>
+                <format>u32:1-2007</format>
                 <description>Number of allowed stations</description>
               </valueHelp>
               <constraint>
@@ -576,7 +576,7 @@
             <properties>
               <help>Transmission power reduction in dBm</help>
               <valueHelp>
-                <format>&lt;0-255&gt;</format>
+                <format>u32:0-255</format>
                 <description>TX power reduction in dBm</description>
               </valueHelp>
               <constraint>
@@ -599,7 +599,7 @@
                     <properties>
                       <help>WEP encryption key</help>
                       <valueHelp>
-                        <format>&lt;hexdigits&gt;</format>
+                        <format>txt</format>
                         <description>Wired Equivalent Privacy key</description>
                       </valueHelp>
                       <constraint>
@@ -713,7 +713,7 @@
                 using special characters in the WPA passphrase then single
                 quotes are required.</help>
                       <valueHelp>
-                        <format>&lt;text&gt;</format>
+                        <format>txt</format>
                         <description>Passphrase of at least 8 but not more than 63 printable characters</description>
                       </valueHelp>
                       <constraint>

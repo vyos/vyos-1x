@@ -28,7 +28,7 @@
                 <properties>
                   <help>Advertise interval</help>
                   <valueHelp>
-                    <format>1-255</format>
+                    <format>u32:1-255</format>
                     <description>Advertise interval in seconds (default: 1)</description>
                   </valueHelp>
                   <constraint>
@@ -112,28 +112,36 @@
               </node>
               <leafNode name="hello-source-address">
                 <properties>
-                  <help>VRRP hello source address (IPv4 or IPv6)</help>
+                  <help>VRRP hello source address</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 hello source address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 hello source address</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
                     <validator name="ipv6-address"/>
                   </constraint>
-                  <valueHelp>
-                    <format>&lt;IPv4|IPv6&gt;</format>
-                    <description>IPv4 or IPv6 hello source address</description>
-                  </valueHelp>
                 </properties>
               </leafNode>
               <leafNode name="peer-address">
                 <properties>
-                  <help>Unicast VRRP peer address (IPv4 or IPv6)</help>
+                  <help>Unicast VRRP peer address</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 unicast peer address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 unicast peer address</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
                     <validator name="ipv6-address"/>
                   </constraint>
-                  <valueHelp>
-                    <format>&lt;IPv4|IPv6&gt;</format>
-                    <description>IPv4 or IPv6 unicast peer address</description>
-                  </valueHelp>
                 </properties>
               </leafNode>
               <leafNode name="no-preempt">
@@ -145,6 +153,10 @@
               <leafNode name="preempt-delay">
                 <properties>
                   <help>Preempt delay (in seconds)</help>
+                  <valueHelp>
+                    <format>u32:0-1000</format>
+                    <description>preempt delay</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 0-1000"/>
                   </constraint>
@@ -152,14 +164,14 @@
               </leafNode>
               <leafNode name="priority">
                 <properties>
-                  <help>Router priority</help>
+                  <help>Router priority (default: 100)</help>
+                  <valueHelp>
+                    <format>u32:1-255</format>
+                    <description>Router priority</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
-                  <valueHelp>
-                    <format>1-255</format>
-                    <description>Router priority (default: 100)</description>
-                  </valueHelp>
                 </properties>
               </leafNode>
               <leafNode name="rfc3768-compatibility">
@@ -209,17 +221,21 @@
               </node>
               <leafNode name="virtual-address">
                 <properties>
-                  <multi/>
                   <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 virtual address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 virtual address</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ipv4-host"/>
                     <validator name="ipv6-host"/>
                   </constraint>
                   <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
-                  <valueHelp>
-                    <format>&lt;IPv4|IPv6&gt;</format>
-                    <description>IPv4 or IPv6 virtual address</description>
-                  </valueHelp>
+                  <multi/>
                 </properties>
               </leafNode>
               <leafNode name="virtual-address-excluded">
@@ -244,13 +260,13 @@
               <leafNode name="vrid">
                 <properties>
                   <help>Virtual router identifier</help>
+                  <valueHelp>
+                    <format>u32:1-255</format>
+                    <description>Virtual router identifier</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
-                  <valueHelp>
-                    <format>1-255</format>
-                    <description>Virtual router identifier</description>
-                  </valueHelp>
                 </properties>
               </leafNode>
             </children>

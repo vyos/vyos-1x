@@ -13,7 +13,7 @@
               <help>Policy local-route rule set number</help>
               <valueHelp>
                 <!-- table main with prio 32766 -->
-                <format>&lt;1-32765&gt;</format>
+                <format>u32:1-32765</format>
                 <description>Local-route rule number (1-219)</description>
               </valueHelp>
               <constraint>
@@ -30,7 +30,7 @@
                     <properties>
                       <help>Routing table to forward packet with</help>
                       <valueHelp>
-                        <format>&lt;1-200&gt;</format>
+                        <format>u32:1-200</format>
                         <description>Table number</description>
                       </valueHelp>
                       <completionHelp>

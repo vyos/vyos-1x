@@ -75,7 +75,7 @@
                     <properties>
                       <help>Flows per second</help>
                       <valueHelp>
-                        <format>&lt;0-4294967294&gt;</format>
+                        <format>u32:0-4294967294</format>
                         <description>Flows per second</description>
                       </valueHelp>
                       <constraint>
@@ -87,7 +87,7 @@
                     <properties>
                       <help>Megabits per second</help>
                       <valueHelp>
-                        <format>&lt;0-4294967294&gt;</format>
+                        <format>u32:0-4294967294</format>
                         <description>Megabits per second</description>
                       </valueHelp>
                       <constraint>
@@ -99,7 +99,7 @@
                     <properties>
                       <help>Packets per second</help>
                       <valueHelp>
-                        <format>&lt;0-4294967294&gt;</format>
+                        <format>u32:0-4294967294</format>
                         <description>Packets per second</description>
                       </valueHelp>
                       <constraint>

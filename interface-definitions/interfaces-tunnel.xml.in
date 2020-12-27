@@ -209,7 +209,7 @@
                     <properties>
                       <help>Tunnel key</help>
                       <valueHelp>
-                        <format>0-4294967295</format>
+                        <format>u32</format>
                         <description>Tunnel key</description>
                       </valueHelp>
                       <constraint>

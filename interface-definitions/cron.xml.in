@@ -14,7 +14,7 @@
             <properties>
               <help>Scheduled task</help>
               <valueHelp>
-                <format>&lt;string&gt;</format>
+                <format>txt</format>
                 <description>Task name</description>
               </valueHelp>
               <priority>999</priority>

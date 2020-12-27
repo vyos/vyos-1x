@@ -7,7 +7,7 @@
         <properties>
           <help>Border Gateway Protocol (BGP) parameters</help>
           <valueHelp>
-            <format>&lt;1-4294967294&gt;</format>
+            <format>u32:1-4294967294</format>
             <description>AS number</description>
           </valueHelp>
           <constraint>
@@ -159,7 +159,7 @@
                         <properties>
                           <help>AS-path hopcount limit</help>
                           <valueHelp>
-                            <format>&lt;0-255&gt;</format>
+                            <format>u32:0-255</format>
                             <description>AS path hop count limit</description>
                           </valueHelp>
                           <constraint>
@@ -242,7 +242,7 @@
                 <properties>
                   <help>Maximum ebgp multipaths</help>
                   <valueHelp>
-                    <format>&lt;1-255&gt;</format>
+                    <format>u32:1-255</format>
                     <description>EBGP multipaths</description>
                   </valueHelp>
                   <constraint>
@@ -254,7 +254,7 @@
                 <properties>
                   <help>Maximum ibgp multipaths</help>
                   <valueHelp>
-                    <format>&lt;1-255&gt;</format>
+                    <format>u32:1-255</format>
                     <description>EBGP multipaths</description>
                   </valueHelp>
                   <constraint>
@@ -276,7 +276,7 @@
                 <description>BGP neighbor IPv6 address</description>
               </valueHelp>
               <valueHelp>
-                <format>&lt;interface&gt;</format>
+                <format>txt</format>
                 <description>Interface name</description>
               </valueHelp>
               <constraint>
@@ -299,7 +299,7 @@
                 <properties>
                   <help>Minimum interval for sending routing updates</help>
                   <valueHelp>
-                    <format>&lt;0-600&gt;</format>
+                    <format>u32:0-600</format>
                     <description>Advertisement interval in seconds</description>
                   </valueHelp>
                   <constraint>
@@ -379,7 +379,7 @@
                 <properties>
                   <help>Allow this EBGP neighbor to not be on a directly connected network</help>
                   <valueHelp>
-                    <format>&lt;1-255&gt;</format>
+                    <format>u32:1-255</format>
                     <description>Number of hops</description>
                   </valueHelp>
                   <constraint>
@@ -404,7 +404,7 @@
                         <list>external internal</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>&lt;1-4294967294&gt;</format>
+                        <format>u32:1-4294967294</format>
                         <description>Neighbor AS number</description>
                       </valueHelp>
                       <valueHelp>
@@ -439,7 +439,7 @@
                             <list>external internal</list>
                           </completionHelp>
                           <valueHelp>
-                            <format>&lt;1-4294967294&gt;</format>
+                            <format>u32:1-4294967294</format>
                             <description>Neighbor AS number</description>
                           </valueHelp>
                           <valueHelp>
@@ -465,7 +465,7 @@
                 <properties>
                   <help>Local AS number</help>
                   <valueHelp>
-                    <format>&lt;1-4294967294&gt;</format>
+                    <format>u32:1-4294967294</format>
                     <description>Local AS number</description>
                   </valueHelp>
                   <constraint>
@@ -522,7 +522,7 @@
                     <list>external internal</list>
                   </completionHelp>
                   <valueHelp>
-                    <format>&lt;1-4294967294&gt;</format>
+                    <format>u32:1-4294967294</format>
                     <description>Neighbor AS number</description>
                   </valueHelp>
                   <valueHelp>
@@ -561,7 +561,7 @@
                     <properties>
                       <help>BGP connect timer for this neighbor</help>
                       <valueHelp>
-                        <format>&lt;1-65535&gt;</format>
+                        <format>u32:1-65535</format>
                         <description>Connect timer in seconds</description>
                       </valueHelp>
                       <valueHelp>
@@ -577,7 +577,7 @@
                     <properties>
                       <help>BGP hold timer for this neighbor</help>
                       <valueHelp>
-                        <format>&lt;1-65535&gt;</format>
+                        <format>u32:1-65535</format>
                         <description>Hold timer in seconds</description>
                       </valueHelp>
                       <valueHelp>
@@ -593,7 +593,7 @@
                     <properties>
                       <help>BGP keepalive interval for this neighbor</help>
                       <valueHelp>
-                        <format>&lt;1-65535&gt;</format>
+                        <format>u32:1-65535</format>
                         <description>Keepalive interval in seconds (default 60)</description>
                       </valueHelp>
                       <constraint>
@@ -612,7 +612,7 @@
                     <properties>
                       <help>Number of the maximum number of hops to the BGP peer</help>
                       <valueHelp>
-                        <format>&lt;1-254&gt;</format>
+                        <format>u32:1-254</format>
                         <description>Number of hops</description>
                       </valueHelp>
                       <constraint>
@@ -635,7 +635,7 @@
                     <description>IPv6 address of route source</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>&lt;interface&gt;</format>
+                    <format>txt</format>
                     <description>Interface as route source</description>
                   </valueHelp>
                   <constraint>
@@ -736,7 +736,7 @@
                     <properties>
                       <help>Confederation AS identifier [REQUIRED]</help>
                       <valueHelp>
-                        <format>&lt;1-4294967294&gt;</format>
+                        <format>u32:1-4294967294</format>
                         <description>Confederation AS id</description>
                       </valueHelp>
                       <constraint>
@@ -748,7 +748,7 @@
                     <properties>
                       <help>Peer ASs in the BGP confederation</help>
                       <valueHelp>
-                        <format>&lt;1-4294967294&gt;</format>
+                        <format>u32:1-4294967294</format>
                         <description>Peer AS number</description>
                       </valueHelp>
                       <constraint>
@@ -767,7 +767,7 @@
                     <properties>
                       <help>Half-life time for dampening [REQUIRED]</help>
                       <valueHelp>
-                        <format>&lt;1-45&gt;</format>
+                        <format>u32:1-45</format>
                         <description>Half-life penalty in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -779,7 +779,7 @@
                     <properties>
                       <help>Maximum duration to suppress a stable route [REQUIRED]</help>
                       <valueHelp>
-                        <format>&lt;1-255&gt;</format>
+                        <format>u32:1-255</format>
                         <description>Maximum suppress duration in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -791,7 +791,7 @@
                     <properties>
                       <help>Time to start reusing a route [REQUIRED]</help>
                       <valueHelp>
-                        <format>&lt;1-20000&gt;</format>
+                        <format>u32:1-20000</format>
                         <description>Re-use time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -803,7 +803,7 @@
                     <properties>
                       <help>When to start suppressing a route [REQUIRED]</help>
                       <valueHelp>
-                        <format>&lt;1-20000&gt;</format>
+                        <format>u32:1-20000</format>
                         <description>Start-suppress-time</description>
                       </valueHelp>
                       <constraint>
@@ -822,7 +822,7 @@
                     <properties>
                       <help>Default local preference</help>
                       <valueHelp>
-                        <format>&lt;0-4294967295&gt;</format>
+                        <format>u32</format>
                         <description>Local preference</description>
                       </valueHelp>
                       <constraint>
@@ -858,7 +858,7 @@
                         <properties>
                           <help>Administrative distance for external BGP routes</help>
                           <valueHelp>
-                            <format>&lt;1-255&gt;</format>
+                            <format>u32:1-255</format>
                             <description>Administrative distance for external BGP routes</description>
                           </valueHelp>
                           <constraint>
@@ -870,7 +870,7 @@
                         <properties>
                           <help>Administrative distance for internal BGP routes</help>
                           <valueHelp>
-                            <format>&lt;1-255&gt;</format>
+                            <format>u32:1-255</format>
                             <description>Administrative distance for internal BGP routes</description>
                           </valueHelp>
                           <constraint>
@@ -882,7 +882,7 @@
                         <properties>
                           <help>Administrative distance for local BGP routes</help>
                           <valueHelp>
-                            <format>&lt;1-255&gt;</format>
+                            <format>u32:1-255</format>
                             <description>Administrative distance for internal BGP routes</description>
                           </valueHelp>
                           <constraint>
@@ -908,7 +908,7 @@
                         <properties>
                           <help>Administrative distance for prefix</help>
                           <valueHelp>
-                            <format>&lt;1-255&gt;</format>
+                            <format>u32:1-255</format>
                             <description>Administrative distance for external BGP routes</description>
                           </valueHelp>
                           <constraint>
@@ -929,7 +929,7 @@
                     <properties>
                       <help>Maximum time to hold onto restarting neighbors stale paths</help>
                       <valueHelp>
-                        <format>&lt;1-3600&gt;</format>
+                        <format>u32:1-3600</format>
                         <description>Hold time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -1038,7 +1038,7 @@
                 <properties>
                   <help>Allow this EBGP peer-group to not be on a directly connected network</help>
                   <valueHelp>
-                    <format>&lt;1-255&gt;</format>
+                    <format>u32:1-255</format>
                     <description>Number of hops</description>
                   </valueHelp>
                   <constraint>
@@ -1050,7 +1050,7 @@
                 <properties>
                   <help>Local AS number [REQUIRED]</help>
                   <valueHelp>
-                    <format>&lt;1-4294967294&gt;</format>
+                    <format>u32:1-4294967294</format>
                     <description>Local AS number</description>
                   </valueHelp>
                   <constraint>
@@ -1090,7 +1090,7 @@
                     <list>external internal</list>
                   </completionHelp>
                   <valueHelp>
-                    <format>&lt;1-4294967294&gt;</format>
+                    <format>u32:1-4294967294</format>
                     <description>Neighbor AS number</description>
                   </valueHelp>
                   <valueHelp>
@@ -1123,7 +1123,7 @@
                     <properties>
                       <help>Number of the maximum number of hops to the BGP peer</help>
                       <valueHelp>
-                        <format>&lt;1-254&gt;</format>
+                        <format>u32:1-254</format>
                         <description>Number of hops</description>
                       </valueHelp>
                       <constraint>
@@ -1146,7 +1146,7 @@
                     <description>IPv6 address of route source</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>&lt;interface&gt;</format>
+                    <format>txt</format>
                     <description>Interface as route source</description>
                   </valueHelp>
                   <constraint>
@@ -1175,7 +1175,7 @@
                 <properties>
                   <help>BGP holdtime interval</help>
                   <valueHelp>
-                    <format>&lt;4-65535&gt;</format>
+                    <format>u32:4-65535</format>
                     <description>Hold-time in seconds (default 180)</description>
                   </valueHelp>
                   <valueHelp>
@@ -1191,7 +1191,7 @@
                 <properties>
                   <help>Keepalive interval</help>
                   <valueHelp>
-                    <format>&lt;1-65535&gt;</format>
+                    <format>u32:1-65535</format>
                     <description>Keep-alive time in seconds (default 60)</description>
                   </valueHelp>
                   <constraint>

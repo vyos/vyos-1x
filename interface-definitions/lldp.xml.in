@@ -16,7 +16,7 @@
                 <description>Location data all interfaces</description>
               </valueHelp>
               <valueHelp>
-                <format>&lt;intf&gt;</format>
+                <format>txt</format>
                 <description>Location data for a specific interface</description>
               </valueHelp>
               <completionHelp>

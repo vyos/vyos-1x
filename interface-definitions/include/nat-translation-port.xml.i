@@ -7,7 +7,7 @@
       <description>Numeric IP port</description>
     </valueHelp>
     <valueHelp>
-      <format>&lt;start&gt;-&lt;end&gt;</format>
+      <format>range</format>
       <description>Numbered port range (e.g., 1001-1005)</description>
     </valueHelp>
   </properties>

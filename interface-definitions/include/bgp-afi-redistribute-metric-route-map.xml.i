@@ -3,7 +3,7 @@
   <properties>
     <help>Metric for redistributed routes</help>
     <valueHelp>
-      <format>&lt;1-4294967295&gt;</format>
+      <format>u32:1-4294967295</format>
       <description>Metric for redistributed routes</description>
     </valueHelp>
   </properties>

@@ -84,7 +84,7 @@
                             <properties>
                               <help>File containing the X.509 certificate for the Certificate Authority (CA)</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -93,7 +93,7 @@
                             <properties>
                               <help>File containing the X.509 Certificate Revocation List (CRL)</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -102,7 +102,7 @@
                             <properties>
                               <help>File containing the X.509 certificate for the remote access VPN server (this host)</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -111,7 +111,7 @@
                             <properties>
                               <help>File containing the private key for the X.509 certificate for the remote access VPN server (this host)</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -129,7 +129,7 @@
                     <properties>
                       <help>IKE lifetime</help>
                       <valueHelp>
-                        <format>&lt;30-86400&gt;</format>
+                        <format>u32:30-86400</format>
                         <description>IKE lifetime in seconds (default 3600)</description>
                       </valueHelp>
                       <constraint>
@@ -141,7 +141,7 @@
                     <properties>
                       <help>ESP lifetime</help>
                       <valueHelp>
-                        <format>&lt;30-86400&gt;</format>
+                        <format>u32:30-86400</format>
                         <description>IKE lifetime in seconds (default 3600)</description>
                       </valueHelp>
                       <constraint>
@@ -176,7 +176,7 @@
                 <properties>
                   <help>PPP idle timeout</help>
                   <valueHelp>
-                    <format>&lt;30-86400&gt;</format>
+                    <format>u32:30-86400</format>
                     <description>PPP idle timeout in seconds (default 1800)</description>
                   </valueHelp>
                     <constraint>

@@ -64,7 +64,7 @@
                     <properties>
                       <help>Session timeout</help>
                       <valueHelp>
-                        <format>1-30</format>
+                        <format>u32:1-30</format>
                         <description>Session timeout in seconds (default: 2)</description>
                       </valueHelp>
                       <constraint>
@@ -87,7 +87,7 @@
                 <properties>
                   <help>tcp port number to accept connections (default: 443)</help>
                   <valueHelp>
-                    <format>1-65535</format>
+                    <format>u32:1-65535</format>
                     <description>Numeric IP port (default: 443)</description>
                   </valueHelp>
                   <constraint>
@@ -100,7 +100,7 @@
                 <properties>
                   <help>udp port number to accept connections (default: 443)</help>
                   <valueHelp>
-                    <format>1-65535</format>
+                    <format>u32:1-65535</format>
                     <description>Numeric IP port (default: 443)</description>
                   </valueHelp>
                   <constraint>
@@ -220,7 +220,7 @@
                     <properties>
                       <help>Prefix length used for individual client</help>
                       <valueHelp>
-                        <format>&lt;48-128&gt;</format>
+                        <format>u32:48-128</format>
                         <description>Client prefix length (default: 64)</description>
                       </valueHelp>
                       <constraint>

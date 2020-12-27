@@ -40,7 +40,7 @@
                         <properties>
                           <help>Access-list number</help>
                           <valueHelp>
-                            <format>1-2699</format>
+                            <format>u32:1-2699</format>
                             <description>Access list number</description>
                           </valueHelp>
                           <constraint>
@@ -59,7 +59,7 @@
                         <properties>
                           <help>Access-list6 number</help>
                           <valueHelp>
-                            <format>1-2699</format>
+                            <format>u32:1-2699</format>
                             <description>Access list number</description>
                           </valueHelp>
                           <constraint>
@@ -95,7 +95,7 @@
                         <list>disable</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>&lt;1-254&gt;</format>
+                        <format>u32:1-254</format>
                         <description>TTL</description>
                       </valueHelp>
                       <valueHelp>
@@ -108,7 +108,7 @@
                     <properties>
                       <help>Session IPv4 hold time</help>
                       <valueHelp>
-                        <format>15-65535</format>
+                        <format>u32:15-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -131,7 +131,7 @@
                     <properties>
                       <help>Hello IPv4 hold time</help>
                       <valueHelp>
-                        <format>1-65535</format>
+                        <format>u32:1-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -143,7 +143,7 @@
                     <properties>
                       <help>Hello IPv4 interval</help>
                       <valueHelp>
-                        <format>1-65535</format>
+                        <format>u32:1-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -155,7 +155,7 @@
                     <properties>
                       <help>Hello IPv6 hold time</help>
                       <valueHelp>
-                        <format>1-65535</format>
+                        <format>u32:1-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -167,7 +167,7 @@
                     <properties>
                       <help>Hello IPv6 interval</help>
                       <valueHelp>
-                        <format>1-65535</format>
+                        <format>u32:1-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -179,7 +179,7 @@
                     <properties>
                       <help>Session IPv4 hold time</help>
                       <valueHelp>
-                        <format>15-65535</format>
+                        <format>u32:15-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -191,7 +191,7 @@
                     <properties>
                       <help>Session IPv6 hold time</help>
                       <valueHelp>
-                        <format>15-65535</format>
+                        <format>u32:15-65535</format>
                         <description>Time in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -258,7 +258,7 @@
                         <properties>
                           <help>Hello interval</help>
                           <valueHelp>
-                            <format>1-65535</format>
+                            <format>u32:1-65535</format>
                             <description>Time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -270,7 +270,7 @@
                         <properties>
                           <help>Hello hold time</help>
                           <valueHelp>
-                            <format>1-65535</format>
+                            <format>u32:1-65535</format>
                             <description>Time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -308,7 +308,7 @@
                         <properties>
                           <help>Hello interval</help>
                           <valueHelp>
-                            <format>1-65535</format>
+                            <format>u32:1-65535</format>
                             <description>Time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -320,7 +320,7 @@
                         <properties>
                           <help>Hello hold time</help>
                           <valueHelp>
-                            <format>1-65535</format>
+                            <format>u32:1-65535</format>
                             <description>Time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -382,7 +382,7 @@
                             <properties>
                               <help>Access-list number to apply FEC filtering</help>
                                 <valueHelp>
-                                  <format>1-2699</format>
+                                  <format>u32:1-2699</format>
                                   <description>Access list number</description>
                                 </valueHelp>
                                 <constraint>
@@ -394,7 +394,7 @@
                             <properties>
                               <help>Access-list number for IPv4 neighbor selection to apply filtering</help>
                               <valueHelp>
-                                <format>1-2699</format>
+                                <format>u32:1-2699</format>
                                 <description>Access list number</description>
                               </valueHelp>
                               <constraint>
@@ -403,7 +403,7 @@
                             </properties>
                           </leafNode>
                         </children>
-                      </node>  
+                      </node>
                     </children>
                   </node>
                   <node name="ipv6">
@@ -426,7 +426,7 @@
                             <properties>
                               <help>Access-list6 number to apply FEC filtering</help>
                                 <valueHelp>
-                                  <format>1-2699</format>
+                                  <format>u32:1-2699</format>
                                   <description>Access list number</description>
                                 </valueHelp>
                                 <constraint>
@@ -438,7 +438,7 @@
                             <properties>
                               <help>Access-list6 number for IPv6 neighbor selection to apply filtering</help>
                               <valueHelp>
-                                <format>1-2699</format>
+                                <format>u32:1-2699</format>
                                 <description>Access list number</description>
                               </valueHelp>
                               <constraint>
@@ -447,7 +447,7 @@
                             </properties>
                           </leafNode>
                         </children>
-                      </node>   
+                      </node>
                     </children>
                   </node>
                 </children>
@@ -471,7 +471,7 @@
                             <properties>
                               <help>Access-list number to apply FEC filtering</help>
                                 <valueHelp>
-                                  <format>1-2699</format>
+                                  <format>u32:1-2699</format>
                                   <description>Access list number</description>
                                 </valueHelp>
                                 <constraint>
@@ -483,7 +483,7 @@
                             <properties>
                               <help>Access-list number for IPv4 neighbor selection to apply filtering</help>
                               <valueHelp>
-                                <format>1-2699</format>
+                                <format>u32:1-2699</format>
                                 <description>Access list number</description>
                               </valueHelp>
                               <constraint>
@@ -492,7 +492,7 @@
                             </properties>
                           </leafNode>
                         </children>
-                      </node> 
+                      </node>
                     </children>
                   </node>
                   <node name="ipv6">
@@ -509,7 +509,7 @@
                             <properties>
                               <help>Access-list6 number to apply FEC filtering</help>
                                 <valueHelp>
-                                  <format>1-2699</format>
+                                  <format>u32:1-2699</format>
                                   <description>Access list number</description>
                                 </valueHelp>
                                 <constraint>
@@ -521,7 +521,7 @@
                             <properties>
                               <help>Access-list6 number for IPv6 neighbor selection to apply filtering</help>
                               <valueHelp>
-                                <format>1-2699</format>
+                                <format>u32:1-2699</format>
                                 <description>Access list number</description>
                               </valueHelp>
                               <constraint>
@@ -530,7 +530,7 @@
                             </properties>
                           </leafNode>
                         </children>
-                      </node>  
+                      </node>
                     </children>
                   </node>
                 </children>
@@ -561,7 +561,7 @@
                 <properties>
                   <help>Maximum TTL for MPLS packets</help>
                   <valueHelp>
-                    <format>1-255</format>
+                    <format>u32:1-255</format>
                     <description>Maximum hops allowed</description>
                   </valueHelp>
                   <constraint>

@@ -20,7 +20,7 @@
             <properties>
               <help>Prefix length used for individual client</help>
               <valueHelp>
-                <format>&lt;48-128&gt;</format>
+                <format>u32:48-128</format>
                 <description>Client prefix length (default: 64)</description>
               </valueHelp>
               <constraint>
@@ -46,7 +46,7 @@
             <properties>
               <help>Prefix length delegated to client</help>
               <valueHelp>
-                <format>&lt;32-64&gt;</format>
+                <format>u32:32-64</format>
                 <description>Delegated prefix length</description>
               </valueHelp>
               <constraint>

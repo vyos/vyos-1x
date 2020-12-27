@@ -11,7 +11,7 @@
             <properties>
               <help>Set auto-update interval for IPsec daemon</help>
               <valueHelp>
-                <format>30-65535</format>
+                <format>u32:30-65535</format>
                 <description>Auto-update interval (s)</description>
               </valueHelp>
               <constraint>
@@ -53,7 +53,7 @@
                 <properties>
                   <help>ESP lifetime</help>
                   <valueHelp>
-                    <format>30-86400</format>
+                    <format>u32:30-86400</format>
                     <description>ESP lifetime in seconds (default 3600)</description>
                   </valueHelp>
                   <constraint>
@@ -191,7 +191,7 @@
                 <properties>
                   <help>ESP-group proposal [REQUIRED]</help>
                   <valueHelp>
-                    <format>&lt;1-65535&gt;</format>
+                    <format>u32:1-65535</format>
                     <description>ESP-group proposal number</description>
                   </valueHelp>
                 </properties>
@@ -266,7 +266,7 @@
                     <properties>
                       <help>Keep-alive interval</help>
                       <valueHelp>
-                        <format>&lt;2-86400&gt;</format>
+                        <format>u32:2-86400</format>
                         <description>Keep-alive interval in seconds (default 30)</description>
                       </valueHelp>
                       <constraint>
@@ -278,7 +278,7 @@
                     <properties>
                       <help>Dead-Peer-Detection keep-alive timeout (IKEv1 only)</help>
                       <valueHelp>
-                        <format>&lt;2-86400&gt;</format>
+                        <format>u32:2-86400</format>
                         <description>Keep-alive timeout in seconds (default 120)</description>
                       </valueHelp>
                       <constraint>
@@ -330,7 +330,7 @@
                 <properties>
                   <help>IKE lifetime</help>
                   <valueHelp>
-                    <format>&lt;30-86400&gt;</format>
+                    <format>u32:30-86400</format>
                     <description>IKE lifetime in seconds (default 28800)</description>
                   </valueHelp>
                   <constraint>
@@ -380,7 +380,7 @@
                 <properties>
                   <help>proposal_help</help>
                   <valueHelp>
-                    <format>&lt;1-65535&gt;</format>
+                    <format>u32:1-65535</format>
                     <description>IKE-group proposal</description>
                   </valueHelp>
                 </properties>
@@ -525,7 +525,7 @@
                 <properties>
                   <help>strongSwan Logger Level</help>
                   <valueHelp>
-                    <format>&lt;0-2&gt;</format>
+                    <format>u32:0-2</format>
                     <description>Logger Verbosity Level (default 0)</description>
                   </valueHelp>
                   <constraint>
@@ -712,7 +712,7 @@
                     <properties>
                       <help>Pre-shared secret key</help>
                       <valueHelp>
-                        <format>&lt;text&gt;</format>
+                        <format>txt</format>
                         <description>Pre-shared secret key</description>
                       </valueHelp>
                     </properties>
@@ -767,7 +767,7 @@
                     <description>IPv6 address of the peer</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>&lt;text&gt;</format>
+                    <format>txt</format>
                     <description>Hostname of the peer</description>
                   </valueHelp>
                   <valueHelp>
@@ -785,7 +785,7 @@
                         <properties>
                           <help>ID for peer authentication</help>
                           <valueHelp>
-                            <format>&lt;text&gt;</format>
+                            <format>txt</format>
                             <description>ID used for peer authentication</description>
                           </valueHelp>
                         </properties>
@@ -817,7 +817,7 @@
                         <properties>
                           <help>Pre-shared secret key</help>
                           <valueHelp>
-                            <format>&lt;text&gt;</format>
+                            <format>txt</format>
                             <description>Pre-shared secret key</description>
                           </valueHelp>
                         </properties>
@@ -826,7 +826,7 @@
                         <properties>
                           <help>ID for remote authentication</help>
                           <valueHelp>
-                            <format>&lt;text&gt;</format>
+                            <format>txt</format>
                             <description>ID used for peer authentication</description>
                           </valueHelp>
                         </properties>
@@ -851,7 +851,7 @@
                             <properties>
                               <help>File containing the X.509 certificate for the Certificate Authority (CA)</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -860,7 +860,7 @@
                             <properties>
                               <help>File containing the X.509 certificate for this host</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -869,7 +869,7 @@
                             <properties>
                               <help>File containing the X.509 Certificate Revocation List (CRL)</help>
                               <valueHelp>
-                                <format>&lt;text&gt;</format>
+                                <format>txt</format>
                                 <description>File in /config/auth</description>
                               </valueHelp>
                             </properties>
@@ -883,7 +883,7 @@
                                 <properties>
                                   <help>File containing the private key for the X.509 certificate for this host</help>
                                   <valueHelp>
-                                    <format>&lt;text&gt;</format>
+                                    <format>txt</format>
                                     <description>File in /config/auth</description>
                                   </valueHelp>
                                 </properties>
@@ -892,7 +892,7 @@
                                 <properties>
                                   <help>Password that protects the private key</help>
                                   <valueHelp>
-                                    <format>&lt;text&gt;</format>
+                                    <format>txt</format>
                                     <description>Password that protects the private key</description>
                                   </valueHelp>
                                 </properties>
@@ -1018,7 +1018,7 @@
                     <properties>
                       <help>Peer tunnel [REQUIRED]</help>
                       <valueHelp>
-                        <format>&lt;0-4294967295&gt;</format>
+                        <format>u32</format>
                         <description>Peer tunnel [REQUIRED]</description>
                       </valueHelp>
                     </properties>

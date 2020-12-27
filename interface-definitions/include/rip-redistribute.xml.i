@@ -3,7 +3,7 @@
   <properties>
     <help>Metric for redistributed routes</help>
     <valueHelp>
-      <format>&lt;1-16&gt;</format>
+      <format>u32:1-16</format>
       <description>Redistribute route metric</description>
     </valueHelp>
     <constraint>
@@ -15,7 +15,7 @@
   <properties>
     <help>Route map reference</help>
     <valueHelp>
-      <format>&lt;text&gt;</format>
+      <format>txt</format>
       <description>Route map reference</description>
     </valueHelp>
     <completionHelp>

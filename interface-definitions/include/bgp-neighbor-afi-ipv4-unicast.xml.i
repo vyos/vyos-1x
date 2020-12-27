@@ -13,7 +13,7 @@
           <properties>
             <help>Number of occurrences of AS number</help>
             <valueHelp>
-              <format>&lt;1-10&gt;</format>
+              <format>u32:1-10</format>
               <description>Number of times AS is allowed in path</description>
             </valueHelp>
             <constraint>
@@ -114,7 +114,7 @@
               <path>policy access-list</path>
             </completionHelp>
             <valueHelp>
-              <format>&lt;1-65535&gt;</format>
+              <format>u32:1-65535</format>
               <description>Access-list to filter outgoing IPv4-route updates to this neighbor</description>
             </valueHelp>
             <constraint>
@@ -129,7 +129,7 @@
               <path>policy access-list</path>
             </completionHelp>
             <valueHelp>
-              <format>&lt;1-65535&gt;</format>
+              <format>u32:1-65535</format>
               <description>Access-list to filter incoming IPv4-route updates from this neighbor</description>
             </valueHelp>
             <constraint>
@@ -166,7 +166,7 @@
       <properties>
         <help>Maximum number of IPv4-prefixes to accept from this neighbor</help>
         <valueHelp>
-          <format>&lt;1-4294967295&gt;</format>
+          <format>u32:1-4294967295</format>
           <description>Prefix limit</description>
         </valueHelp>
         <constraint>
@@ -273,7 +273,7 @@
       <properties>
         <help>Default weight for routes from this neighbor</help>
         <valueHelp>
-          <format>&lt;1-65535&gt;</format>
+          <format>u32:1-65535</format>
           <description>Weight for routes from this neighbor</description>
         </valueHelp>
         <constraint>

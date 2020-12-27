@@ -11,7 +11,7 @@
             <properties>
               <help>Administrative distance</help>
               <valueHelp>
-                <format>&lt;1-255&gt;</format>
+                <format>u32:1-255</format>
                 <description>Administrative distance</description>
               </valueHelp>
               <constraint>
@@ -36,7 +36,7 @@
             <properties>
               <help>Metric of redistributed routes</help>
               <valueHelp>
-                <format>&lt;1-16&gt;</format>
+                <format>u32:1-16</format>
                 <description>Redistributed routes metric</description>
               </valueHelp>
               <constraint>
@@ -58,7 +58,7 @@
                     <properties>
                       <help>Access list to apply to input packets</help>
                       <valueHelp>
-                        <format>&lt;0-4294967295&gt;</format>
+                        <format>u32</format>
                         <description>Access list to apply to input packets</description>
                       </valueHelp>
                       <completionHelp>
@@ -73,7 +73,7 @@
                     <properties>
                       <help>Access list to apply to output packets</help>
                       <valueHelp>
-                        <format>&lt;0-4294967295&gt;</format>
+                        <format>u32</format>
                         <description>Access list to apply to output packets</description>
                       </valueHelp>
                       <completionHelp>
@@ -90,7 +90,7 @@
                 <properties>
                   <help>Apply filtering to an interface</help>
                   <valueHelp>
-                    <format>&lt;text&gt;</format>
+                    <format>txt</format>
                     <description>Apply filtering to an interface</description>
                   </valueHelp>
                   <completionHelp>
@@ -107,7 +107,7 @@
                         <properties>
                           <help>Access list to apply to input packets</help>
                           <valueHelp>
-                            <format>&lt;0-4294967295&gt;</format>
+                            <format>u32</format>
                             <description>Access list to apply to input packets</description>
                           </valueHelp>
                           <completionHelp>
@@ -122,7 +122,7 @@
                         <properties>
                           <help>Access list to apply to output packets</help>
                           <valueHelp>
-                            <format>&lt;0-4294967295&gt;</format>
+                            <format>u32</format>
                             <description>Access list to apply to output packets</description>
                           </valueHelp>
                           <completionHelp>
@@ -144,7 +144,7 @@
                         <properties>
                           <help>Prefix-list to apply to input packets</help>
                           <valueHelp>
-                            <format>&lt;text&gt;</format>
+                            <format>txt</format>
                             <description>Prefix-list to apply to input packets</description>
                           </valueHelp>
                           <completionHelp>
@@ -156,7 +156,7 @@
                         <properties>
                           <help>Prefix-list to apply to output packets</help>
                           <valueHelp>
-                            <format>&lt;text&gt;</format>
+                            <format>txt</format>
                             <description>Prefix-list to apply to output packets</description>
                           </valueHelp>
                           <completionHelp>
@@ -177,7 +177,7 @@
                     <properties>
                       <help>Prefix-list to apply to input packets</help>
                       <valueHelp>
-                        <format>&lt;text&gt;</format>
+                        <format>txt</format>
                         <description>Prefix-list to apply to input packets</description>
                       </valueHelp>
                       <completionHelp>
@@ -189,7 +189,7 @@
                     <properties>
                       <help>Prefix-list to apply to output packets</help>
                       <valueHelp>
-                        <format>&lt;text&gt;</format>
+                        <format>txt</format>
                         <description>Prefix-list to apply to output packets</description>
                       </valueHelp>
                       <completionHelp>
@@ -205,7 +205,7 @@
             <properties>
               <help>Interface name</help>
               <valueHelp>
-                <format>&lt;text&gt;</format>
+                <format>txt</format>
                 <description>Apply filtering to an interface</description>
               </valueHelp>
               <completionHelp>
@@ -218,7 +218,7 @@
             <properties>
               <help>Neighbor router</help>
               <valueHelp>
-                <format>ipv4</format> 
+                <format>ipv4</format>
                 <description>Neighbor router</description>
               </valueHelp>
               <constraint>
@@ -231,7 +231,7 @@
             <properties>
               <help>RIP network</help>
               <valueHelp>
-                <format>ipv4net</format> 
+                <format>ipv4net</format>
                 <description>RIP network</description>
               </valueHelp>
               <constraint>
@@ -244,7 +244,7 @@
             <properties>
               <help>Source network</help>
               <valueHelp>
-                <format>ipv4net</format> 
+                <format>ipv4net</format>
                 <description>Source network</description>
               </valueHelp>
               <constraint>
@@ -256,7 +256,7 @@
                 <properties>
                   <help>Access list</help>
                   <valueHelp>
-                    <format>&lt;text&gt;</format>
+                    <format>txt</format>
                     <description>Access list</description>
                   </valueHelp>
                   <completionHelp>
@@ -268,7 +268,7 @@
                 <properties>
                   <help>Administrative distance for network</help>
                   <valueHelp>
-                    <format>&lt;1-255&gt;</format>
+                    <format>u32:1-255</format>
                     <description>Administrative distance</description>
                   </valueHelp>
                   <constraint>
@@ -282,7 +282,7 @@
             <properties>
               <help>Passive interface</help>
               <valueHelp>
-                <format>&lt;text&gt;</format>
+                <format>txt</format>
                 <description>Suppress routing updates on interface</description>
               </valueHelp>
               <valueHelp>
@@ -347,7 +347,7 @@
             <properties>
               <help>RIP static route</help>
               <valueHelp>
-                <format>ipv4net</format> 
+                <format>ipv4net</format>
                 <description>RIP static route</description>
               </valueHelp>
               <constraint>
@@ -365,7 +365,7 @@
                 <properties>
                   <help>Garbage collection timer</help>
                   <valueHelp>
-                    <format>&lt;5-2147483647&gt;</format>
+                    <format>u32:5-2147483647</format>
                     <description>Garbage colletion time (default 120)</description>
                   </valueHelp>
                   <constraint>
@@ -377,7 +377,7 @@
                 <properties>
                   <help>Routing information timeout timer</help>
                   <valueHelp>
-                    <format>&lt;5-2147483647&gt;</format>
+                    <format>u32:5-2147483647</format>
                     <description>Routing information timeout timer (default 180)</description>
                   </valueHelp>
                   <constraint>
@@ -389,7 +389,7 @@
                 <properties>
                   <help>Routing table update timer</help>
                   <valueHelp>
-                    <format>&lt;5-2147483647&gt;</format>
+                    <format>u32:5-2147483647</format>
                     <description>Routing table update timer in seconds (default 30)</description>
                   </valueHelp>
                   <constraint>
