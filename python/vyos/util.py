@@ -215,6 +215,30 @@ def read_file(fname, defaultonfailure=None):
             return defaultonfailure
         raise e
 
+def write_file(fname, data, defaultonfailure=None, user=None, group=None):
+    """
+    Write content of data to given fname, should defaultonfailure be not None,
+    it is returned on failure to read.
+
+    If directory of file is not present, it is auto-created.
+    """
+    dirname = os.path.dirname(fname)
+    if not os.path.isdir(dirname):
+        os.makedirs(dirname, mode=0o755, exist_ok=False)
+        chown(dirname, user, group)
+
+    try:
+        """ Write a file to string """
+        bytes = 0
+        with open(fname, 'w') as f:
+            bytes = f.write(data)
+        chown(fname, user, group)
+        return bytes
+    except Exception as e:
+        if defaultonfailure is not None:
+            return defaultonfailure
+        raise e
+
 
 def read_json(fname, defaultonfailure=None):
     """

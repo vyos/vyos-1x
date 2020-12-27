@@ -171,11 +171,11 @@
                   <help>Hostname or IP address of peer</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>Remote syslog server IPv4 address</description>
+                    <description>Squid cache-peer IPv4 address</description>
                   </valueHelp>
                   <valueHelp>
                     <format>hostname</format>
-                    <description>Remote syslog server FQDN</description>
+                    <description>Squid cache-peer hostname</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ip-address"/>
@@ -293,7 +293,10 @@
           </leafNode>
           <tagNode name="listen-address">
             <properties>
-              <help>IPv4 address for webproxy to listen on [REQUIRED]</help>
+              <help>IPv4 listen-address for WebProxy [REQUIRED]</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
+              </completionHelp>
               <valueHelp>
                 <format>ipv4</format>
                 <description>IPv4 address listen on</description>
@@ -402,7 +405,7 @@
                   <help>URL filtering via squidGuard redirector</help>
                 </properties>
                 <children>
-                  #include <include/webproxy-squidguard.xml.i>
+                  #include <include/webproxy-url-filtering.xml.i>
                   <node name="auto-update">
                     <properties>
                       <help>Auto update settings</help>
@@ -446,7 +449,7 @@
                       <constraintErrorMessage>SquidGuard rule must between 1-1024</constraintErrorMessage>
                     </properties>
                     <children>
-                      #include <include/webproxy-squidguard.xml.i>
+                      #include <include/webproxy-url-filtering.xml.i>
                       <leafNode name="redirect-url">
                         <properties>
                           <help>Redirect URL for filtered websites</help>

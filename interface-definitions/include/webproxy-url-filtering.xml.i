@@ -1,4 +1,4 @@
-<!-- included start from webproxy-squidguard.xml.i -->
+<!-- included start from webproxy-url-filtering.xml.i -->
 <leafNode name="allow-category">
   <properties>
     <help>Category to allow</help>
@@ -25,17 +25,17 @@
 </leafNode>
 <leafNode name="default-action">
   <properties>
-    <help>Default action</help>
+    <help>Default action (default: allow)</help>
     <completionHelp>
       <list>allow block</list>
     </completionHelp>
     <valueHelp>
       <format>allow</format>
-      <description>Default filter action to allow (default)</description>
+      <description>Default filter action is allow)</description>
     </valueHelp>
     <valueHelp>
       <format>block</format>
-      <description>Default filter action to allow (default)</description>
+      <description>Default filter action is block</description>
     </valueHelp>
     <constraint>
       <regex>^(allow|block)$</regex>
@@ -45,6 +45,7 @@
 <leafNode name="enable-safe-search">
   <properties>
     <help>Enable safe-mode search on popular search engines</help>
+    <valueless/>
   </properties>
 </leafNode>
 <leafNode name="local-block-keyword">
@@ -62,11 +63,8 @@
     <help>Local URL to block</help>
     <valueHelp>
       <format>url</format>
-      <description>Local URL to block (without http:\/\/</description>
+      <description>Local URL to block (without "http://")</description>
     </valueHelp>
-    <constraint>
-      <regex>^(https?:\/\/)$</regex>
-    </constraint>
     <multi/>
   </properties>
 </leafNode>
@@ -78,7 +76,8 @@
       <description>IP address of site to block</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-prefix"/>
+      <validator name="ipv4-address"/>
+      <validator name="fqdn"/>
     </constraint>
     <multi/>
   </properties>
@@ -88,11 +87,8 @@
     <help>Local URL to allow</help>
     <valueHelp>
       <format>url</format>
-      <description>Local URL to allow (without http:\/\/</description>
+      <description>Local URL to allow (without "http://")</description>
     </valueHelp>
-    <constraint>
-      <regex>^(https?:\/\/)$</regex>
-    </constraint>
     <multi/>
   </properties>
 </leafNode>
@@ -104,7 +100,8 @@
       <description>IP address of site to allow</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-prefix"/>
+      <validator name="ipv4-address"/>
+      <validator name="fqdn"/>
     </constraint>
     <multi/>
   </properties>

@@ -84,7 +84,7 @@
             <properties>
               <help>Show update log for url-filter database</help>
             </properties>
-            <command>if [ -e /config/url-filtering/squidguard/updatestatus ]; then cat /config/url-filtering/squidguard/updatestatus; else echo "Update log not found"; fi</command>
+            <command>if [ -e /opt/vyatta/etc/config/url-filtering/squidguard/updatestatus ]; then cat /opt/vyatta/etc/config/url-filtering/squidguard/updatestatus; else echo "Update log not found"; fi</command>
           </node>
         </children>
       </node>

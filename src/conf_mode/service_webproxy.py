@@ -16,6 +16,7 @@
 
 import os
 
+from shutil import rmtree
 from sys import exit
 
 from vyos.config import Config
@@ -23,6 +24,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import write_file
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -31,6 +33,47 @@ airbag.enable()
 
 squid_config_file = '/etc/squid/squid.conf'
 squidguard_config_file = '/etc/squidguard/squidGuard.conf'
+squidguard_db_dir = '/opt/vyatta/etc/config/url-filtering/squidguard/db'
+user_group = 'proxy'
+
+def generate_sg_localdb(category, list_type, role, proxy):
+    cat_ = category.replace('-', '_')
+    if isinstance(dict_search(f'url_filtering.squidguard.{cat_}', proxy),
+                  list):
+
+        # local block databases must be generated "on-the-fly"
+        tmp = {
+            'squidguard_db_dir' : squidguard_db_dir,
+            'category' : f'{category}-default',
+            'list_type' : list_type,
+            'rule' : role
+        }
+        sg_tmp_file = '/tmp/sg.conf'
+        db_file = f'{category}-default/{list_type}'
+        domains = '\n'.join(dict_search(f'url_filtering.squidguard.{cat_}', proxy))
+
+        # local file
+        write_file(f'{squidguard_db_dir}/{category}-default/local', '',
+                   user=user_group, group=user_group)
+        # database input file
+        write_file(f'{squidguard_db_dir}/{db_file}', domains,
+                   user=user_group, group=user_group)
+
+        # temporary config file, deleted after generation
+        render(sg_tmp_file, 'squid/sg_acl.conf.tmpl', tmp,
+               user=user_group, group=user_group)
+
+        call(f'su - {user_group} -c "squidGuard -d -c {sg_tmp_file} -C {db_file}"')
+
+        if os.path.exists(sg_tmp_file):
+            os.unlink(sg_tmp_file)
+
+    else:
+        # if category is not part of our configuration, clean out the
+        # squidguard lists
+        tmp = f'{squidguard_db_dir}/{category}-default'
+        if os.path.exists(tmp):
+            rmtree(f'{squidguard_db_dir}/{category}-default')
 
 def get_config(config=None):
     if config:
@@ -55,6 +98,7 @@ def get_config(config=None):
     else:
         # store path to squidGuard config, used when generating Squid config
         proxy['squidguard_conf'] = squidguard_config_file
+        proxy['squidguard_db_dir'] = squidguard_db_dir
 
     # XXX: T2665: blend in proper cache-peer default values later
     default_values.pop('cache_peer')
@@ -67,8 +111,6 @@ def get_config(config=None):
             proxy['cache_peer'][peer] = dict_merge(default_values,
                 proxy['cache_peer'][peer])
 
-    import pprint
-    pprint.pprint(proxy)
     return proxy
 
 def verify(proxy):
@@ -121,12 +163,23 @@ def verify(proxy):
             if 'address' not in config:
                 raise ConfigError(f'Cache-peer "{peer}" address must be set!')
 
+
 def generate(proxy):
     if not proxy:
         return None
 
     render(squid_config_file, 'squid/squid.conf.tmpl', proxy)
     render(squidguard_config_file, 'squid/squidGuard.conf.tmpl', proxy)
+
+    cat_dict = {
+        'local-block' : 'domains',
+        'local-block-keyword' : 'expressions',
+        'local-block-url' : 'urls',
+        'local-ok' : 'domains',
+        'local-ok-url' : 'urls'
+    }
+    for category, list_type in cat_dict.items():
+        generate_sg_localdb(category, list_type, 'default', proxy)
 
     return None
 
