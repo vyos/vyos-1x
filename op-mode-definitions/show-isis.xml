@@ -36,9 +36,9 @@
           <node name="interface">
             <properties>
               <help>Show IS-IS interfaces</help>
-                <completionHelp>
-                  <script>${vyos_completion_dir}/list_interfaces.py</script>
-                </completionHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
             </properties>
             <children>
               <leafNode name="detail">
