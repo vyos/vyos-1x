@@ -203,13 +203,29 @@ class TestServiceWebProxy(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_05_basic_squidguard(self):
+        """ Create very basic local SquidGuard blacklist and verify its contents" """
+        sg_db_dir = '/opt/vyatta/etc/config/url-filtering/squidguard/db'
+
         default_cache = '100'
         local_block = ['192.0.0.1', '10.0.0.1', 'block.vyos.net']
+        local_block_url = ['foo.com/bar.html', 'bar.com/foo.htm']
+        local_block_pattern = ['porn', 'cisco', 'juniper']
+        local_ok = ['10.0.0.0', 'vyos.net']
+        local_ok_url = ['vyos.net', 'vyos.io']
 
         self.session.set(base_path + ['listen-address', listen_ip])
         self.session.set(base_path + ['url-filtering', 'squidguard', 'log', 'all'])
+
         for block in local_block:
             self.session.set(base_path + ['url-filtering', 'squidguard', 'local-block', block])
+        for ok in local_ok:
+            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-ok', ok])
+        for url in local_block_url:
+            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-block-url', url])
+        for url in local_ok_url:
+            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-ok-url', url])
+        for pattern in local_block_pattern:
+            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-block-keyword', pattern])
 
         # commit changes
         self.session.commit()
@@ -227,12 +243,12 @@ class TestServiceWebProxy(unittest.TestCase):
 
         # The following are rewrite strings to force safe/strict search for
         # several popular search engines.
-        self.assertIn(r"s@(.*\.google\..*/(custom|search|images|groups|news)?.*q=.*)@\1\&safe=active@i", sg_config)
-        self.assertIn(r"s@(.*\..*/yandsearch?.*text=.*)@\1\&fyandex=1@i", sg_config)
-        self.assertIn(r"s@(.*\.yahoo\..*/search.*p=.*)@\1\&vm=r@i", sg_config)
-        self.assertIn(r"s@(.*\.live\..*/.*q=.*)@\1\&adlt=strict@i", sg_config)
-        self.assertIn(r"s@(.*\.msn\..*/.*q=.*)@\1\&adlt=strict@i", sg_config)
-        self.assertIn(r"s@(.*\.bing\..*/search.*q=.*)@\1\&adlt=strict@i", sg_config)
+        self.assertIn(r's@(.*\.google\..*/(custom|search|images|groups|news)?.*q=.*)@\1\&safe=active@i', sg_config)
+        self.assertIn(r's@(.*\..*/yandsearch?.*text=.*)@\1\&fyandex=1@i', sg_config)
+        self.assertIn(r's@(.*\.yahoo\..*/search.*p=.*)@\1\&vm=r@i', sg_config)
+        self.assertIn(r's@(.*\.live\..*/.*q=.*)@\1\&adlt=strict@i', sg_config)
+        self.assertIn(r's@(.*\.msn\..*/.*q=.*)@\1\&adlt=strict@i', sg_config)
+        self.assertIn(r's@(.*\.bing\..*/search.*q=.*)@\1\&adlt=strict@i', sg_config)
 
         # URL lists
         self.assertIn(r'dest local-ok-default {', sg_config)
@@ -244,9 +260,26 @@ class TestServiceWebProxy(unittest.TestCase):
         self.assertIn(f'redirect 302:http://block.vyos.net', sg_config)
 
         # local-block database
-        blocklist = read_file('/opt/vyatta/etc/config/url-filtering/squidguard/db/local-block-default/domains')
+        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-default/domains')
         for block in local_block:
-            self.assertIn(f'{block}', blocklist)
+            self.assertIn(f'{block}', tmp)
+
+        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-url-default/urls')
+        for url in local_block_url:
+            self.assertIn(f'{url}', tmp)
+
+        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-keyword-default/expressions')
+        for pattern in local_block_pattern:
+            self.assertIn(f'{pattern}', tmp)
+
+        # local-ok database
+        tmp = cmd(f'sudo cat {sg_db_dir}/local-ok-default/domains')
+        for ok in local_ok:
+            self.assertIn(f'{ok}', tmp)
+
+        tmp = cmd(f'sudo cat {sg_db_dir}/local-ok-url-default/urls')
+        for url in local_ok_url:
+            self.assertIn(f'{url}', tmp)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
