@@ -5,7 +5,163 @@
       <node name="ipv6">
         <children>
           <node name="bgp">
+            <properties>
+              <help>Show Border Gateway Protocol (BGP) information</help>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp ipv6"</command>
             <children>
+              <leafNode name="summary">
+                <properties>
+                  <help>Show summary of BGP neighbor status</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 summary"</command>
+              </leafNode>
+              <tagNode name="regexp">
+                <properties>
+                  <help>Show routes matching AS path regular expression</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 regexp $5"</command>
+              </tagNode>
+              <tagNode name="prefix-list">
+                <properties>
+                  <help>Show routes matching the IPv6 prefix-list name</help>
+                  <completionHelp>
+                    <path>policy prefix-list6</path>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 prefix-list $5"</command>
+              </tagNode>
+              <tagNode name="neighbors">
+                <properties>
+                  <help>Show detailed information on TCP and BGP neighbor connections for given address</help>
+                  <completionHelp>
+                    <script>/usr/bin/vtysh -c "show bgp ipv6 summary" | awk '{print $1}' | grep -oE "\b([0-9a-f]{1,4}\:{0,2}){0,20}\b"</script>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5"</command>
+                <children>
+                  <leafNode name="advertised-routes">
+                    <properties>
+                      <help>Show routes advertised to a BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 advertised-routes"</command>
+                  </leafNode>
+                  <leafNode name="filtered-routes">
+                    <properties>
+                      <help>Show routes filtered from a BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 filtered-routes"</command>
+                  </leafNode>
+                  <leafNode name="dampened-routes">
+                    <properties>
+                      <help>Show dampened routes received from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 dampened-routes"</command>
+                  </leafNode>
+                  <leafNode name="flap-statistics">
+                    <properties>
+                      <help>Show flap statistics of the routes learned from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 flap-statistics"</command>
+                  </leafNode>
+                  <leafNode name="prefix-counts">
+                    <properties>
+                      <help>Show detailed prefix count information for BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 prefix-counts"</command>
+                  </leafNode>
+                  <node name="received">
+                    <properties>
+                      <help>Show information received from BGP neighbor</help>
+                    </properties>
+                    <children>
+                      <leafNode name="prefix-filter">
+                        <properties>
+                          <help>Show prefixlist filter</help>
+                        </properties>
+                        <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 received prefix-filter"</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="received-routes">
+                    <properties>
+                      <help>Show received routes from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 received-routes"</command>
+                  </leafNode>
+                  <leafNode name="routes">
+                    <properties>
+                      <help>Show routes learned from BGP neighbor</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 neighbor $5 routes"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <tagNode name="large-community">
+                <properties>
+                  <help>Show routes matching the large-community-list number or name</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 large-community-list $5"</command>
+                <children>
+                  <node name="exact-match">
+                    <properties>
+                      <help>Show routes matching the large-community-list number or name</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 large-community-list $5 exact-match"</command>
+                  </node>
+                </children>
+              </tagNode>
+              <tagNode name="large-community-list">
+                <properties>
+                  <help>Show routes matching the large-community-list number or name</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 large-community-list $5"</command>
+                <children>
+                  <node name="exact-match">
+                    <properties>
+                      <help>Show routes matching the large-community-list number or name</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 large-community-list $5 exact-match"</command>
+                  </node>
+                </children>
+              </tagNode>
+              <tagNode name="filter-list">
+                <properties>
+                  <help>Show routes conforming to regular expression access list name</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 filter-list $5"</command>
+              </tagNode>
+              <tagNode name="community">
+                <properties>
+                  <help>Show BGP information for specified community number</help>
+                  <completionHelp>
+                    <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 community $5"</command>
+                <children>
+                  <node name="exact-match">
+                    <properties>
+                      <help>Show routes from community that exactly matches the community number</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 community $5 exact-match"</command>
+                  </node>
+                </children>
+              </tagNode>
+              <tagNode name="community-list">
+                <properties>
+                  <help>Show routes matching the community-list number or name</help>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 community-list $5"</command>
+                <children>
+                  <node name="exact-match">
+                    <properties>
+                      <help>Show routes exactly matching the community-list name or number</help>
+                    </properties>
+                    <command>/usr/bin/vtysh -c "show bgp ipv6 community-list $5 exact-match"</command>
+                  </node>
+                </children>
+              </tagNode>
               <tagNode name="route-map">
                 <properties>
                   <help>Show BGP routes matching the specified route map</help>
@@ -17,6 +173,26 @@
               </tagNode>
             </children>
           </node>
+          <tagNode name="bgp">
+            <properties>
+              <help>Show BGP information for specified IP address or prefix</help>
+              <completionHelp>
+                <list>&lt;X:X::X:X&gt; &lt;X:X::X:X/x&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/vtysh -c "show bgp ipv6 $4"</command>
+            <children>
+              <node name="longer-prefixes">
+                <properties>
+                  <help>Show route and more specific routes</help>
+                  <completionHelp>
+                    <list>&lt;X:X::X:X&gt; &lt;X:X::X:X/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/vtysh -c "show bgp ipv6 $4 longer-prefixes"</command>
+              </node>
+            </children>
+          </tagNode>
         </children>
       </node>
     </children>
