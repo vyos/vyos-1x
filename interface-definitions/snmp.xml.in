@@ -88,6 +88,9 @@
           <tagNode name="listen-address">
             <properties>
               <help>IP address to listen for incoming SNMP requests</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+              </completionHelp>
               <valueHelp>
                 <format>ipv4</format>
                 <description>IPv4 address to listen for incoming SNMP requests</description>

@@ -22,6 +22,9 @@
               <leafNode name="listen-address">
                 <properties>
                   <help>Address to listen for HTTPS requests</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                  </completionHelp>
                   <valueHelp>
                     <format>ipv4</format>
                    <description>HTTPS IPv4 address</description>

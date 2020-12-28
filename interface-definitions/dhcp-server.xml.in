@@ -42,7 +42,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          #include <include/listen-address.xml.i>
+          #include <include/listen-address-ipv4.xml.i>
           <tagNode name="shared-network-name">
             <properties>
               <help>Name of DHCP shared network</help>
