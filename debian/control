@@ -99,7 +99,6 @@ Depends:
   python3-pyudev,
   python3-six,
   python3-tabulate,
-  python3-tqdm,
   python3-vici (>= 5.7.2),
   python3-voluptuous,
   python3-waitress,

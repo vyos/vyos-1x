@@ -101,18 +101,7 @@
             <properties>
               <help>Update the webproxy blacklist database</help>
             </properties>
-            <children>
-              <tagNode name="category">
-                <properties>
-                  <help>Update a category of the webproxy blacklist database</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_webproxy_category.sh</script>
-                  </completionHelp>
-                </properties>
-                <command>sudo /usr/libexec/vyos/legacy/vyatta-sg-blacklist.pl --update-blacklist-category="$5"</command>
-              </tagNode>
-            </children>
-            <command>sudo /usr/libexec/vyos/legacy/vyatta-sg-blacklist.pl --update-blacklist</command>
+            <command>sudo ${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist</command>
           </node>
         </children>
       </node>
