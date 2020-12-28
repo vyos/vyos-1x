@@ -38,6 +38,7 @@ Depends:
   crda,
   cron,
   dbus,
+  ddclient (>= 3.9.1),
   dropbear,
   easy-rsa,
   etherwake,
