@@ -248,7 +248,6 @@ def dec_ip(address, decrement):
     from ipaddress import ip_interface
     return str(ip_interface(address).ip - int(decrement))
 
-
 @register_filter('isc_static_route')
 def isc_static_route(subnet, router):
     # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
@@ -270,3 +269,9 @@ def isc_static_route(subnet, router):
     string += ','.join(router.split('.'))
 
     return string
+
+@register_filter('is_file')
+def is_file(filename):
+    if os.path.exists(filename):
+        return os.path.isfile(filename)
+    return False

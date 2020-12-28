@@ -1,0 +1,644 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="webproxy" owner="${vyos_conf_scripts_dir}/service_webproxy.py">
+        <properties>
+          <help>Webproxy service settings</help>
+          <priority>500</priority>
+        </properties>
+        <children>
+          <leafNode name="append-domain">
+            <properties>
+              <help>Default domain name</help>
+              <valueHelp>
+                <format>domain</format>
+                <description>Domain to use for urls that do not contain a '.'</description>
+              </valueHelp>
+              <constraint>
+                <regex>^[\.][a-z0-9-][$]?</regex>
+              </constraint>
+              <constraintErrorMessage>Must start append-domain with a '.'</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <node name="authentication">
+            <properties>
+              <help>Proxy Authentication Settings</help>
+            </properties>
+            <children>
+              <leafNode name="children">
+                <properties>
+                  <help>Number of authentication helper processes (default: 5)</help>
+                  <valueHelp>
+                    <format>n</format>
+                    <description>Number of authentication helper processes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-500"/>
+                  </constraint>
+                </properties>
+                <defaultValue>5</defaultValue>
+              </leafNode>
+              <leafNode name="credentials-ttl">
+                <properties>
+                  <help>Authenticated session time to live in minutes (default: 60)</help>
+                  <valueHelp>
+                    <format>n</format>
+                    <description>Authenticated session timeout</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-600"/>
+                  </constraint>
+                </properties>
+                <defaultValue>60</defaultValue>
+              </leafNode>
+              <node name="ldap">
+                <properties>
+                  <help>LDAP authentication settings</help>
+                </properties>
+                <children>
+                  <leafNode name="base-dn">
+                    <properties>
+                      <help>LDAP Base DN to search</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bind-dn">
+                    <properties>
+                      <help>LDAP DN used to bind to server</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="filter-expression">
+                    <properties>
+                      <help>Filter expression to perform LDAP search with</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="password">
+                    <properties>
+                      <help>LDAP password to bind with</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="persistent-connection">
+                    <properties>
+                      <help>Use persistent LDAP connection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="port">
+                    <properties>
+                      <help>LDAP server port to use (default: 389)</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Port number to use</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>389</defaultValue>
+                  </leafNode>
+                  <leafNode name="server">
+                    <properties>
+                      <help>LDAP server to use</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="use-ssl">
+                    <properties>
+                      <help>Use SSL/TLS for LDAP connection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="username-attribute">
+                    <properties>
+                      <help>LDAP username attribute</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="version">
+                    <properties>
+                      <help>LDAP protocol version (default: 3)</help>
+                      <completionHelp>
+                          <list>2 3</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>2</format>
+                        <description>LDAP protocol version 2</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>3</format>
+                        <description>LDAP protocol version 2</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-3"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>3</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="method">
+                <properties>
+                  <help>Authentication Method</help>
+                  <completionHelp>
+                    <list>ldap</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ldap</format>
+                    <description>Lightweight Directory Access Protocol</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(ldap)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>The only supported method currently is LDAP</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="realm">
+                <properties>
+                  <help>Name of authentication realm (e.g. "My Company proxy server")</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="cache-peer">
+            <properties>
+              <help>Specify other caches in a hierarchy</help>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Cache peers FQDN</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Hostname or IP address of peer</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Squid cache-peer IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>hostname</format>
+                    <description>Squid cache-peer hostname</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid FQDN or IP address</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="http-port">
+                <properties>
+                  <help>Default Proxy Port (default: 3128)</help>
+                  <valueHelp>
+                    <format>u32:1025-65535</format>
+                    <description>Default port number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1025-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>3128</defaultValue>
+              </leafNode>
+               <leafNode name="icp-port">
+                <properties>
+                  <help>Cache peer ICP port (default: disabled)</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Cache peer ICP port</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>0</defaultValue>
+              </leafNode>
+              <leafNode name="options">
+                <properties>
+                  <help>Cache peer options (default: "no-query default")</help>
+                  <valueHelp>
+                    <format>text</format>
+                    <description>Cache peer options</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>no-query default</defaultValue>
+              </leafNode>
+              <leafNode name="type">
+                <properties>
+                  <help>Squid peer type (default parent)</help>
+                  <completionHelp>
+                    <list>parent sibling multicast</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>parent</format>
+                    <description>Peer is a parent</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sibling</format>
+                    <description>Peer is a sibling</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>multicast</format>
+                    <description>Peer is a member of a multicast group</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(parent|sibling|multicast)$</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>parent</defaultValue>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="cache-size">
+            <properties>
+              <help>Disk cache size in MB (default: 100)</help>
+               <valueHelp>
+                <format>u32</format>
+                <description>Disk cache size in MB</description>
+              </valueHelp>
+               <valueHelp>
+                <format>0</format>
+                <description>Disable disk caching</description>
+              </valueHelp>
+            </properties>
+            <defaultValue>100</defaultValue>
+          </leafNode>
+          <leafNode name="default-port">
+            <properties>
+              <help>Default Proxy Port (default: 3128)</help>
+              <valueHelp>
+                <format>u32:1025-65535</format>
+                <description>Default port number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1025-65535"/>
+              </constraint>
+            </properties>
+            <defaultValue>3128</defaultValue>
+          </leafNode>
+          <leafNode name="disable-access-log">
+            <properties>
+              <help>Disable logging of HTTP accesses</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="domain-block">
+            <properties>
+              <help>Domain name to block</help>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="domain-noncache">
+            <properties>
+              <help>Domain name to access without caching</help>
+              <multi/>
+            </properties>
+          </leafNode>
+          <tagNode name="listen-address">
+            <properties>
+              <help>IPv4 listen-address for WebProxy [REQUIRED]</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
+              </completionHelp>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 address listen on</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="port">
+                <properties>
+                  <help>Default Proxy Port (default: 3128)</help>
+                  <valueHelp>
+                    <format>u32:1025-65535</format>
+                    <description>Default port number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1025-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-transparent">
+                <properties>
+                  <help>Disable transparent mode</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="maximum-object-size">
+            <properties>
+              <help>Maximum size of object to be stored in cache in kilobytes</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Object size in KB</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-100000"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="mem-cache-size">
+            <properties>
+              <help>Memory cache size in MB</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Memory cache size in MB </description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-100000"/>
+              </constraint>
+            </properties>
+            <defaultValue>20</defaultValue>
+          </leafNode>
+          <leafNode name="minimum-object-size">
+            <properties>
+              <help>Maximum size of object to be stored in cache in kilobytes</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Object size in KB</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-100000"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="outgoing-address">
+            <properties>
+              <help>Outgoing IP address for webproxy</help>
+            </properties>
+          </leafNode>
+          <leafNode name="reply-block-mime">
+            <properties>
+              <help>MIME type to block</help>
+              <completionHelp>
+                <list>image/gif www/mime application/macbinary application/oda application/octet-stream application/pdf application/postscript application/postscript application/postscript text/rtf application/octet-stream application/octet-stream application/x-tar application/x-csh application/x-dvi application/x-hdf application/x-latex text/plain application/x-netcdf application/x-netcdf application/x-sh application/x-tcl application/x-tex application/x-texinfo application/x-texinfo application/x-troff application/x-troff application/x-troff application/x-troff-man application/x-troff-me application/x-troff-ms application/x-wais-source application/zip application/x-bcpio application/x-cpio application/x-gtar application/x-rpm application/x-shar application/x-sv4cpio application/x-sv4crc application/x-tar application/x-ustar audio/basic audio/basic audio/mpeg audio/mpeg audio/mpeg audio/x-aiff audio/x-aiff audio/x-aiff audio/x-wav image/bmp image/ief image/jpeg image/jpeg image/jpeg image/tiff image/tiff image/x-cmu-raster image/x-portable-anymap image/x-portable-bitmap image/x-portable-graymap image/x-portable-pixmap image/x-rgb image/x-xbitmap image/x-xpixmap image/x-xwindowdump text/html text/html text/css application/x-javascript text/plain text/plain text/plain text/plain text/plain text/plain text/plain text/plain text/plain text/richtext text/tab-separated-values text/x-setext video/mpeg video/mpeg video/mpeg video/quicktime video/quicktime video/x-msvideo video/x-sgi-movie application/mac-compactpro application/mac-binhex40 application/macwriteii application/msword application/msword application/vnd.ms-excel application/vnd.ms-powerpoint application/vnd.lotus-1-2-3 application/vnd.mif application/x-stuffit application/pict application/pict application/x-arj-compressed application/x-lha-compressed application/x-lha-compressed application/x-deflate text/plain application/octet-stream application/octet-stream image/png application/octet-stream application/x-xpinstall application/octet-stream text/plain application/x-director application/x-director application/x-director image/vnd.djvu image/vnd.djvu application/octet-stream application/octet-stream application/andrew-inset x-conference/x-cooltalk model/iges model/iges audio/midi audio/midi audio/midi model/mesh model/mesh video/vnd.mpegurl chemical/x-pdb application/x-chess-pgn audio/x-realaudio audio/x-pn-realaudio audio/x-pn-realaudio text/sgml text/sgml application/x-koan application/x-koan application/x-koan application/x-koan application/smil application/smil application/octet-stream application/x-futuresplash application/x-shockwave-flash application/x-cdlink model/vrml image/vnd.wap.wbmp application/vnd.wap.wbxml application/vnd.wap.wmlc application/vnd.wap.wmlscriptc application/vnd.wap.wmlscript application/xhtml application/xhtml text/xml text/xml chemical/x-xyz text/plain</list>
+              </completionHelp>
+              <constraint>
+                <regex>^(image/gif|www/mime|application/macbinary|application/oda|application/octet-stream|application/pdf|application/postscript|application/postscript|application/postscript|text/rtf|application/octet-stream|application/octet-stream|application/x-tar|application/x-csh|application/x-dvi|application/x-hdf|application/x-latex|text/plain|application/x-netcdf|application/x-netcdf|application/x-sh|application/x-tcl|application/x-tex|application/x-texinfo|application/x-texinfo|application/x-troff|application/x-troff|application/x-troff|application/x-troff-man|application/x-troff-me|application/x-troff-ms|application/x-wais-source|application/zip|application/x-bcpio|application/x-cpio|application/x-gtar|application/x-rpm|application/x-shar|application/x-sv4cpio|application/x-sv4crc|application/x-tar|application/x-ustar|audio/basic|audio/basic|audio/mpeg|audio/mpeg|audio/mpeg|audio/x-aiff|audio/x-aiff|audio/x-aiff|audio/x-wav|image/bmp|image/ief|image/jpeg|image/jpeg|image/jpeg|image/tiff|image/tiff|image/x-cmu-raster|image/x-portable-anymap|image/x-portable-bitmap|image/x-portable-graymap|image/x-portable-pixmap|image/x-rgb|image/x-xbitmap|image/x-xpixmap|image/x-xwindowdump|text/html|text/html|text/css|application/x-javascript|text/plain|text/plain|text/plain|text/plain|text/plain|text/plain|text/plain|text/plain|text/plain|text/richtext|text/tab-separated-values|text/x-setext|video/mpeg|video/mpeg|video/mpeg|video/quicktime|video/quicktime|video/x-msvideo|video/x-sgi-movie|application/mac-compactpro|application/mac-binhex40|application/macwriteii|application/msword|application/msword|application/vnd.ms-excel|application/vnd.ms-powerpoint|application/vnd.lotus-1-2-3|application/vnd.mif|application/x-stuffit|application/pict|application/pict|application/x-arj-compressed|application/x-lha-compressed|application/x-lha-compressed|application/x-deflate|text/plain|application/octet-stream|application/octet-stream|image/png|application/octet-stream|application/x-xpinstall|application/octet-stream|text/plain|application/x-director|application/x-director|application/x-director|image/vnd.djvu|image/vnd.djvu|application/octet-stream|application/octet-stream|application/andrew-inset|x-conference/x-cooltalk|model/iges|model/iges|audio/midi|audio/midi|audio/midi|model/mesh|model/mesh|video/vnd.mpegurl|chemical/x-pdb|application/x-chess-pgn|audio/x-realaudio|audio/x-pn-realaudio|audio/x-pn-realaudio|text/sgml|text/sgml|application/x-koan|application/x-koan|application/x-koan|application/x-koan|application/smil|application/smil|application/octet-stream|application/x-futuresplash|application/x-shockwave-flash|application/x-cdlink|model/vrml|image/vnd.wap.wbmp|application/vnd.wap.wbxml|application/vnd.wap.wmlc|application/vnd.wap.wmlscriptc|application/vnd.wap.wmlscript|application/xhtml|application/xhtml|text/xml|text/xml|chemical/x-xyz|text/plain)$</regex>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="reply-body-max-size">
+            <properties>
+              <help>Maximum reply body size in KB</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Reply size in KB</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-100000"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="url-filtering">
+            <properties>
+              <help>URL filtering settings</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable URL filtering</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="squidguard">
+                <properties>
+                  <help>URL filtering via squidGuard redirector</help>
+                </properties>
+                <children>
+                  #include <include/webproxy-url-filtering.xml.i>
+                  <node name="auto-update">
+                    <properties>
+                      <help>Auto update settings</help>
+                    </properties>
+                    <children>
+                      <leafNode name="update-hour">
+                        <properties>
+                          <help>Hour of day for database update [REQUIRED]</help>
+                          <valueHelp>
+                            <format>u32:0-23</format>
+                            <description>Hour for database update</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-23"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>0</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="redirect-url">
+                    <properties>
+                      <help>Redirect URL for filtered websites (default: block.vyos.net)</help>
+                      <valueHelp>
+                        <format>url</format>
+                        <description>URL for redirect</description>
+                      </valueHelp>
+                    </properties>
+                    <defaultValue>block.vyos.net</defaultValue>
+                  </leafNode>
+                  <tagNode name="rule">
+                    <properties>
+                      <help>URL filter rule for a source-group</help>
+                      <valueHelp>
+                        <format>u32:1-1024</format>
+                        <description>Rule Number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-1024"/>
+                      </constraint>
+                      <constraintErrorMessage>SquidGuard rule must between 1-1024</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/webproxy-url-filtering.xml.i>
+                      <leafNode name="redirect-url">
+                        <properties>
+                          <help>Redirect URL for filtered websites</help>
+                          <valueHelp>
+                            <format>url</format>
+                            <description>URL for redirect</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="source-group">
+                        <properties>
+                          <help>Source-group for this rule [REQUIRED]</help>
+                          <valueHelp>
+                            <format>group</format>
+                            <description>Source group identifier for this rule</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>service webproxy url-filtering squidguard source-group</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="time-period">
+                        <properties>
+                          <help>Time-period for this rule</help>
+                          <valueHelp>
+                            <format>period</format>
+                            <description>Time period for this rule</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>service webproxy url-filtering squidguard time-period</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="source-group">
+                    <properties>
+                      <help>Source group name</help>
+                      <valueHelp>
+                        <format>name</format>
+                        <description>Name of source group</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[^0-9]</regex>
+                      </constraint>
+                      <constraintErrorMessage>URL-filter source-group cannot start with a number!</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>Address for source-group</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address to match</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv4net</format>
+                            <description>IPv4 prefix to match</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv4range</format>
+                            <description>IPv4 address range to match</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                            <validator name="ipv4-prefix"/>
+                            <validator name="ipv4-range"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="description">
+                        <properties>
+                          <help>Description for source-group</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="domain">
+                        <properties>
+                          <help>Domain for source-group</help>
+                          <valueHelp>
+                            <format>domain</format>
+                            <description>Domain name for the source-group</description>
+                          </valueHelp>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ldap-ip-search">
+                        <properties>
+                          <help>LDAP search expression for an IP address list</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ldap-user-search">
+                        <properties>
+                          <help>LDAP search expression for a user group</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="user">
+                        <properties>
+                          <help>List of user names</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="time-period">
+                    <properties>
+                      <help>Time period name</help>
+                    </properties>
+                    <children>
+                      <tagNode name="days">
+                        <properties>
+                          <help>Time-period days</help>
+                          <completionHelp>
+                            <list>Sun Mon Tue Wed Thu Fri Sat weekdays weekend all</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>Sun</format>
+                            <description>Sunday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Mon</format>
+                            <description>Monday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Tue</format>
+                            <description>Tuesday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Wed</format>
+                            <description>Wednesday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Thu</format>
+                            <description>Thursday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Fri</format>
+                            <description>Friday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>Sat</format>
+                            <description>Saturday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>weekdays</format>
+                            <description>Monday through Friday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>weekend</format>
+                            <description>Saturday and Sunday</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>All days of the week</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(Sun|Mon|Tue|Wed|Thu|Fri|Sat|weekdays|weekend|all)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="time">
+                            <properties>
+                              <help>Time for time-period</help>
+                              <valueHelp>
+                                <format>&lt;hh:mm - hh:mm&gt;</format>
+                                <description>Time range in 24hr time</description>
+                              </valueHelp>
+                              <constraint>
+                                <!-- time range example: 12:00-13:00 -->
+                                <regex>^(\d\d:\d\d)-(\d\d:\d\d)$</regex>
+                              </constraint>
+                              <constraintErrorMessage>Expected time format hh:mm - hh:mm in 24hr time</constraintErrorMessage>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <leafNode name="description">
+                        <properties>
+                          <help>Time-period description</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

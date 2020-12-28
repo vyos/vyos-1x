@@ -21,5 +21,6 @@ usr/libexec/vyos/op_mode
 usr/libexec/vyos/services
 usr/libexec/vyos/system
 usr/libexec/vyos/validators
+usr/libexec/vyos/legacy
 usr/libexec/vyos/*.py
 usr/share

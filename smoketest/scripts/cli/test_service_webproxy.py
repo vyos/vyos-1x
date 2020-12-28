@@ -127,7 +127,7 @@ class TestServiceWebProxy(unittest.TestCase):
         realm = 'VyOS Webproxy'
         ldap_base_dn = 'DC=vyos,DC=net'
         ldap_server = 'ldap.vyos.net'
-        ldap_bind_dn = 'CN=proxyuser,CN=Users,DC=example,DC=local'
+        ldap_bind_dn = f'CN=proxyuser,CN=Users,{ldap_base_dn}'
         ldap_password = 'VyOS12345'
         ldap_attr = 'cn'
         ldap_filter = '(cn=%s)'
@@ -156,6 +156,7 @@ class TestServiceWebProxy(unittest.TestCase):
 
         self.session.set(base_path + ['authentication', 'ldap', 'username-attribute', ldap_attr])
         self.session.set(base_path + ['authentication', 'ldap', 'filter-expression', ldap_filter])
+        self.session.set(base_path + ['authentication', 'ldap', 'use-ssl'])
 
         # commit changes
         self.session.commit()
@@ -166,8 +167,8 @@ class TestServiceWebProxy(unittest.TestCase):
         # Now verify LDAP settings
         self.assertIn(f'auth_param basic children {auth_children}', config)
         self.assertIn(f'auth_param basic credentialsttl {cred_ttl} minute', config)
-        self.assertIn(f'auth_param basic realm {realm}', config)
-        self.assertIn(f'auth_param basic program /usr/lib/squid/basic_ldap_auth -v 3 -b "{ldap_base_dn}" -D "{ldap_bind_dn}" -w {ldap_password} -f {ldap_filter} -u {ldap_attr} -p 389 -R -h {ldap_server}', config)
+        self.assertIn(f'auth_param basic realm "{realm}"', config)
+        self.assertIn(f'auth_param basic program /usr/lib/squid/basic_ldap_auth -v 3 -b "{ldap_base_dn}" -D "{ldap_bind_dn}" -w "{ldap_password}" -f "{ldap_filter}" -u "{ldap_attr}" -p 389 -ZZ -R -h "{ldap_server}"', config)
         self.assertIn(f'acl auth proxy_auth REQUIRED', config)
 
         # Check for running process
