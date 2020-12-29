@@ -94,4 +94,4 @@ class TestServiceRADVD(unittest.TestCase):
         self.assertTrue(process_named_running('radvd'))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

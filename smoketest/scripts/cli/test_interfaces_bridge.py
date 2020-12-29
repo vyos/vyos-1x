@@ -45,7 +45,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             for tmp in Section.interfaces("ethernet"):
                 if not '.' in tmp:
                     self._members.append(tmp)
-            
+
             self.session.set(['interfaces','dummy','dum0'])
             self.session.set(['interfaces','dummy','dum1'])
             self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
@@ -55,7 +55,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._options['br0'] = []
         for member in self._members:
             self._options['br0'].append(f'member interface {member}')
-    
+
     def tearDown(self):
         self.session.delete(['interfaces','bonding'])
         self.session.delete(['interfaces','dummy'])
@@ -94,7 +94,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.delete(self._base_path + [interface, 'member'])
 
         self.session.commit()
-    
+
     def test_vlan_filter(self):
         """ Add member interface to bridge and set VLAN filter """
         for interface in self._interfaces:
@@ -115,22 +115,22 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # commit config
         self.session.commit()
-        
+
         # Detect the vlan filter function
         for interface in self._interfaces:
             with open(f'/sys/class/net/{interface}/bridge/vlan_filtering', 'r') as f:
                 flags = f.read()
                 self.assertEqual(int(flags), 1)
-        
+
         # Execute the program to obtain status information
-        
+
         json_data = cmd('bridge -j vlan show', shell=True)
-        
+
         vlan_filter_status = None
-        
+
         vlan_filter_status = json.loads(json_data)
-            
-        
+
+
         if vlan_filter_status is not None:
             for interface_status in vlan_filter_status:
                 ifname = interface_status['ifname']
@@ -160,15 +160,15 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                             self.assertTrue(True)
                         else:
                             self.assertTrue(False)
-                        
+
         else:
             self.assertTrue(False)
-        
-            
-        
+
+
+
 
         # check member interfaces are added on the bridge
-        
+
         for interface in self._interfaces:
             bridge_members = []
             for tmp in glob(f'/sys/class/net/{interface}/lower_*'):
@@ -207,5 +207,5 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
 

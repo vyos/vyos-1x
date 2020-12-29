@@ -48,4 +48,4 @@ class TestServiceMDNSrepeater(unittest.TestCase):
         self.assertTrue(process_named_running('mdns-repeater'))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

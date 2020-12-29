@@ -76,4 +76,4 @@ class TestSystemIP(unittest.TestCase):
             self.assertEqual(read_file(gc_thresh1), str(size // 8))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

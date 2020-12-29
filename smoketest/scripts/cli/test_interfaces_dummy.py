@@ -25,4 +25,4 @@ class DummyInterfaceTest(BasicInterfaceTest.BaseTest):
          self._interfaces = ['dum0', 'dum1', 'dum2']
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

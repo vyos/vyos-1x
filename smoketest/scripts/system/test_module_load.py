@@ -40,4 +40,4 @@ class TestKernelModules(unittest.TestCase):
             self.assertTrue(success)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

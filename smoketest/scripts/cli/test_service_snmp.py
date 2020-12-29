@@ -153,5 +153,5 @@ class TestSNMPService(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
 

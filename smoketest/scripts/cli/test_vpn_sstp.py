@@ -59,4 +59,4 @@ if __name__ == '__main__':
           f'-subj {subject}'
     cmd(tmp)
 
-    unittest.main()
+    unittest.main(verbosity=2)

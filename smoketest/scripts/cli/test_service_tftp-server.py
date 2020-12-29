@@ -102,4 +102,4 @@ class TestServiceTFTPD(unittest.TestCase):
         self.assertEqual(count, len(address))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

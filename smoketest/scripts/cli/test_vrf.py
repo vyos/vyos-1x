@@ -49,4 +49,4 @@ class VRFTest(unittest.TestCase):
         self.session.commit()
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

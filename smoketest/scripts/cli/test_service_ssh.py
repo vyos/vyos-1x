@@ -160,4 +160,4 @@ class TestServiceSSH(unittest.TestCase):
         self.assertIn(PROCESS_NAME, tmp)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

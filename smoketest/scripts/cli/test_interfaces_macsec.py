@@ -152,5 +152,5 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertIn(interface, interfaces())
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
 

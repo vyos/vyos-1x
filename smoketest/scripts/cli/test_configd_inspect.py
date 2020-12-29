@@ -107,4 +107,4 @@ class TestConfigdInclude(unittest.TestCase):
             self.assertEqual(n, 0, f"'{s}' modifies config")
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

@@ -108,5 +108,5 @@ if __name__ == '__main__':
         if '.' not in tmp:
             interfaces.append(tmp)
 
-    unittest.main()
+    unittest.main(verbosity=2)
 

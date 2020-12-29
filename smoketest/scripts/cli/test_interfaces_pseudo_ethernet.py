@@ -37,4 +37,4 @@ class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
         self._interfaces = list(self._options)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

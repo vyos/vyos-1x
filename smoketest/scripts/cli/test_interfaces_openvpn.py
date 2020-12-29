@@ -660,4 +660,4 @@ if __name__ == '__main__':
     for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
         cmd(f'sudo chown openvpn:openvpn {file}')
 
-    unittest.main()
+    unittest.main(verbosity=2)

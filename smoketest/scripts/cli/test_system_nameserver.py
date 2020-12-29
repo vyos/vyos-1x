@@ -62,5 +62,5 @@ class TestSystemNameServer(unittest.TestCase):
             self.assertTrue(test_server_1 not in servers)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
 

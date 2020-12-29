@@ -238,4 +238,4 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
-    unittest.main()
+    unittest.main(verbosity=2)

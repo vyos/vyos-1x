@@ -58,4 +58,4 @@ class TestHTTPSService(unittest.TestCase):
         self.assertEqual(ret, 0)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
