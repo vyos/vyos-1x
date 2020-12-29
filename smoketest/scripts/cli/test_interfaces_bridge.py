@@ -61,8 +61,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.delete(['interfaces','dummy'])
         super().tearDown()
 
-    def test_add_remove_member(self):
-        """ Add member interfaces to bridge and set STP cost/priority """
+    def test_add_remove_bridge_member(self):
+        # Add member interfaces to bridge and set STP cost/priority
         for interface in self._interfaces:
             base = self._base_path + [interface]
             self.session.set(base + ['stp'])
@@ -95,8 +95,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-    def test_vlan_filter(self):
-        """ Add member interface to bridge and set VLAN filter """
+    def test_bridge_vlan_filter(self):
+        # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
             base = self._base_path + [interface]
             self.session.set(base + ['vif', '1','address', '192.0.2.1/24'])
@@ -183,8 +183,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-    def test_vlan_members(self):
-        """ T2945: ensure that VIFs are not dropped from bridge """
+    def test_bridge_vlan_members(self):
+        # T2945: ensure that VIFs are not dropped from bridge
 
         self.session.set(['interfaces', 'ethernet', 'eth0', 'vif', '300'])
         self.session.set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0.300'])

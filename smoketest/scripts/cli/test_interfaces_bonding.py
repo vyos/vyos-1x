@@ -51,18 +51,16 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             self._options['bond0'].append(f'member interface {member}')
 
 
-    def test_add_address_single(self):
+    def test_add_single_ip_address(self):
         """ derived method to check if member interfaces are enslaved properly """
-        super().test_add_address_single()
+        super().test_add_single_ip_address()
 
         for interface in self._interfaces:
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
             self.assertListEqual(slaves, self._members)
 
-    def test_8021q_vlan(self):
-        """ Testcase for 802.1q VLAN interfaces created on top of a lacp / bond
-        interface. This is the testcase for T2894 """
-        super().test_8021q_vlan()
+    def test_8021q_vlan_interfaces(self):
+        super().test_8021q_vlan_interfaces()
 
         for interface in self._interfaces:
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()

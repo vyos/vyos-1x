@@ -38,8 +38,8 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
         }
         self._interfaces = list(self._options)
 
-    def test_add_address_single(self):
-        super().test_add_address_single()
+    def test_add_single_ip_address(self):
+        super().test_add_single_ip_address()
 
         command = 'sudo ip -j l2tp show session'
         json_out = json.loads(cmd(command))

@@ -48,9 +48,9 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         }
         self._interfaces = list(self._options)
 
-    def test_add_address_single(self):
+    def test_add_single_ip_address(self):
         """ derived method to check if member interfaces are enslaved properly """
-        super().test_add_address_single()
+        super().test_add_single_ip_address()
 
         for option, option_value in self._options.items():
             if 'type access-point' in option_value:

@@ -27,8 +27,8 @@ class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
          self._base_path = ['interfaces', 'loopback']
          self._interfaces = ['lo']
 
-    def test_add_address_single(self):
-        super().test_add_address_single()
+    def test_add_single_ip_address(self):
+        super().test_add_single_ip_address()
         for addr in self._loopback_addresses:
             self.assertTrue(is_intf_addr_assigned('lo', addr))
 
