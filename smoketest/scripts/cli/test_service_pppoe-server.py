@@ -222,7 +222,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         conf.read(self._config_file)
 
         # Validate configuration
-        self.assertEqual(conf['radius']['called-sid'], radius_called_sid)
+        self.assertEqual(conf['pppoe']['called-sid'], radius_called_sid)
         self.assertEqual(conf['radius']['acct-interim-jitter'], radius_acct_interim_jitter)
 
 
