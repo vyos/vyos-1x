@@ -52,7 +52,6 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
 
 
     def test_add_single_ip_address(self):
-        """ derived method to check if member interfaces are enslaved properly """
         super().test_add_single_ip_address()
 
         for interface in self._interfaces:
@@ -66,10 +65,10 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
             self.assertListEqual(slaves, self._members)
 
-    def test_remove_member(self):
-        """ T2515: when removing a bond member the previously enslaved/member
-        interface must be in its former admin-up/down state. Here we ensure that
-        it is admin-up as it was admin-up before. """
+    def test_bonding_remove_member(self):
+        # T2515: when removing a bond member the previously enslaved/member
+        # interface must be in its former admin-up/down state. Here we ensure
+        # that it is admin-up as it was admin-up before.
 
         # configure member interfaces
         for interface in self._interfaces:

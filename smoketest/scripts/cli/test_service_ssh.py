@@ -53,8 +53,8 @@ class TestServiceSSH(unittest.TestCase):
         del self.session
 
     def test_ssh_default(self):
-        """ Check if SSH service runs with default settings - used for checking
-            behavior of <defaultValue> in XML definition """
+        # Check if SSH service runs with default settings - used for checking
+        # behavior of <defaultValue> in XML definition
         self.session.set(base_path)
 
         # commit changes
@@ -67,8 +67,8 @@ class TestServiceSSH(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_ssh_single(self):
-        """ Check if SSH service can be configured and runs """
+    def test_ssh_single_listen_address(self):
+        # Check if SSH service can be configured and runs
         self.session.set(base_path + ['port', '1234'])
         self.session.set(base_path + ['disable-host-validation'])
         self.session.set(base_path + ['disable-password-authentication'])
@@ -106,9 +106,9 @@ class TestServiceSSH(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_ssh_multi(self):
-        """ Check if SSH service can be configured and runs with multiple
-            listen ports and listen-addresses """
+    def test_ssh_multiple_listen_addresses(self):
+        # Check if SSH service can be configured and runs with multiple
+        # listen ports and listen-addresses
         ports = ['22', '2222']
         for port in ports:
             self.session.set(base_path + ['port', port])
@@ -134,7 +134,7 @@ class TestServiceSSH(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ssh_vrf(self):
-        """ Check if SSH service can be bound to given VRF """
+        # Check if SSH service can be bound to given VRF
         port = '22'
         self.session.set(base_path + ['port', port])
         self.session.set(base_path + ['vrf', vrf])

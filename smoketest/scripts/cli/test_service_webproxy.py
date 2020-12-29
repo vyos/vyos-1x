@@ -204,7 +204,7 @@ class TestServiceWebProxy(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_05_basic_squidguard(self):
-        """ Create very basic local SquidGuard blacklist and verify its contents" """
+        # Create very basic local SquidGuard blacklist and verify its contents
         sg_db_dir = '/opt/vyatta/etc/config/url-filtering/squidguard/db'
 
         default_cache = '100'

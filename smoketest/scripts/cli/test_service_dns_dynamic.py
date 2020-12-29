@@ -45,8 +45,7 @@ class TestServiceDDNS(unittest.TestCase):
 
         del self.session
 
-    def test_service(self):
-        """ Check individual DDNS service providers """
+    def test_dyndns_service(self):
         ddns = ['interface', 'eth0', 'service']
         services = ['cloudflare', 'afraid', 'dyndns', 'zoneedit']
 
@@ -97,8 +96,8 @@ class TestServiceDDNS(unittest.TestCase):
             # Check for running process
             self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_rfc2136(self):
-        """ Check if DDNS service can be configured and runs """
+    def test_dyndns_rfc2136(self):
+        # Check if DDNS service can be configured and runs
         ddns = ['interface', 'eth0', 'rfc2136', 'vyos']
         ddns_key_file = '/config/auth/my.key'
 

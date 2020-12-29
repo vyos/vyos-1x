@@ -32,8 +32,8 @@ class TestSystemIP(unittest.TestCase):
         del self.session
 
     def test_system_ip_forwarding(self):
-        """ Test if IPv4 forwarding can be disabled globally, default is '1'
-        which means forwearding enabled """
+        # Test if IPv4 forwarding can be disabled globally, default is '1'
+        # which means forwearding enabled
         all_forwarding = '/proc/sys/net/ipv4/conf/all/forwarding'
         self.assertEqual(read_file(all_forwarding), '1')
 
@@ -43,7 +43,7 @@ class TestSystemIP(unittest.TestCase):
         self.assertEqual(read_file(all_forwarding), '0')
 
     def test_system_ip_multipath(self):
-        """ test IPv4 multipathing options, options default to off -> '0' """
+        # Test IPv4 multipathing options, options default to off -> '0'
         use_neigh = '/proc/sys/net/ipv4/fib_multipath_use_neigh'
         hash_policy = '/proc/sys/net/ipv4/fib_multipath_hash_policy'
 
@@ -58,7 +58,8 @@ class TestSystemIP(unittest.TestCase):
         self.assertEqual(read_file(hash_policy), '1')
 
     def test_system_ip_arp_table_size(self):
-        """ Maximum number of entries to keep in the ARP cache, the default is 8k """
+        # Maximum number of entries to keep in the ARP cache, the
+        # default is 8k
 
         gc_thresh3 = '/proc/sys/net/ipv4/neigh/default/gc_thresh3'
         gc_thresh2 = '/proc/sys/net/ipv4/neigh/default/gc_thresh2'

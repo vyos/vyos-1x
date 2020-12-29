@@ -48,7 +48,7 @@ class TestSystemNTP(unittest.TestCase):
         del self.session
 
     def test_ntp_options(self):
-        """ Test basic NTP support with multiple servers and their options """
+        # Test basic NTP support with multiple servers and their options
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['noselect', 'preempt', 'prefer']
         ntp_pool = 'pool.vyos.io'
@@ -76,7 +76,7 @@ class TestSystemNTP(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ntp_clients(self):
-        """ Test the allowed-networks statement """
+        # Test the allowed-networks statement
         networks = ['192.0.2.0/24', '2001:db8:1000::/64']
         for network in networks:
             self.session.set(base_path + ['allow-clients', 'address', network])

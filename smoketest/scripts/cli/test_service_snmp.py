@@ -45,8 +45,8 @@ class TestSNMPService(unittest.TestCase):
     def tearDown(self):
         del self.session
 
-    def test_snmp(self):
-        """ Check if SNMP can be configured and service runs """
+    def test_snmp_basic(self):
+        # Check if SNMP can be configured and service runs
         clients = ['192.0.2.1', '2001:db8::1']
         networks = ['192.0.2.128/25', '2001:db8:babe::/48']
         listen = ['127.0.0.1', '::1']
@@ -85,7 +85,8 @@ class TestSNMPService(unittest.TestCase):
 
 
     def test_snmpv3_sha(self):
-        """ Check if SNMPv3 can be configured with SHA authentication and service runs"""
+        # Check if SNMPv3 can be configured with SHA authentication
+        # and service runs
 
         self.session.set(base_path + ['v3', 'engineid', '000000000000000000000002'])
         self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
@@ -119,7 +120,8 @@ class TestSNMPService(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_snmpv3_md5(self):
-        """ Check if SNMPv3 can be configured with MD5 authentication and service runs"""
+        # Check if SNMPv3 can be configured with MD5 authentication
+        # and service runs
 
         self.session.set(base_path + ['v3', 'engineid', '000000000000000000000002'])
         self.session.set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])

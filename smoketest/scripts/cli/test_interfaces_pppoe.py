@@ -53,8 +53,8 @@ class PPPoEInterfaceTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_pppoe(self):
-        """ Check if PPPoE dialer can be configured and runs """
+    def test_pppoe_client(self):
+        # Check if PPPoE dialer can be configured and runs
         for interface in self._interfaces:
             user = 'VyOS-user-' + interface
             passwd = 'VyOS-passwd-' + interface
@@ -98,7 +98,7 @@ class PPPoEInterfaceTest(unittest.TestCase):
             self.assertTrue(running)
 
     def test_pppoe_dhcpv6pd(self):
-        """ Check if PPPoE dialer can be configured with DHCPv6-PD """
+        # Check if PPPoE dialer can be configured with DHCPv6-PD
         address = '1'
         sla_id = '0'
         sla_len = '8'

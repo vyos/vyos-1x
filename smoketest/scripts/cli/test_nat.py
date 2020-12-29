@@ -40,8 +40,6 @@ class TestNAT(unittest.TestCase):
         self.session.commit()
 
     def test_snat(self):
-        """ Test source NAT (SNAT) rules """
-
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']
         outbound_iface_100 = 'eth0'
         outbound_iface_200 = 'eth1'
@@ -92,8 +90,6 @@ class TestNAT(unittest.TestCase):
             self.assertEqual(f'{address}/{mask}', network)
 
     def test_dnat(self):
-        """ Test destination NAT (DNAT) rules """
-
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']
         inbound_iface_100 = 'eth0'
         inbound_iface_200 = 'eth1'
@@ -143,8 +139,8 @@ class TestNAT(unittest.TestCase):
                 self.assertEqual(iface, inbound_iface_200)
 
 
-    def test_validation_logic(self):
-        """ T2813: Ensure translation address is specified """
+    def test_snat_required_translation_address(self):
+        # T2813: Ensure translation address is specified
         rule = '5'
         self.session.set(src_path + ['rule', rule, 'source', 'address', '192.0.2.0/24'])
 

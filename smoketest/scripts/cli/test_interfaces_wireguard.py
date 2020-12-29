@@ -38,8 +38,8 @@ class WireGuardInterfaceTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_peer(self):
-        """ Create WireGuard interfaces with associated peers """
+    def test_wireguard_peer(self):
+        # Create WireGuard interfaces with associated peers
         for intf in self._interfaces:
             peer = 'foo-' + intf
             psk = 'u2xdA70hkz0S1CG0dZlOh0aq2orwFXRIVrKo4DCvHgM='
@@ -63,9 +63,9 @@ class WireGuardInterfaceTest(unittest.TestCase):
             self.assertTrue(os.path.isdir(f'/sys/class/net/{intf}'))
 
 
-    def test_add_remove_peer(self):
-        """ Create WireGuard interfaces with associated peers. Remove one of
-        the configured peers. Bug reported as T2939 """
+    def test_wireguard_add_remove_peer(self):
+        # T2939: Create WireGuard interfaces with associated peers.
+        # Remove one of the configured peers.
         interface = 'wg0'
         port = '12345'
         pubkey_1 = 'n1CUsmR0M2LUUsyicBd6blZICwUqqWWHbu4ifZ2/9gk='
@@ -91,8 +91,6 @@ class WireGuardInterfaceTest(unittest.TestCase):
         # Delete second peer
         self.session.delete(base_path + [interface, 'peer', 'PEER01'])
         self.session.commit()
-
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -32,8 +32,8 @@ class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
         for addr in self._loopback_addresses:
             self.assertTrue(is_intf_addr_assigned('lo', addr))
 
-    def test_add_address_multi(self):
-        super().test_add_address_multi()
+    def test_add_multiple_ip_addresses(self):
+        super().test_add_multiple_ip_addresses()
         for addr in self._loopback_addresses:
             self.assertTrue(is_intf_addr_assigned('lo', addr))
 

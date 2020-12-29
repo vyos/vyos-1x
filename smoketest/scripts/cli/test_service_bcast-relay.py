@@ -39,8 +39,7 @@ class TestServiceBroadcastRelay(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_service(self):
-        """ Check if broadcast relay service can be configured and runs """
+    def test_broadcast_relay_service(self):
         ids = range(1, 5)
         for id in ids:
             base = base_path + ['id', str(id)]

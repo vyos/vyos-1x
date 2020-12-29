@@ -48,8 +48,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         }
         self._interfaces = list(self._options)
 
-    def test_add_single_ip_address(self):
-        """ derived method to check if member interfaces are enslaved properly """
+    def test_wireless_add_single_ip_address(self):
+        # derived method to check if member interfaces are enslaved properly
         super().test_add_single_ip_address()
 
         for option, option_value in self._options.items():
@@ -62,9 +62,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             else:
                 self.assertTrue(False)
 
-    def test_hostapd_config(self):
-        """ Check if hostapd config is properly generated """
-
+    def test_wireless_hostapd_config(self):
         # Only set the hostapd (access-point) options
         interface = 'wlan0'
         ssid = 'ssid'
@@ -140,9 +138,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
 
-    def test_hostapd_wpa_config(self):
-        """ Check if hostapd config is properly generated """
-
+    def test_wireless_hostapd_wpa_config(self):
         # Only set the hostapd (access-point) options
         interface = 'wlan0'
         phy = 'phy0'
@@ -208,7 +204,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
 
-    def test_access_point_bridge(self):
+    def test_wireless_access_point_bridge(self):
         interface = 'wlan0'
         ssid = 'VyOS-Test'
         bridge = 'br42477'

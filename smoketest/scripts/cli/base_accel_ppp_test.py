@@ -56,8 +56,8 @@ class BasicAccelPPPTest:
         def verify(self, conf):
             self.assertEqual(conf['core']['thread-count'], str(get_half_cpus()))
 
-        def test_name_servers(self):
-            """ Verify proper Name-Server configuration for IPv4 and IPv6 """
+        def test_accel_name_servers(self):
+            # Verify proper Name-Server configuration for IPv4 and IPv6
             self.basic_config()
 
             nameserver = ['192.0.2.1', '192.0.2.2', '2001:db8::1']
@@ -78,8 +78,8 @@ class BasicAccelPPPTest:
                 else:
                     self.assertEqual(conf['ipv6-dns'][ns], None)
 
-        def test_authentication_local(self):
-            """ Test configuration of local authentication """
+        def test_accel_local_authentication(self):
+            # Test configuration of local authentication
             self.basic_config()
 
             # upload / download limit
@@ -134,8 +134,8 @@ class BasicAccelPPPTest:
             # Check for running process
             self.assertTrue(process_named_running(self._process_name))
 
-        def test_authentication_radius(self):
-            """ Test configuration of RADIUS authentication for PPPoE server """
+        def test_accel_radius_authentication(self):
+            # Test configuration of RADIUS authentication for PPPoE server
             self.basic_config()
 
             radius_server = '192.0.2.22'

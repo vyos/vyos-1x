@@ -43,10 +43,10 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
 
          self._interfaces = list(self._options)
 
-    def test_encryption(self):
-        """ MACsec can be operating in authentication and encryption mode - both
-        using different mandatory settings, lets test encryption as the basic
-        authentication test has been performed using the base class tests """
+    def test_macsec_encryption(self):
+        # MACsec can be operating in authentication and encryption mode - both
+        # using different mandatory settings, lets test encryption as the basic
+        # authentication test has been performed using the base class tests
 
         mak_cak = '232e44b7fda6f8e2d88a07bf78a7aff4'
         mak_ckn = '40916f4b23e3d548ad27eedd2d10c6f98c2d21684699647d63d41b500dfe8836'
@@ -105,7 +105,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check for running process
             self.assertTrue(process_named_running('wpa_supplicant'))
 
-    def test_mandatory_options(self):
+    def test_macsec_mandatory_options(self):
         interface = 'macsec1'
         self.session.set(self._base_path + [interface])
 
@@ -123,8 +123,8 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.commit()
         self.assertIn(interface, interfaces())
 
-    def test_source_interface(self):
-        """ Ensure source-interface can bot be part of any other bond or bridge """
+    def test_macsec_source_interface(self):
+        # Ensure source-interface can bot be part of any other bond or bridge
 
         base_bridge = ['interfaces', 'bridge', 'br200']
         base_bond = ['interfaces', 'bonding', 'bond200']

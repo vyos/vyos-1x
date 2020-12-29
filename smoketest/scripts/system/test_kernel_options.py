@@ -29,13 +29,13 @@ class TestKernelModules(unittest.TestCase):
     available in the Kernel that is run. """
 
     def test_bond_interface(self):
-        """ The bond/lacp interface must be enabled in the OS Kernel """
+        # The bond/lacp interface must be enabled in the OS Kernel
         for option in ['CONFIG_BONDING']:
             tmp = re.findall(f'{option}=(y|m)', config)
             self.assertTrue(tmp)
 
     def test_bridge_interface(self):
-        """ The bridge interface must be enabled in the OS Kernel """
+        # The bridge interface must be enabled in the OS Kernel
         for option in ['CONFIG_BRIDGE',
                        'CONFIG_BRIDGE_IGMP_SNOOPING',
                        'CONFIG_BRIDGE_VLAN_FILTERING']:
@@ -43,7 +43,7 @@ class TestKernelModules(unittest.TestCase):
             self.assertTrue(tmp)
 
     def test_qemu_support(self):
-        """ The bond/lacp interface must be enabled in the OS Kernel """
+        # The bond/lacp interface must be enabled in the OS Kernel
         for option in ['CONFIG_VIRTIO_BLK', 'CONFIG_SCSI_VIRTIO',
                        'CONFIG_VIRTIO_NET', 'CONFIG_VIRTIO_CONSOLE',
                        'CONFIG_VIRTIO', 'CONFIG_VIRTIO_PCI',
@@ -53,7 +53,7 @@ class TestKernelModules(unittest.TestCase):
             self.assertTrue(tmp)
 
     def test_vmware_support(self):
-        """ The bond/lacp interface must be enabled in the OS Kernel """
+        # The bond/lacp interface must be enabled in the OS Kernel
         for option in ['CONFIG_VMXNET3']:
             tmp = re.findall(f'{option}=(y|m)', config)
             self.assertTrue(tmp)

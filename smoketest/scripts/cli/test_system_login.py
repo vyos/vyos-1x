@@ -43,7 +43,7 @@ class TestSystemLogin(unittest.TestCase):
         del self.session
 
     def test_local_user(self):
-        """ Check if user can be created and we can SSH to localhost """
+        # Check if user can be created and we can SSH to localhost
         self.session.set(['service', 'ssh', 'port', '22'])
 
         for user in users:
@@ -69,7 +69,7 @@ class TestSystemLogin(unittest.TestCase):
             self.assertTrue(len(stdout) > 40)
 
     def test_radius_kernel_features(self):
-        """ T2886: RADIUS requires some Kernel options to be present """
+        # T2886: RADIUS requires some Kernel options to be present
         kernel = platform.release()
         kernel_config = read_file(f'/boot/config-{kernel}')
 
@@ -83,7 +83,7 @@ class TestSystemLogin(unittest.TestCase):
             self.assertIn(f'{option}=y', kernel_config)
 
     def test_radius_config(self):
-        """ Verify generated RADIUS configuration files """
+        # Verify generated RADIUS configuration files
 
         radius_key = 'VyOSsecretVyOS'
         radius_server = '172.16.100.10'

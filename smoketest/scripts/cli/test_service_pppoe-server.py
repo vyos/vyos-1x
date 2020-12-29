@@ -73,8 +73,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         super().basic_config()
 
-    def test_ppp_options(self):
-        """ Test configuration of local authentication for PPPoE server """
+    def test_pppoe_server_ppp_options(self):
+        # Test configuration of local authentication for PPPoE server
         self.basic_config()
 
         # other settings
@@ -116,8 +116,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))
 
-    def test_authentication_protocols(self):
-        """ Test configuration of local authentication for PPPoE server """
+    def test_pppoe_server_authentication_protocols(self):
+        # Test configuration of local authentication for PPPoE server
         self.basic_config()
 
         # explicitly test mschap-v2 - no special reason
@@ -135,8 +135,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))
 
-    def test_client_ip_pool(self):
-        """ Test configuration of IPv6 client pools """
+    def test_pppoe_server_client_ip_pool(self):
+        # Test configuration of IPv6 client pools
         self.basic_config()
 
         subnet = '172.18.0.0/24'
@@ -164,8 +164,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.assertTrue(process_named_running(self._process_name))
 
 
-    def test_client_ipv6_pool(self):
-        """ Test configuration of IPv6 client pools """
+    def test_pppoe_server_client_ipv6_pool(self):
+        # Test configuration of IPv6 client pools
         self.basic_config()
 
         # Enable IPv6
@@ -207,7 +207,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.assertTrue(process_named_running(self._process_name))
 
 
-    def test_authentication_radius(self):
+    def test_accel_radius_authentication(self):
         radius_called_sid = 'ifname:mac'
         radius_acct_interim_jitter = '9'
 
@@ -215,7 +215,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.set(['authentication', 'radius', 'acct-interim-jitter', radius_acct_interim_jitter])
 
         # run common tests
-        super().test_authentication_radius()
+        super().test_accel_radius_authentication()
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')

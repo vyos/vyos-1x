@@ -48,7 +48,7 @@ class TestServicePowerDNS(unittest.TestCase):
         del self.session
 
     def test_basic_forwarding(self):
-        """ Check basic DNS forwarding settings """
+        # Check basic DNS forwarding settings
         cache_size = '20'
         negative_ttl = '120'
 
@@ -100,7 +100,7 @@ class TestServicePowerDNS(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_dnssec(self):
-        """ DNSSEC option testing """
+        # DNSSEC option testing
 
         for network in allow_from:
             self.session.set(base_path + ['allow-from', network])
@@ -121,7 +121,7 @@ class TestServicePowerDNS(unittest.TestCase):
             self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_external_nameserver(self):
-        """ Externe Domain Name Servers (DNS) addresses """
+        # Externe Domain Name Servers (DNS) addresses
 
         for network in allow_from:
             self.session.set(base_path + ['allow-from', network])
@@ -147,8 +147,6 @@ class TestServicePowerDNS(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_domain_forwarding(self):
-        """ Externe Domain Name Servers (DNS) addresses """
-
         for network in allow_from:
             self.session.set(base_path + ['allow-from', network])
         for address in listen_adress:

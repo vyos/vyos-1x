@@ -41,8 +41,8 @@ class TestSystemNameServer(unittest.TestCase):
 
         del self.session
 
-    def test_add_server(self):
-        """ Check if server is added to resolv.conf """
+    def test_nameserver_add(self):
+        # Check if server is added to resolv.conf
         for s in test_servers:
             self.session.set(base_path + [s])
         self.session.commit()
@@ -51,8 +51,8 @@ class TestSystemNameServer(unittest.TestCase):
         for s in servers:
             self.assertTrue(s in servers)
 
-    def test_delete_server(self):
-        """ Test if a deleted server disappears from resolv.conf """
+    def test_nameserver_delete(self):
+        # Test if a deleted server disappears from resolv.conf
         for s in test_servers:
           self.session.delete(base_path + [s])
         self.session.commit()

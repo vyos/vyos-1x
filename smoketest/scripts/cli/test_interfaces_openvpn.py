@@ -71,10 +71,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_client_verify(self):
-        """
-        Create OpenVPN client interface and test verify() steps.
-        """
+    def test_openvpn_client_verify(self):
+        # Create OpenVPN client interface and test verify() steps.
         interface = 'vtun2000'
         path = base_path + [interface]
         self.session.set(path + ['mode', 'client'])
@@ -144,11 +142,9 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.assertIn(interface, interfaces())
 
 
-    def test_client_interfaces(self):
-        """
-        Create OpenVPN client interfaces connecting to different
-        server IP addresses. Validate configuration afterwards.
-        """
+    def test_openvpn_client_interfaces(self):
+        # Create OpenVPN client interfaces connecting to different
+        # server IP addresses. Validate configuration afterwards.
         num_range = range(10, 15)
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -211,10 +207,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
-    def test_server_verify(self):
-        """
-        Create one OpenVPN server interface and check required verify() stages
-        """
+    def test_openvpn_server_verify(self):
+        # Create one OpenVPN server interface and check required verify() stages
         interface = 'vtun5000'
         path = base_path + [interface]
 
@@ -321,11 +315,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
-    def test_server_subnet_topology(self):
-        """
-        Create OpenVPN server interfaces using different client subnets.
-        Validate configuration afterwards.
-        """
+    def test_openvpn_server_subnet_topology(self):
+        # Create OpenVPN server interfaces using different client subnets.
+        # Validate configuration afterwards.
+
         auth_hash = 'sha256'
         num_range = range(20, 25)
         port = ''
@@ -418,11 +411,9 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
-    def test_server_net30_topology(self):
-        """
-        Create OpenVPN server interfaces (net30) using different client
-        subnets. Validate configuration afterwards.
-        """
+    def test_openvpn_server_net30_topology(self):
+        # Create OpenVPN server interfaces (net30) using different client
+        # subnets. Validate configuration afterwards.
         auth_hash = 'sha256'
         num_range = range(20, 25)
         port = ''
@@ -495,10 +486,10 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
-    def test_site2site_verify(self):
-        """
-        Create one OpenVPN site2site interface and check required verify() stages
-        """
+    def test_openvpn_site2site_verify(self):
+        # Create one OpenVPN site2site interface and check required
+        # verify() stages
+
         interface = 'vtun5000'
         path = base_path + [interface]
 
@@ -554,10 +545,9 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
         self.session.commit()
 
-    def test_site2site_interfaces_tun(self):
-        """
-        Create two OpenVPN site-to-site interfaces
-        """
+    def test_openvpn_site2site_interfaces_tun(self):
+        # Create two OpenVPN site-to-site interfaces
+
         num_range = range(30, 35)
         port = ''
         local_address = ''

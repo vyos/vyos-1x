@@ -156,9 +156,9 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
 
-    def test_verify_ipv4_local_remote_addr(self):
-        """ When running tests ensure that for certain encapsulation types the
-        local and remote IP address is actually an IPv4 address """
+    def test_tunnel_verify_ipv4_local_remote_addr(self):
+        # When running tests ensure that for certain encapsulation types the
+        # local and remote IP address is actually an IPv4 address
 
         interface = f'tun1000'
         local_if_addr = f'10.10.200.1/24'
@@ -185,9 +185,9 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.delete(self._base_path + [interface])
             self.session.commit()
 
-    def test_verify_ipv6_local_remote_addr(self):
-        """ When running tests ensure that for certain encapsulation types the
-        local and remote IP address is actually an IPv6 address """
+    def test_tunnel_verify_ipv6_local_remote_addr(self):
+        # When running tests ensure that for certain encapsulation types the
+        # local and remote IP address is actually an IPv6 address
 
         interface = f'tun1010'
         local_if_addr = f'10.10.200.1/24'
@@ -214,8 +214,8 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.delete(self._base_path + [interface])
             self.session.commit()
 
-    def test_verify_local_dhcp(self):
-        """ We can not use local-ip and dhcp-interface at the same time """
+    def test_tunnel_verify_local_dhcp(self):
+        # We can not use local-ip and dhcp-interface at the same time
 
         interface = f'tun1020'
         local_if_addr = f'10.0.0.1/24'
@@ -234,7 +234,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
-    def test_ip6ip6(self):
+    def test_tunnel_ip6ip6(self):
         interface = 'tun120'
         encapsulation = 'ip6ip6'
         local_if_addr = '2001:db8:f00::1/24'
@@ -270,7 +270,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
 
-    def test_gre_ipv4(self):
+    def test_tunnel_gre_ipv4(self):
         interface = 'tun200'
         encapsulation = 'gre'
         local_if_addr = '172.16.1.1/24'
@@ -340,7 +340,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
 
 
-    def test_sit(self):
+    def test_tunnel_sit(self):
         interface = 'tun300'
         encapsulation = 'sit'
         local_if_addr = '172.16.2.1/24'
