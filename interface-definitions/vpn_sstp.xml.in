@@ -52,41 +52,9 @@
               <help>SSL Certificate, SSL Key and CA (/config/user-data/sstp)</help>
             </properties>
             <children>
-              <leafNode name="ca-cert-file">
-                <properties>
-                  <help>Certificate Authority certificate</help>
-                  <valueHelp>
-                    <format>file</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="cert-file">
-                <properties>
-                  <help>Server Certificate</help>
-                  <completionHelp>
-                    <script>ls /config</script>
-                  </completionHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="key-file">
-                <properties>
-                  <help>Privat Key of the Server Certificate</help>
-                  <valueHelp>
-                    <format>file</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/certificate.xml.i>
+              #include <include/certificate-ca.xml.i>
+              #include <include/certificate-key.xml.i>
             </children>
           </node>
         </children>

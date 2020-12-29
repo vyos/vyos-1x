@@ -116,45 +116,9 @@
               <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
             </properties>
             <children>
-              <leafNode name="ca-cert-file">
-                <properties>
-                  <help>Certificate Authority certificate</help>
-                  <completionHelp>
-                    <script>ls /config/auth</script>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>file</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="cert-file">
-                <properties>
-                  <help>Server Certificate</help>
-                  <valueHelp>
-                    <format>file</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="key-file">
-                <properties>
-                  <help>Privat Key of the Server Certificate</help>
-                  <valueHelp>
-                    <format>file</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/certificate.xml.i>
+              #include <include/certificate-ca.xml.i>
+              #include <include/certificate-key.xml.i>
             </children>
           </node>
           <node name="network-settings">

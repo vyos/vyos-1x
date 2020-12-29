@@ -847,24 +847,8 @@
                           <help>X.509 certificate</help>
                         </properties>
                         <children>
-                          <leafNode name="ca-cert-file">
-                            <properties>
-                              <help>File containing the X.509 certificate for the Certificate Authority (CA)</help>
-                              <valueHelp>
-                                <format>txt</format>
-                                <description>File in /config/auth</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="cert-file">
-                            <properties>
-                              <help>File containing the X.509 certificate for this host</help>
-                              <valueHelp>
-                                <format>txt</format>
-                                <description>File in /config/auth</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
+                          #include <include/certificate.xml.i>
+                          #include <include/certificate-ca.xml.i>
                           <leafNode name="crl-file">
                             <properties>
                               <help>File containing the X.509 Certificate Revocation List (CRL)</help>
