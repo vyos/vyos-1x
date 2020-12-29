@@ -31,7 +31,7 @@
                         <properties>
                           <help>File containing the secret key shared with remote DNS server [REQUIRED]</help>
                           <valueHelp>
-                            <format>file</format>
+                            <format>filename</format>
                             <description>File in /config/auth directory</description>
                           </valueHelp>
                         </properties>

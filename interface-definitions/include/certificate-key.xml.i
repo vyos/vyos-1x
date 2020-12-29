@@ -3,7 +3,7 @@
   <properties>
     <help>Certificate private key in x509 PEM format</help>
     <valueHelp>
-      <format>file</format>
+      <format>filename</format>
       <description>File in /config/auth directory</description>
     </valueHelp>
     <constraint>

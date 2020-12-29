@@ -662,7 +662,7 @@
             <properties>
               <help>File containing the secret key shared with remote end of tunnel</help>
               <valueHelp>
-                <format>file</format>
+                <format>filename</format>
                 <description>File in /config/auth directory</description>
               </valueHelp>
               <constraint>
@@ -679,7 +679,7 @@
                 <properties>
                   <help>File containing tls static key for tls-auth</help>
                   <valueHelp>
-                    <format>file</format>
+                    <format>filename</format>
                     <description>File in /config/auth directory</description>
                   </valueHelp>
                   <constraint>
@@ -693,7 +693,7 @@
                 <properties>
                   <help>File containing certificate revocation list (CRL) for this host</help>
                   <valueHelp>
-                    <format>file</format>
+                    <format>filename</format>
                     <description>File in /config/auth directory</description>
                   </valueHelp>
                   <constraint>
@@ -705,7 +705,7 @@
                 <properties>
                   <help>File containing Diffie Hellman parameters (server only)</help>
                   <valueHelp>
-                    <format>file</format>
+                    <format>filename</format>
                     <description>File in /config/auth directory</description>
                   </valueHelp>
                   <constraint>
@@ -718,7 +718,7 @@
                 <properties>
                   <help>File containing encryption key to authenticate control channel</help>
                   <valueHelp>
-                    <format>file</format>
+                    <format>filename</format>
                     <description>File in /config/auth directory</description>
                   </valueHelp>
                   <constraint>
