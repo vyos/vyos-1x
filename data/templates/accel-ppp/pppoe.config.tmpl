@@ -126,6 +126,9 @@ burst={{ limits.burst }}
 timeout={{ limits.timeout }}
 {%   endif %}
 {% endif %}
+{% if authentication.radius.called_sid_format is defined and authentication.radius.called_sid_format is not none %}
+called-sid={{ authentication.radius.called_sid_format }}
+{% endif %}
 
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}
