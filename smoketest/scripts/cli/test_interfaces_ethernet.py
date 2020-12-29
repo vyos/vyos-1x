@@ -15,10 +15,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 from vyos.ifconfig import Section
+from vyos.util import cmd
+from vyos.util import process_named_running
+from vyos.util import read_file
+
+ca_cert  = '/config/auth/eapol_test_ca.pem'
+ssl_cert = '/config/auth/eapol_test_server.pem'
+ssl_key  = '/config/auth/eapol_test_server.key'
+
+def get_wpa_supplicant_value(interface, key):
+    tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
+    tmp = re.findall(r'\n?{}=(.*)'.format(key), tmp)
+    return tmp[0]
 
 class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
@@ -43,27 +56,103 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
                 if not '.' in tmp:
                     self._interfaces.append(tmp)
 
-        def test_dhcp_disable(self):
-            """
-            When interface is configured as admin down, it must be admin down even
-            """
-            for interface in self._interfaces:
-                self.session.set(self._base_path + [interface, 'disable'])
-                for option in self._options.get(interface, []):
-                    self.session.set(self._base_path + [interface] + option.split())
+        self._macs = {}
+        for interface in self._interfaces:
+            try:
+                mac = self.session.show_config(self._base_path +
+                                               [interface, 'hw-id']).split()[1]
+            except:
+                # during initial system startup there is no hw-id node
+                mac = read_file(f'/sys/class/net/{interface}/address')
+            self._macs[interface] = mac
 
-                # Also enable DHCP (ISC DHCP always places interface in admin up
-                # state so we check that we do not start DHCP client.
-                # https://phabricator.vyos.net/T2767
-                self.session.set(self._base_path + [interface, 'address', 'dhcp'])
 
-            self.session.commit()
+    def tearDown(self):
+        for interface in self._interfaces:
+            # when using a dedicated interface to test via TEST_ETH environment
+            # variable only this one will be cleared in the end - usable to test
+            # ethernet interfaces via SSH
+            self.session.delete(self._base_path + [interface])
+            self.session.set(self._base_path + [interface, 'duplex', 'auto'])
+            self.session.set(self._base_path + [interface, 'speed', 'auto'])
+            self.session.set(self._base_path + [interface, 'hw-id', self._macs[interface]])
 
-            # Validate interface state
-            for interface in self._interfaces:
-                with open(f'/sys/class/net/{interface}/flags', 'r') as f:
-                    flags = f.read()
-                self.assertEqual(int(flags, 16) & 1, 0)
+        super().tearDown()
+
+
+    def test_dhcp_disable_interface(self):
+        # When interface is configured as admin down, it must be admin down
+        # even when dhcpc starts on the given interface
+        for interface in self._interfaces:
+            self.session.set(self._base_path + [interface, 'disable'])
+
+            # Also enable DHCP (ISC DHCP always places interface in admin up
+            # state so we check that we do not start DHCP client.
+            # https://phabricator.vyos.net/T2767
+            self.session.set(self._base_path + [interface, 'address', 'dhcp'])
+
+        self.session.commit()
+
+        # Validate interface state
+        for interface in self._interfaces:
+            with open(f'/sys/class/net/{interface}/flags', 'r') as f:
+                flags = f.read()
+            self.assertEqual(int(flags, 16) & 1, 0)
+
+
+    def test_eapol_support(self):
+        for interface in self._interfaces:
+            # Enable EAPoL
+            self.session.set(self._base_path + [interface, 'eapol', 'ca-cert-file', ca_cert])
+            self.session.set(self._base_path + [interface, 'eapol', 'cert-file', ssl_cert])
+            self.session.set(self._base_path + [interface, 'eapol', 'key-file', ssl_key])
+
+        self.session.commit()
+
+        # Check for running process
+        self.assertTrue(process_named_running('wpa_supplicant'))
+
+        # Validate interface config
+        for interface in self._interfaces:
+            tmp = get_wpa_supplicant_value(interface, 'key_mgmt')
+            self.assertEqual('IEEE8021X', tmp)
+
+            tmp = get_wpa_supplicant_value(interface, 'eap')
+            self.assertEqual('TLS', tmp)
+
+            tmp = get_wpa_supplicant_value(interface, 'eapol_flags')
+            self.assertEqual('0', tmp)
+
+            tmp = get_wpa_supplicant_value(interface, 'ca_cert')
+            self.assertEqual(f'"{ca_cert}"', tmp)
+
+            tmp = get_wpa_supplicant_value(interface, 'client_cert')
+            self.assertEqual(f'"{ssl_cert}"', tmp)
+
+            tmp = get_wpa_supplicant_value(interface, 'private_key')
+            self.assertEqual(f'"{ssl_key}"', tmp)
+
+            mac = read_file(f'/sys/class/net/{interface}/address')
+            tmp = get_wpa_supplicant_value(interface, 'identity')
+            self.assertEqual(f'"{mac}"', tmp)
 
 if __name__ == '__main__':
-    unittest.main()
+    # Our SSL certificates need a subject ...
+    subject = '/C=DE/ST=BY/O=VyOS/localityName=Cloud/commonName=vyos/' \
+              'organizationalUnitName=VyOS/emailAddress=maintainers@vyos.io/'
+
+    if not (os.path.isfile(ssl_key) and os.path.isfile(ssl_cert)):
+        # Generate mandatory SSL certificate
+        tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
+              f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
+        print(cmd(tmp))
+
+    if not os.path.isfile(ca_cert):
+        # Generate "CA"
+        tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} -subj {subject}'
+        print(cmd(tmp))
+
+    for file in [ca_cert, ssl_cert, ssl_key]:
+        cmd(f'sudo chown radius_priv_user:vyattacfg {file}')
+
+    unittest.main(verbosity=2)

@@ -68,25 +68,16 @@ class BasicInterfaceTest:
             self._options = {}
 
         def tearDown(self):
-            # we should not remove ethernet from the overall CLI
-            if 'ethernet' in self._base_path:
-                for interface in self._interfaces:
-                    # when using a dedicated interface to test via TEST_ETH environment
-                    # variable only this one will be cleared in the end - usable to test
-                    # ethernet interfaces via SSH
-                    self.session.delete(self._base_path + [interface])
-                    self.session.set(self._base_path + [interface, 'duplex', 'auto'])
-                    self.session.set(self._base_path + [interface, 'speed', 'auto'])
-            else:
+            # Ethernet is handled in its derived class
+            if 'ethernet' not in self._base_path:
                 self.session.delete(self._base_path)
 
             self.session.commit()
             del self.session
 
-        def test_add_description(self):
-            """
-            Check if description can be added to interface
-            """
+        def test_interface_description(self):
+            # Check if description can be added to interface and
+            # can be read back
             for intf in self._interfaces:
                 test_string=f'Description-Test-{intf}'
                 self.session.set(self._base_path + [intf, 'description', test_string])
@@ -98,14 +89,10 @@ class BasicInterfaceTest:
             # Validate interface description
             for intf in self._interfaces:
                 test_string=f'Description-Test-{intf}'
-                with open(f'/sys/class/net/{intf}/ifalias', 'r') as f:
-                    tmp = f.read().rstrip()
-                    self.assertTrue(tmp, test_string)
+                tmp = read_file(f'/sys/class/net/{intf}/ifalias')
+                self.assertTrue(tmp, test_string)
 
-        def test_add_address_single(self):
-            """
-            Check if a single address can be added to interface.
-            """
+        def test_add_single_ip_address(self):
             addr = '192.0.2.0/31'
             for intf in self._interfaces:
                 self.session.set(self._base_path + [intf, 'address', addr])
@@ -117,11 +104,7 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 self.assertTrue(is_intf_addr_assigned(intf, addr))
 
-        def test_add_address_multi(self):
-            """
-            Check if IPv4/IPv6 addresses can be added to interface.
-            """
-
+        def test_add_multiple_ip_addresses(self):
             # Add address
             for intf in self._interfaces:
                 for addr in self._test_addr:
@@ -141,8 +124,8 @@ class BasicInterfaceTest:
 
                         self.assertTrue(is_intf_addr_assigned(intf, addr['addr']))
 
-        def test_ipv6_link_local(self):
-            """ Common function for IPv6 link-local address assignemnts """
+        def test_ipv6_link_local_address(self):
+            # Common function for IPv6 link-local address assignemnts
             if not self._test_ipv6:
                 return None
 
@@ -169,14 +152,7 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 self.assertTrue(AF_INET6 not in ifaddresses(interface))
 
-        def _mtu_test(self, intf):
-            """ helper function to verify MTU size """
-            with open(f'/sys/class/net/{intf}/mtu', 'r') as f:
-                tmp = f.read().rstrip()
-                self.assertEqual(tmp, self._mtu)
-
-        def test_change_mtu(self):
-            """ Testcase if MTU can be changed on interface """
+        def test_interface_mtu(self):
             if not self._test_mtu:
                 return None
 
@@ -191,10 +167,12 @@ class BasicInterfaceTest:
 
             # verify changed MTU
             for intf in self._interfaces:
-                self._mtu_test(intf)
+                tmp = read_file(f'/sys/class/net/{intf}/mtu')
+                self.assertEqual(tmp, self._mtu)
 
-        def test_change_mtu_1200(self):
-            """ Testcase if MTU can be changed to 1200 on non IPv6 enabled interfaces """
+        def test_mtu_1200_no_ipv6_interface(self):
+            # Testcase if MTU can be changed to 1200 on non IPv6
+            # enabled interfaces
             if not self._test_mtu:
                 return None
 
@@ -214,12 +192,12 @@ class BasicInterfaceTest:
 
             # verify changed MTU
             for intf in self._interfaces:
-                self._mtu_test(intf)
+                tmp = read_file(f'/sys/class/net/{intf}/mtu')
+                self.assertEqual(tmp, self._mtu)
 
             self._mtu = old_mtu
 
-        def test_8021q_vlan(self):
-            """ Testcase for 802.1q VLAN interfaces """
+        def test_8021q_vlan_interfaces(self):
             if not self._test_vlan:
                 return None
 
@@ -235,16 +213,18 @@ class BasicInterfaceTest:
                         self.session.set(base + ['address', address])
 
             self.session.commit()
+
             for intf in self._interfaces:
                 for vlan in self._vlan_range:
                     vif = f'{intf}.{vlan}'
                     for address in self._test_addr:
                         self.assertTrue(is_intf_addr_assigned(vif, address))
-                    self._mtu_test(vif)
+
+                    tmp = read_file(f'/sys/class/net/{vif}/mtu')
+                    self.assertEqual(tmp, self._mtu)
 
 
-        def test_8021ad_qinq_vlan(self):
-            """ Testcase for 802.1ad Q-in-Q VLAN interfaces """
+        def test_8021ad_qinq_vlan_interfaces(self):
             if not self._test_qinq:
                 return None
 
@@ -271,10 +251,11 @@ class BasicInterfaceTest:
                         vif = f'{interface}.{vif_s}.{vif_c}'
                         for address in self._test_addr:
                             self.assertTrue(is_intf_addr_assigned(vif, address))
-                        self._mtu_test(vif)
 
-        def test_ip_options(self):
-            """ Test interface base IPv4 options """
+                        tmp = read_file(f'/sys/class/net/{vif}/mtu')
+                        self.assertEqual(tmp, self._mtu)
+
+        def test_interface_ip_options(self):
             if not self._test_ip:
                 return None
 
@@ -325,8 +306,7 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/rp_filter')
                 self.assertEqual('2', tmp)
 
-        def test_ipv6_options(self):
-            """ Test interface base IPv6 options """
+        def test_interface_ipv6_options(self):
             if not self._test_ipv6:
                 return None
 
@@ -350,8 +330,7 @@ class BasicInterfaceTest:
                 self.assertEqual(dad_transmits, tmp)
 
 
-        def test_ipv6_dhcpv6_pd(self):
-            """ Test interface base IPv6 options """
+        def test_ipv6_dhcpv6_prefix_delegation(self):
             if not self._test_ipv6:
                 return None
 
