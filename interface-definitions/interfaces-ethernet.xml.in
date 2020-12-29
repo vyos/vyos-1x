@@ -28,7 +28,6 @@
           </leafNode>
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-disable.xml.i>
-          #include <include/interface-vrf.xml.i>
           <leafNode name="duplex">
             <properties>
               <help>Duplex mode</help>
@@ -54,6 +53,7 @@
             </properties>
             <defaultValue>auto</defaultValue>
           </leafNode>
+          #include <include/interface-eapol.xml.i>
           #include <include/interface-hw-id.xml.i>
           #include <include/interface-ipv4-options.xml.i>
           #include <include/interface-ipv6-options.xml.i>
@@ -187,6 +187,7 @@
           </node>
           #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>
+          #include <include/interface-vrf.xml.i>
           #include <include/interface-xdp.xml.i>
         </children>
       </tagNode>

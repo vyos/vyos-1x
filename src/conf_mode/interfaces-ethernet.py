@@ -28,11 +28,17 @@ from vyos.configverify import verify_mtu
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_eapol
 from vyos.ifconfig import EthernetIf
+from vyos.template import render
+from vyos.util import call
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+# XXX: wpa_supplicant works on the source interface
+wpa_suppl_conf = '/run/wpa_supplicant/{ifname}.conf'
 
 def get_config(config=None):
     """
@@ -67,6 +73,7 @@ def verify(ethernet):
     verify_dhcpv6(ethernet)
     verify_address(ethernet)
     verify_vrf(ethernet)
+    verify_eapol(ethernet)
 
     # XDP requires multiple TX queues
     if 'xdp' in ethernet:
@@ -83,16 +90,31 @@ def verify(ethernet):
     return None
 
 def generate(ethernet):
+    if 'eapol' in ethernet:
+        render(wpa_suppl_conf.format(**ethernet),
+               'ethernet/wpa_supplicant.conf.tmpl', ethernet)
+    else:
+        # delete configuration on interface removal
+        if os.path.isfile(wpa_suppl_conf.format(**ethernet)):
+            os.unlink(wpa_suppl_conf.format(**ethernet))
+
     return None
 
 def apply(ethernet):
-    e = EthernetIf(ethernet['ifname'])
+    ifname = ethernet['ifname']
+    # take care about EAPoL supplicant daemon
+    eapol_action='stop'
+
+    e = EthernetIf(ifname)
     if 'deleted' in ethernet:
         # delete interface
         e.remove()
     else:
         e.update(ethernet)
+        if 'eapol' in ethernet:
+            eapol_action='restart'
 
+    call(f'systemctl {eapol_action} wpa_supplicant-macsec@{ifname}')
 
 if __name__ == '__main__':
     try:

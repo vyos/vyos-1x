@@ -89,6 +89,15 @@ def verify_vrf(config):
                 'Interface "{ifname}" cannot be both a member of VRF "{vrf}" '
                 'and bridge "{is_bridge_member}"!'.format(**config))
 
+def verify_eapol(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of EAPoL configuration.
+    """
+    if 'eapol' in config:
+        if not {'cert_file', 'key_file'} <= set(config['eapol']):
+            raise ConfigError('Both cert and key-file must be specified '\
+                              'when using EAPoL!')
 
 def verify_address(config):
     """
