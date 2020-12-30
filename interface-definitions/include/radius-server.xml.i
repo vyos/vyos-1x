@@ -4,18 +4,7 @@
     <help>RADIUS based user authentication</help>
   </properties>
   <children>
-    <leafNode name="source-address">
-      <properties>
-        <help>RADIUS client source address</help>
-        <valueHelp>
-          <format>ipv4</format>
-          <description>IPv4 source-address of RADIUS queries</description>
-        </valueHelp>
-        <constraint>
-          <validator name="ipv4-address"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/source-address-ipv4.xml.i>
     <tagNode name="server">
       <properties>
         <help>RADIUS server configuration</help>

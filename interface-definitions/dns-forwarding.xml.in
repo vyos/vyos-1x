@@ -162,9 +162,10 @@
               </leafNode>
               <leafNode name="source-address">
                 <properties>
-                  <help>Local addresses from which to send DNS queries.
-                If unspecified, the querier will use any available address on
-                the outbound interface.</help>
+                  <help>Local addresses from which to send DNS queries</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                  </completionHelp>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 address from which to send traffic</description>

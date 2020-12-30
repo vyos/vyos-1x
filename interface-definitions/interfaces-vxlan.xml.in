@@ -37,18 +37,7 @@
           </leafNode>
           #include <include/interface-ipv4-options.xml.i>
           #include <include/interface-ipv6-options.xml.i>
-          <leafNode name="source-address">
-            <properties>
-              <help>VXLAN source address</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>IPv4 source-address of VXLAN tunnel</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ipv4-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/source-address-ipv4.xml.i>
           #include <include/source-interface.xml.i>
           #include <include/interface-mac.xml.i>
           #include <include/interface-mtu-1200-16000.xml.i>
