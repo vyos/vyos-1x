@@ -111,7 +111,15 @@ service-name={{ service_name | join(',') }}
 {% endif %}
 
 {% if pado_delay %}
-pado-delay={{ pado_delay }}
+{%   set pado_delay_param = namespace(value='0') %}
+{%   for delay in pado_delay|sort(attribute='0') %}
+{%     if not loop.last %}
+{%       set pado_delay_param.value = pado_delay_param.value + ',' + delay + ':' + pado_delay[delay].sessions %}
+{%     else %}
+{%       set pado_delay_param.value = pado_delay_param.value + ',-1:' + pado_delay[delay].sessions %}
+{%     endif %}
+{%   endfor %}
+pado-delay={{ pado_delay_param.value }}
 {% endif %}
 
 {% if limits is defined %}
