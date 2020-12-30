@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 #
-# Module: vyos-show-ram.sh
-# Displays memory usage information in minimalistic format
-#
 # Copyright (C) 2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
