@@ -284,19 +284,6 @@ def verify(openvpn):
                                 if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
 
-            else:
-                for route in (dict_search('server.push_route', openvpn) or []):
-                    if is_ipv6(route):
-                        raise ConfigError('IPv6 push-route requires an IPv6 server subnet')
-
-            #for client in openvpn ['client']:
-            #    if client['ipv6_ip']:
-            #        raise ConfigError(f'Server client "{client["name"]}" IPv6 IP requires an IPv6 server subnet')
-            #    if client['ipv6_push_route']:
-            #        raise ConfigError(f'Server client "{client["name"]} IPv6 push-route requires an IPv6 server subnet"')
-            #    if client['ipv6_subnet']:
-            #        raise ConfigError(f'Server client "{client["name"]} IPv6 subnet requires an IPv6 server subnet"')
-
     else:
         # checks for both client and site-to-site go here
         if dict_search('server.reject_unconfigured_clients', openvpn):
