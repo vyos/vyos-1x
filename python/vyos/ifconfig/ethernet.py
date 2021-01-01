@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,9 +17,10 @@ import os
 import re
 
 from vyos.ifconfig.interface import Interface
-from vyos.validate import assert_list
 from vyos.util import run
 from vyos.util import dict_search
+from vyos.validate import assert_list
+from vyos.validate import assert_range
 
 @Interface.register
 class EthernetIf(Interface):
@@ -72,6 +73,13 @@ class EthernetIf(Interface):
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'ufo', v),
             # 'shellcmd': 'ethtool -K {ifname} ufo {value}',
+        },
+    }}
+
+    _sysfs_set = {**Interface._sysfs_set, **{
+        'rps': {
+            'validate': lambda cpu: assert_range(cpu, 0, 4294967295),
+            'location': '/sys/class/net/{ifname}/queues/rx-0/rps_cpus',
         },
     }}
 
@@ -231,6 +239,26 @@ class EthernetIf(Interface):
             raise ValueError("Value out of range")
         return self.set_interface('gso', 'on' if state else 'off')
 
+    def set_rps(self, state):
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+
+        rps_cpus = 0
+        if state:
+            # enable RPS on all available CPUs, RPS works woth a CPU bitmask,
+            # where each bit represents a CPU (core/thread). The formula below
+            # expands to rps_cpus = 255 for a 8 core system
+            rps_cpus = (1 << os.cpu_count()) -1
+
+            # XXX: we should probably reserve one core when the system is under
+            # high preasure so we can still have a core left for housekeeping.
+            # This is done by masking out the lowst bit so CPU0 is spared from
+            # receive packet steering.
+            rps_cpus &= ~1
+
+        # send bitmask representation as hex string without leading '0x'
+        return self.set_interface('rps', f'{rps_cpus:x}')
+
     def set_sg(self, state):
         """
         Enable Scatter-Gather support. State can be either True or False.
@@ -306,6 +334,9 @@ class EthernetIf(Interface):
 
         # GSO (generic segmentation offload)
         self.set_gso(dict_search('offload.gso', config) != None)
+
+        # RPS - Receive Packet Steering
+        self.set_rps(dict_search('offload.rps', config) != None)
 
         # scatter-gather option
         self.set_sg(dict_search('offload.sg', config) != None)

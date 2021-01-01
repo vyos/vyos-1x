@@ -77,6 +77,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="rps">
+                <properties>
+                  <help>Enable Receive Packet Steering</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="sg">
                 <properties>
                   <help>Enable Scatter-Gather</help>
@@ -99,13 +105,13 @@
           </node>
           <leafNode name="speed">
             <properties>
-              <help>Link speed</help>
+              <help>Link speed (default: auto)</help>
               <completionHelp>
                 <list>auto 10 100 1000 2500 5000 10000 25000 40000 50000 100000</list>
               </completionHelp>
               <valueHelp>
                 <format>auto</format>
-                <description>Auto negotiation (default)</description>
+                <description>Auto negotiation</description>
               </valueHelp>
               <valueHelp>
                 <format>10</format>
@@ -163,7 +169,7 @@
                 <properties>
                   <help>RX ring buffer</help>
                   <valueHelp>
-                    <format>80-16384</format>
+                    <format>u32:80-16384</format>
                     <description>ring buffer size</description>
                   </valueHelp>
                   <constraint>
@@ -175,7 +181,7 @@
                 <properties>
                   <help>TX ring buffer</help>
                   <valueHelp>
-                    <format>80-16384</format>
+                    <format>u32:80-16384</format>
                     <description>ring buffer size</description>
                   </valueHelp>
                   <constraint>

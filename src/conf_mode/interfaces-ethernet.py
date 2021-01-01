@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -75,9 +75,15 @@ def verify(ethernet):
     verify_vrf(ethernet)
     verify_eapol(ethernet)
 
+    ifname = ethernet['ifname']
+    # verify offloading capabilities
+    if 'offload' in ethernet and 'rps' in ethernet['offload']:
+        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
+            raise ConfigError('Interface does not suport RPS!')
+
     # XDP requires multiple TX queues
     if 'xdp' in ethernet:
-        queues = glob('/sys/class/net/{ifname}/queues/tx-*'.format(**ethernet))
+        queues = glob(f'/sys/class/net/{ifname}/queues/tx-*')
         if len(queues) < 2:
             raise ConfigError('XDP requires additional TX queues, too few available!')
 
