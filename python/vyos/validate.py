@@ -1,4 +1,4 @@
-# Copyright 2018-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -165,7 +165,7 @@ def assert_boolean(b):
 
 
 def assert_range(value, lower=0, count=3):
-    if int(value) not in range(lower,lower+count):
+    if int(value, 16) not in range(lower, lower+count):
         raise ValueError("Value out of range")
 
 

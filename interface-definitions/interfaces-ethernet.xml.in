@@ -77,6 +77,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="rps">
+                <properties>
+                  <help>Enable Receive Packet Steering</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="sg">
                 <properties>
                   <help>Enable Scatter-Gather</help>

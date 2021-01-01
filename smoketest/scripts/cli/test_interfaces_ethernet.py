@@ -99,6 +99,31 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
                 flags = f.read()
             self.assertEqual(int(flags, 16) & 1, 0)
 
+    def test_offloading_rps(self):
+        # enable RPS on all available CPUs, RPS works woth a CPU bitmask,
+        # where each bit represents a CPU (core/thread). The formula below
+        # expands to rps_cpus = 255 for a 8 core system
+        rps_cpus = (1 << os.cpu_count()) -1
+
+        # XXX: we should probably reserve one core when the system is under
+        # high preasure so we can still have a core left for housekeeping.
+        # This is done by masking out the lowst bit so CPU0 is spared from
+        # receive packet steering.
+        rps_cpus &= ~1
+
+        for interface in self._interfaces:
+            self.session.set(self._base_path + [interface, 'offload', 'rps'])
+
+        self.session.commit()
+
+        for interface in self._interfaces:
+            cpus = read_file('/sys/class/net/eth1/queues/rx-0/rps_cpus')
+            # remove the nasty ',' separation on larger strings
+            cpus = cpus.replace(',','')
+            cpus = int(cpus, 16)
+
+            self.assertEqual(f'{cpus:x}', f'{rps_cpus:x}')
+
 
     def test_eapol_support(self):
         for interface in self._interfaces:
