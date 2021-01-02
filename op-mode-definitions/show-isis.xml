@@ -3,6 +3,9 @@
   <node name="show">
     <children>
       <node name="isis">
+        <properties>
+          <help>IS-IS routing protocol</help>
+        </properties>
         <children>
           <node name="database">
             <properties>
