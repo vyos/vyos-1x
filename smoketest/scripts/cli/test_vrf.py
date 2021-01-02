@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ import unittest
 
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.util import read_file
+from vyos.validate import is_intf_addr_assigned
 
 class VRFTest(unittest.TestCase):
     def setUp(self):
@@ -31,7 +32,7 @@ class VRFTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_table_id(self):
+    def test_vrf_table_id(self):
         table = 1000
         for vrf in self._vrfs:
             base = ['vrf', 'name', vrf]
@@ -47,6 +48,19 @@ class VRFTest(unittest.TestCase):
 
         # commit changes
         self.session.commit()
+
+    def test_vrf_loopback_ips(self):
+        table = 1000
+        for vrf in self._vrfs:
+            base = ['vrf', 'name', vrf]
+            self.session.set(base + ['table', str(table)])
+            table += 1
+
+        # commit changes
+        self.session.commit()
+        for vrf in self._vrfs:
+            self.assertTrue(is_intf_addr_assigned(vrf, '127.0.0.1'))
+            self.assertTrue(is_intf_addr_assigned(vrf, '::1'))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

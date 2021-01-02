@@ -223,6 +223,10 @@ def apply(vrf_config):
             # afterwards are taken.
             _cmd(f'ip -4 route add vrf {name} unreachable default metric 4278198272')
             _cmd(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
+            # We also should add proper loopback IP addresses to the newly
+            # created VRFs for services bound to the loopback address (SNMP, NTP)
+            _cmd(f'ip -4 addr add 127.0.0.1/8 dev {name}')
+            _cmd(f'ip -6 addr add ::1/128 dev {name}')
 
         # set VRF description for e.g. SNMP monitoring
         Interface(name).set_alias(vrf['description'])
