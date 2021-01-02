@@ -17,7 +17,7 @@
             <properties>
               <help>Clear prefix-list statistics or status for specified word</help>
               <completionHelp>
-                <list>&lt;WORD&gt;</list>
+                <list>WORD</list>
               </completionHelp>
             </properties>
             <command>vtysh -c "$*"</command>

@@ -74,7 +74,6 @@ op_mode_definitions:
 	rm -f $(OP_TMPL_DIR)/set/node.def
 	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/interfaces/node.def
-	rm -f $(OP_TMPL_DIR)/show/ipv6/node.def
 	rm -f $(OP_TMPL_DIR)/show/ipv6/route/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
