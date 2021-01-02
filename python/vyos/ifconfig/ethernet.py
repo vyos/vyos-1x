@@ -20,7 +20,6 @@ from vyos.ifconfig.interface import Interface
 from vyos.util import run
 from vyos.util import dict_search
 from vyos.validate import assert_list
-from vyos.validate import assert_range
 
 @Interface.register
 class EthernetIf(Interface):
@@ -78,7 +77,7 @@ class EthernetIf(Interface):
 
     _sysfs_set = {**Interface._sysfs_set, **{
         'rps': {
-            'validate': lambda cpu: assert_range(cpu, 0, 4294967295),
+            'convert': lambda cpus: cpus if cpus else '0',
             'location': '/sys/class/net/{ifname}/queues/rx-0/rps_cpus',
         },
     }}
@@ -246,21 +245,18 @@ class EthernetIf(Interface):
         if not isinstance(state, bool):
             raise ValueError("Value out of range")
 
-        rps_cpus = 0
+        rps_cpus = '0'
         if state:
-            # enable RPS on all available CPUs, RPS works woth a CPU bitmask,
-            # where each bit represents a CPU (core/thread). The formula below
-            # expands to rps_cpus = 255 for a 8 core system
-            rps_cpus = (1 << os.cpu_count()) -1
-
-            # XXX: we should probably reserve one core when the system is under
-            # high preasure so we can still have a core left for housekeeping.
-            # This is done by masking out the lowst bit so CPU0 is spared from
-            # receive packet steering.
-            rps_cpus &= ~1
+            # Enable RPS on all available CPUs except CPU0 which we will not
+            # utilize so the system has one spare core when it's under high
+            # preasure to server other means. Linux sysfs excepts a bitmask
+            # representation of the CPUs which should participate on RPS, we
+            # can enable more CPUs that are physically present on the system,
+            # Linux will clip that internally!
+            rps_cpus = 'ffffffff,ffffffff,ffffffff,fffffffe'
 
         # send bitmask representation as hex string without leading '0x'
-        return self.set_interface('rps', f'{rps_cpus:x}')
+        return self.set_interface('rps', rps_cpus)
 
     def set_sg(self, state):
         """
