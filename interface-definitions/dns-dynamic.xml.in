@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!-- Dynamic DNS configuration -->
 <interfaceDefinition>
   <node name="service">
     <children>
@@ -71,11 +70,11 @@
                     <properties>
                       <help>Service being used for Dynamic DNS [REQUIRED]</help>
                       <completionHelp>
-                        <list>&lt;custom&gt; afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
+                        <list>afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>&lt;custom&gt;</format>
-                        <description>Service with a custom name</description>
+                        <format>txt</format>
+                        <description>Dynanmic DNS service with a custom name</description>
                       </valueHelp>
                       <valueHelp>
                         <format>afraid</format>
@@ -147,50 +146,94 @@
                         <properties>
                           <help>ddclient protocol used for DDNS service [REQUIRED FOR CUSTOM]</help>
                           <completionHelp>
-                              <list>changeip cloudflare dnspark dslreports1 dyndns2 easydns namecheap noip sitelutions zoneedit1</list>
+                            <list>changeip cloudflare dnsmadeeasy dnspark dondominio dslreports1 dtdns duckdns dyndns2 easydns freedns freemyip googledomains hammernode1 namecheap nfsn noip sitelutions woima yandex zoneedit1</list>
                           </completionHelp>
                           <valueHelp>
                             <format>changeip</format>
-                            <description>changeip protocol</description>
+                            <description>ChangeIP protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>cloudflare</format>
-                            <description>cloudflare protocol</description>
+                            <description>Cloudflare protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>dnsmadeeasy</format>
+                            <description>DNS Made Easy protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>dnspark</format>
-                            <description>dnspark protocol</description>
+                            <description>DNS Park protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>dondominio</format>
+                            <description>DonDominio protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>dslreports1</format>
-                            <description>dslreports1 protocol</description>
+                            <description>DslReports protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>dtdns</format>
+                            <description>DtDNS protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>duckdns</format>
+                            <description>DuckDNS protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>dyndns2</format>
-                            <description>dyndns2 protocol</description>
+                            <description>DynDNS protocol v2</description>
                           </valueHelp>
                           <valueHelp>
                             <format>easydns</format>
-                            <description>easydns protocol</description>
+                            <description>easyDNS protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>freedns</format>
+                            <description>FreeDNS protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>freemyip</format>
+                            <description>freemyip protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>googledomains</format>
+                            <description>Google domains protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>hammernode1</format>
+                            <description>Hammernode protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>namecheap</format>
-                            <description>namecheap protocol</description>
+                            <description>Namecheap protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>nfsn</format>
+                            <description>NearlyFreeSpeech DNS protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>noip</format>
-                            <description>noip protocol</description>
+                            <description>No-IP protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>sitelutions</format>
-                            <description>sitelutions protocol</description>
+                            <description>Sitelutions protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>woima</format>
+                            <description>WOIMA protocol</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>yandex</format>
+                            <description>Yandex.DNS protocol</description>
                           </valueHelp>
                           <valueHelp>
                             <format>zoneedit1</format>
-                            <description>zoneedit1 protocol</description>
+                            <description>Zoneedit protocol</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(changeip|cloudflare|dnspark|dslreports1|dyndns2|easydns|namecheap|noip|sitelutions|zoneedit1)</regex>
+                            <regex>^(changeip|cloudflare|dnsmadeeasy|dnspark|dondominio|dslreports1|dtdns|duckdns|dyndns2|easydns|freedns|freemyip|googledomains|hammernode1|namecheap|nfsn|noip|sitelutions|woima|yandex|zoneedit1)$</regex>
                           </constraint>
                           <constraintErrorMessage>Please choose from the list of allowed protocols</constraintErrorMessage>
                         </properties>
