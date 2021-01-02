@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="ip">
+        <properties>
+          <help>Clear Internet Protocol (IP) statistics or status</help>
+        </properties>
+        <children>
+          <node name="prefix-list">
+            <properties>
+              <help>Clear prefix-list statistics or status</help>
+            </properties>
+            <command>vtysh -c "$*"</command>
+          </node>
+          <tagNode name="prefix-list">
+            <properties>
+              <help>Clear prefix-list statistics or status for specified word</help>
+              <completionHelp>
+                <list>&lt;WORD&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>vtysh -c "$*"</command>
+            <children>
+              <leafNode name="node.tag">
+                <properties>
+                  <help>Clear prefix-list statistics or status for given word|network</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "$*"</command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
