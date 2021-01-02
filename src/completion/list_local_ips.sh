@@ -14,11 +14,11 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [ $ipv4 -eq 1 ] && [ $ipv6 -eq 1 ]; then
-    ip a | grep inet | awk '{print $2}' | sed -e /^fe80::/d | awk -F/ '{print $1}'
+    ip a | grep inet | awk '{print $2}' | sed -e /^fe80::/d | awk -F/ '{print $1}' | sort -u
 elif [ $ipv4 -eq 1 ] ; then
-    ip a | grep 'inet ' | awk '{print $2}' | awk -F/ '{print $1}'
+    ip a | grep 'inet ' | awk '{print $2}' | awk -F/ '{print $1}' | sort -u
 elif [ $ipv6 -eq 1 ] ; then
-    ip a | grep 'inet6 ' | awk '{print $2}' | sed -e /^fe80::/d | awk -F/ '{print $1}'
+    ip a | grep 'inet6 ' | awk '{print $2}' | sed -e /^fe80::/d | awk -F/ '{print $1}' | sort -u
 else
     echo "Usage:"
     echo "-4|--ipv4    list only IPv4 addresses"
