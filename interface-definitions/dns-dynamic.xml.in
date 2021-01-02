@@ -10,7 +10,6 @@
           <node name="dynamic" owner="${vyos_conf_scripts_dir}/dynamic_dns.py">
             <properties>
               <help>Dynamic DNS</help>
-              <priority>919</priority>
             </properties>
             <children>
               <tagNode name="interface">
