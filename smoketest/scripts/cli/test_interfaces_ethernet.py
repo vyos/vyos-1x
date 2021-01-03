@@ -38,6 +38,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'ethernet']
+        self._mirror_interfaces = ['dum100']
         self._test_ip = True
         self._test_mtu = True
         self._test_vlan = True
@@ -67,8 +68,9 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
             self._macs[interface] = mac
 
         # Creating test interfaces for port mirroring
-        self.session.set(['interfaces', 'dummy', 'dum100'])
-        self._mirror_interfaces.append('dum100')
+        for mon_intf in self._mirror_interfaces:
+            if 'dum' in mon_intf:
+                self.session.set(['interfaces', 'dummy', mon_intf])
 
 
     def tearDown(self):
@@ -81,7 +83,10 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.set(self._base_path + [interface, 'speed', 'auto'])
             self.session.set(self._base_path + [interface, 'hw-id', self._macs[interface]])
         
-        self.session.delete(['interfaces','dummy','dum100'])
+        # Delete the dependent interface of port mirroring
+        for mon_intf in self._mirror_interfaces:
+            if 'dum' in mon_intf:
+                self.session.delete(['interfaces', 'dummy', mon_intf])
 
         super().tearDown()
 

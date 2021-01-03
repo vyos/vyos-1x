@@ -30,6 +30,7 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self._base_path = ['interfaces', 'bonding']
         self._interfaces = ['bond0']
+        self._mirror_interfaces = ['dum10']
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
@@ -51,11 +52,15 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             self._options['bond0'].append(f'member interface {member}')
 
         # Creating test interfaces for port mirroring
-        self.session.set(['interfaces', 'dummy', 'dum10'])
-        self._mirror_interfaces.append('dum10')
+        for mon_intf in self._mirror_interfaces:
+            if 'dum' in mon_intf:
+                self.session.set(['interfaces', 'dummy', mon_intf])
     
     def tearDown(self):
-        self.session.delete(['interfaces','dummy','dum10'])
+        # Delete the dependent interface of port mirroring
+        for mon_intf in self._mirror_interfaces:
+            if 'dum' in mon_intf:
+                self.session.delete(['interfaces', 'dummy', mon_intf])
         super().tearDown()
 
 
