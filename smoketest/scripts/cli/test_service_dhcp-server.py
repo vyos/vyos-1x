@@ -369,7 +369,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         # commit changes
         self.session.commit()
 
-        # VErify
+        # Verify
         config = read_file(DHCPD_CONF)
         network = address_from_cidr(subnet)
         netmask = netmask_from_cidr(subnet)
@@ -378,6 +378,40 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.assertIn(f'option routers {router};', config)
         self.assertIn(f'range {range_0_start} {range_0_stop_excl};', config)
         self.assertIn(f'range {range_0_start_excl} {range_0_stop};', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dhcp_relay_server(self):
+        # Listen on specific address and return DHCP leases from a non
+        # directly connected pool
+        self.session.set(base_path + ['listen-address', router])
+
+        relay_subnet = '10.0.0.0/16'
+        relay_router = inc_ip(relay_subnet, 1)
+
+        range_0_start = '10.0.1.0'
+        range_0_stop  = '10.0.250.255'
+
+        pool = base_path + ['shared-network-name', 'RELAY', 'subnet', relay_subnet]
+        self.session.set(pool + ['default-router', relay_router])
+        self.session.set(pool + ['range', '0', 'start', range_0_start])
+        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(DHCPD_CONF)
+        network = address_from_cidr(subnet)
+        netmask = netmask_from_cidr(subnet)
+        # Check the relay network
+        self.assertIn(f'subnet {network} netmask {netmask}' + r' { }', config)
+
+        relay_network = address_from_cidr(relay_subnet)
+        relay_netmask = netmask_from_cidr(relay_subnet)
+        self.assertIn(f'subnet {relay_network} netmask {relay_netmask}' + r' {', config)
+        self.assertIn(f'option routers {relay_router};', config)
+        self.assertIn(f'range {range_0_start} {range_0_stop};', config)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

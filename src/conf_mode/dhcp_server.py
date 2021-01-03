@@ -110,24 +110,27 @@ def get_config(config=None):
     # T2665: defaults include lease time per TAG node which need to be added to
     # individual subnet definitions
     default_values = defaults(base + ['shared-network-name', 'subnet'])
-    for network, network_config in (dict_search('shared_network_name', dhcp).items() or {}):
-        for subnet, subnet_config in (dict_search('subnet', network_config).items() or {}):
-            if 'lease' not in subnet_config:
-                dhcp['shared_network_name'][network]['subnet'][subnet] = dict_merge(
-                    default_values, dhcp['shared_network_name'][network]['subnet'][subnet])
 
-            # If exclude IP addresses are defined we need to slice them out of
-            # the defined ranges
-            if {'exclude', 'range'} <= set(subnet_config):
-                new_range_id = 0
-                new_range_dict = {}
-                for r, r_config in subnet_config['range'].items():
-                    for slice in dhcp_slice_range(subnet_config['exclude'], r_config):
-                        new_range_dict.update({new_range_id : slice})
-                        new_range_id +=1
+    if 'shared_network_name' in dhcp:
+        for network, network_config in dhcp['shared_network_name'].items():
+            if 'subnet' in network_config:
+                for subnet, subnet_config in network_config['subnet'].items():
+                    if 'lease' not in subnet_config:
+                        dhcp['shared_network_name'][network]['subnet'][subnet] = dict_merge(
+                            default_values, dhcp['shared_network_name'][network]['subnet'][subnet])
 
-                dhcp['shared_network_name'][network]['subnet'][subnet].update(
-                        {'range' : new_range_dict})
+                    # If exclude IP addresses are defined we need to slice them out of
+                    # the defined ranges
+                    if {'exclude', 'range'} <= set(subnet_config):
+                        new_range_id = 0
+                        new_range_dict = {}
+                        for r, r_config in subnet_config['range'].items():
+                            for slice in dhcp_slice_range(subnet_config['exclude'], r_config):
+                                new_range_dict.update({new_range_id : slice})
+                                new_range_id +=1
+
+                        dhcp['shared_network_name'][network]['subnet'][subnet].update(
+                                {'range' : new_range_dict})
 
     return dhcp
 
