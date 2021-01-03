@@ -99,6 +99,20 @@ def verify_eapol(config):
             raise ConfigError('Both cert and key-file must be specified '\
                               'when using EAPoL!')
 
+def verify_mirror(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of mirror interface configuration.
+
+    It makes no sense to mirror traffic back at yourself!
+    """
+    if 'mirror' in config:
+        for direction, mirror_interface in config['mirror'].items():
+            if mirror_interface == config['ifname']:
+                raise ConfigError(f'Can not mirror "{direction}" traffic back ' \
+                                   'the originating interface!')
+
+
 def verify_address(config):
     """
     Common helper function used by interface implementations to perform

@@ -29,6 +29,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_eapol
+from vyos.configverify import verify_mirror
 from vyos.ifconfig import EthernetIf
 from vyos.template import render
 from vyos.util import call
@@ -74,6 +75,7 @@ def verify(ethernet):
     verify_address(ethernet)
     verify_vrf(ethernet)
     verify_eapol(ethernet)
+    verify_mirror(ethernet)
 
     ifname = ethernet['ifname']
     # verify offloading capabilities
