@@ -1008,86 +1008,45 @@ class Interface(Control):
             if os.path.isfile(config_file):
                 os.remove(config_file)
 
-    def apply_mirror(self):
+    def set_mirror(self):
         # Please refer to the document for details
-        # https://man7.org/linux/man-pages/man8/tc.8.html
-        # https://man7.org/linux/man-pages/man8/tc-mirred.8.html
-        ifname = self._config['ifname']
+        #   - https://man7.org/linux/man-pages/man8/tc.8.html
+        #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
+        # Depening if we are the source or the target interface of the port
+        # mirror we need to setup some variables.
+        source_if = self._config['ifname']
+        config = self._config.get('mirror', None)
+
+        if 'is_mirror_intf' in self._config:
+            source_if = next(iter(self._config['is_mirror_intf']))
+            config = self._config['is_mirror_intf'][source_if]
+
         # Remove existing mirroring rules
-        try:
-            delete_tc_cmd = f'tc qdisc del dev {ifname} handle ffff: ingress'
-            self._cmd(delete_tc_cmd)
-        except:
-            pass
-        try:
-            delete_tc_cmd = f'tc qdisc del dev {ifname} handle 1: root prio'
-            self._cmd(delete_tc_cmd)
-        except:
-            pass
+        delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress; '
+        delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio'
+        self._popen(delete_tc_cmd)
 
-        # Setting up packet mirroring
-        ingress_mirror = dict_search('mirror.ingress', self._config)
-        # if interface does yet not exist bail out early and
-        # add it later
-        if ingress_mirror and ingress_mirror in interfaces():
-            # Mirror ingress traffic
-            mirror_cmd = f'tc qdisc add dev {ifname} handle ffff: ingress'
-            self._cmd(mirror_cmd)
-            # Export the mirrored traffic to the interface
-            mirror_cmd = f'tc filter add dev {ifname} parent ffff: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {ingress_mirror}'
-            self._cmd(mirror_cmd)
+        # Bail out early if nothing needs to be configured
+        if not config:
+            return
 
-        egress_mirror = dict_search('mirror.egress', self._config)
-        # if interface does yet not exist bail out early and
-        # add it later
-        if egress_mirror and egress_mirror in interfaces():
+        for direction, mirror_if in config.items():
+            if mirror_if not in interfaces():
+                continue
+
+            if direction == 'ingress':
+                handle = 'ffff: ingress'
+                parent = 'ffff:'
+            elif direction == 'egress':
+                handle = '1: root prio'
+                parent = '1:'
+
             # Mirror egress traffic
-            mirror_cmd = f'tc qdisc add dev {ifname} handle 1: root prio'
-            self._cmd(mirror_cmd)
+            mirror_cmd  = f'tc qdisc add dev {source_if} handle {handle}; '
             # Export the mirrored traffic to the interface
-            mirror_cmd = f'tc filter add dev {ifname} parent 1: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {egress_mirror}'
-            self._cmd(mirror_cmd)
+            mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {mirror_if}'
+            self._popen(mirror_cmd)
 
-    def apply_mirror_of_monitor(self):
-        # Please refer to the document for details
-        # https://man7.org/linux/man-pages/man8/tc.8.html
-        # https://man7.org/linux/man-pages/man8/tc-mirred.8.html
-        ifname = self._config['ifname']
-        mirror_rules = self._config.get('is_monitor_intf')
-
-        # Remove existing mirroring rules
-        # The rule must be completely deleted first
-        for rule in mirror_rules:
-            for intf, dire in rule.items():
-                try:
-                    delete_tc_cmd = f'tc qdisc del dev {intf} handle ffff: ingress'
-                    self._cmd(delete_tc_cmd)
-                except:
-                    pass
-                try:
-                    delete_tc_cmd = f'tc qdisc del dev {intf} handle 1: root prio'
-                    self._cmd(delete_tc_cmd)
-                except:
-                    pass
-
-        # Setting mirror rules
-        for rule in mirror_rules:
-            for intf, dire in rule.items():
-                # Setting up packet mirroring
-                if dire == "ingress":
-                    # Mirror ingress traffic
-                    mirror_cmd = f'tc qdisc add dev {intf} handle ffff: ingress'
-                    self._cmd(mirror_cmd)
-                    # Export the mirrored traffic to the interface
-                    mirror_cmd = f'tc filter add dev {intf} parent ffff: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {ifname}'
-                    self._cmd(mirror_cmd)
-                elif dire == "egress":
-                    # Mirror egress traffic
-                    mirror_cmd = f'tc qdisc add dev {intf} handle 1: root prio'
-                    self._cmd(mirror_cmd)
-                    # Export the mirrored traffic to the interface
-                    mirror_cmd = f'tc filter add dev {intf} parent 1: protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {ifname}'
-                    self._cmd(mirror_cmd)
 
     def set_xdp(self, state):
         """
@@ -1281,12 +1240,11 @@ class Interface(Control):
             bridge_dict = config.get('is_bridge_member')
             self.add_to_bridge(bridge_dict)
 
-        # Re-set rules for the mirror monitoring interface
-        if 'is_monitor_intf' in config:
-            self.apply_mirror_of_monitor()
-
         # eXpress Data Path - highly experimental
         self.set_xdp('xdp' in config)
+
+        # configure port mirror
+        self.set_mirror()
 
         # remove no longer required 802.1ad (Q-in-Q VLANs)
         ifname = config['ifname']
@@ -1337,9 +1295,6 @@ class Interface(Control):
             vif_config['ifname'] = vif_ifname
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
-
-        self.apply_mirror()
-
 
 
 class VLANIf(Interface):
@@ -1416,6 +1371,9 @@ class VLANIf(Interface):
             return None
 
         return super().set_admin_state(state)
+
+    def set_mirror(self):
+        return
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by

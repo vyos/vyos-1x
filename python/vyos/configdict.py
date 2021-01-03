@@ -21,7 +21,6 @@ import json
 
 from vyos.util import dict_search
 from vyos.xml import defaults
-from vyos import ConfigError
 from vyos.util import cmd
 
 def retrieve_config(path_hash, base_path, config):
@@ -215,49 +214,49 @@ def is_member(conf, interface, intftype=None):
         for intf in conf.list_nodes(base):
             member = base + [intf, 'member', 'interface', interface]
             if conf.exists(member):
-                tmp = conf.get_config_dict(member, key_mangling=('-', '_'), get_first_key=True)
+                tmp = conf.get_config_dict(member, key_mangling=('-', '_'),
+                                           get_first_key=True)
                 ret_val = {intf : tmp}
 
     old_level = conf.set_level(old_level)
     return ret_val
 
-def is_monitor_intf(conf,interface,direction=None):
+def is_mirror_intf(conf, interface, direction=None):
     """
-    Check whether the passed interface is the mirror monitoring interface of 
-    other interfaces of the specified type.
-    direction is optional, if not passed it will search all known direction
+    Check whether the passed interface is used for port mirroring. Direction
+    is optional, if not passed it will search all known direction
     (currently ingress and egress)
 
     Returns:
     None -> Interface is not a monitor interface
     Array() -> This interface is a monitor interface of interfaces
     """
-    
+    from vyos.ifconfig import Section
+
     directions = ['ingress', 'egress']
     if direction not in directions + [None]:
-        raise ValueError(f'unknown interface mirror direction "{direction}"')
-    
+        raise ValueError(f'Unknown interface mirror direction "{direction}"')
+
     direction = directions if direction == None else [direction]
-    
-    ret_val = []
+
+    ret_val = None
     old_level = conf.get_level()
     conf.set_level([])
     base = ['interfaces']
-    
-    for dire in direction:
+
+    for dir in direction:
         for iftype in conf.list_nodes(base):
             iftype_base = base + [iftype]
             for intf in conf.list_nodes(iftype_base):
-                mirror = iftype_base + [intf, 'mirror', dire, interface]
+                mirror = iftype_base + [intf, 'mirror', dir, interface]
                 if conf.exists(mirror):
-                    ret_val.append({intf : dire})
-    
+                    path = ['interfaces', Section.section(intf), intf]
+                    tmp = conf.get_config_dict(path, key_mangling=('-', '_'),
+                                               get_first_key=True)
+                    ret_val = {intf : tmp}
+
     old_level = conf.set_level(old_level)
-    if len(ret_val) == 0:
-        return None
-    else:
-        return ret_val
-    
+    return ret_val
 
 def has_vlan_subinterface_configured(conf, intf):
     """
@@ -265,7 +264,7 @@ def has_vlan_subinterface_configured(conf, intf):
     Checks the following config nodes:
     'vif', 'vif-s'
 
-    Returns True if interface has VLAN subinterface configured, False if it doesn't.
+    Return True if interface has VLAN subinterface configured.
     """
     from vyos.ifconfig import Section
     ret = False
@@ -325,7 +324,9 @@ def get_interface_dict(config, base, ifname=''):
 
     Return a dictionary with the necessary interface config keys.
     """
+
     if not ifname:
+        from vyos import ConfigError
         # determine tagNode instance
         if 'VYOS_TAGNODE_VALUE' not in os.environ:
             raise ConfigError('Interface (VYOS_TAGNODE_VALUE) not specified')
@@ -342,13 +343,14 @@ def get_interface_dict(config, base, ifname=''):
 
     # setup config level which is extracted in get_removed_vlans()
     config.set_level(base + [ifname])
-    dict = config.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    dict = config.get_config_dict([], key_mangling=('-', '_'),
+                                  get_first_key=True)
 
-    # Check if interface has been removed. We must use exists() as get_config_dict()
-    # will always return {} - even when an empty interface node like
+    # Check if interface has been removed. We must use exists() as
+    # get_config_dict() will always return {} - even when an empty interface
+    # node like the following exists.
     # +macsec macsec1 {
     # +}
-    # exists.
     if not config.exists([]):
         dict.update({'deleted' : ''})
 
@@ -372,10 +374,10 @@ def get_interface_dict(config, base, ifname=''):
     # Check if we are a member of a bridge device
     bridge = is_member(config, ifname, 'bridge')
     if bridge: dict.update({'is_bridge_member' : bridge})
-    
+
     # Check if it is a monitor interface
-    mirror = is_monitor_intf(config, ifname)
-    if mirror: dict.update({'is_monitor_intf' : mirror})
+    mirror = is_mirror_intf(config, ifname)
+    if mirror: dict.update({'is_mirror_intf' : mirror})
 
     # Check if we are a member of a bond device
     bond = is_member(config, ifname, 'bonding')
@@ -469,7 +471,7 @@ def get_vlan_ids(interface):
     Get the VLAN ID of the interface bound to the bridge
     """
     vlan_ids = set()
-        
+
     bridge_status = cmd('bridge -j vlan show', shell=True)
     vlan_filter_status = json.loads(bridge_status)
 
@@ -481,7 +483,7 @@ def get_vlan_ids(interface):
                 for vlan_status in vlans_status:
                     vlan_id = vlan_status['vlan']
                     vlan_ids.add(vlan_id)
-        
+
     return vlan_ids
 
 
