@@ -23,8 +23,9 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
-from vyos.template import inc_ip
 from vyos.template import address_from_cidr
+from vyos.template import inc_ip
+from vyos.template import dec_ip
 from vyos.template import netmask_from_cidr
 
 PROCESS_NAME = 'dhcpd'
@@ -48,7 +49,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_single_pool_range(self):
+    def test_dhcp_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
 
         range_0_start = inc_ip(subnet, 10)
@@ -93,7 +94,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_single_pool_options(self):
+    def test_dhcp_single_pool_options(self):
         shared_net_name = 'SMOKE-0815'
 
         range_0_start   = inc_ip(subnet, 10)
@@ -197,7 +198,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_single_pool_static_mapping(self):
+    def test_dhcp_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
@@ -246,7 +247,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_multi_pools(self):
+    def test_dhcp_multiple_pools(self):
         lease_time = '14400'
 
         for network in ['0', '1', '2', '3']:
@@ -316,6 +317,67 @@ class TestServiceDHCPServer(unittest.TestCase):
                 self.assertIn(f'fixed-address {ip};', config)
                 self.assertIn(f'hardware ethernet {mac};', config)
                 client_base += 1
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dhcp_exclude_not_in_range(self):
+        # T3180: verify else path when slicing DHCP ranges and exclude address
+        # is not part of the DHCP range
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', 'EXCLUDE-TEST', 'subnet', subnet]
+        self.session.set(pool + ['default-router', router])
+        self.session.set(pool + ['exclude', router])
+        self.session.set(pool + ['range', '0', 'start', range_0_start])
+        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # commit changes
+        self.session.commit()
+
+        # VErify
+        config = read_file(DHCPD_CONF)
+        network = address_from_cidr(subnet)
+        netmask = netmask_from_cidr(subnet)
+
+        self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
+        self.assertIn(f'option routers {router};', config)
+        self.assertIn(f'range {range_0_start} {range_0_stop};', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dhcp_exclude_in_range(self):
+        # T3180: verify else path when slicing DHCP ranges and exclude address
+        # is not part of the DHCP range
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 100)
+
+        # the DHCP exclude addresse is blanked out of the range which is done
+        # by slicing one range into two ranges
+        exclude_addr  = inc_ip(range_0_start, 20)
+        range_0_stop_excl = dec_ip(exclude_addr, 1)
+        range_0_start_excl = inc_ip(exclude_addr, 1)
+
+        pool = base_path + ['shared-network-name', 'EXCLUDE-TEST-2', 'subnet', subnet]
+        self.session.set(pool + ['default-router', router])
+        self.session.set(pool + ['exclude', exclude_addr])
+        self.session.set(pool + ['range', '0', 'start', range_0_start])
+        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # commit changes
+        self.session.commit()
+
+        # VErify
+        config = read_file(DHCPD_CONF)
+        network = address_from_cidr(subnet)
+        netmask = netmask_from_cidr(subnet)
+
+        self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
+        self.assertIn(f'option routers {router};', config)
+        self.assertIn(f'range {range_0_start} {range_0_stop_excl};', config)
+        self.assertIn(f'range {range_0_start_excl} {range_0_stop};', config)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

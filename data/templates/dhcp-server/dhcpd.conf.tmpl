@@ -35,12 +35,12 @@ option wpad-url code 252 = text;
 {%   endfor %}
 
 {% endif %}
-# Failover configuration
 {% if shared_network_name is defined and shared_network_name is not none %}
 {%   for network, network_config in shared_network_name.items() if network_config.disable is not defined %}
 {%     if network_config.subnet is defined and network_config.subnet is not none %}
 {%       for subnet, subnet_config in network_config.subnet.items() %}
 {%         if subnet_config.failover is defined and subnet_config.failover is defined and subnet_config.failover.name is defined and subnet_config.failover.name is not none %}
+# Failover configuration for {{ subnet }}
 failover peer "{{ subnet_config.failover.name }}" {
 {%           if subnet_config.failover.status == 'primary' %}
     primary;

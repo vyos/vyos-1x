@@ -126,7 +126,8 @@ def get_config(config=None):
                         new_range_dict.update({new_range_id : slice})
                         new_range_id +=1
 
-                subnet_config.update({'range' : new_range_dict})
+                dhcp['shared_network_name'][network]['subnet'][subnet].update(
+                        {'range' : new_range_dict})
 
     return dhcp
 
