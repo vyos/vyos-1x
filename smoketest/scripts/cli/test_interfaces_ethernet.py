@@ -38,7 +38,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         super().setUp()
 
         self._base_path = ['interfaces', 'ethernet']
-        self._mirror_interfaces = ['dum100']
+        self._mirror_interfaces = ['dum10100']
         self._test_ip = True
         self._test_mtu = True
         self._test_vlan = True

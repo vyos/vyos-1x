@@ -30,7 +30,7 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self._base_path = ['interfaces', 'bonding']
         self._interfaces = ['bond0']
-        self._mirror_interfaces = ['dum10']
+        self._mirror_interfaces = ['dum10010']
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
