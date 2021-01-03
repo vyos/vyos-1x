@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ipv6">
+        <children>
+          <tagNode name="bgp">
+            <properties>
+              <help>Clear BGP neighbor IP address</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6</script>
+              </completionHelp>
+            </properties>
+            <command>vtysh -c "clear bgp ipv6 $4"</command>
+            <children>
+              <node name="in">
+                <properties>
+                  <help>Send route-refresh unless using 'soft-reconfiguration inbound'</help>
+                </properties>
+                <command>vtysh -c "clear bgp ipv6 $4 in"</command>
+                <children>
+                  <leafNode name="prefix-filter">
+                    <properties>
+                      <help>Push out prefix-list ORF and do inbound soft reconfig</help>
+                    </properties>
+                    <command>vtysh -c "clear bgp ipv6 $4 in prefix-filter"</command>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="out">
+                <properties>
+                  <help>Resend all outbound updates</help>
+                </properties>
+                <command>vtysh -c "clear bgp ipv6 $4 out"</command>
+              </node>
+              <node name="soft">
+                <properties>
+                  <help>Soft reconfig inbound and outbound updates</help>
+                </properties>
+                <command>vtysh -c "clear bgp ipv6 $4 soft"</command>
+                <children>
+                  <node name="in">
+                    <properties>
+                      <help>Clear via soft reconfig of inbound update</help>
+                    </properties>
+                    <command>vtysh -c "clear bgp ipv6 $4 soft in"</command>
+                  </node>
+                  <node name="out">
+                    <properties>
+                      <help>Resend all outbound updates</help>
+                    </properties>
+                    <command>vtysh -c "clear bgp ipv6 $4 soft out"</command>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
