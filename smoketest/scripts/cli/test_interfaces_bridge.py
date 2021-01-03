@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,14 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import json
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 from glob import glob
 from netifaces import interfaces
+
 from vyos.ifconfig import Section
 from vyos.util import cmd
-import json
+from vyos.util import read_file
 
 class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
@@ -89,8 +91,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['vif', '1','address', '192.0.2.1/24'])
-            self.session.set(base + ['vif', '2','address','192.0.3.1/24'])
+            self.session.set(base + ['vif', '1', 'address', '192.0.2.1/24'])
+            self.session.set(base + ['vif', '2', 'address', '192.0.3.1/24'])
 
             vlan_id = 101
             allowed_vlan = 2
@@ -108,9 +110,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Detect the vlan filter function
         for interface in self._interfaces:
-            with open(f'/sys/class/net/{interface}/bridge/vlan_filtering', 'r') as f:
-                flags = f.read()
-                self.assertEqual(int(flags), 1)
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/vlan_filtering')
+            self.assertEqual(tmp, '1')
 
         # Execute the program to obtain status information
         json_data = cmd('bridge -j vlan show', shell=True)
@@ -163,29 +164,28 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         for interface in self._interfaces:
             self.session.delete(self._base_path + [interface, 'member'])
 
-        self.session.commit()
 
     def test_bridge_vlan_members(self):
         # T2945: ensure that VIFs are not dropped from bridge
+        vifs = ['300', '400']
+        for interface in self._interfaces:
+            for member in self._members:
+                for vif in vifs:
+                    self.session.set(['interfaces', 'ethernet', member, 'vif', vif])
+                    self.session.set(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
 
-        self.session.set(['interfaces', 'ethernet', 'eth0', 'vif', '300'])
-        self.session.set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0.300'])
         self.session.commit()
 
-        # member interface must be assigned to the bridge
-        self.assertTrue(os.path.exists('/sys/class/net/br0/lower_eth0.300'))
+        # Verify config
+        for interface in self._interfaces:
+            for member in self._members:
+                for vif in vifs:
+                    # member interface must be assigned to the bridge
+                    self.assertTrue(os.path.exists(f'/sys/class/net/{interface}/lower_{member}.{vif}'))
 
-        # add second bridge member
-        self.session.set(['interfaces', 'ethernet', 'eth0', 'vif', '400'])
-        self.session.commit()
-
-        # member interface must still be assigned to the bridge
-        self.assertTrue(os.path.exists('/sys/class/net/br0/lower_eth0.300'))
-
-        # remove VLAN interfaces
-        self.session.delete(['interfaces', 'ethernet', 'eth0', 'vif', '300'])
-        self.session.delete(['interfaces', 'ethernet', 'eth0', 'vif', '400'])
-        self.session.commit()
+            # remove VLAN interfaces
+            for vif in vifs:
+                self.session.delete(['interfaces', 'ethernet', member, 'vif', vif])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
