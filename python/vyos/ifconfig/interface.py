@@ -1059,6 +1059,10 @@ class Interface(Control):
         # The rule must be completely deleted first
         for rule in mirror_rules:
             for intf, dire in rule.items():
+                # If the monitored interface is not created, it is not processed
+                if intf not in interfaces():
+                    continue
+                
                 try:
                     delete_tc_cmd = f'tc qdisc del dev {intf} handle ffff: ingress'
                     self._cmd(delete_tc_cmd)
@@ -1073,6 +1077,10 @@ class Interface(Control):
         # Setting mirror rules
         for rule in mirror_rules:
             for intf, dire in rule.items():
+                # If the monitored interface is not created, it is not processed
+                if intf not in interfaces():
+                    continue
+                
                 # Setting up packet mirroring
                 if dire == "ingress":
                     # Mirror ingress traffic
