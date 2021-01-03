@@ -46,20 +46,10 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 if not '.' in tmp:
                     self._members.append(tmp)
 
-            self.session.set(['interfaces','dummy','dum0'])
-            self.session.set(['interfaces','dummy','dum1'])
-            self.session.set(['interfaces','bonding','bond1','member','interface','dum0'])
-            self.session.set(['interfaces','bonding','bond1','member','interface','dum1'])
-            self._members.append('bond1')
-
         self._options['br0'] = []
         for member in self._members:
             self._options['br0'].append(f'member interface {member}')
 
-    def tearDown(self):
-        self.session.delete(['interfaces','bonding'])
-        self.session.delete(['interfaces','dummy'])
-        super().tearDown()
 
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority
@@ -123,13 +113,9 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 self.assertEqual(int(flags), 1)
 
         # Execute the program to obtain status information
-
         json_data = cmd('bridge -j vlan show', shell=True)
-
         vlan_filter_status = None
-
         vlan_filter_status = json.loads(json_data)
-
 
         if vlan_filter_status is not None:
             for interface_status in vlan_filter_status:
@@ -164,11 +150,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         else:
             self.assertTrue(False)
 
-
-
-
         # check member interfaces are added on the bridge
-
         for interface in self._interfaces:
             bridge_members = []
             for tmp in glob(f'/sys/class/net/{interface}/lower_*'):
@@ -204,7 +186,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.delete(['interfaces', 'ethernet', 'eth0', 'vif', '300'])
         self.session.delete(['interfaces', 'ethernet', 'eth0', 'vif', '400'])
         self.session.commit()
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
