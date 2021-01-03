@@ -31,6 +31,67 @@ router isis {{ process }}
 {% if spf_interval is defined and spf_interval is not none %}
  spf-interval {{ spf_interval }}
 {% endif %}
+{% if traffic_engineering is defined and traffic_engineering is not none %}
+{%   if traffic_engineering.enable is defined %}
+ mpls-te on
+{%   endif %}
+{%   if traffic_engineering.address is defined %}
+ mpls-te router-address {{ traffic_engineering.address }}
+{%   endif %}
+{%   if traffic_engineering.inter_as is defined %}
+{%     if traffic_engineering.inter_as.level_1 is defined %}
+ mpls-te inter-as level-1
+{%     endif %}
+{%     if traffic_engineering.inter_as.level_1_2 is defined %}
+ mpls-te inter-as level-1-2
+{%     endif %}
+{%     if traffic_engineering.inter_as.level_2 is defined %}
+ mpls-te inter-as level-2-only
+{%     endif %}
+{%   else %}
+ mpls-te inter-as
+{%   endif %}
+{% endif %}
+{% if segment_routing is defined %}
+{%   if segment_routing.enable is defined %}
+ segment-routing on
+{%   endif %}
+{%   if segment_routing.maximum_label_depth is defined %}
+ segment-routing node-msd {{ segment_routing.maximum_label_depth }}
+{%   endif %}
+{%   if segment_routing.global_block is defined %}
+ segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }}
+{%   endif %}
+{%   if segment_routing.local_block is defined %}
+ segment-routing local-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}
+{%   endif %}
+{%   if segment_routing.prefix is defined %}
+{%     for prefixes in segment_routing.prefix %}
+{%       if segment_routing.prefix[prefixes].absolute is defined %}
+{%         if segment_routing.prefix[prefixes].absolute.value is defined %}
+ segment-routing prefix {{ prefixes }} absolute {{ segment_routing.prefix[prefixes].absolute.value }}
+{%           if segment_routing.prefix[prefixes].absolute.explicit_null is defined %}
+ segment-routing prefix {{ prefixes }} absolute {{ segment_routing.prefix[prefixes].absolute.value }} explicit-null
+{%           endif %}
+{%           if segment_routing.prefix[prefixes].absolute.no_php_flag is defined %}
+ segment-routing prefix {{ prefixes }} absolute {{ segment_routing.prefix[prefixes].absolute.value }} no-php-flag
+{%           endif %}
+{%         endif %}
+{%         if segment_routing.prefix[prefixes].index is defined %}
+{%           if segment_routing.prefix[prefixes].index.value is defined %}
+ segment-routing prefix {{ prefixes }} index {{ segment_routing.prefix[prefixes].index.value }}
+{%             if segment_routing.prefix[prefixes].index.explicit_null is defined %}
+ segment-routing prefix {{ prefixes }} index {{ segment_routing.prefix[prefixes].index.value }} explicit-null
+{%             endif %}
+{%             if segment_routing.prefix[prefixes].index.no_php_flag is defined %}
+ segment-routing prefix {{ prefixes }} index {{ segment_routing.prefix[prefixes].index.value }} no-php-flag
+{%             endif %}
+{%           endif %}
+{%         endif %}
+{%       endif %}
+{%     endfor %}
+{%   endif %}
+{% endif %}
 {% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.init_delay is not none %}
  spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }}
 {% endif %}
