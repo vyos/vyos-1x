@@ -34,11 +34,12 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_vlan = True
         self._test_qinq = True
         self._test_mirror = True
-
+        
         self._base_path = ['interfaces', 'bridge']
         self._interfaces = ['br0']
 
         self._members = []
+        self._mirror_interfaces = []
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
@@ -48,9 +49,22 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 if not '.' in tmp:
                     self._members.append(tmp)
 
+            self.session.set(['interfaces','dummy','dum10001'])
+            self.session.set(['interfaces','dummy','dum10002'])
+            self.session.set(['interfaces','bonding','bond10001','member','interface','dum10001'])
+            self.session.set(['interfaces','bonding','bond10001','member','interface','dum10002'])
+            self._members.append('bond10001')
+            self._mirror_interfaces.append('bond10001')
+
         self._options['br0'] = []
         for member in self._members:
             self._options['br0'].append(f'member interface {member}')
+    
+    def tearDown(self):
+        self.session.delete(['interfaces', 'bonding', 'bond10001'])
+        self.session.delete(['interfaces', 'dummy', 'dum10001'])
+        self.session.delete(['interfaces', 'dummy', 'dum10002'])
+        super().tearDown()
 
 
     def test_add_remove_bridge_member(self):
@@ -189,4 +203,3 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

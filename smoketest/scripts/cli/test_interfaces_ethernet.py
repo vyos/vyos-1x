@@ -66,6 +66,10 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
                 mac = read_file(f'/sys/class/net/{interface}/address')
             self._macs[interface] = mac
 
+        # Creating test interfaces for port mirroring
+        self.session.set(['interfaces', 'dummy', 'dum100'])
+        self._mirror_interfaces.append('dum100')
+
 
     def tearDown(self):
         for interface in self._interfaces:
@@ -76,6 +80,8 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.set(self._base_path + [interface, 'duplex', 'auto'])
             self.session.set(self._base_path + [interface, 'speed', 'auto'])
             self.session.set(self._base_path + [interface, 'hw-id', self._macs[interface]])
+        
+        self.session.delete(['interfaces','dummy','dum100'])
 
         super().tearDown()
 

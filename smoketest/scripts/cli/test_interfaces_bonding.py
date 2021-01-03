@@ -50,6 +50,14 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         for member in self._members:
             self._options['bond0'].append(f'member interface {member}')
 
+        # Creating test interfaces for port mirroring
+        self.session.set(['interfaces', 'dummy', 'dum10'])
+        self._mirror_interfaces.append('dum10')
+    
+    def tearDown(self):
+        self.session.delete(['interfaces','dummy','dum10'])
+        super().tearDown()
+
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
