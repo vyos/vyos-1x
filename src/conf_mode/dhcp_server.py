@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -89,11 +89,11 @@ def dhcp_slice_range(exclude_list, range_dict):
                 if not (ip_address(r['start']) > ip_address(r['stop'])):
                     output.append(r)
         else:
-          # if we have no exclude in the whole range - we just take the range
-          # as it is
+          # if the excluded address was not part of the range, we simply return
+          # the entire ranga again
           if not range_last_exclude:
-              if ra not in output:
-                  output.append(ra)
+              if range_dict not in output:
+                  output.append(range_dict)
 
     return output
 
