@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 routing information</help>
+        </properties>
+        <children>
+          <tagNode name="route">
+            <properties>
+              <help>Show IPv6 routes of given address or prefix</help>
+              <completionHelp>
+                <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <node name="longer-prefixes">
+                <properties>
+                  <help>Show longer prefixes of routes for given address or prefix</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route $4 longer-prefixes"</command>
+              </node>
+            </children>
+            <command>vtysh -c "show ipv6 route $4"</command>
+          </tagNode>
+          <node name="route">
+            <properties>
+              <help>Show IPv6 routes</help>
+            </properties>
+            <command>vtysh -c "show ipv6 route"</command>
+            <children>
+              <node name="bgp">
+                <properties>
+                  <help>Show IPv6 BGP routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route bgp"</command>
+              </node>
+              <node name="connected">
+                <properties>
+                  <help>Show IPv6 connected routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route connected"</command>
+              </node>
+              <node name="isis">
+                <properties>
+                  <help>Show IPv6 IS-IS routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route isis"</command>
+              </node>
+              <node name="kernel">
+                <properties>
+                  <help>Show IPv6 Kernel routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route kernel"</command>
+              </node>
+              <node name="ospfv3">
+                <properties>
+                  <help>Show IPv6 OSPF routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route ospf6"</command>
+              </node>
+              <node name="ripng">
+                <properties>
+                  <help>Show IPv6 RIPNG routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route ripng"</command>
+              </node>
+              <node name="static">
+                <properties>
+                  <help>Show IPv6 static routes</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route static"</command>
+              </node>
+              <node name="summary">
+                <properties>
+                  <help>Show IPv6 routes summary</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route summary"</command>
+              </node>
+              <node name="table">
+                <properties>
+                  <help>Show IPv6 routes in policy tables</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route table all"</command>
+              </node>
+              <tagNode name="table">
+                <properties>
+                  <help>Show IPv6 routes in specific policy table</help>
+                  <completionHelp>
+                    <path>protocols static table</path>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 route table $5"</command>
+              </tagNode>
+              <node name="vrf">
+                <properties>
+                  <help>Show IPv6 routes in VRFs</help>
+                </properties>
+                <command>vtysh -c "show ipv6 route vrf all"</command>
+              </node>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Show IPv6 routes in specific VRF</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 route vrf $5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

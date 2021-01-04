@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 routing information</help>
+        </properties>
+        <children>
+          <node name="prefix-list">
+            <properties>
+              <help>Show IPv6 prefix-lists</help>
+            </properties>
+            <command>vtysh -c "show ipv6 prefix-list"</command>
+            <children>
+              <node name="detail">
+                <properties>
+                  <help>Show detail of IPv6 prefix-lists</help>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list detail"</command>
+              </node>
+              <tagNode name="detail">
+                <properties>
+                  <help>Show detail of specified IPv6 prefix-list</help>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list detail $5"</command>
+              </tagNode>
+              <node name="summary">
+                <properties>
+                  <help>Show summary of IPv6 prefix-lists</help>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list summary"</command>
+              </node>
+              <tagNode name="summary">
+                <properties>
+                  <help>Show summary of specified IPv6 prefix-list</help>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list summary $5"</command>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="prefix-list">
+            <properties>
+              <help>Show specified IPv6 prefix-list</help>
+              <completionHelp>
+                <list>WORD</list>
+              </completionHelp>
+            </properties>
+            <command>vtysh -c "show ipv6 prefix-list $4"</command>
+            <children>
+              <node name="node.tag">
+                <properties>
+                  <help>Show select prefix of specified IPv6 prefix-list</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list $4 $5"</command>
+                <children>
+                  <node name="first-match">
+                    <properties>
+                      <help>Show first-match from select prefix of named IPv6 prefix-list</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 prefix-list $4 $5 first-match"</command>
+                  </node>
+                  <node name="longer">
+                    <properties>
+                      <help>Show longer match of select prefix from named IPv6 prefix-list</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 prefix-list $4 $5 longer"</command>
+                  </node>
+                </children>
+              </node>
+              <node name="seq">
+                <properties>
+                  <help>Show specified sequence from specified IPv6 prefix-list</help>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list $4 seq"</command>
+              </node>
+              <tagNode name="seq">
+                <properties>
+                  <help>Show specified sequence from specified IPv6 prefix-list</help>
+                </properties>
+                <command>vtysh -c "show ipv6 prefix-list $4 seq $6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
