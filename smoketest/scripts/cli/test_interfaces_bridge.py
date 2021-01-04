@@ -39,6 +39,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._interfaces = ['br0']
 
         self._members = []
+        self._mirror_interfaces = []
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
@@ -48,9 +49,22 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 if not '.' in tmp:
                     self._members.append(tmp)
 
+            for dep_intf in ['dum10001', 'dum10002']:
+                if 'dum' in dep_intf:
+                    self.session.set(['interfaces', 'dummy', dep_intf])
+                    self.session.set(['interfaces', 'bonding', 'bond10001', 'member', 'interface', dep_intf])
+            self._mirror_interfaces.append('bond10001')
+
         self._options['br0'] = []
         for member in self._members:
             self._options['br0'].append(f'member interface {member}')
+    
+    def tearDown(self):
+        self.session.delete(['interfaces', 'bonding', 'bond10001'])
+        for dep_intf in ['dum10001', 'dum10002']:
+            if 'dum' in dep_intf:
+                self.session.delete(['interfaces', 'dummy', dep_intf])
+        super().tearDown()
 
 
     def test_add_remove_bridge_member(self):
@@ -189,4 +203,3 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

@@ -32,6 +32,22 @@ from vyos.util import process_named_running
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 
+def read_mirror_rule(interfaces):
+    Success = 0
+    for interface in interfaces:
+        get_tc_cmd = 'tc -j qdisc'
+        tmp = cmd(get_tc_cmd, shell=True)
+        data = json.loads(tmp)
+        for rule in data:
+            dev = rule['dev']
+            handle = rule['handle']
+            kind = rule['kind']
+            if dev == interface and handle == "ffff:" and kind == "ingress":
+                Success+=1
+            elif dev == interface and handle == "1:" and kind == "prio":
+                Success+=1
+    return Success
+
 dhcp6c_config_file = '/run/dhcp6c/dhcp6c.{}.conf'
 def get_dhcp6c_config_value(interface, key):
     tmp = read_file(dhcp6c_config_file.format(interface))
@@ -56,6 +72,7 @@ class BasicInterfaceTest:
         _interfaces = []
         _qinq_range = ['10', '20', '30']
         _vlan_range = ['100', '200', '300', '2000']
+        _mirror_interfaces = []
         # choose IPv6 minimum MTU value for tests - this must always work
         _mtu = '1280'
 
@@ -66,14 +83,34 @@ class BasicInterfaceTest:
                                 '2001:db8:1::ffff/64', '2001:db8:101::1/112']
             self._test_mtu = False
             self._options = {}
+            self._mirror_interfaces = []
 
         def tearDown(self):
             # Ethernet is handled in its derived class
             if 'ethernet' not in self._base_path:
                 self.session.delete(self._base_path)
-
             self.session.commit()
             del self.session
+
+        def test_mirror(self):
+
+            if self._test_mirror:
+                for intf in self._mirror_interfaces:
+                    Success = 0
+                    i = 0
+                    # Check the two-way mirror rules of ingress and egress
+                    for interface in self._interfaces:
+                        self.session.set(self._base_path + [interface, 'mirror', 'ingress', intf])
+                        self.session.set(self._base_path + [interface, 'mirror', 'egress', intf])
+                        i+=1
+                    self.session.commit()
+                    # Parse configuration
+                    Success = read_mirror_rule(self._interfaces)
+                    if Success == i*2:
+                        self.assertTrue(True)
+                    else:
+                        self.assertTrue(False)
+                    i=0
 
         def test_interface_description(self):
             # Check if description can be added to interface and
