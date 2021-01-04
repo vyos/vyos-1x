@@ -36,7 +36,7 @@
                 <description>Local IPv6 address for this tunnel [NOTICE: unavailable for mGRE tunnels]</description>
               </valueHelp>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_local_ips.sh</script>
+                <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
               </completionHelp>
               <constraint>
                 <validator name="ip-address"/>
