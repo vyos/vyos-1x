@@ -1,3 +1,9 @@
+vyos-1x (1.3-1) unstable; urgency=medium
+
+  * New LTS branch.
+
+ -- Daniil Baturin <daniil@vyos.io>  Mon, 04 Jan 2021 17:35:48 +0200
+
 vyos-1x (1.3dev0) unstable; urgency=medium
 
   * Dummy changelog entry for vyos-1x repository
