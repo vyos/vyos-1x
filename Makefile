@@ -69,17 +69,17 @@ op_mode_definitions:
 
 	# XXX: delete top level op mode node.def's that now live in other packages
 	rm -f $(OP_TMPL_DIR)/add/node.def
-	rm -f $(OP_TMPL_DIR)/clear/node.def
 	rm -f $(OP_TMPL_DIR)/clear/interfaces/node.def
-	rm -f $(OP_TMPL_DIR)/set/node.def
-	rm -f $(OP_TMPL_DIR)/show/node.def
-	rm -f $(OP_TMPL_DIR)/show/interfaces/node.def
-	rm -f $(OP_TMPL_DIR)/monitor/node.def
+	rm -f $(OP_TMPL_DIR)/clear/node.def
+	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
+	rm -f $(OP_TMPL_DIR)/monitor/node.def
+	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
+	rm -f $(OP_TMPL_DIR)/set/node.def
+	rm -f $(OP_TMPL_DIR)/show/interfaces/node.def
+	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
 	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
-	rm -f $(OP_TMPL_DIR)/delete/node.def
-	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
 
 	# XXX: ping must be able to recursivly call itself as the
 	# options are provided from the script itself
