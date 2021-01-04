@@ -1,0 +1,322 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Show IPv6 routing information</help>
+        </properties>
+        <children>
+          <node name="ospfv3">
+            <properties>
+              <help>Show IPv6 Open Shortest Path First (OSPF)</help>
+            </properties>
+            <command>vtysh -c "show ipv6 ospf6"</command>
+            <children>
+              <node name="area">
+                <properties>
+                  <help>Show Shortest Path First tree information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 spf tree"</command>
+              </node>
+              <tagNode name="area">
+                <properties>
+                  <help>Area ID (as an IPv4 notation)</help>
+                  <completionHelp>
+                    <path>protocols ospfv3 area</path>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 area $4 spf tree"</command>
+                <children>
+                  <tagNode name="router">
+                    <properties>
+                      <help> Simulate view point (Router ID)</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 simulate spf-tree $7 $4 $5"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <node name="border-routers">
+                <properties>
+                  <help>Show OSPFv3 border-router (ABR and ASBR) information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 border-routers"</command>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show OSPFv3 detailed border-router information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 border-routers detail"</command>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="border-routers">
+                <properties>
+                  <help>Border router ID</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 border-routers $5"</command>
+              </tagNode>
+              <node name="interface">
+                <properties>
+                  <help>Show OSPFv3 interface information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 interface"</command>
+                <children>
+                  <node name="prefix">
+                    <properties>
+                      <help>Show connected prefixes to advertise</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 interface prefix"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>More detailed interface prefix information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 interface prefix detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="prefix">
+                    <properties>
+                      <help>Show interface prefix route specific information</help>
+                      <completionHelp>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 interface prefix $6"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>More detailed information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 interface prefix $6 detail"</command>
+                      </node>
+                      <node name="match">
+                        <properties>
+                          <help>Matched interface prefix information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 interface prefix $6 match"</command>
+                      </node>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <tagNode name="interface">
+                <properties>
+                  <help>Specific insterface to examine</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 interface $5"</command>
+                <children>
+                  <node name="prefix">
+                    <properties>
+                      <help>Show connected prefixes to advertise</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 interface $5 prefix"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>More detailed interface prefix information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 interface $5 prefix detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="prefix">
+                    <properties>
+                      <help>Show interface prefix route specific information</help>
+                      <completionHelp>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 interface $5 prefix $7"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>More detailed information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 interface $5 prefix $7 detail"</command>
+                      </node>
+                      <node name="match">
+                        <properties>
+                          <help>Matched interface prefix information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 interface $5 prefix $7 match"</command>
+                      </node>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <node name="linkstate">
+                <properties>
+                  <help>Show OSPFv3 linkstate routing information</help>
+                </properties>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed linkstate information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 linkstate detail"</command>
+                  </node>
+                  <node name="network">
+                    <properties>
+                      <help>Show linkstate Network information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 linkstate network"</command>
+                  </node>
+                  <node name="router">
+                    <properties>
+                      <help>Show linkstate Router information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 linkstate router"</command>
+                  </node>
+                </children>
+              </node>
+              <node name="neighbor">
+                <properties>
+                  <help>Show OSPFv3 neighbor information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 neighbor"</command>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed neighbor information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 neighbor detail"</command>
+                  </node>
+                  <node name="drchoice">
+                    <properties>
+                      <help>Show neighbor DR choice information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 neighbor drchoice"</command>
+                  </node>
+                </children>
+              </node>
+              <node name="redistribute">
+                <properties>
+                  <help>Show OSPFv3 redistribute external information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 redistribute"</command>
+              </node>
+              <node name="route">
+                <properties>
+                  <help>Show OSPFv3 routing table information</help>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 route"</command>
+                <children>
+                  <node name="external-1">
+                    <properties>
+                      <help>Show Type-1 External route information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route external-1"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Show detailed Type-1 External route information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 route external-1 detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="external-2">
+                    <properties>
+                      <help>Show Type-2 External route information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route external-2"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Show detailed Type-2 External route information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 route external-2 detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="inter-area">
+                    <properties>
+                      <help>Show Inter-Area route information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route inter-area"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Show detailed Inter-Area route information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 route inter-area detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="intra-area">
+                    <properties>
+                      <help>Show Intra-Area route information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route intra-area"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Show detailed Intra-Area route information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 route intra-area detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed route information</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route detail"</command>
+                  </node>
+                  <node name="summary">
+                    <properties>
+                      <help>Show route table summary</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route summary"</command>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="route">
+                <properties>
+                  <help>Show specified route/prefix information</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "show ipv6 ospf6 route $5"</command>
+                <children>
+                  <node name="longer">
+                    <properties>
+                      <help>Show routes longer than specified prefix</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route $5 longer"</command>
+                  </node>
+                  <node name="match">
+                    <properties>
+                      <help>Show routes matching specified prefix</help>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 route $5 match"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Detailed information</help>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 route $5 match detail"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
