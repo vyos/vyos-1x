@@ -107,5 +107,6 @@ for sa in sas:
                 sa_data.append(data)
 
 headers = ["Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out", "Remote address", "Remote ID", "Proposal"]
+sa_data = sorted(sa_data, key=lambda peer: peer[0])
 output = tabulate.tabulate(sa_data, headers)
 print(output)
