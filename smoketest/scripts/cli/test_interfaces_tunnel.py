@@ -67,9 +67,6 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.local_v4 = '192.0.2.1'
         self.local_v6 = '2001:db8::1'
 
-        self.session.set(['interfaces', 'dummy', source_if, 'address', self.local_v4 + '/32'])
-        self.session.set(['interfaces', 'dummy', source_if, 'address', self.local_v6 + '/128'])
-
         self._options = {
             'tun10': ['encapsulation ipip', 'remote-ip 192.0.2.10', 'local-ip ' + self.local_v4],
             'tun20': ['encapsulation gre',  'remote-ip 192.0.2.20', 'local-ip ' + self.local_v4],
@@ -77,6 +74,9 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self._interfaces = list(self._options)
         super().setUp()
+
+        self.session.set(['interfaces', 'dummy', source_if, 'address', self.local_v4 + '/32'])
+        self.session.set(['interfaces', 'dummy', source_if, 'address', self.local_v6 + '/128'])
 
     def tearDown(self):
         self.session.delete(['interfaces', 'dummy', source_if])
