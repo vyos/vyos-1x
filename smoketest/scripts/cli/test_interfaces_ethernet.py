@@ -35,16 +35,13 @@ def get_wpa_supplicant_value(interface, key):
 
 class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
-        self._base_path = ['interfaces', 'ethernet']
         self._test_ip = True
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
         self._test_ipv6 = True
-        self._test_mirror = True
-        self._interfaces = []
+        self._base_path = ['interfaces', 'ethernet']
+        self._mirror_interfaces = ['dum21354']
 
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
@@ -65,6 +62,8 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
                 # during initial system startup there is no hw-id node
                 mac = read_file(f'/sys/class/net/{interface}/address')
             self._macs[interface] = mac
+
+        super().setUp()
 
 
     def tearDown(self):

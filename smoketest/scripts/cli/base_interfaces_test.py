@@ -25,12 +25,32 @@ from netifaces import AF_INET6
 
 from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 from vyos.util import read_file
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
+
+def is_mirrored_to(interface, mirror_if, qdisc):
+    """
+    Ask TC if we are mirroring traffic to a discrete interface.
+
+    interface: source interface
+    mirror_if: destination where we mirror our data to
+    qdisc: must be ffff or 1 for ingress/egress
+    """
+    if qdisc not in ['ffff', '1']:
+        raise ValueError()
+
+    ret_val = False
+    tmp = cmd(f'tc -s -p filter ls dev {interface} parent {qdisc}: | grep mirred')
+    tmp = tmp.lower()
+    if mirror_if in tmp:
+        ret_val = True
+    return ret_val
+
 
 dhcp6c_config_file = '/run/dhcp6c/dhcp6c.{}.conf'
 def get_dhcp6c_config_value(interface, key):
@@ -56,24 +76,52 @@ class BasicInterfaceTest:
         _interfaces = []
         _qinq_range = ['10', '20', '30']
         _vlan_range = ['100', '200', '300', '2000']
+        _test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
+                      '2001:db8:1::ffff/64', '2001:db8:101::1/112']
+
+        _mirror_interfaces = []
         # choose IPv6 minimum MTU value for tests - this must always work
         _mtu = '1280'
 
         def setUp(self):
             self.session = ConfigSession(os.getpid())
 
-            self._test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
-                                '2001:db8:1::ffff/64', '2001:db8:101::1/112']
-            self._test_mtu = False
-            self._options = {}
+            # Setup mirror interfaces for SPAN (Switch Port Analyzer)
+            for span in self._mirror_interfaces:
+                section = Section.section(span)
+                self.session.set(['interfaces', section, span])
 
         def tearDown(self):
             # Ethernet is handled in its derived class
             if 'ethernet' not in self._base_path:
                 self.session.delete(self._base_path)
 
+            # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
+            for span in self._mirror_interfaces:
+                section = Section.section(span)
+                self.session.delete(['interfaces', section, span])
+
             self.session.commit()
             del self.session
+
+        def test_span_mirror(self):
+            if not self._mirror_interfaces:
+                return None
+
+            # Check the two-way mirror rules of ingress and egress
+            for mirror in self._mirror_interfaces:
+                for interface in self._interfaces:
+                    self.session.set(self._base_path + [interface, 'mirror', 'ingress', mirror])
+                    self.session.set(self._base_path + [interface, 'mirror', 'egress',  mirror])
+
+            self.session.commit()
+
+            # Verify config
+            for mirror in self._mirror_interfaces:
+                for interface in self._interfaces:
+                    self.assertTrue(is_mirrored_to(interface, mirror, 'ffff'))
+                    self.assertTrue(is_mirrored_to(interface, mirror, '1'))
+
 
         def test_interface_description(self):
             # Check if description can be added to interface and
