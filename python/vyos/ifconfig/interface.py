@@ -1019,7 +1019,7 @@ class Interface(Control):
 
         if 'is_mirror_intf' in self._config:
             source_if = next(iter(self._config['is_mirror_intf']))
-            config = self._config['is_mirror_intf'][source_if]
+            config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
         # Remove existing mirroring rules
         delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress; '
