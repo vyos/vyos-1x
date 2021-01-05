@@ -44,7 +44,8 @@ neighbor_config = {
         'cap_strict'  : '',
         },
     '192.0.2.3' : {
-        'description' : 'foo bar baz',
+#        XXX: not available in current Perl backend
+#       'description' : 'foo bar baz',
         'remote_as'   : '200',
         'passive'     : '',
         'multi_hop'   : '5',
