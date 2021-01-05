@@ -13,9 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import netifaces
-from vyos.util import cmd
-
 # Important note when you are adding new validation functions:
 #
 # The Control class will analyse the signature of the function in this file
@@ -59,6 +56,9 @@ def _is_intf_addr_assigned(intf, address, netmask=''):
     address 192.0.2.1/24.
     """
     from vyos.template import is_ipv4
+    from netifaces import ifaddresses
+    from netifaces import AF_INET
+    from netifaces import AF_INET6
 
     # check if the requested address type is configured at all
     # {
@@ -67,13 +67,13 @@ def _is_intf_addr_assigned(intf, address, netmask=''):
     # 10: [{'addr': 'fe80::a00:27ff:fed9:5b04%eth0', 'netmask': 'ffff:ffff:ffff:ffff::'}]
     # }
     try:
-        ifaces = netifaces.ifaddresses(intf)
+        ifaces = ifaddresses(intf)
     except ValueError as e:
         print(e)
         return False
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
-    addr_type = netifaces.AF_INET if is_ipv4(address) else netifaces.AF_INET6
+    addr_type = AF_INET if is_ipv4(address) else AF_INET6
 
     # Check every IP address on this interface for a match
     for ip in ifaces.get(addr_type,[]):
@@ -103,8 +103,8 @@ def is_addr_assigned(addr):
     """
     Verify if the given IPv4/IPv6 address is assigned to any interface
     """
-
-    for intf in netifaces.interfaces():
+    from netifaces import interfaces
+    for intf in interfaces():
         tmp = is_intf_addr_assigned(intf, addr)
         if tmp == True:
             return True
@@ -129,28 +129,34 @@ def is_subnet_connected(subnet, primary=False):
     """
     from ipaddress import ip_address
     from ipaddress import ip_network
+
+    from netifaces import ifaddresses
+    from netifaces import interfaces
+    from netifaces import AF_INET
+    from netifaces import AF_INET6
+
     from vyos.template import is_ipv6
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
-    addr_type = netifaces.AF_INET
+    addr_type = AF_INET
     if is_ipv6(subnet):
-        addr_type = netifaces.AF_INET6
+        addr_type = AF_INET6
 
-    for interface in netifaces.interfaces():
+    for interface in interfaces():
         # check if the requested address type is configured at all
-        if addr_type not in netifaces.ifaddresses(interface).keys():
+        if addr_type not in ifaddresses(interface).keys():
             continue
 
         # An interface can have multiple addresses, but some software components
         # only support the primary address :(
         if primary:
-            ip = netifaces.ifaddresses(interface)[addr_type][0]['addr']
+            ip = ifaddresses(interface)[addr_type][0]['addr']
             if ip_address(ip) in ip_network(subnet):
                 return True
         else:
             # Check every assigned IP address if it is connected to the subnet
             # in question
-            for ip in netifaces.ifaddresses(interface)[addr_type]:
+            for ip in ifaddresses(interface)[addr_type]:
                 # remove interface extension (e.g. %eth0) that gets thrown on the end of _some_ addrs
                 addr = ip['addr'].split('%')[0]
                 if ip_address(addr) in ip_network(subnet):
@@ -190,6 +196,7 @@ def assert_mtu(mtu, ifname):
     assert_number(mtu)
 
     import json
+    from vyos.util import cmd
     out = cmd(f'ip -j -d link show dev {ifname}')
     # [{"ifindex":2,"ifname":"eth0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"mtu":1500,"qdisc":"pfifo_fast","operstate":"UP","linkmode":"DEFAULT","group":"default","txqlen":1000,"link_type":"ether","address":"08:00:27:d9:5b:04","broadcast":"ff:ff:ff:ff:ff:ff","promiscuity":0,"min_mtu":46,"max_mtu":16110,"inet6_addr_gen_mode":"none","num_tx_queues":1,"num_rx_queues":1,"gso_max_size":65536,"gso_max_segs":65535}]
     parsed = json.loads(out)[0]
