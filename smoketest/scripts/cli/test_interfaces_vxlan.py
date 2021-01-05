@@ -21,8 +21,6 @@ from base_interfaces_test import BasicInterfaceTest
 
 class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
         self._test_mtu = True
         self._base_path = ['interfaces', 'vxlan']
         self._options = {
@@ -30,6 +28,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
             'vxlan1': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
         }
         self._interfaces = list(self._options)
+        super().setUp()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

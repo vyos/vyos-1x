@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-import jmespath
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
@@ -23,8 +22,6 @@ from vyos.util import cmd
 
 class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
         self._base_path = ['interfaces', 'l2tpv3']
         self._options = {
             'l2tpeth10': ['local-ip 127.0.0.1', 'remote-ip 127.10.10.10',
@@ -37,6 +34,7 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
                           'source-port 2020', 'destination-port 20202'],
         }
         self._interfaces = list(self._options)
+        super().setUp()
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()

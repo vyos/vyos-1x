@@ -33,8 +33,6 @@ def get_config_value(interface, key):
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
         self._base_path = ['interfaces', 'wireless']
         self._options = {
             'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
@@ -47,6 +45,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
                        'type access-point', 'address 192.0.2.13/30', 'channel 0'],
         }
         self._interfaces = list(self._options)
+        super().setUp()
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly

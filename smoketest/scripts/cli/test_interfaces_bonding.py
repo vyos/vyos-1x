@@ -26,17 +26,15 @@ from vyos.util import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
-        self._base_path = ['interfaces', 'bonding']
-        self._interfaces = ['bond0']
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
         self._test_ipv6 = True
-        self._test_mirror = True
-
+        self._base_path = ['interfaces', 'bonding']
+        self._interfaces = ['bond0']
+        self._mirror_interfaces = ['dum21354']
         self._members = []
+
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
@@ -49,6 +47,8 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         self._options['bond0'] = []
         for member in self._members:
             self._options['bond0'].append(f'member interface {member}')
+
+        super().setUp()
 
 
     def test_add_single_ip_address(self):

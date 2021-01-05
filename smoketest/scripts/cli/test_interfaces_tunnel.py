@@ -62,11 +62,8 @@ def tunnel_conf(interface):
 
 class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
-        self._base_path = ['interfaces', 'tunnel']
         self._test_mtu = True
-
+        self._base_path = ['interfaces', 'tunnel']
         self.local_v4 = '192.0.2.1'
         self.local_v6 = '2001:db8::1'
 
@@ -79,6 +76,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         }
 
         self._interfaces = list(self._options)
+        super().setUp()
 
     def tearDown(self):
         self.session.delete(['interfaces', 'dummy', source_if])

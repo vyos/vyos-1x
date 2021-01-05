@@ -28,17 +28,13 @@ from vyos.util import read_file
 
 class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-        super().setUp()
-
         self._test_ipv6 = True
         self._test_vlan = True
         self._test_qinq = True
-        self._test_mirror = True
-
         self._base_path = ['interfaces', 'bridge']
-        self._interfaces = ['br0']
-
+        self._mirror_interfaces = ['dum21354']
         self._members = []
+
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
@@ -51,7 +47,9 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._options['br0'] = []
         for member in self._members:
             self._options['br0'].append(f'member interface {member}')
+        self._interfaces = list(self._options)
 
+        super().setUp()
 
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority
@@ -188,5 +186,5 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 self.session.delete(['interfaces', 'ethernet', member, 'vif', vif])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)
 
