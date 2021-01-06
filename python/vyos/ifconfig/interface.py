@@ -265,7 +265,7 @@ class Interface(Control):
             # If we can not connect to the interface then let the caller know
             # as the class could not be correctly initialised
             else:
-                raise Exception('interface "{}" not found'.format(self.config['ifname']))
+                raise Exception(f'interface "{ifname}" not found!')
 
         # temporary list of assigned IP addresses
         self._addr = []
