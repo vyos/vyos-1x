@@ -20,7 +20,7 @@
              </properties>
              <command>echo "Package versions:"; dpkg -l | awk '$0~/>/{exit}1'</command>
           </leafNode>
-          <leafNode name="quagga">
+          <leafNode name="frr">
              <properties>
                <help>Show Quagga version information</help>
              </properties>
