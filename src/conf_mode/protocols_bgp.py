@@ -50,32 +50,37 @@ def verify(bgp):
 
     # Check if declared more than one ASN
     if len(bgp) > 1:
-        raise ConfigError('Only one BGP AS can be defined!')
+        raise ConfigError('Only one BGP AS number can be defined!')
 
     for asn, asn_config in bgp.items():
+        import pprint
+        pprint.pprint(asn_config)
+
         # Common verification for both peer-group and neighbor statements
-        for neigh in ['neighbor', 'peer_group']:
+        for neighbor in ['neighbor', 'peer_group']:
             # bail out early if there is no neighbor or peer-group statement
             # this also saves one indention level
-            if neigh not in asn_config:
+            if neighbor not in asn_config:
+                print(f'no {neighbor} found in config')
                 continue
 
-            #for neighbor, config in asn_config[neigh].items():
-                '''
-                # These checks need to be modified. Because peer-group can be declared without 'remote-as'.
-                # When 'remote-as' configured for specific neighbor in peer-group. For example
-                #
+            for peer, peer_config in asn_config[neighbor].items():
+                # Only regular "neighbor" statement can have a peer-group set
+                # Check if the configure peer-group exists
+                if 'peer_group' in peer_config:
+                    peer_group = peer_config['peer_group']
+                    if peer_group not in asn_config['peer_group']:
+                        raise ConfigError(f'Specified peer-group "{peer_group}" for '\
+                                          f'neighbor "{neighbor}" does not exist!')
 
-                set protocols nbgp 65001 neighbor 100.64.0.2 peer-group 'FOO'
-                set protocols nbgp 65001 neighbor 100.64.0.2 remote-as '65002'
-                set protocols nbgp 65001 peer-group FOO
-
-                '''
-                #if 'remote_as' not in config and 'peer_group' not in config:
-                #    raise ConfigError(f'BGP remote-as must be specified for "{neighbor}"!')
-
-                #if 'remote_as' in config and 'peer_group' in config:
-                #    raise ConfigError(f'BGP peer-group member "{neighbor}" cannot override remote-as of peer-group!')
+                # Some checks can/must only be done on a neighbor and nor a peer-group
+                if neighbor == 'neighbor':
+                    # remote-as must be either set explicitly for the neighbor
+                    # or for the entire peer-group
+                    if 'remote_as' not in peer_config:
+                        peer_group = peer_config['peer_group']
+                        if 'remote_as' not in asn_config['peer_group'][peer_group]:
+                            raise ConfigError('Remote AS must be set for neighbor or peer-group!')
 
     return None
 
