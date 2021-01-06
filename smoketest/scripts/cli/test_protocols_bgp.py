@@ -245,5 +245,98 @@ class TestProtocolsBGP(unittest.TestCase):
             self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
             self.verify_frr_config(peer, peer_config, frrconfig)
 
+
+    def test_bgp_04_afi_ipv4(self):
+        networks = {
+            '10.0.0.0/8' : {
+                'as_set' : '',
+                },
+            '100.64.0.0/10' : {
+                'as_set' : '',
+                },
+            '192.168.0.0/16' : {
+                'summary_only' : '',
+                },
+        }
+
+        # We want to redistribute ...
+        redistributes = ['connected', 'kernel', 'ospf', 'rip', 'static']
+        for redistribute in redistributes:
+            self.session.set(base_path + ['address-family', 'ipv4-unicast',
+                                          'redistribute', redistribute])
+
+        for network, network_config in networks.items():
+            self.session.set(base_path + ['address-family', 'ipv4-unicast',
+                                          'network', network])
+            if 'as_set' in network_config:
+                self.session.set(base_path + ['address-family', 'ipv4-unicast',
+                                              'aggregate-address', network, 'as-set'])
+            if 'summary_only' in network_config:
+                self.session.set(base_path + ['address-family', 'ipv4-unicast',
+                                              'aggregate-address', network, 'summary-only'])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = getFRRBGPconfig()
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' address-family ipv4 unicast', frrconfig)
+
+        for redistribute in redistributes:
+            self.assertIn(f' redistribute {redistribute}', frrconfig)
+
+        for network, network_config in networks.items():
+            self.assertIn(f' network {network}', frrconfig)
+            if 'as_set' in network_config:
+                self.assertIn(f' aggregate-address {network} as-set', frrconfig)
+            if 'summary_only' in network_config:
+                self.assertIn(f' aggregate-address {network} summary-only', frrconfig)
+
+
+    def test_bgp_05_afi_ipv6(self):
+        networks = {
+            '2001:db8:100::/48' : {
+                },
+            '2001:db8:200::/48' : {
+                },
+            '2001:db8:300::/48' : {
+                'summary_only' : '',
+                },
+        }
+
+        # We want to redistribute ...
+        redistributes = ['connected', 'kernel', 'ospfv3', 'ripng', 'static']
+        for redistribute in redistributes:
+            self.session.set(base_path + ['address-family', 'ipv6-unicast',
+                                          'redistribute', redistribute])
+
+        for network, network_config in networks.items():
+            self.session.set(base_path + ['address-family', 'ipv6-unicast',
+                                          'network', network])
+            if 'summary_only' in network_config:
+                self.session.set(base_path + ['address-family', 'ipv6-unicast',
+                                              'aggregate-address', network, 'summary-only'])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = getFRRBGPconfig()
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' address-family ipv6 unicast', frrconfig)
+
+        for redistribute in redistributes:
+            # FRR calls this OSPF6
+            if redistribute == 'ospfv3':
+                redistribute = 'ospf6'
+            self.assertIn(f' redistribute {redistribute}', frrconfig)
+
+        for network, network_config in networks.items():
+            self.assertIn(f' network {network}', frrconfig)
+            if 'as_set' in network_config:
+                self.assertIn(f' aggregate-address {network} summary-only', frrconfig)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
