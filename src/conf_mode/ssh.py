@@ -28,7 +28,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/run/ssh/sshd_config'
+config_file = r'/run/sshd/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
 def get_config(config=None):

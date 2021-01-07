@@ -25,7 +25,7 @@ from vyos.util import process_named_running
 from vyos.util import read_file
 
 PROCESS_NAME = 'sshd'
-SSHD_CONF = '/run/ssh/sshd_config'
+SSHD_CONF = '/run/sshd/sshd_config'
 base_path = ['service', 'ssh']
 vrf = 'ssh-test'
 
