@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,10 +24,11 @@ from vyos.configdict import dict_merge
 from vyos.configdict import get_interface_dict
 from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
-from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_vrf
 from vyos.ifconfig import Interface
 from vyos.ifconfig import GREIf
 from vyos.ifconfig import GRETapIf
@@ -121,6 +122,9 @@ def verify(tunnel):
     elif tunnel['encapsulation'] == 'gre':
         if 'local_ip' in tunnel and is_ipv6(tunnel['local_ip']):
             raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
+
+    if 'source_interface' in tunnel:
+        verify_interface_exists(tunnel['source_interface'])
 
 def generate(tunnel):
     return None

@@ -23,13 +23,13 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
+from vyos.configverify import verify_eapol
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_mirror
 from vyos.configverify import verify_mtu
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
-from vyos.configverify import verify_eapol
-from vyos.configverify import verify_mirror
 from vyos.ifconfig import EthernetIf
 from vyos.template import render
 from vyos.util import call
@@ -59,7 +59,8 @@ def verify(ethernet):
     if 'deleted' in ethernet:
         return None
 
-    verify_interface_exists(ethernet)
+    ifname = ethernet['ifname']
+    verify_interface_exists(ifname)
 
     if ethernet.get('speed', None) == 'auto':
         if ethernet.get('duplex', None) != 'auto':
@@ -77,7 +78,6 @@ def verify(ethernet):
     verify_eapol(ethernet)
     verify_mirror(ethernet)
 
-    ifname = ethernet['ifname']
     # verify offloading capabilities
     if 'offload' in ethernet and 'rps' in ethernet['offload']:
         if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):

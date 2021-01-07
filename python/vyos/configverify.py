@@ -136,15 +136,14 @@ def verify_bridge_delete(config):
             'Interface "{ifname}" cannot be deleted as it is a '
             'member of bridge "{is_bridge_member}"!'.format(**config))
 
-def verify_interface_exists(config):
+def verify_interface_exists(ifname):
     """
     Common helper function used by interface implementations to perform
     recurring validation if an interface actually exists.
     """
     from netifaces import interfaces
-    if not config['ifname'] in interfaces():
-        raise ConfigError('Interface "{ifname}" does not exist!'
-                          .format(**config))
+    if ifname not in interfaces():
+        raise ConfigError(f'Interface "{ifname}" does not exist!')
 
 def verify_source_interface(config):
     """
