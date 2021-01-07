@@ -193,9 +193,11 @@ def verify_dhcpv6(config):
                 raise ConfigError('DHCPv6-PD requires an interface where to assign '
                                   'the delegated prefix!')
 
-            for interface in interfaces:
+            for count, interface in enumerate(interfaces):
                 if 'sla_id' in interfaces[interface]:
                     sla_ids.append(interfaces[interface]['sla_id'])
+                else:
+                    sla_ids.append(str(count))
 
             # Check for duplicates
             duplicates = [x for n, x in enumerate(sla_ids) if x in sla_ids[:n]]
