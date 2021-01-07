@@ -4,7 +4,6 @@
     <help>RADIUS based user authentication</help>
   </properties>
   <children>
-    #include <include/source-address-ipv4-ipv6.xml.i>
     <tagNode name="server">
       <properties>
         <help>RADIUS server configuration</help>
@@ -27,6 +26,7 @@
         #include <include/radius-server-port.xml.in>
       </children>
     </tagNode>
+    #include <include/source-address-ipv4-ipv6.xml.i>
   </children>
 </node>
 <!-- included end -->

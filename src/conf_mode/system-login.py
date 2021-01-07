@@ -16,33 +16,29 @@
 
 import os
 
-from crypt import crypt, METHOD_SHA512
-from netifaces import interfaces
+from crypt import crypt
+from crypt import METHOD_SHA512
 from psutil import users
-from pwd import getpwall, getpwnam
+from pwd import getpwall
+from pwd import getpwnam
 from spwd import getspnam
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.template import is_ipv4
-from vyos.util import cmd, call, DEVNULL, chmod_600, chmod_755
+from vyos.util import cmd
+from vyos.util import call
+from vyos.util import DEVNULL
+from vyos.util import dict_search
+from vyos.xml import defaults
 from vyos import ConfigError
-
 from vyos import airbag
 airbag.enable()
 
 radius_config_file = "/etc/pam_radius_auth.conf"
-
-default_config_data = {
-    'deleted': False,
-    'add_users': [],
-    'del_users': [],
-    'radius_server': [],
-    'radius_source_address': [],
-    'radius_vrf': ''
-}
-
 
 def get_local_users():
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
@@ -58,215 +54,130 @@ def get_local_users():
 
 
 def get_config(config=None):
-    login = default_config_data
     if config:
         conf = config
     else:
         conf = Config()
-    base_level = ['system', 'login']
-
-    # We do not need to check if the nodes exist or not and bail out early
-    # ... this would interrupt the following logic on determine which users
-    # should be deleted and which users should stay.
-    #
-    # All fine so far!
-
-    # Read in all local users and store to list
-    for username in conf.list_nodes(base_level + ['user']):
-        user = {
-            'name': username,
-            'password_plaintext': '',
-            'password_encrypted': '!',
-            'public_keys': [],
-            'full_name': '',
-            'home_dir': '/home/' + username,
-        }
-        conf.set_level(base_level + ['user', username])
-
-        # Plaintext password
-        if conf.exists(['authentication', 'plaintext-password']):
-            user['password_plaintext'] = conf.return_value(
-                ['authentication', 'plaintext-password'])
-
-        # Encrypted password
-        if conf.exists(['authentication', 'encrypted-password']):
-            user['password_encrypted'] = conf.return_value(
-                ['authentication', 'encrypted-password'])
-
-        # User real name
-        if conf.exists(['full-name']):
-            user['full_name'] = conf.return_value(['full-name'])
-
-        # User home-directory
-        if conf.exists(['home-directory']):
-            user['home_dir'] = conf.return_value(['home-directory'])
-
-        # Read in public keys
-        for id in conf.list_nodes(['authentication', 'public-keys']):
-            key = {
-                'name': id,
-                'key': '',
-                'options': '',
-                'type': ''
-            }
-            conf.set_level(base_level + ['user', username, 'authentication',
-                                         'public-keys', id])
-
-            # Public Key portion
-            if conf.exists(['key']):
-                key['key'] = conf.return_value(['key'])
-
-            # Options for individual public key
-            if conf.exists(['options']):
-                key['options'] = conf.return_value(['options'])
-
-            # Type of public key
-            if conf.exists(['type']):
-                key['type'] = conf.return_value(['type'])
-
-            # Append individual public key to list of user keys
-            user['public_keys'].append(key)
-
-        login['add_users'].append(user)
-
-    #
-    # RADIUS configuration
-    #
-    conf.set_level(base_level + ['radius'])
-
-    if conf.exists(['source-address']):
-        login['radius_source_address'] = conf.return_values(['source-address'])
-
-    # retrieve VRF instance
-    if conf.exists(['vrf']):
-        login['radius_vrf'] = conf.return_value(['vrf'])
-
-    # Read in all RADIUS servers and store to list
-    for server in conf.list_nodes(['server']):
-        server_cfg = {
-            'address': server,
-            'disabled': False,
-            'key': '',
-            'port': '1812',
-            'timeout': '2',
-            'priority': 255
-        }
-        conf.set_level(base_level + ['radius', 'server', server])
-
-        # Check if RADIUS server was temporary disabled
-        if conf.exists(['disable']):
-            server_cfg['disabled'] = True
-
-        # RADIUS shared secret
-        if conf.exists(['key']):
-            server_cfg['key'] = conf.return_value(['key'])
-
-        # RADIUS authentication port
-        if conf.exists(['port']):
-            server_cfg['port'] = conf.return_value(['port'])
-
-        # RADIUS session timeout
-        if conf.exists(['timeout']):
-            server_cfg['timeout'] = conf.return_value(['timeout'])
-
-        # Check if RADIUS server has priority
-        if conf.exists(['priority']):
-            server_cfg['priority'] = int(conf.return_value(['priority']))
-
-        # Append individual RADIUS server configuration to global server list
-        login['radius_server'].append(server_cfg)
+    base = ['system', 'login']
+    login = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                 get_first_key=True)
 
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
-    cli_users = [tmp['name'] for tmp in login['add_users']]
-    # create a list of all users, cli and users
-    all_users = list(set(local_users+cli_users))
+    cli_users = []
+    if 'user' in login:
+        cli_users = list(login['user'])
 
-    # Remove any normal users that dos not exist in the current configuration.
-    # This can happen if user is added but configuration was not saved and
-    # system is rebooted.
-    login['del_users'] = [tmp for tmp in all_users if tmp not in cli_users]
+        # XXX: T2665: we can not safely rely on the defaults() when there are
+        # tagNodes in place, it is better to blend in the defaults manually.
+        default_values = defaults(base + ['user'])
+        for user in login['user']:
+            login['user'][user] = dict_merge(default_values, login['user'][user])
+
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    default_values = defaults(base + ['radius', 'server'])
+    for server in dict_search('radius.server', login) or []:
+        login['radius']['server'][server] = dict_merge(default_values,
+            login['radius']['server'][server])
+
+    # XXX: for a yet unknown reason when we only have one source-address
+    # get_config_dict() will show a string over a string
+    if 'radius' in login and 'source_address' in login['radius']:
+        print(type(login['radius']['source_address']))
+        if isinstance(login['radius']['source_address'], str):
+            login['radius']['source_address'] = [login['radius']['source_address']]
+
+    # create a list of all users, cli and users
+    all_users = list(set(local_users + cli_users))
+    # We will remove any normal users that dos not exist in the current
+    # configuration. This can happen if user is added but configuration was not
+    # saved and system is rebooted.
+    rm_users = [tmp for tmp in all_users if tmp not in cli_users]
+    if rm_users: login.update({'rm_users' : rm_users})
 
     return login
 
-
 def verify(login):
-    cur_user = os.environ['SUDO_USER']
-    if cur_user in login['del_users']:
-        raise ConfigError(
-            'Attempting to delete current user: {}'.format(cur_user))
+    if 'rm_users' in login:
+        cur_user = os.environ['SUDO_USER']
+        if cur_user in login['rm_users']:
+            raise ConfigError(f'Attempting to delete current user: {cur_user}')
 
-    for user in login['add_users']:
-        for key in user['public_keys']:
-            if not key['type']:
-                raise ConfigError(
-                    'SSH public key type missing for "{name}"!'.format(**key))
-
-            if not key['key']:
-                raise ConfigError(
-                    'SSH public key for id "{name}" missing!'.format(**key))
+    if 'user' in login:
+        for user, user_config in login['user'].items():
+            for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
+                if 'type' not in pubkey_options:
+                    raise ConfigError(f'Missing type for public-key "{pubkey}"!')
+                if 'key' not in pubkey_options:
+                    raise ConfigError(f'Missing key for public-key "{pubkey}"!')
 
     # At lease one RADIUS server must not be disabled
-    if len(login['radius_server']) > 0:
+    if 'radius' in login:
+        if 'server' not in login['radius']:
+            raise ConfigError('No RADIUS server defined!')
+
         fail = True
-        for server in login['radius_server']:
-            if not server['disabled']:
+        for server, server_config in dict_search('radius.server', login).items():
+            if 'key' not in server_config:
+                raise ConfigError(f'RADIUS server "{server}" requires key!')
+
+            if 'disabled' not in server_config:
                 fail = False
+                continue
         if fail:
-            raise ConfigError('At least one RADIUS server must be active.')
+            raise ConfigError('All RADIUS servers are disabled')
 
-    ipv4_count = 0
-    ipv6_count = 0
-    for address in login['radius_source_address']:
-        if is_ipv4(address): ipv4_count += 1
-        else: ipv6_count += 1
+        verify_vrf(login['radius'])
 
-    if ipv4_count > 1:
-        raise ConfigError('Only one IPv4 source-address can be set!')
-    if ipv6_count > 1:
-        raise ConfigError('Only one IPv6 source-address can be set!')
+        if 'source_address' in login['radius']:
+            ipv4_count = 0
+            ipv6_count = 0
+            for address in login['radius']['source_address']:
+                if is_ipv4(address): ipv4_count += 1
+                else:                ipv6_count += 1
 
-    vrf_name = login['radius_vrf']
-    if vrf_name and vrf_name not in interfaces():
-        raise ConfigError(f'VRF "{vrf_name}" does not exist')
+            if ipv4_count > 1:
+                raise ConfigError('Only one IPv4 source-address can be set!')
+            if ipv6_count > 1:
+                raise ConfigError('Only one IPv6 source-address can be set!')
 
     return None
 
 
 def generate(login):
     # calculate users encrypted password
-    for user in login['add_users']:
-        if user['password_plaintext']:
-            user['password_encrypted'] = crypt(
-                user['password_plaintext'], METHOD_SHA512)
-            user['password_plaintext'] = ''
+    if 'user' in login:
+        for user, user_config in login['user'].items():
+            tmp = dict_search('authentication.plaintext_password', user_config)
+            if tmp:
+                encrypted_password = crypt(tmp, METHOD_SHA512)
+                login['user'][user]['authentication']['encrypted_password'] = encrypted_password
+                del login['user'][user]['authentication']['plaintext_password']
 
-            # remove old plaintext password and set new encrypted password
-            env = os.environ.copy()
-            env['vyos_libexec_dir'] = '/usr/libexec/vyos'
+                # remove old plaintext password and set new encrypted password
+                env = os.environ.copy()
+                env['vyos_libexec_dir'] = '/usr/libexec/vyos'
 
-            call("/opt/vyatta/sbin/my_delete system login user '{name}' "
-                 "authentication plaintext-password"
-                 .format(**user), env=env)
+                call(f"/opt/vyatta/sbin/my_delete system login user '{user}' "
+                     "authentication plaintext-password", env=env)
 
-            call("/opt/vyatta/sbin/my_set system login user '{name}' "
-                 "authentication encrypted-password '{password_encrypted}'"
-                 .format(**user), env=env)
+                call(f"/opt/vyatta/sbin/my_set system login user '{user}' "
+                     "authentication encrypted-password '{encrypted_password}'", env=env)
+            else:
+                try:
+                    if getspnam(user).sp_pwdp == dict_search('authentication.encrypted_password', user_config):
+                        # If the current encrypted bassword matches the encrypted password
+                        # from the config - do not update it. This will remove the encrypted
+                        # value from the system logs.
+                        #
+                        # The encrypted password will be set only once during the first boot
+                        # after an image upgrade.
+                        del login['user'][user]['authentication']['encrypted_password']
+                except:
+                    pass
 
-        else:
-            try:
-                if getspnam(user['name']).sp_pwdp == user['password_encrypted']:
-                    # If the current encrypted bassword matches the encrypted password
-                    # from the config - do not update it. This will remove the encrypted
-                    # value from the system logs.
-                    #
-                    # The encrypted password will be set only once during the first boot
-                    # after an image upgrade.
-                    user['password_encrypted'] = ''
-            except:
-                pass
-
-    if len(login['radius_server']) > 0:
+    if 'radius' in login:
         render(radius_config_file, 'login/pam_radius_auth.conf.tmpl', login,
                    permission=0o600, user='root', group='root')
     else:
@@ -277,93 +188,72 @@ def generate(login):
 
 
 def apply(login):
-    for user in login['add_users']:
-        # make new user using vyatta shell and make home directory (-m),
-        # default group of 100 (users)
-        command = "useradd -m -N"
-        # check if user already exists:
-        if user['name'] in get_local_users():
-            # update existing account
-            command = "usermod"
+    if 'user' in login:
+        for user, user_config in login['user'].items():
+            # make new user using vyatta shell and make home directory (-m),
+            # default group of 100 (users)
+            command = 'useradd -m -N'
+            # check if user already exists:
+            if user in get_local_users():
+                # update existing account
+                command = 'usermod'
 
-        # all accounts use /bin/vbash
-        command += " -s /bin/vbash"
-        # we need to use '' quotes when passing formatted data to the shell
-        # else it will not work as some data parts are lost in translation
-        if user['password_encrypted']:
-            command += " -p '{password_encrypted}'".format(**user)
+            # all accounts use /bin/vbash
+            command += ' -s /bin/vbash'
+            # we need to use '' quotes when passing formatted data to the shell
+            # else it will not work as some data parts are lost in translation
+            tmp = dict_search('authentication.encrypted_password', user_config)
+            if tmp: command += f" -p '{tmp}'"
 
-        if user['full_name']:
-            command += " -c '{full_name}'".format(**user)
+            tmp = dict_search('full_name', user_config)
+            if tmp: command += f" -c '{tmp}'"
 
-        if user['home_dir']:
-            command += " -d '{home_dir}'".format(**user)
+            tmp = dict_search('home_directory', user_config)
+            if tmp: command += f" -d '{tmp}'"
+            else: command += f" -d '/home/{user}'"
 
-        command += " -G frrvty,vyattacfg,sudo,adm,dip,disk {name}".format(**user)
+            command += f' -G frrvty,vyattacfg,sudo,adm,dip,disk {user}'
 
-        try:
-            cmd(command)
+            try:
+                cmd(command)
 
-            uid = getpwnam(user['name']).pw_uid
-            gid = getpwnam(user['name']).pw_gid
+                # we should not rely on the value stored in
+                # user_config['home_directory'], as a crazy user will choose
+                # username root or any other system user which will fail.
+                #
+                # XXX: Should we deny using root at all?
+                home_dir = getpwnam(user).pw_dir
+                render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.tmpl',
+                       user_config, permission=0o600, user=user, group='users')
 
-            # we should not rely on the value stored in user['home_dir'], as a
-            # crazy user will choose username root or any other system user
-            # which will fail. Should we deny using root at all?
-            home_dir = getpwnam(user['name']).pw_dir
+            except Exception as e:
+                raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
 
-            # install ssh keys
-            ssh_key_dir = home_dir + '/.ssh'
-            if not os.path.isdir(ssh_key_dir):
-                os.mkdir(ssh_key_dir)
-                os.chown(ssh_key_dir, uid, gid)
-                chmod_755(ssh_key_dir)
+    if 'rm_users' in login:
+        for user in login['rm_users']:
+            try:
+                # Logout user if he is still logged in
+                if user in list(set([tmp[0] for tmp in users()])):
+                    print(f'{user} is logged in, forcing logout!')
+                    call(f'pkill -HUP -u {user}')
 
-            ssh_key_file = ssh_key_dir + '/authorized_keys'
-            with open(ssh_key_file, 'w') as f:
-                f.write("# Automatically generated by VyOS\n")
-                f.write("# Do not edit, all changes will be lost\n")
+                # Remove user account but leave home directory to be safe
+                call(f'userdel -r {user}', stderr=DEVNULL)
 
-                for id in user['public_keys']:
-                    line = ''
-                    if id['options']:
-                        line = '{options} '.format(**id)
-
-                    line += '{type} {key} {name}\n'.format(**id)
-                    f.write(line)
-
-            os.chown(ssh_key_file, uid, gid)
-            chmod_600(ssh_key_file)
-
-        except Exception as e:
-            print(e)
-            raise ConfigError('Adding user "{name}" raised exception'
-                              .format(**user))
-
-    for user in login['del_users']:
-        try:
-            # Logout user if he is logged in
-            if user in list(set([tmp[0] for tmp in users()])):
-                print(f'{user} is logged in, forcing logout')
-                call(f'pkill -HUP -u {user}')
-
-            # Remove user account but leave home directory to be safe
-            call(f'userdel -r {user}', stderr=DEVNULL)
-
-        except Exception as e:
-            raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
+            except Exception as e:
+                raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
 
     #
     # RADIUS configuration
     #
-    if len(login['radius_server']) > 0:
-        try:
-            env = os.environ.copy()
-            env['DEBIAN_FRONTEND'] = 'noninteractive'
+    env = os.environ.copy()
+    env['DEBIAN_FRONTEND'] = 'noninteractive'
+    try:
+        if 'radius' in login:
             # Enable RADIUS in PAM
             cmd('pam-auth-update --package --enable radius', env=env)
-
-            # Make NSS system aware of RADIUS, too
+            # Make NSS system aware of RADIUS
+            # This fancy snipped was copied from old Vyatta code
             command = "sed -i -e \'/\smapname/b\' \
                           -e \'/^passwd:/s/\s\s*/&mapuid /\' \
                           -e \'/^passwd:.*#/s/#.*/mapname &/\' \
@@ -371,31 +261,20 @@ def apply(login):
                           -e \'/^group:.*#/s/#.*/ mapname &/\' \
                           -e \'/^group:[^#]*$/s/: */&mapname /\' \
                           /etc/nsswitch.conf"
-
-            cmd(command)
-
-        except Exception as e:
-            raise ConfigError('RADIUS configuration failed: {}'.format(e))
-
-    else:
-        try:
-            env = os.environ.copy()
-            env['DEBIAN_FRONTEND'] = 'noninteractive'
-
+        else:
             # Disable RADIUS in PAM
-            cmd("pam-auth-update --package --remove radius", env=env)
-
+            cmd('pam-auth-update --package --remove radius', env=env)
+            # Drop RADIUS from NSS NSS system
+            # This fancy snipped was copied from old Vyatta code
             command = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
                    -e \'/^passwd:.*[ \t]mapname/s/[ \t]mapname//\' \
                    -e \'/^group:.*[ \t]mapname/s/[ \t]mapname//\' \
                    -e \'s/[ \t]*$//\' \
                    /etc/nsswitch.conf"
 
-            cmd(command)
-
-        except Exception as e:
-            raise ConfigError(
-                'Removing RADIUS configuration failed.\n{}'.format(e))
+        cmd(command)
+    except Exception as e:
+        raise ConfigError(f'RADIUS configuration failed: {e}')
 
     return None
 
