@@ -60,6 +60,8 @@ interface_definitions: $(BUILD_DIR) $(obj)
 	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ip/node.def $(TMPL_DIR)/interfaces/vti/node.tag/ip
 	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/vti/node.tag/ipv6
 
+	find $(TMPL_DIR) -name node.def -empty && sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
+
 .PHONY: op_mode_definitions
 .ONESHELL:
 op_mode_definitions:
@@ -84,6 +86,8 @@ op_mode_definitions:
 	# XXX: ping must be able to recursivly call itself as the
 	# options are provided from the script itself
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
+
+	find $(op_TMPL_DIR) -name node.def -empty && sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
 .PHONY: component_versions
 .ONESHELL:
