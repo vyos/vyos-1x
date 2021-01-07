@@ -9,12 +9,7 @@
           <priority>900</priority>
         </properties>
         <children>
-          <leafNode name="disable">
-            <properties>
-              <help>Option to disable DHCPv6 server</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/generic-disable-node.xml.i>
           <leafNode name="preference">
             <properties>
               <help>Preference of this DHCPv6 server compared with others</help>
@@ -37,12 +32,7 @@
               <constraintErrorMessage>Invalid DHCPv6 shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Option to disable DHCPv6 configuration for shared-network</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <node name="common-options">
                 <properties>
                   <help>Common options to distribute to all clients, including stateless clients</help>
@@ -324,12 +314,7 @@
                       <constraintErrorMessage>Invalid static mapping name. May only contain letters, numbers and .-_</constraintErrorMessage>
                     </properties>
                     <children>
-                      <leafNode name="disable">
-                        <properties>
-                          <help>Option to disable static mapping</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-disable-node.xml.i>
                       <leafNode name="identifier">
                         <properties>
                           <help>Client identifier (DUID) for this static mapping</help>

@@ -9,12 +9,7 @@
           <priority>740</priority>
         </properties>
         <children>
-          <leafNode name="disable">
-            <properties>
-              <help>Option to disable IGMP proxy</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/generic-disable-node.xml.i>
           <leafNode name="disable-quickleave">
             <properties>
               <help>Option to disable "quickleave"</help>

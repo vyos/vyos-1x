@@ -9,12 +9,7 @@
           <priority>990</priority>
         </properties>
         <children>
-          <leafNode name="disable">
-            <properties>
-              <help>Globally disable broadcast relay service</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/generic-disable-node.xml.i>
           <tagNode name="id">
             <properties>
               <help>Unique ID for each UDP port to forward</help>
@@ -27,12 +22,7 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable broadcast relay service instance</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="address">
                 <properties>
                   <help>Set source IP of forwarded packets, otherwise original senders address is used</help>

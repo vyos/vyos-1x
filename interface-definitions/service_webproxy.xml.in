@@ -394,12 +394,7 @@
               <help>URL filtering settings</help>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable URL filtering</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <node name="squidguard">
                 <properties>
                   <help>URL filtering via squidGuard redirector</help>

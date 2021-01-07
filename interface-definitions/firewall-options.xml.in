@@ -16,12 +16,7 @@
               </completionHelp>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable this rule</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="adjust-mss">
                 <properties>
                   <help>Adjust MSS for IPv4 transit packets</help>

@@ -1045,12 +1045,7 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="disable">
-                        <properties>
-                          <help>Option to disable vpn tunnel</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-disable-node.xml.i>
                       <leafNode name="esp-group">
                         <properties>
                           <help>ESP group name</help>

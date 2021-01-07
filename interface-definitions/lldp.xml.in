@@ -25,12 +25,7 @@
               </completionHelp>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable lldp on this interface</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <node name="location">
                 <properties>
                   <help>LLDP-MED location data [REQUIRED]</help>

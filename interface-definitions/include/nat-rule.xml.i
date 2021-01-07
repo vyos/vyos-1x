@@ -26,12 +26,7 @@
         #include <include/nat-port.xml.i>
       </children>
     </node>
-    <leafNode name="disable">
-      <properties>
-        <help>Disable NAT rule</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/generic-disable-node.xml.i>
     <leafNode name="exclude">
       <properties>
         <help>Exclude packets matching this rule from NAT</help>

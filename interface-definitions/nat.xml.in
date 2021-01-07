@@ -79,12 +79,7 @@
                   <help>Rule description</help>
                 </properties>
               </leafNode>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable NAT rule</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               #include <include/nat-interface.xml.i>
               <node name="source">
                 <properties>

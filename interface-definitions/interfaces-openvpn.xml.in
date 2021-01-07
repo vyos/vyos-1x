@@ -418,12 +418,7 @@
                   </valueHelp>
                 </properties>
                 <children>
-                  <leafNode name="disable">
-                    <properties>
-                      <help>Option to disable client connection</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-disable-node.xml.i>
                   <leafNode name="ip">
                     <properties>
                       <help>IP address of the client</help>
@@ -482,12 +477,7 @@
                   <help>Pool of client IPv4 addresses</help>
                 </properties>
                 <children>
-                  <leafNode name="disable">
-                    <properties>
-                      <help>Disable client IP pool</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-disable-node.xml.i>
                   <leafNode name="start">
                     <properties>
                       <help>First IP address in the pool</help>
@@ -546,12 +536,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="disable">
-                    <properties>
-                      <help>Disable client IPv6 pool</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-disable-node.xml.i>
                 </children>
               </node>
               <leafNode name="domain-name">
