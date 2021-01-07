@@ -722,7 +722,7 @@
                       <constraintErrorMessage>Invalid WPA pass phrase, must be 8 to 63 printable characters!</constraintErrorMessage>
                     </properties>
                   </leafNode>
-                  #include <include/radius-server.xml.i>
+                  #include <include/radius-server-ipv4.xml.i>
                   <node name="radius">
                     <children>
                       <tagNode name="server">

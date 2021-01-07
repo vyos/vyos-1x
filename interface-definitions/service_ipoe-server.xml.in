@@ -197,7 +197,7 @@
                   </tagNode>
                 </children>
               </tagNode>
-              #include <include/radius-server.xml.i>
+              #include <include/radius-server-ipv4.xml.i>
               #include <include/accel-radius-additions.xml.i>
             </children>
           </node>

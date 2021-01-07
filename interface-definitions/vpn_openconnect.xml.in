@@ -57,7 +57,7 @@
                   </tagNode>
                 </children>
               </node>
-              #include <include/radius-server.xml.i>
+              #include <include/radius-server-ipv4.xml.i>
               <node name="radius">
                 <children>
                   <leafNode name="timeout">
