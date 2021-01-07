@@ -187,15 +187,17 @@ def verify_dhcpv6(config):
         # assigned IPv6 subnet from a delegated prefix
         for pd in dict_search('dhcpv6_options.pd', config):
             sla_ids = []
+            interfaces = dict_search(f'dhcpv6_options.pd.{pd}.interface', config)
 
-            if not dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+            if not interfaces:
                 raise ConfigError('DHCPv6-PD requires an interface where to assign '
                                   'the delegated prefix!')
 
-            for interface in dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
-                sla_id = dict_search(
-                    f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id', config)
-                sla_ids.append(sla_id)
+            for count, interface in enumerate(interfaces):
+                if 'sla_id' in interfaces[interface]:
+                    sla_ids.append(interfaces[interface]['sla_id'])
+                else:
+                    sla_ids.append(str(count))
 
             # Check for duplicates
             duplicates = [x for n, x in enumerate(sla_ids) if x in sla_ids[:n]]
