@@ -123,6 +123,11 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
 
             self.assertEqual(f'{cpus:x}', f'{rps_cpus:x}')
 
+    def test_non_existing_interface(self):
+        self.session.set(self._base_path + ['eth667'])
+        # check validate() - interface does not exist
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
 
     def test_eapol_support(self):
         for interface in self._interfaces:
