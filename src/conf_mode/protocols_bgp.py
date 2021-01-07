@@ -17,10 +17,11 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.util import call
-from vyos.util import dict_search
+from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.template import render_to_string
+from vyos.util import call
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -41,6 +42,16 @@ def get_config():
 
     if not conf.exists(base + ['route-map']):
         call('vtysh -c \"conf t\" -c \"no ip protocol bgp\" ')
+
+    # We also need some additional information from the config,
+    # prefix-lists and route-maps for instance.
+    base = ['policy']
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # As we only support one ASN (later checked in begin of verify()) we add the
+    # new information only to the first AS number
+    asn = next(iter(bgp))
+    # Merge policy dict into bgp dict
+    bgp[asn] = dict_merge(tmp, bgp[asn])
 
     return bgp
 
@@ -78,9 +89,36 @@ def verify(bgp):
                     # remote-as must be either set explicitly for the neighbor
                     # or for the entire peer-group
                     if 'remote_as' not in peer_config:
-                        peer_group = peer_config['peer_group']
-                        if 'remote_as' not in asn_config['peer_group'][peer_group]:
+                        if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][peer_config['peer_group']]:
                             raise ConfigError('Remote AS must be set for neighbor or peer-group!')
+
+                for afi in ['ipv4_unicast', 'ipv6_unicast']:
+                    # Bail out early if address family is not configured
+                    if 'address_family' not in peer_config or afi not in peer_config['address_family']:
+                        continue
+
+                    afi_config = peer_config['address_family'][afi]
+                    # Validate if configured Prefix list exists
+                    if 'prefix_list' in afi_config:
+                        for tmp in ['import', 'export']:
+                            if tmp in afi_config['prefix_list']:
+                                if afi == 'ipv4_unicast':
+                                    prefix_list = afi_config['prefix_list'][tmp]
+                                    if 'prefix_list' not in asn_config or prefix_list not in asn_config['prefix_list']:
+                                        raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+                                if afi == 'ipv6_unicast':
+                                    prefix_list = afi_config['prefix_list6'][tmp]
+                                    if 'prefix_list6' not in asn_config or prefix_list not in asn_config['prefix_list6']:
+                                        raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+
+
+                    if 'route_map' in afi_config:
+                        for tmp in ['import', 'export']:
+                            if tmp in afi_config['route_map']:
+                                route_map = afi_config['route_map'][tmp]
+                                if 'route_map' not in asn_config or route_map not in asn_config['route_map']:
+                                    raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
+
 
     return None
 
