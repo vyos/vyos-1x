@@ -193,6 +193,7 @@ def process_node(n, tmpl_dir):
                 f.write('help: {0}\n'.format(props['help']))
         else:
             # Something has already generated this file
+            print("Warning: refusing to overwrite already existing file {}".format(nodedef_path))
             pass
 
         # Create the inner node.tag part

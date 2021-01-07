@@ -34,6 +34,9 @@ $(BUILD_DIR):
 interface_definitions: $(BUILD_DIR) $(obj)
 	mkdir -p $(TMPL_DIR)
 
+	# Build "base" templates (service, interfaces, other high-level nodes)
+	$(CURDIR)/scripts/build-command-templates $(CURDIR)/interface-definitions/base/base.xml $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR)
+
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
