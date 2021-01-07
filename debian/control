@@ -18,6 +18,7 @@ Build-Depends:
   python3-lxml,
   python3-netifaces,
   python3-nose,
+  python3-psutil,
   python3-setuptools,
   python3-xmltodict,
   quilt,
