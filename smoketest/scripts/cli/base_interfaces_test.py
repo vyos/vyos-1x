@@ -366,7 +366,7 @@ class BasicInterfaceTest:
                 self.assertEqual(dad_transmits, tmp)
 
 
-        def test_ipv6_dhcpv6_pd_auto_inc_sla_id(self):
+        def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6:
                 return None
 
@@ -422,14 +422,12 @@ class BasicInterfaceTest:
                 section = Section.section(delegatee)
                 self.session.delete(['interfaces', section, delegatee])
 
-        def test_ipv6_dhcpv6_pd_manual_sla_id(self):
+        def test_dhcpv6pd_manual_sla_id(self):
             if not self._test_ipv6:
                 return None
 
-            address = '1'
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
-            sla_id = '1'
 
             delegatees = ['dum3340', 'dum3341', 'dum3342', 'dum3343', 'dum3344']
 
@@ -439,6 +437,8 @@ class BasicInterfaceTest:
                     self.session.set(path + option.split())
 
                 # prefix delegation stuff
+                address = '1'
+                sla_id = '1'
                 pd_base = path + ['dhcpv6-options', 'pd', '0']
                 self.session.set(pd_base + ['length', prefix_len])
 
@@ -454,9 +454,10 @@ class BasicInterfaceTest:
 
             self.session.commit()
 
-            address = '1'
-            sla_id = '1'
+            # Verify dhcpc6 client configuration
             for interface in self._interfaces:
+                address = '1'
+                sla_id = '1'
                 dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
 
                 # verify DHCPv6 prefix delegation

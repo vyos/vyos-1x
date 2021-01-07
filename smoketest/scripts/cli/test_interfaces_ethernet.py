@@ -19,6 +19,7 @@ import re
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.util import cmd
 from vyos.util import process_named_running
@@ -124,10 +125,16 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertEqual(f'{cpus:x}', f'{rps_cpus:x}')
 
     def test_non_existing_interface(self):
-        self.session.set(self._base_path + ['eth667'])
+        unknonw_interface = self._base_path + ['eth667']
+        self.session.set(unknonw_interface)
+
         # check validate() - interface does not exist
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
+
+        # we need to remove this wrong interface from the configuration
+        # manually, else tearDown() will have problem in commit()
+        self.session.delete(unknonw_interface)
 
     def test_eapol_support(self):
         for interface in self._interfaces:
