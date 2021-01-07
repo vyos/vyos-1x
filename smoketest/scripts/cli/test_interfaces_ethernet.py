@@ -136,6 +136,18 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         # manually, else tearDown() will have problem in commit()
         self.session.delete(unknonw_interface)
 
+    def test_speed_duplex_verify(self):
+        for interface in self._interfaces:
+            self.session.set(self._base_path + [interface, 'speed', '1000'])
+
+            # check validate() - if either speed or duplex is not auto, the
+            # other one must be manually configured, too
+            with self.assertRaises(ConfigSessionError):
+                self.session.commit()
+            self.session.set(self._base_path + [interface, 'duplex', 'full'])
+
+        self.session.commit()
+
     def test_eapol_support(self):
         for interface in self._interfaces:
             # Enable EAPoL

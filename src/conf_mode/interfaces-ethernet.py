@@ -62,13 +62,10 @@ def verify(ethernet):
     ifname = ethernet['ifname']
     verify_interface_exists(ifname)
 
-    if ethernet.get('speed', None) == 'auto':
-        if ethernet.get('duplex', None) != 'auto':
-            raise ConfigError('If speed is hardcoded, duplex must be hardcoded, too')
-
-    if ethernet.get('duplex', None) == 'auto':
-        if ethernet.get('speed', None) != 'auto':
-            raise ConfigError('If duplex is hardcoded, speed must be hardcoded, too')
+    # No need to check speed and duplex keys as both have default values.
+    if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
+        (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
+            raise ConfigError('Speed/Duplex missmatch. Must be both auto or manually configured')
 
     verify_mtu(ethernet)
     verify_mtu_ipv6(ethernet)
