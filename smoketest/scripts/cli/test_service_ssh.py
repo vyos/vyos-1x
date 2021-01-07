@@ -44,11 +44,6 @@ class TestServiceSSH(unittest.TestCase):
     def tearDown(self):
         # delete testing SSH config
         self.session.delete(base_path)
-        # restore "plain" SSH access
-        self.session.set(base_path)
-        # delete VRF
-        self.session.delete(['vrf', 'name', vrf])
-
         self.session.commit()
         del self.session
 
@@ -109,7 +104,7 @@ class TestServiceSSH(unittest.TestCase):
     def test_ssh_multiple_listen_addresses(self):
         # Check if SSH service can be configured and runs with multiple
         # listen ports and listen-addresses
-        ports = ['22', '2222']
+        ports = ['22', '2222', '2223', '2224']
         for port in ports:
             self.session.set(base_path + ['port', port])
 
@@ -143,7 +138,7 @@ class TestServiceSSH(unittest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
 
-        self.session.set(['vrf', 'name', vrf, 'table', '1001'])
+        self.session.set(['vrf', 'name', vrf, 'table', '1338'])
 
         # commit changes
         self.session.commit()
@@ -158,6 +153,9 @@ class TestServiceSSH(unittest.TestCase):
         # Check for process in VRF
         tmp = cmd(f'ip vrf pids {vrf}')
         self.assertIn(PROCESS_NAME, tmp)
+
+        # delete VRF
+        self.session.delete(['vrf', 'name', vrf])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
