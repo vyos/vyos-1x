@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -12,7 +12,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
 import unittest
 import json
@@ -50,17 +49,6 @@ def is_mirrored_to(interface, mirror_if, qdisc):
     if mirror_if in tmp:
         ret_val = True
     return ret_val
-
-
-dhcp6c_config_file = '/run/dhcp6c/dhcp6c.{}.conf'
-def get_dhcp6c_config_value(interface, key):
-    tmp = read_file(dhcp6c_config_file.format(interface))
-    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
-
-    out = []
-    for item in tmp:
-        out.append(item.replace(';',''))
-    return out
 
 class BasicInterfaceTest:
     class BaseTest(unittest.TestCase):
@@ -378,13 +366,16 @@ class BasicInterfaceTest:
                 self.assertEqual(dad_transmits, tmp)
 
 
-        def test_ipv6_dhcpv6_prefix_delegation(self):
+        def test_ipv6_dhcpv6_pd_auto_inc_sla_id(self):
             if not self._test_ipv6:
                 return None
 
             address = '1'
-            sla_id = '0'
-            sla_len = '8'
+            prefix_len = '56'
+            sla_len = str(64 - int(prefix_len))
+
+            delegatees = ['dum2340', 'dum2341', 'dum2342', 'dum2343', 'dum2344']
+
             for interface in self._interfaces:
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
@@ -392,25 +383,101 @@ class BasicInterfaceTest:
 
                 # prefix delegation stuff
                 pd_base = path + ['dhcpv6-options', 'pd', '0']
-                self.session.set(pd_base + ['length', '56'])
-                self.session.set(pd_base + ['interface', interface, 'address', address])
-                self.session.set(pd_base + ['interface', interface, 'sla-id',  sla_id])
+                self.session.set(pd_base + ['length', prefix_len])
+
+                for delegatee in delegatees:
+                    section = Section.section(delegatee)
+                    self.session.set(['interfaces', section, delegatee])
+                    self.session.set(pd_base + ['interface', delegatee, 'address', address])
+                    # increment interface address
+                    address = str(int(address) + 1)
 
             self.session.commit()
 
+            address = '1'
+            sla_id = '0'
             for interface in self._interfaces:
+                dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
+
                 # verify DHCPv6 prefix delegation
-                # will return: ['delegation', '::/56 infinity;']
-                tmp = get_dhcp6c_config_value(interface, 'prefix')[1].split()[0] # mind the whitespace
-                self.assertEqual(tmp, '::/56')
-                tmp = get_dhcp6c_config_value(interface, 'prefix-interface')[0].split()[0]
-                self.assertEqual(tmp, interface)
-                tmp = get_dhcp6c_config_value(interface, 'ifid')[0]
-                self.assertEqual(tmp, address)
-                tmp = get_dhcp6c_config_value(interface, 'sla-id')[0]
-                self.assertEqual(tmp, sla_id)
-                tmp = get_dhcp6c_config_value(interface, 'sla-len')[0]
-                self.assertEqual(tmp, sla_len)
+                self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
+
+                for delegatee in delegatees:
+                    self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
+                    self.assertIn(f'ifid {address};', dhcpc6_config)
+                    self.assertIn(f'sla-id {sla_id};', dhcpc6_config)
+                    self.assertIn(f'sla-len {sla_len};', dhcpc6_config)
+
+                    # increment sla-id
+                    sla_id = str(int(sla_id) + 1)
+                    # increment interface address
+                    address = str(int(address) + 1)
 
             # Check for running process
             self.assertTrue(process_named_running('dhcp6c'))
+
+            for delegatee in delegatees:
+                # we can already cleanup the test delegatee interface here
+                # as until commit() is called, nothing happens
+                section = Section.section(delegatee)
+                self.session.delete(['interfaces', section, delegatee])
+
+        def test_ipv6_dhcpv6_pd_manual_sla_id(self):
+            if not self._test_ipv6:
+                return None
+
+            address = '1'
+            prefix_len = '56'
+            sla_len = str(64 - int(prefix_len))
+            sla_id = '1'
+
+            delegatees = ['dum3340', 'dum3341', 'dum3342', 'dum3343', 'dum3344']
+
+            for interface in self._interfaces:
+                path = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(path + option.split())
+
+                # prefix delegation stuff
+                pd_base = path + ['dhcpv6-options', 'pd', '0']
+                self.session.set(pd_base + ['length', prefix_len])
+
+                for delegatee in delegatees:
+                    section = Section.section(delegatee)
+                    self.session.set(['interfaces', section, delegatee])
+                    self.session.set(pd_base + ['interface', delegatee, 'address', address])
+                    self.session.set(pd_base + ['interface', delegatee, 'sla-id', address])
+
+                    # increment interface address
+                    address = str(int(address) + 1)
+                    sla_id = str(int(sla_id) + 1)
+
+            self.session.commit()
+
+            address = '1'
+            sla_id = '1'
+            for interface in self._interfaces:
+                dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
+
+                # verify DHCPv6 prefix delegation
+                self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
+
+                for delegatee in delegatees:
+                    self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
+                    self.assertIn(f'ifid {address};', dhcpc6_config)
+                    self.assertIn(f'sla-id {sla_id};', dhcpc6_config)
+                    self.assertIn(f'sla-len {sla_len};', dhcpc6_config)
+
+                    # increment sla-id
+                    sla_id = str(int(sla_id) + 1)
+                    # increment interface address
+                    address = str(int(address) + 1)
+
+            # Check for running process
+            self.assertTrue(process_named_running('dhcp6c'))
+
+            for delegatee in delegatees:
+                # we can already cleanup the test delegatee interface here
+                # as until commit() is called, nothing happens
+                section = Section.section(delegatee)
+                self.session.delete(['interfaces', section, delegatee])
