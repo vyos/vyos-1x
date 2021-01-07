@@ -395,13 +395,13 @@ class BasicInterfaceTest:
             self.session.commit()
 
             address = '1'
-            sla_id = '0'
             for interface in self._interfaces:
                 dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
 
                 # verify DHCPv6 prefix delegation
                 self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
 
+                sla_id = '0'
                 for delegatee in delegatees:
                     self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
                     self.assertIn(f'ifid {address};', dhcpc6_config)
@@ -446,7 +446,7 @@ class BasicInterfaceTest:
                     section = Section.section(delegatee)
                     self.session.set(['interfaces', section, delegatee])
                     self.session.set(pd_base + ['interface', delegatee, 'address', address])
-                    self.session.set(pd_base + ['interface', delegatee, 'sla-id', address])
+                    self.session.set(pd_base + ['interface', delegatee, 'sla-id', sla_id])
 
                     # increment interface address
                     address = str(int(address) + 1)
