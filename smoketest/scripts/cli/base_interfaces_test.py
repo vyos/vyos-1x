@@ -94,7 +94,7 @@ class BasicInterfaceTest:
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:
-                return None
+                self.skipTest('testcase not enabled')
 
             # Check the two-way mirror rules of ingress and egress
             for mirror in self._mirror_interfaces:
@@ -163,7 +163,7 @@ class BasicInterfaceTest:
         def test_ipv6_link_local_address(self):
             # Common function for IPv6 link-local address assignemnts
             if not self._test_ipv6:
-                return None
+                self.skipTest('testcase not enabled')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -190,7 +190,7 @@ class BasicInterfaceTest:
 
         def test_interface_mtu(self):
             if not self._test_mtu:
-                return None
+                self.skipTest('testcase not enabled')
 
             for intf in self._interfaces:
                 base = self._base_path + [intf]
@@ -210,7 +210,7 @@ class BasicInterfaceTest:
             # Testcase if MTU can be changed to 1200 on non IPv6
             # enabled interfaces
             if not self._test_mtu:
-                return None
+                self.skipTest('testcase not enabled')
 
             old_mtu = self._mtu
             self._mtu = '1200'
@@ -235,7 +235,7 @@ class BasicInterfaceTest:
 
         def test_8021q_vlan_interfaces(self):
             if not self._test_vlan:
-                return None
+                self.skipTest('testcase not enabled')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -262,7 +262,7 @@ class BasicInterfaceTest:
 
         def test_8021ad_qinq_vlan_interfaces(self):
             if not self._test_qinq:
-                return None
+                self.skipTest('testcase not enabled')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -293,7 +293,7 @@ class BasicInterfaceTest:
 
         def test_interface_ip_options(self):
             if not self._test_ip:
-                return None
+                self.skipTest('testcase not enabled')
 
             for interface in self._interfaces:
                 arp_tmo = '300'
@@ -344,7 +344,7 @@ class BasicInterfaceTest:
 
         def test_interface_ipv6_options(self):
             if not self._test_ipv6:
-                return None
+                self.skipTest('testcase not enabled')
 
             for interface in self._interfaces:
                 dad_transmits = '10'
@@ -368,7 +368,7 @@ class BasicInterfaceTest:
 
         def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6:
-                return None
+                self.skipTest('testcase not enabled')
 
             address = '1'
             prefix_len = '56'
@@ -424,7 +424,7 @@ class BasicInterfaceTest:
 
         def test_dhcpv6pd_manual_sla_id(self):
             if not self._test_ipv6:
-                return None
+                self.skipTest('testcase not enabled')
 
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
