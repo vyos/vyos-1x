@@ -17,6 +17,7 @@
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
     </constraint>
+    <multi/>
   </properties>
 </leafNode>
 <!-- included end -->

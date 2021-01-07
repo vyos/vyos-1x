@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,6 +25,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
+from vyos.template import is_ipv4
 from vyos.util import cmd, call, DEVNULL, chmod_600, chmod_755
 from vyos import ConfigError
 
@@ -38,7 +39,7 @@ default_config_data = {
     'add_users': [],
     'del_users': [],
     'radius_server': [],
-    'radius_source_address': '',
+    'radius_source_address': [],
     'radius_vrf': ''
 }
 
@@ -134,7 +135,7 @@ def get_config(config=None):
     conf.set_level(base_level + ['radius'])
 
     if conf.exists(['source-address']):
-        login['radius_source_address'] = conf.return_value(['source-address'])
+        login['radius_source_address'] = conf.return_values(['source-address'])
 
     # retrieve VRF instance
     if conf.exists(['vrf']):
@@ -214,6 +215,17 @@ def verify(login):
         if fail:
             raise ConfigError('At least one RADIUS server must be active.')
 
+    ipv4_count = 0
+    ipv6_count = 0
+    for address in login['radius_source_address']:
+        if is_ipv4(address): ipv4_count += 1
+        else: ipv6_count += 1
+
+    if ipv4_count > 1:
+        raise ConfigError('Only one IPv4 source-address can be set!')
+    if ipv6_count > 1:
+        raise ConfigError('Only one IPv6 source-address can be set!')
+
     vrf_name = login['radius_vrf']
     if vrf_name and vrf_name not in interfaces():
         raise ConfigError(f'VRF "{vrf_name}" does not exist')
@@ -255,13 +267,8 @@ def generate(login):
                 pass
 
     if len(login['radius_server']) > 0:
-        render(radius_config_file, 'system-login/pam_radius_auth.conf.tmpl',
-               login)
-
-        uid = getpwnam('root').pw_uid
-        gid = getpwnam('root').pw_gid
-        os.chown(radius_config_file, uid, gid)
-        chmod_600(radius_config_file)
+        render(radius_config_file, 'login/pam_radius_auth.conf.tmpl', login,
+                   permission=0o600, user='root', group='root')
     else:
         if os.path.isfile(radius_config_file):
             os.unlink(radius_config_file)
@@ -284,16 +291,15 @@ def apply(login):
         # we need to use '' quotes when passing formatted data to the shell
         # else it will not work as some data parts are lost in translation
         if user['password_encrypted']:
-            command += " -p '{}'".format(user['password_encrypted'])
+            command += " -p '{password_encrypted}'".format(**user)
 
         if user['full_name']:
-            command += " -c '{}'".format(user['full_name'])
+            command += " -c '{full_name}'".format(**user)
 
         if user['home_dir']:
-            command += " -d '{}'".format(user['home_dir'])
+            command += " -d '{home_dir}'".format(**user)
 
-        command += " -G frrvty,vyattacfg,sudo,adm,dip,disk"
-        command += " {}".format(user['name'])
+        command += " -G frrvty,vyattacfg,sudo,adm,dip,disk {name}".format(**user)
 
         try:
             cmd(command)
@@ -321,10 +327,9 @@ def apply(login):
                 for id in user['public_keys']:
                     line = ''
                     if id['options']:
-                        line = '{} '.format(id['options'])
+                        line = '{options} '.format(**id)
 
-                    line += '{} {} {}\n'.format(id['type'],
-                                                id['key'], id['name'])
+                    line += '{type} {key} {name}\n'.format(**id)
                     f.write(line)
 
             os.chown(ssh_key_file, uid, gid)
@@ -339,8 +344,8 @@ def apply(login):
         try:
             # Logout user if he is logged in
             if user in list(set([tmp[0] for tmp in users()])):
-                print('{} is logged in, forcing logout'.format(user))
-                call('pkill -HUP -u {}'.format(user))
+                print(f'{user} is logged in, forcing logout')
+                call(f'pkill -HUP -u {user}')
 
             # Remove user account but leave home directory to be safe
             call(f'userdel -r {user}', stderr=DEVNULL)
@@ -356,7 +361,7 @@ def apply(login):
             env = os.environ.copy()
             env['DEBIAN_FRONTEND'] = 'noninteractive'
             # Enable RADIUS in PAM
-            cmd("pam-auth-update --package --enable radius", env=env)
+            cmd('pam-auth-update --package --enable radius', env=env)
 
             # Make NSS system aware of RADIUS, too
             command = "sed -i -e \'/\smapname/b\' \

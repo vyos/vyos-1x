@@ -24,8 +24,10 @@ from platform import release as kernel_version
 from subprocess import Popen, PIPE
 
 from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.template import inc_ip
 
 base_path = ['system', 'login']
 users = ['vyos1', 'vyos2']
@@ -42,7 +44,7 @@ class TestSystemLogin(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_local_user(self):
+    def test_system_login_user(self):
         # Check if user can be created and we can SSH to localhost
         self.session.set(['service', 'ssh', 'port', '22'])
 
@@ -82,7 +84,7 @@ class TestSystemLogin(unittest.TestCase):
         for option in options:
             self.assertIn(f'{option}=y', kernel_config)
 
-    def test_radius_config(self):
+    def test_system_login_radius_ipv4(self):
         # Verify generated RADIUS configuration files
 
         radius_key = 'VyOSsecretVyOS'
@@ -95,12 +97,72 @@ class TestSystemLogin(unittest.TestCase):
         self.session.set(base_path + ['radius', 'server', radius_server, 'port', radius_port])
         self.session.set(base_path + ['radius', 'server', radius_server, 'timeout', radius_timeout])
         self.session.set(base_path + ['radius', 'source-address', radius_source])
+        self.session.set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+
+        # check validate() - Only one IPv4 source-address supported
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
 
         self.session.commit()
 
         # this file must be read with higher permissions
         pam_radius_auth_conf = cmd('sudo cat /etc/pam_radius_auth.conf')
         tmp = re.findall(r'\n?{}:{}\s+{}\s+{}\s+{}'.format(radius_server,
+                        radius_port, radius_key, radius_timeout,
+                        radius_source), pam_radius_auth_conf)
+        self.assertTrue(tmp)
+
+        # required, static options
+        self.assertIn('priv-lvl 15', pam_radius_auth_conf)
+        self.assertIn('mapped_priv_user radius_priv_user', pam_radius_auth_conf)
+
+        # PAM
+        pam_common_account = read_file('/etc/pam.d/common-account')
+        self.assertIn('pam_radius_auth.so', pam_common_account)
+
+        pam_common_auth = read_file('/etc/pam.d/common-auth')
+        self.assertIn('pam_radius_auth.so', pam_common_auth)
+
+        pam_common_session = read_file('/etc/pam.d/common-session')
+        self.assertIn('pam_radius_auth.so', pam_common_session)
+
+        pam_common_session_noninteractive = read_file('/etc/pam.d/common-session-noninteractive')
+        self.assertIn('pam_radius_auth.so', pam_common_session_noninteractive)
+
+        # NSS
+        nsswitch_conf = read_file('/etc/nsswitch.conf')
+        tmp = re.findall(r'passwd:\s+mapuid\s+files\s+mapname', nsswitch_conf)
+        self.assertTrue(tmp)
+
+        tmp = re.findall(r'group:\s+mapname\s+files', nsswitch_conf)
+        self.assertTrue(tmp)
+
+    def test_system_login_radius_ipv6(self):
+        # Verify generated RADIUS configuration files
+
+        radius_key = 'VyOS-VyOS'
+        radius_server = '2001:db8::1'
+        radius_source = '::1'
+        radius_port = '4000'
+        radius_timeout = '4'
+
+        self.session.set(base_path + ['radius', 'server', radius_server, 'key', radius_key])
+        self.session.set(base_path + ['radius', 'server', radius_server, 'port', radius_port])
+        self.session.set(base_path + ['radius', 'server', radius_server, 'timeout', radius_timeout])
+        self.session.set(base_path + ['radius', 'source-address', radius_source])
+        self.session.set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+
+        # check validate() - Only one IPv4 source-address supported
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+
+        self.session.commit()
+
+        # this file must be read with higher permissions
+        pam_radius_auth_conf = cmd('sudo cat /etc/pam_radius_auth.conf')
+        tmp = re.findall(r'\n?\[{}\]:{}\s+{}\s+{}\s+\[{}\]'.format(radius_server,
                         radius_port, radius_key, radius_timeout,
                         radius_source), pam_radius_auth_conf)
         self.assertTrue(tmp)

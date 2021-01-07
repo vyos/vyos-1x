@@ -110,7 +110,7 @@
               </leafNode>
             </children>
           </tagNode>
-          #include <include/radius-server-ipv4.xml.i>
+          #include <include/radius-server-ipv4-ipv6.xml.i>
           <node name="radius">
             <children>
               <tagNode name="server">
