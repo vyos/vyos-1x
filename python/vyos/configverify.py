@@ -194,8 +194,8 @@ def verify_dhcpv6(config):
                                   'the delegated prefix!')
 
             for interface in interfaces:
-                sla_id = interfaces[interface].get('sla_id', None)
-                sla_ids.append(sla_id)
+                if 'sla_id' in interfaces[interface]:
+                    sla_ids.append(interfaces[interface]['sla_id'])
 
             # Check for duplicates
             duplicates = [x for n, x in enumerate(sla_ids) if x in sla_ids[:n]]
