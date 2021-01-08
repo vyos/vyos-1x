@@ -94,7 +94,7 @@ class BasicInterfaceTest:
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             # Check the two-way mirror rules of ingress and egress
             for mirror in self._mirror_interfaces:
@@ -163,7 +163,7 @@ class BasicInterfaceTest:
         def test_ipv6_link_local_address(self):
             # Common function for IPv6 link-local address assignemnts
             if not self._test_ipv6:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -190,7 +190,7 @@ class BasicInterfaceTest:
 
         def test_interface_mtu(self):
             if not self._test_mtu:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             for intf in self._interfaces:
                 base = self._base_path + [intf]
@@ -210,7 +210,7 @@ class BasicInterfaceTest:
             # Testcase if MTU can be changed to 1200 on non IPv6
             # enabled interfaces
             if not self._test_mtu:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             old_mtu = self._mtu
             self._mtu = '1200'
@@ -235,7 +235,7 @@ class BasicInterfaceTest:
 
         def test_8021q_vlan_interfaces(self):
             if not self._test_vlan:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -262,7 +262,7 @@ class BasicInterfaceTest:
 
         def test_8021ad_qinq_vlan_interfaces(self):
             if not self._test_qinq:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -293,7 +293,7 @@ class BasicInterfaceTest:
 
         def test_interface_ip_options(self):
             if not self._test_ip:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             for interface in self._interfaces:
                 arp_tmo = '300'
@@ -344,7 +344,7 @@ class BasicInterfaceTest:
 
         def test_interface_ipv6_options(self):
             if not self._test_ipv6:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             for interface in self._interfaces:
                 dad_transmits = '10'
@@ -368,9 +368,8 @@ class BasicInterfaceTest:
 
         def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
-            address = '1'
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
 
@@ -381,6 +380,7 @@ class BasicInterfaceTest:
                 for option in self._options.get(interface, []):
                     self.session.set(path + option.split())
 
+                address = '1'
                 # prefix delegation stuff
                 pd_base = path + ['dhcpv6-options', 'pd', '0']
                 self.session.set(pd_base + ['length', prefix_len])
@@ -394,13 +394,13 @@ class BasicInterfaceTest:
 
             self.session.commit()
 
-            address = '1'
             for interface in self._interfaces:
                 dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
 
                 # verify DHCPv6 prefix delegation
                 self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
 
+                address = '1'
                 sla_id = '0'
                 for delegatee in delegatees:
                     self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
@@ -424,7 +424,7 @@ class BasicInterfaceTest:
 
         def test_dhcpv6pd_manual_sla_id(self):
             if not self._test_ipv6:
-                self.skipTest('testcase not enabled')
+                self.skipTest('not enabled')
 
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
