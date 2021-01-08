@@ -144,9 +144,8 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
             # other one must be manually configured, too
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
-            self.session.set(self._base_path + [interface, 'duplex', 'full'])
-
-        self.session.commit()
+            self.session.set(self._base_path + [interface, 'speed', 'auto'])
+            self.session.commit()
 
     def test_eapol_support(self):
         for interface in self._interfaces:
