@@ -26,6 +26,7 @@ from vyos.util import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
+        self._test_ip = True
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
