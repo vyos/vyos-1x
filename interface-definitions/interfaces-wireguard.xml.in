@@ -55,12 +55,7 @@
               <constraintErrorMessage>peer alias too long (limit 100 characters)</constraintErrorMessage>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>disables peer</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="pubkey">
                 <properties>
                   <help>base64 encoded public key</help>

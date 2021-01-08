@@ -26,7 +26,7 @@
               #include <include/accel-auth-local-users.xml.i>
               #include <include/accel-auth-mode.xml.i>
               #include <include/accel-auth-protocols.xml.i>
-              #include <include/radius-server.xml.i>
+              #include <include/radius-server-ipv4.xml.i>
               #include <include/accel-radius-additions.xml.i>
               <node name="radius">
                 <children>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,9 +20,9 @@ from base_interfaces_test import BasicInterfaceTest
 
 class DummyInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
-         self._base_path = ['interfaces', 'dummy']
-         self._interfaces = ['dum0', 'dum1', 'dum2']
-         super().setUp()
+        self._base_path = ['interfaces', 'dummy']
+        self._interfaces = ['dum435', 'dum8677', 'dum0931', 'dum089']
+        super().setUp()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

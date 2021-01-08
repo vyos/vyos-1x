@@ -13,12 +13,7 @@
               <priority>990</priority>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable mDNS repeater service</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="interface">
                 <properties>
                   <help>Interface to repeat mDNS advertisements [REQUIRED]</help>

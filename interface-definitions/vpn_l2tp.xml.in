@@ -212,7 +212,7 @@
                   #include <include/accel-ppp-mppe.xml.i>
                   #include <include/accel-auth-mode.xml.i>
                   #include <include/accel-auth-local-users.xml.i>
-                  #include <include/radius-server.xml.i>
+                  #include <include/radius-server-ipv4.xml.i>
                   <node name="radius">
                     <children>
                       <tagNode name="server">

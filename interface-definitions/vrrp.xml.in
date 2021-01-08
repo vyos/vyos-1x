@@ -73,12 +73,7 @@
                   <help>Group description</help>
                 </properties>
               </leafNode>
-              <leafNode name="disable">
-                <properties>
-                  <valueless/>
-                  <help>Disable VRRP group</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <node name="health-check">
                 <properties>
                   <help>Health check script</help>

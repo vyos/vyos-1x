@@ -17,10 +17,11 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.util import call
-from vyos.util import dict_search
+from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.template import render_to_string
+from vyos.util import call
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -42,6 +43,16 @@ def get_config():
     if not conf.exists(base + ['route-map']):
         call('vtysh -c \"conf t\" -c \"no ip protocol bgp\" ')
 
+    # We also need some additional information from the config,
+    # prefix-lists and route-maps for instance.
+    base = ['policy']
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # As we only support one ASN (later checked in begin of verify()) we add the
+    # new information only to the first AS number
+    asn = next(iter(bgp))
+    # Merge policy dict into bgp dict
+    bgp[asn] = dict_merge(tmp, bgp[asn])
+
     return bgp
 
 def verify(bgp):
@@ -50,32 +61,64 @@ def verify(bgp):
 
     # Check if declared more than one ASN
     if len(bgp) > 1:
-        raise ConfigError('Only one BGP AS can be defined!')
+        raise ConfigError('Only one BGP AS number can be defined!')
 
     for asn, asn_config in bgp.items():
+        import pprint
+        pprint.pprint(asn_config)
+
         # Common verification for both peer-group and neighbor statements
-        for neigh in ['neighbor', 'peer_group']:
+        for neighbor in ['neighbor', 'peer_group']:
             # bail out early if there is no neighbor or peer-group statement
             # this also saves one indention level
-            if neigh not in asn_config:
+            if neighbor not in asn_config:
+                print(f'no {neighbor} found in config')
                 continue
 
-            #for neighbor, config in asn_config[neigh].items():
-                '''
-                # These checks need to be modified. Because peer-group can be declared without 'remote-as'.
-                # When 'remote-as' configured for specific neighbor in peer-group. For example
-                #
+            for peer, peer_config in asn_config[neighbor].items():
+                # Only regular "neighbor" statement can have a peer-group set
+                # Check if the configure peer-group exists
+                if 'peer_group' in peer_config:
+                    peer_group = peer_config['peer_group']
+                    if peer_group not in asn_config['peer_group']:
+                        raise ConfigError(f'Specified peer-group "{peer_group}" for '\
+                                          f'neighbor "{neighbor}" does not exist!')
 
-                set protocols nbgp 65001 neighbor 100.64.0.2 peer-group 'FOO'
-                set protocols nbgp 65001 neighbor 100.64.0.2 remote-as '65002'
-                set protocols nbgp 65001 peer-group FOO
+                # Some checks can/must only be done on a neighbor and nor a peer-group
+                if neighbor == 'neighbor':
+                    # remote-as must be either set explicitly for the neighbor
+                    # or for the entire peer-group
+                    if 'remote_as' not in peer_config:
+                        if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][peer_config['peer_group']]:
+                            raise ConfigError('Remote AS must be set for neighbor or peer-group!')
 
-                '''
-                #if 'remote_as' not in config and 'peer_group' not in config:
-                #    raise ConfigError(f'BGP remote-as must be specified for "{neighbor}"!')
+                for afi in ['ipv4_unicast', 'ipv6_unicast']:
+                    # Bail out early if address family is not configured
+                    if 'address_family' not in peer_config or afi not in peer_config['address_family']:
+                        continue
 
-                #if 'remote_as' in config and 'peer_group' in config:
-                #    raise ConfigError(f'BGP peer-group member "{neighbor}" cannot override remote-as of peer-group!')
+                    afi_config = peer_config['address_family'][afi]
+                    # Validate if configured Prefix list exists
+                    if 'prefix_list' in afi_config:
+                        for tmp in ['import', 'export']:
+                            if tmp in afi_config['prefix_list']:
+                                if afi == 'ipv4_unicast':
+                                    prefix_list = afi_config['prefix_list'][tmp]
+                                    if 'prefix_list' not in asn_config or prefix_list not in asn_config['prefix_list']:
+                                        raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+                                if afi == 'ipv6_unicast':
+                                    prefix_list = afi_config['prefix_list6'][tmp]
+                                    if 'prefix_list6' not in asn_config or prefix_list not in asn_config['prefix_list6']:
+                                        raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+
+
+                    if 'route_map' in afi_config:
+                        for tmp in ['import', 'export']:
+                            if tmp in afi_config['route_map']:
+                                route_map = afi_config['route_map'][tmp]
+                                if 'route_map' not in asn_config or route_map not in asn_config['route_map']:
+                                    raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
+
 
     return None
 

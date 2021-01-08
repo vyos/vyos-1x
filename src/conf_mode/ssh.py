@@ -28,7 +28,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/run/ssh/sshd_config'
+config_file = r'/run/sshd/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
 def get_config(config=None):
@@ -68,6 +68,8 @@ def generate(ssh):
 
     render(config_file, 'ssh/sshd_config.tmpl', ssh)
     render(systemd_override, 'ssh/override.conf.tmpl', ssh)
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
 
     return None
 
@@ -75,9 +77,6 @@ def apply(ssh):
     if not ssh:
         # SSH access is removed in the commit
         call('systemctl stop ssh.service')
-
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
 
     if ssh:
         call('systemctl restart ssh.service')

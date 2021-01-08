@@ -28,6 +28,7 @@ from vyos.util import read_file
 
 class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
+        self._test_ip = True
         self._test_ipv6 = True
         self._test_vlan = True
         self._test_qinq = True

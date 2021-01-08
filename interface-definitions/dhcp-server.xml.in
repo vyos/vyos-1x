@@ -9,12 +9,7 @@
           <priority>911</priority>
         </properties>
         <children>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable DHCP server</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/generic-disable-node.xml.i>
           <leafNode name="dynamic-dns-update">
             <properties>
               <help>Dynamically update Domain Name System (RFC4702)</help>
@@ -63,12 +58,7 @@
                   <help>Shared-network-name description</help>
                 </properties>
               </leafNode>
-              <leafNode name="disable">
-                <properties>
-                  <help>Option to disable DHCP configuration for shared-network</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="shared-network-parameters">
                 <properties>
                   <help>Additional shared-network parameters for DHCP server.
@@ -330,12 +320,7 @@
                       <constraintErrorMessage>Invalid static mapping name. May only contain letters, numbers and .-_</constraintErrorMessage>
                     </properties>
                     <children>
-                      <leafNode name="disable">
-                        <properties>
-                          <help>Option to disable static mapping</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-disable-node.xml.i>
                       <leafNode name="ip-address">
                         <properties>
                           <help>Fixed IP address of static mapping</help>

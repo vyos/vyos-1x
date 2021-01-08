@@ -9,12 +9,7 @@
         <help>User name for authentication</help>
       </properties>
       <children>
-        <leafNode name="disable">
-          <properties>
-            <help>Option to disable a PPPoE Server user</help>
-            <valueless/>
-          </properties>
-        </leafNode>
+        #include <include/generic-disable-node.xml.i>
         <leafNode name="password">
           <properties>
             <help>Password for authentication</help>

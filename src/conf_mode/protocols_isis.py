@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos import ConfigError
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos import frr
@@ -48,7 +49,7 @@ def verify(isis):
         # If more then one isis process is defined (Frr only supports one)
         # http://docs.frrouting.org/en/latest/isisd.html#isis-router
         if len(isis) > 1:
-            raise ConfigError('Only one isis process can be definded')
+            raise ConfigError('Only one isis process can be defined')
 
         # If network entity title (net) not defined
         if 'net' not in isis_config:
@@ -63,7 +64,7 @@ def verify(isis):
             if {'md5', 'plaintext_password'} <= set(isis_config['encryption']):
                 raise ConfigError('Can not use both md5 and plaintext-password for ISIS area-password!')
 
-        # If one param from deley set, but not set others
+        # If one param from delay set, but not set others
         if 'spf_delay_ietf' in isis_config:
             required_timers = ['holddown', 'init_delay', 'long_delay', 'short_delay', 'time_to_learn']
             exist_timers = []
@@ -84,6 +85,34 @@ def verify(isis):
             for redistribute_level in proto_config.keys():
                 if proc_level and proc_level != 'level_1_2' and proc_level != redistribute_level:
                     raise ConfigError('\"protocols isis {0} redistribute ipv4 {2} {3}\" cannot be used with \"protocols isis {0} level {1}\"'.format(process, proc_level, proto, redistribute_level))
+
+        # Segment routing checks
+        if dict_search('segment_routing', isis_config):
+            if dict_search('segment_routing.global_block', isis_config):
+                high_label_value = dict_search('segment_routing.global_block.high_label_value', isis_config)
+                low_label_value = dict_search('segment_routing.global_block.low_label_value', isis_config)
+                # If segment routing global block high value is blank, throw error
+                if low_label_value and not high_label_value:
+                    raise ConfigError('Segment routing global block high value must not be left blank')
+                # If segment routing global block low value is blank, throw error
+                if high_label_value and not low_label_value:
+                    raise ConfigError('Segment routing global block low value must not be left blank')
+                # If segment routing global block low value is higher than the high value, throw error
+                if int(low_label_value) > int(high_label_value):
+                    raise ConfigError('Segment routing global block low value must be lower than high value')
+                
+            if dict_search('segment_routing.local_block', isis_config):
+                high_label_value = dict_search('segment_routing.local_block.high_label_value', isis_config)
+                low_label_value = dict_search('segment_routing.local_block.low_label_value', isis_config)
+                # If segment routing local block high value is blank, throw error
+                if low_label_value and not high_label_value:
+                    raise ConfigError('Segment routing local block high value must not be left blank')
+                # If segment routing local block low value is blank, throw error
+                if high_label_value and not low_label_value:
+                    raise ConfigError('Segment routing local block low value must not be left blank')
+                # If segment routing local block low value is higher than the high value, throw error
+                if int(low_label_value) > int(high_label_value):
+                    raise ConfigError('Segment routing local block low value must be lower than high value')
 
     return None
 

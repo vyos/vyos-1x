@@ -34,6 +34,7 @@
                       </constraint>
                       <constraintErrorMessage>Invalid encrypted password for $VAR(../../@).</constraintErrorMessage>
                     </properties>
+                    <defaultValue>!</defaultValue>
                   </leafNode>
                   <leafNode name="plaintext-password">
                     <properties>
@@ -44,7 +45,7 @@
                     <properties>
                       <help>Remote access public keys</help>
                       <valueHelp>
-                        <format>&gt;identifier&lt;</format>
+                        <format>txt</format>
                         <description>Key identifier used by ssh-keygen (usually of form user@host)</description>
                       </valueHelp>
                     </properties>
@@ -61,7 +62,7 @@
                       </leafNode>
                       <leafNode name="type">
                         <properties>
-                          <help></help>
+                          <help>Public key type</help>
                           <completionHelp>
                             <list>ssh-dss ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521 ssh-ed25519</list>
                           </completionHelp>
@@ -86,7 +87,7 @@
                             <description/>
                           </valueHelp>
                           <constraint>
-                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)</regex>
+                            <regex>^(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)$</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -110,7 +111,7 @@
               </leafNode>
             </children>
           </tagNode>
-          #include <include/radius-server.xml.i>
+          #include <include/radius-server-ipv4-ipv6.xml.i>
           <node name="radius">
             <children>
               <tagNode name="server">
@@ -119,7 +120,7 @@
                     <properties>
                       <help>Session timeout</help>
                       <valueHelp>
-                        <format>1-30</format>
+                        <format>u32:1-30</format>
                         <description>Session timeout in seconds (default: 2)</description>
                       </valueHelp>
                       <constraint>
@@ -127,18 +128,20 @@
                       </constraint>
                       <constraintErrorMessage>Timeout must be between 1 and 30 seconds</constraintErrorMessage>
                     </properties>
+                    <defaultValue>2</defaultValue>
                   </leafNode>
                   <leafNode name="priority">
                     <properties>
                       <help>Server priority</help>
                       <valueHelp>
-                        <format>1-255</format>
+                        <format>u32:1-255</format>
                         <description>Server priority (default: 255)</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-255"/>
                       </constraint>
                     </properties>
+                    <defaultValue>255</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>

@@ -136,15 +136,14 @@ def verify_bridge_delete(config):
             'Interface "{ifname}" cannot be deleted as it is a '
             'member of bridge "{is_bridge_member}"!'.format(**config))
 
-def verify_interface_exists(config):
+def verify_interface_exists(ifname):
     """
     Common helper function used by interface implementations to perform
     recurring validation if an interface actually exists.
     """
     from netifaces import interfaces
-    if not config['ifname'] in interfaces():
-        raise ConfigError('Interface "{ifname}" does not exist!'
-                          .format(**config))
+    if ifname not in interfaces():
+        raise ConfigError(f'Interface "{ifname}" does not exist!')
 
 def verify_source_interface(config):
     """
@@ -187,15 +186,17 @@ def verify_dhcpv6(config):
         # assigned IPv6 subnet from a delegated prefix
         for pd in dict_search('dhcpv6_options.pd', config):
             sla_ids = []
+            interfaces = dict_search(f'dhcpv6_options.pd.{pd}.interface', config)
 
-            if not dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
+            if not interfaces:
                 raise ConfigError('DHCPv6-PD requires an interface where to assign '
                                   'the delegated prefix!')
 
-            for interface in dict_search(f'dhcpv6_options.pd.{pd}.interface', config):
-                sla_id = dict_search(
-                    f'dhcpv6_options.pd.{pd}.interface.{interface}.sla_id', config)
-                sla_ids.append(sla_id)
+            for count, interface in enumerate(interfaces):
+                if 'sla_id' in interfaces[interface]:
+                    sla_ids.append(interfaces[interface]['sla_id'])
+                else:
+                    sla_ids.append(str(count))
 
             # Check for duplicates
             duplicates = [x for n, x in enumerate(sla_ids) if x in sla_ids[:n]]
