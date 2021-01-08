@@ -94,7 +94,7 @@
                     </children>
                   </tagNode>
                 </children>
-			  </node>
+              </node>
               <leafNode name="full-name">
                 <properties>
                   <help>Full name of the user (use quotes for names with spaces)</help>
