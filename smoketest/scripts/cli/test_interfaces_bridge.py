@@ -25,14 +25,13 @@ from netifaces import interfaces
 from vyos.ifconfig import Section
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.validate import is_intf_addr_assigned
 
 class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         self._test_ip = True
         self._test_ipv6 = True
         self._test_ipv6_pd = True
-        self._test_vlan = True
-        self._test_qinq = True
         self._base_path = ['interfaces', 'bridge']
         self._mirror_interfaces = ['dum21354']
         self._members = []
@@ -52,6 +51,12 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._interfaces = list(self._options)
 
         super().setUp()
+    
+    def tearDown(self):
+        for intf in self._interfaces:
+            self.session.delete(self._base_path + [intf])
+        
+        super().tearDown()
 
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority
@@ -88,11 +93,15 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.commit()
 
     def test_bridge_vlan_filter(self):
+        
+        vif_vlan = 2
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['vif', '1', 'address', '192.0.2.1/24'])
-            self.session.set(base + ['vif', '2', 'address', '192.0.3.1/24'])
+            self.session.set(base + ['enable-vlan'])
+            self.session.set(base + ['address', '192.0.2.1/24'])
+            self.session.set(base + ['vif', str(vif_vlan), 'address', '192.0.3.1/24'])
+            self.session.set(base + ['vif', str(vif_vlan), 'mtu', self._mtu])
 
             vlan_id = 101
             allowed_vlan = 2
@@ -159,7 +168,13 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
             for member in self._members:
                 self.assertIn(member, bridge_members)
-
+        
+        # Check VLAN sub interface
+        for intf in self._interfaces:
+            vif = f'{intf}.{vif_vlan}'
+            tmp = read_file(f'/sys/class/net/{vif}/mtu')
+            self.assertEqual(tmp, self._mtu)
+        
         # delete all members
         for interface in self._interfaces:
             self.session.delete(self._base_path + [interface, 'member'])
