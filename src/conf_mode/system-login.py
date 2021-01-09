@@ -84,7 +84,6 @@ def get_config(config=None):
     # XXX: for a yet unknown reason when we only have one source-address
     # get_config_dict() will show a string over a string
     if 'radius' in login and 'source_address' in login['radius']:
-        print(type(login['radius']['source_address']))
         if isinstance(login['radius']['source_address'], str):
             login['radius']['source_address'] = [login['radius']['source_address']]
 
