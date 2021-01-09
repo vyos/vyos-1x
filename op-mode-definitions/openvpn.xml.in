@@ -19,7 +19,6 @@
             key_path=$4
             full_path=
 
-            # Prepend /config/auth if the path is not absolute
             if echo $key_path | egrep -ve '^/.*' &gt; /dev/null; then
                 full_path=/config/auth/$key_path
             else

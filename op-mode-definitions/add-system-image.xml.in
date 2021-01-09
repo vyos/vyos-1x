@@ -11,7 +11,7 @@
             <properties>
               <help>Add a new image to the system</help>
               <completionHelp>
-                  <list>/path/to/vyos-image.iso http://example.com/vyos-image.iso</list>
+                <list>/path/to/vyos-image.iso "http://example.com/vyos-image.iso"</list>
               </completionHelp>
             </properties>
             <command>sudo ${vyatta_sbindir}/install-image --url "${4}"</command>

@@ -32,7 +32,7 @@
                 <properties>
                   <help>Display routes matching the specified communities</help>
                   <completionHelp>
-                    <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list> 
+                    <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
                   </completionHelp>
                 </properties>
                 <command>/usr/bin/vtysh -c "show ip bgp community $5"</command>
@@ -97,11 +97,11 @@
                         </properties>
                         <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast community"</command>
                       </node>
-                      <tagNode name="community"> 
+                      <tagNode name="community">
                         <properties>
                           <help>Display routes matching the specified communities</help>
                           <completionHelp>
-                            <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list> 
+                            <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
                           </completionHelp>
                         </properties>
                         <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast community $7"</command>
@@ -160,7 +160,7 @@
                             <command>/usr/bin/vtysh -c "show ip bgp ipv4 unicast neighbor $7 routes"</command>
                           </leafNode>
                         </children>
-                      </tagNode>                 
+                      </tagNode>
                       <leafNode name="paths">
                         <properties>
                           <help>Show BGP path information</help>
@@ -190,7 +190,7 @@
                           <help>Show summary of BGP information</help>
                         </properties>
                         <command>/usr/bin/vtysh -c "show ip bgp summary"</command>
-                      </leafNode>           
+                      </leafNode>
                     </children>
                   </node>
                   <tagNode name="unicast">
@@ -227,7 +227,7 @@
                   <help>Show BGP memory usage</help>
                 </properties>
                 <command>/usr/bin/vtysh -c "show ip bgp memory"</command>
-              </leafNode>           
+              </leafNode>
               <tagNode name="neighbors">
                 <properties>
                   <help>Show detailed BGP IPv4 unicast neighbor information</help>
@@ -287,7 +287,7 @@
                     <command>/usr/bin/vtysh -c "show ip bgp neighbor $5 routes"</command>
                   </leafNode>
                 </children>
-              </tagNode>           
+              </tagNode>
               <leafNode name="paths">
                 <properties>
                   <help>Show BGP path information</help>
