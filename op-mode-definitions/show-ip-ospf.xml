@@ -54,7 +54,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -107,7 +107,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database external"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database external $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -166,7 +166,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database network"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database network $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -219,7 +219,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database nssa-external"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database nssa-external $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -272,7 +272,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-area"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-area $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -325,7 +325,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-as"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-as $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -378,7 +378,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-link"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-link $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -431,7 +431,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database router"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database router $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -490,7 +490,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database summary"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database summary $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
