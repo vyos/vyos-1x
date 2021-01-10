@@ -45,12 +45,7 @@
                 </properties>
                 <command>vtysh -c "show ipv6 ospf6 border-routers"</command>
                 <children>
-                  <node name="detail">
-                    <properties>
-                      <help>Show OSPFv3 detailed border-router information</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 border-routers detail"</command>
-                  </node>
+                  #include <include/ospfv3-detail.xml.i>
                 </children>
               </node>
               <tagNode name="border-routers">
@@ -68,44 +63,7 @@
                 </properties>
                 <command>vtysh -c "show ipv6 ospf6 database"</command>
                 <children>
-                  <tagNode name="adv-router">
-                    <properties>
-                      <help>Search by Advertising Router ID</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <children>
-                      <tagNode name="linkstate-id">
-                        <properties>
-                          <help>Search by Link state ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database adv-router $6 linkstate-id $8 detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database adv-router $6 linkstate-id $8 dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database adv-router $6 linkstate-id $8 internal"</command>
-                          </node>
-                        </children>
-                      </tagNode>
-                    </children>
-                  </tagNode>
+                  #include <include/ospfv3-adv-router.xml.i>
                   <node name="any">
                     <properties>
                       <help>Search by Any Link state Type</help>
@@ -119,24 +77,9 @@
                           </completionHelp>
                         </properties>
                         <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database * * $7 detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database * * $7 dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database * * $7 internal"</command>
-                          </node>
+                          #include <include/ospfv3-detail.xml.i>
+                          #include <include/ospfv3-dump.xml.i>
+                          #include <include/ospfv3-internal.xml.i>
                         </children>
                       </tagNode>
                     </children>
@@ -150,98 +93,19 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 database * $6"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show details of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database * $6 detail"</command>
-                      </node>
-                      <node name="dump">
-                        <properties>
-                          <help>Show dump of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database * $6 dump"</command>
-                      </node>
-                      <node name="internal">
-                        <properties>
-                          <help>Show LSAs internal information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database * $6 internal"</command>
-                      </node>
-                      <node name="node.tag">
-                        <properties>
-                          <help>Search by Advertising Router ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database * $6 $7"</command>
-                        <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database * $6 $7 detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database * $6 $7 dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database * $6 $7 internal"</command>
-                          </node>
-                        </children>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
+                      #include <include/ospfv3-dump.xml.i>
+                      #include <include/ospfv3-internal.xml.i>
+                      #include <include/ospfv3-adv-router-id-node-tag.xml.i>
                     </children>
                   </tagNode>
-
-
-
-
-
                   <node name="as-external">
                     <properties>
                       <help>Show AS-External LSAs</help>
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 database as-external"</command>
                     <children>
-                      <tagNode name="adv-router">
-                        <properties>
-                          <help>Search by Advertising Router ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <children>
-                          <tagNode name="linkstate-id">
-                            <properties>
-                              <help>Search by Link state ID</help>
-                              <completionHelp>
-                                <list>&lt;x.x.x.x&gt;</list>
-                              </completionHelp>
-                            </properties>
-                            <children>
-                              <node name="dump">
-                                <properties>
-                                  <help>Show dump of LSAs</help>
-                                </properties>
-                                <command>vtysh -c "show ipv6 ospf6 database as-external adv-router $7 linkstate-id $9 dump"</command>
-                              </node>
-                              <node name="internal">
-                                <properties>
-                                  <help>Show LSAs internal information</help>
-                                </properties>
-                                <command>vtysh -c "show ipv6 ospf6 database as-external adv-router $7 linkstate-id $9 internal"</command>
-                              </node>
-                            </children>
-                          </tagNode>
-                        </children>
-                      </tagNode>
+                      #include <include/ospfv3-adv-router.xml.i>
                       <tagNode name="any">
                         <properties>
                           <help>Search by Advertising Router ID</help>
@@ -251,126 +115,16 @@
                         </properties>
                         <command>vtysh -c "show ipv6 ospf6 database as-external * $7"</command>
                         <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external * $7 detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external * $7 dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external * $7 internal"</command>
-                          </node>
+                          #include <include/ospfv3-detail.xml.i>
+                          #include <include/ospfv3-dump.xml.i>
+                          #include <include/ospfv3-internal.xml.i>
                         </children>
                       </tagNode>
-                      <node name="detail">
-                        <properties>
-                          <help>Show details of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external detail"</command>
-                      </node>
-                      <node name="dump">
-                        <properties>
-                          <help>Show dump of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external dump"</command>
-                      </node>
-                      <node name="internal">
-                        <properties>
-                          <help>Show LSAs internal information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external internal"</command>
-                      </node>
-                      <tagNode name="linkstate-id">
-                        <properties>
-                          <help>Search by Link state ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external linkstate-id $7 detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external linkstate-id $7 dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external linkstate-id $7 internal"</command>
-                          </node>
-                        </children>
-                      </tagNode>
-                      <node name="self-originated">
-                        <properties>
-                          <help>Show Self-originated LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external self-originated"</command>
-                        <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external self-originated detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external self-originated dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external self-originated internal"</command>
-                          </node>
-                          <tagNode name="linkstate-id">
-                            <properties>
-                              <help>Search by Link state ID</help>
-                              <completionHelp>
-                                <list>&lt;x.x.x.x&gt;</list>
-                              </completionHelp>
-                            </properties>
-                            <children>
-                              <node name="detail">
-                                <properties>
-                                  <help>Show details of LSAs</help>
-                                </properties>
-                                <command>vtysh -c "show ipv6 ospf6 database as-external self-originated linkstate-id $8 detail"</command>
-                              </node>
-                              <node name="dump">
-                                <properties>
-                                  <help>Show dump of LSAs</help>
-                                </properties>
-                                <command>vtysh -c "show ipv6 ospf6 database as-external self-originated linkstate-id $8 dump"</command>
-                              </node>
-                              <node name="internal">
-                                <properties>
-                                  <help>Show LSAs internal information</help>
-                                </properties>
-                                <command>vtysh -c "show ipv6 ospf6 database as-external self-originated linkstate-id $8 internal"</command>
-                              </node>
-                            </children>
-                          </tagNode>
-                        </children>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
+                      #include <include/ospfv3-dump.xml.i>
+                      #include <include/ospfv3-internal.xml.i>
+                      #include <include/ospfv3-linkstate-id.xml.i>
+                      #include <include/ospfv3-self-originated.xml.i>
                     </children>
                   </node>
                   <tagNode name="as-external">
@@ -381,140 +135,17 @@
                       </completionHelp>
                     </properties>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show details of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external $6 detail"</command>
-                      </node>
-                      <node name="dump">
-                        <properties>
-                          <help>Show dump of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external $6 dump"</command>
-                      </node>
-                      <node name="internal">
-                        <properties>
-                          <help>Show LSAs internal information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external $6 internal"</command>
-                      </node>
-                      <node name="self-originated">
-                        <properties>
-                          <help>Show Self-originated LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external $6 self-originated"</command>
-                        <children>
-                          <node name="detail">
-                            <properties>
-                              <help>Show details of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external $6 self-originated detail"</command>
-                          </node>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external $6 self-originated dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>vtysh -c "show ipv6 ospf6 database as-external $6 self-originated internal"</command>
-                          </node>
-                        </children>
-                      </node>
-                      <node name="node.tag">
-                        <properties>
-                          <help>Search by Advertising Router ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <children>
-                          <node name="dump">
-                            <properties>
-                              <help>Show dump of LSAs</help>
-                            </properties>
-                            <command>echo vtysh -c "show ipv6 ospf6 database as-external $6 $7 dump"</command>
-                          </node>
-                          <node name="internal">
-                            <properties>
-                              <help>Show LSAs internal information</help>
-                            </properties>
-                            <command>echo vtysh -c "show ipv6 ospf6 database as-external $6 $7 internal"</command>
-                          </node>
-                        </children>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
+                      #include <include/ospfv3-dump.xml.i>
+                      #include <include/ospfv3-internal.xml.i>
+                      #include <include/ospfv3-self-originated.xml.i>
+                      #include <include/ospfv3-adv-router-id-node-tag.xml.i>
                     </children>
                   </tagNode>
-                  <node name="detail">
-                    <properties>
-                      <help>Show details of LSAs</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 database detail"</command>
-                  </node>
-                  <node name="dump">
-                    <properties>
-                      <help>Show dump of LSAs</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 database dump"</command>
-                  </node>
-                  <tagNode name="linkstate-id">
-                    <properties>
-                      <help>Search by Link state ID</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show details of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database linkstate-id $6 detail"</command>
-                      </node>
-                      <node name="dump">
-                        <properties>
-                          <help>Show dump of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database linkstate-id $6 dump"</command>
-                      </node>
-                      <node name="internal">
-                        <properties>
-                          <help>Show LSAs internal information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database linkstate-id $6 internal"</command>
-                      </node>
-                    </children>
-                  </tagNode>
-                  <node name="self-originated">
-                    <properties>
-                      <help>Show Self-originated LSAs</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 database self-originated"</command>
-                    <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show details of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database self-originated detail"</command>
-                      </node>
-                      <node name="dump">
-                        <properties>
-                          <help>Show dump of LSAs</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database self-originated dump"</command>
-                      </node>
-                      <node name="internal">
-                        <properties>
-                          <help>Show LSAs internal information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database self-originated internal"</command>
-                      </node>
-                    </children>
-                  </node>
+                  #include <include/ospfv3-detail.xml.i>
+                  #include <include/ospfv3-internal.xml.i>
+                  #include <include/ospfv3-linkstate-id.xml.i>
+                  #include <include/ospfv3-self-originated.xml.i>
                 </children>
               </node>
               <node name="interface">
@@ -529,12 +160,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 interface prefix"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>More detailed interface prefix information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 interface prefix detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
                   <tagNode name="prefix">
@@ -546,12 +172,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 interface prefix $6"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>More detailed information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 interface prefix $6 detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                       <node name="match">
                         <properties>
                           <help>Matched interface prefix information</help>
@@ -577,12 +198,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 interface $5 prefix"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>More detailed interface prefix information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 interface $5 prefix detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
                   <tagNode name="prefix">
@@ -594,12 +210,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 interface $5 prefix $7"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>More detailed information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 interface $5 prefix $7 detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                       <node name="match">
                         <properties>
                           <help>Matched interface prefix information</help>
@@ -615,12 +226,7 @@
                   <help>Show OSPFv3 linkstate routing information</help>
                 </properties>
                 <children>
-                  <node name="detail">
-                    <properties>
-                      <help>Show detailed linkstate information</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 linkstate detail"</command>
-                  </node>
+                  #include <include/ospfv3-detail.xml.i>
                   <node name="network">
                     <properties>
                       <help>Show linkstate Network information</help>
@@ -641,12 +247,7 @@
                 </properties>
                 <command>vtysh -c "show ipv6 ospf6 neighbor"</command>
                 <children>
-                  <node name="detail">
-                    <properties>
-                      <help>Show detailed neighbor information</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 neighbor detail"</command>
-                  </node>
+                  #include <include/ospfv3-detail.xml.i>
                   <node name="drchoice">
                     <properties>
                       <help>Show neighbor DR choice information</help>
@@ -673,12 +274,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 route external-1"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show detailed Type-1 External route information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 route external-1 detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
                   <node name="external-2">
@@ -687,12 +283,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 route external-2"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show detailed Type-2 External route information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 route external-2 detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
                   <node name="inter-area">
@@ -701,12 +292,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 route inter-area"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show detailed Inter-Area route information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 route inter-area detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
                   <node name="intra-area">
@@ -715,20 +301,10 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 route intra-area"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Show detailed Intra-Area route information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 route intra-area detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
-                  <node name="detail">
-                    <properties>
-                      <help>Show detailed route information</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 route detail"</command>
-                  </node>
+                  #include <include/ospfv3-detail.xml.i>
                   <node name="summary">
                     <properties>
                       <help>Show route table summary</help>
@@ -758,12 +334,7 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 route $5 match"</command>
                     <children>
-                      <node name="detail">
-                        <properties>
-                          <help>Detailed information</help>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 route $5 match detail"</command>
-                      </node>
+                      #include <include/ospfv3-detail.xml.i>
                     </children>
                   </node>
                 </children>
