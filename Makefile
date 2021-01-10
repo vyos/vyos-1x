@@ -8,8 +8,10 @@ CC := gcc
 LIBS := -lzmq
 CFLAGS :=
 
-src = $(wildcard interface-definitions/*.xml.in)
-obj = $(src:.xml.in=.xml)
+config_xml_src = $(wildcard interface-definitions/*.xml.in)
+config_xml_obj = $(config_xml_src:.xml.in=.xml)
+op_xml_src = $(wildcard op-mode-definitions/*.xml.in)
+op_xml_obj = $(op_xml_src:.xml.in=.xml)
 
 %.xml: %.xml.in
 	@echo Generating $(BUILD_DIR)/$@ from $<
@@ -23,15 +25,12 @@ obj = $(src:.xml.in=.xml)
 	# -nostdinc  Do not search the standard system directories for header files
 	# -P         Inhibit generation of linemarkers in the output from the
 	#            preprocessor
-	@$(CC) -x c-header -E -undef -nostdinc -P -I$(CURDIR)/interface-definitions -o $(BUILD_DIR)/$@ -c $<
-
-$(BUILD_DIR):
-	install -d -m 0755 $(BUILD_DIR)/interface-definitions
-	install -d -m 0755 $(BUILD_DIR)/op-mode-definitions
+	mkdir -p $(BUILD_DIR)/$(dir $@)
+	@$(CC) -x c-header -E -undef -nostdinc -P -I$(CURDIR)/$(dir $<) -o $(BUILD_DIR)/$@ -c $<
 
 .PHONY: interface_definitions
 .ONESHELL:
-interface_definitions: $(BUILD_DIR) $(obj)
+interface_definitions: $(config_xml_obj)
 	mkdir -p $(TMPL_DIR)
 
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
@@ -62,10 +61,10 @@ interface_definitions: $(BUILD_DIR) $(obj)
 
 .PHONY: op_mode_definitions
 .ONESHELL:
-op_mode_definitions:
+op_mode_definitions: $(op_xml_obj)
 	mkdir -p $(OP_TMPL_DIR)
 
-	find $(CURDIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
+	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
 	# XXX: delete top level op mode node.def's that now live in other packages
 	rm -f $(OP_TMPL_DIR)/add/node.def
@@ -87,7 +86,7 @@ op_mode_definitions:
 
 .PHONY: component_versions
 .ONESHELL:
-component_versions: $(BUILD_DIR) $(obj)
+component_versions: interface_definitions
 	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
 
 .PHONY: vyshim

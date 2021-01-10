@@ -21,7 +21,7 @@
               </node>
               <node name="summary">
                 <properties>
-                  <help>Show CPU's on system</help>
+                  <help>Show system CPUs</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/cpu_summary.py</command>
               </node>

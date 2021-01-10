@@ -54,7 +54,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database asbr-summary $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -75,7 +75,7 @@
                           <help>Show summary of self-originate IPv4 OSPF ASBR database</help>
                         </properties>
                         <command>show ip ospf database asbr-summary $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="external">
@@ -107,7 +107,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database external"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database external $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -128,7 +128,7 @@
                           <help>Show self-originate IPv4 OSPF external database</help>
                         </properties>
                         <command>show ip ospf database external $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <leafNode name="max-age">
@@ -166,7 +166,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database network"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database network $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -187,7 +187,7 @@
                           <help>Show self-originate IPv4 OSPF network database</help>
                         </properties>
                         <command>show ip ospf database network $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="nssa-external">
@@ -219,7 +219,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database nssa-external"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database nssa-external $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -240,7 +240,7 @@
                           <help>Show self-originate IPv4 OSPF NSSA external database</help>
                         </properties>
                         <command>show ip ospf database nssa-external $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="opaque-area">
@@ -272,7 +272,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-area"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-area $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -293,7 +293,7 @@
                           <help>Show self-originate IPv4 OSPF opaque-area database</help>
                         </properties>
                         <command>show ip ospf database opaque-area $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="opaque-as">
@@ -325,7 +325,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-as"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-as $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -346,7 +346,7 @@
                           <help>Show self-originate IPv4 OSPF opaque-as database</help>
                         </properties>
                         <command>show ip ospf database opaque-as $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="opaque-link">
@@ -378,7 +378,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-link"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database opaque-link $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -399,7 +399,7 @@
                           <help>Show self-originate IPv4 OSPF opaque-link database</help>
                         </properties>
                         <command>show ip ospf database opaque-link $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <node name="router">
@@ -431,7 +431,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database router"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database router $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -452,7 +452,7 @@
                           <help>Show self-originate IPv4 OSPF router database</help>
                         </properties>
                         <command>show ip ospf database router $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                   <leafNode name="self-originate">
@@ -490,7 +490,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show ip ospf database summary"</command>
+                    <command>/usr/bin/vtysh -c "show ip ospf database summary $6"</command>
                     <children>
                       <node name="adv-router">
                         <properties>
@@ -511,7 +511,7 @@
                           <help>Show self-originate IPv4 OSPF summary database</help>
                         </properties>
                         <command>show ip ospf database summary $6 self-originate</command>
-                      </leafNode> 
+                      </leafNode>
                     </children>
                   </tagNode>
                 </children>

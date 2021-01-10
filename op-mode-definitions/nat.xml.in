@@ -16,7 +16,7 @@
                 <properties>
                   <help>Show configured source NAT rules</help>
                 </properties>
-                <command>echo To be migrated to Python - https://phabricator.vyos.net/T2459</command>
+                <command>echo To be migrated to Python - Phabricator T2459</command>
               </node>
               <node name="statistics">
                 <properties>
@@ -58,7 +58,7 @@
                 <properties>
                   <help>Show configured destination NAT rules</help>
                 </properties>
-                <command>echo To be migrated to Python - https://phabricator.vyos.net/T2459</command>
+                <command>echo To be migrated to Python - Phabricator T2459</command>
               </node>
               <node name="statistics">
                 <properties>
