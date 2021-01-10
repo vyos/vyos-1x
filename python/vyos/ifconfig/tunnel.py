@@ -72,16 +72,22 @@ class _Tunnel(Interface):
 
         # add " option-name option-name-value ..." for all options set
         options = " ".join(["{} {}".format(k, self.config[k])
-                            for k in self.options if k in self.config and self.config[k]])
+                            for k in self.options if k in self.config and self.config[k] and k is not 'pmtud'])
         self._cmd('{} {}'.format(create.format(**self.config), options))
         self.set_admin_state('down')
 
     def change_options(self):
-        change = 'ip tunnel cha {ifname} mode {type}'
+        change = 'ip tunnel cha {ifname} mode {type} pmtudisc'
 
         # add " option-name option-name-value ..." for all options set
+        # option 'pmtud' doesn't has any value like 'ttl' or 'key' (ip tunnel cha tunX [no]pmtudisc)
         options = " ".join(["{} {}".format(k, self.config[k])
-                            for k in self.options if k in self.config and self.config[k]])
+                            for k in self.options if k in self.config and self.config[k] and k is not 'pmtud'])
+
+        # set interfaces tunnel tunX parameters ip pmtu-discovery disable
+        if 'disable' in self.config['pmtud']:
+            change = 'ip tunnel cha {ifname} mode {type} nopmtudisc'
+
         self._cmd('{} {}'.format(change.format(**self.config), options))
 
     @classmethod
@@ -142,7 +148,7 @@ class GREIf(_Tunnel):
     """
 
     default = {'type': 'gre'}
-    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key', 'pmtud']
 
 # GreTap also called GRE Bridge
 class GRETapIf(_Tunnel):
