@@ -11,7 +11,7 @@
             <properties>
               <help>Show active VPN server sessions</help>
             </properties>
-           <command>${vyos_op_scripts_dir}/show_vpn_ra.py</command> 
+           <command>${vyos_op_scripts_dir}/show_vpn_ra.py</command>
          </leafNode>
         </children>
       </node>
