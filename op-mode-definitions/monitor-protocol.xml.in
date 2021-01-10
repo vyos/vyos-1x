@@ -1,0 +1,1542 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="protocol">
+        <properties>
+          <help>Monitor routing protocols</help>
+        </properties>
+        <children>
+          <node name="bgp">
+            <properties>
+              <help>Monitor the Border Gateway Protocol (BGP)</help>
+            </properties>
+            <children>
+              #include <include/monitor-background.xml.i>
+              <node name="disable">
+                <properties>
+                  <help>Disable Border Gateway Protocol (BGP) debugging</help>
+                </properties>
+                <children>
+                  <node name="all">
+                    <properties>
+                      <help>Disable all BGP debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp"</command>
+                  </node>
+                  <node name="allow-martians">
+                    <properties>
+                      <help>Disable BGP martians next hops debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="as4">
+                    <properties>
+                      <help>Disable BGP allow AS4 actions debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="bestpath">
+                    <properties>
+                      <help>Disable BGP allow best path debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <tagNode name="bestpath">
+                    <properties>
+                      <help>Disable BGP bestpath IPv4 IPv6</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </tagNode>
+                  <node name="flowspec">
+                    <properties>
+                      <help>Disable BGP allow flowspec debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="keepalives">
+                    <properties>
+                      <help>Disable BGP keepalives debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="labelpool">
+                    <properties>
+                      <help>Disable BGP label pool debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="neighbor-events">
+                    <properties>
+                      <help>Disable BGP Neighbor events debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="nht">
+                    <properties>
+                      <help>Disable BGP next hop tracking debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="pbr">
+                    <properties>
+                      <help>Disable BGP policy based routing debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Disable BGP rib debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp zebra"</command>
+                  </node>
+                  <node name="update-groups">
+                    <properties>
+                      <help>Disable BGP update groups debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="updates">
+                    <properties>
+                      <help>Disable BGP updates debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="vnc">
+                    <properties>
+                      <help>Disable BGP VNC debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug bgp ${@:5}"</command>
+                    <children>
+                      <node name="import-bi-attach">
+                        <properties>
+                          <help>Disable BGP vnc import BI attachment debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug bgp ${@:5}"</command>
+                      </node>
+                      <node name="import-del-remote">
+                        <properties>
+                          <help>Disable BGP vnc import/delete remote routes debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug bgp ${@:5}"</command>
+                      </node>
+                      <node name="rfapi-query">
+                        <properties>
+                          <help>Disable BGP vnc rfapi query debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug bgp ${@:5}"</command>
+                      </node>
+                      <node name="verbose">
+                        <properties>
+                          <help>Disable BGP vnc verbose logging debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug bgp ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="enable">
+                <properties>
+                  <help>Enable Border Gateway Protocol (BGP) debugging</help>
+                </properties>
+                <children>
+                  <node name="allow-martians">
+                    <properties>
+                      <help>Enable BGP martians next hops debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="as4">
+                    <properties>
+                      <help>Enable BGP allow AS4 actions debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="bestpath">
+                    <properties>
+                      <help>Enable BGP allow best path debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <tagNode name="bestpath">
+                    <properties>
+                      <help>Debug bestpath IPv4 IPv6</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </tagNode>
+                  <node name="flowspec">
+                    <properties>
+                      <help>Enable BGP allow flowspec debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="keepalives">
+                    <properties>
+                      <help>Enable BGP keepalives debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="labelpool">
+                    <properties>
+                      <help>Enable BGP label pool debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="neighbor-events">
+                    <properties>
+                      <help>Enable BGP Neighbor events debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="nht">
+                    <properties>
+                      <help>Enable BGP next hop tracking debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="pbr">
+                    <properties>
+                      <help>Enable BGP policy based routing debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Enable BGP rib debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp zebra"</command>
+                  </node>
+                  <node name="update-groups">
+                    <properties>
+                      <help>Enable BGP update groups debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="updates">
+                    <properties>
+                      <help>Enable BGP updates debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                  </node>
+                  <node name="vnc">
+                    <properties>
+                      <help>Enable BGP VNC debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug bgp ${@:5}"</command>
+                    <children>
+                      <node name="import-bi-attach">
+                        <properties>
+                          <help>Enable BGP vnc import BI attachment debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug bgp ${@:5}"</command>
+                      </node>
+                      <node name="import-del-remote">
+                        <properties>
+                          <help>Enable BGP vnc import/delete remote routes debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug bgp ${@:5}"</command>
+                      </node>
+                      <node name="rfapi-query">
+                        <properties>
+                          <help>Enable BGP vnc rfapi query debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug bgp ${@:5}"</command>
+                      </node>
+                      <node name="verbose">
+                        <properties>
+                          <help>Enable BGP vnc verbose logging debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug bgp ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="ospf">
+            <properties>
+              <help>Monitor the Open Shortest Path First (OSPF) protocol</help>
+            </properties>
+            <children>
+              #include <include/monitor-background.xml.i>
+
+
+              <node name="disable">
+                <children>
+                  <node name="event">
+                    <properties>
+                      <help>Disable OSPF debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf"</command>
+                  </node>
+                  <node name="event">
+                    <properties>
+                      <help>Disable OSPF event debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf ${@:5}"</command>
+                  </node>
+                  <node name="ism">
+                    <properties>
+                      <help>Disable OSPF ism debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="events">
+                        <properties>
+                          <help>Disable OSPF ism events debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="status">
+                        <properties>
+                          <help>Disable OSPF ism status debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="timers">
+                        <properties>
+                          <help>Disable OSPF ism timers debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="lsa">
+                    <properties>
+                      <help>Disable OSPF lsa debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="flooding">
+                        <properties>
+                          <help>Disable OSPF lsa flooding debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="generate">
+                        <properties>
+                          <help>Disable OSPF lsa generate debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="install">
+                        <properties>
+                          <help>Disable OSPF lsa install debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="refresh">
+                        <properties>
+                          <help>Disable OSPF lsa refresh debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="nsm">
+                    <properties>
+                      <help>Disable OSPF nsm debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="events">
+                        <properties>
+                          <help>Disable OSPF nsm events debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="status">
+                        <properties>
+                          <help>Disable OSPF nsm status debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="timers">
+                        <properties>
+                          <help>Disable OSPF nsm timers debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="nssa">
+                    <properties>
+                      <help>Disable OSPF nssa debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Disable OSPF packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="all">
+                        <properties>
+                          <help>Disable OSPF all packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-no-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="dd">
+                        <properties>
+                          <help>Disable OSPF dd packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-no-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="hello">
+                        <properties>
+                          <help>Disable OSPF hello packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-no-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="ls-ack">
+                        <properties>
+                          <help>Disable OSPF ls-ack packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-no-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="ls-request">
+                        <properties>
+                          <help>Disable OSPF ls-request packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-no-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="ls-update">
+                        <properties>
+                          <help>Disable OSPF ls-update packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-no-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Disable OSPF rib debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf zebra"</command>
+                    <children>
+                      <node name="interface">
+                        <properties>
+                          <help>Disable OSPF rib interface debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf zebra interface"</command>
+                      </node>
+                      <node name="redistribute">
+                        <properties>
+                          <help>Disable OSPF rib redistribute debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf zebra redistribute"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="enable">
+                <children>
+                  <node name="event">
+                    <properties>
+                      <help>Enable OSPF event debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf ${@:5}"</command>
+                  </node>
+                  <node name="ism">
+                    <properties>
+                      <help>Enable OSPF ism debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="events">
+                        <properties>
+                          <help>Enable OSPF ism events debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="status">
+                        <properties>
+                          <help>Enable OSPF ism status debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="timers">
+                        <properties>
+                          <help>Enable OSPF ism timers debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="lsa">
+                    <properties>
+                      <help>Enable OSPF lsa debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="flooding">
+                        <properties>
+                          <help>Enable OSPF lsa flooding debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="generate">
+                        <properties>
+                          <help>Enable OSPF lsa generate debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="install">
+                        <properties>
+                          <help>Enable OSPF lsa install debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="refresh">
+                        <properties>
+                          <help>Enable OSPF lsa refresh debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="nsm">
+                    <properties>
+                      <help>Enable OSPF nsm debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="events">
+                        <properties>
+                          <help>Enable OSPF nsm events debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="status">
+                        <properties>
+                          <help>Enable OSPF nsm status debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                      <node name="timers">
+                        <properties>
+                          <help>Enable OSPF nsm timers debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="nssa">
+                    <properties>
+                      <help>Enable OSPF nssa debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Enable OSPF packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf ${@:5}"</command>
+                    <children>
+                      <node name="all">
+                        <properties>
+                          <help>Enable OSPF all packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="dd">
+                        <properties>
+                          <help>Enable OSPF dd packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="hello">
+                        <properties>
+                          <help>Enable OSPF hello packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="ls-ack">
+                        <properties>
+                          <help>Enable OSPF ls-ack packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="ls-request">
+                        <properties>
+                          <help>Enable OSPF ls-request packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                      <node name="ls-update">
+                        <properties>
+                          <help>Enable OSPF ls-update packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf ${@:5}"</command>
+                        <children>
+                          #include <include/monitor-ospf-packet-detail.xml.i>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Enable OSPF rib debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf zebra"</command>
+                    <children>
+                      <node name="interface">
+                        <properties>
+                          <help>Enable OSPF rib interface debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf zebra interface"</command>
+                      </node>
+                      <node name="redistribute">
+                        <properties>
+                          <help>Enable OSPF rib redistribute debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf zebra redistribute"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="ospfv3">
+            <properties>
+              <help>Monitor the IPv6 Open Shortest Path First (OSPFv3) protocol</help>
+            </properties>
+            <children>
+              <node name="background">
+                <properties>
+                  <help>Monitor in background</help>
+                </properties>
+                <children>
+                  <node name="start">
+                    <properties>
+                      <help>Start background monitoring</help>
+                    </properties>
+                    <command>${vyatta_bindir}/vyatta-monitor-background OSPFv3 ospf6</command>
+                  </node>
+                  <node name="stop">
+                    <properties>
+                      <help>Stop background monitoring</help>
+                    </properties>
+                    <command>${vyatta_bindir}/vyatta-monitor-background-stop OSPFv3</command>
+                  </node>
+                </children>
+              </node>
+              <node name="disable">
+                <properties>
+                  <help>Disable IPv6 Open Shortest Path First (OSPFv3) protocol debugging</help>
+                </properties>
+                <children>
+                  <node name="abr">
+                    <properties>
+                      <help>Disable all OSPFv3 debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6"</command>
+                  </node>
+                  <node name="abr">
+                    <properties>
+                      <help>Disable OSPFv3 ABR debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="asbr">
+                    <properties>
+                      <help>Disable OSPFv3 ASBR debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="border-routers">
+                    <properties>
+                      <help>Disable OSPFv3 border router debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="area-id">
+                        <properties>
+                          <help>Disable debug border routers in specific Area</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="router-id">
+                        <properties>
+                          <help>Disable debug specific border router</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="flooding">
+                    <properties>
+                      <help>Disable OSPFv3 flooding debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="interface">
+                    <properties>
+                      <help>Disable OSPFv3 Interface debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="lsa">
+                    <properties>
+                      <help>Disable OSPFv3 Link State Advertisments debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="as-external">
+                        <properties>
+                          <help>Display As-External LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="inter-prefix">
+                        <properties>
+                          <help>Display Inter-Area-Prefix LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="inter-router">
+                        <properties>
+                          <help>Display Inter-Router LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="intra-prefix">
+                        <properties>
+                          <help>Display Intra-Area-Prefix LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="link">
+                        <properties>
+                          <help>Display Link LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="network">
+                        <properties>
+                          <help>Display Network LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="router">
+                        <properties>
+                          <help>Display Router LSAs</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="unknown">
+                        <properties>
+                          <help>Display LSAs of unknown origin</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="message">
+                    <properties>
+                      <help>Disable OSPFv3 message debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="all">
+                        <properties>
+                          <help>Debug All message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="dbdesc">
+                        <properties>
+                          <help>Debug Database Description message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="hello">
+                        <properties>
+                          <help>Debug Hello message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="lsack">
+                        <properties>
+                          <help>Debug Link State Acknowledgement message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="lsreq">
+                        <properties>
+                          <help>Debug Link State Request message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="lsupdate">
+                        <properties>
+                          <help>Debug Link State Update message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="unknown">
+                        <properties>
+                          <help>Debug Unknown message</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="neighbor">
+                    <properties>
+                      <help>Disable OSPFv3 Neighbor debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="event">
+                        <properties>
+                          <help>Debug OSPFv3 Neighbor Event</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="state">
+                        <properties>
+                          <help>Debug OSPFv3 Neighbor State Change</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Disable OSPFv3 connection to RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="recv">
+                        <properties>
+                          <help>Debug receiving zebra</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Debug sending zebra</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="route">
+                    <properties>
+                      <help>Disable OSPFv3 route table calculation debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="inter-area">
+                        <properties>
+                          <help>Debug inter-area route calculation</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="intra-area">
+                        <properties>
+                          <help>Debug intra-area route calculation</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="memory">
+                        <properties>
+                          <help>Debug route memory use</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="table">
+                        <properties>
+                          <help>Debug route table calculation</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="spf">
+                    <properties>
+                      <help>Disable OSPFv3 SPF calculation debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="database">
+                        <properties>
+                          <help>Log number of LSAs at SPF Calculation time</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="process">
+                        <properties>
+                          <help>Debug Detailed SPF Process</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="time">
+                        <properties>
+                          <help>Measure time taken by SPF Calculation</help>
+                        </properties>
+                        <command>vtysh -c "no debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="enable">
+                <properties>
+                  <help>Enable IPv6 Open Shortest Path First (OSPFv3) protocol debugging</help>
+                </properties>
+                <children>
+                  <node name="abr">
+                    <properties>
+                      <help>Enable OSPFv3 ABR debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="asbr">
+                    <properties>
+                      <help>Enable OSPFv3 ASBR debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="border-routers">
+                    <properties>
+                      <help>Enable OSPFv3 border router debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="area-id">
+                        <properties>
+                          <help>Debug border routers in specific Area</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="router-id">
+                        <properties>
+                          <help>Debug specific border router</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="flooding">
+                    <properties>
+                      <help>Enable OSPFv3 flooding debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="interface">
+                    <properties>
+                      <help>Enable OSPFv3 Interface debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                  </node>
+                  <node name="lsa">
+                    <properties>
+                      <help>Enable OSPFv3 Link State Advertisments debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="as-external">
+                        <properties>
+                          <help>Display As-External LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="inter-prefix">
+                        <properties>
+                          <help>Display Inter-Area-Prefix LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="inter-router">
+                        <properties>
+                          <help>Display Inter-Router LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="intra-prefix">
+                        <properties>
+                          <help>Display Intra-Area-Prefix LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="link">
+                        <properties>
+                          <help>Display Link LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="network">
+                        <properties>
+                          <help>Display Network LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="router">
+                        <properties>
+                          <help>Display Router LSAs</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="unknown">
+                        <properties>
+                          <help>Display LSAs of unknown origin</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="message">
+                    <properties>
+                      <help>Enable OSPFv3 message debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="all">
+                        <properties>
+                          <help>Debug All message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="dbdesc">
+                        <properties>
+                          <help>Debug Database Description message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="hello">
+                        <properties>
+                          <help>Debug Hello message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="lsack">
+                        <properties>
+                          <help>Debug Link State Acknowledgement message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="lsreq">
+                        <properties>
+                          <help>Debug Link State Request message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="lsupdate">
+                        <properties>
+                          <help>Debug Link State Update message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="unknown">
+                        <properties>
+                          <help>Debug Unknown message</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="neighbor">
+                    <properties>
+                      <help>Enable OSPFv3 Neighbor debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="event">
+                        <properties>
+                          <help>Debug OSPFv3 Neighbor Event</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="state">
+                        <properties>
+                          <help>Debug OSPFv3 Neighbor State Change</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Enable OSPFv3 connection to RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="recv">
+                        <properties>
+                          <help>Debug receiving zebra</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Debug sending zebra</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="route">
+                    <properties>
+                      <help>Enable OSPFv3 route table calculation debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="inter-area">
+                        <properties>
+                          <help>Debug inter-area route calculation</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="intra-area">
+                        <properties>
+                          <help>Debug intra-area route calculation</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="memory">
+                        <properties>
+                          <help>Debug route memory use</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="table">
+                        <properties>
+                          <help>Debug route table calculation</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="spf">
+                    <properties>
+                      <help>Enable OSPFv3 SPF calculation debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                    <children>
+                      <node name="database">
+                        <properties>
+                          <help>Log number of LSAs at SPF Calculation time</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="process">
+                        <properties>
+                          <help>Debug Detailed SPF Process</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                      <node name="time">
+                        <properties>
+                          <help>Measure time taken by SPF Calculation</help>
+                        </properties>
+                        <command>vtysh -c "debug ospf6 ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="rib">
+            <properties>
+              <help>Monitor the Routing Information Base (RIB)</help>
+            </properties>
+            <children>
+              <node name="background">
+                <properties>
+                  <help>Monitor in background</help>
+                </properties>
+                <children>
+                  <node name="start">
+                    <properties>
+                      <help>Start background monitoring</help>
+                    </properties>
+                    <command>${vyatta_bindir}/vyatta-monitor-background RIB zebra</command>
+                  </node>
+                  <node name="stop">
+                    <properties>
+                      <help>Stop background monitoring</help>
+                    </properties>
+                    <command>${vyatta_bindir}/vyatta-monitor-background-stop RIB</command>
+                  </node>
+                </children>
+              </node>
+              <node name="disable">
+                <properties>
+                  <help>Disable Route Information Base (RIB) debugging</help>
+                </properties>
+                <children>
+                  <node name="events">
+                    <properties>
+                      <help>Disable RIB events debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="kernel">
+                    <properties>
+                      <help>Disable RIB kernel debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Disable RIB packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug zebra ${@:5}"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Disable detailed debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug zebra ${@:5}"</command>
+                      </node>
+                      <node name="recv">
+                        <properties>
+                          <help>Disable receive packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug zebra ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Disable send packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug zebra ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="nexthop">
+                    <properties>
+                      <help>Disable RIB nexthop debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="mpls">
+                    <properties>
+                      <help>Disable RIP MPLS LSP debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Disable RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug zebra ${@:5}"</command>
+                    <children>
+                      <node name="detailed">
+                        <properties>
+                          <help>Disable detailed debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug zebra ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="enable">
+                <properties>
+                  <help>Enable Route Information Base (RIB) debugging</help>
+                </properties>
+                <children>
+                  <node name="events">
+                    <properties>
+                      <help>Enable RIB events debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="kernel">
+                    <properties>
+                      <help>Enable RIB kernel debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Enable RIB packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug zebra ${@:5}"</command>
+                    <children>
+                      <node name="detail">
+                        <properties>
+                          <help>Enable detailed debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug zebra ${@:5}"</command>
+                      </node>
+                      <node name="recv">
+                        <properties>
+                          <help>Enable receive packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug zebra ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Enable send packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug zebra ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="nexthop">
+                    <properties>
+                      <help>Enable RIB nexthop debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="mpls">
+                    <properties>
+                      <help>Enable RIP MPLS LSP debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug zebra ${@:5}"</command>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Enable RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug zebra ${@:5}"</command>
+                    <children>
+                      <node name="detailed">
+                        <properties>
+                          <help>Enable detailed debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug zebra ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="rip">
+            <properties>
+              <help>Monitor the Routing Information Protocol (RIP)</help>
+            </properties>
+            <children>
+              #include <include/monitor-background.xml.i>
+              <node name="disable">
+                <properties>
+                  <help>Disable Routing Information Protocol (RIP) debugging</help>
+                </properties>
+                <children>
+                  <node name="all">
+                    <properties>
+                      <help>Disable RIP debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug rip"</command>
+                  </node>
+                  <node name="events">
+                    <properties>
+                      <help>Disable RIP events debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug rip ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Disable RIP packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug rip ${@:5}"</command>
+                    <children>
+                      <node name="recv">
+                        <properties>
+                          <help>Disable receive packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug rip ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Disable send packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug rip ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Disable RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug rip zebra"</command>
+                  </node>
+                </children>
+              </node>
+              <node name="enable">
+                <properties>
+                  <help>Enable Routing Information Protocol (RIP) debugging</help>
+                </properties>
+                <children>
+                  <node name="events">
+                    <properties>
+                      <help>Enable RIP events debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug rip ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Enable RIP packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug rip ${@:5}"</command>
+                    <children>
+                      <node name="recv">
+                        <properties>
+                          <help>Enable receive packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug rip ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Enable send packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug rip ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Enable RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug rip zebra"</command>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="ripng">
+            <properties>
+              <help>Monitor the Routing Information Protocol Next Generation (RIPng) protocol</help>
+            </properties>
+            <children>
+              #include <include/monitor-background.xml.i>
+              <node name="disable">
+                <properties>
+                  <help>Disable Routing Information Protocol Next Generation (RIPNG) debugging</help>
+                </properties>
+                <children>
+                  <node name="all">
+                    <properties>
+                      <help>Disable RIPNG debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ripng"</command>
+                  </node>
+                  <node name="events">
+                    <properties>
+                      <help>Disable RIPNG events debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ripng ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Disable RIPNG packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ripng ${@:5}"</command>
+                    <children>
+                      <node name="recv">
+                        <properties>
+                          <help>Disable receive packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ripng ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Disable send packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "no debug ripng ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Disable RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "no debug ripng zebra"</command>
+                  </node>
+                </children>
+              </node>
+              <node name="enable">
+                <properties>
+                  <help>Enable Routing Information Protocol Next Generation (RIPNG) debugging</help>
+                </properties>
+                <children>
+                  <node name="events">
+                    <properties>
+                      <help>Enable RIPNG events debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ripng ${@:5}"</command>
+                  </node>
+                  <node name="packet">
+                    <properties>
+                      <help>Enable RIPNG packet debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ripng ${@:5}"</command>
+                    <children>
+                      <node name="recv">
+                        <properties>
+                          <help>Enable receive packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ripng ${@:5}"</command>
+                      </node>
+                      <node name="send">
+                        <properties>
+                          <help>Enable send packet debugging</help>
+                        </properties>
+                        <command>vtysh -c "debug ripng ${@:5}"</command>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="rib">
+                    <properties>
+                      <help>Enable RIB debugging</help>
+                    </properties>
+                    <command>vtysh -c "debug ripng zebra"</command>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
