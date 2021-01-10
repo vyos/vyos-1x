@@ -6,7 +6,8 @@
       <list>&lt;x.x.x.x&gt;</list>
     </completionHelp>
   </properties>
-  <command>vtysh -c "show ipv6 ospf6 database * $6 $7"</command>
+  <!-- FRR uses ospf6 where we use ospfv3, thus alter the command -->
+  <command>vtysh -c "show ipv6 ospf6 ${@:4}"</command>
   <children>
     #include <include/ospfv3-detail.xml.i>
     #include <include/ospfv3-dump.xml.i>
