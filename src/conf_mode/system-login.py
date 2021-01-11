@@ -158,11 +158,11 @@ def generate(login):
                 env = os.environ.copy()
                 env['vyos_libexec_dir'] = '/usr/libexec/vyos'
 
-                call(f"/opt/vyatta/sbin/my_delete system login user '{user}' "
-                     "authentication plaintext-password", env=env)
+                call(f"/opt/vyatta/sbin/my_delete system login user '{user}' " \
+                     f"authentication plaintext-password", env=env)
 
-                call(f"/opt/vyatta/sbin/my_set system login user '{user}' "
-                     "authentication encrypted-password '{encrypted_password}'", env=env)
+                call(f"/opt/vyatta/sbin/my_set system login user '{user}' " \
+                     f"authentication encrypted-password '{encrypted_password}'", env=env)
             else:
                 try:
                     if getspnam(user).sp_pwdp == dict_search('authentication.encrypted_password', user_config):
@@ -212,7 +212,6 @@ def apply(login):
             else: command += f" -d '/home/{user}'"
 
             command += f' -G frrvty,vyattacfg,sudo,adm,dip,disk {user}'
-
             try:
                 cmd(command)
 
