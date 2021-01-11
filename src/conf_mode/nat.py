@@ -88,7 +88,7 @@ def get_config(config=None):
     for direction in ['source', 'destination']:
         if direction in nat:
             default_values = defaults(base + [direction, 'rule'])
-            for rule in nat[direction]['rule']:
+            for rule in dict_search(f'{direction}.rule', nat) or []:
                 nat[direction]['rule'][rule] = dict_merge(default_values,
                     nat[direction]['rule'][rule])
 
