@@ -12,7 +12,7 @@
             <properties>
               <help>Show contents of all master log files</help>
             </properties>
-            <command>eval $(lesspipe); less $_vyatta_less_options --prompt=".log?m, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`</command>
+            <command>sudo bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
           </leafNode>
           <leafNode name="authorization">
             <properties>
