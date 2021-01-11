@@ -138,7 +138,6 @@ class TestNAT(unittest.TestCase):
             else:
                 self.assertEqual(iface, inbound_iface_200)
 
-
     def test_snat_required_translation_address(self):
         # T2813: Ensure translation address is specified
         rule = '5'
@@ -155,6 +154,17 @@ class TestNAT(unittest.TestCase):
 
         self.session.set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
         self.session.commit()
+
+    def test_nat_no_rules(self):
+        # T3206: deleting all rules but keep the direction 'destination' or
+        # 'source' resulteds in KeyError: 'rule'.
+        #
+        # Test that both 'nat destination' and 'nat source' nodes can exist
+        # without any rule
+        self.session.set(src_path)
+        self.session.set(dst_path)
+        self.session.commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
