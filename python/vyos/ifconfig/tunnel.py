@@ -63,21 +63,21 @@ class _Tunnel(Interface):
         },
     }}
 
+    _create_cmd = 'ip tunnel add {ifname} mode {type}'
+
     def __init__(self, ifname, **config):
         self.config = deepcopy(config) if config else {}
         super().__init__(ifname, **config)
 
     def _create(self):
-        create = 'ip tunnel add {ifname} mode {type}'
-
         # add " option-name option-name-value ..." for all options set
         options = " ".join(["{} {}".format(k, self.config[k])
                             for k in self.options if k in self.config and self.config[k]])
-        self._cmd('{} {}'.format(create.format(**self.config), options))
+        self._cmd('{} {}'.format(self._create_cmd.format(**self.config), options))
         self.set_admin_state('down')
 
     def change_options(self):
-        change = 'ip tunnel cha {ifname} mode {type}'
+        change = 'ip tunnel change {ifname} mode {type}'
 
         # add " option-name option-name-value ..." for all options set
         options = " ".join(["{} {}".format(k, self.config[k])
@@ -163,6 +163,11 @@ class GRETapIf(_Tunnel):
 
     default = {'type': 'gretap'}
     options = ['local', 'remote', 'ttl',]
+
+    _create_cmd = 'ip link add name {ifname} type {type}'
+
+    def change_options(self):
+        pass
 
 class IP6GREIf(_Tunnel):
     """
