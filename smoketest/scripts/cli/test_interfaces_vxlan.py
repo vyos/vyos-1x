@@ -21,6 +21,8 @@ from base_interfaces_test import BasicInterfaceTest
 
 class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
+        self._test_ip = True
+        self._test_ipv6 = True
         self._test_mtu = True
         self._base_path = ['interfaces', 'vxlan']
         self._options = {

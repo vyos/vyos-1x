@@ -57,6 +57,7 @@ class BasicInterfaceTest:
         _test_vlan = False
         _test_qinq = False
         _test_ipv6 = False
+        _test_ipv6_pd = False
         _test_mirror = False
         _base_path = []
 
@@ -367,7 +368,7 @@ class BasicInterfaceTest:
 
 
         def test_dhcpv6pd_auto_sla_id(self):
-            if not self._test_ipv6:
+            if not self._test_ipv6_pd:
                 self.skipTest('not enabled')
 
             prefix_len = '56'
@@ -423,7 +424,7 @@ class BasicInterfaceTest:
                 self.session.delete(['interfaces', section, delegatee])
 
         def test_dhcpv6pd_manual_sla_id(self):
-            if not self._test_ipv6:
+            if not self._test_ipv6_pd:
                 self.skipTest('not enabled')
 
             prefix_len = '56'

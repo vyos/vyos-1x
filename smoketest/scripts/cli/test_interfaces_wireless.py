@@ -33,6 +33,7 @@ def get_config_value(interface, key):
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
+        self._test_ip = True
         self._base_path = ['interfaces', 'wireless']
         self._options = {
             'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',

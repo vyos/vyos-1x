@@ -33,6 +33,8 @@ def get_config_value(interface, key):
 class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
          super().setUp()
+         self._test_ip = True
+         self._test_ipv6 = True
          self._base_path = ['interfaces', 'macsec']
          self._options = { 'macsec0': ['source-interface eth0', 'security cipher gcm-aes-128'] }
 

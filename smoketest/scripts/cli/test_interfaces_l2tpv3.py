@@ -22,6 +22,8 @@ from vyos.util import cmd
 
 class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
+        self._test_ip = True
+        self._test_ipv6 = True
         self._base_path = ['interfaces', 'l2tpv3']
         self._options = {
             'l2tpeth10': ['local-ip 127.0.0.1', 'remote-ip 127.10.10.10',
