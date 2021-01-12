@@ -76,7 +76,11 @@ class TestSystemNTP(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ntp_clients(self):
-        # Test the allowed-networks statement
+        """ Test the allowed-networks statement """
+        listen_address = ['127.0.0.1', '::1']
+        for listen in listen_address:
+            self.session.set(base_path + ['listen-address', listen])
+
         networks = ['192.0.2.0/24', '2001:db8:1000::/64']
         for network in networks:
             self.session.set(base_path + ['allow-clients', 'address', network])
@@ -102,7 +106,9 @@ class TestSystemNTP(unittest.TestCase):
 
         # Check listen address
         tmp = get_config_value('interface')
-        test = ['ignore wildcard', 'listen 127.0.0.1', 'listen ::1']
+        test = ['ignore wildcard']
+        for listen in listen_address:
+            test.append(f'listen {listen}')
         self.assertEqual(tmp, test)
 
         # Check for running process
