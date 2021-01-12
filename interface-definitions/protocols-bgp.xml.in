@@ -198,9 +198,9 @@
                           #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
-                      <node name="ospf">
+                      <node name="ospfv3">
                         <properties>
-                          <help>Redistribute OSPF routes into BGP</help>
+                          <help>Redistribute OSPFv3 routes into BGP</help>
                         </properties>
                         <children>
                           #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
@@ -282,7 +282,7 @@
               <constraint>
                 <validator name="ipv4-address"/>
                 <validator name="ipv6-address"/>
-                <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|vxlan|wg|wlan)[0-9]+</regex>
+                <regex>(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo</regex>
               </constraint>
             </properties>
             <children>
@@ -641,7 +641,7 @@
                   <constraint>
                     <validator name="ipv4-address"/>
                     <validator name="ipv6-address"/>
-                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|vxlan|wg|wlan)[0-9]+</regex>
+                    <regex>(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -1152,7 +1152,7 @@
                   <constraint>
                     <validator name="ipv4-address"/>
                     <validator name="ipv6-address"/>
-                    <regex>(br|bond|dum|en|eth|gnv|lo|peth|tun|vti|vxlan|wg|wlan)[0-9]+</regex>
+                    <regex>(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo</regex>
                   </constraint>
                 </properties>
               </leafNode>
