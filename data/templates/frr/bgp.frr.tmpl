@@ -152,7 +152,11 @@ router bgp {{ asn }}
 {%         if protocol == 'table' %}
   redistribute table {{ address_family[af].redistribute[protocol].table }}
 {%         else %}
-  redistribute {{ protocol }}{% if address_family[af].redistribute[protocol].metric is defined %} metric {{ address_family[af].redistribute[protocol].metric }}{% endif %}{% if address_family[af].redistribute[protocol].route_map is defined %} route-map {{ address_family[af].redistribute[protocol].route_map }}{% endif %}
+{%           set redistribution_protocol = protocol %}
+{%             if protocol == 'ospfv3' %}
+{%               set redistribution_protocol = 'ospf6' %}
+{%             endif %}
+  redistribute {{ redistribution_protocol }}{% if address_family[af].redistribute[protocol].metric is defined %} metric {{ address_family[af].redistribute[protocol].metric }}{% endif %}{% if address_family[af].redistribute[protocol].route_map is defined %} route-map {{ address_family[af].redistribute[protocol].route_map }}{% endif %}
 {#######   we need this blank line!! #######}
 
 {%         endif %}
