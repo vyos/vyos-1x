@@ -168,8 +168,8 @@ interface {{ iface }}
 {%     if iface_config.psnp_interval is defined and iface_config.psnp_interval is not none %}
  isis psnp-interval {{ iface_config.psnp_interval }}
 {%     endif %}
-{%     if iface_config.three_way_handshake is defined %}
- isis three-way-handshake
+{%     if iface_config.no_three_way_handshake is defined %}
+ no isis three-way-handshake
 {%     endif %}
 {%   endfor %}
 {% endif %}

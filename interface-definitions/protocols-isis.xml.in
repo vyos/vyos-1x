@@ -758,9 +758,9 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="three-way-handshake">
+              <leafNode name="no-three-way-handshake">
                 <properties>
-                  <help>Enable/Disable three-way handshake</help>
+                  <help>Disable three-way handshake</help>
                   <valueless/>
                 </properties>
               </leafNode>
