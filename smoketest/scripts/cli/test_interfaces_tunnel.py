@@ -63,6 +63,7 @@ def tunnel_conf(interface):
 class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         self._test_ip = True
+        self._test_ipv6 = True
         self._test_mtu = True
         self._base_path = ['interfaces', 'tunnel']
         self.local_v4 = '192.0.2.1'
@@ -203,4 +204,4 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.commit()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

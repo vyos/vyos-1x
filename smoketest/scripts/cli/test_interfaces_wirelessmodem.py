@@ -40,7 +40,7 @@ class WWANInterfaceTest(unittest.TestCase):
         self.session.commit()
         del self.session
 
-    def test_wlm_1(self):
+    def test_wwan(self):
         for interface in self._interfaces:
             self.session.set(base_path + [interface, 'no-peer-dns'])
             self.session.set(base_path + [interface, 'connect-on-demand'])

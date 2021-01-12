@@ -27,10 +27,11 @@ from vyos.util import read_file
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         self._test_ip = True
+        self._test_ipv6 = True
+        self._test_ipv6_pd = True
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
-        self._test_ipv6 = True
         self._base_path = ['interfaces', 'bonding']
         self._interfaces = ['bond0']
         self._mirror_interfaces = ['dum21354']

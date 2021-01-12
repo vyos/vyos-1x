@@ -37,10 +37,11 @@ def get_wpa_supplicant_value(interface, key):
 class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
         self._test_ip = True
+        self._test_ipv6 = True
+        self._test_ipv6_pd = True
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
-        self._test_ipv6 = True
         self._base_path = ['interfaces', 'ethernet']
         self._mirror_interfaces = ['dum21354']
 
