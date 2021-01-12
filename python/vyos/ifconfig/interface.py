@@ -79,6 +79,14 @@ class Interface(Control):
             'shellcmd': 'ip -json link show dev {ifname}',
             'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
         },
+        'alias': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].ifalias | [0]', json.loads(j)),
+        },
+        'mac': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].address | [0]', json.loads(j)),
+        },
         'min_mtu': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
             'format': lambda j: jmespath.search('[*].min_mtu | [0]', json.loads(j)),
@@ -87,6 +95,14 @@ class Interface(Control):
             'shellcmd': 'ip -json -detail link list dev {ifname}',
             'format': lambda j: jmespath.search('[*].max_mtu | [0]', json.loads(j)),
         },
+        'mtu': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].mtu | [0]', json.loads(j)),
+        },
+        'oper_state': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].operstate | [0]', json.loads(j)),
+        },
     }
 
     _command_set = {
@@ -94,9 +110,17 @@ class Interface(Control):
             'validate': lambda v: assert_list(v, ['up', 'down']),
             'shellcmd': 'ip link set dev {ifname} {value}',
         },
+        'alias': {
+            'convert': lambda name: name if name else '',
+            'shellcmd': 'ip link set dev {ifname} alias "{value}"',
+        },
         'mac': {
             'validate': assert_mac,
             'shellcmd': 'ip link set dev {ifname} address {value}',
+        },
+        'mtu': {
+            'validate': assert_mtu,
+            'shellcmd': 'ip link set dev {ifname} mtu {value}',
         },
         'vrf': {
             'convert': lambda v: f'master {v}' if v else 'nomaster',
@@ -104,30 +128,7 @@ class Interface(Control):
         },
     }
 
-    _sysfs_get = {
-        'alias': {
-            'location': '/sys/class/net/{ifname}/ifalias',
-        },
-        'mac': {
-            'location': '/sys/class/net/{ifname}/address',
-        },
-        'mtu': {
-            'location': '/sys/class/net/{ifname}/mtu',
-        },
-        'oper_state':{
-            'location': '/sys/class/net/{ifname}/operstate',
-        },
-    }
-
     _sysfs_set = {
-        'alias': {
-            'convert': lambda name: name if name else '\0',
-            'location': '/sys/class/net/{ifname}/ifalias',
-        },
-        'mtu': {
-            'validate': assert_mtu,
-            'location': '/sys/class/net/{ifname}/mtu',
-        },
         'arp_cache_tmo': {
             'convert': lambda tmo: (int(tmo) * 1000),
             'location': '/proc/sys/net/ipv4/neigh/{ifname}/base_reachable_time_ms',
