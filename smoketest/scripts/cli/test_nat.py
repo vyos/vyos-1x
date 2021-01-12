@@ -155,6 +155,18 @@ class TestNAT(unittest.TestCase):
         self.session.set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
         self.session.commit()
 
+    def test_dnat_negated_addresses(self):
+        # T3186: negated addresses are not accepted by nftables
+        rule = '1000'
+        self.session.set(dst_path + ['rule', rule, 'destination', 'address', '!192.0.2.1'])
+        self.session.set(dst_path + ['rule', rule, 'destination', 'port', '53'])
+        self.session.set(dst_path + ['rule', rule, 'inbound-interface', 'eth0'])
+        self.session.set(dst_path + ['rule', rule, 'protocol', 'tcp_udp'])
+        self.session.set(dst_path + ['rule', rule, 'source', 'address', '!192.0.2.1'])
+        self.session.set(dst_path + ['rule', rule, 'translation', 'address', '192.0.2.1'])
+        self.session.set(dst_path + ['rule', rule, 'translation', 'port', '53'])
+        self.session.commit()
+
     def test_nat_no_rules(self):
         # T3206: deleting all rules but keep the direction 'destination' or
         # 'source' resulteds in KeyError: 'rule'.
