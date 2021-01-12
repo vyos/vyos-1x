@@ -36,12 +36,9 @@ def get_config():
 
     # XXX: any reason we can not move this into the FRR template?
     # we shall not call vtysh directly, especially not in get_config()
-    if not conf.exists(base):
-        bgp = {}
-        call('vtysh -c \"conf t\" -c \"no ip protocol bgp\" ')
-
-    if not conf.exists(base + ['route-map']):
-        call('vtysh -c \"conf t\" -c \"no ip protocol bgp\" ')
+    if not conf.exists(base) or not conf.exists(base + ['route-map']):
+        call('vtysh -c \"conf t\" -c \"no ip protocol bgp\"')
+        return bgp
 
     # We also need some additional information from the config,
     # prefix-lists and route-maps for instance.
