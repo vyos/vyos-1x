@@ -6,7 +6,7 @@
       <node name="snmp" owner="${vyos_conf_scripts_dir}/snmp.py">
         <properties>
           <help>Simple Network Management Protocol (SNMP)</help>
-          <priority>980</priority>
+          <priority>900</priority>
         </properties>
         <children>
           <tagNode name="community">

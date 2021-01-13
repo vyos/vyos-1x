@@ -6,7 +6,7 @@
       <node name="ssh" owner="${vyos_conf_scripts_dir}/ssh.py">
         <properties>
           <help>Secure Shell (SSH)</help>
-          <priority>500</priority>
+          <priority>1000</priority>
         </properties>
         <children>
           <node name="access-control">

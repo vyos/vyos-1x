@@ -77,10 +77,9 @@ def apply(ssh):
     if not ssh:
         # SSH access is removed in the commit
         call('systemctl stop ssh.service')
+        return None
 
-    if ssh:
-        call('systemctl restart ssh.service')
-
+    call('systemctl restart ssh.service')
     return None
 
 if __name__ == '__main__':
