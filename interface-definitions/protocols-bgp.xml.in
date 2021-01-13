@@ -192,9 +192,9 @@
                           #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
-                      <node name="rip">
+                      <node name="ripng">
                         <properties>
-                          <help>Redistribute RIP routes into BGP</help>
+                          <help>Redistribute RIPng routes into BGP</help>
                         </properties>
                         <children>
                           #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
@@ -742,8 +742,43 @@
                   <help>BGP peer-group address-family parameters</help>
                 </properties>
                 <children>
-                  #include <include/bgp-peer-group-afi-ipv4-unicast.xml.i>
-                  #include <include/bgp-peer-group-afi-ipv6-unicast.xml.i>
+                  <node name="ipv4-unicast">
+                    <properties>
+                      <help>IPv4 BGP peer group parameters</help>
+                    </properties>
+                    <children>
+                      <node name="capability">
+                        <properties>
+                          <help>Advertise capabilities to this peer-group</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-capability-orf.xml.i>
+                          #include <include/bgp-afi-ipv6-capability-dynamic.xml.i>
+                        </children>
+                      </node>
+                      #include <include/bgp-afi-ipv4-prefix-list.xml.i>
+                      #include <include/bgp-afi-common.xml.i>
+                    </children>
+                  </node>
+                  <node name="ipv6-unicast">
+                    <properties>
+                      <help>IPv6 BGP peer group parameters</help>
+                    </properties>
+                    <children>
+                      <node name="capability">
+                        <properties>
+                          <help>Advertise capabilities to this peer-group</help>
+                        </properties>
+                        <children>
+                          #include <include/bgp-afi-capability-orf.xml.i>
+                          #include <include/bgp-afi-ipv6-capability-dynamic.xml.i>
+                        </children>
+                      </node>
+                      #include <include/bgp-afi-ipv6-nexthop-local.xml.i>
+                      #include <include/bgp-afi-ipv6-prefix-list.xml.i>
+                      #include <include/bgp-afi-common.xml.i>
+                    </children>
+                  </node>
                 </children>
               </node>
               <leafNode name="bfd">

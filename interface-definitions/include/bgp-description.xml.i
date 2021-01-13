@@ -1,8 +1,7 @@
 <!-- included start from bgp-description.xml.i -->
 <leafNode name="description">
   <properties>
-    <help>Description for this peer-group</help>
-    <valueless/>
+    <help>Neighbor specific description</help>
   </properties>
 </leafNode>
 <!-- included end -->

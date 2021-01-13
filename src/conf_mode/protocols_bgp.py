@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,16 +34,13 @@ def get_config():
     base = ['protocols', 'nbgp']
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    # XXX: any reason we can not move this into the FRR template?
-    # we shall not call vtysh directly, especially not in get_config()
-    if not conf.exists(base) or not conf.exists(base + ['route-map']):
-        call('vtysh -c \"conf t\" -c \"no ip protocol bgp\"')
+    if not conf.exists(base):
         return bgp
 
     # We also need some additional information from the config,
     # prefix-lists and route-maps for instance.
     base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
     # As we only support one ASN (later checked in begin of verify()) we add the
     # new information only to the first AS number
     asn = next(iter(bgp))
@@ -61,9 +58,6 @@ def verify(bgp):
         raise ConfigError('Only one BGP AS number can be defined!')
 
     for asn, asn_config in bgp.items():
-        import pprint
-        pprint.pprint(asn_config)
-
         # Common verification for both peer-group and neighbor statements
         for neighbor in ['neighbor', 'peer_group']:
             # bail out early if there is no neighbor or peer-group statement
@@ -98,22 +92,26 @@ def verify(bgp):
                     # Validate if configured Prefix list exists
                     if 'prefix_list' in afi_config:
                         for tmp in ['import', 'export']:
-                            if tmp in afi_config['prefix_list']:
-                                if afi == 'ipv4_unicast':
-                                    prefix_list = afi_config['prefix_list'][tmp]
-                                    if 'prefix_list' not in asn_config or prefix_list not in asn_config['prefix_list']:
-                                        raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
-                                if afi == 'ipv6_unicast':
-                                    prefix_list = afi_config['prefix_list6'][tmp]
-                                    if 'prefix_list6' not in asn_config or prefix_list not in asn_config['prefix_list6']:
-                                        raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
-
+                            if tmp not in afi_config['prefix_list']:
+                                # bail out early
+                                continue
+                            # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
+                            # compares will run on '_' as also '_' is a valid name for a prefix-list
+                            prefix_list = afi_config['prefix_list'][tmp].replace('-', '_')
+                            if afi == 'ipv4_unicast':
+                                if dict_search(f'policy.prefix_list.{prefix_list}', asn_config) == None:
+                                    raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+                            elif afi == 'ipv6_unicast':
+                                if dict_search(f'policy.prefix_list6.{prefix_list}', asn_config) == None:
+                                    raise ConfigError(f'prefix-list6 "{prefix_list}" used for "{tmp}" does not exist!')
 
                     if 'route_map' in afi_config:
                         for tmp in ['import', 'export']:
                             if tmp in afi_config['route_map']:
-                                route_map = afi_config['route_map'][tmp]
-                                if 'route_map' not in asn_config or route_map not in asn_config['route_map']:
+                                # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
+                                # compares will run on '_' as also '_' is a valid name for a route-map
+                                route_map = afi_config['route_map'][tmp].replace('-', '_')
+                                if dict_search(f'policy.route_map.{route_map}', asn_config) == None:
                                     raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
 
 

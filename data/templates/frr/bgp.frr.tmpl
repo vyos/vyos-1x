@@ -24,7 +24,7 @@
  neighbor {{ neighbor }} description {{ config.description }}
 {%   endif %}
 {%   if config.disable_capability_negotiation is defined %}
- neighbor {{ neighbor }} disable-capability-negotiation
+ neighbor {{ neighbor }} dont-capability-negotiate
 {%   endif %}
 {%   if config.ebgp_multihop is defined and config.ebgp_multihop is not none %}
  neighbor {{ neighbor }} ebgp-multihop {{ config.ebgp_multihop }}
