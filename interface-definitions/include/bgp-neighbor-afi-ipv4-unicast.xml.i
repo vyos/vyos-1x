@@ -10,6 +10,7 @@
       </properties>
       <children>
         #include <include/bgp-afi-capability-orf.xml.i>
+        #include <include/bgp-capability-dynamic.xml.i>
       </children>
     </node>
     #include <include/bgp-afi-peer-group.xml.i>

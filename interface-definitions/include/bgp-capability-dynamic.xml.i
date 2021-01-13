@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-ipv6-capability-dynamic.xml.i -->
+<!-- included start from bgp-capability-dynamic.xml.i -->
 <!-- Capability dynamic in the afi ipv6 does nothing T3037 -->
 <leafNode name="dynamic">
   <properties>

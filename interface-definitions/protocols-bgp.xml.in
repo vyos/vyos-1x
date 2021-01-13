@@ -293,19 +293,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <node name="bfd">
-                <properties>
-                  <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
-                </properties>
-                <children>
-                  <leafNode name="check-control-plane-failure">
-                    <properties>
-                      <help>Allow to write CBIT independence in BFD outgoing packets and read both C-BIT value of BFD and lookup BGP peer status</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              #include <include/bgp-bfd.xml.i>
               #include <include/bgp-capability.xml.i>
               #include <include/bgp-description.xml.i>
               #include <include/bgp-disable-capability-negotiation.xml.i>
@@ -742,51 +730,11 @@
                   <help>BGP peer-group address-family parameters</help>
                 </properties>
                 <children>
-                  <node name="ipv4-unicast">
-                    <properties>
-                      <help>IPv4 BGP peer group parameters</help>
-                    </properties>
-                    <children>
-                      <node name="capability">
-                        <properties>
-                          <help>Advertise capabilities to this peer-group</help>
-                        </properties>
-                        <children>
-                          #include <include/bgp-afi-capability-orf.xml.i>
-                          #include <include/bgp-afi-ipv6-capability-dynamic.xml.i>
-                        </children>
-                      </node>
-                      #include <include/bgp-afi-ipv4-prefix-list.xml.i>
-                      #include <include/bgp-afi-common.xml.i>
-                    </children>
-                  </node>
-                  <node name="ipv6-unicast">
-                    <properties>
-                      <help>IPv6 BGP peer group parameters</help>
-                    </properties>
-                    <children>
-                      <node name="capability">
-                        <properties>
-                          <help>Advertise capabilities to this peer-group</help>
-                        </properties>
-                        <children>
-                          #include <include/bgp-afi-capability-orf.xml.i>
-                          #include <include/bgp-afi-ipv6-capability-dynamic.xml.i>
-                        </children>
-                      </node>
-                      #include <include/bgp-afi-ipv6-nexthop-local.xml.i>
-                      #include <include/bgp-afi-ipv6-prefix-list.xml.i>
-                      #include <include/bgp-afi-common.xml.i>
-                    </children>
-                  </node>
+                  #include <include/bgp-neighbor-afi-ipv4-unicast.xml.i>
+                  #include <include/bgp-neighbor-afi-ipv6-unicast.xml.i>
                 </children>
               </node>
-              <leafNode name="bfd">
-                <properties>
-                  <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/bgp-bfd.xml.i>
               #include <include/bgp-capability.xml.i>
               #include <include/bgp-description.xml.i>
               #include <include/bgp-disable-capability-negotiation.xml.i>
