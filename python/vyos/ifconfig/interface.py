@@ -81,7 +81,7 @@ class Interface(Control):
         },
         'alias': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].ifalias | [0]', json.loads(j)),
+            'format': lambda j: jmespath.search('[*].ifalias | [0]', json.loads(j)) or '',
         },
         'mac': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
