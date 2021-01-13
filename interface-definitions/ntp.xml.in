@@ -5,8 +5,8 @@
     <children>
       <node name="ntp" owner="${vyos_conf_scripts_dir}/ntp.py">
         <properties>
-          <priority>400</priority>
           <help>Network Time Protocol (NTP) configuration</help>
+          <priority>900</priority>
         </properties>
         <children>
           <tagNode name="server">

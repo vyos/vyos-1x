@@ -4,7 +4,7 @@
     <properties>
       <help>Virtual Routing and Forwarding</help>
       <!-- must be before any interface creation -->
-      <priority>60</priority>
+      <priority>10</priority>
     </properties>
     <children>
       <leafNode name="bind-to-all">
