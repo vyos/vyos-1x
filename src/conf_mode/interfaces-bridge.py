@@ -73,7 +73,6 @@ def get_config(config=None):
         # the default dictionary is not properly paged into the dict (see T2665)
         # thus we will ammend it ourself
         default_member_values = defaults(base + ['member', 'interface'])
-        vlan_aware = True if 'enable_vlan' in bridge else False
         for interface,interface_config in bridge['member']['interface'].items():
             bridge['member']['interface'][interface] = dict_merge(
                     default_member_values, bridge['member']['interface'][interface])
@@ -97,7 +96,7 @@ def get_config(config=None):
 
             # VLAN-aware bridge members must not have VLAN interface configuration
             tmp = has_vlan_subinterface_configured(conf,interface)
-            if vlan_aware and tmp:
+            if 'enable_vlan' in bridge and tmp:
                 bridge['member']['interface'][interface].update({'has_vlan' : ''})
 
     return bridge
@@ -108,8 +107,6 @@ def verify(bridge):
 
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
-
-    vlan_aware = True if 'enable_vlan' in bridge else False
     
     ifname = bridge['ifname']
 
@@ -135,7 +132,7 @@ def verify(bridge):
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')
 
-            if vlan_aware:
+            if 'enable_vlan' in bridge:
                 if 'has_vlan' in interface_config:
                     raise ConfigError(error_msg + 'it has an VLAN subinterface assigned!')
 
@@ -159,7 +156,7 @@ def verify(bridge):
                 if 'native_vlan' in interface_config:
                     raise ConfigError(f'You must first activate "enable-vlan" of {ifname} bridge to use "native-vlan"')
     
-    if vlan_aware:
+    if 'enable_vlan' in bridge:
         if dict_search('vif.1', bridge):
             raise ConfigError(f'VLAN 1 sub interface cannot be set for VLAN aware bridge {ifname}, and VLAN 1 is always the parent interface')
     else:

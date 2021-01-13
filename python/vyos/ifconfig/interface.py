@@ -900,29 +900,46 @@ class Interface(Control):
             if 'priority' in bridge_config:
                 self.set_path_cost(bridge_config['priority'])
 
-            del_ifname_vlan_ids = get_vlan_ids(ifname)
-            bridge_vlan_filter = int(Section.klass(bridge)(bridge, create=True).get_vlan_filter())
+            bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
 
-            if bridge_vlan_filter:
-
-                # Delete all VLAN IDS configured in the interface first
-                for vlan in del_ifname_vlan_ids:
-                    cmd = f'bridge vlan del dev {ifname} vid {vlan} master'
-                    self._cmd(cmd)
+            if int(bridge_vlan_filter):
+                cur_vlan_ids = get_vlan_ids(ifname)
+                add_vlan = []
+                native_vlan_id = None
+                allowed_vlan_ids= []
 
                 if 'native_vlan' in bridge_config:
                     vlan_id = bridge_config['native_vlan']
-                    cmd = f'bridge vlan add dev {ifname} vid {vlan_id} pvid untagged master'
-                    self._cmd(cmd)
+                    add_vlan.append(vlan_id)
+                    native_vlan_id = vlan_id
                 else:
                     # VLAN 1 is the default VLAN for all unlabeled packets
-                    cmd = f'bridge vlan add dev {ifname} vid 1 pvid untagged master'
-                    self._cmd(cmd)
+                    add_vlan.append(1)
+                    native_vlan_id = 1
 
                 if 'allowed_vlan' in bridge_config:
                     for vlan in bridge_config['allowed_vlan']:
-                        cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
-                        self._cmd(cmd)
+                        vlan_range = vlan.split('-')
+                        if len(vlan_range) == 2:
+                            for vlan_add in range(int(vlan_range[0]),int(vlan_range[1]) + 1):
+                                add_vlan.append(str(vlan_add))
+                                allowed_vlan_ids.append(str(vlan_add))
+                        else:
+                            add_vlan.append(vlan)
+                            allowed_vlan_ids.append(vlan)
+                
+                # Remove redundant VLANs from the system
+                for vlan in list_diff(cur_vlan_ids, add_vlan):
+                    cmd = f'bridge vlan del dev {ifname} vid {vlan} master'
+                    self._cmd(cmd)
+                
+                for vlan in allowed_vlan_ids:
+                    cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
+                    self._cmd(cmd)
+                
+                # Setting native VLAN to system
+                cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
+                self._cmd(cmd)
 
     def set_dhcp(self, enable):
         """
