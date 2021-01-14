@@ -1,0 +1,218 @@
+interfaces {
+    ethernet eth0 {
+        address 192.0.2.100/25
+        address 2001:db8:aaaa::ffff/64
+    }
+    ethernet eth1 {
+        address 192.0.2.200/25
+        address 2001:db8:bbbb::ffff/64
+    }
+    loopback lo {
+    }
+}
+policy {
+    prefix-list IX-out-v4 {
+        rule 10 {
+            action permit
+            prefix 10.0.0.0/23
+        }
+        rule 20 {
+            action permit
+            prefix 10.0.128.0/23
+        }
+    }
+    prefix-list6 IX-out-v6 {
+        rule 10 {
+            action permit
+            prefix 2001:db8:100::/40
+        }
+        rule 20 {
+            action permit
+            prefix 2001:db8:200::/40
+        }
+    }
+    route-map IX-out-v4 {
+        rule 10 {
+            action permit
+            match {
+                ip {
+                    address {
+                        prefix-list IX-out-v4
+                    }
+                }
+            }
+        }
+    }
+    route-map IX-out-v6 {
+        rule 10 {
+            action permit
+            match {
+                ipv6 {
+                    address {
+                        prefix-list IX-out-v6
+                    }
+                }
+            }
+        }
+    }
+}
+protocols {
+    bgp 65000 {
+        address-family {
+            ipv4-unicast {
+                network 10.0.0.0/23 {
+                }
+                network 10.0.128.0/23 {
+                }
+            }
+            ipv6-unicast {
+                network 2001:db8:100::/40 {
+                }
+                network 2001:db8:200::/40 {
+                }
+            }
+        }
+        neighbor 192.0.2.1 {
+            description "Peering: IX-1 (Route Server)"
+            peer-group IXPeeringIPv4
+            remote-as 65020
+        }
+        neighbor 192.0.2.2 {
+            description "Peering: IX-1 (Route Server)"
+            peer-group IXPeeringIPv4
+            remote-as 65020
+        }
+        neighbor 192.0.2.3 {
+            description "Peering: IX-1 (Route Server)"
+            peer-group IXPeeringIPv4
+            remote-as 65020
+        }
+        neighbor 192.0.2.129 {
+            description "Peering: IX-2 (Route Server)"
+            peer-group IXPeeringIPv4
+            remote-as 65030
+        }
+        neighbor 192.0.2.130 {
+            description "Peering: IX-2 (Route Server)"
+            peer-group IXPeeringIPv4
+            remote-as 65030
+        }
+        neighbor 2001:db8:aaaa::1 {
+            description "Peering: IX-1 (Route Server)"
+            peer-group IXPeeringIPv6
+            remote-as 65020
+        }
+        neighbor 2001:db8:aaaa::2 {
+            description "Peering: IX-1 (Route Server)"
+            peer-group IXPeeringIPv6
+            remote-as 65020
+        }
+        neighbor 2001:db8:bbbb::1 {
+            description "Peering: IX-2 (Route Server)"
+            peer-group IXPeeringIPv6
+            remote-as 65030
+        }
+        neighbor 2001:db8:bbbb::2 {
+            description "Peering: IX-2 (Route Server)"
+            peer-group IXPeeringIPv6
+            remote-as 65030
+        }
+        parameters {
+            default {
+                no-ipv4-unicast
+            }
+        }
+        peer-group IXPeeringIPv4 {
+            address-family {
+                ipv4-unicast {
+                    route-map {
+                        export IX-out-v4
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+        }
+        peer-group IXPeeringIPv6 {
+            address-family {
+                ipv6-unicast {
+                    route-map {
+                        export IX-out-v6
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+        }
+    }
+    static {
+        route 10.0.0.0/23 {
+            blackhole {
+                distance 250
+            }
+        }
+        route 10.0.128.0/23 {
+            blackhole {
+                distance 250
+            }
+        }
+        route6 2001:db8:100::/40 {
+            blackhole {
+                distance 250
+            }
+        }
+        route6 2001:db8:200::/40 {
+            blackhole {
+                distance 250
+            }
+        }
+    }
+}
+service {
+    ssh {
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@1:conntrack-sync@1:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@13:ipoe-server@1:ipsec@5:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@6:salt@1:snmp@2:ssh@2:sstp@3:system@19:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webgui@1:webproxy@2:zone-policy@1"
+// Release version: 1.3-rolling-202010241631
