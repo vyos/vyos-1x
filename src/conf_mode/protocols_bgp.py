@@ -63,7 +63,6 @@ def verify(bgp):
             # bail out early if there is no neighbor or peer-group statement
             # this also saves one indention level
             if neighbor not in asn_config:
-                print(f'no {neighbor} found in config')
                 continue
 
             for peer, peer_config in asn_config[neighbor].items():

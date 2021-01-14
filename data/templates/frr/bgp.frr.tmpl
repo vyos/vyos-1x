@@ -133,7 +133,6 @@
 {% endmacro %}
 !
 router bgp {{ asn }}
- no bgp default ipv4-unicast
 {% if address_family is defined and address_family is not none %}
 {%   for af in address_family %}
  !
@@ -241,7 +240,6 @@ router bgp {{ asn }}
  bgp default local-preference {{ parameters.default.local_pref }}
 {%     endif %}
 {%     if parameters.default.no_ipv4_unicast is defined %}
-{#     We use this is parameter as default in template (5-th string) #}
  no bgp default ipv4-unicast
 {%     endif %}
 {%   endif %}
