@@ -366,7 +366,6 @@ class BridgeIf(Interface):
                     for vlan in allowed_vlan_ids:
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
-                    
                     # Setting native VLAN to system
                     cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
                     self._cmd(cmd)

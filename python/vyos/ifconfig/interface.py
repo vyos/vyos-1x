@@ -936,7 +936,6 @@ class Interface(Control):
                 for vlan in allowed_vlan_ids:
                     cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
                     self._cmd(cmd)
-                
                 # Setting native VLAN to system
                 cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
                 self._cmd(cmd)
