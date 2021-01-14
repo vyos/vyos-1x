@@ -23,7 +23,7 @@ ifconfig-ipv6-push {{ ipv6_ip[0] }} {{ ipv6_remote }}
 push "route-ipv6 {{ route6 }}"
 {%   endfor %}
 {%   for net6 in ipv6_subnet %}
-iroute {{ net6 }}
+iroute-ipv6 {{ net6 }}
 {%   endfor %}
 {% endif %}
 {% if disable is defined %}
