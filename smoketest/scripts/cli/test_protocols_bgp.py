@@ -47,8 +47,7 @@ neighbor_config = {
         'cap_strict'  : '',
         },
     '192.0.2.3' : {
-#        XXX: not available in current Perl backend
-#       'description' : 'foo bar baz',
+        'description' : 'foo bar baz',
         'remote_as'   : '200',
         'passive'     : '',
         'multi_hop'   : '5',
@@ -67,8 +66,7 @@ peer_group_config = {
 #       'ttl_security': '5',
         },
     'bar' : {
-#        XXX: not available in current Perl backend
-#       'description' : 'foo peer bar group',
+        'description' : 'foo peer bar group',
         'remote_as'   : '200',
         'shutdown'    : '',
         'no_cap_nego' : '',
