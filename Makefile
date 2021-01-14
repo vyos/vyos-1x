@@ -42,7 +42,6 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/interfaces/node.def
 	rm -f $(TMPL_DIR)/protocols/node.def
-	rm -rf $(TMPL_DIR)/protocols/nbgp
 	rm -f $(TMPL_DIR)/protocols/static/node.def
 	rm -f $(TMPL_DIR)/policy/node.def
 	rm -f $(TMPL_DIR)/system/node.def

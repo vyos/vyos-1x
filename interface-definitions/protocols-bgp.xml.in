@@ -3,7 +3,7 @@
 <interfaceDefinition>
   <node name="protocols">
     <children>
-      <tagNode name="nbgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py">
+      <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py">
         <properties>
           <help>Border Gateway Protocol (BGP) parameters</help>
           <valueHelp>

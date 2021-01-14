@@ -31,7 +31,7 @@ config_file = r'/tmp/bgp.frr'
 
 def get_config():
     conf = Config()
-    base = ['protocols', 'nbgp']
+    base = ['protocols', 'bgp']
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
     if not conf.exists(base):
