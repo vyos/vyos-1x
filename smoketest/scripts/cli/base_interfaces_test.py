@@ -127,7 +127,17 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 test_string=f'Description-Test-{intf}'
                 tmp = read_file(f'/sys/class/net/{intf}/ifalias')
-                self.assertTrue(tmp, test_string)
+                self.assertEqual(tmp, test_string)
+                self.assertEqual(Interface(intf).get_alias(), test_string)
+                self.session.delete(self._base_path + [intf, 'description'])
+
+            self.session.commit()
+
+            # Validate remove interface description "empty"
+            for intf in self._interfaces:
+                tmp = read_file(f'/sys/class/net/{intf}/ifalias')
+                self.assertEqual(tmp, str())
+                self.assertEqual(Interface(intf).get_alias(), str())
 
         def test_add_single_ip_address(self):
             addr = '192.0.2.0/31'
