@@ -22,6 +22,10 @@ notificationEvent  linkDownTrap  linkDown ifIndex ifDescr ifType ifAdminStatus i
 monitor  -r 10 -e linkUpTrap   "Generate linkUp" ifOperStatus != 2
 monitor  -r 10 -e linkDownTrap "Generate linkDown" ifOperStatus == 2
 
+# Remove all old ifTable entries with the same ifName as newly appeared
+# interface (with different ifIndex) - this is the case on e.g. ppp interfaces
+interface_replace_old yes
+
 ########################
 # configurable section #
 ########################

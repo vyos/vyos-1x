@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="snmp">
+        <properties>
+          <help>Restart SNMP service</help>
+        </properties>
+        <command>if cli-shell-api existsActive service snmp; then sudo systemctl restart snmpd.service; else echo "Service SNMP not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
