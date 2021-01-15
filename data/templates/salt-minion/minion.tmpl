@@ -21,7 +21,9 @@ hash_type: {{ hash }}
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
-log_file: file:///dev/log
+# log_file: file:///dev/log
+#
+log_file: /var/log/salt/minion
 
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
