@@ -37,7 +37,7 @@
                 <properties>
                   <help>View the VLAN filter settings of the bridge</help>
                 </properties>
-                <command>/usr/sbin/bridge -c --color vlan show</command>
+                <command>/usr/sbin/bridge -c vlan show</command>
               </leafNode>
             </children>
           </node>
