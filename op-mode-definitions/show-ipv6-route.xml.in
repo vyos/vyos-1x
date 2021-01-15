@@ -19,12 +19,42 @@
                 </properties>
                 <command>vtysh -c "show ipv6 route bgp"</command>
               </node>
+              <node name="cache">
+                <properties>
+                  <help>Show kernel IPv6 route cache</help>
+                </properties>
+                <command>ip -s -f inet6 route list cache</command>
+              </node>
+              <tagNode name="cache">
+                <properties>
+                  <help>Show kernel IPv6 route cache for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s -f inet6 route list cache $5</command>
+              </tagNode>
               <node name="connected">
                 <properties>
                   <help>Show IPv6 connected routes</help>
                 </properties>
                 <command>vtysh -c "show ipv6 route connected"</command>
               </node>
+              <node name="forward">
+                <properties>
+                  <help>Show kernel IPv6 route table</help>
+                </properties>
+                <command>ip -f inet6 route list</command>
+              </node>
+              <tagNode name="forward">
+                <properties>
+                  <help>Show kernel IPv6 route table for a given route</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>ip -s -f inet6 route list $5</command>
+              </tagNode>
               <node name="isis">
                 <properties>
                   <help>Show IPv6 IS-IS routes</help>
