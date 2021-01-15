@@ -126,6 +126,11 @@ def verify(tunnel):
     if 'source_interface' in tunnel:
         verify_interface_exists(tunnel['source_interface'])
 
+    # ttl != 0 and nopmtudisc are incompatible
+    if 'pmtu_discovery' in tunnel['parameters']['ip']:
+        if 'disable' in tunnel['parameters']['ip']['pmtu_discovery'] and "0" not in tunnel['parameters']['ip']['ttl']:
+            raise ConfigError('ip ttl should be set to "0" with option "pmtu-discovery disable"')
+
 def generate(tunnel):
     return None
 
@@ -164,6 +169,7 @@ def apply(tunnel):
         'local_ip'                   : 'local',
         'remote_ip'                  : 'remote',
         'source_interface'           : 'dev',
+        'parameters.ip.pmtu_discovery' : 'pmtud',
         'parameters.ip.ttl'          : 'ttl',
         'parameters.ip.tos'          : 'tos',
         'parameters.ip.key'          : 'key',

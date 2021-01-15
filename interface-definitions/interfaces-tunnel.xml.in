@@ -177,6 +177,25 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
+                  <leafNode name="pmtu-discovery">
+                    <properties>
+                      <help>Path MTU Discovery parameters</help>
+                      <completionHelp>
+                        <list>disable enable</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>disable</format>
+                        <description>Disable Path MTU Discovery for tunnel</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>enable</format>
+                        <description>Enable Path MTU Discovery for tunnel (by default)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(disable|enable)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <leafNode name="ttl">
                     <properties>
                       <help>Time to live field</help>
