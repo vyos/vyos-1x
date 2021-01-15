@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="ssh">
+        <properties>
+          <help>Restart SSH service</help>
+        </properties>
+        <command>if cli-shell-api existsActive service ssh; then sudo systemctl restart ssh.service; else echo "Service SSH not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
