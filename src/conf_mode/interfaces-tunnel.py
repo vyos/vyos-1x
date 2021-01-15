@@ -126,10 +126,14 @@ def verify(tunnel):
     if 'source_interface' in tunnel:
         verify_interface_exists(tunnel['source_interface'])
 
-    # ttl != 0 and nopmtudisc are incompatible
-    if 'pmtu_discovery' in tunnel['parameters']['ip']:
-        if 'disable' in tunnel['parameters']['ip']['pmtu_discovery'] and "0" not in tunnel['parameters']['ip']['ttl']:
-            raise ConfigError('ip ttl should be set to "0" with option "pmtu-discovery disable"')
+    # TTL != 0 and nopmtudisc are incompatible, parameters and ip use default
+    # values, thus the keys are always present.
+    if dict_search('parameters.ip.no_pmtu_discovery', tunnel) != None:
+        if dict_search('parameters.ip.ttl', tunnel) != '0':
+            raise ConfigError('Disabled PMTU requires TTL set to "0"!')
+        if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
+            raise ConfigError('Can not disable PMTU discovery for given encapsulation')
+
 
 def generate(tunnel):
     return None
@@ -169,7 +173,6 @@ def apply(tunnel):
         'local_ip'                   : 'local',
         'remote_ip'                  : 'remote',
         'source_interface'           : 'dev',
-        'parameters.ip.pmtu_discovery' : 'pmtud',
         'parameters.ip.ttl'          : 'ttl',
         'parameters.ip.tos'          : 'tos',
         'parameters.ip.key'          : 'key',
@@ -180,13 +183,21 @@ def apply(tunnel):
     if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
         mappingv6 = {
             # this                       :  get_config()
-            'parameters.ipv6.encaplimit' : 'encaplimit'
+            'parameters.ipv6.encaplimit' : 'encaplimit',
+            'parameters.ipv6.flowlabel'  : 'flowlabel',
+            'parameters.ipv6.hoplimit'   : 'hoplimit',
+            'parameters.ipv6.tclass'     : 'flowlabel'
         }
         mapping.update(mappingv6)
 
     for our_key, their_key in mapping.items():
         if dict_search(our_key, tunnel) and their_key in conf:
             conf[their_key] = dict_search(our_key, tunnel)
+
+    if dict_search('parameters.ip.no_pmtu_discovery', tunnel) != None:
+        if 'pmtudisc' in conf['raw']:
+            conf['raw'].remove('pmtudisc')
+        conf['raw'].append('nopmtudisc')
 
     tun = klass(tunnel['ifname'], **conf)
     tun.change_options()

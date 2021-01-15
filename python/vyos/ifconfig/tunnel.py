@@ -48,31 +48,42 @@ class _Tunnel(Interface):
         },
     }
 
+    default = {
+        'local' : '',
+        'remote': '',
+        'dev' : '',
+        'ttl' : '',
+        'tos' : '',
+        'key' : '',
+    }
+    options = Interface.options + list(default.keys())
+
     # TODO: This is surely used for more than tunnels
     # TODO: could be refactored elsewhere
-    _command_set = {**Interface._command_set, **{
-        'multicast': {
-            'validate': lambda v: assert_list(v, ['enable', 'disable']),
-            'convert': enable_to_on,
-            'shellcmd': 'ip link set dev {ifname} multicast {value}',
-        },
-        'allmulticast': {
-            'validate': lambda v: assert_list(v, ['enable', 'disable']),
-            'convert': enable_to_on,
-            'shellcmd': 'ip link set dev {ifname} allmulticast {value}',
-        },
-    }}
-
+    _command_set = {
+        **Interface._command_set,
+        **{
+            'multicast': {
+                'validate': lambda v: assert_list(v, ['enable', 'disable']),
+                'convert': enable_to_on,
+                'shellcmd': 'ip link set dev {ifname} multicast {value}',
+            },
+            'allmulticast': {
+                'validate': lambda v: assert_list(v, ['enable', 'disable']),
+                'convert': enable_to_on,
+                'shellcmd': 'ip link set dev {ifname} allmulticast {value}',
+            },
+        }
+    }
     _create_cmd = 'ip tunnel add {ifname} mode {type}'
-
-    def __init__(self, ifname, **config):
-        self.config = deepcopy(config) if config else {}
-        super().__init__(ifname, **config)
 
     def _create(self):
         # add " option-name option-name-value ..." for all options set
-        options = " ".join(["{} {}".format(k, self.config[k])
-                            for k in self.options if k in self.config and self.config[k]])
+        options = ' '.join(['{} {}'.format(k, self.config[k])
+                            for k,v in self.config.items() if v and k not in
+                                                    ['ifname', 'type', 'raw']])
+        if 'raw' in self.config:
+            options += ' ' + ' '.join(self.config['raw'])
         self._cmd('{} {}'.format(self._create_cmd.format(**self.config), options))
         self.set_admin_state('down')
 
@@ -80,13 +91,12 @@ class _Tunnel(Interface):
         change = 'ip tunnel change {ifname} mode {type}'
 
         # add " option-name option-name-value ..." for all options set
-        options = " ".join(["{} {}".format(k, self.config[k])
-                            for k in self.options if k in self.config and self.config[k]])
+        options = ' '.join(['{} {}'.format(k, self.config[k])
+                            for k,v in self.config.items() if v and k not in
+                                                    ['ifname', 'type', 'raw']])
+        if 'raw' in self.config:
+            options += ' ' + ' '.join(self.config['raw'])
         self._cmd('{} {}'.format(change.format(**self.config), options))
-
-    @classmethod
-    def get_config(cls):
-        return dict(zip(cls.options, ['']*len(cls.options)))
 
     def get_mac(self):
         """
@@ -141,8 +151,13 @@ class GREIf(_Tunnel):
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre.c
     """
 
-    default = {'type': 'gre'}
-    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': 'gre',
+            'raw' : ['pmtudisc'], # parameters that we can pass raw to ip command
+        },
+    }
 
 # GreTap also called GRE Bridge
 class GRETapIf(_Tunnel):
@@ -151,18 +166,20 @@ class GRETapIf(_Tunnel):
 
     https://en.wikipedia.org/wiki/TUN/TAP
     """
-
     # no multicast, ttl or tos for gretap
-
     definition = {
         **_Tunnel.definition,
         **{
             'bridgeable': True,
         },
     }
-
-    default = {'type': 'gretap'}
-    options = ['local', 'remote', 'ttl',]
+    default = {
+        'type': 'gretap',
+        'local': '',
+        'remote': '',
+        'dev': '',
+        'raw' : ['pmtudisc'], # parameters that we can pass raw to ip command
+    }
 
     _create_cmd = 'ip link add name {ifname} type {type}'
 
@@ -177,10 +194,16 @@ class IP6GREIf(_Tunnel):
     https://tools.ietf.org/html/rfc7676
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre6.c
     """
-
-    default = {'type': 'ip6gre'}
-    options = ['local', 'remote', 'dev', 'encaplimit',
-               'hoplimit', 'tclass', 'flowlabel']
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': 'ip6gre',
+            'encaplimit': '',
+            'hoplimit': '',
+            'tclass': '',
+            'flowlabel': '',
+        },
+    }
 
 class IPIPIf(_Tunnel):
     """
@@ -189,12 +212,15 @@ class IPIPIf(_Tunnel):
     For more information please refer to:
     https://tools.ietf.org/html/rfc2003
     """
-
     # IPIP does not allow to pass multicast, unlike GRE
     # but the interface itself can be set with multicast
-
-    default = {'type': 'ipip'}
-    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': 'ipip',
+            'raw' : ['pmtudisc'], # parameters that we can pass raw to ip command
+        },
+    }
 
 class IPIP6If(_Tunnel):
     """
@@ -203,10 +229,16 @@ class IPIP6If(_Tunnel):
     For more information please refer to:
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_ip6tnl.c
     """
-
-    default = {'type': 'ipip6'}
-    options = ['local', 'remote', 'dev', 'encaplimit',
-               'hoplimit', 'tclass', 'flowlabel']
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': 'ipip6',
+            'encaplimit': '',
+            'hoplimit': '',
+            'tclass': '',
+            'flowlabel': '',
+        },
+    }
 
 class IP6IP6If(IPIP6If):
     """
@@ -215,7 +247,12 @@ class IP6IP6If(IPIP6If):
     For more information please refer to:
     https://tools.ietf.org/html/rfc2473
     """
-    default = {'type': 'ip6ip6'}
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': 'ip6ip6',
+        },
+    }
 
 
 class SitIf(_Tunnel):
@@ -225,9 +262,12 @@ class SitIf(_Tunnel):
     For more information please refer to:
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_iptnl.c
     """
-
-    default = {'type': 'sit'}
-    options = ['local', 'remote', 'dev', 'ttl', 'tos', 'key']
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': 'sit',
+        },
+    }
 
 class Sit6RDIf(SitIf):
     """
@@ -236,7 +276,14 @@ class Sit6RDIf(SitIf):
     https://en.wikipedia.org/wiki/IPv6_rapid_deployment
     """
     # TODO: check if key can really be used with 6RD
-    options = ['remote', 'ttl', 'tos', 'key', '6rd-prefix', '6rd-relay-prefix']
+    default = {
+        **_Tunnel.default,
+        **{
+            'type': '6rd',
+            '6rd_prefix' : '',
+            '6rd_relay_prefix' : '',
+        },
+    }
 
     def _create(self):
         # do not call _Tunnel.create, building fully here
