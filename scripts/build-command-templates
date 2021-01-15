@@ -3,7 +3,7 @@
 #    build-command-template: converts new style command definitions in XML
 #      to the old style (bunch of dirs and node.def's) command templates
 #
-#    Copyright (C) 2017,2021 VyOS maintainers <maintainers@vyos.net>
+#    Copyright (C) 2017 VyOS maintainers <maintainers@vyos.net>
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Lesser General Public
@@ -279,26 +279,19 @@ def process_node(n, tmpl_dir):
             f.write(make_node_def(props))
     else:
         # Something has already generated that file
-        print("Warning: refusing to overwrite already existing file {}".format(nodedef_path))
         pass
 
 
-    if (node_type == "node") and (children is None):
-        print("Warning: non-leaf, non-tag <node> without children may be incomplete ({})".format(nodedef_path))
-        pass
-    elif node_type == "node":
+    if node_type == "node":
         inner_nodes = children.iterfind("*")
         for inner_n in inner_nodes:
             process_node(inner_n, my_tmpl_dir)
-    elif node_type == "tagNode":
-        if children is None:
-            raise ValueError("A <tagNode> without children is not allowed")
-
-        inner_nodes = children.iterfind("*")
+    if node_type == "tagNode":
         my_tmpl_dir.append("node.tag")
         if debug:
             print("Created path for the tagNode:", end="")
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
+        inner_nodes = children.iterfind("*")
         for inner_n in inner_nodes:
             process_node(inner_n, my_tmpl_dir)
     else:
