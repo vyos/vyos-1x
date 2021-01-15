@@ -45,7 +45,7 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Restart a DNS service</help>
+          <help>Restart specific DNS service</help>
         </properties>
         <children>
           <leafNode name="forwarding">

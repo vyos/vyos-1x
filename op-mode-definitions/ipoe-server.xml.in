@@ -72,7 +72,7 @@
     <children>
       <leafNode name="ipoe-server">
         <properties>
-          <help>show ipoe-server status</help>
+          <help>Restart IPoE server process</help>
         </properties>
         <command>${vyos_op_scripts_dir}/ipoe-control.py --action="restart"</command>
       </leafNode>

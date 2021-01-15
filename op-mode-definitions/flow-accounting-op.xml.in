@@ -55,7 +55,7 @@
     <children>
       <leafNode name="flow-accounting">
         <properties>
-          <help>Restart flow-accounting service</help>
+          <help>Restart (net)flow accounting process</help>
         </properties>
         <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action restart</command>
       </leafNode>
