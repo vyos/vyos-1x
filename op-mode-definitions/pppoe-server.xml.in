@@ -33,7 +33,7 @@
     <children>
       <leafNode name="pppoe-server">
         <properties>
-          <help>Restarts pppoe-server</help>
+          <help>Restart PPPoE server process</help>
         </properties>
         <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="restart"</command>
       </leafNode>

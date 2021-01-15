@@ -28,7 +28,7 @@
     <children>
       <node name="vrrp">
         <properties>
-          <help>Restart the VRRP (Virtual Router Redundancy Protocol) process</help>
+          <help>Restart VRRP (Virtual Router Redundancy Protocol) process</help>
         </properties>
         <command>sudo systemctl restart keepalived.service</command>
       </node>

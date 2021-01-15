@@ -123,7 +123,7 @@
     <children>
       <node name="dhcp">
         <properties>
-          <help>Restart DHCP processes</help>
+          <help>Restart DHCP server processes</help>
         </properties>
         <children>
           <node name="server">
@@ -142,7 +142,7 @@
       </node>
       <node name="dhcpv6">
         <properties>
-          <help>Restart DHCPv6 processes</help>
+          <help>Restart DHCPv6 server processes</help>
         </properties>
         <children>
           <node name="server">
