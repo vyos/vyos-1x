@@ -32,6 +32,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_ip = True
         self._test_ipv6 = True
         self._test_ipv6_pd = True
+        self._test_vlan = True
         self._base_path = ['interfaces', 'bridge']
         self._mirror_interfaces = ['dum21354']
         self._members = []
@@ -91,6 +92,12 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.delete(self._base_path + [interface, 'member'])
 
         self.session.commit()
+    
+    def test_8021q_vlan_interfaces(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.session.set(base + ['enable-vlan'])
+        super().test_8021q_vlan_interfaces()
 
     def test_bridge_vlan_filter(self):
         
@@ -168,12 +175,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
             for member in self._members:
                 self.assertIn(member, bridge_members)
-        
-        # Check VLAN sub interface
-        for intf in self._interfaces:
-            vif = f'{intf}.{vif_vlan}'
-            tmp = read_file(f'/sys/class/net/{vif}/mtu')
-            self.assertEqual(tmp, self._mtu)
         
         # delete all members
         for interface in self._interfaces:
