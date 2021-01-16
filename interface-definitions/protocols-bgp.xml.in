@@ -511,7 +511,7 @@
                       <help>Half-life time for dampening [REQUIRED]</help>
                       <valueHelp>
                         <format>u32:1-45</format>
-                        <description>Half-life penalty in seconds</description>
+                        <description>Half-life penalty in minutes</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-45"/>
@@ -523,7 +523,7 @@
                       <help>Maximum duration to suppress a stable route [REQUIRED]</help>
                       <valueHelp>
                         <format>u32:1-255</format>
-                        <description>Maximum suppress duration in seconds</description>
+                        <description>Maximum suppress duration in minutes</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-255"/>
@@ -532,10 +532,10 @@
                   </leafNode>
                   <leafNode name="re-use">
                     <properties>
-                      <help>Time to start reusing a route [REQUIRED]</help>
+                      <help>Threshold to start reusing a route [REQUIRED]</help>
                       <valueHelp>
                         <format>u32:1-20000</format>
-                        <description>Re-use time in seconds</description>
+                        <description>Re-use penalty points</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-20000"/>
@@ -547,7 +547,7 @@
                       <help>When to start suppressing a route [REQUIRED]</help>
                       <valueHelp>
                         <format>u32:1-20000</format>
-                        <description>Start-suppress-time</description>
+                        <description>Start-suppress penalty points</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-20000"/>
