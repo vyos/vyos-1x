@@ -37,7 +37,7 @@ class VRFTest(unittest.TestCase):
         self.session.delete(base_path)
         self.session.commit()
         for vrf in vrfs:
-            self.assertTrue(vrf not in interfaces())
+            self.assertNotIn(vrf, interfaces())
 
     def test_vrf_table_id(self):
         table = '1000'

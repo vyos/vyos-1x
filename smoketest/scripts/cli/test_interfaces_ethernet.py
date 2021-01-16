@@ -78,8 +78,13 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.set(self._base_path + [interface, 'speed', 'auto'])
             self.session.set(self._base_path + [interface, 'hw-id', self._macs[interface]])
 
-        super().tearDown()
+        # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
+        for span in self._mirror_interfaces:
+            section = Section.section(span)
+            self.session.delete(['interfaces', section, span])
 
+        self.session.commit()
+        del self.session
 
     def test_dhcp_disable_interface(self):
         # When interface is configured as admin down, it must be admin down
@@ -193,12 +198,12 @@ if __name__ == '__main__':
         # Generate mandatory SSL certificate
         tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
               f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
-        print(cmd(tmp))
+        cmd(tmp)
 
     if not os.path.isfile(ca_cert):
         # Generate "CA"
         tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} -subj {subject}'
-        print(cmd(tmp))
+        cmd(tmp)
 
     for file in [ca_cert, ssl_cert, ssl_key]:
         cmd(f'sudo chown radius_priv_user:vyattacfg {file}')

@@ -60,8 +60,8 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
             self.assertListEqual(slaves, self._members)
 
-    def test_8021q_vlan_interfaces(self):
-        super().test_8021q_vlan_interfaces()
+    def test_vif_8021q_interfaces(self):
+        super().test_vif_8021q_interfaces()
 
         for interface in self._interfaces:
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()

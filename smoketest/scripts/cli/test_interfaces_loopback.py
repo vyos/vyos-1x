@@ -36,7 +36,7 @@ class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # loopback interface must persist!
         for intf in self._interfaces:
-            self.assertTrue(intf in interfaces())
+            self.assertIn(intf, interfaces())
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
@@ -47,6 +47,9 @@ class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
         super().test_add_multiple_ip_addresses()
         for addr in self._loopback_addresses:
             self.assertTrue(is_intf_addr_assigned('lo', addr))
+
+    def test_interface_disable(self):
+        self.skipTest('not supported')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

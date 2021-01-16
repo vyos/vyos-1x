@@ -82,26 +82,22 @@ class BasicInterfaceTest:
                 self.session.set(['interfaces', section, span])
 
         def tearDown(self):
-            # Ethernet is handled in its derived class
-            if 'ethernet' not in self._base_path:
-                self.session.delete(self._base_path)
-
             # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
             for span in self._mirror_interfaces:
                 section = Section.section(span)
                 self.session.delete(['interfaces', section, span])
 
+            self.session.delete(self._base_path)
             self.session.commit()
             del self.session
 
-            # Ethernet is handled in its derived class
-            if 'ethernet' not in self._base_path:
-                for intf in self._interfaces:
-                    self.assertTrue(intf not in interfaces())
+            # Verify that no previously interface remained on the system
+            for intf in self._interfaces:
+                self.assertNotIn(intf, interfaces())
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             # Check the two-way mirror rules of ingress and egress
             for mirror in self._mirror_interfaces:
@@ -194,7 +190,7 @@ class BasicInterfaceTest:
         def test_ipv6_link_local_address(self):
             # Common function for IPv6 link-local address assignemnts
             if not self._test_ipv6:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -221,7 +217,7 @@ class BasicInterfaceTest:
 
         def test_interface_mtu(self):
             if not self._test_mtu:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             for intf in self._interfaces:
                 base = self._base_path + [intf]
@@ -241,7 +237,7 @@ class BasicInterfaceTest:
             # Testcase if MTU can be changed to 1200 on non IPv6
             # enabled interfaces
             if not self._test_mtu:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             old_mtu = self._mtu
             self._mtu = '1200'
@@ -264,9 +260,13 @@ class BasicInterfaceTest:
 
             self._mtu = old_mtu
 
-        def test_8021q_vlan_interfaces(self):
+        def test_vif_8021q_interfaces(self):
+            # XXX: This testcase is not allowed to run as first testcase, reason
+            # is the Wireless test will first load the wifi kernel hwsim module
+            # which creates a wlan0 and wlan1 interface which will fail the
+            # tearDown() test in the end that no interface is allowed to survive!
             if not self._test_vlan:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -292,9 +292,13 @@ class BasicInterfaceTest:
                     self.assertEqual(Interface(vif).get_admin_state(), 'up')
 
 
-        def test_8021ad_qinq_vlan_interfaces(self):
+        def test_vif_s_8021ad_vlan_interfaces(self):
+            # XXX: This testcase is not allowed to run as first testcase, reason
+            # is the Wireless test will first load the wifi kernel hwsim module
+            # which creates a wlan0 and wlan1 interface which will fail the
+            # tearDown() test in the end that no interface is allowed to survive!
             if not self._test_qinq:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
@@ -325,7 +329,7 @@ class BasicInterfaceTest:
 
         def test_interface_ip_options(self):
             if not self._test_ip:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             for interface in self._interfaces:
                 arp_tmo = '300'
@@ -376,7 +380,7 @@ class BasicInterfaceTest:
 
         def test_interface_ipv6_options(self):
             if not self._test_ipv6:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             for interface in self._interfaces:
                 dad_transmits = '10'
@@ -400,7 +404,7 @@ class BasicInterfaceTest:
 
         def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6_pd:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
@@ -456,7 +460,7 @@ class BasicInterfaceTest:
 
         def test_dhcpv6pd_manual_sla_id(self):
             if not self._test_ipv6_pd:
-                self.skipTest('not enabled')
+                self.skipTest('not supported')
 
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
