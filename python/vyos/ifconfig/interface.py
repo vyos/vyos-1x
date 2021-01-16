@@ -912,10 +912,6 @@ class Interface(Control):
                     vlan_id = bridge_config['native_vlan']
                     add_vlan.append(vlan_id)
                     native_vlan_id = vlan_id
-                else:
-                    # VLAN 1 is the default VLAN for all unlabeled packets
-                    add_vlan.append(1)
-                    native_vlan_id = 1
 
                 if 'allowed_vlan' in bridge_config:
                     for vlan in bridge_config['allowed_vlan']:
@@ -937,8 +933,9 @@ class Interface(Control):
                     cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
                     self._cmd(cmd)
                 # Setting native VLAN to system
-                cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
-                self._cmd(cmd)
+                if native_vlan_id:
+                    cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
+                    self._cmd(cmd)
 
     def set_dhcp(self, enable):
         """
