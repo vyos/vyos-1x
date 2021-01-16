@@ -295,7 +295,7 @@ class BridgeIf(Interface):
                 self._cmd(cmd)
             
             for vlan in add_vlan:
-                cmd = f'bridge vlan add dev {ifname} vid {vif} self'
+                cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
                 self._cmd(cmd)
             
             # VLAN of bridge parent interface is always 1
