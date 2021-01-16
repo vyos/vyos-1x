@@ -52,11 +52,11 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._interfaces = list(self._options)
 
         super().setUp()
-    
+
     def tearDown(self):
         for intf in self._interfaces:
             self.session.delete(self._base_path + [intf])
-        
+
         super().tearDown()
 
     def test_add_remove_bridge_member(self):
@@ -92,15 +92,15 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.delete(self._base_path + [interface, 'member'])
 
         self.session.commit()
-    
-    def test_8021q_vlan_interfaces(self):
+
+    def test_vif_8021q_interfaces(self):
         for interface in self._interfaces:
             base = self._base_path + [interface]
             self.session.set(base + ['enable-vlan'])
-        super().test_8021q_vlan_interfaces()
+        super().test_vif_8021q_interfaces()
 
     def test_bridge_vlan_filter(self):
-        
+
         vif_vlan = 2
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
@@ -175,7 +175,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
             for member in self._members:
                 self.assertIn(member, bridge_members)
-        
+
         # delete all members
         for interface in self._interfaces:
             self.session.delete(self._base_path + [interface, 'member'])
