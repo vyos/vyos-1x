@@ -111,6 +111,19 @@ class BasicInterfaceTest:
                     self.assertTrue(is_mirrored_to(interface, mirror, 'ffff'))
                     self.assertTrue(is_mirrored_to(interface, mirror, '1'))
 
+        def test_interface_disable(self):
+            # Check if description can be added to interface and
+            # can be read back
+            for intf in self._interfaces:
+                self.session.set(self._base_path + [intf, 'disable'])
+                for option in self._options.get(intf, []):
+                    self.session.set(self._base_path + [intf] + option.split())
+
+            self.session.commit()
+
+            # Validate interface description
+            for intf in self._interfaces:
+                self.assertEqual(Interface(intf).get_admin_state(), 'down')
 
         def test_interface_description(self):
             # Check if description can be added to interface and
@@ -150,6 +163,7 @@ class BasicInterfaceTest:
 
             for intf in self._interfaces:
                 self.assertTrue(is_intf_addr_assigned(intf, addr))
+                self.assertEqual(Interface(intf).get_admin_state(), 'up')
 
         def test_add_multiple_ip_addresses(self):
             # Add address
@@ -269,6 +283,7 @@ class BasicInterfaceTest:
 
                     tmp = read_file(f'/sys/class/net/{vif}/mtu')
                     self.assertEqual(tmp, self._mtu)
+                    self.assertEqual(Interface(vif).get_admin_state(), 'up')
 
 
         def test_8021ad_qinq_vlan_interfaces(self):
