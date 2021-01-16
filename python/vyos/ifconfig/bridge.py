@@ -342,10 +342,6 @@ class BridgeIf(Interface):
                         vlan_id = interface_config['native_vlan']
                         add_vlan.append(vlan_id)
                         native_vlan_id = vlan_id
-                    else:
-                        # VLAN 1 is the default VLAN for all unlabeled packets
-                        add_vlan.append(1)
-                        native_vlan_id = 1
 
                     if 'allowed_vlan' in interface_config:
                         for vlan in interface_config['allowed_vlan']:
@@ -367,8 +363,9 @@ class BridgeIf(Interface):
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
                     # Setting native VLAN to system
-                    cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
-                    self._cmd(cmd)
+                    if native_vlan_id:
+                        cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
+                        self._cmd(cmd)
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
