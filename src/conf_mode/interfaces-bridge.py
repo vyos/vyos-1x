@@ -138,23 +138,10 @@ def verify(bridge):
 
                 if 'wlan' in interface:
                     raise ConfigError(error_msg + 'VLAN aware cannot be set!')
-
-                if 'allowed_vlan' in interface_config:
-                    for vlan in interface_config['allowed_vlan']:
-                        if re.search('[0-9]{1,4}-[0-9]{1,4}', vlan):
-                            vlan_range = vlan.split('-')
-                            if int(vlan_range[0]) <1 and int(vlan_range[0])>4094:
-                                raise ConfigError('VLAN ID must be between 1 and 4094')
-                            if int(vlan_range[1]) <1 and int(vlan_range[1])>4094:
-                                raise ConfigError('VLAN ID must be between 1 and 4094')
-                        else:
-                            if int(vlan) <1 and int(vlan)>4094:
-                                raise ConfigError('VLAN ID must be between 1 and 4094')
             else:
-                if 'allowed_vlan' in interface_config:
-                    raise ConfigError(f'You must first activate "enable-vlan" of {ifname} bridge to use "allowed-vlan"')
-                if 'native_vlan' in interface_config:
-                    raise ConfigError(f'You must first activate "enable-vlan" of {ifname} bridge to use "native-vlan"')
+                for option in ['allowed_vlan', 'native_vlan']:
+                    if option in interface_config:
+                        raise ConfigError('Can not use VLAN options on non VLAN aware bridge')
     
     if 'enable_vlan' in bridge:
         if dict_search('vif.1', bridge):
