@@ -27,7 +27,7 @@ from vyos.util import read_file
 PROCESS_NAME = 'sshd'
 SSHD_CONF = '/run/sshd/sshd_config'
 base_path = ['service', 'ssh']
-vrf = 'ssh-test'
+vrf = 'mgmt'
 
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
