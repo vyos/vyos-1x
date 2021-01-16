@@ -41,26 +41,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-def helper_check_removed_vlan(conf,bridge,key,key_mangling):
-    key_update = re.sub(key_mangling[0], key_mangling[1], key)
-    if dict_search('member.interface', bridge):
-        for interface in bridge['member']['interface']:
-            tmp = leaf_node_changed(conf, ['member', 'interface',interface,key])
-            if tmp:
-                if 'member' in bridge:
-                    if 'interface' in bridge['member']:
-                        if interface in bridge['member']['interface']:
-                            bridge['member']['interface'][interface].update({f'{key_update}_removed': tmp })
-                        else:
-                            bridge['member']['interface'].update({interface: {f'{key_update}_removed': tmp }})
-                    else:
-                        bridge['member'].update({ 'interface': {interface: {f'{key_update}_removed': tmp }}})
-                else:
-                    bridge.update({'member': { 'interface': {interface: {f'{key_update}_removed': tmp }}}})
-                    
-    return bridge
-    
-
 def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -80,12 +60,6 @@ def get_config(config=None):
             bridge['member'].update({'interface_remove': tmp })
         else:
             bridge.update({'member': {'interface_remove': tmp }})
-        
-            
-    # determine which members vlan have been removed
-    
-    bridge = helper_check_removed_vlan(conf,bridge,'native-vlan',('-', '_'))
-    bridge = helper_check_removed_vlan(conf,bridge,'allowed-vlan',('-', '_'))
 
     if dict_search('member.interface', bridge):
         # XXX: T2665: we need a copy of the dict keys for iteration, else we will get:
@@ -99,7 +73,6 @@ def get_config(config=None):
         # the default dictionary is not properly paged into the dict (see T2665)
         # thus we will ammend it ourself
         default_member_values = defaults(base + ['member', 'interface'])
-        vlan_aware = False 
         for interface,interface_config in bridge['member']['interface'].items():
             bridge['member']['interface'][interface] = dict_merge(
                     default_member_values, bridge['member']['interface'][interface])
@@ -120,19 +93,11 @@ def get_config(config=None):
             # Bridge members must not have an assigned address
             tmp = has_address_configured(conf, interface)
             if tmp: bridge['member']['interface'][interface].update({'has_address' : ''})
-            
+
             # VLAN-aware bridge members must not have VLAN interface configuration
-            if 'native_vlan' in interface_config:
-                vlan_aware = True
-            
-            if 'allowed_vlan' in interface_config:
-                vlan_aware = True
-            
-            
-            if vlan_aware:
-                tmp = has_vlan_subinterface_configured(conf,interface)
-                if tmp:
-                    if tmp: bridge['member']['interface'][interface].update({'has_vlan' : ''})
+            tmp = has_vlan_subinterface_configured(conf,interface)
+            if 'enable_vlan' in bridge and tmp:
+                bridge['member']['interface'][interface].update({'has_vlan' : ''})
 
     return bridge
 
@@ -143,7 +108,7 @@ def verify(bridge):
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
     
-    vlan_aware = False 
+    ifname = bridge['ifname']
 
     if dict_search('member.interface', bridge):
         for interface, interface_config in bridge['member']['interface'].items():
@@ -166,31 +131,24 @@ def verify(bridge):
 
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')
-            
-            if 'has_vlan' in interface_config:
-                raise ConfigError(error_msg + 'it has an VLAN subinterface assigned!')
-            
-            # VLAN-aware bridge members must not have VLAN interface configuration
-            if 'native_vlan' in interface_config:
-                vlan_aware = True
-            
-            if 'allowed_vlan' in interface_config:
-                vlan_aware = True
-            
-            if vlan_aware and 'wlan' in interface:
-                raise ConfigError(error_msg + 'VLAN aware cannot be set!')
-            
-            if 'allowed_vlan' in interface_config:
-                for vlan in interface_config['allowed_vlan']:
-                    if re.search('[0-9]{1,4}-[0-9]{1,4}', vlan):
-                        vlan_range = vlan.split('-')
-                        if int(vlan_range[0]) <1 and int(vlan_range[0])>4094:
-                            raise ConfigError('VLAN ID must be between 1 and 4094')
-                        if int(vlan_range[1]) <1 and int(vlan_range[1])>4094:
-                            raise ConfigError('VLAN ID must be between 1 and 4094')
-                    else:
-                        if int(vlan) <1 and int(vlan)>4094:
-                            raise ConfigError('VLAN ID must be between 1 and 4094')
+
+            if 'enable_vlan' in bridge:
+                if 'has_vlan' in interface_config:
+                    raise ConfigError(error_msg + 'it has an VLAN subinterface assigned!')
+
+                if 'wlan' in interface:
+                    raise ConfigError(error_msg + 'VLAN aware cannot be set!')
+            else:
+                for option in ['allowed_vlan', 'native_vlan']:
+                    if option in interface_config:
+                        raise ConfigError('Can not use VLAN options on non VLAN aware bridge')
+    
+    if 'enable_vlan' in bridge:
+        if dict_search('vif.1', bridge):
+            raise ConfigError(f'VLAN 1 sub interface cannot be set for VLAN aware bridge {ifname}, and VLAN 1 is always the parent interface')
+    else:
+        if dict_search('vif', bridge):
+            raise ConfigError(f'You must first activate "enable-vlan" of {ifname} bridge to use "vif"')
 
     return None
 

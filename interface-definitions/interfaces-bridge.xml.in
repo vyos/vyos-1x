@@ -86,6 +86,12 @@
           #include <include/interface-ipv6-options.xml.i>
           #include <include/interface-mac.xml.i>
           #include <include/interface-mirror.xml.i>
+          <leafNode name="enable-vlan">
+            <properties>
+              <help>Enable VLAN aware bridge</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="max-age">
             <properties>
               <help>Interval at which neighbor bridges are removed</help>
@@ -138,7 +144,7 @@
                         <description>VLAN id range allowed on this interface (use '-' as delimiter)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^([0-9]{1,4}-[0-9]{1,4})|([0-9]{1,4})$</regex>
+                        <validator name="allowed-vlan"/>
                       </constraint>
                       <constraintErrorMessage>not a valid VLAN ID value or range</constraintErrorMessage>
                       <multi/>
@@ -196,7 +202,6 @@
               <valueless/>
             </properties>
           </leafNode>
-          #include <include/vif-s.xml.i>
           #include <include/vif.xml.i>
         </children>
       </tagNode>
