@@ -54,7 +54,7 @@ def get_config(config=None):
     bridge = get_interface_dict(conf, base)
 
     # determine which members have been removed
-    tmp = node_changed(conf, ['member', 'interface'])
+    tmp = node_changed(conf, ['member', 'interface'], key_mangling=('-', '_'))
     if tmp:
         if 'member' in bridge:
             bridge['member'].update({'interface_remove': tmp })
@@ -107,7 +107,7 @@ def verify(bridge):
 
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
-    
+
     ifname = bridge['ifname']
 
     if dict_search('member.interface', bridge):
@@ -142,7 +142,7 @@ def verify(bridge):
                 for option in ['allowed_vlan', 'native_vlan']:
                     if option in interface_config:
                         raise ConfigError('Can not use VLAN options on non VLAN aware bridge')
-    
+
     if 'enable_vlan' in bridge:
         if dict_search('vif.1', bridge):
             raise ConfigError(f'VLAN 1 sub interface cannot be set for VLAN aware bridge {ifname}, and VLAN 1 is always the parent interface')

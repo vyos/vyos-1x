@@ -58,7 +58,7 @@ def get_config(config=None):
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
     dict = {}
-    tmp = node_changed(conf, ['peer'])
+    tmp = node_changed(conf, ['peer'], key_mangling=('-', '_'))
     for peer in (tmp or []):
         pubkey = leaf_node_changed(conf, ['peer', peer, 'pubkey'])
         if pubkey:
