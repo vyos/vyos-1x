@@ -74,18 +74,20 @@ def get_config(config=None):
         conf = Config()
 
     base = ['vrf']
-    vrf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    vrf = conf.get_config_dict(base, get_first_key=True)
 
     # determine which VRF has been removed
-    tmp = node_changed(conf, base + ['name'])
-    for name in tmp:
-        vrf.update({'vrf_remove' : { name : ''}})
+    for name in node_changed(conf, base + ['name']):
+        if 'vrf_remove' not in vrf:
+            vrf.update({'vrf_remove' : {}})
+
+        vrf['vrf_remove'][name] = {}
         # get VRF bound interfaces
         interfaces = vrf_interfaces(conf, name)
-        if interfaces: vrf.update({'vrf_remove' : { name : {'interfaces' : ''}}})
+        if interfaces: vrf['vrf_remove'][name]['interface'] = interfaces
         # get VRF bound routing instances
         routes = vrf_routing(conf, name)
-        if routes: vrf.update({'vrf_remove' : { name : {'routes' : routes}}})
+        if routes: vrf['vrf_remove'][name]['route'] = routes
 
     return vrf
 
@@ -93,10 +95,10 @@ def verify(vrf):
     # ensure VRF is not assigned to any interface
     if 'vrf_remove' in vrf:
         for name, config in vrf['vrf_remove'].items():
-            if 'interfaces' in config:
+            if 'interface' in config:
                 raise ConfigError(f'Can not remove VRF "{name}", it still has '\
                                   f'member interfaces!')
-            if 'routes' in config:
+            if 'route' in config:
                 raise ConfigError(f'Can not remove VRF "{name}", it still has '\
                                   f'static routes installed!')
 
