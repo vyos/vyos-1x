@@ -74,7 +74,7 @@ def get_config(config=None):
     bridge = get_interface_dict(conf, base)
 
     # determine which members have been removed
-    tmp = node_changed(conf, ['member', 'interface'])
+    tmp = node_changed(conf, ['member', 'interface'], key_mangling=('-', '_'))
     if tmp:
         if 'member' in bridge:
             bridge['member'].update({'interface_remove': tmp })

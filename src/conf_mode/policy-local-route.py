@@ -40,7 +40,7 @@ def get_config(config=None):
 
     # delete policy local-route
     dict = {}
-    tmp = node_changed(conf, ['policy', 'local-route', 'rule'])
+    tmp = node_changed(conf, ['policy', 'local-route', 'rule'], key_mangling=('-', '_'))
     if tmp:
         for rule in (tmp or []):
             src = leaf_node_changed(conf, ['policy', 'local-route', 'rule', rule, 'source'])

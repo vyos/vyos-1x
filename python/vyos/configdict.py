@@ -126,14 +126,14 @@ def leaf_node_changed(conf, path):
 
     return None
 
-def node_changed(conf, path):
+def node_changed(conf, path, key_mangling=None):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return the old value. If nothing
     has been changed, None is returned
     """
     from vyos.configdiff import get_config_diff, Diff
-    D = get_config_diff(conf, key_mangling=('-', '_'))
+    D = get_config_diff(conf, key_mangling)
     D.set_level(conf.get_level())
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
     keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE)['delete'].keys()
