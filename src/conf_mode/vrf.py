@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,28 +17,19 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 from json import loads
 
 from vyos.config import Config
-from vyos.configdict import list_diff
+from vyos.configdict import node_changed
 from vyos.ifconfig import Interface
-from vyos.util import read_file, cmd
-from vyos import ConfigError
 from vyos.template import render
-
+from vyos.util import cmd
+from vyos.util import dict_search
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
-
-default_config_data = {
-    'bind_to_all': '0',
-    'deleted': False,
-    'vrf_add': [],
-    'vrf_existing': [],
-    'vrf_remove': []
-}
 
 def _cmd(command):
     cmd(command, raising=ConfigError, message='Error changing VRF')
@@ -81,112 +72,60 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    vrf_config = deepcopy(default_config_data)
 
-    cfg_base = ['vrf']
-    if not conf.exists(cfg_base):
-        # get all currently effetive VRFs and mark them for deletion
-        vrf_config['vrf_remove'] = conf.list_effective_nodes(cfg_base + ['name'])
-    else:
-        # set configuration level base
-        conf.set_level(cfg_base)
+    base = ['vrf']
+    vrf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-        # Should services be allowed to bind to all VRFs?
-        if conf.exists(['bind-to-all']):
-            vrf_config['bind_to_all'] = '1'
+    # determine which VRF has been removed
+    tmp = node_changed(conf, base + ['name'])
+    for name in tmp:
+        vrf.update({'vrf_remove' : { name : ''}})
+        # get VRF bound interfaces
+        interfaces = vrf_interfaces(conf, name)
+        if interfaces: vrf.update({'vrf_remove' : { name : {'interfaces' : ''}}})
+        # get VRF bound routing instances
+        routes = vrf_routing(conf, name)
+        if routes: vrf.update({'vrf_remove' : { name : {'routes' : routes}}})
 
-        # Determine vrf interfaces (currently effective) - to determine which
-        # vrf interface is no longer present and needs to be removed
-        eff_vrf = conf.list_effective_nodes(['name'])
-        act_vrf = conf.list_nodes(['name'])
-        vrf_config['vrf_remove'] = list_diff(eff_vrf, act_vrf)
+    return vrf
 
-        # read in individual VRF definition and build up
-        # configuration
-        for name in conf.list_nodes(['name']):
-            vrf_inst = {
-                'description' : '',
-                'members': [],
-                'name' : name,
-                'table' : '',
-                'table_mod': False
-            }
-            conf.set_level(cfg_base + ['name', name])
-
-            if conf.exists(['table']):
-                # VRF table can't be changed on demand, thus we need to read in the
-                # current and the effective routing table number
-                act_table = conf.return_value(['table'])
-                eff_table = conf.return_effective_value(['table'])
-                vrf_inst['table'] = act_table
-                if eff_table and eff_table != act_table:
-                    vrf_inst['table_mod'] = True
-
-            if conf.exists(['description']):
-                vrf_inst['description'] = conf.return_value(['description'])
-
-            # append individual VRF configuration to global configuration list
-            vrf_config['vrf_add'].append(vrf_inst)
-
-    # set configuration level base
-    conf.set_level(cfg_base)
-
-    # check VRFs which need to be removed as they are not allowed to have
-    # interfaces attached
-    tmp = []
-    for name in vrf_config['vrf_remove']:
-        vrf_inst = {
-            'interfaces': [],
-            'name': name,
-            'routes': []
-        }
-
-        # find member interfaces of this particulat VRF
-        vrf_inst['interfaces'] = vrf_interfaces(conf, name)
-
-        # find routing protocols used by this VRF
-        vrf_inst['routes'] = vrf_routing(conf, name)
-
-        # append individual VRF configuration to temporary configuration list
-        tmp.append(vrf_inst)
-
-    # replace values in vrf_remove with list of dictionaries
-    # as we need it in verify() - we can't delete a VRF with members attached
-    vrf_config['vrf_remove'] = tmp
-    return vrf_config
-
-def verify(vrf_config):
+def verify(vrf):
     # ensure VRF is not assigned to any interface
-    for vrf in vrf_config['vrf_remove']:
-        if len(vrf['interfaces']) > 0:
-            raise ConfigError(f"VRF {vrf['name']} can not be deleted. It has active member interfaces!")
+    if 'vrf_remove' in vrf:
+        for name, config in vrf['vrf_remove'].items():
+            if 'interfaces' in config:
+                raise ConfigError(f'Can not remove VRF "{name}", it still has '\
+                                  f'member interfaces!')
+            if 'routes' in config:
+                raise ConfigError(f'Can not remove VRF "{name}", it still has '\
+                                  f'static routes installed!')
 
-        if len(vrf['routes']) > 0:
-            raise ConfigError(f"VRF {vrf['name']} can not be deleted. It has active routing protocols!")
+    if 'name' in vrf:
+        table_ids = []
+        for name, config in vrf['name'].items():
+            # table id is mandatory
+            if 'table' not in config:
+                raise ConfigError(f'VRF "{name}" table id is mandatory!')
 
-    table_ids = []
-    for vrf in vrf_config['vrf_add']:
-        # table id is mandatory
-        if not vrf['table']:
-            raise ConfigError(f"VRF {vrf['name']} table id is mandatory!")
+            # routing table id can't be changed - OS restriction
+            if os.path.isdir(f'/sys/class/net/{name}'):
+                tmp = loads(cmd(f'ip -j -d link show {name}'))[0]
+                tmp = str(dict_search('linkinfo.info_data.table', tmp))
+                if tmp and tmp != config['table']:
+                    raise ConfigError(f'VRF "{name}" table id modification not possible!')
 
-        # routing table id can't be changed - OS restriction
-        if vrf['table_mod']:
-            raise ConfigError(f"VRF {vrf['name']} table id modification is not possible!")
-
-        # VRf routing table ID must be unique on the system
-        if vrf['table'] in table_ids:
-            raise ConfigError(f"VRF {vrf['name']} table id {vrf['table']} is not unique!")
-
-        table_ids.append(vrf['table'])
+            # VRf routing table ID must be unique on the system
+            if config['table'] in table_ids:
+                raise ConfigError(f'VRF "{name}" table id is not unique!')
+            table_ids.append(config['table'])
 
     return None
 
-def generate(vrf_config):
-    render(config_file, 'vrf/vrf.conf.tmpl', vrf_config)
+def generate(vrf):
+    render(config_file, 'vrf/vrf.conf.tmpl', vrf)
     return None
 
-def apply(vrf_config):
+def apply(vrf):
     # Documentation
     #
     # - https://github.com/torvalds/linux/blob/master/Documentation/networking/vrf.txt
@@ -196,40 +135,48 @@ def apply(vrf_config):
     # - https://netdevconf.info/1.2/slides/oct6/02_ahern_what_is_l3mdev_slides.pdf
 
     # set the default VRF global behaviour
-    bind_all = vrf_config['bind_to_all']
-    if read_file('/proc/sys/net/ipv4/tcp_l3mdev_accept') != bind_all:
-        _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
-        _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
+    bind_all = '0'
+    if 'bind_to_all' in vrf:
+        bind_all = '1'
+    _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
+    _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
 
-    for vrf in vrf_config['vrf_remove']:
-        name = vrf['name']
-        if os.path.isdir(f'/sys/class/net/{name}'):
-            _cmd(f'ip -4 route del vrf {name} unreachable default metric 4278198272')
-            _cmd(f'ip -6 route del vrf {name} unreachable default metric 4278198272')
-            _cmd(f'ip link delete dev {name}')
+    for tmp in (dict_search('vrf_remove', vrf) or []):
+        if os.path.isdir(f'/sys/class/net/{tmp}'):
+            _cmd(f'ip -4 route del vrf {tmp} unreachable default metric 4278198272')
+            _cmd(f'ip -6 route del vrf {tmp} unreachable default metric 4278198272')
+            _cmd(f'ip link delete dev {tmp}')
 
-    for vrf in vrf_config['vrf_add']:
-        name = vrf['name']
-        table = vrf['table']
+    if 'name' in vrf:
+        for name, config in vrf['name'].items():
+            table = config['table']
 
-        if not os.path.isdir(f'/sys/class/net/{name}'):
-            # For each VRF apart from your default context create a VRF
-            # interface with a separate routing table
-            _cmd(f'ip link add {name} type vrf table {table}')
-            # Start VRf
-            _cmd(f'ip link set dev {name} up')
-            # The kernel Documentation/networking/vrf.txt also recommends
-            # adding unreachable routes to the VRF routing tables so that routes
-            # afterwards are taken.
-            _cmd(f'ip -4 route add vrf {name} unreachable default metric 4278198272')
-            _cmd(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
-            # We also should add proper loopback IP addresses to the newly
-            # created VRFs for services bound to the loopback address (SNMP, NTP)
-            _cmd(f'ip -4 addr add 127.0.0.1/8 dev {name}')
-            _cmd(f'ip -6 addr add ::1/128 dev {name}')
+            if not os.path.isdir(f'/sys/class/net/{name}'):
+                # For each VRF apart from your default context create a VRF
+                # interface with a separate routing table
+                _cmd(f'ip link add {name} type vrf table {table}')
+                # The kernel Documentation/networking/vrf.txt also recommends
+                # adding unreachable routes to the VRF routing tables so that routes
+                # afterwards are taken.
+                _cmd(f'ip -4 route add vrf {name} unreachable default metric 4278198272')
+                _cmd(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
+                # We also should add proper loopback IP addresses to the newly
+                # created VRFs for services bound to the loopback address (SNMP, NTP)
+                _cmd(f'ip -4 addr add 127.0.0.1/8 dev {name}')
+                _cmd(f'ip -6 addr add ::1/128 dev {name}')
 
-        # set VRF description for e.g. SNMP monitoring
-        Interface(name).set_alias(vrf['description'])
+            # set VRF description for e.g. SNMP monitoring
+            vrf_if = Interface(name)
+            vrf_if.set_alias(config.get('description', ''))
+            # Enable/Disable of an interface must always be done at the end of the
+            # derived class to make use of the ref-counting set_admin_state()
+            # function. We will only enable the interface if 'up' was called as
+            # often as 'down'. This is required by some interface implementations
+            # as certain parameters can only be changed when the interface is
+            # in admin-down state. This ensures the link does not flap during
+            # reconfiguration.
+            state = 'down' if 'disable' in config else 'up'
+            vrf_if.set_admin_state(state)
 
     # Linux routing uses rules to find tables - routing targets are then
     # looked up in those tables. If the lookup got a matching route, the
@@ -248,13 +195,13 @@ def apply(vrf_config):
     local_pref = [r.get('priority') for r in list_rules() if r.get('table') == 'local'][0]
 
     # change preference when VRFs are enabled and local lookup table is default
-    if not local_pref and vrf_config['vrf_add']:
+    if not local_pref and 'name' in vrf:
         for af in ['-4', '-6']:
             _cmd(f'ip {af} rule add pref 32765 table local')
             _cmd(f'ip {af} rule del pref 0')
 
     # return to default lookup preference when no VRF is configured
-    if not vrf_config['vrf_add']:
+    if 'name' not in vrf:
         for af in ['-4', '-6']:
             _cmd(f'ip {af} rule add pref 0 table local')
             _cmd(f'ip {af} rule del pref 32765')
