@@ -93,6 +93,11 @@ class BasicInterfaceTest:
             self.session.commit()
             del self.session
 
+            # Ethernet is handled in its derived class
+            if 'ethernet' not in self._base_path:
+                for intf in self._interfaces:
+                    self.assertFalse(os.path.isdir('/sys/class/net/{intf}'))
+
         def test_span_mirror(self):
             if not self._mirror_interfaces:
                 self.skipTest('not enabled')
