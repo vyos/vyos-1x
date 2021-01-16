@@ -18,9 +18,10 @@ import json
 
 from binascii import hexlify
 
-from netifaces import ifaddresses
 from netifaces import AF_INET
 from netifaces import AF_INET6
+from netifaces import ifaddresses
+from netifaces import interfaces
 
 from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
@@ -96,7 +97,7 @@ class BasicInterfaceTest:
             # Ethernet is handled in its derived class
             if 'ethernet' not in self._base_path:
                 for intf in self._interfaces:
-                    self.assertFalse(os.path.isdir('/sys/class/net/{intf}'))
+                    self.assertTrue(intf not in interfaces())
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:

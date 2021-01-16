@@ -17,6 +17,8 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from netifaces import interfaces
+
 from vyos.validate import is_intf_addr_assigned
 
 class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -26,6 +28,15 @@ class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
          self._loopback_addresses = ['127.0.0.1', '::1']
          self._base_path = ['interfaces', 'loopback']
          self._interfaces = ['lo']
+
+    def tearDown(self):
+        self.session.delete(self._base_path)
+        self.session.commit()
+        del self.session
+
+        # loopback interface must persist!
+        for intf in self._interfaces:
+            self.assertTrue(intf in interfaces())
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
