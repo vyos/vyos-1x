@@ -17,6 +17,7 @@
 import os
 import re
 
+from glob import glob
 from sys import exit
 from ipaddress import IPv4Address
 from ipaddress import IPv4Network
@@ -488,14 +489,9 @@ def apply(openvpn):
 
     # Do some cleanup when OpenVPN is disabled/deleted
     if 'deleted' in openvpn or 'disable' in openvpn:
-        # cleanup old configuration files
-        cleanup = []
-        cleanup.append(cfg_file.format(**openvpn))
-        cleanup.append(openvpn['auth_user_pass_file'])
-
-        for file in cleanup:
-            if os.path.isfile(file):
-                os.unlink(file)
+        for cleanup_file in glob(f'/run/openvpn/{interface}.*'):
+            if os.path.isfile(cleanup_file):
+                os.unlink(cleanup_file)
 
         if interface in interfaces():
             VTunIf(interface).remove()
