@@ -203,6 +203,16 @@ router bgp {{ asn }}
 {%   endfor %}
 {% endif %}
  !
+{% if listen is defined %}
+{%   if listen.limit is defined and listen.limit is not none %}
+ bgp listen limit {{ listen.limit }}
+{%   endif %}
+{%   for prefix, options in listen.range.items() %}
+{%     if options.peer_group is defined and options.peer_group is not none %}
+ bgp listen range {{ prefix }} peer-group {{ options.peer_group }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
 {% if parameters is defined %}
 {%   if parameters.always_compare_med is defined %}
  bgp always-compare-med
