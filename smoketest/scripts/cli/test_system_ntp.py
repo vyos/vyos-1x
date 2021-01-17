@@ -26,7 +26,7 @@ from vyos.util import read_file
 from vyos.util import process_named_running
 
 PROCESS_NAME = 'ntpd'
-NTP_CONF = '/etc/ntp.conf'
+NTP_CONF = '/run/ntpd/ntpd.conf'
 base_path = ['system', 'ntp']
 
 def get_config_value(key):
@@ -46,6 +46,8 @@ class TestSystemNTP(unittest.TestCase):
         self.session.delete(base_path)
         self.session.commit()
         del self.session
+
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_ntp_options(self):
         # Test basic NTP support with multiple servers and their options
@@ -76,7 +78,7 @@ class TestSystemNTP(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ntp_clients(self):
-        """ Test the allowed-networks statement """
+        # Test the allowed-networks statement
         listen_address = ['127.0.0.1', '::1']
         for listen in listen_address:
             self.session.set(base_path + ['listen-address', listen])
