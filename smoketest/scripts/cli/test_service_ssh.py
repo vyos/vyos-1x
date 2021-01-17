@@ -29,6 +29,10 @@ SSHD_CONF = '/run/sshd/sshd_config'
 base_path = ['service', 'ssh']
 vrf = 'mgmt'
 
+key_rsa = '/etc/ssh/ssh_host_rsa_key'
+key_dsa = '/etc/ssh/ssh_host_dsa_key'
+key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
+
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
     tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
@@ -46,6 +50,10 @@ class TestServiceSSH(unittest.TestCase):
         self.session.delete(base_path)
         self.session.commit()
         del self.session
+
+        self.assertTrue(os.path.isfile(key_rsa))
+        self.assertTrue(os.path.isfile(key_dsa))
+        self.assertTrue(os.path.isfile(key_ed25519))
 
     def test_ssh_default(self):
         # Check if SSH service runs with default settings - used for checking

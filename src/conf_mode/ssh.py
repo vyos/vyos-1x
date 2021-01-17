@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,8 @@
 import os
 
 from sys import exit
+from syslog import syslog
+from syslog import LOG_INFO
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -30,6 +32,10 @@ airbag.enable()
 
 config_file = r'/run/sshd/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
+
+key_rsa = '/etc/ssh/ssh_host_rsa_key'
+key_dsa = '/etc/ssh/ssh_host_dsa_key'
+key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
 
 def get_config(config=None):
     if config:
@@ -65,6 +71,18 @@ def generate(ssh):
             os.unlink(systemd_override)
 
         return None
+
+    # This usually happens only once on a fresh system, SSH keys need to be
+    # freshly generted, one per every system!
+    if not os.path.isfile(key_rsa):
+        syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
+        call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')
+    if not os.path.isfile(key_dsa):
+        syslog(LOG_INFO, 'SSH DSA host key not found, generating new key!')
+        call(f'ssh-keygen -q -N "" -t dsa -f {key_dsa}')
+    if not os.path.isfile(key_ed25519):
+        syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
+        call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
 
     render(config_file, 'ssh/sshd_config.tmpl', ssh)
     render(systemd_override, 'ssh/override.conf.tmpl', ssh)
