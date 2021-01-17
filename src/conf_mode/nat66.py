@@ -65,9 +65,10 @@ def get_config(config=None):
     for direction in ['source', 'destination']:
         if direction in nat:
             default_values = defaults(base + [direction, 'rule'])
-            for rule in nat[direction]['rule']:
-                nat[direction]['rule'][rule] = dict_merge(default_values,
-                    nat[direction]['rule'][rule])
+            if 'rule' in nat[direction]:
+                for rule in nat[direction]['rule']:
+                    nat[direction]['rule'][rule] = dict_merge(default_values,
+                        nat[direction]['rule'][rule])
 
     # read in current nftable (once) for further processing
     tmp = cmd('nft -j list table ip6 raw')
@@ -144,60 +145,9 @@ def verify(nat):
 
     return None
 
-def nat66_conf_to_ndp_proxy_conf(nat):
-    ndpproxy = {
-        'interface': {}
-    }
-    if  not nat or 'deleted' in nat:
-        # no need to verify the CLI as NAT66 is going to be deactivated
-        return None
-    # Detect and convert the default configuration of the configured interface
-    source_rule = dict_search('source.rule', nat)
-    if source_rule:
-        for rule,config in source_rule.items():
-            interface_ndp = {
-                'router': 'yes',
-                'timeout': 500,
-                'ttl': 30000,
-                'prefix': {}
-            }
-            if config['outbound_interface'] not in ndpproxy['interface']:
-                ndpproxy['interface'].update({config['outbound_interface']: interface_ndp})
-        for rule,config in source_rule.items():
-            if config['outbound_interface'] in ndpproxy['interface']:
-                prefix = dict_search('translation.prefix', config)
-                if prefix:
-                    nat66_prefix = config['translation']['prefix']
-                    if nat66_prefix not in ndpproxy['interface'][config['outbound_interface']]['prefix']:
-                        ndpproxy['interface'][config['outbound_interface']]['prefix'].update({nat66_prefix: {'mode':'auto'}})
-    
-    # Detect and convert the default configuration of the configured interface
-    destination_rule = dict_search('destination.rule', nat)
-    if destination_rule:
-        for rule,config in destination_rule.items():
-            interface_ndp = {
-                'router': 'yes',
-                'timeout': 500,
-                'ttl': 30000,
-                'prefix': {}
-            }
-            if config['inbound_interface'] not in ndpproxy['interface']:
-                ndpproxy['interface'].update({config['inbound_interface']: interface_ndp})
-        for rule,config in destination_rule.items():
-            if rule['interface'] in ndpproxy['interface']:
-                prefix = dict_search('destination.address', config)
-                if prefix:
-                    nat66_address = config['destination']['address']
-                    if nat66_prefix not in ndpproxy['interface'][config['inbound_interface']]['prefix']:
-                        ndpproxy['interface'][config['inbound_interface']]['prefix'].update({nat66_prefix: {'mode':'auto'}})
-    
-    return ndpproxy
-
-def generate(nat,ndp_proxy):
+def generate(nat):
     render(iptables_nat_config, 'firewall/nftables-nat66.tmpl', nat, permission=0o755)
-    if ndp_proxy == None:
-        return None
-    render(ndppd_config, 'proxy-ndp/ndppd.conf.tmpl', ndp_proxy, permission=0o755)
+    render(ndppd_config, 'proxy-ndp/ndppd.conf.tmpl', nat, permission=0o755)
     return None
 
 def apply(nat):
@@ -213,8 +163,7 @@ if __name__ == '__main__':
         check_kmod(k_mod)
         c = get_config()
         verify(c)
-        ndp_proxy = nat66_conf_to_ndp_proxy_conf(c)
-        generate(c,ndp_proxy)
+        generate(c)
         apply(c)
     except ConfigError as e:
         print(e)

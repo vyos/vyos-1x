@@ -14,28 +14,49 @@
 #
 ########################################################
 
+{% set global = namespace(ndppd_interfaces = [],ndppd_prefixs = []) %}
 
-{% for i in interface %}
 
-{%- if not interface[i].disable %}
+{% if source is defined and source.rule is defined and source.rule is not none %}
+{%   for rule, config in source.rule.items() if config.disable is not defined %}
+{%     if config.outbound_interface is defined %}
+{%         if config.outbound_interface not in global.ndppd_interfaces %}
+{%             set global.ndppd_interfaces = global.ndppd_interfaces + [config.outbound_interface] %}
+{%         endif   %}
+{%         if config.translation.prefix is defined  %}
+{%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.outbound_interface,'rule':config.translation.prefix}] %}
+{%         endif    %}
+{%     endif    %}
+{%   endfor %}
+{% endif %}
+
+{% if destination is defined and destination.rule is defined and destination.rule is not none %}
+{%   for rule, config in destination.rule.items() if config.disable is not defined %}
+{%     if config.inbound_interface is defined  %}
+{%         if config.inbound_interface not in global.ndppd_interfaces %}
+{%             set global.ndppd_interfaces = global.ndppd_interfaces + [config.inbound_interface] %}
+{%         endif   %}
+{%         if config.translation.address is defined  %}
+{%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.inbound_interface,'rule':config.translation.address}] %}
+{%         endif    %}
+{%     endif   %}
+{%   endfor %}
+{% endif %}
+
+{% for i in global.ndppd_interfaces %}
 
 proxy {{ i }} {
-    router {{  interface[i].router }}
-    timeout {{ interface[i].timeout }}
-    ttl {{ interface[i].ttl }} 
-{% for p in interface[i].prefix %}
+    router yes
+    timeout 500
+    ttl 30000
+{%  for map in global.ndppd_prefixs %}
+{%     if map['interface'] == i %}
+{%         set p = map['rule']  %}
     rule {{ p }} {
-{% if interface[i].prefix[p].mode == 'auto' %}
-        auto
-{% elif interface[i].prefix[p].mode == 'static' %}
         static
-{% elif interface[i].prefix[p].mode == 'iface' and interface[i].prefix[p].iface %}
-        iface {{ interface[i].prefix[p].iface }}
-{% endif %}
     }
-{%- endfor %} 
+{%     endif  %}
+{%  endfor   %}
 }
-
-{%- endif %}
 
 {% endfor %} 
