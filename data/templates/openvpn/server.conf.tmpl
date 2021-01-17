@@ -281,6 +281,10 @@ compat-names
 # Custom options added by user (not validated)
 #
 {%   for option in openvpn_option %}
-{{ option }}
+{%     for argument in option.split('--') %}
+{%       if argument is defined and argument != '' %}
+--{{ argument }}
+{%       endif %}
+{%     endfor %}
 {%   endfor %}
 {% endif %}
