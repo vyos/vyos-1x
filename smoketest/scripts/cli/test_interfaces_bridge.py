@@ -202,6 +202,13 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             # remove VLAN interfaces
             for vif in vifs:
                 self.session.delete(['interfaces', 'ethernet', member, 'vif', vif])
+        
+        # delete all members
+        for interface in self._interfaces:
+            for member in self._members:
+                for vif in vifs:
+                    self.session.delete(['interfaces', 'ethernet', member, 'vif', vif])
+                    self.session.delete(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

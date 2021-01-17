@@ -272,9 +272,9 @@ def has_vlan_subinterface_configured(conf, intf):
     old_level = conf.get_level()
     conf.set_level([])
 
-    intfpath = 'interfaces ' + Section.get_config_path(intf)
-    if ( conf.exists(f'{intfpath} vif') or
-            conf.exists(f'{intfpath} vif-s')):
+    intfpath = ['interfaces', Section.section(intf), intf]
+    if ( conf.exists(intfpath + ['vif']) or
+            conf.exists(intfpath + ['vif-s'])):
         ret = True
 
     conf.set_level(old_level)
