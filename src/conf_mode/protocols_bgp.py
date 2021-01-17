@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from sys import exit
 
 from vyos.config import Config
@@ -28,6 +30,14 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/tmp/bgp.frr'
+
+DEBUG = os.path.exists('/tmp/bgp.debug')
+if DEBUG:
+    import logging
+    lg = logging.getLogger("vyos.frr")
+    lg.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    lg.addHandler(ch)
 
 def get_config():
     conf = Config()
@@ -147,13 +157,19 @@ def apply(bgp):
             frr_cfg.commit_configuration(daemon='bgpd')
 
     # Debugging
-    '''
-    print('')
-    print('--------- DEBUGGING ----------')
-    print(f'Existing config:\n{frr_cfg["original_config"]}\n\n')
-    print(f'Replacement config:\n{bgp["new_frr_config"]}\n\n')
-    print(f'Modified config:\n{frr_cfg["modified_config"]}\n\n')
-    '''
+    if DEBUG:
+        from pprint import pprint
+        print('')
+        print('--------- DEBUGGING ----------')
+        pprint(dir(frr_cfg))
+        print('Existing config:\n')
+        for line in frr_cfg.original_config:
+            print(line)
+        print(f'Replacement config:\n')
+        print(f'{bgp["new_frr_config"]}')
+        print(f'Modified config:\n')
+        print(f'{frr_cfg}')
+
 
     return None
 
