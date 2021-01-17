@@ -1,0 +1,1666 @@
+firewall {
+    all-ping enable
+    broadcast-ping disable
+    config-trap disable
+    group {
+        address-group MEDIA-STREAMING-CLIENTS {
+            address 172.16.35.241
+            address 172.16.35.242
+            address 172.16.35.243
+        }
+        address-group DMZ-WEBSERVER {
+            address 172.16.36.10
+            address 172.16.36.40
+            address 172.16.36.20
+        }
+        address-group DMZ-RDP-SERVER {
+            address 172.16.33.40
+        }
+        address-group DOMAIN-CONTROLLER {
+            address 172.16.100.10
+            address 172.16.100.20
+        }
+        address-group AUDIO-STREAM {
+            address 172.16.35.20
+            address 172.16.35.21
+            address 172.16.35.22
+            address 172.16.35.23
+        }
+        ipv6-network-group LOCAL-ADDRESSES {
+            network ff02::/64
+            network fe80::/10
+        }
+        network-group SSH-IN-ALLOW {
+            network 192.0.2.0/24
+            network 10.0.0.0/8
+            network 172.16.0.0/12
+            network 192.168.0.0/16
+        }
+        port-group SMART-TV-PORTS {
+            port 5005-5006
+            port 80
+            port 443
+            port 3722
+        }
+    }
+    ipv6-name ALLOW-ALL-6 {
+        default-action accept
+    }
+    ipv6-name ALLOW-BASIC-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            protocol icmpv6
+        }
+    }
+    ipv6-name ALLOW-ESTABLISHED-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            destination {
+                group {
+                    network-group LOCAL-ADDRESSES
+                }
+            }
+            protocol icmpv6
+            source {
+                address fe80::/10
+            }
+        }
+        rule 20 {
+            action accept
+            icmpv6 {
+                type echo-request
+            }
+            protocol icmpv6
+        }
+        rule 21 {
+            action accept
+            icmpv6 {
+                type destination-unreachable
+            }
+            protocol icmpv6
+        }
+        rule 22 {
+            action accept
+            icmpv6 {
+                type packet-too-big
+            }
+            protocol icmpv6
+        }
+        rule 23 {
+            action accept
+            icmpv6 {
+                type time-exceeded
+            }
+            protocol icmpv6
+        }
+        rule 24 {
+            action accept
+            icmpv6 {
+                type parameter-problem
+            }
+            protocol icmpv6
+        }
+    }
+    ipv6-name WAN-LOCAL-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            destination {
+                address ff02::/64
+            }
+            protocol icmpv6
+            source {
+                address fe80::/10
+            }
+        }
+        rule 50 {
+            action accept
+            description DHCPv6
+            destination {
+                address fe80::/10
+                port 546
+            }
+            protocol udp
+            source {
+                address fe80::/10
+                port 547
+            }
+        }
+    }
+    ipv6-receive-redirects disable
+    ipv6-src-route disable
+    ip-src-route disable
+    log-martians enable
+    name DMZ-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name DMZ-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            description "NTP and LDAP to AD DC"
+            destination {
+                group {
+                    address-group DOMAIN-CONTROLLER
+                }
+                port 123,389,636
+            }
+            protocol tcp_udp
+        }
+        rule 300 {
+            action accept
+            destination {
+                group {
+                    address-group DMZ-RDP-SERVER
+                }
+                port 3389
+            }
+            protocol tcp_udp
+            source {
+                address 172.16.36.20
+            }
+        }
+    }
+    name DMZ-LOCAL {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 50 {
+            action accept
+            destination {
+                address 172.16.254.30
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 123 {
+            action accept
+            destination {
+                port 123
+            }
+            protocol udp
+        }
+    }
+    name DMZ-WAN {
+        default-action accept
+    }
+    name GUEST-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            destination {
+                port 80,443
+            }
+            protocol tcp
+        }
+    }
+    name GUEST-IOT {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            description "MEDIA-STREAMING-CLIENTS Devices to GUEST"
+            destination {
+                group {
+                    address-group MEDIA-STREAMING-CLIENTS
+                }
+            }
+            protocol tcp_udp
+        }
+        rule 110 {
+            action accept
+            description "AUDIO-STREAM Devices to GUEST"
+            destination {
+                group {
+                    address-group AUDIO-STREAM
+                }
+            }
+            protocol tcp_udp
+        }
+        rule 200 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 224.0.0.251
+                port 5353
+            }
+            protocol udp
+        }
+        rule 300 {
+            action accept
+            description "BCAST relay"
+            destination {
+                port 1900
+            }
+            protocol udp
+        }
+    }
+    name GUEST-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name GUEST-LOCAL {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            description DNS
+            destination {
+                address 172.31.0.254
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 11 {
+            action accept
+            description DHCP
+            destination {
+                port 67
+            }
+            protocol udp
+        }
+        rule 15 {
+            action accept
+            destination {
+                address 172.31.0.254
+            }
+            protocol icmp
+        }
+        rule 200 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 224.0.0.251
+                port 5353
+            }
+            protocol udp
+        }
+        rule 210 {
+            action accept
+            description "AUDIO-STREAM Broadcast"
+            destination {
+                port 1900
+            }
+            protocol udp
+        }
+    }
+    name GUEST-WAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 25 {
+            action accept
+            description SMTP
+            destination {
+                port 25,587
+            }
+            protocol tcp
+        }
+        rule 53 {
+            action accept
+            destination {
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 60 {
+            action accept
+            source {
+                address 172.31.0.200
+            }
+        }
+        rule 80 {
+            action accept
+            source {
+                address 172.31.0.200
+            }
+        }
+        rule 100 {
+            action accept
+            protocol icmp
+        }
+        rule 110 {
+            action accept
+            description POP3
+            destination {
+                port 110,995
+            }
+            protocol tcp
+        }
+        rule 123 {
+            action accept
+            description "NTP Client"
+            destination {
+                port 123
+            }
+            protocol udp
+        }
+        rule 143 {
+            action accept
+            description IMAP
+            destination {
+                port 143,993
+            }
+            protocol tcp
+        }
+        rule 200 {
+            action accept
+            destination {
+                port 80,443
+            }
+            protocol tcp
+        }
+        rule 500 {
+            action accept
+            description "L2TP IPSec"
+            destination {
+                port 500,4500
+            }
+            protocol udp
+        }
+        rule 600 {
+            action accept
+            destination {
+                port 5222-5224
+            }
+            protocol tcp
+        }
+        rule 601 {
+            action accept
+            destination {
+                port 3478-3497,4500,16384-16387,16393-16402
+            }
+            protocol udp
+        }
+        rule 1000 {
+            action accept
+            source {
+                address 172.31.0.184
+            }
+        }
+    }
+    name IOT-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            description "MEDIA-STREAMING-CLIENTS Devices to IOT"
+            protocol tcp_udp
+            source {
+                group {
+                    address-group MEDIA-STREAMING-CLIENTS
+                }
+            }
+        }
+        rule 110 {
+            action accept
+            description "AUDIO-STREAM Devices to IOT"
+            protocol tcp_udp
+            source {
+                group {
+                    address-group AUDIO-STREAM
+                }
+            }
+        }
+        rule 200 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 224.0.0.251
+                port 5353
+            }
+            protocol udp
+        }
+        rule 300 {
+            action accept
+            description "BCAST relay"
+            destination {
+                port 1900
+            }
+            protocol udp
+        }
+    }
+    name IOT-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            description "AppleTV to LAN"
+            destination {
+                group {
+                    port-group SMART-TV-PORTS
+                }
+            }
+            protocol tcp_udp
+            source {
+                group {
+                    address-group MEDIA-STREAMING-CLIENTS
+                }
+            }
+        }
+        rule 110 {
+            action accept
+            description "AUDIO-STREAM Devices to LAN"
+            protocol tcp_udp
+            source {
+                group {
+                    address-group AUDIO-STREAM
+                }
+            }
+        }
+    }
+    name IOT-LOCAL {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            description DNS
+            destination {
+                address 172.16.254.30
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 11 {
+            action accept
+            description DHCP
+            destination {
+                port 67
+            }
+            protocol udp
+        }
+        rule 15 {
+            action accept
+            destination {
+                address 172.16.35.254
+            }
+            protocol icmp
+        }
+        rule 200 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 224.0.0.251
+                port 5353
+            }
+            protocol udp
+        }
+        rule 201 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 172.16.35.254
+                port 5353
+            }
+            protocol udp
+        }
+        rule 210 {
+            action accept
+            description "AUDIO-STREAM Broadcast"
+            destination {
+                port 1900,1902,6969
+            }
+            protocol udp
+        }
+    }
+    name IOT-WAN {
+        default-action accept
+    }
+    name LAN-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 22 {
+            action accept
+            description "SSH into DMZ"
+            destination {
+                port 22
+            }
+            protocol tcp
+        }
+        rule 100 {
+            action accept
+            destination {
+                group {
+                    address-group DMZ-WEBSERVER
+                }
+                port 22,80,443
+            }
+            protocol tcp
+        }
+    }
+    name LAN-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name LAN-IOT {
+        default-action accept
+    }
+    name LAN-LOCAL {
+        default-action accept
+    }
+    name LAN-WAN {
+        default-action accept
+    }
+    name LOCAL-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name LOCAL-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 5 {
+            action accept
+            protocol icmp
+        }
+        rule 200 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 224.0.0.251
+                port 5353
+            }
+            protocol udp
+        }
+        rule 300 {
+            action accept
+            description "BCAST relay"
+            destination {
+                port 1900
+            }
+            protocol udp
+        }
+    }
+    name LOCAL-IOT {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 5 {
+            action accept
+            protocol icmp
+        }
+        rule 200 {
+            action accept
+            description "MCAST relay"
+            destination {
+                address 224.0.0.251
+                port 5353
+            }
+            protocol udp
+        }
+        rule 300 {
+            action accept
+            description "BCAST relay"
+            destination {
+                port 1900,6969
+            }
+            protocol udp
+        }
+    }
+    name LOCAL-LAN {
+        default-action accept
+    }
+    name LOCAL-WAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            protocol icmp
+        }
+        rule 50 {
+            action accept
+            description DNS
+            destination {
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 80 {
+            action accept
+            destination {
+                port 80,443
+            }
+            protocol tcp
+        }
+        rule 123 {
+            action accept
+            description NTP
+            destination {
+                port 123
+            }
+            protocol udp
+        }
+    }
+    name WAN-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            destination {
+                address 172.16.36.10
+                port 80,443
+            }
+            protocol tcp
+        }
+    }
+    name WAN-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 1000 {
+            action accept
+            destination {
+                address 172.31.0.184
+            }
+        }
+        rule 8000 {
+            action accept
+            destination {
+                address 172.31.0.200
+                port 10000
+            }
+            protocol udp
+        }
+    }
+    name WAN-IOT {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name WAN-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 1000 {
+            action accept
+            destination {
+                address 172.16.33.40
+                port 3389
+            }
+            protocol tcp
+            source {
+                group {
+                    network-group SSH-IN-ALLOW
+                }
+            }
+        }
+    }
+    name WAN-LOCAL {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 22 {
+            action accept
+            destination {
+                port 22
+            }
+            protocol tcp
+            source {
+                group {
+                    network-group SSH-IN-ALLOW
+                }
+            }
+        }
+    }
+    options {
+        interface pppoe0 {
+            adjust-mss 1452
+            adjust-mss6 1432
+        }
+    }
+    receive-redirects disable
+    send-redirects enable
+    source-validation disable
+    syn-cookies enable
+    twa-hazards-protection disable
+}
+interfaces {
+    dummy dum0 {
+        address 172.16.254.30/32
+    }
+    ethernet eth0 {
+        duplex auto
+        speed auto
+        vif 5 {
+            address 172.16.37.254/24
+        }
+        vif 10 {
+            address 172.16.33.254/24
+        }
+        vif 20 {
+            address 172.31.0.254/24
+        }
+        vif 35 {
+            address 172.16.35.254/24
+        }
+        vif 50 {
+            address 172.16.36.254/24
+        }
+        vif 100 {
+            address 172.16.100.254/24
+        }
+        vif 201 {
+            address 172.18.201.254/24
+        }
+        vif 202 {
+            address 172.18.202.254/24
+        }
+        vif 203 {
+            address 172.18.203.254/24
+        }
+        vif 204 {
+            address 172.18.204.254/24
+        }
+    }
+    ethernet eth1 {
+        vif 7 {
+            description FTTH-PPPoE
+        }
+    }
+    loopback lo {
+        address 172.16.254.30/32
+    }
+    pppoe pppoe0 {
+        authentication {
+            password vyos
+            user vyos
+        }
+        default-route auto
+        description "FTTH 100/50MBit"
+        dhcpv6-options {
+            pd 0 {
+                interface eth0.10 {
+                    address 1
+                    sla-id 10
+                }
+                interface eth0.20 {
+                    address 1
+                    sla-id 20
+                }
+                length 56
+            }
+        }
+        ipv6 {
+            address {
+                autoconf
+            }
+        }
+        mtu 1492
+        no-peer-dns
+        source-interface eth1.7
+    }
+}
+nat {
+    destination {
+        rule 100 {
+            description HTTP(S)
+            destination {
+                port 80,443
+            }
+            inbound-interface pppoe0
+            log
+            protocol tcp
+            translation {
+                address 172.16.36.10
+            }
+        }
+        rule 1000 {
+            destination {
+                port 3389
+            }
+            disable
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 172.16.33.40
+            }
+        }
+        rule 8000 {
+            destination {
+                port 10000
+            }
+            inbound-interface pppoe0
+            log
+            protocol udp
+            translation {
+                address 172.31.0.200
+            }
+        }
+    }
+    source {
+        rule 100 {
+            log
+            outbound-interface pppoe0
+            source {
+                address 172.16.32.0/19
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 200 {
+            outbound-interface pppoe0
+            source {
+                address 172.16.100.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 300 {
+            outbound-interface pppoe0
+            source {
+                address 172.31.0.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 400 {
+            outbound-interface pppoe0
+            source {
+                address 172.18.200.0/21
+            }
+            translation {
+                address masquerade
+            }
+        }
+    }
+}
+protocols {
+    static {
+        interface-route6 2000::/3 {
+            next-hop-interface pppoe0 {
+            }
+        }
+        route 10.0.0.0/8 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 169.254.0.0/16 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 172.16.0.0/12 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 192.168.0.0/16 {
+            blackhole {
+                distance 254
+            }
+        }
+    }
+}
+service {
+    dhcp-server {
+        shared-network-name BACKBONE {
+            authoritative
+            subnet 172.16.37.0/24 {
+                default-router 172.16.37.254
+                dns-server 172.16.254.30
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                ntp-server 172.16.254.30
+                range 0 {
+                    start 172.16.37.120
+                    stop 172.16.37.149
+                }
+                static-mapping AP1.wue3 {
+                    ip-address 172.16.37.231
+                    mac-address 18:e8:29:6c:c3:a5
+                }
+            }
+        }
+        shared-network-name GUEST {
+            authoritative
+            subnet 172.31.0.0/24 {
+                default-router 172.31.0.254
+                dns-server 172.31.0.254
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                range 0 {
+                    start 172.31.0.100
+                    stop 172.31.0.199
+                }
+                static-mapping host01 {
+                    ip-address 172.31.0.200
+                    mac-address 00:50:00:00:00:01
+                }
+                static-mapping host02 {
+                    ip-address 172.31.0.184
+                    mac-address 00:50:00:00:00:02
+                }
+            }
+        }
+        shared-network-name IOT {
+            authoritative
+            subnet 172.16.35.0/24 {
+                default-router 172.16.35.254
+                dns-server 172.16.254.30
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                ntp-server 172.16.254.30
+                range 0 {
+                    start 172.16.35.101
+                    stop 172.16.35.149
+                }
+            }
+        }
+        shared-network-name LAN {
+            authoritative
+            subnet 172.16.33.0/24 {
+                default-router 172.16.33.254
+                dns-server 172.16.254.30
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                ntp-server 172.16.254.30
+                range 0 {
+                    start 172.16.33.100
+                    stop 172.16.33.189
+                }
+            }
+        }
+    }
+    dns {
+        forwarding {
+            allow-from 172.16.0.0/12
+            cache-size 0
+            domain 16.172.in-addr.arpa {
+                addnta
+                recursion-desired
+                server 172.16.100.10
+                server 172.16.100.20
+                server 172.16.110.30
+            }
+            domain 18.172.in-addr.arpa {
+                addnta
+                recursion-desired
+                server 172.16.100.10
+                server 172.16.100.20
+                server 172.16.110.30
+            }
+            domain vyos.net {
+                addnta
+                recursion-desired
+                server 172.16.100.20
+                server 172.16.100.10
+                server 172.16.110.30
+            }
+            ignore-hosts-file
+            listen-address 172.16.254.30
+            listen-address 172.31.0.254
+            negative-ttl 60
+        }
+    }
+    lldp {
+        legacy-protocols {
+            cdp
+        }
+        snmp {
+            enable
+        }
+    }
+    mdns {
+        repeater {
+            interface eth0.35
+            interface eth0.10
+        }
+    }
+    router-advert {
+        interface eth0.10 {
+            prefix ::/64 {
+                preferred-lifetime 2700
+                valid-lifetime 5400
+            }
+        }
+        interface eth0.20 {
+            prefix ::/64 {
+                preferred-lifetime 2700
+                valid-lifetime 5400
+            }
+        }
+    }
+    snmp {
+        community fooBar {
+            authorization ro
+            network 172.16.100.0/24
+        }
+        contact "VyOS maintainers and contributors <maintainers@vyos.io>"
+        listen-address 172.16.254.30 {
+            port 161
+        }
+        location "The Internet"
+    }
+    ssh {
+        disable-host-validation
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-archive {
+            location tftp://172.16.20.200/CONFIGS/vyos
+        }
+        commit-revisions 200
+    }
+    conntrack {
+        expect-table-size 2048
+        hash-size 32768
+        modules {
+            sip {
+                disable
+            }
+        }
+        table-size 262144
+        timeout {
+            icmp 30
+            other 600
+            udp {
+                other 300
+                stream 300
+            }
+        }
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 172.16.254.30
+    ntp {
+        allow-clients {
+            address 172.16.0.0/12
+        }
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    option {
+        ctrl-alt-delete ignore
+        reboot-on-panic
+        startup-beep
+    }
+    syslog {
+        global {
+            facility all {
+                level debug
+            }
+            facility protocols {
+                level debug
+            }
+        }
+        host 172.16.100.1 {
+            facility all {
+                level warning
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+traffic-policy {
+    shaper QoS {
+        bandwidth 50mbit
+        default {
+            bandwidth 100%
+            burst 15k
+            queue-limit 1000
+            queue-type fq-codel
+        }
+    }
+}
+zone-policy {
+    zone DMZ {
+        default-action drop
+        from GUEST {
+            firewall {
+                name GUEST-DMZ
+            }
+        }
+        from LAN {
+            firewall {
+                name LAN-DMZ
+            }
+        }
+        from LOCAL {
+            firewall {
+                name LOCAL-DMZ
+            }
+        }
+        from WAN {
+            firewall {
+                name WAN-DMZ
+            }
+        }
+        interface eth0.50
+    }
+    zone GUEST {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-GUEST
+            }
+        }
+        from IOT {
+            firewall {
+                name IOT-GUEST
+            }
+        }
+        from LAN {
+            firewall {
+                name LAN-GUEST
+            }
+        }
+        from LOCAL {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LOCAL-GUEST
+            }
+        }
+        from WAN {
+            firewall {
+                ipv6-name ALLOW-ESTABLISHED-6
+                name WAN-GUEST
+            }
+        }
+        interface eth0.20
+    }
+    zone IOT {
+        default-action drop
+        from GUEST {
+            firewall {
+                name GUEST-IOT
+            }
+        }
+        from LAN {
+            firewall {
+                name LAN-IOT
+            }
+        }
+        from LOCAL {
+            firewall {
+                name LOCAL-IOT
+            }
+        }
+        from WAN {
+            firewall {
+                name WAN-IOT
+            }
+        }
+        interface eth0.35
+    }
+    zone LAN {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-LAN
+            }
+        }
+        from GUEST {
+            firewall {
+                name GUEST-LAN
+            }
+        }
+        from IOT {
+            firewall {
+                name IOT-LAN
+            }
+        }
+        from LOCAL {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LOCAL-LAN
+            }
+        }
+        from WAN {
+            firewall {
+                ipv6-name ALLOW-ESTABLISHED-6
+                name WAN-LAN
+            }
+        }
+        interface eth0.5
+        interface eth0.10
+        interface eth0.100
+        interface eth0.201
+        interface eth0.202
+        interface eth0.203
+        interface eth0.204
+    }
+    zone LOCAL {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-LOCAL
+            }
+        }
+        from GUEST {
+            firewall {
+                ipv6-name ALLOW-ESTABLISHED-6
+                name GUEST-LOCAL
+            }
+        }
+        from IOT {
+            firewall {
+                name IOT-LOCAL
+            }
+        }
+        from LAN {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LAN-LOCAL
+            }
+        }
+        from WAN {
+            firewall {
+                ipv6-name WAN-LOCAL-6
+                name WAN-LOCAL
+            }
+        }
+        local-zone
+    }
+    zone WAN {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-WAN
+            }
+        }
+        from GUEST {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name GUEST-WAN
+            }
+        }
+        from IOT {
+            firewall {
+                name IOT-WAN
+            }
+        }
+        from LAN {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LAN-WAN
+            }
+        }
+        from LOCAL {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LOCAL-WAN
+            }
+        }
+        interface pppoe0
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@1:conntrack-sync@1:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@18:ipoe-server@1:ipsec@5:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@6:salt@1:snmp@2:ssh@2:sstp@3:system@20:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3-beta-202101091250
+
