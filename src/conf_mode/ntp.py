@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,7 +24,7 @@ from vyos.template import render
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/ntp.conf'
+config_file = r'/run/ntpd/ntpd.conf'
 systemd_override = r'/etc/systemd/system/ntp.service.d/override.conf'
 
 def get_config(config=None):
@@ -33,8 +33,11 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['system', 'ntp']
+    if not conf.exists(base):
+        return None
 
     ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    ntp['config_file'] = config_file
     return ntp
 
 def verify(ntp):
@@ -42,7 +45,7 @@ def verify(ntp):
     if not ntp:
         return None
 
-    if len(ntp.get('allow_clients', {})) and not (len(ntp.get('server', {})) > 0):
+    if 'allow_clients' in ntp and 'server' not in ntp:
         raise ConfigError('NTP server not configured')
 
     verify_vrf(ntp)
@@ -53,7 +56,7 @@ def generate(ntp):
     if not ntp:
         return None
 
-    render(config_file, 'ntp/ntp.conf.tmpl', ntp)
+    render(config_file, 'ntp/ntpd.conf.tmpl', ntp)
     render(systemd_override, 'ntp/override.conf.tmpl', ntp)
 
     return None
