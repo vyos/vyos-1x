@@ -198,10 +198,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 for vif in vifs:
                     # member interface must be assigned to the bridge
                     self.assertTrue(os.path.exists(f'/sys/class/net/{interface}/lower_{member}.{vif}'))
-
-            # remove VLAN interfaces
-            for vif in vifs:
-                self.session.delete(['interfaces', 'ethernet', member, 'vif', vif])
         
         # delete all members
         for interface in self._interfaces:
