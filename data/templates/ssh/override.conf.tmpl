@@ -8,5 +8,6 @@ ConditionPathExists={{config_file}}
 ExecStart=
 ExecStart={{vrf_command}}/usr/sbin/sshd -f {{config_file}} -D $SSHD_OPTS
 Restart=always
+RestartPreventExitStatus=
 RestartSec=10
 RuntimeDirectoryPreserve=yes
