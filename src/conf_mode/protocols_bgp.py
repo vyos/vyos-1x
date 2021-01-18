@@ -148,13 +148,6 @@ def apply(bgp):
     frr_cfg.load_configuration(daemon='bgpd')
     frr_cfg.modify_section(f'router bgp \S+', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
-    frr_cfg.commit_configuration(daemon='bgpd')
-
-    # If FRR config is blank, rerun the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if bgp['new_frr_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(daemon='bgpd')
 
     # Debugging
     if DEBUG:
@@ -169,6 +162,14 @@ def apply(bgp):
         print(f'{bgp["new_frr_config"]}')
         print(f'Modified config:\n')
         print(f'{frr_cfg}')
+
+    frr_cfg.commit_configuration(daemon='bgpd')
+
+    # If FRR config is blank, rerun the blank commit x times due to frr-reload
+    # behavior/bug not properly clearing out on one commit.
+    if bgp['new_frr_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(daemon='bgpd')
 
 
     return None
