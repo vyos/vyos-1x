@@ -198,8 +198,8 @@ router bgp {{ asn }}
 {% endif %}
  !
 {% if neighbor is defined and neighbor is not none %}
-{%   for n, config in neighbor.items() %}
-{{ bgp_neighbor(n, config) }}
+{%   for peer, config in neighbor.items() %}
+{{ bgp_neighbor(peer, config) }}
 {%   endfor %}
 {% endif %}
  !
