@@ -87,10 +87,10 @@ def apply(options):
     # Ctrl-Alt-Delete action
     if os.path.exists(systemd_action_file):
         os.unlink(systemd_action_file)
-    if 'ctrl_alt_del' in options:
-        if options['ctrl_alt_del'] == 'reboot':
+    if 'ctrl_alt_delete' in options:
+        if options['ctrl_alt_delete'] == 'reboot':
             os.symlink('/lib/systemd/system/reboot.target', systemd_action_file)
-        elif options['ctrl_alt_del'] == 'poweroff':
+        elif options['ctrl_alt_delete'] == 'poweroff':
             os.symlink('/lib/systemd/system/poweroff.target', systemd_action_file)
 
     # Configure HTTP client
