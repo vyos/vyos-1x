@@ -88,8 +88,13 @@ def verify(bgp):
                 if neighbor == 'neighbor':
                     # remote-as must be either set explicitly for the neighbor
                     # or for the entire peer-group
-                    if 'remote_as' not in peer_config:
-                        if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][peer_config['peer_group']]:
+                    if 'interface' in peer_config:
+                        if 'remote_as' not in peer_config['interface']:
+                            if 'peer_group' not in peer_config['interface'] or 'remote_as' not in asn_config['peer_group'][ peer_config['interface']['peer_group'] ]:
+                                raise ConfigError('Remote AS must be set for neighbor or peer-group!')
+
+                    elif 'remote_as' not in peer_config:
+                        if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][ peer_config['peer_group'] ]:
                             raise ConfigError('Remote AS must be set for neighbor or peer-group!')
 
                 for afi in ['ipv4_unicast', 'ipv6_unicast']:
