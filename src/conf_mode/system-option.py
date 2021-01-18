@@ -104,11 +104,11 @@ def apply(options):
             os.unlink(ssh_config)
 
     # Reboot system on kernel panic
+    timeout = '0'
+    if 'reboot_on_panic' in options:
+        timeout = '60'
     with open('/proc/sys/kernel/panic', 'w') as f:
-        if 'reboot_on_panic' in options:
-            f.write('60')
-        else:
-            f.write('0')
+        f.write(timeout)
 
     # tuned - performance tuning
     if 'performance' in options:
