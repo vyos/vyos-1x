@@ -149,7 +149,9 @@ def netmask_from_ipv4(address):
     Example:
       - 172.18.201.10 -> 255.255.255.128
     """
-    from netifaces import interfaces, ifaddresses, AF_INET
+    from netifaces import interfaces
+    from netifaces import ifaddresses
+    from netifaces import AF_INET
     for interface in interfaces():
         tmp = ifaddresses(interface)
         if AF_INET in tmp:
@@ -159,6 +161,30 @@ def netmask_from_ipv4(address):
                         return af_addr['netmask']
 
     raise ValueError
+
+@register_filter('is_ip_network')
+def is_ip_network(addr):
+    """ Take IP(v4/v6) address and validate if the passed argument is a network
+    or a host address.
+
+    Example:
+      - 192.0.2.0          -> False
+      - 192.0.2.10/24      -> False
+      - 192.0.2.0/24       -> True
+      - 2001:db8::         -> False
+      - 2001:db8::100      -> False
+      - 2001:db8::/48      -> True
+      - 2001:db8:1000::/64 -> True
+    """
+    try:
+        from ipaddress import ip_network
+        # input variables must contain a / to indicate its CIDR notation
+        if len(addr.split('/')) != 2:
+            raise ValueError()
+        ip_network(addr)
+        return True
+    except:
+        return False
 
 @register_filter('network_from_ipv4')
 def network_from_ipv4(address):
@@ -247,6 +273,21 @@ def dec_ip(address, decrement):
     """
     from ipaddress import ip_interface
     return str(ip_interface(address).ip - int(decrement))
+
+@register_filter('compare_netmask')
+def compare_netmask(netmask1, netmask2):
+    """
+    Compare two IP netmask if they have the exact same size.
+
+    compare_netmask('10.0.0.0/8', '20.0.0.0/8') -> True
+    compare_netmask('10.0.0.0/8', '20.0.0.0/16') -> False
+    """
+    from ipaddress import ip_network
+    try:
+        return ip_network(netmask1).netmask == ip_network(netmask2).netmask
+    except:
+        return False
+
 
 @register_filter('isc_static_route')
 def isc_static_route(subnet, router):

@@ -93,3 +93,22 @@ class TestVyOSTemplate(TestCase):
         self.assertEqual(vyos.template.dec_ip('2001:db8::b/64', '10'),  '2001:db8::1')
         self.assertEqual(vyos.template.dec_ip('2001:db8::f', '5'),  '2001:db8::a')
 
+    def test_is_network(self):
+        self.assertFalse(vyos.template.is_ip_network('192.0.2.0'))
+        self.assertFalse(vyos.template.is_ip_network('192.0.2.1/24'))
+        self.assertTrue(vyos.template.is_ip_network('192.0.2.0/24'))
+
+        self.assertFalse(vyos.template.is_ip_network('2001:db8::'))
+        self.assertFalse(vyos.template.is_ip_network('2001:db8::ffff'))
+        self.assertTrue(vyos.template.is_ip_network('2001:db8::/48'))
+        self.assertTrue(vyos.template.is_ip_network('2001:db8:1000::/64'))
+
+    def test_is_network(self):
+        self.assertTrue(vyos.template.compare_netmask('10.0.0.0/8', '20.0.0.0/8'))
+        self.assertTrue(vyos.template.compare_netmask('10.0.0.0/16', '20.0.0.0/16'))
+        self.assertFalse(vyos.template.compare_netmask('10.0.0.0/8', '20.0.0.0/16'))
+        self.assertFalse(vyos.template.compare_netmask('10.0.0.1', '20.0.0.0/16'))
+
+        self.assertTrue(vyos.template.compare_netmask('2001:db8:1000::/48', '2001:db8:2000::/48'))
+        self.assertTrue(vyos.template.compare_netmask('2001:db8:1000::/64', '2001:db8:2000::/64'))
+        self.assertFalse(vyos.template.compare_netmask('2001:db8:1000::/48', '2001:db8:2000::/64'))

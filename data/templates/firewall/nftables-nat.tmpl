@@ -21,18 +21,34 @@
 {%     set comment   = 'DST-NAT-' + rule %}
 {%     set base_log  = '[NAT-DST-' + rule %}
 {%     set interface = ' iifname "' + config.inbound_interface + '"' if config.inbound_interface is defined and config.inbound_interface != 'any' else '' %}
-{%     set trns_addr = 'dnat to ' + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
+{%     if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
+{#       support 1:1 network translation #}
+{%       if config.translation.address | is_ip_network %}
+{%         set trns_addr = 'dnat ip prefix to ip daddr map { ' + config.source.address + ' : ' + config.translation.address + ' }' %}
+{#         we can now clear out the src_addr part as it's already covered in aboves map #}
+{%         set src_addr  = '' %}
+{%       else %}
+{%         set trns_addr = 'dnat to ' + config.translation.address %}
+{%       endif %}
+{%     endif %}
 {%   elif chain == 'POSTROUTING' %}
 {%     set comment   = 'SRC-NAT-' + rule %}
 {%     set base_log  = '[NAT-SRC-' + rule %}
 {%     set interface = ' oifname "' + config.outbound_interface + '"' if config.outbound_interface is defined and config.outbound_interface != 'any' else '' %}
-{%     if config.translation is defined and config.translation.address is defined and config.translation.address == 'masquerade' %}
-{%       set trns_addr = config.translation.address %}
-{%       if config.translation.port is defined and config.translation.port is not none %}
-{%         set trns_addr = trns_addr + ' to ' %}
+{%     if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
+{%       if config.translation.address == 'masquerade' %}
+{%         set trns_addr = config.translation.address %}
+{%         if config.translation.port is defined and config.translation.port is not none %}
+{%           set trns_addr = trns_addr + ' to ' %}
+{%         endif %}
+{#       support 1:1 network translation #}
+{%       elif config.translation.address | is_ip_network %}
+{%         set trns_addr = 'snat ip prefix to ip saddr map { ' + config.source.address + ' : ' + config.translation.address + ' }' %}
+{#         we can now clear out the src_addr part as it's already covered in aboves map #}
+{%         set src_addr  = '' %}
+{%       else %}
+{%         set trns_addr = 'snat to ' + config.translation.address %}
 {%       endif %}
-{%     else %}
-{%       set trns_addr = 'snat to ' + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
 {%     endif %}
 {%   endif %}
 {%   set trns_port = ':' + config.translation.port if config.translation is defined and config.translation.port is defined and config.translation.port is not none %}
@@ -132,7 +148,6 @@ add rule ip raw NAT_CONNTRACK counter accept
 {{ nat_rule(rule, config, 'PREROUTING') }}
 {%   endfor %}
 {% endif %}
-
 #
 # Source NAT rules build up here
 #

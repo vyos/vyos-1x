@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,6 +26,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
+from vyos.template import is_ip_network
 from vyos.util import cmd
 from vyos.util import check_kmod
 from vyos.util import dict_search
@@ -68,9 +69,9 @@ def verify_rule(config, err_msg):
                               'ports can only be specified when protocol is '\
                               'either tcp, udp or tcp_udp!')
 
-        if '/' in (dict_search('translation.address', config) or []):
+        if is_ip_network(dict_search('translation.address', config)):
             raise ConfigError(f'{err_msg}\n' \
-                             'Cannot use ports with an IPv4net type translation address as it\n' \
+                             'Cannot use ports with an IPv4 network as translation address as it\n' \
                              'statically maps a whole network of addresses onto another\n' \
                              'network of addresses')
 
@@ -147,7 +148,7 @@ def verify(nat):
 
             addr = dict_search('translation.address', config)
             if addr != None:
-                if addr != 'masquerade':
+                if addr != 'masquerade' and not is_ip_network(addr):
                     for ip in addr.split('-'):
                         if not is_addr_assigned(ip):
                             print(f'WARNING: IP address {ip} does not exist on the system!')
