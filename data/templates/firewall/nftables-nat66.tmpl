@@ -15,7 +15,7 @@
 {%     endif %}
 {%     set trns_address = dnat_type + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
 {%   elif chain == "POSTROUTING" %}
-{%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined and config.outbound_interface != 'any' else '' %}
+{%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined else '' %}
 {%     set trns_prefix = "snat prefix to " + config.translation.prefix if config.translation is defined and config.translation.prefix is defined and config.translation.prefix is not none %}
 {%   endif %}
 {%   set comment   = "NPT-NAT-" + rule %}

@@ -117,7 +117,7 @@ def verify(nat):
                 raise ConfigError(f'{err_msg}\n' \
                                   'outbound-interface not specified')
             else:
-                if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
+                if config['outbound_interface'] not in interfaces():
                     print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
 
