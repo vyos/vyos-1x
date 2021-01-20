@@ -20,6 +20,29 @@ if ! grep -q '^minion' /etc/passwd; then
     adduser --quiet minion users
 fi
 
+# Add RADIUS operator user for RADIUS authenticated users to map to
+if ! grep -q '^radius_user' /etc/passwd; then
+    adduser --quiet --firstuid 1001 --disabled-login --ingroup users --gecos "radius user" --shell /bin/vbash radius_user
+    adduser --quiet radius_user frrvty
+    adduser --quiet radius_user vyattaop
+    adduser --quiet radius_user operator
+    adduser --quiet radius_user adm
+    adduser --quiet radius_user dip
+    adduser --quiet radius_user users
+fi
+
+# Add RADIUS admin user for RADIUS authenticated users to map to
+if ! grep -q '^radius_priv_user' /etc/passwd; then
+    adduser --quiet --firstuid 1001 --disabled-login --ingroup vyattacfg --gecos "radius privileged user" --shell /bin/vbash radius_priv_user
+    adduser --quiet radius_priv_user frrvty
+    adduser --quiet radius_priv_user vyattacfg
+    adduser --quiet radius_priv_user sudo
+    adduser --quiet radius_priv_user adm
+    adduser --quiet radius_priv_user dip
+    adduser --quiet radius_priv_user disk
+    adduser --quiet radius_priv_user users
+fi
+
 # add hostsd group for vyos-hostsd
 if ! grep -q '^hostsd' /etc/group; then
     addgroup --quiet --system hostsd
