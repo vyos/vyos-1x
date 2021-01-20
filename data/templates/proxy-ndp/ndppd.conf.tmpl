@@ -30,19 +30,6 @@
 {%   endfor %}
 {% endif %}
 
-{% if destination is defined and destination.rule is defined and destination.rule is not none %}
-{%   for rule, config in destination.rule.items() if config.disable is not defined %}
-{%     if config.inbound_interface is defined  %}
-{%         if config.inbound_interface not in global.ndppd_interfaces %}
-{%             set global.ndppd_interfaces = global.ndppd_interfaces + [config.inbound_interface] %}
-{%         endif   %}
-{%         if config.translation.address is defined  %}
-{%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.inbound_interface,'rule':config.translation.address}] %}
-{%         endif    %}
-{%     endif   %}
-{%   endfor %}
-{% endif %}
-
 {% for i in global.ndppd_interfaces %}
 
 proxy {{ i }} {
