@@ -20,6 +20,11 @@ if ! grep -q '^minion' /etc/passwd; then
     adduser --quiet minion users
 fi
 
+# OpenVPN should get its own user
+if ! grep -q '^openvpn' /etc/passwd; then
+    adduser --quiet --firstuid 100 --system --group --shell /usr/sbin/nologin openvpn
+fi
+
 # Add RADIUS operator user for RADIUS authenticated users to map to
 if ! grep -q '^radius_user' /etc/passwd; then
     adduser --quiet --firstuid 1001 --disabled-login --ingroup users --gecos "radius user" --shell /bin/vbash radius_user
