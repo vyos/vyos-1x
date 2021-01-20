@@ -84,7 +84,6 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.delete(['interfaces', 'dummy', source_if])
         super().tearDown()
 
-
     def test_ipv4_encapsulations(self):
         # When running tests ensure that for certain encapsulation types the
         # local and remote IP address is actually an IPv4 address
@@ -106,7 +105,6 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
             self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
-
             self.session.set(self._base_path + [interface, 'source-interface', source_if])
 
             # Source interface can not be used with sit and gre-bridge
@@ -130,6 +128,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
             self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
             self.assertEqual(remote_ip4,     conf['linkinfo']['info_data']['remote'])
+            self.assertTrue(conf['linkinfo']['info_data']['pmtudisc'])
 
             # cleanup this instance
             self.session.delete(self._base_path + [interface])
@@ -177,7 +176,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertEqual(encapsulation, conf['link_type'])
 
             self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
-            self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
+            self.assertEqual(remote_ip6,    conf['linkinfo']['info_data']['remote'])
 
             # cleanup this instance
             self.session.delete(self._base_path + [interface])
@@ -202,6 +201,32 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Check if commit is ok
         self.session.commit()
+
+    def test_tunnel_parameters_gre(self):
+        interface = f'tun1030'
+        gre_key = '10'
+        encapsulation = 'gre'
+        tos = '20'
+
+        self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
+        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'no-pmtu-discovery'])
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'key', gre_key])
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'tos', tos])
+
+        # Check if commit is ok
+        self.session.commit()
+
+        conf = tunnel_conf(interface)
+        self.assertEqual(mtu,           conf['mtu'])
+        self.assertEqual(interface,     conf['ifname'])
+        self.assertEqual(encapsulation, conf['link_type'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
+        self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
+        self.assertFalse(               conf['linkinfo']['info_data']['pmtudisc'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

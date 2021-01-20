@@ -55,6 +55,7 @@ class _Tunnel(Interface):
         'ttl' : '',
         'tos' : '',
         'key' : '',
+        'raw' : '',
     }
     options = Interface.options + list(default.keys())
 
