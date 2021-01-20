@@ -1,0 +1,5 @@
+ATTR{[dmi/id]sys_vendor}!="Microsoft Corporation", GOTO="end_hyperv_nic"
+
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="hv_pci", NAME="vf_%k"
+
+LABEL="end_hyperv_nic"

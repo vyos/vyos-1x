@@ -1,0 +1,14 @@
+ATTR{[dmi/id]sys_vendor}!="VMware, Inc.", GOTO="end_vmware_nic"
+
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet0", ENV{VYOS_IFNAME}="eth0"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet1", ENV{VYOS_IFNAME}="eth1"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet2", ENV{VYOS_IFNAME}="eth2"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet3", ENV{VYOS_IFNAME}="eth3"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet4", ENV{VYOS_IFNAME}="eth4"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet5", ENV{VYOS_IFNAME}="eth5"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet6", ENV{VYOS_IFNAME}="eth6"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet7", ENV{VYOS_IFNAME}="eth7"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet8", ENV{VYOS_IFNAME}="eth8"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{label}=="Ethernet9", ENV{VYOS_IFNAME}="eth9"
+
+LABEL="end_vmware_nic"
