@@ -7,7 +7,13 @@
 
 {%   if chain == "PREROUTING" %}
 {%     set interface = " iifname \"" + config.inbound_interface + "\"" if config.inbound_interface is defined and config.inbound_interface != 'any' else '' %}
-{%     set trns_address = "dnat to " + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
+{%     if config.translation.address | is_ip_network %}
+{#       support 1:1 network translation #}
+{%       set dnat_type = "dnat prefix to " %}
+{%     else   %}
+{%       set dnat_type = "dnat to " %}
+{%     endif %}
+{%     set trns_address = dnat_type + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
 {%   elif chain == "POSTROUTING" %}
 {%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined and config.outbound_interface != 'any' else '' %}
 {%     set trns_prefix = "snat prefix to " + config.translation.prefix if config.translation is defined and config.translation.prefix is defined and config.translation.prefix is not none %}

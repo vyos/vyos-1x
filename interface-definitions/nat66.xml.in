@@ -141,13 +141,18 @@
                 <children>
                   <leafNode name="address">
                     <properties>
-                      <help>IPv6 address to be translated</help>
+                      <help>IPv6 address or prefix to be translated</help>
                       <valueHelp>
                         <format>ipv6</format>
                         <description>IPv6 address</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv6-address"/>
+                        <validator name="ipv6-prefix"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -160,13 +165,18 @@
                 <children>
                   <leafNode name="address">
                     <properties>
-                      <help>IPv6 address to translate to</help>
+                      <help>IPv6 address or prefix to translate to</help>
                       <valueHelp>
                         <format>ipv6</format>
                         <description>IPv6 address</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv6-address"/>
+                        <validator name="ipv6-prefix"/>
                       </constraint>
                     </properties>
                   </leafNode>

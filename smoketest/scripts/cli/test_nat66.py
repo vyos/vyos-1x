@@ -72,10 +72,10 @@ class TestNAT66(unittest.TestCase):
             self.assertEqual(f'{address}/{mask}', source_prefix)
     
     def test_destination_nat66(self):
-        source_address = 'fc00::1'
+        destination_address = 'fc00::1'
         translation_address = 'fc01::1'
         self.session.set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
-        self.session.set(dst_path + ['rule', '1', 'destination', 'address', source_address])
+        self.session.set(dst_path + ['rule', '1', 'destination', 'address', destination_address])
         self.session.set(dst_path + ['rule', '1', 'translation', 'address', translation_address])
 
         # check validate() - outbound-interface must be defined
@@ -96,8 +96,35 @@ class TestNAT66(unittest.TestCase):
 
             self.assertEqual(dnat_addr, translation_address)
             self.assertEqual(iface, 'eth1')
+    
+    def test_destination_nat66_prefix(self):
+        destination_prefix = 'fc00::/64'
+        translation_prefix = 'fc01::/64'
+        self.session.set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.session.set(dst_path + ['rule', '1', 'destination', 'address', destination_prefix])
+        self.session.set(dst_path + ['rule', '1', 'translation', 'address', translation_prefix])
 
-    def test_snat_required_translation_prefix(self):
+        # check validate() - outbound-interface must be defined
+        self.session.commit()
+
+        tmp = cmd('sudo nft -j list table ip6 nat')
+        data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
+
+        for idx in range(0, len(data_json)):
+            data = data_json[idx]
+
+            self.assertEqual(data['chain'], 'PREROUTING')
+            self.assertEqual(data['family'], 'ip6')
+            self.assertEqual(data['table'], 'nat')
+
+            iface = dict_search('match.right', data['expr'][0])
+            translation_address = dict_search('dnat.addr.prefix.addr', data['expr'][3])
+            translation_mask = dict_search('dnat.addr.prefix.len', data['expr'][3])
+
+            self.assertEqual(f'{translation_address}/{translation_mask}', translation_prefix)
+            self.assertEqual(iface, 'eth1')
+
+    def test_source_nat66_required_translation_prefix(self):
         # T2813: Ensure translation address is specified
         rule = '5'
         source_prefix = 'fc00::/64'
