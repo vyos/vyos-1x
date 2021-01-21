@@ -335,11 +335,14 @@
                       </leafNode>
                       <leafNode name="mac-address">
                         <properties>
-                          <help>MAC address of static mapping [REQUIRED]</help>
+                          <help>Media Access Control (MAC) address</help>
                           <valueHelp>
                             <format>h:h:h:h:h:h</format>
-                            <description>MAC address used in static mapping [REQUIRED]</description>
+                            <description>Hardware (MAC) address</description>
                           </valueHelp>
+                          <constraint>
+                            <validator name="mac-address"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="static-mapping-parameters">
