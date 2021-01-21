@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+#
+# override-default: preprocessor for XML interface definitions to interpret
+# redundant entries (relative to path) with tag 'defaultValue' as an override
+# directive. Must be called before build-command-templates, as the schema
+# disallows redundancy.
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+# Use lxml xpath capability to find multiple elements with tag defaultValue
+# relative to path; replace and remove to override the value.
+
+import sys
+import glob
+import logging
+from lxml import etree
+
+debug = False
+
+logger = logging.getLogger(__name__)
+logs_handler = logging.StreamHandler()
+logger.addHandler(logs_handler)
+
+if debug:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+
+def override_element(l: list):
+    """
+    Allow multiple override elements; use the final one (in document order).
+    """
+    if len(l) < 2:
+        logger.debug("passing list of single element to override_element")
+        return
+
+    # assemble list of leafNodes of overriding defaultValues, for later removal
+    parents = []
+    for el in l[1:]:
+        parents.append(el.getparent())
+
+    # replace element with final override
+    l[0].getparent().replace(l[0], l[-1])
+
+    # remove all but overridden element
+    for el in parents:
+        el.getparent().remove(el)
+
+def collect_and_override(dir_name):
+    """
+    Collect elements with defaultValue tag into dictionary indexed by tuple
+    of (name, str(ancestor path)); the second component must be immutable for
+    tuple to act as key, hence str().
+    """
+    for fname in glob.glob(f'{dir_name}/*.xml'):
+        tree = etree.parse(fname)
+        root = tree.getroot()
+        defv = {}
+
+        xpath_str = f'//defaultValue'
+        xp = tree.xpath(xpath_str)
+
+        for element in xp:
+            ap = element.xpath('ancestor::*[@name]')
+            defv.setdefault((ap[-1].get("name"), str(ap[:-1])), []).append(element)
+
+        for k, v in defv.items():
+            if len(v) > 1:
+                logger.debug(f'overridding default in {k[0]}')
+                override_element(v)
+
+        revised_str = etree.tostring(root, encoding='unicode', pretty_print=True)
+
+        with open(f'{fname}', 'w') as f:
+            f.write(revised_str)
+
+def main():
+    if len(sys.argv) < 2:
+        logger.critical('Must specify XML directory!')
+        sys.exit(1)
+
+    dir_name = sys.argv[1]
+
+    collect_and_override(dir_name)
+
+if __name__ == '__main__':
+    main()
