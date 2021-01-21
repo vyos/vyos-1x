@@ -47,12 +47,6 @@ def get_config(config=None):
     base = ['interfaces', 'l2tpv3']
     l2tpv3 = get_interface_dict(conf, base)
 
-    # L2TPv3 is "special" the default MTU is 1488 - update accordingly
-    # as the config_level is already st in get_interface_dict() - we can use []
-    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-    if 'mtu' not in tmp:
-        l2tpv3['mtu'] = '1488'
-
     # To delete an l2tpv3 interface we need the current tunnel and session-id
     if 'deleted' in l2tpv3:
         tmp = leaf_node_changed(conf, ['tunnel-id'])

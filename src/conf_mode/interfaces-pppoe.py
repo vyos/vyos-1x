@@ -43,12 +43,6 @@ def get_config(config=None):
     base = ['interfaces', 'pppoe']
     pppoe = get_interface_dict(conf, base)
 
-    # PPPoE is "special" the default MTU is 1492 - update accordingly
-    # as the config_level is already st in get_interface_dict() - we can use []
-    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-    if 'mtu' not in tmp:
-        pppoe['mtu'] = '1492'
-
     return pppoe
 
 def verify(pppoe):

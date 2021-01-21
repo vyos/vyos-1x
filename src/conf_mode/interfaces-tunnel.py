@@ -57,12 +57,6 @@ def get_config(config=None):
     base = ['interfaces', 'tunnel']
     tunnel = get_interface_dict(conf, base)
 
-    # Wireguard is "special" the default MTU is 1420 - update accordingly
-    # as the config_level is already st in get_interface_dict() - we can use []
-    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-    if 'mtu' not in tmp:
-        tunnel['mtu'] = '1476'
-
     tmp = leaf_node_changed(conf, ['encapsulation'])
     if tmp: tunnel.update({'encapsulation_changed': {}})
 

@@ -125,6 +125,9 @@
             </properties>
           </leafNode>
           #include <include/interface-mtu-68-1500.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1492</defaultValue>
+          </leafNode>
           <leafNode name="no-peer-dns">
             <properties>
               <help>Do not use DNS servers provided by the peer</help>
