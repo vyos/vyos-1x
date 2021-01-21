@@ -336,5 +336,35 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.assertIn(f' aggregate-address {network} summary-only', frrconfig)
 
 
+    def test_bgp_06_listen_range(self):
+        # Implemented via T1875
+        limit = '64'
+        listen_ranges = ['192.0.2.0/25', '192.0.2.128/25']
+        peer_group = 'listenfoobar'
+        self.session.set(base_path + ['listen', 'limit', limit])
+        for prefix in listen_ranges:
+            self.session.set(base_path + ['listen', 'range', prefix])
+            # check validate() - peer-group must be defined for range/prefix
+            with self.assertRaises(ConfigSessionError):
+                self.session.commit()
+            self.session.set(base_path + ['listen', 'range', prefix, 'peer-group', peer_group])
+
+        # check validate() - peer-group does yet not exist!
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(base_path + ['peer-group', peer_group, 'remote-as', ASN])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = getFRRBGPconfig()
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
+        self.assertIn(f' neighbor {peer_group} remote-as {ASN}', frrconfig)
+        self.assertIn(f' bgp listen limit {limit}', frrconfig)
+        for prefix in listen_ranges:
+            self.assertIn(f' bgp listen range {prefix} peer-group {peer_group}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -127,13 +127,17 @@ def verify(bgp):
                                 route_map = afi_config['route_map'][tmp].replace('-', '_')
                                 if dict_search(f'policy.route_map.{route_map}', asn_config) == None:
                                     raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
-               
+
         # Throw an error if a peer group is not configured for allow range
-        if 'listen' in asn_config:
-            if 'range' in asn_config['listen']:
-                for prefix in asn_config['listen']['range']:
-                    if not 'peer_group' in asn_config['listen']['range'].get(prefix):
-                        raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
+        for prefix in dict_search('listen.range', asn_config) or []:
+            # we can not use dict_search() here as prefix contains dots ...
+            if 'peer_group' not in asn_config['listen']['range'][prefix]:
+                raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
+            else:
+                peer_group = asn_config['listen']['range'][prefix]['peer_group']
+                # the peer group must also exist
+                if not dict_search(f'peer_group.{peer_group}', asn_config):
+                    raise ConfigError(f'Peer-group "{peer_group}" for listen range "{prefix}" does not exist!')
 
     return None
 
