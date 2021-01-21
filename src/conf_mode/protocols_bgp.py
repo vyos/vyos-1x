@@ -109,7 +109,7 @@ def verify(bgp):
                             if tmp not in afi_config['prefix_list']:
                                 # bail out early
                                 continue
-                            # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
+                            # get_config_dict() mangles all '-' characters to '_' this is legitimate, thus all our
                             # compares will run on '_' as also '_' is a valid name for a prefix-list
                             prefix_list = afi_config['prefix_list'][tmp].replace('-', '_')
                             if afi == 'ipv4_unicast':
@@ -127,7 +127,13 @@ def verify(bgp):
                                 route_map = afi_config['route_map'][tmp].replace('-', '_')
                                 if dict_search(f'policy.route_map.{route_map}', asn_config) == None:
                                     raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
-
+               
+        # Throw an error if a peer group is not configured for allow range
+        if 'listen' in asn_config:
+            if 'range' in asn_config['listen']:
+                for prefix in asn_config['listen']['range']:
+                    if not 'peer_group' in asn_config['listen']['range'].get(prefix):
+                        raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
 
     return None
 
