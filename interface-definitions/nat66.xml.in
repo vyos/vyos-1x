@@ -13,7 +13,7 @@
         <children>
           <tagNode name="rule">
             <properties>
-              <help>SNPTv6 rule number</help>
+              <help>Source NAT66 rule number</help>
               <valueHelp>
                 <format>1-999999</format>
                 <description>Number for this rule</description>
@@ -43,7 +43,7 @@
               </leafNode>
               <leafNode name="outbound-interface">
                 <properties>
-                  <help>Outbound interface of NAT traffic</help>
+                  <help>Outbound interface of NAT66 traffic</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
@@ -98,7 +98,7 @@
         <children>
           <tagNode name="rule">
             <properties>
-              <help>DNPTv6 rule number</help>
+              <help>Destination NAT66 rule number</help>
               <valueHelp>
                 <format>1-999999</format>
                 <description>Number for this rule</description>
@@ -116,7 +116,7 @@
               </leafNode>
               <leafNode name="disable">
                 <properties>
-                  <help>Disable DNPT rule</help>
+                  <help>Disable NAT66 rule</help>
                   <valueless/>
                 </properties>
               </leafNode>
@@ -128,7 +128,7 @@
               </leafNode>
               <leafNode name="inbound-interface">
                 <properties>
-                  <help>Inbound interface of NAT traffic</help>
+                  <help>Inbound interface of NAT66 traffic</help>
                   <completionHelp>
                     <list>any</list>
                     <script>${vyos_completion_dir}/list_interfaces.py</script> 
