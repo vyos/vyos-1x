@@ -49,14 +49,6 @@ def get_config(config=None):
     base = ['interfaces', 'macsec']
     macsec = get_interface_dict(conf, base)
 
-    # MACsec is "special" the default MTU is 1460 - update accordingly
-    # as the config_level is already st in get_interface_dict() - we can use []
-    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-    if 'mtu' not in tmp:
-        # base MTU for MACsec is 1468 bytes, but we leave room for 802.1ad and
-        # 802.1q VLAN tags, thus the limit is 1460 bytes.
-        macsec['mtu'] = '1460'
-
     # Check if interface has been removed
     if 'deleted' in macsec:
         source_interface = conf.return_effective_value(['source-interface'])

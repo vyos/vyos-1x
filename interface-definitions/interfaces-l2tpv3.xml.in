@@ -72,6 +72,9 @@
             </properties>
           </leafNode>
           #include <include/interface-mtu-68-16000.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1488</defaultValue>
+          </leafNode>
           <leafNode name="peer-session-id">
             <properties>
               <help>Peer session identifier</help>

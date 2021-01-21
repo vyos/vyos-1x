@@ -42,12 +42,6 @@ def get_config(config=None):
     base = ['interfaces', 'vxlan']
     vxlan = get_interface_dict(conf, base)
 
-    # VXLAN is "special" the default MTU is 1492 - update accordingly
-    # as the config_level is already st in get_interface_dict() - we can use []
-    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
-    if 'mtu' not in tmp:
-        vxlan['mtu'] = '1450'
-
     return vxlan
 
 def verify(vxlan):
