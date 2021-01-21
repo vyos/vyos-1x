@@ -1,0 +1,840 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Protocol OSPF configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="nospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py">
+        <properties>
+          <help>Open Shortest Path First protocol (OSPF) parameters</help>
+          <priority>620</priority>
+        </properties>
+        <children>
+          <tagNode name="access-list">
+            <properties>
+              <help>Access list to filter networks in routing updates</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Access-list number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4294967295"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="export">
+                <properties>
+                  <help>Filter for outgoing routing update [REQUIRED]</help>
+                  <completionHelp>
+                    <list>bgp connected kernel rip static</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>bgp</format>
+                    <description>Filter BGP routes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>connected</format>
+                    <description>Filter connected routes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>kernel</format>
+                    <description>Filter Kernel routes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rip</format>
+                    <description>Filter RIP routes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>static</format>
+                    <description>Filter static routes</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(bgp|connected|kernel|rip|static)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be bgp, connected, kernel, rip, or static</constraintErrorMessage>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="area">
+            <properties>
+              <help>OSPF Area</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>OSPF area in decimal notation</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>OSPF area in dotted decimal notation</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4294967295"/>
+                <validator name="ip-address"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="area-type">
+                <properties>
+                  <help>Area type</help>
+                </properties>
+                <children>
+                  <leafNode name="normal">
+                    <properties>
+                      <help>Normal OSPF area</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <node name="nssa">
+                    <properties>
+                      <help>Nssa OSPF area</help>
+                    </properties>
+                    <children>
+                      <leafNode name="default-cost">
+                        <properties>
+                          <help>Summary-default cost of nssa area</help>
+                          <valueHelp>
+                            <format>u32:0-16777215</format>
+                            <description>Summary default cost</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-16777215"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="no-summary">
+                        <properties>
+                          <help>Do not inject inter-area routes into stub</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="translate">
+                        <properties>
+                          <help>Nssa-abr</help>
+                          <completionHelp>
+                            <list>always candidate never</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>always</format>
+                            <description>NSSA-ABR to always translate</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>candidate</format>
+                            <description>NSSA-ABR for translate election (default)</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>never</format>
+                            <description>NSSA-ABR to never translate</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(always|candidate|never)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="stub">
+                    <properties>
+                      <help>Stub OSPF area</help>
+                    </properties>
+                    <children>
+                      <leafNode name="default-cost">
+                        <properties>
+                          <help>Summary-default cost of nssa area</help>
+                          <valueHelp>
+                            <format>u32:0-16777215</format>
+                            <description>Summary default cost</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-16777215"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="no-summary">
+                        <properties>
+                          <help>Do not inject inter-area routes into stub</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <leafNode name="authentication">
+                <properties>
+                  <help>OSPF area authentication type</help>
+                  <completionHelp>
+                    <list>plaintext-password md5</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>plaintext-password</format>
+                    <description>Use plain-text authentication</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>md5</format>
+                    <description>Use md5 authentication</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(plaintext-password|md5)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="network">
+                <properties>
+                  <help>OSPF network [REQUIRED]</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>OSPF network [REQUIRED]</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <tagNode name="range">
+                <properties>
+                  <help>Summarize routes matching prefix (border routers only)</help>
+                </properties>
+                <children>
+                  <leafNode name="cost">
+                    <properties>
+                      <help>Metric for this range</help>
+                      <valueHelp>
+                        <format>u32:0-16777215</format>
+                        <description>Metric for this range</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-16777215"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="not-advertise">
+                    <properties>
+                      <help>Do not advertise this range</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="substitute">
+                    <properties>
+                      <help>Announce area range as another prefix</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>Announce area range as another prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="shortcut">
+                <properties>
+                  <help>Area shortcut mode</help>
+                  <completionHelp>
+                    <list>default disable enable</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>default</format>
+                    <description>Set default</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>Disable shortcutting mode</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>enable</format>
+                    <description>Enable shortcutting mode</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(default|disable|enable)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="virtual-link">
+                <properties>
+                  <help>Virtual link</help>
+                </properties>
+                <children>
+                  <node name="authentication">
+                    <properties>
+                      <help>Authentication</help>
+                    </properties>
+                    <children>
+                      <node name="md5">
+                        <properties>
+                          <help>MD5 key id</help>
+                        </properties>
+                        <children>
+                          <tagNode name="key-id">
+                            <properties>
+                              <help>MD5 key id</help>
+                              <valueHelp>
+                                <format>u32:1-255</format>
+                                <description>MD5 key id</description>
+                              </valueHelp>
+                            </properties>
+                            <children>
+                              <leafNode name="md5-key">
+                                <properties>
+                                  <help>MD5 authentication type</help>
+                                  <valueHelp>
+                                    <format>txt</format>
+                                    <description>MD5 Key (16 characters or less)</description>
+                                  </valueHelp>
+                                </properties>
+                              </leafNode>
+                            </children>
+                          </tagNode>
+                        </children>
+                      </node>
+                      <leafNode name="plaintext-password">
+                        <properties>
+                          <help>Plain text password</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Plain text password (8 characters or less)</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="dead-interval">
+                    <properties>
+                      <help>Interval after which a neighbor is declared dead</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Neighbor dead interval (seconds)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="hello-interval">
+                    <properties>
+                      <help>Interval between hello packets</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Hello interval (seconds)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="retransmit-interval">
+                    <properties>
+                      <help>Interval between retransmitting lost link state advertisements</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Retransmit interval (seconds)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="transmit-delay">
+                    <properties>
+                      <help>Link state transmit delay</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Link state transmit delay (seconds)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <node name="auto-cost">
+            <properties>
+              <help>Calculate OSPF interface cost according to bandwidth</help>
+            </properties>
+            <children>
+              <leafNode name="reference-bandwidth">
+                <properties>
+                  <help>Reference bandwidth method to assign OSPF cost</help>
+                  <valueHelp>
+                    <format>u32:1-4294967</format>
+                    <description>Reference bandwidth cost in Mbits/sec (default 100)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="default-information">
+            <properties>
+              <help>Control distribution of default information</help>
+            </properties>
+            <children>
+              <node name="originate">
+                <properties>
+                  <help>Distribute a default route</help>
+                </properties>
+                <children>
+                  <leafNode name="always">
+                    <properties>
+                      <help>Always advertise default route</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="metric">
+                    <properties>
+                      <help>OSPF default metric</help>
+                      <valueHelp>
+                        <format>u32:0-16777214</format>
+                        <description>Default metric</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-16777214"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="metric-type">
+                    <properties>
+                      <help>OSPF metric type for default routes</help>
+                      <valueHelp>
+                        <format>u32:1-2</format>
+                        <description>Metric type for default routes (default 2)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-2"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="route-map">
+                    <properties>
+                      <help>Route map reference</help>
+                      <completionHelp>
+                        <path>policy route-map</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="default-metric">
+            <properties>
+              <help>Metric of redistributed routes</help>
+              <valueHelp>
+                <format>u32:0-16777214</format>
+                <description>Metric of redistributed routes</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-16777214"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="distance">
+            <properties>
+              <help>Administrative distance</help>
+            </properties>
+            <children>
+              <leafNode name="global">
+                <properties>
+                  <help>OSPF administrative distance</help>
+                  <valueHelp>
+                    <format>u32:1-255</format>
+                    <description>Administrative distance</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="ospf">
+                <properties>
+                  <help>OSPF administrative distance</help>
+                </properties>
+                <children>
+                  <leafNode name="external">
+                    <properties>
+                      <help>Distance for external routes</help>
+                      <valueHelp>
+                        <format>u32:1-255</format>
+                        <description>Distance for external routes</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="inter-area">
+                    <properties>
+                      <help>Distance for inter-area routes</help>
+                      <valueHelp>
+                        <format>u32:1-255</format>
+                        <description>Distance for inter-area routes</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="intra-area">
+                    <properties>
+                      <help>Distance for intra-area routes</help>
+                      <valueHelp>
+                        <format>u32:1-255</format>
+                        <description>Distance for intra-area routes</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="log-adjacency-changes">
+            <properties>
+              <help>Log changes in adjacency state</help>
+            </properties>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Log all state changes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="max-metric">
+            <properties>
+              <help>OSPF maximum and infinite-distance metric</help>
+            </properties>
+            <children>
+              <node name="router-lsa">
+                <properties>
+                  <help>Advertise own Router-LSA with infinite distance (stub router)</help>
+                </properties>
+                <children>
+                  <leafNode name="administrative">
+                    <properties>
+                      <help>Administratively apply, for an indefinite period</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="on-shutdown">
+                    <properties>
+                      <help>Advertise stub-router prior to full shutdown of OSPF</help>
+                      <valueHelp>
+                        <format>u32:5-86400</format>
+                        <description>Time (seconds) to advertise self as stub-router</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 5-86400"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="on-startup">
+                    <properties>
+                      <help>Automatically advertise stub Router-LSA on startup of OSPF</help>
+                      <valueHelp>
+                        <format>u32:5-86400</format>
+                        <description>Time (seconds) to advertise self as stub-router</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 5-86400"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="mpls-te">
+            <properties>
+              <help>MultiProtocol Label Switching-Traffic Engineering (MPLS-TE) parameters</help>
+            </properties>
+            <children>
+              <leafNode name="enable">
+                <properties>
+                  <help>Enable MPLS-TE functionality</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="router-address">
+                <properties>
+                  <help>Stable IP address of the advertising router</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Stable IP address of the advertising router</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="neighbor">
+            <properties>
+              <help>Neighbor IP address</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Neighbor IP address</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="poll-interval">
+                <properties>
+                  <help>Dead neighbor polling interval</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Seconds between dead neighbor polling interval (default 60)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="priority">
+                <properties>
+                  <help>Neighbor priority in seconds</help>
+                  <valueHelp>
+                    <format>u32:0-255</format>
+                    <description>Neighbor priority (default 0)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="parameters">
+            <properties>
+              <help>OSPF specific parameters</help>
+            </properties>
+            <children>
+              <leafNode name="abr-type">
+                <properties>
+                  <help>OSPF ABR type</help>
+                  <completionHelp>
+                    <list>cisco ibm shortcut standard</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>cisco</format>
+                    <description>Cisco ABR type (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ibm</format>
+                    <description>Ibm ABR type</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>shortcut</format>
+                    <description>Shortcut ABR type</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>standard</format>
+                    <description>Standard ABR type</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(cisco|ibm|shortcut|standard)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="opaque-lsa">
+                <properties>
+                  <help>Enable the Opaque-LSA capability (rfc2370)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="rfc1583-compatibility">
+                <properties>
+                  <help>Enable rfc1583 criteria for handling AS external routes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="router-id">
+                <properties>
+                  <help>Override the default router identifier</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Override the default router identifier</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="passive-interface">
+            <properties>
+              <help>Suppress routing updates on an interface</help>
+              <valueHelp>
+                <format>&lt;interface&gt;</format>
+                <description>Interface to be passive (i.e. suppress routing updates)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>default</format>
+                <description>Default to suppress routing updates on all interfaces</description>
+              </valueHelp>
+              <completionHelp>
+                <list>default</list>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="passive-interface-exclude">
+            <properties>
+              <help>Interface to exclude when using 'passive-interface default'</help>
+              <valueHelp>
+                <format>&lt;interface&gt;</format>
+                <description>Interface to be passive (i.e. suppress routing updates)</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="redistribute">
+            <properties>
+              <help>Redistribute information from another routing protocol</help>
+            </properties>
+            <children>
+              <node name="bgp">
+                <properties>
+                  <help>Redistribute BGP routes</help>
+                </properties>
+                <children>
+                  #include <include/ospf-metric.xml.i>
+                </children>
+              </node>
+              <node name="connected">
+                <properties>
+                  <help>Redistribute connected routes</help>
+                </properties>
+                <children>
+                  #include <include/ospf-metric.xml.i>
+                </children>
+              </node>
+              <node name="kernel">
+                <properties>
+                  <help>Redistribute kernel routes</help>
+                </properties>
+                <children>
+                  #include <include/ospf-metric.xml.i>
+                </children>
+              </node>
+              <node name="rip">
+                <properties>
+                  <help>Redistribute rip routes</help>
+                </properties>
+                <children>
+                  #include <include/ospf-metric.xml.i>
+                </children>
+              </node>
+              <node name="static">
+                <properties>
+                  <help>Redistribute static routes</help>
+                </properties>
+                <children>
+                  #include <include/ospf-metric.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="refresh">
+            <properties>
+              <help>Adjust refresh parameters</help>
+            </properties>
+            <children>
+              <leafNode name="timers">
+                <properties>
+                  <help>Refresh timer</help>
+                  <valueHelp>
+                    <format>u32:10-1800</format>
+                    <description>Timer value in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-1800"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="route-map">
+            <properties>
+              <help>Filter routes installed in local route map</help>
+              <completionHelp>
+                <path>policy route-map</path>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <node name="timers">
+            <properties>
+              <help>Adjust routing timers</help>
+            </properties>
+            <children>
+              <node name="throttle">
+                <properties>
+                  <help>Throttling adaptive timers</help>
+                </properties>
+                <children>
+                  <node name="spf">
+                    <properties>
+                      <help>OSPF SPF timers</help>
+                    </properties>
+                    <children>
+                      <leafNode name="delay">
+                        <properties>
+                          <help>Delay (msec) from first change received till SPF calculation</help>
+                          <valueHelp>
+                            <format>u32:0-600000</format>
+                            <description>Delay in msec (default 200)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-600000"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="initial-holdtime">
+                        <properties>
+                          <help>Initial hold time(msec) between consecutive SPF calculations</help>
+                          <valueHelp>
+                            <format>u32:0-600000</format>
+                            <description>Initial hold time in msec (default 1000)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-600000"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="max-holdtime">
+                        <properties>
+                          <help>Maximum hold time (msec)</help>
+                          <valueHelp>
+                            <format>u32:0-600000</format>
+                            <description>Max hold time in msec (default 10000)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-600000"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
