@@ -31,6 +31,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/tmp/ospf.frr'
+frr_daemon = 'ospfd'
 
 DEBUG = os.path.exists('/tmp/ospf.debug')
 if DEBUG:
@@ -40,8 +41,11 @@ if DEBUG:
     ch = logging.StreamHandler()
     lg.addHandler(ch)
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['protocols', 'ospf']
     ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
@@ -90,8 +94,9 @@ def generate(ospf):
 def apply(ospf):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(daemon='ospfd')
-    frr_cfg.modify_section(f'router ospf', '')
+    frr_cfg.load_configuration(frr_daemon)
+    frr_cfg.modify_section('router ospf', '')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
 
     # Debugging
     if DEBUG:
@@ -107,13 +112,13 @@ def apply(ospf):
         print(f'Modified config:\n')
         print(f'{frr_cfg}')
 
-    frr_cfg.commit_configuration(daemon='ospfd')
+    frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if ospf['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(daemon='ospfd')
+            frr_cfg.commit_configuration(frr_daemon)
 
     return None
 
