@@ -3,6 +3,9 @@
 # man https://www.unix.com/man-page/debian/5/dhcp6c.conf/
 interface {{ ifname }} {
 {% if address is defined and 'dhcpv6' in address %}
+{%   if dhcpv6_options is defined and dhcpv6_options.duid is defined and dhcpv6_options.duid is not none %}
+    send client-id {{ dhcpv6_options.duid }};
+{%   endif %}
     request domain-name-servers;
     request domain-name;
 {%   if dhcpv6_options is defined and dhcpv6_options.parameters_only is defined %}
