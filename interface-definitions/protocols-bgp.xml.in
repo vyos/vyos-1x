@@ -5,7 +5,7 @@
     <children>
       <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py">
         <properties>
-          <help>Border Gateway Protocol (BGP) parameters</help>
+          <help>Border Gateway Protocol (BGP)</help>
           <valueHelp>
             <format>u32:1-4294967294</format>
             <description>AS number</description>

@@ -292,8 +292,8 @@ router bgp {{ asn }}
 {% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
 {% endif %}
- !
+!
 {% if route_map is defined and route_map is not none %}
- ip protocol bgp route-map {{ route_map }}
+ip protocol bgp route-map {{ route_map }}
 {% endif %}
- !
+!
