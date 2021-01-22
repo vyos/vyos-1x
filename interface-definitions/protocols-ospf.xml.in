@@ -3,7 +3,7 @@
 <interfaceDefinition>
   <node name="protocols">
     <children>
-      <node name="nospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py">
+      <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py">
         <properties>
           <help>Open Shortest Path First protocol (OSPF) parameters</help>
           <priority>620</priority>
@@ -109,7 +109,7 @@
                       </leafNode>
                       <leafNode name="translate">
                         <properties>
-                          <help>Nssa-abr</help>
+                          <help>Configure NSSA-ABR (default: candidate)</help>
                           <completionHelp>
                             <list>always candidate never</list>
                           </completionHelp>
@@ -129,6 +129,7 @@
                             <regex>^(always|candidate|never)$</regex>
                           </constraint>
                         </properties>
+                        <defaultValue>candidate</defaultValue>
                       </leafNode>
                     </children>
                   </node>
@@ -353,7 +354,7 @@
           </tagNode>
           <node name="auto-cost">
             <properties>
-              <help>Calculate OSPF interface cost according to bandwidth</help>
+              <help>Calculate OSPF interface cost according to bandwidth (default: 100)</help>
             </properties>
             <children>
               <leafNode name="reference-bandwidth">
@@ -361,12 +362,13 @@
                   <help>Reference bandwidth method to assign OSPF cost</help>
                   <valueHelp>
                     <format>u32:1-4294967</format>
-                    <description>Reference bandwidth cost in Mbits/sec (default 100)</description>
+                    <description>Reference bandwidth cost in Mbits/sec</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-4294967"/>
                   </constraint>
                 </properties>
+                <defaultValue>100</defaultValue>
               </leafNode>
             </children>
           </node>
@@ -386,38 +388,7 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="metric">
-                    <properties>
-                      <help>OSPF default metric</help>
-                      <valueHelp>
-                        <format>u32:0-16777214</format>
-                        <description>Default metric</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 0-16777214"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="metric-type">
-                    <properties>
-                      <help>OSPF metric type for default routes</help>
-                      <valueHelp>
-                        <format>u32:1-2</format>
-                        <description>Metric type for default routes (default 2)</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-2"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="route-map">
-                    <properties>
-                      <help>Route map reference</help>
-                      <completionHelp>
-                        <path>policy route-map</path>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/ospf-metric.xml.i>
                 </children>
               </node>
             </children>
@@ -589,27 +560,29 @@
             <children>
               <leafNode name="poll-interval">
                 <properties>
-                  <help>Dead neighbor polling interval</help>
+                  <help>Dead neighbor polling interval (default: 60)</help>
                   <valueHelp>
                     <format>u32:1-65535</format>
-                    <description>Seconds between dead neighbor polling interval (default 60)</description>
+                    <description>Seconds between dead neighbor polling interval</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-65535"/>
                   </constraint>
                 </properties>
+                <defaultValue>60</defaultValue>
               </leafNode>
               <leafNode name="priority">
                 <properties>
-                  <help>Neighbor priority in seconds</help>
+                  <help>Neighbor priority in seconds (default: 0)</help>
                   <valueHelp>
                     <format>u32:0-255</format>
-                    <description>Neighbor priority (default 0)</description>
+                    <description>Neighbor priority</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 0-255"/>
                   </constraint>
                 </properties>
+                <defaultValue>0</defaultValue>
               </leafNode>
             </children>
           </tagNode>
@@ -620,7 +593,7 @@
             <children>
               <leafNode name="abr-type">
                 <properties>
-                  <help>OSPF ABR type</help>
+                  <help>OSPF ABR type (default: cisco)</help>
                   <completionHelp>
                     <list>cisco ibm shortcut standard</list>
                   </completionHelp>
@@ -644,6 +617,7 @@
                     <regex>^(cisco|ibm|shortcut|standard)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>cisco</defaultValue>
               </leafNode>
               <leafNode name="opaque-lsa">
                 <properties>
@@ -674,31 +648,37 @@
           <leafNode name="passive-interface">
             <properties>
               <help>Suppress routing updates on an interface</help>
+              <completionHelp>
+                <list>default</list>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
               <valueHelp>
-                <format>&lt;interface&gt;</format>
+                <format>txt</format>
                 <description>Interface to be passive (i.e. suppress routing updates)</description>
               </valueHelp>
               <valueHelp>
                 <format>default</format>
                 <description>Default to suppress routing updates on all interfaces</description>
               </valueHelp>
-              <completionHelp>
-                <list>default</list>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
+              <constraint>
+                <regex>^(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo|default$</regex>
+              </constraint>
               <multi/>
             </properties>
           </leafNode>
           <leafNode name="passive-interface-exclude">
             <properties>
               <help>Interface to exclude when using 'passive-interface default'</help>
-              <valueHelp>
-                <format>&lt;interface&gt;</format>
-                <description>Interface to be passive (i.e. suppress routing updates)</description>
-              </valueHelp>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface to be passive (i.e. suppress routing updates)</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo$</regex>
+              </constraint>
               <multi/>
             </properties>
           </leafNode>
@@ -793,39 +773,42 @@
                     <children>
                       <leafNode name="delay">
                         <properties>
-                          <help>Delay (msec) from first change received till SPF calculation</help>
+                          <help>Delay from first change received till SPF calculation (default: 200)</help>
                           <valueHelp>
                             <format>u32:0-600000</format>
-                            <description>Delay in msec (default 200)</description>
+                            <description>Delay in milliseconds</description>
                           </valueHelp>
                           <constraint>
                             <validator name="numeric" argument="--range 0-600000"/>
                           </constraint>
                         </properties>
+                        <defaultValue>200</defaultValue>
                       </leafNode>
                       <leafNode name="initial-holdtime">
                         <properties>
-                          <help>Initial hold time(msec) between consecutive SPF calculations</help>
+                          <help>Initial hold time between consecutive SPF calculations (default: 1000)</help>
                           <valueHelp>
                             <format>u32:0-600000</format>
-                            <description>Initial hold time in msec (default 1000)</description>
+                            <description>Initial hold time in milliseconds</description>
                           </valueHelp>
                           <constraint>
                             <validator name="numeric" argument="--range 0-600000"/>
                           </constraint>
                         </properties>
+                        <defaultValue>1000</defaultValue>
                       </leafNode>
                       <leafNode name="max-holdtime">
                         <properties>
-                          <help>Maximum hold time (msec)</help>
+                          <help>Maximum hold time (default: 10000)</help>
                           <valueHelp>
                             <format>u32:0-600000</format>
-                            <description>Max hold time in msec (default 10000)</description>
+                            <description>Max hold time in milliseconds</description>
                           </valueHelp>
                           <constraint>
                             <validator name="numeric" argument="--range 0-600000"/>
                           </constraint>
                         </properties>
+                        <defaultValue>10000</defaultValue>
                       </leafNode>
                     </children>
                   </node>

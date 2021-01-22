@@ -24,6 +24,7 @@ from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -43,6 +44,30 @@ def get_config():
     conf = Config()
     base = ['protocols', 'ospf']
     ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # Bail out early if configuration tree does not exist
+    if not conf.exists(base):
+        return ospf
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+
+    # We have to cleanup the default dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: default-information
+    # originate comes with a default metric-type of 2, which will enable the
+    # entire default-information originate tree, even when not set via CLI so we
+    # need to check this first and probably drop that key.
+    if dict_search('default_information.originate', ospf) is None:
+        del default_values['default_information']
+    if dict_search('area.area_type.nssa', ospf) is None:
+        del default_values['area']['area_type']['nssa']
+    for protocol in ['bgp', 'connected', 'kernel', 'rip', 'static']:
+        if dict_search(f'redistribute.{protocol}', ospf) is None:
+            del default_values['redistribute'][protocol]
+
+    ospf = dict_merge(default_values, ospf)
+
     return ospf
 
 def verify(ospf):
