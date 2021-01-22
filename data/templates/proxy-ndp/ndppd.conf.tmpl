@@ -37,8 +37,8 @@ proxy {{ i }} {
     timeout 500
     ttl 30000
 {%  for map in global.ndppd_prefixs %}
-{%     if map['interface'] == i %}
-{%         set p = map['rule']  %}
+{%     if map.interface == i %}
+{%         set p = map.rule  %}
     rule {{ p }} {
         static
     }

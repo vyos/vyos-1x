@@ -151,10 +151,16 @@ def generate(nat):
     return None
 
 def apply(nat):
-    cmd(f'{iptables_nat_config}')
-    cmd('systemctl restart ndppd')
-    if os.path.isfile(iptables_nat_config):
-        os.unlink(iptables_nat_config)
+    if not nat:
+        return None
+    else:
+        cmd(f'{iptables_nat_config}')
+        if 'deleted' in nat or not dict_search('source.rule', nat):
+            cmd('systemctl stop ndppd')
+        else:
+            cmd('systemctl restart ndppd')
+        if os.path.isfile(iptables_nat_config):
+            os.unlink(iptables_nat_config)
 
     return None
 
