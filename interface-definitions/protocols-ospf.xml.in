@@ -5,13 +5,16 @@
     <children>
       <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py">
         <properties>
-          <help>Open Shortest Path First protocol (OSPF) parameters</help>
+          <help>Open Shortest Path First (OSPF)</help>
           <priority>620</priority>
         </properties>
         <children>
           <tagNode name="access-list">
             <properties>
               <help>Access list to filter networks in routing updates</help>
+              <completionHelp>
+                <path>policy access-list</path>
+              </completionHelp>
               <valueHelp>
                 <format>u32</format>
                 <description>Access-list number</description>
@@ -195,6 +198,13 @@
               <tagNode name="range">
                 <properties>
                   <help>Summarize routes matching prefix (border routers only)</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Area range prefix</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
                 </properties>
                 <children>
                   <leafNode name="cost">
@@ -255,6 +265,14 @@
               <tagNode name="virtual-link">
                 <properties>
                   <help>Virtual link</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>OSPF area in dotted decimal notation</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                    <validator name="ip-address"/>
+                  </constraint>
                 </properties>
                 <children>
                   <node name="authentication">
@@ -302,7 +320,7 @@
                   </node>
                   <leafNode name="dead-interval">
                     <properties>
-                      <help>Interval after which a neighbor is declared dead</help>
+                      <help>Interval after which a neighbor is declared dead (default: 40)</help>
                       <valueHelp>
                         <format>u32:1-65535</format>
                         <description>Neighbor dead interval (seconds)</description>
@@ -311,10 +329,11 @@
                         <validator name="numeric" argument="--range 1-65535"/>
                       </constraint>
                     </properties>
+                    <defaultValue>40</defaultValue>
                   </leafNode>
                   <leafNode name="hello-interval">
                     <properties>
-                      <help>Interval between hello packets</help>
+                      <help>Interval between hello packets (default: 10)</help>
                       <valueHelp>
                         <format>u32:1-65535</format>
                         <description>Hello interval (seconds)</description>
@@ -323,10 +342,11 @@
                         <validator name="numeric" argument="--range 1-65535"/>
                       </constraint>
                     </properties>
+                    <defaultValue>10</defaultValue>
                   </leafNode>
                   <leafNode name="retransmit-interval">
                     <properties>
-                      <help>Interval between retransmitting lost link state advertisements</help>
+                      <help>Interval between retransmitting lost link state advertisements (default: 5)</help>
                       <valueHelp>
                         <format>u32:1-65535</format>
                         <description>Retransmit interval (seconds)</description>
@@ -335,10 +355,11 @@
                         <validator name="numeric" argument="--range 1-65535"/>
                       </constraint>
                     </properties>
+                    <defaultValue>5</defaultValue>
                   </leafNode>
                   <leafNode name="transmit-delay">
                     <properties>
-                      <help>Link state transmit delay</help>
+                      <help>Link state transmit delay (default: 1)</help>
                       <valueHelp>
                         <format>u32:1-65535</format>
                         <description>Link state transmit delay (seconds)</description>
@@ -347,6 +368,7 @@
                         <validator name="numeric" argument="--range 1-65535"/>
                       </constraint>
                     </properties>
+                    <defaultValue>1</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>
@@ -389,6 +411,8 @@
                     </properties>
                   </leafNode>
                   #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
                 </children>
               </node>
             </children>
@@ -500,11 +524,11 @@
                     <properties>
                       <help>Advertise stub-router prior to full shutdown of OSPF</help>
                       <valueHelp>
-                        <format>u32:5-86400</format>
+                        <format>u32:5-100</format>
                         <description>Time (seconds) to advertise self as stub-router</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="numeric" argument="--range 5-86400"/>
+                        <validator name="numeric" argument="--range 5-100"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -546,16 +570,20 @@
                     <validator name="ipv4-address"/>
                   </constraint>
                 </properties>
+                <defaultValue>0.0.0.0</defaultValue>
               </leafNode>
             </children>
           </node>
           <tagNode name="neighbor">
             <properties>
-              <help>Neighbor IP address</help>
+              <help>Specify neighbor router</help>
               <valueHelp>
                 <format>ipv4</format>
                 <description>Neighbor IP address</description>
               </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
             </properties>
             <children>
               <leafNode name="poll-interval">
@@ -693,6 +721,8 @@
                 </properties>
                 <children>
                   #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
                 </children>
               </node>
               <node name="connected">
@@ -701,6 +731,8 @@
                 </properties>
                 <children>
                   #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
                 </children>
               </node>
               <node name="kernel">
@@ -709,6 +741,8 @@
                 </properties>
                 <children>
                   #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
                 </children>
               </node>
               <node name="rip">
@@ -717,6 +751,8 @@
                 </properties>
                 <children>
                   #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
                 </children>
               </node>
               <node name="static">
@@ -725,6 +761,8 @@
                 </properties>
                 <children>
                   #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
                 </children>
               </node>
             </children>
@@ -748,14 +786,7 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="route-map">
-            <properties>
-              <help>Filter routes installed in local route map</help>
-              <completionHelp>
-                <path>policy route-map</path>
-              </completionHelp>
-            </properties>
-          </leafNode>
+          #include <include/ospf-route-map.xml.i>
           <node name="timers">
             <properties>
               <help>Adjust routing timers</help>

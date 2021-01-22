@@ -66,11 +66,32 @@ def get_config(config=None):
         del default_values['default_information']
     if dict_search('area.area_type.nssa', ospf) is None:
         del default_values['area']['area_type']['nssa']
+    if 'mpls_te' not in ospf:
+        del default_values['mpls_te']
     for protocol in ['bgp', 'connected', 'kernel', 'rip', 'static']:
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
+    # XXX: T2665: we currently have no nice way for defaults under tag nodes,
+    # clean them out and add them manually :(
+    del default_values['neighbor']
+    del default_values['area']['virtual_link']
 
+    # merge in remaining default values
     ospf = dict_merge(default_values, ospf)
+
+    if 'neighbor' in ospf:
+        default_values = defaults(base + ['neighbor'])
+        for neighbor in ospf['neighbor']:
+            ospf['neighbor'][neighbor] = dict_merge(default_values, ospf['neighbor'][neighbor])
+
+    if 'area' in ospf:
+        default_values = defaults(base + ['area', 'virtual-link'])
+        for area, area_config in ospf['area'].items():
+            if 'virtual_link' in area_config:
+                print(default_values)
+                for virtual_link in area_config['virtual_link']:
+                    ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
+                        default_values, ospf['area'][area]['virtual_link'][virtual_link])
 
     return ospf
 

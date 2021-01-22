@@ -1,0 +1,115 @@
+interfaces {
+    dummy dum0 {
+        address 172.18.254.201/32
+    }
+    ethernet eth0 {
+        duplex auto
+        smp-affinity auto
+        speed auto
+        vif 201 {
+            address 172.18.201.10/24
+            ip {
+                ospf {
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key OSPFVyOSNET
+                            }
+                        }
+                    }
+                    dead-interval 40
+                    hello-interval 10
+                    priority 1
+                    retransmit-interval 5
+                    transmit-delay 1
+                }
+            }
+        }
+    }
+    ethernet eth1 {
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
+}
+protocols {
+    ospf {
+        area 0 {
+            network 172.18.201.0/24
+            network 172.18.254.201/32
+        }
+        log-adjacency-changes {
+        }
+        parameters {
+            abr-type cisco
+            router-id 172.18.254.201
+        }
+        passive-interface default
+        passive-interface-exclude eth0.201
+    }
+    static {
+        route 0.0.0.0/0 {
+            next-hop 172.18.201.254 {
+                distance 10
+            }
+        }
+    }
+}
+service {
+    lldp {
+        interface all {
+        }
+    }
+    snmp {
+        community public {
+            authorization ro
+            network 172.16.100.0/24
+        }
+        contact "VyOS maintainers and contributors <maintainers@vyos.io>"
+        location "Jenkins"
+    }
+    ssh {
+        disable-host-validation
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 200
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+            level admin
+        }
+    }
+    name-server 172.16.254.30
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@9:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.6 */
