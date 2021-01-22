@@ -30,6 +30,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/tmp/bgp.frr'
+frr_daemon = 'bgpd'
 
 DEBUG = os.path.exists('/tmp/bgp.debug')
 if DEBUG:
@@ -39,11 +40,15 @@ if DEBUG:
     ch = logging.StreamHandler()
     lg.addHandler(ch)
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['protocols', 'bgp']
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
+    # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         return bgp
 
@@ -160,7 +165,7 @@ def generate(bgp):
 def apply(bgp):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(daemon='bgpd')
+    frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section(f'router bgp \S+', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
 
@@ -178,13 +183,13 @@ def apply(bgp):
         print(f'Modified config:\n')
         print(f'{frr_cfg}')
 
-    frr_cfg.commit_configuration(daemon='bgpd')
+    frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if bgp['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(daemon='bgpd')
+            frr_cfg.commit_configuration(frr_daemon)
 
 
     return None
