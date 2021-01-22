@@ -459,7 +459,8 @@ class FRRConfig:
         start = _find_first_element(self.config, before_pattern)
         if start < 0:
             return False
-
+        for i, e in enumerate(addition, start=start):
+            LOG.debug(f'add_before:   add          {i:3} {e}')
         self.config[start:start] = addition
         return True
 
