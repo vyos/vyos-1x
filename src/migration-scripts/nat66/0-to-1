@@ -70,4 +70,3 @@ try:
 except OSError as e:
     print("Failed to save the modified config: {}".format(e))
     exit(1)
-
