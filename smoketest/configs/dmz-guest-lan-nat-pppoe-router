@@ -1393,9 +1393,6 @@ service {
 }
 system {
     config-management {
-        commit-archive {
-            location tftp://172.16.20.200/CONFIGS/vyos
-        }
         commit-revisions 200
     }
     conntrack {
