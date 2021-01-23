@@ -30,16 +30,15 @@
 {%   endfor %}
 {% endif %}
 
-{% for i in global.ndppd_interfaces %}
+{% for interface in global.ndppd_interfaces %}
 
-proxy {{ i }} {
+proxy {{ interface }} {
     router yes
     timeout 500
     ttl 30000
 {%  for map in global.ndppd_prefixs %}
-{%     if map.interface == i %}
-{%         set p = map.rule  %}
-    rule {{ p }} {
+{%     if map.interface == interface %}
+    rule {{ map.rule }} {
         static
     }
 {%     endif  %}
