@@ -269,10 +269,15 @@
               </leafNode>
               <tagNode name="range">
                 <properties>
-                  <help>IPv4/IPv6 prefix range</help>
-                  <completionHelp>
-                    <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
-                  </completionHelp>
+                  <help>BGP dynamic neighbors listen range</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 dynamic neighbors listen range</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 dynamic neighbors listen range</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ipv4-prefix"/>
                     <validator name="ipv6-prefix"/>
