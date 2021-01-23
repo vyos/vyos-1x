@@ -4,6 +4,7 @@ Requires=dropbearkey.service
 Wants=conserver-server.service
 ConditionPathExists=/run/conserver/conserver.cf
 After=dropbearkey.service vyos-router.service conserver-server.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=forking
@@ -11,4 +12,6 @@ ExecStartPre=/usr/bin/bash -c '/usr/bin/systemctl set-environment PORT=$(cli-she
 ExecStart=-/usr/sbin/dropbear -w -j -k -r /etc/dropbear/dropbear_rsa_host_key -c "/usr/bin/console %I" -P /run/conserver/dropbear.%I.pid -p ${PORT}
 PIDFile=/run/conserver/dropbear.%I.pid
 KillMode=process
-Restart=on-failure
+Restart=always
+RestartSec=10
+RuntimeDirectoryPreserve=yes
