@@ -77,6 +77,11 @@ system {
     config-management {
         commit-revisions 200
     }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
     domain-name vyos.net
     host-name vyos
     login {
