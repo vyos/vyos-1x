@@ -24,12 +24,14 @@ from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/tmp/ospf.frr'
+frr_daemon = 'ospfd'
 
 DEBUG = os.path.exists('/tmp/ospf.debug')
 if DEBUG:
@@ -39,10 +41,58 @@ if DEBUG:
     ch = logging.StreamHandler()
     lg.addHandler(ch)
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['protocols', 'ospf']
     ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # Bail out early if configuration tree does not exist
+    if not conf.exists(base):
+        return ospf
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+
+    # We have to cleanup the default dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: default-information
+    # originate comes with a default metric-type of 2, which will enable the
+    # entire default-information originate tree, even when not set via CLI so we
+    # need to check this first and probably drop that key.
+    if dict_search('default_information.originate', ospf) is None:
+        del default_values['default_information']
+    if dict_search('area.area_type.nssa', ospf) is None:
+        del default_values['area']['area_type']['nssa']
+    if 'mpls_te' not in ospf:
+        del default_values['mpls_te']
+    for protocol in ['bgp', 'connected', 'kernel', 'rip', 'static']:
+        if dict_search(f'redistribute.{protocol}', ospf) is None:
+            del default_values['redistribute'][protocol]
+    # XXX: T2665: we currently have no nice way for defaults under tag nodes,
+    # clean them out and add them manually :(
+    del default_values['neighbor']
+    del default_values['area']['virtual_link']
+
+    # merge in remaining default values
+    ospf = dict_merge(default_values, ospf)
+
+    if 'neighbor' in ospf:
+        default_values = defaults(base + ['neighbor'])
+        for neighbor in ospf['neighbor']:
+            ospf['neighbor'][neighbor] = dict_merge(default_values, ospf['neighbor'][neighbor])
+
+    if 'area' in ospf:
+        default_values = defaults(base + ['area', 'virtual-link'])
+        for area, area_config in ospf['area'].items():
+            if 'virtual_link' in area_config:
+                print(default_values)
+                for virtual_link in area_config['virtual_link']:
+                    ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
+                        default_values, ospf['area'][area]['virtual_link'][virtual_link])
+
     return ospf
 
 def verify(ospf):
@@ -65,8 +115,9 @@ def generate(ospf):
 def apply(ospf):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(daemon='ospfd')
-    frr_cfg.modify_section(f'router ospf', '')
+    frr_cfg.load_configuration(frr_daemon)
+    frr_cfg.modify_section('router ospf', '')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
 
     # Debugging
     if DEBUG:
@@ -82,13 +133,13 @@ def apply(ospf):
         print(f'Modified config:\n')
         print(f'{frr_cfg}')
 
-    frr_cfg.commit_configuration(daemon='ospfd')
+    frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if ospf['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(daemon='ospfd')
+            frr_cfg.commit_configuration(frr_daemon)
 
     return None
 
