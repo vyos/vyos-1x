@@ -257,7 +257,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-<!--              
+<!--
               <node name="inter-as">
                 <properties>
                   <help>MPLS traffic engineering inter-AS support</help>
@@ -394,9 +394,18 @@
               <tagNode name="prefix">
                 <properties>
                   <help>Static IPv4/IPv6 prefix segment/label mapping</help>
-                  <completionHelp>
-                    <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
-                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 prefix segment</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix segment</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
                 </properties>
                 <children>
                   <node name="absolute">
