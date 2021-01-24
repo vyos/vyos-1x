@@ -1,0 +1,683 @@
+firewall {
+    all-ping enable
+    broadcast-ping disable
+    config-trap disable
+    group {
+        address-group NET-VYOS-HTTPS-4 {
+            address 10.0.150.73
+        }
+        ipv6-network-group NET-VYOS-6 {
+            network 2001:db8:200::/40
+        }
+        network-group NET-VYOS-4 {
+            network 10.0.150.0/23
+            network 192.168.189.0/24
+        }
+        port-group MY-NAS-PORTS {
+            port 80
+            port 5000
+            port 5001
+            port 6022
+            port 9443
+        }
+    }
+    ipv6-name WAN-TO-VLAN15-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            source {
+                group {
+                    network-group NET-VYOS-6
+                }
+            }
+        }
+        rule 1010 {
+            action accept
+            destination {
+                address 2001:db8:200:15::a
+                group {
+                    port-group MY-NAS-PORTS
+                }
+            }
+            protocol tcp
+        }
+    }
+    ipv6-receive-redirects disable
+    ipv6-src-route disable
+    ip-src-route disable
+    log-martians enable
+    name WAN-TO-VLAN15-4 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            source {
+                group {
+                    network-group NET-VYOS-4
+                }
+            }
+        }
+        rule 1000 {
+            action accept
+            destination {
+                group {
+                    address-group NET-VYOS-HTTPS-4
+                }
+                port 80,443
+            }
+            protocol tcp
+        }
+        rule 1010 {
+            action accept
+            destination {
+                address 10.0.150.74
+                group {
+                    port-group MY-NAS-PORTS
+                }
+            }
+            protocol tcp
+        }
+    }
+    receive-redirects disable
+    send-redirects enable
+    source-validation disable
+    syn-cookies enable
+    twa-hazards-protection disable
+}
+high-availability {
+    vrrp {
+        group VLAN5-IPv4 {
+            interface eth0.5
+            preempt-delay 180
+            priority 250
+            virtual-address 10.0.150.120/28
+            vrid 5
+        }
+        group VLAN5-IPv6 {
+            interface eth0.5
+            preempt-delay 180
+            priority 250
+            virtual-address 2001:db8:200:f0::ffff/64
+            vrid 6
+        }
+        group VLAN10-IPv4 {
+            interface eth0.10
+            preempt-delay 180
+            priority 250
+            virtual-address 10.0.150.62/26
+            vrid 10
+        }
+        group VLAN10-IPv6 {
+            interface eth0.10
+            preempt-delay 180
+            priority 250
+            virtual-address 2001:db8:200:10::ffff/64
+            virtual-address 2001:db8:200::ffff/64
+            vrid 11
+        }
+        group VLAN15-IPv4 {
+            interface eth0.15
+            preempt-delay 180
+            priority 250
+            virtual-address 10.0.150.78/28
+            vrid 15
+        }
+        group VLAN15-IPv6 {
+            interface eth0.15
+            preempt-delay 180
+            priority 250
+            virtual-address 2001:db8:200:15::ffff/64
+            vrid 16
+        }
+        group VLAN500-IPv4 {
+            interface eth0.500
+            preempt-delay 180
+            priority 250
+            virtual-address 10.0.151.238/28
+            vrid 238
+        }
+        group VLAN500-IPv6 {
+            interface eth0.500
+            preempt-delay 180
+            priority 250
+            virtual-address 2001:db8:200:50::ffff/64
+            vrid 239
+        }
+        group VLAN520-IPv4 {
+            interface eth0.520
+            preempt-delay 180
+            priority 250
+            virtual-address 10.0.150.190/28
+            vrid 52
+        }
+        group VLAN520-IPv6 {
+            interface eth0.520
+            preempt-delay 180
+            priority 250
+            virtual-address 2001:db8:200:520::ffff/64
+            vrid 53
+        }
+        group VLAN810-IPv4 {
+            interface eth0.810
+            preempt-delay 180
+            priority 250
+            virtual-address 10.0.151.30/27
+            vrid 80
+        }
+        group VLAN810-IPv6 {
+            interface eth0.810
+            preempt-delay 180
+            priority 250
+            virtual-address 2001:db8:200:102::ffff/64
+            vrid 81
+        }
+        sync-group VYOS {
+            member VLAN5-IPv4
+            member VLAN5-IPv6
+            member VLAN10-IPv4
+            member VLAN10-IPv6
+            member VLAN500-IPv4
+            member VLAN500-IPv6
+            member VLAN15-IPv4
+            member VLAN15-IPv6
+            member VLAN810-IPv6
+            member VLAN810-IPv4
+            member VLAN520-IPv4
+            member VLAN520-IPv6
+        }
+    }
+}
+interfaces {
+    dummy dum0 {
+        address 2001:db8:200:ffff::2/128
+        address 10.0.151.251/32
+    }
+    ethernet eth0 {
+        vif 5 {
+            address 10.0.150.121/28
+            address 2001:db8:200:f0::4/64
+            ip {
+                ospf {
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key vyosospfkey
+                            }
+                        }
+                    }
+                    cost 10
+                    dead-interval 40
+                    hello-interval 10
+                    network broadcast
+                    priority 200
+                    retransmit-interval 5
+                    transmit-delay 5
+                }
+            }
+        }
+        vif 10 {
+            address 2001:db8:200:10::1:ffff/64
+            address 2001:db8:200::1:ffff/64
+            address 10.0.150.60/26
+        }
+        vif 15 {
+            address 10.0.150.76/28
+            address 2001:db8:200:15::1:ffff/64
+            firewall {
+                out {
+                    ipv6-name WAN-TO-VLAN15-6
+                    name WAN-TO-VLAN15-4
+                }
+            }
+        }
+        vif 50 {
+            address 192.168.189.2/24
+        }
+        vif 110 {
+            address 2001:db8:200:101::ffff/64
+            address 10.0.151.190/27
+            address 10.0.151.158/28
+        }
+        vif 410 {
+            address 10.0.151.206/28
+            address 2001:db8:200:104::ffff/64
+        }
+        vif 450 {
+            address 2001:db8:200:103::ffff/64
+            address 10.0.151.142/29
+            disable
+        }
+        vif 500 {
+            address 10.0.151.236/28
+            address 2001:db8:200:50::1:ffff/64
+        }
+        vif 520 {
+            address 10.0.150.188/26
+            address 2001:db8:200:520::1:ffff/64
+        }
+        vif 800 {
+            address 2001:db8:200:ff::104:1/112
+            address 10.0.151.212/31
+        }
+        vif 810 {
+            address 10.0.151.28/27
+            address 2001:db8:200:102::1:ffff/64
+        }
+    }
+    ethernet eth1 {
+    }
+    loopback lo {
+    }
+}
+policy {
+    prefix-list as65000-origin-v4 {
+        rule 10 {
+            action permit
+            prefix 10.0.150.0/23
+        }
+        rule 100 {
+            action permit
+            prefix 0.0.0.0/0
+        }
+    }
+    prefix-list6 as65000-origin-v6 {
+        rule 10 {
+            action permit
+            prefix 2001:db8:200::/40
+        }
+    }
+    route-map as65010-in {
+        rule 10 {
+            action permit
+            set {
+                local-preference 30
+            }
+        }
+    }
+    route-map as65010-out {
+        rule 10 {
+            action permit
+            set {
+                as-path-prepend "65000 65000"
+            }
+        }
+    }
+}
+protocols {
+    bgp 65000 {
+        address-family {
+            ipv4-unicast {
+                network 10.0.150.0/23 {
+                }
+            }
+            ipv6-unicast {
+                network 2001:db8:200::/40 {
+                }
+            }
+        }
+        neighbor 10.0.151.222 {
+            address-family {
+                ipv4-unicast {
+                    default-originate {
+                    }
+                    prefix-list {
+                        export as65000-origin-v4
+                    }
+                    route-map {
+                        export as65010-out
+                        import as65010-in
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            capability {
+                dynamic
+            }
+            remote-as 65010
+        }
+        neighbor 10.0.151.252 {
+            peer-group VYOSv4
+        }
+        neighbor 10.0.151.254 {
+            peer-group VYOSv4
+        }
+        neighbor 2001:db8:200:ffff::3 {
+            peer-group VYOSv6
+        }
+        neighbor 2001:db8:200:ffff::a {
+            peer-group VYOSv6
+        }
+        neighbor 2001:db8:200:ff::101:2 {
+            address-family {
+                ipv6-unicast {
+                    capability {
+                        dynamic
+                    }
+                    prefix-list {
+                        export as65000-origin-v6
+                    }
+                    route-map {
+                        import as65010-in
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            remote-as 65010
+        }
+        parameters {
+            default {
+                no-ipv4-unicast
+            }
+            log-neighbor-changes
+            router-id 10.0.151.251
+        }
+        peer-group VYOSv4 {
+            address-family {
+                ipv4-unicast {
+                    nexthop-self {
+                    }
+                }
+            }
+            capability {
+                dynamic
+            }
+            remote-as 65000
+            update-source dum0
+        }
+        peer-group VYOSv6 {
+            address-family {
+                ipv6-unicast {
+                    nexthop-self {
+                    }
+                }
+            }
+            capability {
+                dynamic
+            }
+            remote-as 65000
+            update-source dum0
+        }
+        timers {
+            holdtime 30
+            keepalive 10
+        }
+    }
+    ospf {
+        area 0 {
+            area-type {
+                normal
+            }
+            authentication md5
+            network 10.0.151.251/32
+            network 10.0.151.208/31
+            network 10.0.150.112/28
+        }
+        parameters {
+            abr-type cisco
+            router-id 10.0.151.251
+        }
+        passive-interface default
+        passive-interface-exclude dum0
+        passive-interface-exclude eth0.5
+        redistribute {
+            connected {
+                metric-type 2
+            }
+            static {
+                metric-type 2
+            }
+        }
+    }
+    ospfv3 {
+        area 0.0.0.0 {
+            interface dum0
+            interface eth0.5
+        }
+        parameters {
+            router-id 10.0.151.251
+        }
+        redistribute {
+            connected {
+            }
+            static {
+            }
+        }
+    }
+    static {
+        route 10.0.0.0/8 {
+            MY-NAS {
+                distance 254
+            }
+        }
+        route 172.16.0.0/12 {
+            MY-NAS {
+                distance 254
+            }
+        }
+        route 192.168.0.0/16 {
+            MY-NAS {
+                distance 254
+            }
+        }
+        route 193.148.249.144/32 {
+            next-hop 192.168.189.1 {
+            }
+        }
+        route 10.0.150.0/23 {
+            MY-NAS {
+                distance 254
+            }
+        }
+        route 10.0.151.32/27 {
+            next-hop 10.0.151.5 {
+            }
+        }
+        route6 2001:db8:2fe:ffff::/64 {
+            next-hop 2001:db8:200:102::4 {
+            }
+        }
+        route6 2001:db8:2ff::/48 {
+            next-hop 2001:db8:200:101::1 {
+            }
+        }
+        route6 2001:db8:200::/40 {
+            MY-NAS {
+                distance 254
+            }
+        }
+    }
+}
+service {
+    dhcp-server {
+        shared-network-name NET-VYOS-DHCP-1 {
+            subnet 10.0.151.224/28 {
+                default-router 10.0.151.238
+                dns-server 10.0.150.2
+                dns-server 10.0.150.1
+                domain-name vyos.net
+                failover {
+                    local-address 10.0.151.236
+                    name NET-VYOS-DHCP-1
+                    peer-address 10.0.151.237
+                    status primary
+                }
+                lease 1800
+                range 0 {
+                    start 10.0.151.225
+                    stop 10.0.151.237
+                }
+            }
+        }
+        shared-network-name NET-VYOS-HOSTING-1 {
+            subnet 10.0.150.128/26 {
+                default-router 10.0.150.190
+                dns-server 10.0.150.2
+                dns-server 10.0.150.1
+                domain-name vyos.net
+                failover {
+                    local-address 10.0.150.188
+                    name NET-VYOS-HOSTING-1
+                    peer-address 10.0.150.189
+                    status primary
+                }
+                lease 604800
+                range 0 {
+                    start 10.0.150.129
+                    stop 10.0.150.187
+                }
+            }
+        }
+    }
+    lldp {
+        interface all {
+        }
+        management-address 10.0.151.251
+        snmp {
+            enable
+        }
+    }
+    router-advert {
+        interface eth4.500 {
+            default-preference high
+            name-server 2001:db8:200::1
+            name-server 2001:db8:200::2
+            prefix 2001:db8:200:50::/64 {
+                valid-lifetime infinity
+            }
+        }
+        interface eth4.520 {
+            default-preference high
+            name-server 2001:db8:200::1
+            name-server 2001:db8:200::2
+            prefix 2001:db8:200:520::/64 {
+                valid-lifetime infinity
+            }
+        }
+    }
+    snmp {
+        community public {
+            network 10.0.150.0/26
+            network 2001:db8:200:10::/64
+        }
+        contact noc@vyos.net
+        listen-address 10.0.151.251 {
+        }
+        listen-address 2001:db8:200:ffff::2 {
+        }
+        location "Jenkins"
+    }
+    ssh {
+        disable-host-validation
+        listen-address 10.0.151.251
+        listen-address 2001:db8:200:ffff::2
+        listen-address 192.168.189.2
+        loglevel fatal
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 200
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        banner {
+            pre-login "VyOS - Network\n"
+        }
+        radius {
+            server 192.0.2.1 {
+                key SuperS3cretRADIUSkey
+                timeout 1
+            }
+            server 192.0.2.2 {
+                key SuperS3cretRADIUSkey
+                timeout 1
+            }
+            source-address 192.0.2.254
+        }
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 192.0.2.1
+    name-server 192.0.2.2
+    name-server 2001:db8:200::1
+    name-server 2001:db8:200::2
+    ntp {
+        allow-clients {
+            address 10.0.150.0/23
+            address 2001:db8:200::/40
+        }
+        listen-address 10.0.151.251
+        listen-address 2001:db8:200:ffff::2
+        server 0.de.pool.ntp.org {
+        }
+        server 1.de.pool.ntp.org {
+        }
+        server 2.de.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level notice
+            }
+            facility protocols {
+                level debug
+            }
+        }
+        host 10.0.150.26 {
+            facility all {
+                level all
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@1:conntrack-sync@1:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@18:ipoe-server@1:ipsec@5:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@6:salt@1:snmp@2:ssh@2:sstp@3:system@20:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3-beta-202101151942
