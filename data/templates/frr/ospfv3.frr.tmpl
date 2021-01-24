@@ -1,0 +1,41 @@
+!
+router ospf6
+{% if area is defined and area is not none %}
+{%   for area_id, area_config in area.items() %}
+{%     if area_config.interface is defined and area_config.interface is not none %}
+{%       for interface in area_config.interface %}
+ interface {{ interface }} area {{ area_id }}
+{%       endfor %}
+{%     endif %}
+{%     if area_config.range is defined and area_config.range is not none %}
+{%       for prefix, prefix_config in area_config.range.items() %}
+ area {{ area_id }} range {{ prefix }} {{ 'advertise' if prefix_config.advertise is defined }} {{ 'not-advertise' if prefix_config.not_advertise is defined }}
+{%       endfor %}
+{%     endif %}
+{%     if area_config.export_list is defined and area_config.export_list is not none %}
+ area {{ area_id }} export-list {{ area_config.export_list }}
+{%     endif %}
+{%     if area_config.import_list is defined and area_config.import_list is not none %}
+ area {{ area_id }} import-list {{ area_config.import_list }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+{% if distance is defined and distance is not none %}
+{%   if distance.global is defined and distance.global is not none %}
+ distance {{ distance.global }}
+{%   endif %}
+{%   if distance.ospfv3 is defined and distance.ospfv3 is not none %}
+ distance ospf6 {{ 'intra-area ' + distance.ospfv3.intra_area if distance.ospfv3.intra_area is defined }} {{ 'inter-area ' + distance.ospfv3.inter_area if distance.ospfv3.inter_area is defined }} {{ 'external ' + distance.ospfv3.external if distance.ospfv3.external is defined }}
+{%   endif %}
+{% endif %}
+{% if parameters is defined and parameters is not none %}
+{%   if parameters.router_id is defined and parameters.router_id is not none %}
+ ospf6 router-id {{ parameters.router_id }}
+{%   endif %}
+{% endif %}
+{% if redistribute is defined and redistribute is not none %}
+{%   for protocol, options in redistribute.items() %}
+ redistribute {{ protocol }} {{ 'route-map ' + options.route_map if options.route_map is defined }}
+{%   endfor %}
+{% endif %}
+!
