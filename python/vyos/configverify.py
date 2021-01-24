@@ -307,3 +307,24 @@ def verify_diffie_hellman_length(file, min_keysize):
 
     return False
 
+def verify_route_maps(config):
+    """
+    Common helper function used by routing protocol implementations to perform
+    recurring validation if the specified route-map for either zebra to kernel
+    installation exists (this is the top-level route_map key) or when a route
+    is redistributed with a route-map that it exists!
+    """
+    if 'route_map' in config:
+        route_map = config['route_map']
+        # Check if the specified route-map exists, if not error out
+        if dict_search(f'policy.route_map.{route_map}', config) == None:
+            raise ConfigError(f'Specified route-map "{route_map}" does not exist!')
+
+    if 'redistribute' in config:
+        for protocol, protocol_config in config['redistribute'].items():
+            if 'route_map' in protocol_config:
+                route_map = protocol_config['route_map']
+                # Check if the specified route-map exists, if not error out
+                if dict_search(f'policy.route_map.{route_map}', config) == None:
+                    raise ConfigError(f'Redistribution route-map "{route_map}" ' \
+                                      f'for "{protocol}" does not exist!')

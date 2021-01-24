@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_route_maps
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
@@ -99,6 +100,7 @@ def verify(ospf):
     if not ospf:
         return None
 
+    verify_route_maps(ospf)
     return None
 
 def generate(ospf):
