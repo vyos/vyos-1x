@@ -5,8 +5,8 @@ ConditionPathExists=/run/ndppd/ndppd.conf
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=/usr/sbin/ndppd -d -p /run/ndppd/ndppd.pid -c /run/ndppd/ndppd.conf
 Type=forking
+ExecStart=/usr/sbin/ndppd -d -p /run/ndppd/ndppd.pid -c /run/ndppd/ndppd.conf
 PIDFile=/run/ndppd/ndppd.pid
 Restart=on-failure
 RestartSec=20
