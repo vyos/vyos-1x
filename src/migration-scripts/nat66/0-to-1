@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import argv,exit
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+def merge_npt(config,base,rule):
+    merge_base = ['nat66','source','rule',rule]
+    # Configure migration functions
+    if config.exists(base + ['description']):
+        tmp = config.return_value(base + ['description'])
+        config.set(merge_base + ['description'],value=tmp)
+
+    if config.exists(base + ['disable']):
+        tmp = config.return_value(base + ['disable'])
+        config.set(merge_base + ['disable'],value=tmp)
+
+    if config.exists(base + ['outbound-interface']):
+        tmp = config.return_value(base + ['outbound-interface'])
+        config.set(merge_base + ['outbound-interface'],value=tmp)
+
+    if config.exists(base + ['source','prefix']):
+        tmp = config.return_value(base + ['source','prefix'])
+        config.set(merge_base + ['source','prefix'],value=tmp)
+
+    if config.exists(base + ['translation','prefix']):
+        tmp = config.return_value(base + ['translation','prefix'])
+        config.set(merge_base + ['translation','prefix'],value=tmp)
+
+if not config.exists(['nat', 'nptv6']):
+    # Nothing to do
+    exit(0)
+
+for rule in config.list_nodes(['nat', 'nptv6', 'rule']):
+    base = ['nat', 'nptv6', 'rule', rule]
+    # Merge 'nat nptv6' to 'nat66 source'
+    merge_npt(config,base,rule)
+
+# Delete the original NPT configuration
+config.delete(['nat','nptv6']);
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

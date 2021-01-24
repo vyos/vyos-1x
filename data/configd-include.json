@@ -28,6 +28,7 @@
 "ipsec-settings.py",
 "lldp.py",
 "nat.py",
+"nat66.py",
 "ntp.py",
 "policy-local-route.py",
 "protocols_bgp.py",

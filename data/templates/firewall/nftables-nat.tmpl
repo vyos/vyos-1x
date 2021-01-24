@@ -118,7 +118,7 @@
 {% endmacro %}
 
 # Start with clean NAT table
-flush table nat
+flush table ip nat
 {% if helper_functions == 'remove' %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
 {%   set base_command = 'delete rule ip raw' %}

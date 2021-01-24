@@ -1,0 +1,192 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="nat66" owner="${vyos_conf_scripts_dir}/nat66.py">
+    <properties>
+      <help>IPv6-to-IPv6 Network Prefix Translation (NAT66/NPT) Settings</help>
+      <priority>220</priority>
+    </properties>
+    <children>
+      <node name="source">
+        <properties>
+          <help>Prefix mapping of IPv6 source address translation</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Source NAT66 rule number</help>
+              <valueHelp>
+                <format>1-999999</format>
+                <description>Number for this rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>NAT66 rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="description">
+                <properties>
+                  <help>Rule description</help>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable NAT66 rule</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="log">
+                <properties>
+                  <help>NAT66 rule logging</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="outbound-interface">
+                <properties>
+                  <help>Outbound interface of NAT66 traffic</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <node name="source">
+                <properties>
+                  <help>IPv6 source prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPv6 prefix to be translated</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="translation">
+                <properties>
+                  <help>Translated IPv6 prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPv6 prefix to translate to</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="destination">
+        <properties>
+          <help>Prefix mapping for IPv6 destination address translation</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Destination NAT66 rule number</help>
+              <valueHelp>
+                <format>1-999999</format>
+                <description>Number for this rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>NAT66 rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="description">
+                <properties>
+                  <help>Rule description</help>
+                </properties>
+              </leafNode>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable NAT66 rule</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="log">
+                <properties>
+                  <help>NAT66 rule logging</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="inbound-interface">
+                <properties>
+                  <help>Inbound interface of NAT66 traffic</help>
+                  <completionHelp>
+                    <list>any</list>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script> 
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <node name="destination">
+                <properties>
+                  <help>IPv6 destination prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IPv6 address or prefix to be translated</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="translation">
+                <properties>
+                  <help>Translated IPv6 address options</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IPv6 address or prefix to translate to</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
