@@ -37,6 +37,9 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.session.set(['policy', 'route-map', route_map, 'rule', route_map_seq, 'action', 'permit'])
 
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.session.delete(['policy', 'route-map', route_map])
         self.session.delete(base_path)
         self.session.commit()
@@ -53,8 +56,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_02_simple(self):
         router_id = '127.0.0.1'
@@ -80,8 +81,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         self.assertIn(f' default-metric {metric}', frrconfig)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_03_access_list(self):
         acl = '100'
@@ -103,11 +102,8 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         for ptotocol in protocols:
             self.assertIn(f' distribute-list {acl} out {ptotocol}', frrconfig) # defaults
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
         self.session.delete(['policy', 'access-list', acl])
+
 
     def test_ospf_04_default_originate(self):
         seq = '100'
@@ -135,8 +131,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         frrconfig = getFRROSPFconfig()
         self.assertIn(f' default-information originate always metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_05_options(self):
         global_distance = '128'
@@ -179,8 +173,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         frrconfig = getFRROSPFconfig()
         self.assertIn(f' distance ospf intra-area {intra_area} inter-area {inter_area} external {external}', frrconfig)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_06_neighbor(self):
         priority = '10'
@@ -199,8 +191,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         for neighbor in neighbors:
             self.assertIn(f' neighbor {neighbor} priority {priority} poll-interval {poll_interval}', frrconfig) # default
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_07_passive_interface(self):
         self.session.set(base_path + ['passive-interface', 'default'])
@@ -218,8 +208,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         for interface in interfaces:
             self.assertIn(f' no passive-interface {interface}', frrconfig) # default
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_08_redistribute(self):
         metric = '15'
@@ -244,8 +232,6 @@ class TestProtocolsOSPF(unittest.TestCase):
             else:
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_09_area(self):
         area = '0'
@@ -262,8 +248,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         for network in networks:
             self.assertIn(f' network {network} area {area}', frrconfig)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ospf_10_virtual_link(self):
         area = '10'
@@ -288,9 +272,6 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} shortcut {shortcut}', frrconfig)
         self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
