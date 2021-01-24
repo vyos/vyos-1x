@@ -26,59 +26,72 @@ PROCESS_NAME = 'bgpd'
 ASN = '64512'
 base_path = ['protocols', 'bgp', ASN]
 
+route_map_in = 'foo-map-in'
+route_map_out = 'foo-map-out'
+prefix_list_in = 'pfx-foo-in'
+prefix_list_out = 'pfx-foo-out'
+
 neighbor_config = {
     '192.0.2.1' : {
-        'cap_dynamic' : '',
-        'cap_ext_next': '',
-        'remote_as'   : '100',
-        'adv_interv'  : '400',
-        'passive'     : '',
-        'password'    : 'VyOS-Secure123',
-        'shutdown'    : '',
-        'cap_over'    : '',
-        'ttl_security': '5',
-        'local_as'    : '300',
+        'cap_dynamic'  : '',
+        'cap_ext_next' : '',
+        'remote_as'    : '100',
+        'adv_interv'   : '400',
+        'passive'      : '',
+        'password'     : 'VyOS-Secure123',
+        'shutdown'     : '',
+        'cap_over'     : '',
+        'ttl_security' : '5',
+        'local_as'     : '300',
+        'route_map_in' : route_map_in,
+        'route_map_out': route_map_out,
         },
     '192.0.2.2' : {
-        'remote_as'   : '200',
-        'shutdown'    : '',
-        'no_cap_nego' : '',
-        'port'        : '667',
-        'cap_strict'  : '',
+        'remote_as'    : '200',
+        'shutdown'     : '',
+        'no_cap_nego'  : '',
+        'port'         : '667',
+        'cap_strict'   : '',
+        'pfx_list_in'  : prefix_list_in,
+        'pfx_list_out' : prefix_list_out,
         },
     '192.0.2.3' : {
-        'description' : 'foo bar baz',
-        'remote_as'   : '200',
-        'passive'     : '',
-        'multi_hop'   : '5',
-        'update_src'  : 'lo',
+        'description'  : 'foo bar baz',
+        'remote_as'    : '200',
+        'passive'      : '',
+        'multi_hop'    : '5',
+        'update_src'   : 'lo',
         },
 }
 
 peer_group_config = {
     'foo' : {
-        'remote_as'   : '100',
-        'passive'     : '',
-        'password'    : 'VyOS-Secure123',
-        'shutdown'    : '',
-        'cap_over'    : '',
+        'remote_as'    : '100',
+        'passive'      : '',
+        'password'     : 'VyOS-Secure123',
+        'shutdown'     : '',
+        'cap_over'     : '',
 #        XXX: not available in current Perl backend
 #       'ttl_security': '5',
         },
     'bar' : {
-        'description' : 'foo peer bar group',
-        'remote_as'   : '200',
-        'shutdown'    : '',
-        'no_cap_nego' : '',
-        'local_as'    : '300',
+        'description'  : 'foo peer bar group',
+        'remote_as'    : '200',
+        'shutdown'     : '',
+        'no_cap_nego'  : '',
+        'local_as'     : '300',
+        'pfx_list_in'  : prefix_list_in,
+        'pfx_list_out' : prefix_list_out,
         },
     'baz' : {
-        'cap_dynamic' : '',
-        'cap_ext_next': '',
-        'remote_as'   : '200',
-        'passive'     : '',
-        'multi_hop'   : '5',
-        'update_src'  : 'lo',
+        'cap_dynamic'  : '',
+        'cap_ext_next' : '',
+        'remote_as'    : '200',
+        'passive'      : '',
+        'multi_hop'    : '5',
+        'update_src'   : 'lo',
+        'route_map_in' : route_map_in,
+        'route_map_out': route_map_out,
         },
 }
 
@@ -89,7 +102,19 @@ class TestProtocolsBGP(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
 
+        self.session.set(['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
+        self.session.set(['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
+        self.session.set(['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'action', 'permit'])
+        self.session.set(['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'prefix', '192.0.2.0/25'])
+        self.session.set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'action', 'permit'])
+        self.session.set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'prefix', '192.0.2.128/25'])
+
     def tearDown(self):
+        self.session.delete(['policy', 'route-map', route_map_in])
+        self.session.delete(['policy', 'route-map', route_map_out])
+        self.session.delete(['policy', 'prefix-list', prefix_list_in])
+        self.session.delete(['policy', 'prefix-list', prefix_list_out])
+
         self.session.delete(base_path)
         self.session.commit()
         del self.session
@@ -122,6 +147,15 @@ class TestProtocolsBGP(unittest.TestCase):
             self.assertIn(f' neighbor {peer} ttl-security hops {peer_config["ttl_security"]}', frrconfig)
         if 'update_src' in peer_config:
             self.assertIn(f' neighbor {peer} update-source {peer_config["update_src"]}', frrconfig)
+        if 'route_map_in' in peer_config:
+            self.assertIn(f' neighbor {peer} route-map {peer_config["route_map_in"]} in', frrconfig)
+        if 'route_map_out' in peer_config:
+            self.assertIn(f' neighbor {peer} route-map {peer_config["route_map_out"]} out', frrconfig)
+        if 'pfx_list_in' in peer_config:
+            self.assertIn(f' neighbor {peer} prefix-list {peer_config["pfx_list_in"]} in', frrconfig)
+        if 'pfx_list_out' in peer_config:
+            self.assertIn(f' neighbor {peer} prefix-list {peer_config["pfx_list_out"]} out', frrconfig)
+
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -184,6 +218,14 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.session.set(base_path + ['neighbor', neighbor, 'ttl-security', 'hops', config["ttl_security"]])
             if 'update_src' in config:
                 self.session.set(base_path + ['neighbor', neighbor, 'update-source', config["update_src"]])
+            if 'route_map_in' in config:
+                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-map', 'import', config["route_map_in"]])
+            if 'route_map_out' in config:
+                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-map', 'export', config["route_map_out"]])
+            if 'pfx_list_in' in config:
+                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'prefix-list', 'import', config["pfx_list_in"]])
+            if 'pfx_list_out' in config:
+                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'prefix-list', 'export', config["pfx_list_out"]])
 
         # commit changes
         self.session.commit()
@@ -231,6 +273,14 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.session.set(base_path + ['peer-group', peer_group, 'ttl-security', 'hops', config["ttl_security"]])
             if 'update_src' in config:
                 self.session.set(base_path + ['peer-group', peer_group, 'update-source', config["update_src"]])
+            if 'route_map_in' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'route-map', 'import', config["route_map_in"]])
+            if 'route_map_out' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'route-map', 'export', config["route_map_out"]])
+            if 'pfx_list_in' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'prefix-list', 'import', config["pfx_list_in"]])
+            if 'pfx_list_out' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'prefix-list', 'export', config["pfx_list_out"]])
 
         # commit changes
         self.session.commit()
