@@ -25,8 +25,7 @@ from vyos.util import process_named_running
 PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
 
-route_map = 'foobarbaz'
-route_map_seq = '10'
+route_map = 'foo-bar-baz10'
 
 def getFRROSPFconfig():
     return cmd('vtysh -c "show run" | sed -n "/router ospf/,/^!/p"')
@@ -34,7 +33,8 @@ def getFRROSPFconfig():
 class TestProtocolsOSPF(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        self.session.set(['policy', 'route-map', route_map, 'rule', route_map_seq, 'action', 'permit'])
+        self.session.set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+        self.session.set(['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
 
     def tearDown(self):
         # Check for running process

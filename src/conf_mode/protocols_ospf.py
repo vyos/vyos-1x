@@ -94,6 +94,13 @@ def get_config(config=None):
                     ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
                         default_values, ospf['area'][area]['virtual_link'][virtual_link])
 
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify()
+    base = ['policy']
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # Merge policy dict into OSPF dict
+    ospf = dict_merge(tmp, ospf)
+
     return ospf
 
 def verify(ospf):

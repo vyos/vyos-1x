@@ -323,7 +323,9 @@ def verify_route_maps(config):
     if 'redistribute' in config:
         for protocol, protocol_config in config['redistribute'].items():
             if 'route_map' in protocol_config:
-                route_map = protocol_config['route_map']
+                # A hyphen in a route-map name will be converted to _, take care
+                # about this effect during validation
+                route_map = protocol_config['route_map'].replace('-','_')
                 # Check if the specified route-map exists, if not error out
                 if dict_search(f'policy.route_map.{route_map}', config) == None:
                     raise ConfigError(f'Redistribution route-map "{route_map}" ' \
