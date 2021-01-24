@@ -52,6 +52,22 @@
 {%   if config.update_source is defined and config.update_source is not none %}
  neighbor {{ neighbor }} update-source {{ config.update_source }}
 {%   endif %}
+{%   if config.interface is defined and config.interface is not none %}
+{%     if config.interface.peer_group is defined and config.interface.peer_group is not none %}
+ neighbor {{ neighbor }} interface peer-group {{ config.interface.peer_group }}
+{%     endif %}
+{%     if config.interface.remote_as is defined and config.interface.remote_as is not none %}
+ neighbor {{ neighbor }} interface remote-as {{ config.interface.remote_as }}
+{%     endif %}
+{%     if config.interface.v6only is defined and config.interface.v6only is not none %}
+{%       if config.interface.v6only.peer_group is defined and config.interface.v6only.peer_group is not none %}
+ neighbor {{ neighbor }} interface v6only peer-group {{ config.interface.v6only.peer_group }}
+{%       endif %}
+{%       if config.interface.v6only.remote_as is defined and config.interface.v6only.remote_as is not none %}
+ neighbor {{ neighbor }} interface v6only remote-as {{ config.interface.v6only.remote_as }}
+{%       endif %}
+{%     endif %}
+{%   endif %}
  !
 {%   if config.address_family is defined and config.address_family is not none %}
 {%     for af in config.address_family %}
