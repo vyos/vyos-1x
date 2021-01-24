@@ -124,7 +124,8 @@
 {%       if config.address_family[af].route_map is defined and config.address_family[af].route_map is not none %}
 {%         if config.address_family[af].route_map.export is defined and config.address_family[af].route_map.export is not none %}
   neighbor {{ neighbor }} route-map {{ config.address_family[af].route_map.export }} out
-{%         elif config.address_family[af].route_map.import is defined and config.address_family[af].route_map.import is not none %}
+{%         endif %}
+{%         if config.address_family[af].route_map.import is defined and config.address_family[af].route_map.import is not none %}
   neighbor {{ neighbor }} route-map {{ config.address_family[af].route_map.import }} in
 {%         endif %}
 {%       endif %}
