@@ -30,7 +30,6 @@ from vyos.util import dict_search
 from vyos.template import is_ipv6
 from vyos.xml import defaults
 from vyos import ConfigError
-import platform
 from vyos import airbag
 airbag.enable()
 
