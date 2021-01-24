@@ -108,7 +108,8 @@
 {%       if config.address_family[af].filter_list is defined and config.address_family[af].filter_list is not none %}
 {%         if config.address_family[af].filter_list.export is defined and config.address_family[af].filter_list.export is not none %}
   neighbor {{ neighbor }} filter-list {{ config.address_family[af].filter_list.export }} out
-{%         elif config.address_family[af].filter_list.import is defined and config.address_family[af].filter_list.import is not none %}
+{%         endif %}
+{%         if config.address_family[af].filter_list.import is defined and config.address_family[af].filter_list.import is not none %}
   neighbor {{ neighbor }} filter-list {{ config.address_family[af].filter_list.import }} in
 {%         endif %}
 {%       endif %}
