@@ -51,7 +51,6 @@ def merge_npt(config,base,rule):
         tmp = config.return_value(base + ['translation','prefix'])
         config.set(merge_base + ['translation','prefix'],value=tmp)
 
-
 if not config.exists(['nat', 'nptv6']):
     # Nothing to do
     exit(0)

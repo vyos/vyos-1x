@@ -15,8 +15,6 @@
 ########################################################
 
 {% set global = namespace(ndppd_interfaces = [],ndppd_prefixs = []) %}
-
-
 {% if source is defined and source.rule is defined and source.rule is not none %}
 {%   for rule, config in source.rule.items() if config.disable is not defined %}
 {%     if config.outbound_interface is defined %}
@@ -31,7 +29,6 @@
 {% endif %}
 
 {% for interface in global.ndppd_interfaces %}
-
 proxy {{ interface }} {
     router yes
     timeout 500

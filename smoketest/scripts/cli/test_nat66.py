@@ -68,7 +68,6 @@ class TestNAT66(unittest.TestCase):
             self.assertEqual(iface, 'eth1')
             # check for translation address
             self.assertEqual(f'{translation_address}/{translation_mask}', translation_prefix)
-
             self.assertEqual(f'{address}/{mask}', source_prefix)
     
     def test_destination_nat66(self):

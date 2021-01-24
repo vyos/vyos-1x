@@ -80,19 +80,16 @@ def get_config(config=None):
 
     if not conf.exists(base):
         nat['helper_functions'] = 'remove'
-
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
         nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT','NAT_CONNTRACK')
-
         nat['deleted'] = ''
-
         return nat
 
     # check if NAT66 connection tracking helpers need to be set up - this has to
     # be done only once
     if not get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK'):
         nat['helper_functions'] = 'add'
-
+        
         # Retrieve current table handler positions
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
         nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT','VYATTA_CT_OUTPUT_HOOK')
@@ -120,17 +117,15 @@ def verify(nat):
                 if config['outbound_interface'] not in interfaces():
                     print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
-
             prefix = dict_search('translation.prefix', config)
             if prefix != None:
                 if not is_ipv6(prefix):
                     raise ConfigError(f'Warning: IPv6 prefix {prefix} is not a valid address prefix')
-            
+
             prefix = dict_search('source.prefix', config)
             if prefix != None:
                 if not is_ipv6(prefix):
                     raise ConfigError(f'{err_msg} source-prefix not specified')
-
 
     if dict_search('destination.rule', nat):
         for rule, config in dict_search('destination.rule', nat).items():
