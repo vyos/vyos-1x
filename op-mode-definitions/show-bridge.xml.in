@@ -29,6 +29,12 @@
             </properties>
             <command>/sbin/brctl showstp $3</command>
           </leafNode>
+          <leafNode name="fdb">
+            <properties>
+              <help>Show the forwarding database of the bridge</help>
+            </properties>
+            <command>/usr/sbin/bridge -c fdb show br $3</command>
+          </leafNode>
         </children>
       </tagNode>
     </children>
