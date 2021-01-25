@@ -87,6 +87,9 @@ peer_group_config = {
 def getFRRBGPconfig():
     return cmd(f'vtysh -c "show run" | sed -n "/router bgp {ASN}/,/^!/p"')
 
+def getFRRRPKIconfig():
+    return cmd(f'vtysh -c "show run" | sed -n "/rpki/,/^!/p"')
+
 class TestProtocolsBGP(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
@@ -336,6 +339,39 @@ class TestProtocolsBGP(unittest.TestCase):
             self.assertIn(f' network {network}', frrconfig)
             if 'as_set' in network_config:
                 self.assertIn(f' aggregate-address {network} summary-only', frrconfig)
+
+
+    def test_bgp_07_rpki(self):
+        rpki_path = ['protocols', 'rpki']
+        init_tmo = '50'
+        polling = '400'
+        preference = '100'
+        timeout = '900'
+
+        cache = {
+            'foo' : { 'address' : '1.1.1.1', 'port' : '8080' },
+# T3253 only one peer supported
+#           'bar' : { 'address' : '2.2.2.2', 'port' : '9090' },
+        }
+
+        self.session.set(rpki_path + ['polling-period', polling])
+        self.session.set(rpki_path + ['preference', preference])
+
+        for name, config in cache.items():
+            self.session.set(rpki_path + ['cache', name, 'address', config['address']])
+            self.session.set(rpki_path + ['cache', name, 'port', config['port']])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = getFRRRPKIconfig()
+        self.assertIn(f'rpki polling_period {polling}', frrconfig)
+
+        for name, config in cache.items():
+            self.assertIn('rpki cache {address} {port} preference 1'.format(**config), frrconfig)
+
+        self.session.delete(rpki_path)
 
 
 if __name__ == '__main__':
