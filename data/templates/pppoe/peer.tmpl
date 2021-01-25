@@ -47,8 +47,8 @@ mtu {{ mtu }}
 mru {{ mtu }}
 
 {% if authentication is defined %}
-{{ "user " + authentication.user if authentication.user is defined }}
-{{ "password " + authentication.password if authentication.password is defined }}
+{{ 'user "' + authentication.user + '"' if authentication.user is defined }}
+{{ 'password "' + authentication.password + '"' if authentication.password is defined }}
 {% endif %}
 
 {{ "usepeerdns" if no_peer_dns is not defined }}
