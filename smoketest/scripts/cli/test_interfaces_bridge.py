@@ -32,6 +32,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_ip = True
         self._test_ipv6 = True
         self._test_ipv6_pd = True
+        self._test_ipv6_dhcpc6 = True
         self._test_vlan = True
         self._base_path = ['interfaces', 'bridge']
         self._mirror_interfaces = ['dum21354']
@@ -198,7 +199,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
                 for vif in vifs:
                     # member interface must be assigned to the bridge
                     self.assertTrue(os.path.exists(f'/sys/class/net/{interface}/lower_{member}.{vif}'))
-        
+
         # delete all members
         for interface in self._interfaces:
             for member in self._members:

@@ -23,6 +23,7 @@ class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_ip = True
         self._test_ipv6 = True
         self._test_ipv6_pd = True
+        self._test_ipv6_dhcpc6 = True
         self._test_mtu = True
         self._test_vlan = True
         self._test_qinq = True
