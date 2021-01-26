@@ -35,14 +35,23 @@ glob_ifnames = '/sys/class/net/({})*'.format('|'.join(interfaces))
 
 
 actions = {}
-def register (name):
+def register(name):
     """
-    decorator to register a function into actions with a name
-    it allows to use actions[name] to call the registered function
+    Decorator to register a function into actions with a name.
+    `actions[name]' can be used to call the registered functions.
+    We wrap each function in a SIGPIPE handler as all registered functions
+    can be subject to a broken pipe if there are a lot of interfaces.
     """
     def _register(function):
-        actions[name] = function
-        return function
+        def handled_function(*args, **kwargs):
+            try:
+                function(*args, **kwargs)
+            except BrokenPipeError:
+                # Flush output to /dev/null and bail out.
+                os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+                sys.exit(1)
+        actions[name] = handled_function
+        return handled_function
     return _register
 
 
