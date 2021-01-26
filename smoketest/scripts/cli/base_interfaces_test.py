@@ -402,12 +402,13 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
 
-        def test_dhcpv6_client_options(self):
+        def test_dhcpv6_clinet_options(self):
             if not self._test_ipv6_dhcpc6:
                 self.skipTest('not supported')
 
-            duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:10'
+            duid_base = 10
             for interface in self._interfaces:
+                duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
                     self.session.set(path + option.split())
@@ -417,10 +418,13 @@ class BasicInterfaceTest:
                 self.session.set(path + ['dhcpv6-options', 'rapid-commit'])
                 self.session.set(path + ['dhcpv6-options', 'parameters-only'])
                 self.session.set(path + ['dhcpv6-options', 'duid', duid])
+                duid_base += 1
 
             self.session.commit()
 
+            duid_base = 10
             for interface in self._interfaces:
+                duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
                 dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
                 self.assertIn(f'interface {interface} ' + '{', dhcpc6_config)
                 self.assertIn(f'  request domain-name-servers;', dhcpc6_config)
@@ -430,6 +434,7 @@ class BasicInterfaceTest:
                 self.assertIn(f'  send rapid-commit;', dhcpc6_config)
                 self.assertIn(f'  send client-id {duid};', dhcpc6_config)
                 self.assertIn('};', dhcpc6_config)
+                duid_base += 1
 
             # Check for running process
             self.assertTrue(process_named_running('dhcp6c'))
