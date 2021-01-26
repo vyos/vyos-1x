@@ -27,31 +27,29 @@ from vyos.util import cmd
 from vyos.util import read_file
 
 class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._test_ipv6 = True
-        self._test_ipv6_pd = True
-        self._test_vlan = True
-        self._test_qinq = True
-        self._base_path = ['interfaces', 'bridge']
-        self._mirror_interfaces = ['dum21354']
-        self._members = []
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._test_ipv6_pd = True
+        cls._test_vlan = True
+        cls._base_path = ['interfaces', 'bridge']
+        cls._mirror_interfaces = ['dum21354']
+        cls._members = []
 
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
-            self._members = os.environ['TEST_ETH'].split()
+            cls._members = os.environ['TEST_ETH'].split()
         else:
-            for tmp in Section.interfaces("ethernet"):
+            for tmp in Section.interfaces('ethernet'):
                 if not '.' in tmp:
-                    self._members.append(tmp)
+                    cls._members.append(tmp)
 
-        self._options['br0'] = []
-        for member in self._members:
-            self._options['br0'].append(f'member interface {member}')
-        self._interfaces = list(self._options)
-
-        super().setUp()
+        cls._options['br0'] = []
+        for member in cls._members:
+            cls._options['br0'].append(f'member interface {member}')
+        cls._interfaces = list(cls._options)
 
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority

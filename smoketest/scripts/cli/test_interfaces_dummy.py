@@ -19,10 +19,10 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 
 class DummyInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._base_path = ['interfaces', 'dummy']
-        self._interfaces = ['dum435', 'dum8677', 'dum0931', 'dum089']
-        super().setUp()
+    @classmethod
+    def setUpClass(cls):
+        cls._base_path = ['interfaces', 'dummy']
+        cls._interfaces = ['dum435', 'dum8677', 'dum0931', 'dum089']
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
