@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,13 +21,13 @@ from netifaces import interfaces
 
 from vyos.validate import is_intf_addr_assigned
 
+loopbacks = ['127.0.0.1', '::1']
+
 class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-         super().setUp()
-         # these addresses are never allowed to be removed from the system
-         self._loopback_addresses = ['127.0.0.1', '::1']
-         self._base_path = ['interfaces', 'loopback']
-         self._interfaces = ['lo']
+    @classmethod
+    def setUpClass(cls):
+         cls._base_path = ['interfaces', 'loopback']
+         cls._interfaces = ['lo']
 
     def tearDown(self):
         self.session.delete(self._base_path)
@@ -40,12 +40,12 @@ class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
-        for addr in self._loopback_addresses:
+        for addr in loopbacks:
             self.assertTrue(is_intf_addr_assigned('lo', addr))
 
     def test_add_multiple_ip_addresses(self):
         super().test_add_multiple_ip_addresses()
-        for addr in self._loopback_addresses:
+        for addr in loopbacks:
             self.assertTrue(is_intf_addr_assigned('lo', addr))
 
     def test_interface_disable(self):

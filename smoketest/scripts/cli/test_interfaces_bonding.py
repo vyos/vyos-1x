@@ -25,34 +25,32 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._test_ipv6 = True
-        self._test_ipv6_pd = True
-        self._test_ipv6_dhcpc6 = True
-        self._test_mtu = True
-        self._test_vlan = True
-        self._test_qinq = True
-        self._base_path = ['interfaces', 'bonding']
-        self._interfaces = ['bond0']
-        self._mirror_interfaces = ['dum21354']
-        self._members = []
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._test_ipv6_pd = True
+        cls._test_ipv6_dhcpc6 = True
+        cls._test_mtu = True
+        cls._test_vlan = True
+        cls._test_qinq = True
+        cls._base_path = ['interfaces', 'bonding']
+        cls._interfaces = ['bond0']
+        cls._mirror_interfaces = ['dum21354']
+        cls._members = []
 
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
-            self._members = os.environ['TEST_ETH'].split()
+            cls._members = os.environ['TEST_ETH'].split()
         else:
-            for tmp in Section.interfaces("ethernet"):
+            for tmp in Section.interfaces('ethernet'):
                 if not '.' in tmp:
-                    self._members.append(tmp)
+                    cls._members.append(tmp)
 
-        self._options['bond0'] = []
-        for member in self._members:
-            self._options['bond0'].append(f'member interface {member}')
-
-        super().setUp()
-
+        cls._options['bond0'] = []
+        for member in cls._members:
+            cls._options['bond0'].append(f'member interface {member}')
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()

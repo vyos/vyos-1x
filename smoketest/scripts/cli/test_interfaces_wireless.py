@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,10 +32,11 @@ def get_config_value(interface, key):
     return tmp[0]
 
 class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._base_path = ['interfaces', 'wireless']
-        self._options = {
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._base_path = ['interfaces', 'wireless']
+        cls._options = {
             'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
                        'type station', 'address 192.0.2.1/30'],
             'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1', 'country-code se',
@@ -45,8 +46,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3', 'country-code se',
                        'type access-point', 'address 192.0.2.13/30', 'channel 0'],
         }
-        self._interfaces = list(self._options)
-        super().setUp()
+        cls._interfaces = list(cls._options)
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,21 +19,21 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 
 class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._test_ipv6 = True
-        self._test_ipv6_pd = True
-        self._test_ipv6_dhcpc6 = True
-        self._test_mtu = True
-        self._test_vlan = True
-        self._test_qinq = True
-        self._base_path = ['interfaces', 'pseudo-ethernet']
-        self._options = {
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._test_ipv6_pd = True
+        cls._test_ipv6_dhcpc6 = True
+        cls._test_mtu = True
+        cls._test_vlan = True
+        cls._test_qinq = True
+        cls._base_path = ['interfaces', 'pseudo-ethernet']
+        cls._options = {
             'peth0': ['source-interface eth1'],
             'peth1': ['source-interface eth1'],
         }
-        self._interfaces = list(self._options)
-        super().setUp()
+        cls._interfaces = list(cls._options)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

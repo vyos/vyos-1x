@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -35,38 +35,31 @@ def get_wpa_supplicant_value(interface, key):
     return tmp[0]
 
 class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._test_ipv6 = True
-        self._test_ipv6_pd = True
-        self._test_ipv6_dhcpc6 = True
-        self._test_mtu = True
-        self._test_vlan = True
-        self._test_qinq = True
-        self._base_path = ['interfaces', 'ethernet']
-        self._mirror_interfaces = ['dum21354']
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._test_ipv6_pd = True
+        cls._test_ipv6_dhcpc6 = True
+        cls._test_mtu = True
+        cls._test_vlan = True
+        cls._test_qinq = True
+        cls._base_path = ['interfaces', 'ethernet']
+        cls._mirror_interfaces = ['dum21354']
 
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
         if 'TEST_ETH' in os.environ:
             tmp = os.environ['TEST_ETH'].split()
-            self._interfaces = tmp
+            cls._interfaces = tmp
         else:
-            for tmp in Section.interfaces("ethernet"):
+            for tmp in Section.interfaces('ethernet'):
                 if not '.' in tmp:
-                    self._interfaces.append(tmp)
+                    cls._interfaces.append(tmp)
 
-        self._macs = {}
-        for interface in self._interfaces:
-            try:
-                mac = self.session.show_config(self._base_path +
-                                               [interface, 'hw-id']).split()[1]
-            except:
-                # during initial system startup there is no hw-id node
-                mac = read_file(f'/sys/class/net/{interface}/address')
-            self._macs[interface] = mac
-
-        super().setUp()
+        cls._macs = {}
+        for interface in cls._interfaces:
+            cls._macs[interface] = read_file(f'/sys/class/net/{interface}/address')
 
 
     def tearDown(self):
@@ -102,8 +95,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Validate interface state
         for interface in self._interfaces:
-            with open(f'/sys/class/net/{interface}/flags', 'r') as f:
-                flags = f.read()
+            flags = read_file(f'/sys/class/net/{interface}/flags')
             self.assertEqual(int(flags, 16) & 1, 0)
 
     def test_offloading_rps(self):

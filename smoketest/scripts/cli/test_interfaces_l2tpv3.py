@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,11 +21,12 @@ from base_interfaces_test import BasicInterfaceTest
 from vyos.util import cmd
 
 class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._test_ipv6 = True
-        self._base_path = ['interfaces', 'l2tpv3']
-        self._options = {
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._base_path = ['interfaces', 'l2tpv3']
+        cls._options = {
             'l2tpeth10': ['local-ip 127.0.0.1', 'remote-ip 127.10.10.10',
                           'tunnel-id 100', 'peer-tunnel-id 10',
                           'session-id 100', 'peer-session-id 10',
@@ -35,8 +36,7 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
                           'session-id 20', 'tunnel-id 200',
                           'source-port 2020', 'destination-port 20202'],
         }
-        self._interfaces = list(self._options)
-        super().setUp()
+        cls._interfaces = list(cls._options)
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()

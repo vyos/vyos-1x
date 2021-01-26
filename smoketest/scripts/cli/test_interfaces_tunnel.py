@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -61,22 +61,22 @@ def tunnel_conf(interface):
     return json.loads(tmp)[0]
 
 class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-        self._test_ip = True
-        self._test_ipv6 = True
-        self._test_mtu = True
-        self._base_path = ['interfaces', 'tunnel']
-        self.local_v4 = '192.0.2.1'
-        self.local_v6 = '2001:db8::1'
-
-        self._options = {
-            'tun10': ['encapsulation ipip', 'remote-ip 192.0.2.10', 'local-ip ' + self.local_v4],
-            'tun20': ['encapsulation gre',  'remote-ip 192.0.2.20', 'local-ip ' + self.local_v4],
+    @classmethod
+    def setUpClass(cls):
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._test_mtu = True
+        cls._base_path = ['interfaces', 'tunnel']
+        cls.local_v4 = '192.0.2.1'
+        cls.local_v6 = '2001:db8::1'
+        cls._options = {
+            'tun10': ['encapsulation ipip', 'remote-ip 192.0.2.10', 'local-ip ' + cls.local_v4],
+            'tun20': ['encapsulation gre',  'remote-ip 192.0.2.20', 'local-ip ' + cls.local_v4],
         }
+        cls._interfaces = list(cls._options)
 
-        self._interfaces = list(self._options)
+    def setUp(self):
         super().setUp()
-
         self.session.set(['interfaces', 'dummy', source_if, 'address', self.local_v4 + '/32'])
         self.session.set(['interfaces', 'dummy', source_if, 'address', self.local_v6 + '/128'])
 

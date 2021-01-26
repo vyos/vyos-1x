@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -31,19 +31,19 @@ def get_config_value(interface, key):
     return tmp[0]
 
 class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
-    def setUp(self):
-         super().setUp()
-         self._test_ip = True
-         self._test_ipv6 = True
-         self._base_path = ['interfaces', 'macsec']
-         self._options = { 'macsec0': ['source-interface eth0', 'security cipher gcm-aes-128'] }
+    @classmethod
+    def setUpClass(cls):
+         cls._test_ip = True
+         cls._test_ipv6 = True
+         cls._base_path = ['interfaces', 'macsec']
+         cls._options = { 'macsec0': ['source-interface eth0', 'security cipher gcm-aes-128'] }
 
          # if we have a physical eth1 interface, add a second macsec instance
-         if 'eth1' in Section.interfaces("ethernet"):
+         if 'eth1' in Section.interfaces('ethernet'):
              macsec = { 'macsec1': [f'source-interface eth1', 'security cipher gcm-aes-128'] }
-             self._options.update(macsec)
+             cls._options.update(macsec)
 
-         self._interfaces = list(self._options)
+         cls._interfaces = list(cls._options)
 
     def test_macsec_encryption(self):
         # MACsec can be operating in authentication and encryption mode - both
