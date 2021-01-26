@@ -45,6 +45,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         self._test_qinq = True
         self._base_path = ['interfaces', 'ethernet']
         self._mirror_interfaces = ['dum21354']
+        self._interfaces = []
 
         # we need to filter out VLAN interfaces identified by a dot (.)
         # in their name - just in case!
