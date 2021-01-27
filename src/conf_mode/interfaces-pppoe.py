@@ -31,6 +31,13 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+config_pppoe = '/etc/ppp/peers/{ifname}'
+script_pppoe_pre_up = '/etc/ppp/ip-pre-up.d/1000-vyos-pppoe-{ifname}'
+script_pppoe_ip_up = '/etc/ppp/ip-up.d/1000-vyos-pppoe-{ifname}'
+script_pppoe_ip_down = '/etc/ppp/ip-down.d/1000-vyos-pppoe-{ifname}'
+script_pppoe_ipv6_up = '/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{ifname}'
+config_wide_dhcp6c = '/run/dhcp6c/dhcp6c.{ifname}.conf'
+
 def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -60,46 +67,23 @@ def verify(pppoe):
     return None
 
 def generate(pppoe):
-    # set up configuration file path variables where our templates will be
-    # rendered into
-    ifname = pppoe['ifname']
-    config_pppoe = f'/etc/ppp/peers/{ifname}'
-    script_pppoe_pre_up = f'/etc/ppp/ip-pre-up.d/1000-vyos-pppoe-{ifname}'
-    script_pppoe_ip_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{ifname}'
-    script_pppoe_ip_down = f'/etc/ppp/ip-down.d/1000-vyos-pppoe-{ifname}'
-    script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{ifname}'
-    config_wide_dhcp6c = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
-
-    config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
-                    script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
-
-    if 'deleted' in pppoe:
-        # stop DHCPv6-PD client
-        call(f'systemctl stop dhcp6c@{ifname}.service')
-        # Hang-up PPPoE connection
-        call(f'systemctl stop ppp@{ifname}.service')
-
-        # Delete PPP configuration files
-        for file in config_files:
-            if os.path.exists(file):
-                os.unlink(file)
-
+    if 'deleted' in pppoe or 'disable' in pppoe:
         return None
-
+    
     # Create PPP configuration files
-    render(config_pppoe, 'pppoe/peer.tmpl', pppoe, permission=0o755)
+    render(config_pppoe.format(**pppoe), 'pppoe/peer.tmpl', pppoe, permission=0o755)
 
     # Create script for ip-pre-up.d
-    render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl', pppoe,
+    render(script_pppoe_pre_up.format(**pppoe), 'pppoe/ip-pre-up.script.tmpl', pppoe,
            permission=0o755)
     # Create script for ip-up.d
-    render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl', pppoe,
+    render(script_pppoe_ip_up.format(**pppoe), 'pppoe/ip-up.script.tmpl', pppoe,
            permission=0o755)
     # Create script for ip-down.d
-    render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl', pppoe,
+    render(script_pppoe_ip_down.format(**pppoe), 'pppoe/ip-down.script.tmpl', pppoe,
            permission=0o755)
     # Create script for ipv6-up.d
-    render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl', pppoe,
+    render(script_pppoe_ipv6_up.format(**pppoe), 'pppoe/ipv6-up.script.tmpl', pppoe,
            permission=0o755)
 
     if 'dhcpv6_options' in pppoe and 'pd' in pppoe['dhcpv6_options']:
@@ -110,13 +94,24 @@ def generate(pppoe):
     return None
 
 def apply(pppoe):
-    if 'deleted' in pppoe:
-        # bail out early
-        return None
+    ifname = pppoe['ifname']
+    
+    config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
+                    script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
+    
+    if 'deleted' in pppoe or 'disable' in pppoe:
+        # stop DHCPv6-PD client
+        call(f'systemctl stop dhcp6c@{ifname}.service')
+        # Disable PPPoE connection
+        call(f'systemctl stop ppp@{ifname}.service')
 
-    if 'disable' not in pppoe:
+        # Delete PPP configuration files
+        for file in config_files:
+            if os.path.exists(file.format(**pppoe)):
+                os.unlink(file.format(**pppoe))
+    else:
         # Dial PPPoE connection
-        call('systemctl restart ppp@{ifname}.service'.format(**pppoe))
+        call(f'systemctl restart ppp@{ifname}.service')
 
     return None
 
