@@ -1109,9 +1109,10 @@ class Interface(Control):
             self.del_addr('dhcp')
 
         # always ensure DHCPv6 client is stopped (when not configured as client
-        # for IPv6 address or prefix delegation
+        # for IPv6 address or prefix delegation)
         dhcpv6pd = dict_search('dhcpv6_options.pd', config)
-        if 'dhcpv6' not in new_addr or dhcpv6pd == None:
+        dhcpv6pd = dhcpv6pd != None and len(dhcpv6pd) != 0
+        if 'dhcpv6' not in new_addr and not dhcpv6pd:
             self.del_addr('dhcpv6')
 
         # determine IP addresses which are assigned to the interface and build a
@@ -1131,7 +1132,7 @@ class Interface(Control):
             self.add_addr(addr)
 
         # start DHCPv6 client when only PD was configured
-        if dhcpv6pd != None:
+        if dhcpv6pd:
             self.set_dhcpv6(True)
 
         # There are some items in the configuration which can only be applied
