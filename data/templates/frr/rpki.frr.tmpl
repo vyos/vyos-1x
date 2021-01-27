@@ -1,0 +1,16 @@
+!
+rpki
+{% if cache is defined and cache is not none %}
+{%   for peer, peer_config in cache.items() %}
+{#     port is mandatory and preference uses a default value #}
+{%     if peer_config.ssh is defined and peer_config.ssh.username is defined and peer_config.ssh.username is not none %}
+ rpki cache {{ peer }} {{ peer_config.port }} {{ peer_config.ssh.username }} {{ peer_config.ssh.private_key_file }} {{ peer_config.ssh.public_key_file }} {{ peer_config.ssh.known_hosts_file }} preference {{ peer_config.preference }}
+{%     else %}
+ rpki cache {{ peer }} {{ peer_config.port }} preference {{ peer_config.preference }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+{% if polling_period is defined and polling_period is not none %}
+ rpki polling_period {{ polling_period }}
+{% endif %}
+!
