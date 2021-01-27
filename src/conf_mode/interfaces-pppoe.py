@@ -79,7 +79,7 @@ def generate(pppoe):
     config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
                     script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
 
-    if 'deleted' in pppoe:
+    if 'deleted' in pppoe or 'disable' in pppoe:
         # stop DHCPv6-PD client
         call(f'systemctl stop dhcp6c@{ifname}.service')
         # Hang-up PPPoE connection
@@ -116,13 +116,11 @@ def generate(pppoe):
     return None
 
 def apply(pppoe):
-    if 'deleted' in pppoe:
-        # bail out early
+    if 'deleted' in pppoe or 'disable' in pppoe:
+        call('systemctl stop ppp@{ifname}.service'.format(**pppoe))
         return None
 
-    if 'disable' not in pppoe:
-        # Dial PPPoE connection
-        call('systemctl restart ppp@{ifname}.service'.format(**pppoe))
+    call('systemctl restart ppp@{ifname}.service'.format(**pppoe))
 
     return None
 
