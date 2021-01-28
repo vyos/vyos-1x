@@ -97,6 +97,27 @@ class PPPoEInterfaceTest(unittest.TestCase):
 
             self.assertTrue(running)
 
+
+    def test_pppoe_clent_disabled_interface(self):
+        # Check if PPPoE Client can be disabled
+        for interface in self._interfaces:
+            self.session.set(base_path + [interface, 'authentication', 'user', 'vyos'])
+            self.session.set(base_path + [interface, 'authentication', 'password', 'vyos'])
+            self.session.set(base_path + [interface, 'source-interface', self._source_interface])
+            self.session.set(base_path + [interface, 'disable'])
+
+            self.session.commit()
+
+        # Validate PPPoE client process
+        running = False
+        for interface in self._interfaces:
+            for proc in process_iter():
+                if interface in proc.cmdline():
+                    running = True
+
+        self.assertFalse(running)
+
+
     def test_pppoe_dhcpv6pd(self):
         # Check if PPPoE dialer can be configured with DHCPv6-PD
         address = '1'
