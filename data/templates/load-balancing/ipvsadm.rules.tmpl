@@ -1,0 +1,26 @@
+{% if rule is defined %}
+-C
+{%   for rule, config in rule.items() if config.disable is not defined %}
+{%     if config.virtual_ip | is_ipv4 %}
+-A -t {{ config.virtual_ip }}:{{ config.virtual_port }} -s {{ config.algorithm }}
+{%     else %}
+-A -t [{{ config.virtual_ip }}]:{{ config.virtual_port }} -s {{ config.algorithm }}
+{%     endif  %}
+{%     if config.backend is defined  %}
+{%         for backend, backend_config in config.backend.items() if config.backend.disable is not defined %}
+{%           if config.virtual_ip | is_ipv4 %}
+{%               set rule_cmd = '-a -t ' + config.virtual_ip + ':' + config.virtual_port + ' -r ' + backend_config.backend_ip + ':' + config.virtual_port  %}
+{%           else   %}
+{%               set rule_cmd = '-a -t [' + config.virtual_ip + ']:' + config.virtual_port + ' -r [' + backend_config.backend_ip + ']:' + config.virtual_port  %}
+{%           endif  %}
+{%           if config.mode == 'dr' %}
+{{ rule_cmd }} -g
+{%           elif config.mode == 'tun' %}
+{{ rule_cmd }} -i
+{%           elif config.mode == 'nat' %}
+{{ rule_cmd }} -m
+{%           endif   %}
+{%         endfor  %}
+{%     endif  %}
+{%   endfor  %}
+{% endif %}
