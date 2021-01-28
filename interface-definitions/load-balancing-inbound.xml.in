@@ -1,0 +1,195 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="load-balancing">
+    <properties>
+      <help>Configure load-balancing</help>
+      <priority>900</priority>
+    </properties>
+    <children>
+      <node name="inbound" owner="${vyos_conf_scripts_dir}/load-balancing-inbound.py">
+        <properties>
+          <help>Load balancing of inbound servers</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Backend server load balancing rules</help>
+              <valueHelp>
+                <format>0-65535</format>
+                <description>Number for this rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-65535"/>
+              </constraint>
+              <constraintErrorMessage>Back-end server load balancing rule numbers are not between 0 and 65535</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable load balancing rules</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="virtual-ip">
+                <properties>
+                  <help>Virtual server IP</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 VIP for the virtual server</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 VIP for the virtual server</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="virtual-port">
+                <properties>
+                  <help>Virtual server Port</help>
+                  <valueHelp>
+                    <format>0-65535</format>
+                    <description>The port number of the virtual server</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>The port number of the virtual server must be between 0 and 65535</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="mode">
+                <properties>
+                  <help>Execute load balancing operation mode</help>
+                  <completionHelp>
+                    <list>dr tun nat</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>dr</format>
+                    <description>Direct Routing mode</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tun</format>
+                    <description>Tunnel mode(IPIP Tunnel)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>nat</format>
+                    <description>NAT mode</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(dr|tun|nat)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Operation mode must be dr, tun, or nat</constraintErrorMessage>
+                </properties>
+                <defaultValue>dr</defaultValue>
+              </leafNode>
+              <leafNode name="algorithm">
+                <properties>
+                  <help>Specify a load balancing algorithm</help>
+                  <completionHelp>
+                    <list>rr wrr lc wlc lblc lblcr dh sh sed nq fo ovf mh</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>rr</format>
+                    <description>Round Robin</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>wrr</format>
+                    <description>Weighted Round Robin</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>lc</format>
+                    <description>Least-Connection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>wlc</format>
+                    <description>Weighted Least-Connection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>lblc</format>
+                    <description>Locality-Based Least-Connection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>lblcr</format>
+                    <description>Locality-Based Least-Connection with Replication</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh</format>
+                    <description>Destination Hashing</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sh</format>
+                    <description>Source  Hashing</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sed</format>
+                    <description>Shortest Expected Delay</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>nq</format>
+                    <description>Never Queue</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>fo</format>
+                    <description>Weighted Failover</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ovf</format>
+                    <description>Weighted Overflow</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mh</format>
+                    <description>Maglev Hashing</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(rr|wrr|lc|wlc|lblc|lblcr|dh|sh|sed|nq|fo|ovf|mh)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Load balancing algorithms must be rr, wrr, lc, wlc, lblc, lblcr, dh, sh, sed, nq, fo, ovf, or mh</constraintErrorMessage>
+                </properties>
+                <defaultValue>rr</defaultValue>
+              </leafNode>
+              <tagNode name="backend">
+                <properties>
+                  <help>Back-end server</help>
+                  <valueHelp>
+                    <format>0-65535</format>
+                    <description>Backend servers are numbered sequentially</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>The back-end server sequence number must be between 0 and 65535</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable load balancing back-end server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="backend-ip">
+                    <properties>
+                      <help>Back-end server IP</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>The IPv4 IP address of the back-end server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>The IPv6 address of the back-end server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
