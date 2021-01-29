@@ -2,14 +2,30 @@
 <interfaceDefinition>
   <node name="generate">
     <properties>
-      <help>Generate an object</help>
+      <help>Generate an object/key</help>
     </properties>
     <children>
-      <node name="ssh-server-key">
+      <node name="ssh">
         <properties>
-          <help>Regenerate the host SSH keys and restart the SSH server</help>
+          <help>Generate SSH related keypairs</help>
         </properties>
-        <command>${vyos_op_scripts_dir}/generate_ssh_server_key.py</command>
+        <children>
+          <node name="server-key">
+            <properties>
+              <help>Re-generate SSH host keys and restart SSH server</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/generate_ssh_server_key.py</command>
+          </node>
+          <tagNode name="client-key">
+            <properties>
+              <help>Re-generate SSH client keypair</help>
+              <completionHelp>
+                <list>&lt;filename&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>ssh-keygen -t rsa -f "$4" -N ""</command>
+          </tagNode>
+        </children>
       </node>
     </children>
   </node>

@@ -625,27 +625,27 @@ if __name__ == '__main__':
         # Generate mandatory SSL certificate
         tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
               f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
-        print(cmd(tmp))
+        cmd(tmp)
 
     if not os.path.isfile(ca_cert):
         # Generate "CA"
         tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} -subj {subject}'
-        print(cmd(tmp))
+        cmd(tmp)
 
     if not os.path.isfile(dh_pem):
         # Generate "DH" key
         tmp = f'openssl dhparam -out {dh_pem} 2048'
-        print(cmd(tmp))
+        cmd(tmp)
 
     if not os.path.isfile(s2s_key):
         # Generate site-2-site key
         tmp = f'openvpn --genkey --secret {s2s_key}'
-        print(cmd(tmp))
+        cmd(tmp)
 
     if not os.path.isfile(auth_key):
         # Generate TLS auth key
         tmp = f'openvpn --genkey --secret {auth_key}'
-        print(cmd(tmp))
+        cmd(tmp)
 
     for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
         cmd(f'sudo chown openvpn:openvpn {file}')

@@ -122,6 +122,9 @@ class TestProtocolsBGP(unittest.TestCase):
         self.session.commit()
         del self.session
 
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
     def verify_frr_config(self, peer, peer_config, frrconfig):
         # recurring patterns to verify for both a simple neighbor and a peer-group
         if 'cap_dynamic' in peer_config:
@@ -182,8 +185,6 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
         self.assertIn(f' no bgp default ipv4-unicast', frrconfig)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_bgp_02_neighbors(self):
         # Test out individual neighbor configuration items, not all of them are
@@ -418,40 +419,6 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f' bgp listen limit {limit}', frrconfig)
         for prefix in listen_ranges:
             self.assertIn(f' bgp listen range {prefix} peer-group {peer_group}', frrconfig)
-
-
-    def test_bgp_07_rpki(self):
-        rpki_path = ['protocols', 'rpki']
-        init_tmo = '50'
-        polling = '400'
-        preference = '100'
-        timeout = '900'
-
-        cache = {
-            'foo' : { 'address' : '1.1.1.1', 'port' : '8080' },
-# T3253 only one peer supported
-#           'bar' : { 'address' : '2.2.2.2', 'port' : '9090' },
-        }
-
-        self.session.set(rpki_path + ['polling-period', polling])
-        self.session.set(rpki_path + ['preference', preference])
-
-        for name, config in cache.items():
-            self.session.set(rpki_path + ['cache', name, 'address', config['address']])
-            self.session.set(rpki_path + ['cache', name, 'port', config['port']])
-
-        # commit changes
-        self.session.commit()
-
-        # Verify FRR bgpd configuration
-        frrconfig = getFRRRPKIconfig()
-        self.assertIn(f'rpki polling_period {polling}', frrconfig)
-
-        for name, config in cache.items():
-            self.assertIn('rpki cache {address} {port} preference 1'.format(**config), frrconfig)
-
-        self.session.delete(rpki_path)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
