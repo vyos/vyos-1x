@@ -61,6 +61,7 @@
         #include <include/interface-vrf.xml.i>
       </children>
     </tagNode>
+    #include <include/interface-vrf.xml.i>
   </children>
 </tagNode>
 <!-- included end -->
