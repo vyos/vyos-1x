@@ -217,17 +217,17 @@ def verify_vlan_config(config):
         verify_vrf(vlan)
 
     # 802.1ad (Q-in-Q) VLANs
-    for vlan in config.get('vif_s', {}):
-        vlan = config['vif_s'][vlan]
-        verify_dhcpv6(vlan)
-        verify_address(vlan)
-        verify_vrf(vlan)
+    for s_vlan in config.get('vif_s', {}):
+        s_vlan = config['vif_s'][s_vlan]
+        verify_dhcpv6(s_vlan)
+        verify_address(s_vlan)
+        verify_vrf(s_vlan)
 
-        for vlan in config.get('vif_s', {}).get('vif_c', {}):
-            vlan = config['vif_c'][vlan]
-            verify_dhcpv6(vlan)
-            verify_address(vlan)
-            verify_vrf(vlan)
+        for c_vlan in s_vlan.get('vif_c', {}):
+            c_vlan = s_vlan['vif_c'][c_vlan]
+            verify_dhcpv6(c_vlan)
+            verify_address(c_vlan)
+            verify_vrf(c_vlan)
 
 def verify_accel_ppp_base_service(config):
     """
