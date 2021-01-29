@@ -91,10 +91,6 @@ def verify(rpki):
     return None
 
 def generate(rpki):
-    if not rpki:
-        rpki['new_frr_config'] = ''
-        return None
-
     # render(config) not needed, its only for debug
     render(config_file, 'frr/rpki.frr.tmpl', rpki)
     rpki['new_frr_config'] = render_to_string('frr/rpki.frr.tmpl', rpki)

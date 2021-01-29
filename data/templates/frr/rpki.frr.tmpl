@@ -1,4 +1,5 @@
 !
+{# as FRR does not support deleting the entire rpki section we leave it in place even when it's empty #}
 rpki
 {% if cache is defined and cache is not none %}
 {%   for peer, peer_config in cache.items() %}
