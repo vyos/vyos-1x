@@ -61,9 +61,6 @@ def get_config(config=None):
     return rpki
 
 def verify(rpki):
-    import pprint
-    pprint.pprint(rpki)
-
     if not rpki:
         return None
 
@@ -133,7 +130,6 @@ def apply(rpki):
         for a in range(5):
             frr_cfg.commit_configuration(frr_daemon)
 
-    raise ConfigError("sadf")
     return None
 
 if __name__ == '__main__':
