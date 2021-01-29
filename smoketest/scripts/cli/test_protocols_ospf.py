@@ -30,6 +30,9 @@ route_map = 'foo-bar-baz10'
 def getFRROSPFconfig():
     return cmd('vtysh -c "show run" | sed -n "/router ospf/,/^!/p"')
 
+def getFRRInterfaceConfig(interface):
+    return cmd(f'vtysh -c "show run" | sed -n "/^interface {interface}$/,/^!/p"')
+
 class TestProtocolsOSPF(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
@@ -260,6 +263,37 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
         for network in networks:
             self.assertIn(f' network {network} area {area}', frrconfig)
+
+    def test_ospf_10_interface_configureation(self):
+        interfaces = Section.interfaces('ethernet')
+        password = 'vyos1234'
+        bandwidth = '10000'
+        cost = '150'
+        network = 'point-to-point'
+        priority = '200'
+
+        for interface in interfaces:
+            self.session.set(base_path + ['interface', interface, 'authentication', 'plaintext-password', password])
+            self.session.set(base_path + ['interface', interface, 'bandwidth', bandwidth])
+            self.session.set(base_path + ['interface', interface, 'bfd'])
+            self.session.set(base_path + ['interface', interface, 'cost', cost])
+            self.session.set(base_path + ['interface', interface, 'mtu-ignore'])
+            self.session.set(base_path + ['interface', interface, 'network', network])
+            self.session.set(base_path + ['interface', interface, 'priority', priority])
+
+        # commit changes
+        self.session.commit()
+
+        for interface in interfaces:
+            config = getFRRInterfaceConfig(interface)
+            self.assertIn(f'interface {interface}', config)
+            self.assertIn(f' ip ospf authentication-key {password}', config)
+            self.assertIn(f' ip ospf bfd', config)
+            self.assertIn(f' ip ospf cost {cost}', config)
+            self.assertIn(f' ip ospf mtu-ignore', config)
+            self.assertIn(f' ip ospf network {network}', config)
+            self.assertIn(f' ip ospf priority {priority}', config)
+            self.assertIn(f' bandwidth {bandwidth}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
