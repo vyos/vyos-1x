@@ -21,6 +21,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
@@ -76,6 +77,7 @@ def get_config(config=None):
     # clean them out and add them manually :(
     del default_values['neighbor']
     del default_values['area']['virtual_link']
+    del default_values['interface']
 
     # merge in remaining default values
     ospf = dict_merge(default_values, ospf)
@@ -94,6 +96,12 @@ def get_config(config=None):
                     ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
                         default_values, ospf['area'][area]['virtual_link'][virtual_link])
 
+    if 'interface' in ospf:
+        default_values = defaults(base + ['interface'])
+        for interface in ospf['interface']:
+            ospf['interface'][interface] = dict_merge(default_values,
+                ospf['interface'][interface])
+
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify()
     base = ['policy']
@@ -108,6 +116,11 @@ def verify(ospf):
         return None
 
     verify_route_maps(ospf)
+
+    if 'interface' in ospf:
+        for interface in ospf['interface']:
+            verify_interface_exists(interface)
+
     return None
 
 def generate(ospf):

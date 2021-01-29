@@ -275,101 +275,8 @@
                   </constraint>
                 </properties>
                 <children>
-                  <node name="authentication">
-                    <properties>
-                      <help>Authentication</help>
-                    </properties>
-                    <children>
-                      <node name="md5">
-                        <properties>
-                          <help>MD5 key id</help>
-                        </properties>
-                        <children>
-                          <tagNode name="key-id">
-                            <properties>
-                              <help>MD5 key id</help>
-                              <valueHelp>
-                                <format>u32:1-255</format>
-                                <description>MD5 key id</description>
-                              </valueHelp>
-                            </properties>
-                            <children>
-                              <leafNode name="md5-key">
-                                <properties>
-                                  <help>MD5 authentication type</help>
-                                  <valueHelp>
-                                    <format>txt</format>
-                                    <description>MD5 Key (16 characters or less)</description>
-                                  </valueHelp>
-                                </properties>
-                              </leafNode>
-                            </children>
-                          </tagNode>
-                        </children>
-                      </node>
-                      <leafNode name="plaintext-password">
-                        <properties>
-                          <help>Plain text password</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Plain text password (8 characters or less)</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
-                  <leafNode name="dead-interval">
-                    <properties>
-                      <help>Interval after which a neighbor is declared dead (default: 40)</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Neighbor dead interval (seconds)</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>40</defaultValue>
-                  </leafNode>
-                  <leafNode name="hello-interval">
-                    <properties>
-                      <help>Interval between hello packets (default: 10)</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Hello interval (seconds)</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>10</defaultValue>
-                  </leafNode>
-                  <leafNode name="retransmit-interval">
-                    <properties>
-                      <help>Interval between retransmitting lost link state advertisements (default: 5)</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Retransmit interval (seconds)</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>5</defaultValue>
-                  </leafNode>
-                  <leafNode name="transmit-delay">
-                    <properties>
-                      <help>Link state transmit delay (default: 1)</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Link state transmit delay (seconds)</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>1</defaultValue>
-                  </leafNode>
+                  #include <include/ospf-authentication.xml.i>
+                  #include <include/ospf-intervals.xml.i>
                 </children>
               </tagNode>
             </children>
@@ -491,6 +398,95 @@
               </node>
             </children>
           </node>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface related configuration</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              #include <include/ospf-authentication.xml.i>
+              #include <include/ospf-intervals.xml.i>
+              <leafNode name="bandwidth">
+                <properties>
+                  <help>Bandwidth of interface (Megabit/sec)</help>
+                  <valueHelp>
+                    <format>u32:1-100000</format>
+                    <description>Bandwidth in Megabit/sec (for calculating OSPF cost)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-100000"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="bfd">
+                <properties>
+                  <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="cost">
+                <properties>
+                  <help>Interface cost</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>OSPF interface cost</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="mtu-ignore">
+                <properties>
+                  <help>Disable Maximum Transmission Unit (MTU) mismatch detection</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="network">
+                <properties>
+                  <help>Network type</help>
+                  <completionHelp>
+                    <list>broadcast non-broadcast point-to-multipoint point-to-point</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>broadcast</format>
+                    <description>Broadcast network type</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>non-broadcast</format>
+                    <description>Non-broadcast network type</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>point-to-multipoint</format>
+                    <description>Point-to-multipoint network type</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>point-to-point</format>
+                    <description>Point-to-point network type</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(broadcast|non-broadcast|point-to-multipoint|point-to-point)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Must be broadcast, non-broadcast, point-to-multipoint or point-to-point</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="priority">
+                <properties>
+                  <help>Router priority (default: 1)</help>
+                  <valueHelp>
+                    <format>u32:0-255</format>
+                    <description>OSPF router priority cost</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-255"/>
+                  </constraint>
+                </properties>
+                <defaultValue>1</defaultValue>
+              </leafNode>
+            </children>
+          </tagNode>
           <node name="log-adjacency-changes">
             <properties>
               <help>Log changes in adjacency state</help>

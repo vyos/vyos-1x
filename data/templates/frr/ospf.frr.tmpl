@@ -1,4 +1,44 @@
 !
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%     if iface_config.authentication is defined and iface_config.authentication is not none %}
+{%       if iface_config.authentication.plaintext_password is defined and iface_config.authentication.plaintext_password is not none %}
+ ip ospf authentication-key {{ iface_config.authentication.plaintext_password }}
+{%       elif iface_config.authentication.md5 is defined %}
+ ip ospf authentication message-digest
+{%         if iface_config.authentication.md5.key_id is defined and iface_config.authentication.md5.key_id is not none %}
+{%           for key, key_config in iface_config.authentication.md5.key_id.items() %}
+ ip ospf message-digest-key {{ key }} md5 {{ key_config.md5_key }}
+{%           endfor %}
+{%         endif %}
+{%       endif %}
+{%     endif %}
+{#     interval configurations all have default values #}
+{%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
+ ip ospf hello-interval {{ iface_config.hello_interval }}
+{%     endif %}
+{%     if iface_config.retransmit_interval is defined and iface_config.retransmit_interval is not none %}
+ ip ospf retransmit-interval {{ iface_config.retransmit_interval }}
+{%     endif %}
+{%     if iface_config.transmit_delay is defined and iface_config.transmit_delay is not none %}
+ ip ospf transmit-delay {{ iface_config.transmit_delay }}
+{%     endif %}
+{%     if iface_config.dead_interval is defined and iface_config.dead_interval is not none %}
+ ip ospf dead-interval {{ iface_config.dead_interval }}
+{%     endif %}
+{%     if iface_config.bfd is defined %}
+ ip ospf bfd
+{%     endif %}
+{%     if iface_config.mtu_ignore is defined %}
+ ip ospf mtu-ignore
+{%     endif %}
+{%     if iface_config.network is defined and iface_config.network is not none %}
+ ip ospf network {{ iface_config.network }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
 router ospf
 {% if access_list is defined and access_list is not none %}
 {%   for acl, acl_config in access_list.items() %}
@@ -50,10 +90,8 @@ router ospf
 {%             endfor %}
 {%           endif %}
 {%         endif %}
-{%         if link_config.dead_interval is defined and link_config.dead_interval is not none %}
-{#           The following values are default values #}
- area {{ area_id }} virtual-link {{ link }} hello-interval {{ link_config.hello_interval }} retransmit-interval {{ link_config.retransmit_interval }} transmit-delay {{ link_config.retransmit_interval }} dead-interval {{ link_config.dead_interval }}
-{%         endif %}
+{#         The following values are default values #}
+ area {{ area_id }} virtual-link {{ link }} hello-interval {{ link_config.hello_interval }} retransmit-interval {{ link_config.retransmit_interval }} transmit-delay {{ link_config.transmit_delay }} dead-interval {{ link_config.dead_interval }}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}

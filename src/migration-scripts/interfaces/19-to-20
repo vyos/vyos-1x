@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import exit, argv
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+
+    #
+    # Migrate "interface ethernet eth0 ip ospf" to "protocols ospf interface eth0"
+    #
+    for type in config.list_nodes(['interfaces']):
+        for interface in config.list_nodes(['interfaces', type]):
+
+            ip_ospf = ['interfaces', type, interface, 'ip', 'ospf']
+            if config.exists(ip_ospf):
+                config.set(['protocols', 'ospf', 'interface'])
+                config.set_tag(['protocols', 'ospf', 'interface'])
+                config.copy(ip_ospf, ['protocols', 'ospf', 'interface', interface])
+                config.delete(ip_ospf)
+
+            vif_path = ['interfaces', type, interface, 'vif']
+            if config.exists(vif_path):
+                for vif in config.list_nodes(vif_path):
+                    vif_ospf_path = vif_path + [vif, 'ip', 'ospf']
+                    if config.exists(vif_ospf_path):
+                        config.set(['protocols', 'ospf', 'interface'])
+                        config.set_tag(['protocols', 'ospf', 'interface'])
+                        config.copy(vif_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif}'])
+                        config.delete(vif_ospf_path)
+
+            vif_s_path = ['interfaces', type, interface, 'vif-s']
+            if config.exists(vif_s_path):
+                for vif_s in config.list_nodes(vif_s_path):
+                    vif_s_ospf_path = vif_s_path + [vif_s, 'ip', 'ospf']
+                    if config.exists(vif_s_ospf_path):
+                        config.set(['protocols', 'ospf', 'interface'])
+                        config.set_tag(['protocols', 'ospf', 'interface'])
+                        config.copy(vif_s_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif_s}'])
+
+                        vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
+                        if config.exists(vif_c_path):
+                            for vif_c in config.list_nodes(vif_c_path):
+                                vif_c_ospf_path = vif_c_path + [vif_c, 'ip', 'ospf']
+                                print(vif_c_ospf_path)
+                                if config.exists(vif_c_ospf_path):
+                                    config.set(['protocols', 'ospf', 'interface'])
+                                    config.set_tag(['protocols', 'ospf', 'interface'])
+                                    config.copy(vif_c_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif_s}.{vif_c}'])
+                                    config.delete(vif_c_ospf_path)
+
+                        config.delete(vif_s_ospf_path)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)
+
