@@ -232,24 +232,8 @@ class TestProtocolsOSPF(unittest.TestCase):
             else:
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
-
-    def test_ospf_09_area(self):
-        area = '0'
+    def test_ospf_09_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
-        for network in networks:
-            self.session.set(base_path + ['area', area, 'network', network])
-
-        # commit changes
-        self.session.commit()
-
-        # Verify FRR ospfd configuration
-        frrconfig = getFRROSPFconfig()
-        self.assertIn(f'router ospf', frrconfig)
-        for network in networks:
-            self.assertIn(f' network {network} area {area}', frrconfig)
-
-
-    def test_ospf_10_virtual_link(self):
         area = '10'
         shortcut = 'enable'
         virtual_link = '192.0.2.1'
@@ -263,6 +247,8 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'retransmit-interval', retransmit])
         self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'transmit-delay', transmit])
         self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'dead-interval', dead])
+        for network in networks:
+            self.session.set(base_path + ['area', area, 'network', network])
 
         # commit changes
         self.session.commit()
@@ -272,6 +258,8 @@ class TestProtocolsOSPF(unittest.TestCase):
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} shortcut {shortcut}', frrconfig)
         self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
+        for network in networks:
+            self.assertIn(f' network {network} area {area}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
