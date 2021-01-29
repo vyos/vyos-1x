@@ -14,7 +14,12 @@ interface {{ iface }}
 {%         endif %}
 {%       endif %}
 {%     endif %}
-{#     interval configurations all have default values #}
+{%     if iface_config.cost is defined and iface_config.cost is not none %}
+ ip ospf cost {{ iface_config.cost }}
+{%     endif %}
+{%     if iface_config.priority is defined and iface_config.priority is not none %}
+ ip ospf priority {{ iface_config.priority }}
+{%     endif %}
 {%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
  ip ospf hello-interval {{ iface_config.hello_interval }}
 {%     endif %}
@@ -35,6 +40,9 @@ interface {{ iface }}
 {%     endif %}
 {%     if iface_config.network is defined and iface_config.network is not none %}
  ip ospf network {{ iface_config.network }}
+{%     endif %}
+{%     if iface_config.bandwidth is defined and iface_config.bandwidth is not none %}
+ bandwidth {{ iface_config.bandwidth }}
 {%     endif %}
 {%   endfor %}
 {% endif %}
