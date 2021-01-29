@@ -64,7 +64,6 @@ if __name__ == '__main__':
                         if config.exists(vif_c_path):
                             for vif_c in config.list_nodes(vif_c_path):
                                 vif_c_ospf_path = vif_c_path + [vif_c, 'ip', 'ospf']
-                                print(vif_c_ospf_path)
                                 if config.exists(vif_c_ospf_path):
                                     config.set(['protocols', 'ospf', 'interface'])
                                     config.set_tag(['protocols', 'ospf', 'interface'])
