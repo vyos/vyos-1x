@@ -59,6 +59,7 @@ class BasicInterfaceTest:
         _test_qinq = False
         _test_ipv6 = False
         _test_ipv6_pd = False
+        _test_ipv6_dhcpc6 = False
         _test_mirror = False
         _base_path = []
 
@@ -401,6 +402,42 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
 
+        def test_dhcpv6_client_options(self):
+            if not self._test_ipv6_dhcpc6:
+                self.skipTest('not supported')
+
+            duid_base = 10
+            for interface in self._interfaces:
+                duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
+                path = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(path + option.split())
+
+                # Enable DHCPv6 client
+                self.session.set(path + ['address', 'dhcpv6'])
+                self.session.set(path + ['dhcpv6-options', 'rapid-commit'])
+                self.session.set(path + ['dhcpv6-options', 'parameters-only'])
+                self.session.set(path + ['dhcpv6-options', 'duid', duid])
+                duid_base += 1
+
+            self.session.commit()
+
+            duid_base = 10
+            for interface in self._interfaces:
+                duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
+                dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
+                self.assertIn(f'interface {interface} ' + '{', dhcpc6_config)
+                self.assertIn(f'  request domain-name-servers;', dhcpc6_config)
+                self.assertIn(f'  request domain-name;', dhcpc6_config)
+                self.assertIn(f'  information-only;', dhcpc6_config)
+                self.assertIn(f'  send ia-na 0;', dhcpc6_config)
+                self.assertIn(f'  send rapid-commit;', dhcpc6_config)
+                self.assertIn(f'  send client-id {duid};', dhcpc6_config)
+                self.assertIn('};', dhcpc6_config)
+                duid_base += 1
+
+            # Check for running process
+            self.assertTrue(process_named_running('dhcp6c'))
 
         def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6_pd:

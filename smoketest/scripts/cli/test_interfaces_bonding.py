@@ -30,6 +30,7 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True
+        cls._test_ipv6_dhcpc6 = True
         cls._test_mtu = True
         cls._test_vlan = True
         cls._test_qinq = True

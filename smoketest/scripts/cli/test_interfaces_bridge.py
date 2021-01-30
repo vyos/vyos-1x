@@ -32,6 +32,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True
+        cls._test_ipv6_dhcpc6 = True
         cls._test_vlan = True
         cls._base_path = ['interfaces', 'bridge']
         cls._mirror_interfaces = ['dum21354']
