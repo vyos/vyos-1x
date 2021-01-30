@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - T3037, BGP address-family ipv6-unicast capability dynamic does not exist in
+#   FRR, there is only a base, per neighbor dynamic capability, migrate config
+
+import sys
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 2):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['protocols', 'bgp']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+
+# Check if BGP is actually configured and obtain the ASN
+asn_list = config.list_nodes(base)
+if asn_list:
+    # There's always just one BGP node, if any
+    bgp_base = base + [asn_list[0]]
+
+    for neighbor_type in ['neighbor', 'peer-group']:
+        if not config.exists(bgp_base + [neighbor_type]):
+            continue
+        for neighbor in config.list_nodes(bgp_base + [neighbor_type]):
+            cap_dynamic = False
+            for afi in ['ipv4-unicast', 'ipv6-unicast']:
+                afi_path = bgp_base + [neighbor_type, neighbor, 'address-family', afi, 'capability', 'dynamic']
+                if config.exists(afi_path):
+                    cap_dynamic = True
+                    config.delete(afi_path)
+
+                    # We have now successfully migrated the address-family specific
+                    # dynamic capability to the neighbor/peer-group level. If this
+                    # has been the only option under the address-family nodes, we
+                    # can clean them up by checking if no other nodes are left under
+                    # that tree and if so, delete the parent.
+                    #
+                    # We walk from the most inner node to the most outer one.
+                    cleanup = -1
+                    while len(config.list_nodes(afi_path[:cleanup])) == 0:
+                        config.delete(afi_path[:cleanup])
+                        cleanup -= 1
+
+            if cap_dynamic:
+                config.set(bgp_base + [neighbor_type, neighbor, 'capability', 'dynamic'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)
