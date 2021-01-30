@@ -23,10 +23,12 @@ if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then
     VRF_NAME="vrf ${VRF_NAME}"
 fi
 
-# Always delete default route when interface goes down
+{%   if default_route != 'none' %}
+# Always delete default route when interface goes down if we installed it
 vtysh -c "conf t" ${VRF_NAME} -c "no ip route 0.0.0.0/0 {{ ifname }} ${VRF_NAME}"
-{%   if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
+{%      if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
 vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
+{%      endif %}
 {%   endif %}
 {% endif %}
 
