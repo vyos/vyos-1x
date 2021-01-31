@@ -554,16 +554,19 @@ def ask_yes_no(question, default=False) -> bool:
     from sys import stdout
     default_msg = "[Y/n]" if default else "[y/N]"
     while True:
-        stdout.write("%s %s " % (question, default_msg))
-        c = input().lower()
-        if c == '':
-            return default
-        elif c in ("y", "ye", "yes"):
-            return True
-        elif c in ("n", "no"):
-            return False
-        else:
-            stdout.write("Please respond with yes/y or no/n\n")
+        try:
+            stdout.write("%s %s " % (question, default_msg))
+            c = input().lower()
+            if c == '':
+                return default
+            elif c in ("y", "ye", "yes"):
+                return True
+            elif c in ("n", "no"):
+                return False
+            else:
+                stdout.write("Please respond with yes/y or no/n\n")
+        except EOFError:
+            stdout.write("\nPlease respond with yes/y or no/n\n")
 
 
 def is_admin() -> bool:
