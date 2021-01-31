@@ -21,7 +21,8 @@ from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
-from vyos.validate import is_addr_assigned,is_loopback_addr
+from vyos.validate import is_addr_assigned
+from vyos.validate import is_loopback_addr
 from vyos.version import get_version_data
 from vyos import ConfigError
 from vyos.util import call
@@ -237,8 +238,10 @@ def apply(lldp):
     else:
         # LLDP service has been terminated
         call('systemctl stop lldpd.service')
-        os.unlink(config_file)
-        os.unlink(vyos_config_file)
+        if os.path.isfile(config_file):
+            os.unlink(config_file)
+        if os.path.isfile(vyos_config_file):
+            os.unlink(vyos_config_file)
 
 if __name__ == '__main__':
     try:
