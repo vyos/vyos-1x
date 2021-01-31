@@ -21,14 +21,29 @@ from netifaces import interfaces
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 from vyos.util import read_file
 from vyos.validate import is_intf_addr_assigned
-from vyos.ifconfig import Interface
 
 base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
 
 class VRFTest(unittest.TestCase):
+    _interfaces = []
+
+    @classmethod
+    def setUpClass(cls):
+        # we need to filter out VLAN interfaces identified by a dot (.)
+        # in their name - just in case!
+        if 'TEST_ETH' in os.environ:
+            tmp = os.environ['TEST_ETH'].split()
+            cls._interfaces = tmp
+        else:
+            for tmp in Section.interfaces('ethernet'):
+                if not '.' in tmp:
+                    cls._interfaces.append(tmp)
+
     def setUp(self):
         self.session = ConfigSession(os.getpid())
 
@@ -119,6 +134,27 @@ class VRFTest(unittest.TestCase):
         # check validate() - table ID can not be altered!
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
+
+    def test_vrf_assign_interface(self):
+        vrf = vrfs[0]
+        table = '5000'
+        self.session.set(['vrf', 'name', vrf, 'table', table])
+
+        for interface in self._interfaces:
+            section = Section.section(interface)
+            self.session.set(['interfaces', section, interface, 'vrf', vrf])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify & cleanup
+        for interface in self._interfaces:
+            # os.readlink resolves to: '../../../../../virtual/net/foovrf'
+            tmp = os.readlink(f'/sys/class/net/{interface}/master').split('/')[-1]
+            self.assertEqual(tmp, vrf)
+            # cleanup
+            section = Section.section(interface)
+            self.session.delete(['interfaces', section, interface, 'vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=True)
