@@ -1,0 +1,707 @@
+firewall {
+    all-ping enable
+    broadcast-ping disable
+    config-trap disable
+    ipv6-receive-redirects disable
+    ipv6-src-route disable
+    ip-src-route disable
+    log-martians enable
+    options {
+        interface vtun0 {
+            adjust-mss 1380
+        }
+        interface vtun1 {
+            adjust-mss 1380
+        }
+        interface vtun2 {
+            adjust-mss 1380
+        }
+        interface wg0 {
+            adjust-mss 1380
+        }
+        interface wg1 {
+            adjust-mss 1380
+        }
+    }
+    receive-redirects disable
+    send-redirects enable
+    source-validation disable
+    syn-cookies disable
+    twa-hazards-protection enable
+}
+high-availability {
+    vrrp {
+        group LAN {
+            hello-source-address 192.168.0.250
+            interface eth1
+            peer-address 192.168.0.251
+            priority 200
+            virtual-address 192.168.0.1/24
+            vrid 1
+        }
+        sync-group failover-group {
+            member LAN
+        }
+    }
+}
+interfaces {
+    ethernet eth0 {
+        duplex auto
+        mtu 9000
+        offload-options {
+            generic-receive on
+            generic-segmentation on
+            scatter-gather on
+            tcp-segmentation on
+        }
+        pppoe 0 {
+            default-route auto
+            mtu 1500
+            name-server auto
+            password password
+            traffic-policy {
+                out shape-17mbit
+            }
+            user-id vyos
+            password vyos
+        }
+        smp-affinity auto
+        speed auto
+    }
+    ethernet eth1 {
+        address 192.168.0.250/24
+        duplex auto
+        ip {
+            source-validation strict
+        }
+        mtu 9000
+        offload-options {
+            generic-receive on
+            generic-segmentation on
+            scatter-gather on
+            tcp-segmentation on
+        }
+        policy {
+            route LAN-POLICY-BASED-ROUTING
+        }
+        smp-affinity auto
+        speed auto
+        traffic-policy {
+            out shape-94mbit
+        }
+    }
+    loopback lo {
+    }
+    openvpn vtun0 {
+        encryption aes256
+        hash sha512
+        ip {
+            source-validation strict
+        }
+        keep-alive {
+            failure-count 3
+            interval 30
+        }
+        mode client
+        openvpn-option "comp-lzo adaptive"
+        openvpn-option fast-io
+        openvpn-option persist-key
+        openvpn-option "reneg-sec 86400"
+        persistent-tunnel
+        remote-host 192.0.2.10
+        tls {
+            ca-cert-file /config/auth/ovpn_test_ca.pem
+            cert-file /config/auth/ovpn_test_server.pem
+            key-file /config/auth/ovpn_test_server.key
+            auth-file /config/auth/ovpn_test_tls_auth.key
+        }
+    }
+    openvpn vtun1 {
+        authentication {
+            password vyos1
+            username vyos1
+        }
+        encryption aes256
+        hash sha1
+        keep-alive {
+            failure-count 3
+            interval 30
+        }
+        mode client
+        openvpn-option "comp-lzo adaptive"
+        openvpn-option "tun-mtu 1500"
+        openvpn-option "tun-mtu-extra 32"
+        openvpn-option "mssfix 1300"
+        openvpn-option persist-key
+        openvpn-option "mute 10"
+        openvpn-option route-nopull
+        openvpn-option fast-io
+        openvpn-option "reneg-sec 86400"
+        persistent-tunnel
+        protocol udp
+        remote-host 01.foo.com
+        remote-port 1194
+        tls {
+            ca-cert-file /config/auth/ovpn_test_ca.pem
+            auth-file /config/auth/ovpn_test_tls_auth.key
+        }
+    }
+    openvpn vtun2 {
+        authentication {
+            password vyos2
+            username vyos2
+        }
+        disable
+        encryption aes256
+        hash sha512
+        keep-alive {
+            failure-count 3
+            interval 30
+        }
+        mode client
+        openvpn-option "tun-mtu 1500"
+        openvpn-option "tun-mtu-extra 32"
+        openvpn-option "mssfix 1300"
+        openvpn-option persist-key
+        openvpn-option "mute 10"
+        openvpn-option route-nopull
+        openvpn-option fast-io
+        openvpn-option remote-random
+        openvpn-option "reneg-sec 86400"
+        persistent-tunnel
+        protocol udp
+        remote-host 01.myvpn.com
+        remote-host 02.myvpn.com
+        remote-host 03.myvpn.com
+        remote-port 1194
+        tls {
+            ca-cert-file /config/auth/ovpn_test_ca.pem
+            auth-file /config/auth/ovpn_test_tls_auth.key
+        }
+    }
+    wireguard wg0 {
+        address 192.168.10.1/24
+        peer red {
+            allowed-ips 192.168.10.4/32
+            persistent-keepalive 20
+            preshared-key CumyXX7osvUT9AwnS+m2TEfCaL0Ptc2LfuZ78Sujuk8=
+            pubkey ALGWvMJCKpHF2tVH3hEIHqUe9iFfAmZATUUok/WQzks=
+        }
+        peer green {
+            allowed-ips 192.168.10.21/32
+            persistent-keepalive 25
+            preshared-key LQ9qmlTh9G4nZu4UgElxRUwg7JB/qoV799aADJOijnY=
+            pubkey 5iQUD3VoCDBTPXAPHOwUJ0p7xzKGHEY/wQmgvBVmaFI=
+        }
+        peer blue {
+            allowed-ips 192.168.10.3/32
+            persistent-keepalive 20
+            preshared-key ztFDOY9UyaDvn8N3X97SFMDwIfv7EEfuUIPP2yab6UI=
+            pubkey G4pZishpMRrLmd96Kr6V7LIuNGdcUb81gWaYZ+FWkG0=
+        }
+        peer pink {
+            allowed-ips 192.168.10.14/32
+            allowed-ips 192.168.10.16/32
+            persistent-keepalive 25
+            preshared-key Qi9Odyx0/5itLPN5C5bEy3uMX+tmdl15QbakxpKlWqQ=
+            pubkey i4qNPmxyy9EETL4tIoZOLKJF4p7IlVmpAE15gglnAk4=
+        }
+        port 7777
+    }
+    wireguard wg1 {
+        address 10.89.90.2/30
+        peer sam {
+            allowed-ips 10.1.1.0/24
+            allowed-ips 10.89.90.1/32
+            endpoint 192.0.2.45:1200
+            persistent-keepalive 20
+            preshared-key XpFtzx2Z+nR8pBv9/sSf7I94OkZkVYTz0AeU5Q/QQUE=
+            pubkey v5zfKGvH6W/lfDXJ0en96lvKo1gfFxMUWxe02+Fj5BU=
+        }
+        port 7778
+    }
+}
+nat {
+    destination {
+        rule 50 {
+            destination {
+                port 49371
+            }
+            inbound-interface pppoe0
+            protocol tcp_udp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 51 {
+            destination {
+                port 58050-58051
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 52 {
+            destination {
+                port 22067-22070
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 53 {
+            destination {
+                port 34342
+            }
+            inbound-interface pppoe0
+            protocol tcp_udp
+            translation {
+                address 192.168.0.121
+            }
+        }
+        rule 54 {
+            destination {
+                port 45459
+            }
+            inbound-interface pppoe0
+            protocol tcp_udp
+            translation {
+                address 192.168.0.120
+            }
+        }
+        rule 55 {
+            destination {
+                port 22
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 56 {
+            destination {
+                port 8920
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 60 {
+            destination {
+                port 80,443
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 70 {
+            destination {
+                port 5001
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 80 {
+            destination {
+                port 25
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.5
+            }
+        }
+        rule 90 {
+            destination {
+                port 8123
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.7
+            }
+        }
+        rule 91 {
+            destination {
+                port 1880
+            }
+            inbound-interface pppoe0
+            protocol tcp
+            translation {
+                address 192.168.0.7
+            }
+        }
+        rule 500 {
+            destination {
+                address !192.168.0.0/24
+                port 53
+            }
+            inbound-interface eth1
+            protocol tcp_udp
+            source {
+                address !192.168.0.1-192.168.0.5
+            }
+            translation {
+                address 192.168.0.1
+            }
+        }
+    }
+    source {
+        rule 1000 {
+            outbound-interface pppoe0
+            translation {
+                address masquerade
+            }
+        }
+        rule 2000 {
+            outbound-interface vtun0
+            source {
+                address 192.168.0.0/16
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 3000 {
+            outbound-interface vtun1
+            translation {
+                address masquerade
+            }
+        }
+    }
+}
+policy {
+    prefix-list user2-routes {
+        rule 1 {
+            action permit
+            prefix 10.1.1.0/24
+        }
+    }
+    prefix-list user1-routes {
+        rule 1 {
+            action permit
+            prefix 192.168.0.0/24
+        }
+    }
+    route LAN-POLICY-BASED-ROUTING {
+        rule 10 {
+            destination {
+            }
+            disable
+            set {
+                table 10
+            }
+            source {
+                address 192.168.0.119/32
+            }
+        }
+        rule 20 {
+            destination {
+            }
+            set {
+                table 100
+            }
+            source {
+                address 192.168.0.240
+            }
+        }
+    }
+    route-map rm-static-to-bgp {
+        rule 10 {
+            action permit
+            match {
+                ip {
+                    address {
+                        prefix-list user1-routes
+                    }
+                }
+            }
+        }
+        rule 100 {
+            action deny
+        }
+    }
+}
+protocols {
+    bgp 64590 {
+        address-family {
+            ipv4-unicast {
+                redistribute {
+                    connected {
+                        route-map rm-static-to-bgp
+                    }
+                }
+            }
+        }
+        neighbor 10.89.90.1 {
+            address-family {
+                ipv4-unicast {
+                    nexthop-self
+                    prefix-list {
+                        export user1-routes
+                        import user2-routes
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            password ericandre2020
+            remote-as 64589
+        }
+        parameters {
+            log-neighbor-changes
+            router-id 10.89.90.2
+        }
+    }
+    static {
+        interface-route 100.64.160.23/32 {
+            next-hop-interface pppoe0 {
+            }
+        }
+        interface-route 100.64.165.25/32 {
+            next-hop-interface pppoe0 {
+            }
+        }
+        interface-route 100.64.165.26/32 {
+            next-hop-interface pppoe0 {
+            }
+        }
+        interface-route 100.64.198.0/24 {
+            next-hop-interface vtun0 {
+            }
+        }
+        table 10 {
+            interface-route 0.0.0.0/0 {
+                next-hop-interface vtun1 {
+                }
+            }
+        }
+        table 100 {
+            route 0.0.0.0/0 {
+                next-hop 192.168.10.5 {
+                }
+            }
+        }
+    }
+}
+service {
+    conntrack-sync {
+        accept-protocol tcp,udp,icmp
+        disable-external-cache
+        event-listen-queue-size 8
+        expect-sync all
+        failover-mechanism {
+            vrrp {
+                sync-group failover-group
+            }
+        }
+        interface eth1 {
+            peer 192.168.0.251
+        }
+        sync-queue-size 8
+    }
+    dhcp-server {
+        shared-network-name LAN {
+            authoritative
+            subnet 192.168.0.0/24 {
+                default-router 192.168.0.1
+                dns-server 192.168.0.1
+                domain-name vyos.net
+                domain-search vyos.net
+                failover {
+                    local-address 192.168.0.250
+                    name DHCP02
+                    peer-address 192.168.0.251
+                    status primary
+                }
+                lease 86400
+                range LANDynamic {
+                    start 192.168.0.200
+                    stop 192.168.0.240
+                }
+                static-mapping IPTV {
+                    ip-address 192.168.0.104
+                    mac-address 00:50:01:31:b5:f6
+                }
+                static-mapping McPrintus {
+                    ip-address 192.168.0.60
+                    mac-address 00:50:01:58:ac:95
+                    static-mapping-parameters "option domain-name-servers 192.168.0.6,192.168.0.17;"
+                }
+                static-mapping Audio {
+                    ip-address 192.168.0.107
+                    mac-address 00:50:01:dc:91:14
+                }
+                static-mapping Mobile01 {
+                    ip-address 192.168.0.109
+                    mac-address 00:50:01:bc:ac:51
+                    static-mapping-parameters "option domain-name-servers 192.168.0.6,192.168.0.17;"
+                }
+                static-mapping sand {
+                    ip-address 192.168.0.110
+                    mac-address 00:50:01:af:c5:d2
+                }
+                static-mapping pearTV {
+                    ip-address 192.168.0.101
+                    mac-address 00:50:01:ba:62:79
+                }
+                static-mapping camera1 {
+                    ip-address 192.168.0.11
+                    mac-address 00:50:01:70:b9:4d
+                    static-mapping-parameters "option domain-name-servers 192.168.0.6,192.168.0.17;"
+                }
+                static-mapping camera2 {
+                    ip-address 192.168.0.12
+                    mac-address 00:50:01:70:b7:4f
+                    static-mapping-parameters "option domain-name-servers 192.168.0.6,192.168.0.17;"
+                }
+            }
+        }
+    }
+    dns {
+        forwarding {
+            allow-from 192.168.0.0/16
+            cache-size 8192
+            dnssec off
+            listen-address 192.168.0.1
+            name-server 100.64.0.1
+            name-server 100.64.0.2
+        }
+    }
+    snmp {
+        community AwesomeCommunity {
+            authorization ro
+            client 127.0.0.1
+            network 192.168.0.0/24
+        }
+    }
+    ssh {
+        access-control {
+            allow {
+                user vyos
+            }
+        }
+        client-keepalive-interval 60
+        listen-address 192.168.0.1
+        listen-address 192.168.10.1
+        listen-address 192.168.0.250
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    ip {
+        arp {
+            table-size 1024
+        }
+    }
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 192.168.0.1
+    ntp {
+        allow-clients {
+            address 192.168.0.0/16
+        }
+        listen-address 192.168.0.1
+        listen-address 192.168.0.250
+        server nz.pool.ntp.org {
+            prefer
+        }
+    }
+    options {
+        beep-if-fully-booted
+        ctrl-alt-del-action ignore
+        reboot-on-panic true
+    }
+    static-host-mapping {
+        host-name host104.vyos.net {
+            inet 192.168.0.104
+        }
+        host-name host60.vyos.net {
+            inet 192.168.0.60
+        }
+        host-name host107.vyos.net {
+            inet 192.168.0.107
+        }
+        host-name host109.vyos.net {
+            inet 192.168.0.109
+        }
+    }
+    sysctl {
+        custom net.core.default_qdisc {
+            value fq
+        }
+        custom net.ipv4.tcp_congestion_control {
+            value bbr
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+        }
+        host 192.168.0.252 {
+            facility all {
+                level debug
+                protocol udp
+            }
+        }
+    }
+    task-scheduler {
+        task Update-Blacklists {
+            executable {
+                path /config/scripts/vyos-foo-update.script
+            }
+            interval 3h
+        }
+    }
+    time-zone Pacific/Auckland
+}
+traffic-policy {
+    shaper shape-17mbit {
+        bandwidth 17mbit
+        default {
+            bandwidth 100%
+            burst 15k
+            queue-type fq-codel
+        }
+    }
+    shaper shape-94mbit {
+        bandwidth 94mbit
+        default {
+            bandwidth 100%
+            burst 15k
+            queue-type fq-codel
+        }
+    }
+}
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@9:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.6 */
