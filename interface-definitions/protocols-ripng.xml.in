@@ -1,0 +1,350 @@
+<!-- Routing Information Protocol (RIPng) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="nripng" owner="${vyos_conf_scripts_dir}/protocols_ripng.py">
+        <properties>
+          <help>Routing Information Protocol (RIPng) parameters</help>
+        </properties>
+        <children>
+          <leafNode name="aggregate-address">
+            <properties>
+              <help>Aggregate RIPng route announcement</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>Aggregate RIPng route announcement</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="default-information">
+            <properties>
+              <help>Control distribution of default route</help>
+            </properties>
+            <children>
+              <leafNode name="originate">
+                <properties>
+                  <help>Distribute a default route</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="default-metric">
+            <properties>
+              <help>Metric of redistributed routes</help>
+              <valueHelp>
+                <format>u32:1-16</format>
+                <description>Default metric</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-16"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="distribute-list">
+            <properties>
+              <help>Filter networks in routing updates</help>
+            </properties>
+            <children>
+              <node name="access-list">
+                <properties>
+                  <help>Access-list</help>
+                </properties>
+                <children>
+                  <leafNode name="in">
+                    <properties>
+                      <help>Access list to apply to input packets</help>
+                      <valueHelp>
+                        <format>u32:1-4294967295</format>
+                        <description>Access list to apply to input packets</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="out">
+                    <properties>
+                      <help>Access list to apply to output packets</help>
+                      <valueHelp>
+                        <format>u32:1-4294967295</format>
+                        <description>Access list to apply to output packets</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <tagNode name="interface">
+                <properties>
+                  <help>Apply filtering to an interface</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Apply filtering to an interface</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="access-list">
+                    <properties>
+                      <help>Access list</help>
+                    </properties>
+                    <children>
+                      <leafNode name="in">
+                        <properties>
+                          <help>Access list to apply to input packets</help>
+                          <valueHelp>
+                            <format>u32:1-4294967295</format>
+                            <description>Access list to apply to input packets</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>policy access-list6</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="out">
+                        <properties>
+                          <help>Access list to apply to output packets</help>
+                          <valueHelp>
+                            <format>u32:1-4294967295</format>
+                            <description>Access list to apply to output packets</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>policy access-list</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="prefix-list">
+                    <properties>
+                      <help>Prefix-list</help>
+                    </properties>
+                    <children>
+                      <leafNode name="in">
+                        <properties>
+                          <help>Prefix-list to apply to input packets</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Prefix-list to apply to input packets</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>policy prefix-list6</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="out">
+                        <properties>
+                          <help>Prefix-list to apply to output packets</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Prefix-list to apply to output packets</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <path>policy prefix-list6</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+              <node name="prefix-list">
+                <properties>
+                  <help>Prefix-list</help>
+                </properties>
+                <children>
+                  <leafNode name="in">
+                    <properties>
+                      <help>Prefix-list to apply to input packets</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Prefix-list to apply to input packets</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <path>policy prefix-list</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="out">
+                    <properties>
+                      <help>Prefix-list to apply to output packets</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Prefix-list to apply to output packets</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <path>policy prefix-list</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="interface">
+            <properties>
+              <help>Interface name</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Apply filtering to an interface</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="network">
+            <properties>
+              <help>RIPng network</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>RIPng network</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="passive-interface">
+            <properties>
+              <help>Passive interface</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Suppress routing updates on interface</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="redistribute">
+            <properties>
+              <help>Redistribute information from another routing protocol</help>
+            </properties>
+            <children>
+              <node name="bgp">
+                <properties>
+                  <help>Redistribute BGP routes</help>
+                </properties>
+                <children>
+                  #include <include/rip-redistribute.xml.i>
+                </children>
+              </node>
+              <node name="connected">
+                <properties>
+                  <help>Redistribute connected routes</help>
+                </properties>
+                <children>
+                  #include <include/rip-redistribute.xml.i>
+                </children>
+              </node>
+              <node name="kernel">
+                <properties>
+                  <help>Redistribute kernel routes</help>
+                </properties>
+                <children>
+                  #include <include/rip-redistribute.xml.i>
+                </children>
+              </node>
+              <node name="ospfv3">
+                <properties>
+                  <help>Redistribute OSPFv3 routes</help>
+                </properties>
+                <children>
+                  #include <include/rip-redistribute.xml.i>
+                </children>
+              </node>
+              <node name="static">
+                <properties>
+                  <help>Redistribute static routes</help>
+                </properties>
+                <children>
+                  #include <include/rip-redistribute.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="route">
+            <properties>
+              <help>RIPng static route</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>RIPng static route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="route-map">
+            <properties>
+              <help>Filter routes installed in local route map</help>
+              <completionHelp>
+                <path>policy route-map</path>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <node name="timers">
+            <properties>
+              <help>RIPng timer values</help>
+            </properties>
+            <children>
+              <leafNode name="garbage-collection">
+                <properties>
+                  <help>Garbage collection timer</help>
+                  <valueHelp>
+                    <format>u32:5-2147483647</format>
+                    <description>Garbage colletion time (default 120)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-2147483647"/>
+                  </constraint>
+                </properties>
+                <defaultValue>120</defaultValue>
+              </leafNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Routing information timeout timer</help>
+                  <valueHelp>
+                    <format>u32:5-2147483647</format>
+                    <description>Routing information timeout timer (default 180)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-2147483647"/>
+                  </constraint>
+                </properties>
+                <defaultValue>180</defaultValue>
+              </leafNode>
+              <leafNode name="update">
+                <properties>
+                  <help>Routing table update timer</help>
+                  <valueHelp>
+                    <format>u32:5-2147483647</format>
+                    <description>Routing table update timer in seconds (default 30)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-2147483647"/>
+                  </constraint>
+                </properties>
+                <defaultValue>30</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
