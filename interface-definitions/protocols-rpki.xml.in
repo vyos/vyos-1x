@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="rpki" owner="${vyos_conf_scripts_dir}/protocols_rpki.py">
+        <properties>
+          <help>BGP prefix origin validation</help>
+        </properties>
+        <children>
+          <tagNode name="cache">
+            <properties>
+              <help>RPKI cache server address</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IP address of NTP server</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address of NTP server</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Fully qualified domain name of NTP server</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+                <validator name="fqdn"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="preference">
+                <properties>
+                  <help>Preference of the cache server</help>
+                  <valueHelp>
+                    <format>u32:1-255</format>
+                    <description>Polling period</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="ssh">
+                <properties>
+                  <help>RPKI SSH connection settings</help>
+                </properties>
+                <children>
+                  <leafNode name="known-hosts-file">
+                    <properties>
+                      <help>RPKI SSH known hosts file</help>
+                      <constraint>
+                        <validator name="file-exists"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="private-key-file">
+                    <properties>
+                      <help>RPKI SSH private key file</help>
+                      <constraint>
+                        <validator name="file-exists"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="public-key-file">
+                    <properties>
+                      <help>RPKI SSH public key file path</help>
+                      <constraint>
+                        <validator name="file-exists"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="username">
+                    <properties>
+                      <help>RPKI SSH username</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <leafNode name="polling-period">
+            <properties>
+              <help>RPKI cache polling period (default: 300)</help>
+              <valueHelp>
+                <format>u32:1-86400</format>
+                <description>Polling period in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-86400"/>
+              </constraint>
+            </properties>
+            <defaultValue>300</defaultValue>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
