@@ -49,6 +49,7 @@ interface_definitions: $(config_xml_obj)
 	rm -rf $(TMPL_DIR)/vpn/nipsec
 	rm -rf $(TMPL_DIR)/protocols/nvrf
 	rm -rf $(TMPL_DIR)/protocols/nripng
+	rm -rf $(TMPL_DIR)/protocols/nstatic
 
 	# XXX: required until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
 	mkdir $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6

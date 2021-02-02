@@ -51,6 +51,8 @@ def command(srcdest, proto, ipaddr):
             command += f' --orig-src {ipaddr}'
     if srcdest == 'destination':
         command += ' -g'
+        if ipaddr:
+            command += f' --orig-dst {ipaddr}'
 
     return command
 
