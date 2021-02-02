@@ -177,7 +177,7 @@ def main():
                         action="store_true")
 
     action.add_argument("--check",
-                        help="Check pending chutdown",
+                        help="Check pending shutdown",
                         action="store_true")
     args = parser.parse_args()
 
