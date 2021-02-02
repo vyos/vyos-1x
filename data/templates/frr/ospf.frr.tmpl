@@ -31,6 +31,8 @@ interface {{ iface }}
 {%     endif %}
 {%     if iface_config.dead_interval is defined and iface_config.dead_interval is not none %}
  ip ospf dead-interval {{ iface_config.dead_interval }}
+{%     elif iface_config.hello_multiplier is defined and iface_config.hello_multiplier is not none %}
+ ip ospf dead-interval minimal hello-multiplier {{ iface_config.hello_multiplier }}
 {%     endif %}
 {%     if iface_config.bfd is defined %}
  ip ospf bfd
@@ -44,6 +46,7 @@ interface {{ iface }}
 {%     if iface_config.bandwidth is defined and iface_config.bandwidth is not none %}
  bandwidth {{ iface_config.bandwidth }}
 {%     endif %}
+!
 {%   endfor %}
 {% endif %}
 !

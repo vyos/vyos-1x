@@ -97,8 +97,15 @@ def get_config(config=None):
                         default_values, ospf['area'][area]['virtual_link'][virtual_link])
 
     if 'interface' in ospf:
-        default_values = defaults(base + ['interface'])
         for interface in ospf['interface']:
+            # We need to reload the defaults on every pass b/c of
+            # hello-multiplier dependency on dead-interval
+            default_values = defaults(base + ['interface'])
+            # If hello-multiplier is set, we need to remove the default from
+            # dead-interval.
+            if 'hello_multiplier' in ospf['interface'][interface]:
+                del default_values['dead_interval']
+
             ospf['interface'][interface] = dict_merge(default_values,
                 ospf['interface'][interface])
 
@@ -120,6 +127,11 @@ def verify(ospf):
     if 'interface' in ospf:
         for interface in ospf['interface']:
             verify_interface_exists(interface)
+            # One can not use dead-interval and hello-multiplier at the same
+            # time. FRR will only activate the last option set via CLI.
+            if {'hello_multiplier', 'dead_interval'} <= set(ospf['interface'][interface]):
+                raise ConfigError(f'Can not use hello-multiplier and dead-interval ' \
+                                  f'concurrently for "{interface}"!')
 
     return None
 
