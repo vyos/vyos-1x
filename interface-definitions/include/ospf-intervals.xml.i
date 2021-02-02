@@ -25,18 +25,6 @@
   </properties>
   <defaultValue>10</defaultValue>
 </leafNode>
-<leafNode name="hello-multiplier">
-  <properties>
-    <help>Hello multiplier factor</help>
-    <valueHelp>
-      <format>u32:1-10</format>
-      <description>Number of Hellos to send each second</description>
-    </valueHelp>
-    <constraint>
-      <validator name="numeric" argument="--range 1-10"/>
-    </constraint>
-  </properties>
-</leafNode>
 <leafNode name="retransmit-interval">
   <properties>
     <help>Interval between retransmitting lost link state advertisements (default: 5)</help>

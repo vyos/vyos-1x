@@ -438,6 +438,18 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="hello-multiplier">
+                <properties>
+                  <help>Hello multiplier factor</help>
+                  <valueHelp>
+                    <format>u32:1-10</format>
+                    <description>Number of Hellos to send each second</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-10"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="mtu-ignore">
                 <properties>
                   <help>Disable Maximum Transmission Unit (MTU) mismatch detection</help>
