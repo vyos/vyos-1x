@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Protocol STATIC configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+       <node name="nstatic" owner="${vyos_conf_scripts_dir}/protocols_static.py">
+        <properties>
+          <help>Static route parameters</help>
+        </properties>
+        <children>
+          <tagNode name="interface-route">
+            <properties>
+              <help>Interface based static route</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>Interface based static route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+              </constraint>
+            </properties>
+            <children>
+              <tagNode name="next-hop-interface">
+                <properties>
+                  <help>Next-hop interface [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  #include <include/static-route-disable.xml.i>
+                  #include <include/static-route-distance.xml.i>
+                  #include <include/static-route-next-hop-vrf.xml.i>
+                </children>
+              </tagNode> 
+            </children>
+          </tagNode>
+          <tagNode name="interface-route6">
+            <properties>
+              <help>Interface based IPv6 static route</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>Interface based IPv6 static route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+            </properties>
+            <children>
+              <tagNode name="next-hop-interface">
+                <properties>
+                  <help>Next-hop interface [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  #include <include/static-route-disable.xml.i>
+                  #include <include/static-route-distance.xml.i>
+                </children>
+              </tagNode> 
+            </children>
+          </tagNode>
+          #include <include/static-route-map.xml.i>
+          <tagNode name="route">
+            <properties>
+              <help>Static route</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>Static route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="blackhole">
+                <properties>
+                  <help>Silently discard pkts when matched</help>
+                </properties>
+                <children>
+                  #include <include/static-route-distance.xml.i>
+                  <leafNode name="tag">
+                    <properties>
+                      <help>Tag value for this route</help>
+                      <valueHelp>
+                        <format>u32:1-4294967295</format>
+                        <description>Tag value for this route</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="dhcp-interface">
+                <properties>
+                  <help>DHCP interface that supplies the next-hop IP address for this static route</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>DHCP interface</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <tagNode name="next-hop">
+                <properties>
+                  <help>Next-hop router</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Next-hop router</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/static-route-disable.xml.i>
+                  #include <include/static-route-distance.xml.i>
+                  <leafNode name="next-hop-interface">
+                    <properties>
+                      <help>IPv4 gateway interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>IPv4 gateway interface name</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  #include <include/static-route-next-hop-vrf.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="route6">
+            <properties>
+              <help>Static IPv6 route</help>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>Static IPv6 route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="blackhole">
+                <properties>
+                  <help>Silently discard pkts when matched</help>
+                </properties>
+                <children>
+                  #include <include/static-route-distance.xml.i>
+                </children>
+              </node>
+              <tagNode name="next-hop">
+                <properties>
+                  <help>Next-hop IPv6 router [REQUIRED]</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Next-hop IPv6 router [REQUIRED]</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/static-route-disable.xml.i>
+                  #include <include/static-route-distance.xml.i>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>IPv6 gateway interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>IPv6 gateway interface name</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  #include <include/static-route-next-hop-vrf.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="table">
+            <properties>
+              <help>Policy route table number</help>
+              <valueHelp>
+                <format>u32:1-200</format>
+                <description>Policy route table number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-200"/>
+              </constraint>
+            </properties>
+            <children>
+              <tagNode name="interface-route">
+                <properties>
+                  <help>Interface based static route</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Interface based static route</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <tagNode name="next-hop-interface">
+                    <properties>
+                      <help>Next-hop interface [REQUIRED]</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      #include <include/static-route-disable.xml.i>
+                      #include <include/static-route-distance.xml.i>
+                    </children>
+                  </tagNode> 
+                </children>
+              </tagNode>
+              <tagNode name="interface-route6">
+                <properties>
+                  <help>Interface based IPv6 static route</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>Interface based IPv6 static route</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <tagNode name="next-hop-interface">
+                    <properties>
+                      <help>Next-hop interface [REQUIRED]</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      #include <include/static-route-disable.xml.i>
+                      #include <include/static-route-distance.xml.i>
+                    </children>
+                  </tagNode> 
+                </children>
+              </tagNode>
+              <tagNode name="route">
+                <properties>
+                  <help>Static route</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Static route</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="blackhole">
+                    <properties>
+                      <help>Silently discard pkts when matched</help>
+                    </properties>
+                    <children>
+                      #include <include/static-route-distance.xml.i>
+                    </children>
+                  </node>
+                  <leafNode name="dhcp-interface">
+                    <properties>
+                      <help>DHCP interface that supplies the next-hop IP address for this static route</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>DHCP interface</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="next-hop">
+                    <properties>
+                      <help>Next-hop router</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Next-hop router</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      #include <include/static-route-disable.xml.i>
+                      #include <include/static-route-distance.xml.i>
+                      <leafNode name="next-hop-interface">
+                        <properties>
+                          <help>IPv4 gateway interface name</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_interfaces.py</script>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>IPv4 gateway interface name</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      #include <include/static-route-next-hop-vrf.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <tagNode name="route6">
+                <properties>
+                  <help>Static IPv6 route</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>Static IPv6 route</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="blackhole">
+                    <properties>
+                      <help>Silently discard pkts when matched</help>
+                    </properties>
+                    <children>
+                      #include <include/static-route-distance.xml.i>
+                    </children>
+                  </node>
+                  <tagNode name="next-hop">
+                    <properties>
+                      <help>Next-hop IPv6 router [REQUIRED]</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Next-hop IPv6 router [REQUIRED]</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      #include <include/static-route-disable.xml.i>
+                      #include <include/static-route-distance.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
