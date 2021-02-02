@@ -209,6 +209,13 @@ def verify_vlan_config(config):
     Common helper function used by interface implementations to perform
     recurring validation of interface VLANs
     """
+
+    # VLAN and Q-in-Q IDs are not allowed to overlap
+    if 'vif' in config and 'vif_s' in config:
+        duplicate = list(set(config['vif']) & set(config['vif_s']))
+        if duplicate:
+            raise ConfigError(f'Duplicate VLAN id "{duplicate[0]}" used for vif and vif-s interfaces!')
+
     # 802.1q VLANs
     for vlan in config.get('vif', {}):
         vlan = config['vif'][vlan]
