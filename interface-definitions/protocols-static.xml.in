@@ -28,11 +28,11 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  #include <include/static-route-disable.xml.i>
+                  #include <include/generic-disable-node.xml.i>
                   #include <include/static-route-distance.xml.i>
                   #include <include/static-route-next-hop-vrf.xml.i>
                 </children>
-              </tagNode> 
+              </tagNode>
             </children>
           </tagNode>
           <tagNode name="interface-route6">
@@ -55,10 +55,10 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  #include <include/static-route-disable.xml.i>
+                  #include <include/generic-disable-node.xml.i>
                   #include <include/static-route-distance.xml.i>
                 </children>
-              </tagNode> 
+              </tagNode>
             </children>
           </tagNode>
           #include <include/static-route-map.xml.i>
@@ -118,7 +118,7 @@
                   </constraint>
                 </properties>
                 <children>
-                  #include <include/static-route-disable.xml.i>
+                  #include <include/generic-disable-node.xml.i>
                   #include <include/static-route-distance.xml.i>
                   <leafNode name="next-hop-interface">
                     <properties>
@@ -169,7 +169,7 @@
                   </constraint>
                 </properties>
                 <children>
-                  #include <include/static-route-disable.xml.i>
+                  #include <include/generic-disable-node.xml.i>
                   #include <include/static-route-distance.xml.i>
                   <leafNode name="interface">
                     <properties>
@@ -220,10 +220,10 @@
                       </completionHelp>
                     </properties>
                     <children>
-                      #include <include/static-route-disable.xml.i>
+                      #include <include/generic-disable-node.xml.i>
                       #include <include/static-route-distance.xml.i>
                     </children>
-                  </tagNode> 
+                  </tagNode>
                 </children>
               </tagNode>
               <tagNode name="interface-route6">
@@ -246,10 +246,10 @@
                       </completionHelp>
                     </properties>
                     <children>
-                      #include <include/static-route-disable.xml.i>
+                      #include <include/generic-disable-node.xml.i>
                       #include <include/static-route-distance.xml.i>
                     </children>
-                  </tagNode> 
+                  </tagNode>
                 </children>
               </tagNode>
               <tagNode name="route">
@@ -296,7 +296,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      #include <include/static-route-disable.xml.i>
+                      #include <include/generic-disable-node.xml.i>
                       #include <include/static-route-distance.xml.i>
                       <leafNode name="next-hop-interface">
                         <properties>
@@ -347,7 +347,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      #include <include/static-route-disable.xml.i>
+                      #include <include/generic-disable-node.xml.i>
                       #include <include/static-route-distance.xml.i>
                     </children>
                   </tagNode>

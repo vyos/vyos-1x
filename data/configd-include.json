@@ -40,6 +40,7 @@
 "protocols_pim.py",
 "protocols_rip.py",
 "protocols_static_multicast.py",
+"protocols_vrf.py",
 "salt-minion.py",
 "service_console-server.py",
 "service_ids_fastnetmon.py",

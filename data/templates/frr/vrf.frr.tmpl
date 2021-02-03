@@ -1,0 +1,42 @@
+!
+{% if vrf is defined and vrf is not none %}
+{%   for vrf_name, vrf_config in vrf.items() %}
+vrf {{ vrf_name }}
+{%     if vrf_config.static is defined and vrf_config.static is not none %}
+{#       IPv4 routes #}
+{%       if vrf_config.static.route is defined and vrf_config.static.route is not none %}
+{%         for route, route_config in vrf_config.static.route.items() %}
+{%           if route_config.blackhole is defined %}
+ ip route {{ route }} blackhole {{ route_config.blackhole.distance if route_config.blackhole.distance is defined }}
+{%           elif route_config.interface is defined and route_config.interface is not none %}
+{%             for interface, interface_config in route_config.interface.items() if interface_config.disable is not defined %}
+ ip route {{ route }} {{ interface }} {{ interface_config.distance if interface_config.distance is defined }} {{ 'nexthop-vrf ' + interface_config.vrf if interface_config.vrf is defined }}
+{%             endfor %}
+{%           elif route_config.next_hop is defined and route_config.next_hop is not none %}
+{%             for next_hop, next_hop_config in route_config.next_hop.items() if next_hop_config.disable is not defined %}
+ ip route {{ route }} {{ next_hop }} {{ next_hop_config.interface if next_hop_config.interface is defined }} {{ next_hop_config.distance if next_hop_config.distance is defined }} {{ 'nexthop-vrf ' + next_hop_config.vrf if next_hop_config.vrf is defined }}
+{%             endfor %}
+{%           endif %}
+{%         endfor %}
+{%       endif %}
+{#       IPv6 routes #}
+{%       if vrf_config.static.route6 is defined and vrf_config.static.route6 is not none %}
+{%         for route, route_config in vrf_config.static.route6.items() %}
+{%           if route_config.blackhole is defined %}
+ ipv6 route {{ route }} blackhole {{ route_config.blackhole.distance if route_config.blackhole.distance is defined }}
+{%           elif route_config.interface is defined and route_config.interface is not none %}
+{%             for interface, interface_config in route_config.interface.items() if interface_config.disable is not defined %}
+ ipv6 route {{ route }} {{ interface }} {{ interface_config.distance if interface_config.distance is defined }} {{ 'nexthop-vrf ' + interface_config.vrf if interface_config.vrf is defined }}
+{%             endfor %}
+{%           elif route_config.next_hop is defined and route_config.next_hop is not none %}
+{%             for next_hop, next_hop_config in route_config.next_hop.items() if next_hop_config.disable is not defined %}
+ ipv6 route {{ route }} {{ next_hop }} {{ next_hop_config.interface if next_hop_config.interface is defined }} {{ next_hop_config.distance if next_hop_config.distance is defined }} {{ 'nexthop-vrf ' + next_hop_config.vrf if next_hop_config.vrf is defined }}
+{%             endfor %}
+{%           endif %}
+
+{%         endfor %}
+{%       endif %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
