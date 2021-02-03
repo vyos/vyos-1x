@@ -24,7 +24,6 @@ from vyos.configverify import verify_route_maps
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
-from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
