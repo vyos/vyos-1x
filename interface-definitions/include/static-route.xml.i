@@ -4,7 +4,7 @@
     <help>VRF static IPv4 route</help>
     <valueHelp>
       <format>ipv4net</format>
-      <description>VRF static IPv4 route</description>
+      <description>IPv4 static route</description>
     </valueHelp>
     <constraint>
       <validator name="ipv4-prefix"/>
@@ -17,6 +17,18 @@
       </properties>
       <children>
         #include <include/static-route-distance.xml.i>
+        <leafNode name="tag">
+          <properties>
+            <help>Tag value for this route</help>
+            <valueHelp>
+              <format>u32:1-4294967295</format>
+              <description>Tag value for this route</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-4294967295"/>
+            </constraint>
+          </properties>
+        </leafNode>
       </children>
     </node>
     <tagNode name="interface">

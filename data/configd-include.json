@@ -39,6 +39,7 @@
 "protocols_ospfv3.py",
 "protocols_pim.py",
 "protocols_rip.py",
+"protocols_static.py",
 "protocols_static_multicast.py",
 "protocols_vrf.py",
 "salt-minion.py",

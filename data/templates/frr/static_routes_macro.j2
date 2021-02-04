@@ -1,0 +1,15 @@
+{% macro static_routes(ip_ipv6, prefix, prefix_config, table=None) %}
+{%   if prefix_config.blackhole is defined %}
+{{ ip_ipv6 }} route {{ prefix }} blackhole {{ prefix_config.blackhole.distance if prefix_config.blackhole.distance is defined }} {{ 'tag ' + prefix_config.blackhole.tag if prefix_config.blackhole.tag is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{%   endif %}
+{%   if prefix_config.interface is defined and prefix_config.interface is not none %}
+{%     for interface, interface_config in prefix_config.interface.items() if interface_config.disable is not defined %}
+{{ ip_ipv6 }} route {{ prefix }} {{ interface }} {{ interface_config.distance if interface_config.distance is defined }} {{ 'nexthop-vrf ' + interface_config.vrf if interface_config.vrf is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{%     endfor %}
+{%   endif %}
+{%   if prefix_config.next_hop is defined and prefix_config.next_hop is not none %}
+{%     for next_hop, next_hop_config in prefix_config.next_hop.items() if next_hop_config.disable is not defined %}
+{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ next_hop_config.interface if next_hop_config.interface is defined }} {{ next_hop_config.distance if next_hop_config.distance is defined }} {{ 'nexthop-vrf ' + next_hop_config.vrf if next_hop_config.vrf is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{%     endfor %}
+{%   endif %}
+{% endmacro %}
