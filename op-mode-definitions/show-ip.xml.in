@@ -11,7 +11,7 @@
             <properties>
               <help>Show IPv4 Neighbor Discovery (ND) information</help>
             </properties>
-            <command>ip -f inet neigh list</command>
+            <command>${vyos_op_scripts_dir}/show_neigh.py --family inet</command>
           </node>
         </children>
       </node>

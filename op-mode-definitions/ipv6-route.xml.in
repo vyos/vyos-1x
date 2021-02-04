@@ -21,7 +21,7 @@
             <properties>
               <help>Show IPv6 Neighbor Discovery (ND) information</help>
             </properties>
-            <command>ip -f inet6 neigh list</command>
+            <command>${vyos_op_scripts_dir}/show_neigh.py --family inet6</command>
           </leafNode>
 
         </children>
