@@ -6,7 +6,7 @@ OP_TMPL_DIR := templates-op
 interface_definitions:
 	mkdir -p $(TMPL_DIR)
 
-	find $(CURDIR)/interface-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
+	find $(CURDIR)/interface-definitions/ -type f -name "*.xml" | sort | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/firewall/node.def
