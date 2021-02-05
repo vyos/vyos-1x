@@ -21,7 +21,7 @@
     <constraint>
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
-      <regex>^(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo$</regex>
+      <validator name="interface-name"/>
     </constraint>
   </properties>
 </leafNode>

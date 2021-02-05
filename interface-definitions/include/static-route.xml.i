@@ -42,13 +42,13 @@
           <description>Gateway interface name</description>
         </valueHelp>
         <constraint>
-          <regex>^(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo$</regex>
+          <validator name="interface-name"/>
         </constraint>
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
         #include <include/static-route-distance.xml.i>
-        #include <include/static-route-next-hop-vrf.xml.i>
+        #include <include/static-route-vrf.xml.i>
       </children>
     </tagNode>
     <tagNode name="next-hop">
@@ -65,8 +65,8 @@
       <children>
         #include <include/generic-disable-node.xml.i>
         #include <include/static-route-distance.xml.i>
-        #include <include/static-route-next-hop-interface.xml.i>
-        #include <include/static-route-next-hop-vrf.xml.i>
+        #include <include/static-route-interface.xml.i>
+        #include <include/static-route-vrf.xml.i>
       </children>
     </tagNode>
   </children>
