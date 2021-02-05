@@ -106,7 +106,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
               <constraint>
-                <regex>^(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+$</regex>
+                <validator name="interface-name"/>
               </constraint>
             </properties>
           </leafNode>
