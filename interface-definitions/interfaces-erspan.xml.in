@@ -46,7 +46,14 @@
               <help>ERSPAN Tunnel parameters</help>
             </properties>
             <children>
-              #include <include/tunnel-parameters-ip.xml.i>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/tunnel-parameters-ip.xml.i>
+                </children>
+              </node>
               <leafNode name="version">
                 <properties>
                   <help>ERSPAN version number setting(default:1)</help>

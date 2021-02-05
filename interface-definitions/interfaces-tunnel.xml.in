@@ -140,7 +140,20 @@
               <help>Tunnel parameters</help>
             </properties>
             <children>
-              #include <include/tunnel-parameters-ip.xml.i>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="no-pmtu-discovery">
+                    <properties>
+                      <help>Disable path MTU discovery</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  #include <include/tunnel-parameters-ip.xml.i>
+                </children>
+              </node>
               <node name="ipv6">
                 <properties>
                   <help>IPv6 specific tunnel parameters</help>
