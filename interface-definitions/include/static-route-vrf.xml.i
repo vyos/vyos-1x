@@ -1,16 +1,18 @@
-<!-- included start from static-route-next-hop-vrf.xml.i -->
-<leafNode name="next-hop-vrf">
+<!-- included start from static-route-vrf.xml.i -->
+<leafNode name="vrf">
   <properties>
     <help>VRF to leak route</help>
+    <completionHelp>
+      <list>default</list>
+      <path>vrf name</path>
+    </completionHelp>
     <valueHelp>
       <format>txt</format>
       <description>Name of VRF to leak to</description>
     </valueHelp>
-    <completionHelp>
-      <path>protocols vrf</path>
-    </completionHelp>
     <constraint>
-      <regex>^[a-zA-Z0-9\-_]{1,100}$</regex>
+      <regex>^(default)$</regex>
+      <validator name="vrf-name"/>
     </constraint>
   </properties>
 </leafNode>

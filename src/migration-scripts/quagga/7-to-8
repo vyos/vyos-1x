@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - T2450: drop interface-route and interface-route6 from "protocols static"
+
+from sys import argv
+from sys import exit
+
+from vyos.configtree import ConfigTree
+
+def migrate_interface_route(config, base, path, route_route6):
+    """ Generic migration function which can be called on every instance of
+    interface-route, beeing it ipv4, ipv6 or nested under the "static table" nodes.
+
+    What we do?
+      - Drop 'interface-route' or 'interface-route6' and migrate the route unter the
+        'route' or 'route6' tag node.
+    """
+    if config.exists(base + path):
+        for route in config.list_nodes(base + path):
+            interface = config.list_nodes(base + path + [route, 'next-hop-interface'])
+
+            tmp = base + path + [route, 'next-hop-interface']
+            for interface in config.list_nodes(tmp):
+                new_base = base + [route_route6, route, 'interface']
+                config.set(new_base)
+                config.set_tag(base + [route_route6])
+                config.set_tag(new_base)
+                config.copy(tmp + [interface], new_base + [interface])
+
+        config.delete(base + path)
+
+def migrate_route(config, base, path, route_route6):
+    """ Generic migration function which can be called on every instance of
+    route, beeing it ipv4, ipv6 or even nested under the static table nodes.
+
+    What we do?
+      - for consistency reasons rename next-hop-interface to interface
+      - for consistency reasons rename next-hop-vrf to vrf
+    """
+    if config.exists(base + path):
+        for route in config.list_nodes(base + path):
+            next_hop = base + path + [route, 'next-hop']
+            if config.exists(next_hop):
+                for gateway in config.list_nodes(next_hop):
+                    # IPv4 routes calls it next-hop-interface, rename this to
+                    # interface instead so it's consitent with IPv6
+                    interface_path = next_hop + [gateway, 'next-hop-interface']
+                    if config.exists(interface_path):
+                        config.rename(interface_path, 'interface')
+
+                    # When VRFs got introduced, I (c-po) named it next-hop-vrf,
+                    # we can also call it vrf which is simply shorter.
+                    vrf_path = next_hop + [gateway, 'next-hop-vrf']
+                    if config.exists(vrf_path):
+                        config.rename(vrf_path, 'vrf')
+
+
+if (len(argv) < 2):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['protocols', 'static']
+
+config = ConfigTree(config_file)
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+# Migrate interface-route into route
+migrate_interface_route(config, base, ['interface-route'], 'route')
+
+# Migrate interface-route6 into route6
+migrate_interface_route(config, base, ['interface-route6'], 'route6')
+
+# Cleanup nodes inside route
+migrate_route(config, base, ['route'], 'route')
+
+# Cleanup nodes inside route6
+migrate_route(config, base, ['route6'], 'route6')
+
+#
+# PBR table cleanup
+table_path = base + ['table']
+if config.exists(table_path):
+    for table in config.list_nodes(table_path):
+        # Migrate interface-route into route
+        migrate_interface_route(config, table_path + [table], ['interface-route'], 'route')
+
+        # Migrate interface-route6 into route6
+        migrate_interface_route(config, table_path + [table], ['interface-route6'], 'route6')
+
+        # Cleanup nodes inside route
+        migrate_route(config, table_path + [table], ['route'], 'route')
+
+        # Cleanup nodes inside route6
+        migrate_route(config, table_path + [table], ['route6'], 'route6')
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

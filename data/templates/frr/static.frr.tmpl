@@ -1,0 +1,38 @@
+{% from 'frr/static_routes_macro.j2' import static_routes %}
+!
+{# IPv4 routing #}
+{% if route is defined and route is not none %}
+{%   for prefix, prefix_config in route.items() %}
+{{ static_routes('ip', prefix, prefix_config) }}
+{%-   endfor -%}
+{% endif %}
+!
+{# IPv6 routing #}
+{% if route6 is defined and route6 is not none %}
+{%   for prefix, prefix_config in route6.items() %}
+{{ static_routes('ipv6', prefix, prefix_config) }}
+{%-   endfor -%}
+{% endif %}
+!
+{# Policy route tables #}
+{% if table is defined and table is not none %}
+{%   for table_id, table_config in table.items() %}
+{%     if table_config.route is defined and table_config.route is not none %}
+{%       for prefix, prefix_config in table_config.route.items() %}
+{{ static_routes('ip', prefix, prefix_config, table_id) }}
+{%-       endfor -%}
+{%     endif %}
+!
+{%     if table_config.route6 is defined and table_config.route6 is not none %}
+{%       for prefix, prefix_config in table_config.route6.items() %}
+{{ static_routes('ipv6', prefix, prefix_config, table_id) }}
+{%-       endfor -%}
+{%     endif %}
+!
+{%   endfor %}
+{% endif %}
+!
+{% if route_map is defined and route_map is not none %}
+ip protocol static route-map {{ route_map }}
+!
+{% endif %}

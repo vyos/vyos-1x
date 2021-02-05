@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import exit, argv
+from sys import argv
+from sys import exit
 from vyos.configtree import ConfigTree
 
 if __name__ == '__main__':
@@ -41,6 +42,11 @@ if __name__ == '__main__':
                 config.copy(ip_ospf, ['protocols', 'ospf', 'interface', interface])
                 config.delete(ip_ospf)
 
+                # if "ip ospf" was the only setting, we can clean out the empty
+                # ip node afterwards
+                if len(config.list_nodes(ip_ospf[:-1])) == 0:
+                    config.delete(ip_ospf[:-1])
+
             vif_path = ['interfaces', type, interface, 'vif']
             if config.exists(vif_path):
                 for vif in config.list_nodes(vif_path):
@@ -50,6 +56,11 @@ if __name__ == '__main__':
                         config.set_tag(['protocols', 'ospf', 'interface'])
                         config.copy(vif_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif}'])
                         config.delete(vif_ospf_path)
+
+                        # if "ip ospf" was the only setting, we can clean out the empty
+                        # ip node afterwards
+                        if len(config.list_nodes(vif_ospf_path[:-1])) == 0:
+                            config.delete(vif_ospf_path[:-1])
 
             vif_s_path = ['interfaces', type, interface, 'vif-s']
             if config.exists(vif_s_path):
@@ -70,7 +81,17 @@ if __name__ == '__main__':
                                     config.copy(vif_c_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif_s}.{vif_c}'])
                                     config.delete(vif_c_ospf_path)
 
+                                    # if "ip ospf" was the only setting, we can clean out the empty
+                                    # ip node afterwards
+                                    if len(config.list_nodes(vif_c_ospf_path[:-1])) == 0:
+                                        config.delete(vif_c_ospf_path[:-1])
+
                         config.delete(vif_s_ospf_path)
+
+                        # if "ip ospf" was the only setting, we can clean out the empty
+                        # ip node afterwards
+                        if len(config.list_nodes(vif_s_ospf_path[:-1])) == 0:
+                            config.delete(vif_s_ospf_path[:-1])
 
     try:
         with open(file_name, 'w') as f:

@@ -18,7 +18,7 @@
             <children>
               <leafNode name="hwaddr">
                 <properties>
-                  <help>mac address to translate to</help>
+                  <help>Translation MAC address</help>
                   <valueHelp>
                     <format>macaddr</format>
                     <description>Hardware (MAC) address</description>

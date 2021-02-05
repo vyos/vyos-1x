@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!-- Multicast static routing configuration -->
 <interfaceDefinition>
   <node name="protocols">
     <children>
