@@ -2,6 +2,9 @@
 <!-- UDP broadcast relay configuration -->
 <interfaceDefinition>
   <node name="service">
+    <properties>
+      <help>Services</help>
+    </properties>
     <children>
       <node name="broadcast-relay" owner="${vyos_conf_scripts_dir}/bcast_relay.py">
         <properties>
