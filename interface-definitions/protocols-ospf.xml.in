@@ -713,7 +713,7 @@
                 <description>Interface to be passive (i.e. suppress routing updates)</description>
               </valueHelp>
               <constraint>
-                <regex>^(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan)[0-9]+|lo$</regex>
+                <regex>^(br|bond|dum|en|eth|gnv|peth|tun|vti|vxlan|wg|wlan|VLINK)[0-9]+|lo$</regex>
               </constraint>
               <multi/>
             </properties>
