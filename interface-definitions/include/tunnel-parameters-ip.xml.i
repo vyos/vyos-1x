@@ -1,17 +1,21 @@
 <!-- included start from tunnel-parameters-ip.xml.i -->
 <leafNode name="ttl">
   <properties>
-    <help>Time to live field</help>
+    <help>Time to live (default: 0)</help>
     <valueHelp>
-      <format>0-255</format>
-      <description>Time to live (default 255)</description>
+      <format>0</format>
+      <description>Copy value from original IP header</description>
+    </valueHelp>
+    <valueHelp>
+      <format>1-255</format>
+      <description>Time to Live</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-255"/>
     </constraint>
     <constraintErrorMessage>TTL must be between 0 and 255</constraintErrorMessage>
   </properties>
-  <defaultValue>255</defaultValue>
+  <defaultValue>0</defaultValue>
 </leafNode>
 <leafNode name="tos">
   <properties>
