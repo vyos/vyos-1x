@@ -66,7 +66,7 @@
               </leafNode>
               <leafNode name="direction">
                 <properties>
-                  <help>specifies the ERSPAN mirrored traffic's direction</help>
+                  <help>Specifies mirrored traffic direction</help>
                   <completionHelp>
                     <list>ingress egress</list>
                   </completionHelp>
