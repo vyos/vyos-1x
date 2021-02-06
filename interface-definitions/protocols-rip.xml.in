@@ -135,24 +135,7 @@
               #include <include/static-route-distance.xml.i>
             </children>
           </tagNode>
-          <leafNode name="passive-interface">
-            <properties>
-              <help>Passive interface</help>
-              <valueHelp>
-                <format>txt</format>
-                <description>Suppress routing updates on interface</description>
-              </valueHelp>
-              <valueHelp>
-                <format>default</format>
-                <description>Suppress routing updates on all interfaces by default</description>
-              </valueHelp>
-              <completionHelp>
-                <list>default</list>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/routing-passive-interface-xml.i>
           <node name="redistribute">
             <properties>
               <help>Redistribute information from another routing protocol</help>
