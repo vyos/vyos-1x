@@ -82,11 +82,11 @@ def verify(rip):
         raise ConfigError(f'Outbound ACL "{acl_out}" does not exist!')
 
     prefix_list_in = dict_search('distribute_list.prefix_list.in', rip)
-    if prefix_list_in and prefix_list_in not in (dict_search('policy.prefix_list', rip) or []):
+    if prefix_list_in and prefix_list_in.replace('-','_') not in (dict_search('policy.prefix_list', rip) or []):
         raise ConfigError(f'Inbound prefix-list "{prefix_list_in}" does not exist!')
 
     prefix_list_out = dict_search('distribute_list.prefix_list.out', rip)
-    if prefix_list_out and prefix_list_out not in (dict_search('policy.prefix_list', rip) or []):
+    if prefix_list_out and prefix_list_out.replace('-','_') not in (dict_search('policy.prefix_list', rip) or []):
         raise ConfigError(f'Outbound prefix-list "{prefix_list_out}" does not exist!')
 
     verify_route_maps(rip)
