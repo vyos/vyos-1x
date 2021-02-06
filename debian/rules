@@ -12,6 +12,8 @@ MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
 SERVICES_DIR := usr/libexec/vyos/services
 
+DEB_TARGET_ARCH := $(shell dpkg-architecture -qDEB_TARGET_ARCH)
+
 %:
 	dh $@ --with python3, --with quilt
 
@@ -20,6 +22,10 @@ override_dh_gencontrol:
 
 override_dh_auto_build:
 	make all
+ifeq ($(DEB_TARGET_ARCH),amd64)
+	# Only build XDP on amd64 systems
+	make vyxdp
+endif
 
 override_dh_auto_install:
 	dh_auto_install
@@ -78,11 +84,6 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_DATA_DIR)
 	cp -r data/* $(DIR)/$(VYOS_DATA_DIR)
 
-	# Install XDP plugins
-	mkdir -p $(DIR)/$(VYOS_DATA_DIR)/xdp
-	cp -r src/xdp/xdp_prog_kern.o $(DIR)/$(VYOS_DATA_DIR)/xdp
-	find src/xdp -perm /a+x -exec cp {} $(DIR)/$(VYOS_SBIN_DIR) \;
-
 	# Install etc configuration files
 	mkdir -p $(DIR)/etc
 	cp -r src/etc/* $(DIR)/etc
@@ -109,3 +110,10 @@ override_dh_auto_install:
 	# Install system programs
 	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
 	cp -r smoketest/bin/* $(DIR)/$(VYOS_BIN_DIR)
+
+ifeq ($(DEB_TARGET_ARCH),amd64)
+	# We only install XDP on amd64 systems
+	mkdir -p $(DIR)/$(VYOS_DATA_DIR)/xdp
+	cp -r src/xdp/xdp_prog_kern.o $(DIR)/$(VYOS_DATA_DIR)/xdp
+	find src/xdp -perm /a+x -exec cp {} $(DIR)/$(VYOS_SBIN_DIR) \;
+endif

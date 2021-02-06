@@ -98,7 +98,7 @@ vyxdp:
 	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions vyshim vyxdp
+all: clean interface_definitions op_mode_definitions component_versions vyshim
 
 .PHONY: clean
 clean:
