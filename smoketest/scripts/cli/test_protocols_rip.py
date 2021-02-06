@@ -91,6 +91,8 @@ class TestProtocolsRIP(unittest.TestCase):
             self.session.set(base_path + ['interface', interface])
             self.session.set(base_path + ['distribute-list', 'interface', interface, 'access-list', 'in', acl_in])
             self.session.set(base_path + ['distribute-list', 'interface', interface, 'access-list', 'out', acl_out])
+            self.session.set(base_path + ['distribute-list', 'interface', interface, 'prefix-list', 'in', prefix_list_in])
+            self.session.set(base_path + ['distribute-list', 'interface', interface, 'prefix-list', 'out', prefix_list_out])
         for neighbor in neighbors:
             self.session.set(base_path + ['neighbor', neighbor])
         for network in networks:
@@ -121,6 +123,8 @@ class TestProtocolsRIP(unittest.TestCase):
             self.assertIn(f' network {interface}', frrconfig)
             self.assertIn(f' distribute-list {acl_in} in {interface}', frrconfig)
             self.assertIn(f' distribute-list {acl_out} out {interface}', frrconfig)
+            self.assertIn(f' distribute-list prefix {prefix_list_in} in {interface}', frrconfig)
+            self.assertIn(f' distribute-list prefix {prefix_list_out} out {interface}', frrconfig)
         for neighbor in neighbors:
             self.assertIn(f' neighbor {neighbor}', frrconfig)
         for network in networks:

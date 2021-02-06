@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,15 +18,27 @@ import os
 
 from sys import exit
 
-from vyos import ConfigError
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.util import call
+from vyos.xml import defaults
 from vyos.template import render
-
+from vyos.template import render_to_string
+from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/ripd.frr'
+config_file = r'/tmp/rip.frr'
+frr_daemon = 'ripd'
+
+DEBUG = os.path.exists('/tmp/rip.debug')
+if DEBUG:
+    import logging
+    lg = logging.getLogger("vyos.frr")
+    lg.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
@@ -34,277 +46,65 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['protocols', 'rip']
-    rip_conf = {
-        'rip_conf'          : False,
-        'default_distance'  : [],
-        'default_originate' : False,
-        'old_rip'  : {
-            'default_metric'  : [],
-            'distribute'      : {},
-            'neighbors'       : {},
-            'networks'        : {},
-            'net_distance'    : {},
-            'passive_iface'   : {},
-            'redist'          : {},
-            'route'           : {},
-            'ifaces'          : {},
-            'timer_garbage'   : 120,
-            'timer_timeout'   : 180,
-            'timer_update'    : 30
-        },
-        'rip'  : {
-            'default_metric'   : None,
-            'distribute'       : {},
-            'neighbors'        : {},
-            'networks'         : {},
-            'net_distance'     : {},
-            'passive_iface'    : {},
-            'redist'           : {},
-            'route'            : {},
-            'ifaces'           : {},
-            'timer_garbage'    : 120,
-            'timer_timeout'    : 180,
-            'timer_update'     : 30
-        }
-    }
+    rip = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    if not (conf.exists(base) or conf.exists_effective(base)):
-        return None
+    # Bail out early if configuration tree does not exist
+    if not conf.exists(base):
+        return rip
 
-    if conf.exists(base):
-        rip_conf['rip_conf'] = True
-
-    conf.set_level(base)
-
-    # Get default distance
-    if conf.exists_effective('default-distance'):
-        rip_conf['old_default_distance'] = conf.return_effective_value('default-distance')
-
-    if conf.exists('default-distance'):
-        rip_conf['default_distance'] = conf.return_value('default-distance')
-
-    # Get default information originate (originate default route)
-    if conf.exists_effective('default-information originate'):
-        rip_conf['old_default_originate'] = True
-
-    if conf.exists('default-information originate'):
-        rip_conf['default_originate'] = True
-
-    # Get default-metric
-    if conf.exists_effective('default-metric'):
-        rip_conf['old_rip']['default_metric'] = conf.return_effective_value('default-metric')
-
-    if conf.exists('default-metric'):
-        rip_conf['rip']['default_metric'] = conf.return_value('default-metric')
-
-    # Get distribute list interface old_rip
-    for dist_iface in conf.list_effective_nodes('distribute-list interface'):
-        # Set level 'distribute-list interface ethX'
-        conf.set_level(base + ['distribute-list', 'interface', dist_iface])
-        rip_conf['rip']['distribute'].update({
-        dist_iface : {
-            'iface_access_list_in': conf.return_effective_value('access-list in'.format(dist_iface)),
-            'iface_access_list_out': conf.return_effective_value('access-list out'.format(dist_iface)),
-            'iface_prefix_list_in': conf.return_effective_value('prefix-list in'.format(dist_iface)),
-            'iface_prefix_list_out': conf.return_effective_value('prefix-list out'.format(dist_iface))
-            }
-        })
-
-        # Access-list in old_rip
-        if conf.exists_effective('access-list in'.format(dist_iface)):
-            rip_conf['old_rip']['iface_access_list_in'] = conf.return_effective_value('access-list in'.format(dist_iface))
-        # Access-list out old_rip
-        if conf.exists_effective('access-list out'.format(dist_iface)):
-            rip_conf['old_rip']['iface_access_list_out'] = conf.return_effective_value('access-list out'.format(dist_iface))
-        # Prefix-list in old_rip
-        if conf.exists_effective('prefix-list in'.format(dist_iface)):
-            rip_conf['old_rip']['iface_prefix_list_in'] = conf.return_effective_value('prefix-list in'.format(dist_iface))
-        # Prefix-list out old_rip
-        if conf.exists_effective('prefix-list out'.format(dist_iface)):
-            rip_conf['old_rip']['iface_prefix_list_out'] = conf.return_effective_value('prefix-list out'.format(dist_iface))
-
-    conf.set_level(base)
-
-    # Get distribute list interface 
-    for dist_iface in conf.list_nodes('distribute-list interface'):
-        # Set level 'distribute-list interface ethX'
-        conf.set_level(base + ['distribute-list', 'interface', dist_iface])
-        rip_conf['rip']['distribute'].update({
-        dist_iface : {
-            'iface_access_list_in': conf.return_value('access-list in'.format(dist_iface)),
-            'iface_access_list_out': conf.return_value('access-list out'.format(dist_iface)),
-            'iface_prefix_list_in': conf.return_value('prefix-list in'.format(dist_iface)),
-            'iface_prefix_list_out': conf.return_value('prefix-list out'.format(dist_iface))
-            }
-        })
-
-        # Access-list in
-        if conf.exists('access-list in'.format(dist_iface)):
-            rip_conf['rip']['iface_access_list_in'] = conf.return_value('access-list in'.format(dist_iface))
-        # Access-list out
-        if conf.exists('access-list out'.format(dist_iface)):
-            rip_conf['rip']['iface_access_list_out'] = conf.return_value('access-list out'.format(dist_iface))
-        # Prefix-list in
-        if conf.exists('prefix-list in'.format(dist_iface)):
-            rip_conf['rip']['iface_prefix_list_in'] = conf.return_value('prefix-list in'.format(dist_iface))
-        # Prefix-list out
-        if conf.exists('prefix-list out'.format(dist_iface)):
-            rip_conf['rip']['iface_prefix_list_out'] = conf.return_value('prefix-list out'.format(dist_iface))
-
-    conf.set_level(base + ['distribute-list'])
-
-    # Get distribute list, access-list in
-    if conf.exists_effective('access-list in'):
-        rip_conf['old_rip']['dist_acl_in'] = conf.return_effective_value('access-list in')
-
-    if conf.exists('access-list in'):
-        rip_conf['rip']['dist_acl_in'] = conf.return_value('access-list in')
-
-    # Get distribute list, access-list out
-    if conf.exists_effective('access-list out'):
-        rip_conf['old_rip']['dist_acl_out'] = conf.return_effective_value('access-list out')
-
-    if conf.exists('access-list out'):
-        rip_conf['rip']['dist_acl_out'] = conf.return_value('access-list out')
-
-    # Get ditstribute list, prefix-list in
-    if conf.exists_effective('prefix-list in'):
-        rip_conf['old_rip']['dist_prfx_in'] = conf.return_effective_value('prefix-list in')
-
-    if conf.exists('prefix-list in'):
-        rip_conf['rip']['dist_prfx_in'] = conf.return_value('prefix-list in')
-
-    # Get distribute list, prefix-list out
-    if conf.exists_effective('prefix-list out'):
-        rip_conf['old_rip']['dist_prfx_out'] = conf.return_effective_value('prefix-list out')
-
-    if conf.exists('prefix-list out'):
-        rip_conf['rip']['dist_prfx_out'] = conf.return_value('prefix-list out')
-
-    conf.set_level(base)
-
-    # Get network Interfaces
-    if conf.exists_effective('interface'):
-        rip_conf['old_rip']['ifaces'] = conf.return_effective_values('interface')
-
-    if conf.exists('interface'):
-        rip_conf['rip']['ifaces'] = conf.return_values('interface')
-
-    # Get neighbors
-    if conf.exists_effective('neighbor'):
-        rip_conf['old_rip']['neighbors'] = conf.return_effective_values('neighbor')
-
-    if conf.exists('neighbor'):
-        rip_conf['rip']['neighbors'] = conf.return_values('neighbor')
-
-    # Get networks
-    if conf.exists_effective('network'):
-        rip_conf['old_rip']['networks'] = conf.return_effective_values('network')
-
-    if conf.exists('network'):
-        rip_conf['rip']['networks'] = conf.return_values('network')
-
-    # Get network-distance old_rip
-    for net_dist in conf.list_effective_nodes('network-distance'):
-        rip_conf['old_rip']['net_distance'].update({
-            net_dist : {
-                'access_list' : conf.return_effective_value('network-distance {0} access-list'.format(net_dist)),
-                'distance' : conf.return_effective_value('network-distance {0} distance'.format(net_dist)),
-            }
-        })
-
-    # Get network-distance
-    for net_dist in conf.list_nodes('network-distance'):
-        rip_conf['rip']['net_distance'].update({
-            net_dist : {
-                'access_list' : conf.return_value('network-distance {0} access-list'.format(net_dist)),
-                'distance' : conf.return_value('network-distance {0} distance'.format(net_dist)),
-            }
-        })
-
-    # Get passive-interface
-    if conf.exists_effective('passive-interface'):
-        rip_conf['old_rip']['passive_iface'] = conf.return_effective_values('passive-interface')
-
-    if conf.exists('passive-interface'):
-        rip_conf['rip']['passive_iface'] = conf.return_values('passive-interface')
-
-    # Get redistribute for old_rip
-    for protocol in conf.list_effective_nodes('redistribute'):
-        rip_conf['old_rip']['redist'].update({
-            protocol : {
-                'metric' : conf.return_effective_value('redistribute {0} metric'.format(protocol)),
-                'route_map' : conf.return_effective_value('redistribute {0} route-map'.format(protocol)),
-            }
-        })
-
-    # Get redistribute
-    for protocol in conf.list_nodes('redistribute'):
-        rip_conf['rip']['redist'].update({
-            protocol : {
-                'metric' : conf.return_value('redistribute {0} metric'.format(protocol)),
-                'route_map' : conf.return_value('redistribute {0} route-map'.format(protocol)),
-            }
-        })
-
-    conf.set_level(base)
-
-    # Get route
-    if conf.exists_effective('route'):
-        rip_conf['old_rip']['route'] = conf.return_effective_values('route')
-
-    if conf.exists('route'):
-        rip_conf['rip']['route'] = conf.return_values('route')
-
-    # Get timers garbage
-    if conf.exists_effective('timers garbage-collection'):
-        rip_conf['old_rip']['timer_garbage'] = conf.return_effective_value('timers garbage-collection')
-
-    if conf.exists('timers garbage-collection'):
-        rip_conf['rip']['timer_garbage'] = conf.return_value('timers garbage-collection')
-
-    # Get timers timeout
-    if conf.exists_effective('timers timeout'):
-        rip_conf['old_rip']['timer_timeout'] = conf.return_effective_value('timers timeout')
-
-    if conf.exists('timers timeout'):
-        rip_conf['rip']['timer_timeout'] = conf.return_value('timers timeout')
-
-    # Get timers update
-    if conf.exists_effective('timers update'):
-        rip_conf['old_rip']['timer_update'] = conf.return_effective_value('timers update')
-
-    if conf.exists('timers update'):
-        rip_conf['rip']['timer_update'] = conf.return_value('timers update')
-
-    return rip_conf
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    # merge in remaining default values
+    rip = dict_merge(default_values, rip)
+    return rip
 
 def verify(rip):
-    if rip is None:
+    if not rip:
         return None
 
-    # Check for network. If network-distance acl is set and distance not set
-    for net in rip['rip']['net_distance']:
-        if not rip['rip']['net_distance'][net]['distance']:
-            raise ConfigError(f"Must specify distance for network {net}")
+    # check ACL and route-maps, prefix-lists
 
 def generate(rip):
-    if rip is None:
+    if not rip:
+        rip['new_frr_config'] = ''
         return None
 
+    # render(config) not needed, its only for debug
     render(config_file, 'frr/rip.frr.tmpl', rip)
+    rip['new_frr_config'] = render_to_string('frr/rip.frr.tmpl', rip)
+
     return None
 
 def apply(rip):
-    if rip is None:
-        return None
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
+    frr_cfg.load_configuration(frr_daemon)
+    frr_cfg.modify_section(r'interface \S+', '')
+    frr_cfg.modify_section('router rip', '')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rip['new_frr_config'])
 
-    if os.path.exists(config_file):
-        call(f'vtysh -d ripd -f {config_file}')
-        os.remove(config_file)
-    else:
-        print("File {0} not found".format(config_file))
+    # Debugging
+    if DEBUG:
+        from pprint import pprint
+        print('')
+        print('--------- DEBUGGING ----------')
+        pprint(dir(frr_cfg))
+        print('Existing config:\n')
+        for line in frr_cfg.original_config:
+            print(line)
+        print(f'Replacement config:\n')
+        print(f'{rip["new_frr_config"]}')
+        print(f'Modified config:\n')
+        print(f'{frr_cfg}')
 
+    frr_cfg.commit_configuration(frr_daemon)
+
+    # If FRR config is blank, rerun the blank commit x times due to frr-reload
+    # behavior/bug not properly clearing out on one commit.
+    if rip['new_frr_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(frr_daemon)
 
     return None
 
@@ -317,4 +117,3 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         exit(1)
-
