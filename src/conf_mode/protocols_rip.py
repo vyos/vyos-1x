@@ -20,7 +20,9 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_route_maps
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos.template import render
 from vyos.template import render_to_string
@@ -57,13 +59,37 @@ def get_config(config=None):
     default_values = defaults(base)
     # merge in remaining default values
     rip = dict_merge(default_values, rip)
+
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify()
+    base = ['policy']
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # Merge policy dict into OSPF dict
+    rip = dict_merge(tmp, rip)
+
     return rip
 
 def verify(rip):
     if not rip:
         return None
 
-    # check ACL and route-maps, prefix-lists
+    acl_in = dict_search('distribute_list.access_list.in', rip)
+    if acl_in and acl_in not in  (dict_search('policy.access_list', rip) or []):
+        raise ConfigError(f'Inbound ACL "{acl_in}" does not exist!')
+
+    acl_out = dict_search('distribute_list.access_list.out', rip)
+    if acl_out and acl_out not in (dict_search('policy.access_list', rip) or []):
+        raise ConfigError(f'Outbound ACL "{acl_out}" does not exist!')
+
+    prefix_list_in = dict_search('distribute_list.prefix_list.in', rip)
+    if prefix_list_in and prefix_list_in not in (dict_search('policy.prefix_list', rip) or []):
+        raise ConfigError(f'Inbound prefix-list "{prefix_list_in}" does not exist!')
+
+    prefix_list_out = dict_search('distribute_list.prefix_list.out', rip)
+    if prefix_list_out and prefix_list_out not in (dict_search('policy.prefix_list', rip) or []):
+        raise ConfigError(f'Outbound prefix-list "{prefix_list_out}" does not exist!')
+
+    verify_route_maps(rip)
 
 def generate(rip):
     if not rip:
