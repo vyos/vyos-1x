@@ -80,8 +80,8 @@ else:
                                 dhcp_interfaces.append(f'{intf}.{vif_s}')
 
                 # try vif-c
-                if config.exists(intf_base + ['vif-c', vif_c]):
-                    for vif_c in config.list_nodes(vif_s_base + ['vif-c', vif_c]):
+                if config.exists(intf_base + ['vif-c']):
+                    for vif_c in config.list_nodes(vif_s_base + ['vif-c']):
                         vif_c_base = vif_s_base + ['vif-c', vif_c]
                         if config.exists(vif_c_base + ['address']):
                             for addr in config.return_values(vif_c_base + ['address']):
