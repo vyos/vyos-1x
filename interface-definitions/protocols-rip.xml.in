@@ -19,31 +19,8 @@
               </constraint>
             </properties>
           </leafNode>
-          <node name="default-information">
-            <properties>
-              <help>Control distribution of default route</help>
-            </properties>
-            <children>
-              <leafNode name="originate">
-                <properties>
-                  <help>Distribute a default route</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-          <leafNode name="default-metric">
-            <properties>
-              <help>Metric of redistributed routes</help>
-              <valueHelp>
-                <format>u32:1-16</format>
-                <description>Redistributed routes metric</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-16"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/rip-default-information.xml.i>
+          #include <include/rip-default-metric.xml.i>
           <node name="distribute-list">
             <properties>
               <help>Filter networks in routing updates</help>
@@ -60,6 +37,9 @@
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
+                  <constraint>
+                    <validator name="interface-name"/>
+                  </constraint>
                 </properties>
                 <children>
                   #include <include/rip-access-list.xml.i>
@@ -69,19 +49,7 @@
               #include <include/rip-prefix-list.xml.i>
             </children>
           </node>
-          <leafNode name="interface">
-            <properties>
-              <help>Interface name</help>
-              <valueHelp>
-                <format>txt</format>
-                <description>Apply filtering to an interface</description>
-              </valueHelp>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/rip-interface.xml.i>
           <leafNode name="neighbor">
             <properties>
               <help>Neighbor router</help>
@@ -196,52 +164,7 @@
               <multi/>
             </properties>
           </leafNode>
-          <node name="timers">
-            <properties>
-              <help>RIP timer values</help>
-            </properties>
-            <children>
-              <leafNode name="garbage-collection">
-                <properties>
-                  <help>Garbage collection timer (default: 120)</help>
-                  <valueHelp>
-                    <format>u32:5-2147483647</format>
-                    <description>Garbage colletion time</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 5-2147483647"/>
-                  </constraint>
-                </properties>
-                <defaultValue>120</defaultValue>
-              </leafNode>
-              <leafNode name="timeout">
-                <properties>
-                  <help>Routing information timeout timer (default: 180)</help>
-                  <valueHelp>
-                    <format>u32:5-2147483647</format>
-                    <description>Routing information timeout timer</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 5-2147483647"/>
-                  </constraint>
-                </properties>
-                <defaultValue>180</defaultValue>
-              </leafNode>
-              <leafNode name="update">
-                <properties>
-                  <help>Routing table update timer  (default: 30)</help>
-                  <valueHelp>
-                    <format>u32:5-2147483647</format>
-                    <description>Routing table update timer in seconds</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 5-2147483647"/>
-                  </constraint>
-                </properties>
-                <defaultValue>30</defaultValue>
-              </leafNode>
-            </children>
-          </node>
+          #include <include/rip-timers.xml.i>
         </children>
       </node>
     </children>
