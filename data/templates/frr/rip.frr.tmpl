@@ -1,4 +1,39 @@
 !
+{# RIP key-chain definition #}
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+{%     if iface_config.authentication is defined and iface_config.authentication.md5 is defined and iface_config.authentication.md5 is not none %}
+key chain {{ iface }}-rip
+{%       for key_id, key_options in iface_config.authentication.md5.items() %}
+ key {{ key_id }}
+{%         if key_options.password is defined and key_options.password is not none %}
+  key-string {{ key_options.password }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{# Interface specific configuration #}
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%     if iface_config.authentication is defined and iface_config.authentication.plaintext_password is defined and iface_config.authentication.plaintext_password is not none %}
+ ip rip authentication mode text
+ ip rip authentication string {{ iface_config.authentication.plaintext_password }}
+{%     elif iface_config.authentication is defined and iface_config.authentication.md5 is defined and iface_config.authentication.md5 is not none %}
+ ip rip authentication key-chain {{ iface }}-rip
+ ip rip authentication mode md5
+{%     endif %}
+{%     if iface_config.split_horizon is defined and iface_config.split_horizon.disable is defined %}
+ no ip rip split-horizon
+{%     endif %}
+{%     if iface_config.split_horizon is defined and iface_config.split_horizon.poison_reverse is defined %}
+ ip rip split-horizon poisoned-reverse
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
 router rip
 {% if default_information is defined and default_information.originate is defined %}
  default-information originate

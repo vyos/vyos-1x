@@ -89,6 +89,16 @@ def verify(rip):
     if prefix_list_out and prefix_list_out.replace('-','_') not in (dict_search('policy.prefix_list', rip) or []):
         raise ConfigError(f'Outbound prefix-list "{prefix_list_out}" does not exist!')
 
+    if 'interface' in rip:
+        for interface, interface_options in rip['interface'].items():
+            if 'authentication' in interface_options:
+                if {'md5', 'plaintext_password'} <= set(interface_options['authentication']):
+                    raise ConfigError('Can not use both md5 and plaintext-password at the same time!')
+            if 'split_horizon' in interface_options:
+                if {'disable', 'poison_reverse'} <= set(interface_options['split_horizon']):
+                    raise ConfigError(f'You can not have "split-horizon poison-reverse" enabled ' \
+                                      f'with "split-horizon disable" for "{interface}"!')
+
     verify_route_maps(rip)
 
 def generate(rip):
@@ -106,6 +116,7 @@ def apply(rip):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
+    frr_cfg.modify_section(r'key chain \S+', '')
     frr_cfg.modify_section(r'interface \S+', '')
     frr_cfg.modify_section('router rip', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rip['new_frr_config'])
