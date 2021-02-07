@@ -1,0 +1,88 @@
+interfaces {
+    dummy dum0 {
+        address 192.0.2.0/32
+    }
+    ethernet eth0 {
+        duplex auto
+        ip {
+            rip {
+                authentication {
+                    md5 1 {
+                        password VyOSsecure
+                    }
+                }
+                split-horizon {
+                    poison-reverse
+                }
+            }
+        }
+        smp-affinity auto
+        speed auto
+        address 172.18.202.10/24
+    }
+    ethernet eth1 {
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
+}
+protocols {
+    rip {
+        default-distance 20
+        default-information {
+            originate
+        }
+        interface eth0
+        network 192.168.0.0/24
+        redistribute {
+            connected {
+            }
+        }
+    }
+}
+service {
+    ssh {
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@10:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.6-S1 */
