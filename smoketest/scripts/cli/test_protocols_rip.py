@@ -64,7 +64,7 @@ class TestProtocolsRIP(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_rip_simple(self):
+    def test_rip(self):
         distance = '40'
         network_distance = '66'
         metric = '8'
