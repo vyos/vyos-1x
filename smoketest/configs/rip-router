@@ -24,6 +24,52 @@ interfaces {
         duplex auto
         smp-affinity auto
         speed auto
+        vif 20 {
+            ip {
+                rip {
+                    authentication {
+                        plaintext-password VyOSsecure
+                    }
+                    split-horizon {
+                        poison-reverse
+                    }
+                }
+            }
+        }
+        vif-s 200 {
+            ip {
+                rip {
+                    authentication {
+                        md5 1 {
+                            password VyOSsecure
+                        }
+                    }
+                    split-horizon {
+                        disable
+                    }
+                }
+            }
+            vif-c 2000 {
+                ip {
+                    rip {
+                        authentication {
+                            md5 1 {
+                                password VyOSsecure
+                            }
+                        }
+                    }
+                }
+            }
+            vif-c 3000 {
+                ip {
+                    rip {
+                        split-horizon {
+                            disable
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 protocols {
@@ -33,6 +79,10 @@ protocols {
             originate
         }
         interface eth0
+        interface eth1.20
+        interface eth1.200
+        interface eth1.200.2000
+        interface eth1.200.3000
         network 192.168.0.0/24
         redistribute {
             connected {
