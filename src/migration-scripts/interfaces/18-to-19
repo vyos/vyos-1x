@@ -18,6 +18,34 @@ from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
 
+def migrate_ospf(config, path, interface):
+    path = path + ['ospf']
+    if config.exists(path):
+        new_base = ['protocols', 'ospf', 'interface']
+        config.set(new_base)
+        config.set_tag(new_base)
+        config.copy(path, new_base + [interface])
+        config.delete(path)
+
+        # if "ip ospf" was the only setting, we can clean out the empty
+        # ip node afterwards
+        if len(config.list_nodes(path[:-1])) == 0:
+            config.delete(path[:-1])
+
+def migrate_rip(config, path, interface):
+    path = path + ['rip']
+    if config.exists(path):
+        new_base = ['protocols', 'rip', 'interface']
+        config.set(new_base)
+        config.set_tag(new_base)
+        config.copy(path, new_base + [interface])
+        config.delete(path)
+
+        # if "ip rip" was the only setting, we can clean out the empty
+        # ip node afterwards
+        if len(config.list_nodes(path[:-1])) == 0:
+            config.delete(path[:-1])
+
 if __name__ == '__main__':
     if (len(argv) < 1):
         print("Must specify file name!")
@@ -34,64 +62,33 @@ if __name__ == '__main__':
     #
     for type in config.list_nodes(['interfaces']):
         for interface in config.list_nodes(['interfaces', type]):
-
-            ip_ospf = ['interfaces', type, interface, 'ip', 'ospf']
-            if config.exists(ip_ospf):
-                config.set(['protocols', 'ospf', 'interface'])
-                config.set_tag(['protocols', 'ospf', 'interface'])
-                config.copy(ip_ospf, ['protocols', 'ospf', 'interface', interface])
-                config.delete(ip_ospf)
-
-                # if "ip ospf" was the only setting, we can clean out the empty
-                # ip node afterwards
-                if len(config.list_nodes(ip_ospf[:-1])) == 0:
-                    config.delete(ip_ospf[:-1])
+            if_base = ['interfaces', type, interface, 'ip']
+            migrate_rip(config, if_base, interface)
+            migrate_ospf(config, if_base, interface)
 
             vif_path = ['interfaces', type, interface, 'vif']
             if config.exists(vif_path):
                 for vif in config.list_nodes(vif_path):
-                    vif_ospf_path = vif_path + [vif, 'ip', 'ospf']
-                    if config.exists(vif_ospf_path):
-                        config.set(['protocols', 'ospf', 'interface'])
-                        config.set_tag(['protocols', 'ospf', 'interface'])
-                        config.copy(vif_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif}'])
-                        config.delete(vif_ospf_path)
-
-                        # if "ip ospf" was the only setting, we can clean out the empty
-                        # ip node afterwards
-                        if len(config.list_nodes(vif_ospf_path[:-1])) == 0:
-                            config.delete(vif_ospf_path[:-1])
+                    vif_if_base = vif_path + [vif, 'ip']
+                    migrate_rip(config, vif_if_base, f'{interface}.{vif}')
+                    migrate_ospf(config, vif_if_base, f'{interface}.{vif}')
 
             vif_s_path = ['interfaces', type, interface, 'vif-s']
             if config.exists(vif_s_path):
                 for vif_s in config.list_nodes(vif_s_path):
-                    vif_s_ospf_path = vif_s_path + [vif_s, 'ip', 'ospf']
-                    if config.exists(vif_s_ospf_path):
-                        config.set(['protocols', 'ospf', 'interface'])
-                        config.set_tag(['protocols', 'ospf', 'interface'])
-                        config.copy(vif_s_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif_s}'])
+                    vif_s_if_base = vif_s_path + [vif_s, 'ip']
 
-                        vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
-                        if config.exists(vif_c_path):
-                            for vif_c in config.list_nodes(vif_c_path):
-                                vif_c_ospf_path = vif_c_path + [vif_c, 'ip', 'ospf']
-                                if config.exists(vif_c_ospf_path):
-                                    config.set(['protocols', 'ospf', 'interface'])
-                                    config.set_tag(['protocols', 'ospf', 'interface'])
-                                    config.copy(vif_c_ospf_path, ['protocols', 'ospf', 'interface', f'{interface}.{vif_s}.{vif_c}'])
-                                    config.delete(vif_c_ospf_path)
+                    # vif-c interfaces MUST be migrated before their parent vif-s
+                    # interface as the migrate_*() functions delete the path!
+                    vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
+                    if config.exists(vif_c_path):
+                        for vif_c in config.list_nodes(vif_c_path):
+                            vif_c_if_base = vif_c_path + [vif_c, 'ip']
+                            migrate_rip(config, vif_c_if_base, f'{interface}.{vif_s}.{vif_c}')
+                            migrate_ospf(config, vif_c_if_base, f'{interface}.{vif_s}.{vif_c}')
 
-                                    # if "ip ospf" was the only setting, we can clean out the empty
-                                    # ip node afterwards
-                                    if len(config.list_nodes(vif_c_ospf_path[:-1])) == 0:
-                                        config.delete(vif_c_ospf_path[:-1])
-
-                        config.delete(vif_s_ospf_path)
-
-                        # if "ip ospf" was the only setting, we can clean out the empty
-                        # ip node afterwards
-                        if len(config.list_nodes(vif_s_ospf_path[:-1])) == 0:
-                            config.delete(vif_s_ospf_path[:-1])
+                    migrate_rip(config, vif_s_if_base, f'{interface}.{vif_s}')
+                    migrate_ospf(config, vif_s_if_base, f'{interface}.{vif_s}')
 
     try:
         with open(file_name, 'w') as f:
@@ -99,4 +96,3 @@ if __name__ == '__main__':
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
         exit(1)
-
