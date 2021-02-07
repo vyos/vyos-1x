@@ -48,7 +48,12 @@ if config.exists(base + ['cache']):
             # Increase preference for the next caching peer - actually VyOS 1.2
             # supported only one but better save then sorry (T3253)
             preference += 1
-            config.rename(base + ['cache', cache], address)
+
+            # T3293: If the RPKI cache name equals the configured address,
+            # renaming is not possible, as rename expects the new path to not
+            # exist.
+            if not config.exists(base + ['cache', address]):
+                config.rename(base + ['cache', cache], address)
 
 try:
     with open(file_name, 'w') as f:
