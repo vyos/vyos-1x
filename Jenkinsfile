@@ -21,4 +21,4 @@
 @Library('vyos-build@current')_
 
 // Start package build using library function from https://github.com/c-po/vyos-build
-buildPackage()
+buildPackage(null, null, null, true)
