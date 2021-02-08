@@ -217,6 +217,43 @@
                   </node>
                 </children>
               </node>
+              <node name="l2vpn-evpn">
+                <properties>
+                  <help>L2VPN EVPN BGP settings</help>
+                </properties>
+                <children>
+                  <leafNode name="advertise-all-vni">
+                    <properties>
+                      <help>Advertise All local VNIs</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="advertise-default-gw">
+                    <properties>
+                      <help>Advertise All default g/w mac-ip routes in EVPN</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="advertise-svi-ip">
+                    <properties>
+                      <help>Advertise svi mac-ip routes in EVPN</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vni">
+                    <properties>
+                      <help>VXLAN Network Identifier</help>
+                      <valueHelp>
+                        <format>u32:1-16777215</format>
+                        <description>VNI number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-16777215"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           <node name="maximum-paths">
@@ -318,6 +355,7 @@
                 <children>
                   #include <include/bgp-neighbor-afi-ipv4-unicast.xml.i>
                   #include <include/bgp-neighbor-afi-ipv6-unicast.xml.i>
+                  #include <include/bgp-neighbor-afi-l2vpn-evpn.xml.i>
                 </children>
               </node>
               <leafNode name="advertisement-interval">
@@ -771,6 +809,7 @@
                 <children>
                   #include <include/bgp-neighbor-afi-ipv4-unicast.xml.i>
                   #include <include/bgp-neighbor-afi-ipv6-unicast.xml.i>
+                  #include <include/bgp-neighbor-afi-l2vpn-evpn.xml.i>
                 </children>
               </node>
               #include <include/bgp-bfd.xml.i>

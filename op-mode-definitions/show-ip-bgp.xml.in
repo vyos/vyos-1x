@@ -204,6 +204,67 @@
                   </tagNode>
                 </children>
               </node>
+              <node name="l2vpn">
+                <properties>
+                  <help>Layer 2 Virtual Private Network</help>
+                </properties>
+                <children>
+                  <node name="evpn">
+                    <properties>
+                      <help>Ethernet Virtual Private Network</help>
+                    </properties>
+                    <children>
+                      <node name="all">
+                        <properties>
+                          <help>Display information about all EVPN NLRIs</help>
+                        </properties>
+                        <children>
+                          <leafNode name="overlay">
+                            <properties>
+                              <help>Display BGP Overlay Information for prefixes</help>
+                            </properties>
+                            <command>vtysh -c "show ip bgp l2vpn evpn all overlay"</command>
+                          </leafNode>
+                          <leafNode name="tags">
+                            <properties>
+                              <help>Display BGP tags for prefixes</help>
+                            </properties>
+                            <command>vtysh -c "show ip bgp l2vpn evpn all tags"</command>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <tagNode name="neighbors">
+                        <properties>
+                          <help>Show detailed BGP IPv4 unicast neighbor information</help>
+                          <completionHelp>
+                            <script>vtysh -c "show ip bgp summary" | awk '{print $1}' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"</script>
+                          </completionHelp>
+                        </properties>
+                        <children>
+                          <leafNode name="advertised-routes">
+                            <properties>
+                              <help>Show routes advertised to a BGP neighbor</help>
+                            </properties>
+                            <command>vtysh -c "show ip bgp l2vpn evpn neighbor $7 advertised-routes"</command>
+                          </leafNode>
+                          <leafNode name="routes">
+                            <properties>
+                              <help>Show routes learned from BGP neighbor</help>
+                            </properties>
+                            <command>vtysh -c "show ip bgp l2vpn evpn neighbor $7 routes"</command>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <leafNode name="update-groups">
+                        <properties>
+                          <help>Detailed info about dynamic update groups</help>
+                        </properties>
+                        <command>vtysh -c "show ip bgp l2vpn evpn update-groups"</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
               <node name="large-community">
                 <properties>
                   <help>Show BGP routes matching the specified large-communities</help>

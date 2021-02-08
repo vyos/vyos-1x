@@ -75,6 +75,8 @@
  address-family ipv4 unicast
 {%       elif af == 'ipv6_unicast' %}
  address-family ipv6 unicast
+{%       elif af == 'l2vpn_evpn' %}
+ address-family l2vpn evpn
 {%       endif %}
 {%       if config.address_family[af].allowas_in is defined and config.address_family[af].allowas_in is not none %}
   neighbor {{ neighbor }} allowas-in {{ config.address_family[af].allowas_in.number if config.address_family[af].allowas_in.number is defined }}
@@ -163,6 +165,8 @@ router bgp {{ asn }}
  address-family ipv4 unicast
 {%     elif af == 'ipv6_unicast' %}
  address-family ipv6 unicast
+{%     elif af == 'l2vpn_evpn' %}
+ address-family l2vpn evpn
 {%     endif %}
 {%     if address_family[af].aggregate_address is defined and address_family[af].aggregate_address is not none %}
 {%       for ip in address_family[af].aggregate_address %}
@@ -190,6 +194,19 @@ router bgp {{ asn }}
 {#######   we need this blank line!! #######}
 
 {%       endfor %}
+{%     endif %}
+{%     if address_family[af].advertise_all_vni is defined %}
+  advertise-all-vni
+{%     endif %}
+{%     if address_family[af].advertise_default_gw is defined %}
+  advertise-default-gw
+{%     endif %}
+{%     if address_family[af].advertise_svi_ip is defined %}
+  advertise-svi-ip
+{%     endif %}
+{%     if address_family[af].vni is defined and address_family[af].vni is not none %}
+  vni {{ address_family[af].vni }}
+  exit-vni
 {%     endif %}
  exit-address-family
 {%   endfor %}
