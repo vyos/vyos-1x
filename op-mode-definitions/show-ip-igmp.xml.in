@@ -13,31 +13,31 @@
                 <properties>
                   <help>IGMP groups information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip igmp groups"</command>
+                <command>vtysh -c "show ip igmp groups"</command>
               </leafNode>
               <leafNode name="interfaces">
                 <properties>
                   <help>IGMP interfaces information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip igmp interface"</command>
+                <command>vtysh -c "show ip igmp interface"</command>
               </leafNode>
               <leafNode name="join">
                 <properties>
                   <help>IGMP static join information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip igmp join"</command>
+                <command>vtysh -c "show ip igmp join"</command>
               </leafNode>
               <leafNode name="sources">
                 <properties>
                   <help>IGMP sources information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip igmp sources"</command>
+                <command>vtysh -c "show ip igmp sources"</command>
               </leafNode>
               <leafNode name="statistics">
                 <properties>
                   <help>IGMP statistics</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip igmp statistics"</command>
+                <command>vtysh -c "show ip igmp statistics"</command>
               </leafNode>
             </children>
           </node>

@@ -13,7 +13,7 @@
                 <properties>
                   <help>Reset IGMP interfaces</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "clear ip igmp interfaces"</command>
+                <command>vtysh -c "clear ip igmp interfaces"</command>
               </leafNode>
             </children>
           </node>

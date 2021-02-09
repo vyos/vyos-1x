@@ -25,13 +25,13 @@
                 <properties>
                   <help>IP multicast information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip multicast"</command>
+                <command>vtysh -c "show ip multicast"</command>
               </leafNode>
               <leafNode name="route">
                 <properties>
                   <help>IP multicast routing table</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip mroute"</command>
+                <command>vtysh -c "show ip mroute"</command>
               </leafNode>
             </children>
           </node>

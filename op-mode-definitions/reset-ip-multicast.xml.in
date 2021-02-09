@@ -13,7 +13,7 @@
                 <properties>
                   <help>Clear multicast routing table</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "clear ip mroute"</command>
+                <command>vtysh -c "clear ip mroute"</command>
               </leafNode>
             </children>
           </node>

@@ -11,13 +11,13 @@
             <properties>
               <help>Show IP routes</help>
             </properties>
-            <command>/usr/bin/vtysh -c "show ip route"</command>
+            <command>vtysh -c "show ip route"</command>
             <children>
               <leafNode name="bgp">
                 <properties>
                   <help>Show IP BGP routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route bgp"</command>
+                <command>vtysh -c "show ip route bgp"</command>
               </leafNode>
               <node name="cache">
                 <properties>
@@ -38,7 +38,7 @@
                 <properties>
                   <help>Show IP connected routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route connected"</command>
+                <command>vtysh -c "show ip route connected"</command>
               </leafNode>
               <node name="forward">
                 <properties>
@@ -59,43 +59,43 @@
                 <properties>
                   <help>Show IP IS-IS routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route isis"</command>
+                <command>vtysh -c "show ip route isis"</command>
               </leafNode>
               <leafNode name="kernel">
                 <properties>
                   <help>Show IP kernel routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route kernel"</command>
+                <command>vtysh -c "show ip route kernel"</command>
               </leafNode>
               <leafNode name="ospf">
                 <properties>
                   <help>Show IP OSPF routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route ospf"</command>
+                <command>vtysh -c "show ip route ospf"</command>
               </leafNode>
               <leafNode name="rip">
                 <properties>
                   <help>Show IP RIP routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route rip"</command>
+                <command>vtysh -c "show ip route rip"</command>
               </leafNode>
               <leafNode name="static">
                 <properties>
                   <help>Show IP static routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route static"</command>
+                <command>vtysh -c "show ip route static"</command>
               </leafNode>
               <leafNode name="summary">
                 <properties>
                   <help>Show IP routes summary</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route summary"</command>
+                <command>vtysh -c "show ip route summary"</command>
               </leafNode>
               <leafNode name="supernets-only">
                 <properties>
                   <help>Show IP supernet routes</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route supernets-only"</command>
+                <command>vtysh -c "show ip route supernets-only"</command>
               </leafNode>
               <node name="table">
                 <properties>
@@ -109,7 +109,7 @@
                     <list>&lt;1-200&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route table $5"</command>
+                <command>vtysh -c "show ip route table $5"</command>
               </tagNode>
               <node name="tag">
                 <properties>
@@ -123,7 +123,7 @@
                     <list>&lt;1-4294967295&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route tag $5"</command>
+                <command>vtysh -c "show ip route tag $5"</command>
               </tagNode>
               <node name="vrf">
                 <properties>
@@ -138,7 +138,7 @@
                     <path>vrf name</path>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route vrf $5"</command>
+                <command>vtysh -c "show ip route vrf $5"</command>
               </tagNode>
             </children>
           </node>
@@ -149,13 +149,13 @@
                 <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
               </completionHelp>
             </properties>
-            <command>/usr/bin/vtysh -c "show ip route $4"</command>
+            <command>vtysh -c "show ip route $4"</command>
             <children>
               <leafNode name="longer-prefixes">
                 <properties>
                   <help>Show longer prefixes of routes for specified IP address or prefix</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip route $4 longer-prefixes"</command>
+                <command>vtysh -c "show ip route $4 longer-prefixes"</command>
               </leafNode>
             </children>
           </tagNode>

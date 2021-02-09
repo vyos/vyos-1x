@@ -16,41 +16,41 @@
                 <properties>
                   <help>Label Information Base</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show mpls ldp binding"</command>
+                <command>vtysh -c "show mpls ldp binding"</command>
                 <children>
                   <node name="detail">
                     <properties>
                       <help>Show detailed information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp binding detail"</command>
+                    <command>vtysh -c "show mpls ldp binding detail"</command>
                   </node>
                   <tagNode name="neighbor">
                     <properties>
                       <help>Display labels from LDP neighbor</help>
                       <completionHelp>
                         <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-                        <script>/usr/bin/vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                        <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
                       </completionHelp>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp binding neighbor $6"</command>
+                    <command>vtysh -c "show mpls ldp binding neighbor $6"</command>
                     <children>
                       <leafNode name="detail">
                         <properties>
                           <help>Show detailed information</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding neighbor $6 detail"</command>
+                        <command>vtysh -c "show mpls ldp binding neighbor $6 detail"</command>
                       </leafNode>
                       <tagNode name="local-label">
                         <properties>
                           <help>Match locally assigned label value</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding neighbor $6 local-label $8"</command>
+                        <command>vtysh -c "show mpls ldp binding neighbor $6 local-label $8"</command>
                       </tagNode>
                       <tagNode name="remote-label">
                         <properties>
                           <help>Match remotely assigned label value</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding neighbor $6 remote-label $8"</command>
+                        <command>vtysh -c "show mpls ldp binding neighbor $6 remote-label $8"</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -58,29 +58,29 @@
                     <properties>
                       <help>Match locally assigned label value</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp binding local-label $6"</command>
+                    <command>vtysh -c "show mpls ldp binding local-label $6"</command>
                     <children>
                       <leafNode name="detail">
                         <properties>
                           <help>Show detailed information</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding local-label $6 detail"</command>
+                        <command>vtysh -c "show mpls ldp binding local-label $6 detail"</command>
                       </leafNode>
                       <tagNode name="neighbor">
                         <properties>
                           <help>Match LDP neighbor</help>
                           <completionHelp>
                             <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-                            <script>/usr/bin/vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                            <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
                           </completionHelp>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding local-label $6 neighbor $8"</command>
+                        <command>vtysh -c "show mpls ldp binding local-label $6 neighbor $8"</command>
                       </tagNode>
                       <tagNode name="remote-label">
                         <properties>
                           <help>Match remotely assigned label value</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding local-label $6 remote-label $8"</command>
+                        <command>vtysh -c "show mpls ldp binding local-label $6 remote-label $8"</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -88,29 +88,29 @@
                     <properties>
                       <help>Match remotely assigned label value</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp binding remote-label $6"</command>
+                    <command>vtysh -c "show mpls ldp binding remote-label $6"</command>
                     <children>
                       <leafNode name="detail">
                         <properties>
                           <help>Show detailed information</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding remote-label $6 detail"</command>
+                        <command>vtysh -c "show mpls ldp binding remote-label $6 detail"</command>
                       </leafNode>
                       <tagNode name="neighbor">
                         <properties>
                           <help>Match LDP neighbor</help>
                           <completionHelp>
                             <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-                            <script>/usr/bin/vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                            <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
                           </completionHelp>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding remote-label $6 neighbor $8"</command>
+                        <command>vtysh -c "show mpls ldp binding remote-label $6 neighbor $8"</command>
                       </tagNode>
                       <tagNode name="local-label">
                         <properties>
                           <help>Match locally assigned label value</help>
                         </properties>
-                        <command>/usr/bin/vtysh -c "show mpls ldp binding remote-label $6 local-label $8"</command>
+                        <command>vtysh -c "show mpls ldp binding remote-label $6 local-label $8"</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -123,13 +123,13 @@
                     <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "show mpls ldp binding $5"</command>
+                <command>vtysh -c "show mpls ldp binding $5"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
                       <help>Show detailed information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp binding $5 detail"</command>
+                    <command>vtysh -c "show mpls ldp binding $5 detail"</command>
                   </leafNode>
                 </children>
               </tagNode>
@@ -137,13 +137,13 @@
                 <properties>
                   <help>Discovery hello information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show mpls ldp discovery"</command>
+                <command>vtysh -c "show mpls ldp discovery"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
                       <help>Show detailed information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp discovery detail"</command>
+                    <command>vtysh -c "show mpls ldp discovery detail"</command>
                   </leafNode>
                 </children>
               </node>
@@ -151,25 +151,25 @@
                 <properties>
                   <help>LDP interface information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show mpls ldp interface"</command>
+                <command>vtysh -c "show mpls ldp interface"</command>
               </node>
               <node name="neighbor">
                 <properties>
                   <help>LDP neighbor information</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show mpls ldp neighbor"</command>
+                <command>vtysh -c "show mpls ldp neighbor"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
                       <help>Show detailed information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp neighbor detail"</command>
+                    <command>vtysh -c "show mpls ldp neighbor detail"</command>
                   </leafNode>
                   <leafNode name="capabilities">
                     <properties>
                       <help>Show neighbor capability information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp neighbor capabilities"</command>
+                    <command>vtysh -c "show mpls ldp neighbor capabilities"</command>
                   </leafNode>
                 </children>
               </node>
@@ -178,22 +178,22 @@
                   <help>LDP neighbor</help>
                   <completionHelp>
                     <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-                    <script>/usr/bin/vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                    <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "show mpls ldp neighbor $5"</command>
+                <command>vtysh -c "show mpls ldp neighbor $5"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
                       <help>Show detailed information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp neighbor $5 detail"</command>
+                    <command>vtysh -c "show mpls ldp neighbor $5 detail"</command>
                   </leafNode>
                   <leafNode name="capabilities">
                     <properties>
                       <help>Show neighbor capability information</help>
                     </properties>
-                    <command>/usr/bin/vtysh -c "show mpls ldp neighbor $5 capabilities"</command>
+                    <command>vtysh -c "show mpls ldp neighbor $5 capabilities"</command>
                   </leafNode>
                 </children>
               </tagNode>
@@ -203,13 +203,13 @@
             <properties>
               <help>Show MPLS pseudowire interfaces</help>
             </properties>
-            <command>/usr/bin/vtysh -c "show mpls pseudowires"</command>
+            <command>vtysh -c "show mpls pseudowires"</command>
           </node>
           <node name="table">
             <properties>
               <help>Show MPLS table</help>
             </properties>
-            <command>/usr/bin/vtysh -c "show mpls table"</command>
+            <command>vtysh -c "show mpls table"</command>
           </node>
         </children>
       </node>

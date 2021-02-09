@@ -6,7 +6,7 @@
         <properties>
           <help>Show routing tables</help>
         </properties>
-        <command>/usr/bin/vtysh -c "show zebra router table summary"</command>
+        <command>vtysh -c "show zebra router table summary"</command>
       </leafNode>
     </children>
   </node>
