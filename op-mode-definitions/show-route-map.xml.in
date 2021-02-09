@@ -6,7 +6,7 @@
         <properties>
           <help>Show route-map information</help>
         </properties>
-        <command>/usr/bin/vtysh -c "show route-map"</command>
+        <command>vtysh -c "show route-map"</command>
       </node>
       <tagNode name="route-map">
         <properties>
@@ -15,7 +15,7 @@
             <path>policy route-map</path>
           </completionHelp>
         </properties>
-        <command>/usr/bin/vtysh -c "show route-map $3"</command>
+        <command>vtysh -c "show route-map $3"</command>
       </tagNode>
     </children>
   </node>

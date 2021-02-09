@@ -11,19 +11,19 @@
             <properties>
               <help>Show RPKI cache connections</help>
             </properties>
-            <command>/usr/bin/vtysh -c "show rpki cache-connection"</command>
+            <command>vtysh -c "show rpki cache-connection"</command>
           </leafNode>
           <leafNode name="cache-server">
              <properties>
                <help>Show RPKI cache servers information</help>
              </properties>
-             <command>/usr/bin/vtysh -c "show rpki cache-server"</command>
+             <command>vtysh -c "show rpki cache-server"</command>
           </leafNode>
           <leafNode name="prefix-table">
              <properties>
                <help>Show RPKI-validated prefixes</help>
              </properties>
-             <command>/usr/bin/vtysh -c "show rpki prefix-table"</command>
+             <command>vtysh -c "show rpki prefix-table"</command>
           </leafNode>
         </children>
       </node>

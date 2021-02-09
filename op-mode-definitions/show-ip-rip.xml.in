@@ -11,13 +11,13 @@
             <properties>
               <help>Show Routing Information Protocol (RIP) information</help>
             </properties>
-            <command>/usr/bin/vtysh -c "show ip rip"</command>
+            <command>vtysh -c "show ip rip"</command>
             <children>
               <leafNode name="status">
                 <properties>
                   <help>Show RIP protocol status</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show ip rip status"</command>
+                <command>vtysh -c "show ip rip status"</command>
               </leafNode>
             </children>
           </node>

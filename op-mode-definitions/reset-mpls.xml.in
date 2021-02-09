@@ -17,10 +17,10 @@
                   <help>Reset MPLS LDP neighbor/session</help>
                   <completionHelp>
                     <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-                    <script>/usr/bin/vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                    <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
                   </completionHelp>
                 </properties>
-                <command>/usr/bin/vtysh -c "clear mpls ldp neighbor $5"</command>
+                <command>vtysh -c "clear mpls ldp neighbor $5"</command>
               </tagNode>
             </children>
           </node>

@@ -128,7 +128,7 @@
                 <properties>
                   <help>Show memory usage of all routing protocols</help>
                 </properties>
-                <command>/usr/bin/vtysh -c "show memory"</command>
+                <command>vtysh -c "show memory"</command>
               </leafNode>
             </children>
           </node>
@@ -162,7 +162,7 @@
             <properties>
               <help>Show Quagga routing daemons</help>
             </properties>
-            <command>/usr/bin/vtysh -c "show daemons"</command>
+            <command>vtysh -c "show daemons"</command>
           </leafNode>
           <leafNode name="storage">
             <properties>
