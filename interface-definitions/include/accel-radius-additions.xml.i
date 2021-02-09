@@ -29,7 +29,7 @@
           </properties>
           <defaultValue>1813</defaultValue>
         </leafNode>
-        #include <include/accel-radius-additions-disable-accounting.xlm.in>
+        #include <include/accel-radius-additions-disable-accounting.xml.i>
         <leafNode name="fail-time">
           <properties>
             <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
