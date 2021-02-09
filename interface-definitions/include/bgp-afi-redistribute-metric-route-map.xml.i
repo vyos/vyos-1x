@@ -8,12 +8,5 @@
     </valueHelp>
   </properties>
 </leafNode>
-<leafNode name="route-map">
-  <properties>
-    <help>Route map to filter redistributed routes</help>
-    <completionHelp>
-      <path>policy route-map</path>
-    </completionHelp>
-  </properties>
-</leafNode>
+#include <include/bgp-route-map.xml.i>
 <!-- included end -->

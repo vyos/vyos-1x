@@ -1,54 +1,12 @@
 <!-- included start from bgp-afi-common.xml.i -->
-<node name="allowas-in">
-  <properties>
-    <help>Accept route that contains the local-as in the as-path</help>
-  </properties>
-  <children>
-    <leafNode name="number">
-      <properties>
-        <help>Number of occurrences of AS number</help>
-        <valueHelp>
-          <format>u32:1-10</format>
-          <description>Number of times AS is allowed in path</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 1-10"/>
-        </constraint>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/bgp-afi-allowas-in.xml.i>
 <leafNode name="as-override">
   <properties>
     <help>AS for routes sent to this peer to be the local AS</help>
     <valueless/>
   </properties>
 </leafNode>
-<node name="attribute-unchanged">
-  <properties>
-    <help>BGP attributes are sent unchanged</help>
-  </properties>
-  <children>
-    <leafNode name="as-path">
-      <properties>
-        <help>Send AS path unchanged</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-    <leafNode name="med">
-      <properties>
-        <help>Send multi-exit discriminator unchanged</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-    <leafNode name="next-hop">
-      <properties>
-        <help>Send nexthop unchanged</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/bgp-afi-attribute-unchanged.xml.i>
 <node name="disable-send-community">
   <properties>
     <help>Disable sending community attributes to this peer</help>
@@ -73,14 +31,7 @@
     <help>Originate default route to this peer</help>
   </properties>
   <children>
-    <leafNode name="route-map">
-      <properties>
-        <help>route-map to specify criteria of the default route</help>
-        <completionHelp>
-          <path>policy route-map</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
+    #include <include/bgp-route-map.xml.i>
   </children>
 </node>
 <node name="distribute-list">
@@ -155,73 +106,17 @@
     </constraint>
   </properties>
 </leafNode>
-<node name="nexthop-self">
-  <properties>
-    <help>Disable the next hop calculation for this peer</help>
-  </properties>
-  <children>
-    <leafNode name="force">
-      <properties>
-        <help>Set the next hop to self for reflected routes</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/bgp-afi-nexthop-self.xml.i>
 <leafNode name="remove-private-as">
   <properties>
     <help>Remove private AS numbers from AS path in outbound route updates</help>
     <valueless/>
   </properties>
 </leafNode>
-<node name="route-map">
-  <properties>
-    <help>Route-map to filter route updates to/from this peer</help>
-  </properties>
-  <children>
-    <leafNode name="export">
-      <properties>
-        <help>Route-map to filter outgoing route updates</help>
-        <completionHelp>
-          <path>policy route-map</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
-    <leafNode name="import">
-      <properties>
-        <help>Route-map to filter incoming route updates</help>
-        <completionHelp>
-          <path>policy route-map</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
-  </children>
-</node>
-<leafNode name="route-reflector-client">
-  <properties>
-    <help>Peer is a route reflector client</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="route-server-client">
-  <properties>
-    <help>Peer is a route server client</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<node name="soft-reconfiguration">
-  <properties>
-    <help>Soft reconfiguration for peer</help>
-  </properties>
-  <children>
-    <leafNode name="inbound">
-      <properties>
-        <help>Enable inbound soft reconfiguration</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/bgp-afi-route-map.xml.i>
+#include <include/bgp-afi-route-reflector-client.xml.i>
+#include <include/bgp-afi-route-server-client.xml.i>
+#include <include/bgp-afi-soft-reconfiguration.xml.i>
 <leafNode name="unsuppress-map">
   <properties>
     <help>Route-map to selectively unsuppress suppressed routes</help>
