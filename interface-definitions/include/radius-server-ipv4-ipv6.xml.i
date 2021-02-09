@@ -22,8 +22,8 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/radius-server-key.xml.in>
-        #include <include/radius-server-port.xml.in>
+        #include <include/radius-server-key.xml.i>
+        #include <include/radius-server-port.xml.i>
       </children>
     </tagNode>
     #include <include/source-address-ipv4-ipv6.xml.i>

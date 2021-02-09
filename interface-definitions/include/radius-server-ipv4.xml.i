@@ -18,8 +18,8 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/radius-server-key.xml.in>
-        #include <include/radius-server-port.xml.in>
+        #include <include/radius-server-key.xml.i>
+        #include <include/radius-server-port.xml.i>
       </children>
     </tagNode>
   </children>
