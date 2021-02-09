@@ -18,6 +18,7 @@ import os
 
 from glob import glob
 from sys import exit
+from multiprocessing import cpu_count
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -77,7 +78,7 @@ def verify(ethernet):
 
     # verify offloading capabilities
     if 'offload' in ethernet and 'rps' in ethernet['offload']:
-        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
+        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus') or cpu_count() < 2:
             raise ConfigError('Interface does not suport RPS!')
 
     # XDP requires multiple TX queues
