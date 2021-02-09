@@ -153,6 +153,9 @@
 {% endmacro %}
 !
 router bgp {{ asn }}
+{# Disable eBGP policy by default until there is a CLI option #}
+{# https://phabricator.vyos.net/T3183 & https://phabricator.vyos.net/T2100 #}
+ no bgp ebgp-requires-policy
 {% if address_family is defined and address_family is not none %}
 {%   for af in address_family %}
  !
