@@ -1,0 +1,82 @@
+!
+router ripng
+{% if default_information is defined and default_information.originate is defined %}
+ default-information originate
+{% endif %}
+{% if default_metric is defined and default_metric is not none %}
+ default-metric {{ default_metric }}
+{% endif %}
+{% if aggregate_address is defined and aggregate_address is not none %}
+{%   for prefix in aggregate_address %}
+ aggregate-address {{ prefix }}
+{%   endfor %}
+{% endif %}
+{% if passive_interface is defined and passive_interface is not none %}
+{%   for ifname in passive_interface %}
+ passive-interface {{ ifname }}
+{%   endfor %}
+{% endif %}
+{% if interface is defined and interface is not none %}
+{%   for ifname in interface %}
+ network {{ ifname }}
+{%   endfor %}
+{% endif %}
+{% if network is defined and network is not none %}
+{%   for net in network %}
+ network {{ net }}
+{%   endfor %}
+{% endif %}
+{% if route is defined and route is not none %}
+{%   for prefix in route %}
+ route {{ prefix }}
+{%   endfor %}
+{% endif %}
+{% if redistribute is defined and redistribute is not none %}
+{%   for protocol, protocol_config in redistribute.items() %}
+{%     if protocol == 'ospfv3' %}
+{%       set protocol = 'ospf6' %}
+{%     endif %}
+ redistribute {{ protocol }} {{ 'metric ' + protocol_config.metric if protocol_config.metric is defined }} {{ 'route-map ' + protocol_config.route_map if protocol_config.route_map is defined }}
+{%   endfor %}
+{% endif %}
+{# timers have default values #}
+ timers basic {{ timers['update'] }} {{ timers.timeout }} {{ timers.garbage_collection }}
+{% if distribute_list is defined and distribute_list is not none %}
+{%   if distribute_list.access_list is defined and distribute_list.access_list is not none %}
+{%     if distribute_list.access_list.in is defined and distribute_list.access_list.in is not none %}
+ ipv6 distribute-list {{ distribute_list.access_list.in }} in
+{%     endif %}
+{%     if distribute_list.access_list.out is defined and distribute_list.access_list.out is not none %}
+ ipv6 distribute-list {{ distribute_list.access_list.out }} out
+{%     endif %}
+{%   endif %}
+{%   if distribute_list.interface is defined and distribute_list.interface is not none %}
+{%     for interface, interface_config in distribute_list.interface.items() %}
+{%       if interface_config.access_list is defined and interface_config.access_list is not none %}
+{%         if interface_config.access_list.in is defined and interface_config.access_list.in is not none %}
+ ipv6 distribute-list {{ interface_config.access_list.in }} in {{ interface }}
+{%         endif %}
+{%         if interface_config.access_list.out is defined and interface_config.access_list.out is not none %}
+ ipv6 distribute-list {{ interface_config.access_list.out }} out {{ interface }}
+{%         endif %}
+{%       endif %}
+{%       if interface_config.prefix_list is defined and interface_config.prefix_list is not none %}
+{%         if interface_config.prefix_list.in is defined and interface_config.prefix_list.in is not none %}
+ ipv6 distribute-list prefix {{ interface_config.prefix_list.in }} in {{ interface }}
+{%         endif %}
+{%         if interface_config.prefix_list.out is defined and interface_config.prefix_list.out is not none %}
+ ipv6 distribute-list prefix {{ interface_config.prefix_list.out }} out {{ interface }}
+{%         endif %}
+{%       endif %}
+{%     endfor %}
+{%   endif %}
+{%   if distribute_list.prefix_list is defined and distribute_list.prefix_list is not none %}
+{%     if distribute_list.prefix_list.in is defined and distribute_list.prefix_list.in is not none %}
+ ipv6 distribute-list prefix {{ distribute_list.prefix_list.in }} in
+{%     endif %}
+{%     if distribute_list.prefix_list.out is defined and distribute_list.prefix_list.out is not none %}
+ ipv6 distribute-list prefix {{ distribute_list.prefix_list.out }} out
+{%     endif %}
+{%   endif %}
+{% endif %}
+!
