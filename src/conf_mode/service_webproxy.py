@@ -123,9 +123,6 @@ def verify(proxy):
     ldap_auth = dict_search('authentication.method', proxy) == 'ldap'
 
     for address, config in proxy['listen_address'].items():
-        if not is_addr_assigned(address):
-            raise ConfigError(
-                f'listen-address "{address}" not assigned on any interface!')
         if ldap_auth and 'disable_transparent' not in config:
             raise ConfigError('Authentication can not be configured when ' \
                               'proxy is in transparent mode')
