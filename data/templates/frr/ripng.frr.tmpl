@@ -1,46 +1,23 @@
 !
+{# Interface specific configuration #}
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%     if iface_config.split_horizon is defined and iface_config.split_horizon.disable is defined %}
+ no ipv6 rip split-horizon
+{%     endif %}
+{%     if iface_config.split_horizon is defined and iface_config.split_horizon.poison_reverse is defined %}
+ ipv6 rip split-horizon poisoned-reverse
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
 router ripng
-{% if default_information is defined and default_information.originate is defined %}
- default-information originate
-{% endif %}
-{% if default_metric is defined and default_metric is not none %}
- default-metric {{ default_metric }}
-{% endif %}
 {% if aggregate_address is defined and aggregate_address is not none %}
 {%   for prefix in aggregate_address %}
  aggregate-address {{ prefix }}
 {%   endfor %}
 {% endif %}
-{% if passive_interface is defined and passive_interface is not none %}
-{%   for ifname in passive_interface %}
- passive-interface {{ ifname }}
-{%   endfor %}
-{% endif %}
-{% if interface is defined and interface is not none %}
-{%   for ifname in interface %}
- network {{ ifname }}
-{%   endfor %}
-{% endif %}
-{% if network is defined and network is not none %}
-{%   for net in network %}
- network {{ net }}
-{%   endfor %}
-{% endif %}
-{% if route is defined and route is not none %}
-{%   for prefix in route %}
- route {{ prefix }}
-{%   endfor %}
-{% endif %}
-{% if redistribute is defined and redistribute is not none %}
-{%   for protocol, protocol_config in redistribute.items() %}
-{%     if protocol == 'ospfv3' %}
-{%       set protocol = 'ospf6' %}
-{%     endif %}
- redistribute {{ protocol }} {{ 'metric ' + protocol_config.metric if protocol_config.metric is defined }} {{ 'route-map ' + protocol_config.route_map if protocol_config.route_map is defined }}
-{%   endfor %}
-{% endif %}
-{# timers have default values #}
- timers basic {{ timers['update'] }} {{ timers.timeout }} {{ timers.garbage_collection }}
 {% if distribute_list is defined and distribute_list is not none %}
 {%   if distribute_list.access_list is defined and distribute_list.access_list is not none %}
 {%     if distribute_list.access_list.in is defined and distribute_list.access_list.in is not none %}
@@ -79,4 +56,5 @@ router ripng
 {%     endif %}
 {%   endif %}
 {% endif %}
+{% include 'frr/rip_ripng.frr.j2' %}
 !

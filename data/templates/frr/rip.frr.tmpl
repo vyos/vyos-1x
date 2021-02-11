@@ -35,12 +35,6 @@ interface {{ iface }}
 {% endif %}
 !
 router rip
-{% if default_information is defined and default_information.originate is defined %}
- default-information originate
-{% endif %}
-{% if default_metric is defined and default_metric is not none %}
- default-metric {{ default_metric }}
-{% endif %}
 {% if default_distance is defined and default_distance is not none %}
  distance {{ default_distance }}
 {% endif %}
@@ -56,33 +50,6 @@ router rip
  neighbor {{ address }}
 {%   endfor %}
 {% endif %}
-{% if network is defined and network is not none %}
-{%   for prefix in network %}
- network {{ prefix }}
-{%   endfor %}
-{% endif %}
-{% if interface is defined and interface is not none %}
-{%   for ifname in interface %}
- network {{ ifname }}
-{%   endfor %}
-{% endif %}
-{% if passive_interface is defined and passive_interface is not none %}
-{%   for ifname in passive_interface %}
- passive-interface {{ ifname }}
-{%   endfor %}
-{% endif %}
-{% if redistribute is defined and redistribute is not none %}
-{%   for protocol, protocol_config in redistribute.items() %}
- redistribute {{ protocol }} {{ 'metric ' + protocol_config.metric if protocol_config.metric is defined }} {{ 'route-map ' + protocol_config.route_map if protocol_config.route_map is defined }}
-{%   endfor %}
-{% endif %}
-{% if route is defined and route is not none %}
-{%   for prefix in route %}
- route {{ prefix }}
-{%   endfor %}
-{% endif %}
-{# timers have default values #}
- timers basic {{ timers['update'] }} {{ timers.timeout }} {{ timers.garbage_collection }}
 {% if distribute_list is defined and distribute_list is not none %}
 {%   if distribute_list.access_list is defined and distribute_list.access_list is not none %}
 {%     if distribute_list.access_list.in is defined and distribute_list.access_list.in is not none %}
@@ -121,4 +88,5 @@ router rip
 {%     endif %}
 {%   endif %}
 {% endif %}
+{% include 'frr/rip_ripng.frr.j2' %}
 !
