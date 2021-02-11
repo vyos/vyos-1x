@@ -1,8 +1,8 @@
-<!-- Routing Information Protocol (RIPng) configuration -->
+<?xml version="1.0"?>
 <interfaceDefinition>
   <node name="protocols">
     <children>
-      <node name="nripng" owner="${vyos_conf_scripts_dir}/protocols_ripng.py">
+      <node name="ripng" owner="${vyos_conf_scripts_dir}/protocols_ripng.py">
         <properties>
           <help>Routing Information Protocol (RIPng) parameters</help>
         </properties>

@@ -20,7 +20,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -29,16 +28,7 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/bgp.frr'
 frr_daemon = 'bgpd'
-
-DEBUG = os.path.exists('/tmp/bgp.debug')
-if DEBUG:
-    import logging
-    lg = logging.getLogger("vyos.frr")
-    lg.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
@@ -156,10 +146,7 @@ def generate(bgp):
     asn = list(bgp.keys())[0]
     bgp[asn]['asn'] = asn
 
-    # render(config) not needed, its only for debug
-    render(config_file, 'frr/bgp.frr.tmpl', bgp[asn])
     bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn])
-
     return None
 
 def apply(bgp):
@@ -168,21 +155,6 @@ def apply(bgp):
     frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section(f'router bgp \S+', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
-
-    # Debugging
-    if DEBUG:
-        from pprint import pprint
-        print('')
-        print('--------- DEBUGGING ----------')
-        pprint(dir(frr_cfg))
-        print('Existing config:\n')
-        for line in frr_cfg.original_config:
-            print(line)
-        print(f'Replacement config:\n')
-        print(f'{bgp["new_frr_config"]}')
-        print(f'Modified config:\n')
-        print(f'{frr_cfg}')
-
     frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
@@ -190,7 +162,6 @@ def apply(bgp):
     if bgp['new_frr_config'] == '':
         for a in range(5):
             frr_cfg.commit_configuration(frr_daemon)
-
 
     return None
 

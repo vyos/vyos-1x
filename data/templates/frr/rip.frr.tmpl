@@ -114,10 +114,10 @@ router rip
 {%   endif %}
 {%   if distribute_list.prefix_list is defined and distribute_list.prefix_list is not none %}
 {%     if distribute_list.prefix_list.in is defined and distribute_list.prefix_list.in is not none %}
-distribute-list prefix {{ distribute_list.prefix_list.in }} in
+ distribute-list prefix {{ distribute_list.prefix_list.in }} in
 {%     endif %}
 {%     if distribute_list.prefix_list.out is defined and distribute_list.prefix_list.out is not none %}
-distribute-list prefix {{ distribute_list.prefix_list.out }} out
+ distribute-list prefix {{ distribute_list.prefix_list.out }} out
 {%     endif %}
 {%   endif %}
 {% endif %}
