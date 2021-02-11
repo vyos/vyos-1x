@@ -46,6 +46,20 @@ def migrate_rip(config, path, interface):
         if len(config.list_nodes(path[:-1])) == 0:
             config.delete(path[:-1])
 
+def migrate_ripng(config, path, interface):
+    path = path + ['ripng']
+    if config.exists(path):
+        new_base = ['protocols', 'ripng', 'interface']
+        config.set(new_base)
+        config.set_tag(new_base)
+        config.copy(path, new_base + [interface])
+        config.delete(path)
+
+        # if "ipv6 ripng" was the only setting, we can clean out the empty
+        # ip node afterwards
+        if len(config.list_nodes(path[:-1])) == 0:
+            config.delete(path[:-1])
+
 if __name__ == '__main__':
     if (len(argv) < 1):
         print("Must specify file name!")
@@ -62,33 +76,48 @@ if __name__ == '__main__':
     #
     for type in config.list_nodes(['interfaces']):
         for interface in config.list_nodes(['interfaces', type]):
-            if_base = ['interfaces', type, interface, 'ip']
-            migrate_rip(config, if_base, interface)
-            migrate_ospf(config, if_base, interface)
+            ip_base = ['interfaces', type, interface, 'ip']
+            ipv6_base = ['interfaces', type, interface, 'ipv6']
+            migrate_rip(config, ip_base, interface)
+            migrate_ripng(config, ipv6_base, interface)
+            migrate_ospf(config, ip_base, interface)
 
             vif_path = ['interfaces', type, interface, 'vif']
             if config.exists(vif_path):
                 for vif in config.list_nodes(vif_path):
-                    vif_if_base = vif_path + [vif, 'ip']
-                    migrate_rip(config, vif_if_base, f'{interface}.{vif}')
-                    migrate_ospf(config, vif_if_base, f'{interface}.{vif}')
+                    vif_ip_base = vif_path + [vif, 'ip']
+                    vif_ipv6_base = vif_path + [vif, 'ipv6']
+                    ifname = f'{interface}.{vif}'
+
+                    migrate_rip(config, vif_ip_base, ifname)
+                    migrate_ripng(config, vif_ipv6_base, ifname)
+                    migrate_ospf(config, vif_ip_base, ifname)
+
 
             vif_s_path = ['interfaces', type, interface, 'vif-s']
             if config.exists(vif_s_path):
                 for vif_s in config.list_nodes(vif_s_path):
-                    vif_s_if_base = vif_s_path + [vif_s, 'ip']
+                    vif_s_ip_base = vif_s_path + [vif_s, 'ip']
+                    vif_s_ipv6_base = vif_s_path + [vif_s, 'ipv6']
 
                     # vif-c interfaces MUST be migrated before their parent vif-s
                     # interface as the migrate_*() functions delete the path!
                     vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
                     if config.exists(vif_c_path):
                         for vif_c in config.list_nodes(vif_c_path):
-                            vif_c_if_base = vif_c_path + [vif_c, 'ip']
-                            migrate_rip(config, vif_c_if_base, f'{interface}.{vif_s}.{vif_c}')
-                            migrate_ospf(config, vif_c_if_base, f'{interface}.{vif_s}.{vif_c}')
+                            vif_c_ip_base = vif_c_path + [vif_c, 'ip']
+                            vif_c_ipv6_base = vif_c_path + [vif_c, 'ipv6']
+                            ifname = f'{interface}.{vif_s}.{vif_c}'
 
-                    migrate_rip(config, vif_s_if_base, f'{interface}.{vif_s}')
-                    migrate_ospf(config, vif_s_if_base, f'{interface}.{vif_s}')
+                            migrate_rip(config, vif_c_ip_base, ifname)
+                            migrate_ripng(config, vif_c_ipv6_base, ifname)
+                            migrate_ospf(config, vif_c_ip_base, ifname)
+
+
+                    ifname = f'{interface}.{vif_s}'
+                    migrate_rip(config, vif_s_ip_base, ifname)
+                    migrate_ripng(config, vif_s_ipv6_base, ifname)
+                    migrate_ospf(config, vif_s_ip_base, ifname)
 
     try:
         with open(file_name, 'w') as f:

@@ -16,6 +16,13 @@ interfaces {
                 }
             }
         }
+        ipv6 {
+            ripng {
+                split-horizon {
+                    poison-reverse
+                }
+            }
+        }
         smp-affinity auto
         speed auto
         address 172.18.202.10/24
@@ -35,6 +42,13 @@ interfaces {
                     }
                 }
             }
+            ipv6 {
+                ripng {
+                    split-horizon {
+                        disable
+                    }
+                }
+            }
         }
         vif-s 200 {
             ip {
@@ -46,6 +60,13 @@ interfaces {
                     }
                     split-horizon {
                         disable
+                    }
+                }
+            }
+            ipv6 {
+                ripng {
+                    split-horizon {
+                        poison-reverse
                     }
                 }
             }
@@ -68,7 +89,49 @@ interfaces {
                         }
                     }
                 }
+                ipv6 {
+                    ripng {
+                        split-horizon {
+                            poison-reverse
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+policy {
+    access-list6 198 {
+        rule 10 {
+            action permit
+            source {
+                any
+            }
+        }
+    }
+    access-list6 199 {
+        rule 20 {
+            action deny
+            source {
+                any
+            }
+        }
+    }
+    prefix-list6 bar-prefix {
+        rule 200 {
+            action deny
+            prefix 2001:db8::/32
+        }
+    }
+    prefix-list6 foo-prefix {
+        rule 100 {
+            action permit
+            prefix 2001:db8::/32
+        }
+    }
+    route-map FooBar123 {
+        rule 10 {
+            action permit
         }
     }
 }
@@ -88,6 +151,72 @@ protocols {
             connected {
             }
         }
+    }
+    ripng {
+        aggregate-address 2001:db8:1000::/48
+        default-information {
+            originate
+        }
+        default-metric 8
+        distribute-list {
+            access-list {
+                in 198
+                out 199
+            }
+            interface eth0 {
+                access-list {
+                    in 198
+                    out 199
+                }
+                prefix-list {
+                    in foo-prefix
+                    out bar-prefix
+                }
+            }
+            interface eth1 {
+                access-list {
+                    in 198
+                    out 199
+                }
+                prefix-list {
+                    in foo-prefix
+                    out bar-prefix
+                }
+            }
+            interface eth2 {
+                access-list {
+                    in 198
+                    out 199
+                }
+                prefix-list {
+                    in foo-prefix
+                    out bar-prefix
+                }
+            }
+            prefix-list {
+                in foo-prefix
+                out bar-prefix
+            }
+        }
+        interface eth0
+        interface eth1
+        interface eth2
+        network 2001:db8:1000::/64
+        network 2001:db8:1001::/64
+        network 2001:db8:2000::/64
+        network 2001:db8:2001::/64
+        passive-interface default
+        redistribute {
+            connected {
+                metric 8
+                route-map FooBar123
+            }
+            static {
+                metric 8
+                route-map FooBar123
+            }
+        }
+        route 2001:db8:1000::/64
     }
 }
 service {
