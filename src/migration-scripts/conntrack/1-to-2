@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+# Delete "set system conntrack modules gre" option
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['system', 'conntrack', 'modules', 'gre']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    # Delete abandoned node
+    config.delete(['system', 'conntrack', 'modules', 'gre'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
