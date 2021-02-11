@@ -46,15 +46,6 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/vpn/nipsec
 
-	# XXX: required until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
-	mkdir $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
-	mkdir $(TMPL_DIR)/interfaces/dummy/node.tag/ipv6
-	mkdir -p $(TMPL_DIR)/interfaces/vti/node.tag/ipv6
-	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
-	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/dummy/node.tag/ipv6
-
-	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/vti/node.tag/ipv6
-
 .PHONY: op_mode_definitions
 .ONESHELL:
 op_mode_definitions: $(op_xml_obj)

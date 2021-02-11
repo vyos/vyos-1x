@@ -24,12 +24,27 @@ interfaces {
                     transmit-delay 1
                 }
             }
+            ipv6 {
+                ospfv3 {
+                    bfd
+                    cost 40
+                }
+            }
         }
     }
     ethernet eth1 {
         duplex auto
         smp-affinity auto
         speed auto
+        ipv6 {
+            ospfv3 {
+                bfd
+                cost 60
+                mtu-ignore
+                network broadcast
+                priority 20
+            }
+        }
     }
 }
 protocols {
@@ -46,6 +61,13 @@ protocols {
         }
         passive-interface default
         passive-interface-exclude eth0.201
+    }
+    ospfv3 {
+        area 0.0.0.0 {
+            interface eth0
+            interface eth1
+            interface eth2
+        }
     }
     static {
         route 0.0.0.0/0 {

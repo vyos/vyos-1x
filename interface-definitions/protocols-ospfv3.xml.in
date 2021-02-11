@@ -41,7 +41,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
-              <leafNode name="interface">
+              <tagNode name="interface">
                 <properties>
                   <help>Enable routing on an IPv6 interface</help>
                   <completionHelp>
@@ -54,9 +54,63 @@
                   <constraint>
                     <validator name="interface-name"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/ospf-intervals.xml.i>
+                  #include <include/ospf-interface-common.xml.i>
+                  <leafNode name="ifmtu">
+                    <properties>
+                      <help>Interface MTU</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Interface MTU</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="instance-id">
+                    <properties>
+                      <help>Instance Id (default: 0)</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>Instance Id</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>0</defaultValue>
+                  </leafNode>
+                  <leafNode name="network">
+                    <properties>
+                      <help>Network type</help>
+                      <completionHelp>
+                        <list>broadcast point-to-point</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>broadcast</format>
+                        <description>Broadcast network type</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>point-to-point</format>
+                        <description>Point-to-point network type</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(broadcast|point-to-point)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Must be broadcast or point-to-point</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="passive">
+                    <properties>
+                      <help>Disable forming of adjacency</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
               <tagNode name="range">
                 <properties>
                   <help>Specify IPv6 prefix (border routers only)</help>
