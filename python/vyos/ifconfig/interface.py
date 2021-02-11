@@ -1015,7 +1015,7 @@ class Interface(Control):
             source_if = next(iter(self._config['is_mirror_intf']))
             config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
-        # Please don't clear 'set $?=0'. It will return the value when executing error
+        # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
         # Remove existing mirroring rules
         delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
         delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio 2> /dev/null;'
