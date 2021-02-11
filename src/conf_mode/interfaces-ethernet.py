@@ -36,6 +36,7 @@ from vyos.util import call
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
+from vyos.version import get_full_version_data
 airbag.enable()
 
 # XXX: wpa_supplicant works on the source interface
@@ -74,11 +75,13 @@ def verify(ethernet):
     verify_vrf(ethernet)
     verify_eapol(ethernet)
     verify_mirror(ethernet)
+    
+    information = get_full_version_data()
 
     # verify offloading capabilities
     if 'offload' in ethernet and 'rps' in ethernet['offload']:
-        if os.cpu_count() < 2:
-            raise ConfigError('RPS cannot be enabled on a system with only 1 logical CPU!')
+        if information['system_type'] == 'KVM guest' and os.cpu_count() < 2:
+            raise ConfigError('In a single-core KVM system, RPS cannot be used!')
         if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
             raise ConfigError('Interface does not suport RPS!')
 
