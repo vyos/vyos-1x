@@ -75,6 +75,7 @@ def get_config(config=None):
         group["backup_script"] = config.return_value("transition-script backup")
         group["fault_script"] = config.return_value("transition-script fault")
         group["stop_script"] = config.return_value("transition-script stop")
+        group["script_mode_force"] = config.exists("transition-script mode-force")
 
         if config.exists("no-preempt"):
             group["preempt"] = False
@@ -182,6 +183,11 @@ def verify(data):
                 pa = ip_address(group["peer_address"])
                 if isinstance(pa, IPv4Address):
                     raise ConfigError("VRRP group {0} uses IPv6 but its peer-address is IPv4".format(group["name"]))
+
+        # Warn the user about the deprecated mode-force option
+        if group["script_mode_force"]:
+            print("""Warning: "transition-script mode-force" VRRP option is deprecated and will be removed in VyOS 1.4.""")
+            print("""It's no longer necessary, so you can safely remove it from your config now.""")
 
     # Disallow same VRID on multiple interfaces
     _groups = sorted(vrrp_groups, key=(lambda x: x["interface"]))

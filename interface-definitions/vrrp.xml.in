@@ -212,6 +212,12 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="mode-force">
+                    <properties>
+                      <valueless/>
+                      <help>Disable VRRP state checking (deprecated, will be removed in VyOS 1.4)</help>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <leafNode name="virtual-address">
