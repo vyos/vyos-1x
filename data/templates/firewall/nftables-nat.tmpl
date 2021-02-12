@@ -24,9 +24,9 @@
 {%     if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
 {#       support 1:1 network translation #}
 {%       if config.translation.address | is_ip_network %}
-{%         set trns_addr = 'dnat ip prefix to ip daddr map { ' + config.source.address + ' : ' + config.translation.address + ' }' %}
-{#         we can now clear out the src_addr part as it's already covered in aboves map #}
-{%         set src_addr  = '' %}
+{%         set trns_addr = 'dnat ip prefix to ip daddr map { ' + config.destination.address + ' : ' + config.translation.address + ' }' %}
+{#         we can now clear out the dst_addr part as it's already covered in aboves map #}
+{%         set dst_addr  = '' %}
 {%       else %}
 {%         set trns_addr = 'dnat to ' + config.translation.address %}
 {%       endif %}
