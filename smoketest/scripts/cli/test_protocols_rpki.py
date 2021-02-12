@@ -148,4 +148,4 @@ if __name__ == '__main__':
     if not os.path.isfile(rpki_known_hosts):
         cmd(f'touch {rpki_known_hosts}')
 
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
