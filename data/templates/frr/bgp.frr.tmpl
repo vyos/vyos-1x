@@ -78,74 +78,74 @@
 {%       elif af == 'l2vpn_evpn' %}
  address-family l2vpn evpn
 {%       endif %}
-{%       if config.address_family[af].allowas_in is defined and config.address_family[af].allowas_in is not none %}
-  neighbor {{ neighbor }} allowas-in {{ config.address_family[af].allowas_in.number if config.address_family[af].allowas_in.number is defined }}
+{%       if config.afi_config.allowas_in is defined and config.afi_config.allowas_in is not none %}
+  neighbor {{ neighbor }} allowas-in {{ config.afi_config.allowas_in.number if config.afi_config.allowas_in.number is defined }}
 {%       endif %}
-{%       if config.address_family[af].remove_private_as is defined %}
+{%       if config.afi_config.remove_private_as is defined %}
   neighbor {{ neighbor }} remove-private-AS
 {%       endif %}
-{%       if config.address_family[af].route_reflector_client is defined %}
+{%       if config.afi_config.route_reflector_client is defined %}
   neighbor {{ neighbor }} route-reflector-client
 {%       endif %}
-{%       if config.address_family[af].weight is defined and config.address_family[af].weight is not none %}
-  neighbor {{ neighbor }} weight {{ config.address_family[af].weight }}
+{%       if config.afi_config.weight is defined and config.afi_config.weight is not none %}
+  neighbor {{ neighbor }} weight {{ config.afi_config.weight }}
 {%       endif %}
-{%       if config.address_family[af].attribute_unchanged is defined and config.address_family[af].attribute_unchanged is not none %}
-  neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if config.address_family[af].attribute_unchanged.as_path is defined }}{{ 'med ' if config.address_family[af].attribute_unchanged.med is defined }}{{ 'next-hop ' if config.address_family[af].attribute_unchanged.next_hop is defined }}
+{%       if config.afi_config.attribute_unchanged is defined and config.afi_config.attribute_unchanged is not none %}
+  neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if config.afi_config.attribute_unchanged.as_path is defined }}{{ 'med ' if config.afi_config.attribute_unchanged.med is defined }}{{ 'next-hop ' if config.afi_config.attribute_unchanged.next_hop is defined }}
 {%       endif %}
-{%       if config.address_family[af].capability is defined and config.address_family[af].capability.orf is defined and config.address_family[af].capability.orf.prefix_list is defined and config.address_family[af].capability.orf.prefix_list is not none %}
-  neighbor {{ neighbor }} capability orf prefix-list {{ config.address_family[af].capability.orf.prefix_list }}
+{%       if config.afi_config.capability is defined and config.afi_config.capability.orf is defined and config.afi_config.capability.orf.prefix_list is defined and config.afi_config.capability.orf.prefix_list is not none %}
+  neighbor {{ neighbor }} capability orf prefix-list {{ config.afi_config.capability.orf.prefix_list }}
 {%       endif %}
-{%       if config.address_family[af].default_originate is defined %}
-  neighbor {{ neighbor }} default-originate {{ 'route-map ' + config.address_family[af].default_originate.route_map if config.address_family[af].default_originate.route_map is defined }}
+{%       if config.afi_config.default_originate is defined %}
+  neighbor {{ neighbor }} default-originate {{ 'route-map ' + config.afi_config.default_originate.route_map if config.afi_config.default_originate.route_map is defined }}
 {%       endif %}
-{%       if config.address_family[af].distribute_list is defined and config.address_family[af].distribute_list is not none %}
-{%         if config.address_family[af].distribute_list.export is defined and config.address_family[af].distribute_list.export is not none %}
-  neighbor {{ neighbor }} distribute-list {{ config.address_family[af].distribute_list.export }} out
+{%       if config.afi_config.distribute_list is defined and config.afi_config.distribute_list is not none %}
+{%         if config.afi_config.distribute_list.export is defined and config.afi_config.distribute_list.export is not none %}
+  neighbor {{ neighbor }} distribute-list {{ config.afi_config.distribute_list.export }} out
 {%         endif %}
-{%         if config.address_family[af].distribute_list.import is defined and config.address_family[af].distribute_list.import is not none %}
-  neighbor {{ neighbor }} distribute-list {{ config.address_family[af].distribute_list.import }} in
-{%         endif %}
-{%       endif %}
-{%       if config.address_family[af].filter_list is defined and config.address_family[af].filter_list is not none %}
-{%         if config.address_family[af].filter_list.export is defined and config.address_family[af].filter_list.export is not none %}
-  neighbor {{ neighbor }} filter-list {{ config.address_family[af].filter_list.export }} out
-{%         endif %}
-{%         if config.address_family[af].filter_list.import is defined and config.address_family[af].filter_list.import is not none %}
-  neighbor {{ neighbor }} filter-list {{ config.address_family[af].filter_list.import }} in
+{%         if config.afi_config.distribute_list.import is defined and config.afi_config.distribute_list.import is not none %}
+  neighbor {{ neighbor }} distribute-list {{ config.afi_config.distribute_list.import }} in
 {%         endif %}
 {%       endif %}
-{%       if config.address_family[af].maximum_prefix is defined and config.address_family[af].maximum_prefix is not none %}
-  neighbor {{ neighbor }} maximum-prefix {{ config.address_family[af].maximum_prefix }}
+{%       if config.afi_config.filter_list is defined and config.afi_config.filter_list is not none %}
+{%         if config.afi_config.filter_list.export is defined and config.afi_config.filter_list.export is not none %}
+  neighbor {{ neighbor }} filter-list {{ config.afi_config.filter_list.export }} out
+{%         endif %}
+{%         if config.afi_config.filter_list.import is defined and config.afi_config.filter_list.import is not none %}
+  neighbor {{ neighbor }} filter-list {{ config.afi_config.filter_list.import }} in
+{%         endif %}
 {%       endif %}
-{%       if config.address_family[af].nexthop_self is defined %}
+{%       if config.afi_config.maximum_prefix is defined and config.afi_config.maximum_prefix is not none %}
+  neighbor {{ neighbor }} maximum-prefix {{ config.afi_config.maximum_prefix }}
+{%       endif %}
+{%       if config.afi_config.nexthop_self is defined %}
 {#         https://phabricator.vyos.net/T1817 #}
-  neighbor {{ neighbor }} next-hop-self {{ 'force' if config.address_family[af].nexthop_self.force is defined }}
+  neighbor {{ neighbor }} next-hop-self {{ 'force' if config.afi_config.nexthop_self.force is defined }}
 {%       endif %}
-{%       if config.address_family[af].route_server_client is defined %}
+{%       if config.afi_config.route_server_client is defined %}
   neighbor {{ neighbor }} route-server-client
 {%       endif %}
-{%       if config.address_family[af].route_map is defined and config.address_family[af].route_map is not none %}
-{%         if config.address_family[af].route_map.export is defined and config.address_family[af].route_map.export is not none %}
-  neighbor {{ neighbor }} route-map {{ config.address_family[af].route_map.export }} out
+{%       if config.afi_config.route_map is defined and config.afi_config.route_map is not none %}
+{%         if config.afi_config.route_map.export is defined and config.afi_config.route_map.export is not none %}
+  neighbor {{ neighbor }} route-map {{ config.afi_config.route_map.export }} out
 {%         endif %}
-{%         if config.address_family[af].route_map.import is defined and config.address_family[af].route_map.import is not none %}
-  neighbor {{ neighbor }} route-map {{ config.address_family[af].route_map.import }} in
-{%         endif %}
-{%       endif %}
-{%       if config.address_family[af].prefix_list is defined and config.address_family[af].prefix_list is not none %}
-{%         if config.address_family[af].prefix_list.export is defined and config.address_family[af].prefix_list.export is not none %}
-  neighbor {{ neighbor }} prefix-list  {{ config.address_family[af].prefix_list.export }} out
-{%         endif %}
-{%         if config.address_family[af].prefix_list.import is defined and config.address_family[af].prefix_list.import is not none %}
-  neighbor {{ neighbor }} prefix-list  {{ config.address_family[af].prefix_list.import }} in
+{%         if config.afi_config.route_map.import is defined and config.afi_config.route_map.import is not none %}
+  neighbor {{ neighbor }} route-map {{ config.afi_config.route_map.import }} in
 {%         endif %}
 {%       endif %}
-{%       if config.address_family[af].soft_reconfiguration is defined and config.address_family[af].soft_reconfiguration.inbound is defined %}
+{%       if config.afi_config.prefix_list is defined and config.afi_config.prefix_list is not none %}
+{%         if config.afi_config.prefix_list.export is defined and config.afi_config.prefix_list.export is not none %}
+  neighbor {{ neighbor }} prefix-list  {{ config.afi_config.prefix_list.export }} out
+{%         endif %}
+{%         if config.afi_config.prefix_list.import is defined and config.afi_config.prefix_list.import is not none %}
+  neighbor {{ neighbor }} prefix-list  {{ config.afi_config.prefix_list.import }} in
+{%         endif %}
+{%       endif %}
+{%       if config.afi_config.soft_reconfiguration is defined and config.afi_config.soft_reconfiguration.inbound is defined %}
   neighbor {{ neighbor }} soft-reconfiguration inbound
 {%       endif %}
-{%       if config.address_family[af].unsuppress_map is defined and config.address_family[af].unsuppress_map is not none %}
-  neighbor {{ neighbor }} unsuppress-map {{ config.address_family[af].unsuppress_map }}
+{%       if config.afi_config.unsuppress_map is defined and config.afi_config.unsuppress_map is not none %}
+  neighbor {{ neighbor }} unsuppress-map {{ config.afi_config.unsuppress_map }}
 {%       endif %}
   neighbor {{ neighbor }} activate
  exit-address-family
@@ -159,53 +159,79 @@ router bgp {{ asn }}
 {# https://phabricator.vyos.net/T3183 & https://phabricator.vyos.net/T2100 #}
  no bgp ebgp-requires-policy
 {% if address_family is defined and address_family is not none %}
-{%   for af in address_family %}
+{%   for afi, afi_config in address_family.items() %}
  !
-{%     if af == 'ipv4_unicast' %}
+{%     if afi == 'ipv4_unicast' %}
  address-family ipv4 unicast
-{%     elif af == 'ipv6_unicast' %}
+{%     elif afi == 'ipv6_unicast' %}
  address-family ipv6 unicast
-{%     elif af == 'l2vpn_evpn' %}
+{%     elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
 {%     endif %}
-{%     if address_family[af].aggregate_address is defined and address_family[af].aggregate_address is not none %}
-{%       for ip in address_family[af].aggregate_address %}
-  aggregate-address {{ ip }}{{ ' as-set' if address_family[af].aggregate_address[ip].as_set is defined }}{{ ' summary-only' if address_family[af].aggregate_address[ip].summary_only is defined }}
+{%     if afi_config.aggregate_address is defined and afi_config.aggregate_address is not none %}
+{%       for ip in afi_config.aggregate_address %}
+  aggregate-address {{ ip }}{{ ' as-set' if afi_config.aggregate_address[ip].as_set is defined }}{{ ' summary-only' if afi_config.aggregate_address[ip].summary_only is defined }}
 {%       endfor %}
 {%     endif %}
-{%     if address_family[af].redistribute is defined and address_family[af].redistribute is not none %}
-{%       for protocol in address_family[af].redistribute %}
+{%     if afi_config.redistribute is defined and afi_config.redistribute is not none %}
+{%       for protocol in afi_config.redistribute %}
 {%         if protocol == 'table' %}
-  redistribute table {{ address_family[af].redistribute[protocol].table }}
+  redistribute table {{ afi_config.redistribute[protocol].table }}
 {%         else %}
 {%           set redistribution_protocol = protocol %}
 {%             if protocol == 'ospfv3' %}
 {%               set redistribution_protocol = 'ospf6' %}
 {%             endif %}
-  redistribute {{ redistribution_protocol }}{% if address_family[af].redistribute[protocol].metric is defined %} metric {{ address_family[af].redistribute[protocol].metric }}{% endif %}{% if address_family[af].redistribute[protocol].route_map is defined %} route-map {{ address_family[af].redistribute[protocol].route_map }}{% endif %}
+  redistribute {{ redistribution_protocol }}{% if afi_config.redistribute[protocol].metric is defined %} metric {{ afi_config.redistribute[protocol].metric }}{% endif %}{% if afi_config.redistribute[protocol].route_map is defined %} route-map {{ afi_config.redistribute[protocol].route_map }}{% endif %}
 {#######   we need this blank line!! #######}
 
 {%         endif %}
 {%       endfor %}
 {%     endif %}
-{%     if address_family[af].network is defined and address_family[af].network is not none %}
-{%       for network in address_family[af].network %}
-  network {{ network }}{% if address_family[af].network[network].route_map is defined %} route-map {{ address_family[af].network[network].route_map }}{% endif %}{% if address_family[af].network[network].backdoor is defined %} backdoor{% endif %}
+{%     if afi_config.network is defined and afi_config.network is not none %}
+{%       for network in afi_config.network %}
+  network {{ network }}{% if afi_config.network[network].route_map is defined %} route-map {{ afi_config.network[network].route_map }}{% endif %}{% if afi_config.network[network].backdoor is defined %} backdoor{% endif %}
 {#######   we need this blank line!! #######}
 
 {%       endfor %}
 {%     endif %}
-{%     if address_family[af].advertise_all_vni is defined %}
+{%     if afi_config.advertise_all_vni is defined %}
   advertise-all-vni
 {%     endif %}
-{%     if address_family[af].advertise_default_gw is defined %}
+{%     if afi_config.advertise_default_gw is defined %}
   advertise-default-gw
 {%     endif %}
-{%     if address_family[af].advertise_svi_ip is defined %}
+{%     if afi_config.advertise_pip is defined and afi_config.advertise_pip is not none %}
+  advertise-pip ip {{ afi_config.advertise_pip }}
+{%     endif %}
+{%     if afi_config.advertise_svi_ip is defined %}
   advertise-svi-ip
 {%     endif %}
-{%     if address_family[af].vni is defined and address_family[af].vni is not none %}
-  vni {{ address_family[af].vni }}
+{%     if afi_config.rt_auto_derive is defined %}
+ autort rfc8365-compatible
+{%     endif %}
+{%     if afi_config.flooding is defined and afi_config.flooding.disable is defined %}
+ flooding disable
+{%     endif %}
+{%     if afi_config.flooding is defined and afi_config.flooding.head_end_replication is defined %}
+ flooding head-end-replication
+{%     endif %}
+{%     if afi_config.rd is defined and afi_config.rd is not none %}
+ rd {{ afi_config.rd }}
+{%     endif %}
+{%     if afi_config.route_target is defined and afi_config.route_target is not none %}
+{%       if afi_config.route_target.both is defined and afi_config.route_target.both is not none %}
+ route-target both {{ afi_config.route_target.both }}
+{%       endif %}
+{%       if afi_config.route_target.export is defined and afi_config.route_target.export is not none %}
+ route-target export {{ afi_config.route_target.export }}
+{%       endif %}
+{%       if afi_config.route_target.import is defined and afi_config.route_target.import is not none %}
+ route-target import {{ afi_config.route_target.import }}
+{%       endif %}
+{%     endif %}
+{%     if afi_config.vni is defined and afi_config.vni is not none %}
+  vni {{ afi_config.vni }}
   exit-vni
 {%     endif %}
  exit-address-family

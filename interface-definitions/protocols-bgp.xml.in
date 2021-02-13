@@ -234,12 +234,104 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="advertise-pip">
+                    <properties>
+                      <help>EVPN system primary IP</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IP address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <leafNode name="advertise-svi-ip">
                     <properties>
                       <help>Advertise svi mac-ip routes in EVPN</help>
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="rt-auto-derive">
+                    <properties>
+                      <help>Auto derivation of Route Target (RFC8365)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <node name="flooding">
+                    <properties>
+                      <help>Specify handling for BUM packets</help>
+                    </properties>
+                    <children>
+                      <leafNode name="disable">
+                        <properties>
+                          <help>Do not flood any BUM packets</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="head-end-replication">
+                        <properties>
+                          <help>Flood BUM packets using head-end replication</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="rd">
+                    <properties>
+                      <help>Route Distinguisher</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Route Distinguisher, asn:xxx</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <node name="route-target">
+                    <properties>
+                      <help>Route Target</help>
+                    </properties>
+                    <children>
+                      <leafNode name="both">
+                        <properties>
+                          <help>Route Target both import and export</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Route target (x.x.x.x:yyy|xxxx:yyyy)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)(\.(25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)){3}|[0-9]{1,10}):[0-9]{1,5}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="export">
+                        <properties>
+                          <help>Route Target export</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Route target (x.x.x.x:yyy|xxxx:yyyy)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)(\.(25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)){3}|[0-9]{1,10}):[0-9]{1,5}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="import">
+                        <properties>
+                          <help>Route Target import</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Route target (x.x.x.x:yyy|xxxx:yyyy)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)(\.(25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)){3}|[0-9]{1,10}):[0-9]{1,5}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                   <leafNode name="vni">
                     <properties>
                       <help>VXLAN Network Identifier</help>
