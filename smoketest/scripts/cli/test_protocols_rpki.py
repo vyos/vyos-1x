@@ -61,6 +61,14 @@ class TestProtocolsRPKI(unittest.TestCase):
                 'port' : '9090',
                 'preference' : '2'
             },
+            '2001:db8::1' : {
+                'port' : '1234',
+                'preference' : '3'
+            },
+            '2001:db8::2' : {
+                'port' : '5678',
+                'preference' : '4'
+            },
         }
 
         self.session.set(base_path + ['polling-period', polling])
