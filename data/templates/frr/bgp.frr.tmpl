@@ -70,82 +70,81 @@
 {%   endif %}
  !
 {%   if config.address_family is defined and config.address_family is not none %}
-{%     for af in config.address_family %}
-{%       if af == 'ipv4_unicast' %}
+{%     for afi, afi_config in config.address_family.items() %}
+{%       if afi == 'ipv4_unicast' %}
  address-family ipv4 unicast
-{%       elif af == 'ipv6_unicast' %}
+{%       elif afi == 'ipv6_unicast' %}
  address-family ipv6 unicast
-{%       elif af == 'l2vpn_evpn' %}
+{%       elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
 {%       endif %}
-{%       if config.afi_config.allowas_in is defined and config.afi_config.allowas_in is not none %}
-  neighbor {{ neighbor }} allowas-in {{ config.afi_config.allowas_in.number if config.afi_config.allowas_in.number is defined }}
+{%       if afi_config.allowas_in is defined and afi_config.allowas_in is not none %}
+  neighbor {{ neighbor }} allowas-in {{ afi_config.allowas_in.number if afi_config.allowas_in.number is defined }}
 {%       endif %}
-{%       if config.afi_config.remove_private_as is defined %}
+{%       if afi_config.remove_private_as is defined %}
   neighbor {{ neighbor }} remove-private-AS
 {%       endif %}
-{%       if config.afi_config.route_reflector_client is defined %}
+{%       if afi_config.route_reflector_client is defined %}
   neighbor {{ neighbor }} route-reflector-client
 {%       endif %}
-{%       if config.afi_config.weight is defined and config.afi_config.weight is not none %}
-  neighbor {{ neighbor }} weight {{ config.afi_config.weight }}
+{%       if afi_config.weight is defined and afi_config.weight is not none %}
+  neighbor {{ neighbor }} weight {{ afi_config.weight }}
 {%       endif %}
-{%       if config.afi_config.attribute_unchanged is defined and config.afi_config.attribute_unchanged is not none %}
-  neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if config.afi_config.attribute_unchanged.as_path is defined }}{{ 'med ' if config.afi_config.attribute_unchanged.med is defined }}{{ 'next-hop ' if config.afi_config.attribute_unchanged.next_hop is defined }}
+{%       if afi_config.attribute_unchanged is defined and afi_config.attribute_unchanged is not none %}
+  neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if afi_config.attribute_unchanged.as_path is defined }}{{ 'med ' if afi_config.attribute_unchanged.med is defined }}{{ 'next-hop ' if afi_config.attribute_unchanged.next_hop is defined }}
 {%       endif %}
-{%       if config.afi_config.capability is defined and config.afi_config.capability.orf is defined and config.afi_config.capability.orf.prefix_list is defined and config.afi_config.capability.orf.prefix_list is not none %}
-  neighbor {{ neighbor }} capability orf prefix-list {{ config.afi_config.capability.orf.prefix_list }}
+{%       if afi_config.capability is defined and afi_config.capability.orf is defined and afi_config.capability.orf.prefix_list is defined and afi_config.capability.orf.prefix_list is not none %}
+  neighbor {{ neighbor }} capability orf prefix-list {{ afi_config.capability.orf.prefix_list }}
 {%       endif %}
-{%       if config.afi_config.default_originate is defined %}
-  neighbor {{ neighbor }} default-originate {{ 'route-map ' + config.afi_config.default_originate.route_map if config.afi_config.default_originate.route_map is defined }}
+{%       if afi_config.default_originate is defined %}
+  neighbor {{ neighbor }} default-originate {{ 'route-map ' + afi_config.default_originate.route_map if afi_config.default_originate.route_map is defined }}
 {%       endif %}
-{%       if config.afi_config.distribute_list is defined and config.afi_config.distribute_list is not none %}
-{%         if config.afi_config.distribute_list.export is defined and config.afi_config.distribute_list.export is not none %}
-  neighbor {{ neighbor }} distribute-list {{ config.afi_config.distribute_list.export }} out
+{%       if afi_config.distribute_list is defined and afi_config.distribute_list is not none %}
+{%         if afi_config.distribute_list.export is defined and afi_config.distribute_list.export is not none %}
+  neighbor {{ neighbor }} distribute-list {{ afi_config.distribute_list.export }} out
 {%         endif %}
-{%         if config.afi_config.distribute_list.import is defined and config.afi_config.distribute_list.import is not none %}
-  neighbor {{ neighbor }} distribute-list {{ config.afi_config.distribute_list.import }} in
-{%         endif %}
-{%       endif %}
-{%       if config.afi_config.filter_list is defined and config.afi_config.filter_list is not none %}
-{%         if config.afi_config.filter_list.export is defined and config.afi_config.filter_list.export is not none %}
-  neighbor {{ neighbor }} filter-list {{ config.afi_config.filter_list.export }} out
-{%         endif %}
-{%         if config.afi_config.filter_list.import is defined and config.afi_config.filter_list.import is not none %}
-  neighbor {{ neighbor }} filter-list {{ config.afi_config.filter_list.import }} in
+{%         if afi_config.distribute_list.import is defined and afi_config.distribute_list.import is not none %}
+  neighbor {{ neighbor }} distribute-list {{ afi_config.distribute_list.import }} in
 {%         endif %}
 {%       endif %}
-{%       if config.afi_config.maximum_prefix is defined and config.afi_config.maximum_prefix is not none %}
-  neighbor {{ neighbor }} maximum-prefix {{ config.afi_config.maximum_prefix }}
+{%       if afi_config.filter_list is defined and afi_config.filter_list is not none %}
+{%         if afi_config.filter_list.export is defined and afi_config.filter_list.export is not none %}
+  neighbor {{ neighbor }} filter-list {{ afi_config.filter_list.export }} out
+{%         endif %}
+{%         if afi_config.filter_list.import is defined and afi_config.filter_list.import is not none %}
+  neighbor {{ neighbor }} filter-list {{ afi_config.filter_list.import }} in
+{%         endif %}
 {%       endif %}
-{%       if config.afi_config.nexthop_self is defined %}
-{#         https://phabricator.vyos.net/T1817 #}
-  neighbor {{ neighbor }} next-hop-self {{ 'force' if config.afi_config.nexthop_self.force is defined }}
+{%       if afi_config.maximum_prefix is defined and afi_config.maximum_prefix is not none %}
+  neighbor {{ neighbor }} maximum-prefix {{ afi_config.maximum_prefix }}
 {%       endif %}
-{%       if config.afi_config.route_server_client is defined %}
+{%       if afi_config.nexthop_self is defined %}
+  neighbor {{ neighbor }} next-hop-self {{ 'force' if afi_config.nexthop_self.force is defined }}
+{%       endif %}
+{%       if afi_config.route_server_client is defined %}
   neighbor {{ neighbor }} route-server-client
 {%       endif %}
-{%       if config.afi_config.route_map is defined and config.afi_config.route_map is not none %}
-{%         if config.afi_config.route_map.export is defined and config.afi_config.route_map.export is not none %}
-  neighbor {{ neighbor }} route-map {{ config.afi_config.route_map.export }} out
+{%       if afi_config.route_map is defined and afi_config.route_map is not none %}
+{%         if afi_config.route_map.export is defined and afi_config.route_map.export is not none %}
+  neighbor {{ neighbor }} route-map {{ afi_config.route_map.export }} out
 {%         endif %}
-{%         if config.afi_config.route_map.import is defined and config.afi_config.route_map.import is not none %}
-  neighbor {{ neighbor }} route-map {{ config.afi_config.route_map.import }} in
-{%         endif %}
-{%       endif %}
-{%       if config.afi_config.prefix_list is defined and config.afi_config.prefix_list is not none %}
-{%         if config.afi_config.prefix_list.export is defined and config.afi_config.prefix_list.export is not none %}
-  neighbor {{ neighbor }} prefix-list  {{ config.afi_config.prefix_list.export }} out
-{%         endif %}
-{%         if config.afi_config.prefix_list.import is defined and config.afi_config.prefix_list.import is not none %}
-  neighbor {{ neighbor }} prefix-list  {{ config.afi_config.prefix_list.import }} in
+{%         if afi_config.route_map.import is defined and afi_config.route_map.import is not none %}
+  neighbor {{ neighbor }} route-map {{ afi_config.route_map.import }} in
 {%         endif %}
 {%       endif %}
-{%       if config.afi_config.soft_reconfiguration is defined and config.afi_config.soft_reconfiguration.inbound is defined %}
+{%       if afi_config.prefix_list is defined and afi_config.prefix_list is not none %}
+{%         if afi_config.prefix_list.export is defined and afi_config.prefix_list.export is not none %}
+  neighbor {{ neighbor }} prefix-list  {{ afi_config.prefix_list.export }} out
+{%         endif %}
+{%         if afi_config.prefix_list.import is defined and afi_config.prefix_list.import is not none %}
+  neighbor {{ neighbor }} prefix-list  {{ afi_config.prefix_list.import }} in
+{%         endif %}
+{%       endif %}
+{%       if afi_config.soft_reconfiguration is defined and afi_config.soft_reconfiguration.inbound is defined %}
   neighbor {{ neighbor }} soft-reconfiguration inbound
 {%       endif %}
-{%       if config.afi_config.unsuppress_map is defined and config.afi_config.unsuppress_map is not none %}
-  neighbor {{ neighbor }} unsuppress-map {{ config.afi_config.unsuppress_map }}
+{%       if afi_config.unsuppress_map is defined and afi_config.unsuppress_map is not none %}
+  neighbor {{ neighbor }} unsuppress-map {{ afi_config.unsuppress_map }}
 {%       endif %}
   neighbor {{ neighbor }} activate
  exit-address-family
