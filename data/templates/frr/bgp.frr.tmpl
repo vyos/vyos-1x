@@ -340,6 +340,9 @@ router bgp {{ asn }}
 {%   if parameters.graceful_restart is defined %}
  bgp graceful-restart {{ 'stalepath-time ' + parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}
 {%   endif %}
+{%   if parameters.graceful_shutdown is defined %}
+ bgp graceful-shutdown
+{%   endif %}
 {%   if parameters.log_neighbor_changes is defined %}
  bgp log-neighbor-changes
 {%   endif %}

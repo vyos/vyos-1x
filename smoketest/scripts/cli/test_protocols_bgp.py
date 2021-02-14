@@ -166,6 +166,7 @@ class TestProtocolsBGP(unittest.TestCase):
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
         local_pref = '500'
+        stalepath_time = '60'
 
         self.session.set(base_path + ['parameters', 'router-id', router_id])
         self.session.set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -173,6 +174,8 @@ class TestProtocolsBGP(unittest.TestCase):
         self.session.set(base_path + ['parameters', 'default', 'local-pref', local_pref])
         # Deactivate IPv4 unicast for a peer by default
         self.session.set(base_path + ['parameters', 'default', 'no-ipv4-unicast'])
+        self.session.set(base_path + ['parameters', 'graceful-restart', 'stalepath-time', stalepath_time])
+        self.session.set(base_path + ['parameters', 'graceful-shutdown'])
 
         # commit changes
         self.session.commit()
@@ -184,6 +187,8 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
         self.assertIn(f' no bgp default ipv4-unicast', frrconfig)
+        self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
+        self.assertIn(f' bgp graceful-shutdown', frrconfig)
 
 
     def test_bgp_02_neighbors(self):

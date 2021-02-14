@@ -852,6 +852,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="graceful-shutdown">
+                <properties>
+                  <help>Graceful shutdown</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="log-neighbor-changes">
                 <properties>
                   <help>Log neighbor up/down changes and reset reason</help>
