@@ -468,25 +468,6 @@
               #include <include/bgp-description.xml.i>
               #include <include/bgp-disable-capability-negotiation.xml.i>
               #include <include/bgp-disable-connected-check.xml.i>
-              <node name="disable-send-community">
-                <properties>
-                  <help>Disable sending community attributes to this neighbor (IPv4)</help>
-                </properties>
-                <children>
-                  <leafNode name="extended">
-                    <properties>
-                      <help>Disable sending extended community attributes to this neighbor (IPv4)</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="standard">
-                    <properties>
-                      <help>Disable sending standard community attributes to this neighbor (IPv4)</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               #include <include/bgp-ebgp-multihop.xml.i>
               <node name="interface">
                 <properties>

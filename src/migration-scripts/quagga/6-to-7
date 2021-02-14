@@ -46,6 +46,14 @@ if asn_list:
         if not config.exists(bgp_base + [neighbor_type]):
             continue
         for neighbor in config.list_nodes(bgp_base + [neighbor_type]):
+            # T2844 - add IPv4 AFI disable-send-community support
+            send_comm_path = bgp_base + [neighbor_type, neighbor, 'disable-send-community']
+            if config.exists(send_comm_path):
+                new_base = bgp_base + [neighbor_type, neighbor, 'address-family', 'ipv4-unicast']
+                config.set(new_base)
+                config.copy(send_comm_path, new_base + ['disable-send-community'])
+                config.delete(send_comm_path)
+
             cap_dynamic = False
             for afi in ['ipv4-unicast', 'ipv6-unicast']:
                 afi_path = bgp_base + [neighbor_type, neighbor, 'address-family', afi, 'capability', 'dynamic']

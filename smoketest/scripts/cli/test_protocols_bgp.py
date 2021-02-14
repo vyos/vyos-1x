@@ -48,6 +48,7 @@ neighbor_config = {
         'local_as'     : '300',
         'route_map_in' : route_map_in,
         'route_map_out': route_map_out,
+        'no_send_comm_ext' : '',
         },
     '192.0.2.2' : {
         'remote_as'    : '200',
@@ -57,6 +58,7 @@ neighbor_config = {
         'cap_strict'   : '',
         'pfx_list_in'  : prefix_list_in,
         'pfx_list_out' : prefix_list_out,
+        'no_send_comm_std' : '',
         },
     '192.0.2.3' : {
         'description'  : 'foo bar baz',
@@ -78,6 +80,7 @@ neighbor_config = {
         'local_as'     : '300',
         'route_map_in' : route_map_in,
         'route_map_out': route_map_out,
+        'no_send_comm_std' : '',
         },
     '2001:db8::2' : {
         'remote_as'    : '456',
@@ -87,6 +90,7 @@ neighbor_config = {
         'cap_strict'   : '',
         'pfx_list_in'  : prefix_list_in6,
         'pfx_list_out' : prefix_list_out6,
+        'no_send_comm_ext' : '',
         },
 }
 
@@ -108,6 +112,7 @@ peer_group_config = {
         'local_as'     : '300',
         'pfx_list_in'  : prefix_list_in,
         'pfx_list_out' : prefix_list_out,
+        'no_send_comm_ext' : '',
         },
     'baz' : {
         'cap_dynamic'  : '',
@@ -194,7 +199,10 @@ class TestProtocolsBGP(unittest.TestCase):
             self.assertIn(f' neighbor {peer} prefix-list {peer_config["pfx_list_in"]} in', frrconfig)
         if 'pfx_list_out' in peer_config:
             self.assertIn(f' neighbor {peer} prefix-list {peer_config["pfx_list_out"]} out', frrconfig)
-
+        if 'no_send_comm_std' in peer_config:
+            self.assertIn(f' no neighbor {peer} send-community', frrconfig)
+        if 'no_send_comm_ext' in peer_config:
+            self.assertIn(f' no neighbor {peer} send-community extended', frrconfig)
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -272,6 +280,10 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'prefix-list', 'import', peer_config["pfx_list_in"]])
             if 'pfx_list_out' in peer_config:
                 self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'prefix-list', 'export', peer_config["pfx_list_out"]])
+            if 'no_send_comm_std' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'disable-send-community', 'standard'])
+            if 'no_send_comm_ext' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'disable-send-community', 'extended'])
 
         # commit changes
         self.session.commit()
@@ -327,6 +339,10 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'prefix-list', 'import', config["pfx_list_in"]])
             if 'pfx_list_out' in config:
                 self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'prefix-list', 'export', config["pfx_list_out"]])
+            if 'no_send_comm_std' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'disable-send-community', 'standard'])
+            if 'no_send_comm_ext' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'disable-send-community', 'extended'])
 
         # commit changes
         self.session.commit()

@@ -155,6 +155,12 @@
 {%       if afi_config.unsuppress_map is defined and afi_config.unsuppress_map is not none %}
   neighbor {{ neighbor }} unsuppress-map {{ afi_config.unsuppress_map }}
 {%       endif %}
+{%       if afi_config.disable_send_community is defined and afi_config.disable_send_community.extended is defined %}
+ no neighbor {{ neighbor }} send-community extended
+{%       endif %}
+{%       if afi_config.disable_send_community is defined and afi_config.disable_send_community.standard is defined %}
+ no neighbor {{ neighbor }} send-community standard
+{%       endif %}
   neighbor {{ neighbor }} activate
  exit-address-family
  !
