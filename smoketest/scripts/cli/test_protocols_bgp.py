@@ -49,6 +49,7 @@ neighbor_config = {
         'route_map_in' : route_map_in,
         'route_map_out': route_map_out,
         'no_send_comm_ext' : '',
+        'addpath_all' : '',
         },
     '192.0.2.2' : {
         'remote_as'    : '200',
@@ -81,6 +82,7 @@ neighbor_config = {
         'route_map_in' : route_map_in,
         'route_map_out': route_map_out,
         'no_send_comm_std' : '',
+        'addpath_per_as'   : '',
         },
     '2001:db8::2' : {
         'remote_as'    : '456',
@@ -206,6 +208,11 @@ class TestProtocolsBGP(unittest.TestCase):
             self.assertIn(f' no neighbor {peer} send-community', frrconfig)
         if 'no_send_comm_ext' in peer_config:
             self.assertIn(f' no neighbor {peer} send-community extended', frrconfig)
+        if 'addpath_all' in peer_config:
+            self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
+        if 'addpath_per_as' in peer_config:
+            self.assertIn(f' neighbor {peer} addpath-tx-bestpath-per-AS', frrconfig)
+
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -287,6 +294,10 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'disable-send-community', 'standard'])
             if 'no_send_comm_ext' in peer_config:
                 self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'disable-send-community', 'extended'])
+            if 'addpath_all' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-all'])
+            if 'addpath_per_as' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-per-as'])
 
         # commit changes
         self.session.commit()
@@ -346,6 +357,10 @@ class TestProtocolsBGP(unittest.TestCase):
                 self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'disable-send-community', 'standard'])
             if 'no_send_comm_ext' in config:
                 self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'disable-send-community', 'extended'])
+            if 'addpath_all' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-all'])
+            if 'addpath_per_as' in config:
+                self.session.set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-per-as'])
 
         # commit changes
         self.session.commit()

@@ -87,6 +87,12 @@
 {%       elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
 {%       endif %}
+{%       if afi_config.addpath_tx_all is defined %}
+  neighbor {{ neighbor }} addpath-tx-all-paths
+{%       endif %}
+{%       if afi_config.addpath_tx_per_as is defined %}
+  neighbor {{ neighbor }} addpath-tx-bestpath-per-AS
+{%       endif %}
 {%       if afi_config.allowas_in is defined and afi_config.allowas_in is not none %}
   neighbor {{ neighbor }} allowas-in {{ afi_config.allowas_in.number if afi_config.allowas_in.number is defined }}
 {%       endif %}
