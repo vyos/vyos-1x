@@ -92,7 +92,7 @@ def verify(bgp):
                         if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][ peer_config['peer_group'] ]:
                             raise ConfigError('Remote AS must be set for neighbor or peer-group!')
 
-                for afi in ['ipv4_unicast', 'ipv6_unicast']:
+                for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
                     # Bail out early if address family is not configured
                     if 'address_family' not in peer_config or afi not in peer_config['address_family']:
                         continue
@@ -122,6 +122,15 @@ def verify(bgp):
                                 route_map = afi_config['route_map'][tmp].replace('-', '_')
                                 if dict_search(f'policy.route_map.{route_map}', asn_config) == None:
                                     raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
+
+                    if 'route_reflector_client' in afi_config:
+                        if 'remote_as' in peer_config and asn != peer_config['remote_as']:
+                            raise ConfigError('route-reflector-client only supported for iBGP peers')
+                        else:
+                            peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', asn_config)
+                            if 'peer_group' in peer_config and peer_group_as != None and peer_group_as != asn:
+                                raise ConfigError('route-reflector-client only supported for iBGP peers')
+
 
         # Throw an error if a peer group is not configured for allow range
         for prefix in dict_search('listen.range', asn_config) or []:
