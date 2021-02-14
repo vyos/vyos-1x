@@ -19,6 +19,7 @@ import unittest
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.template import is_ipv6
 from vyos.util import cmd
 from vyos.util import process_named_running
 
@@ -30,6 +31,8 @@ route_map_in = 'foo-map-in'
 route_map_out = 'foo-map-out'
 prefix_list_in = 'pfx-foo-in'
 prefix_list_out = 'pfx-foo-out'
+prefix_list_in6 = 'pfx-foo-in6'
+prefix_list_out6 = 'pfx-foo-out6'
 
 neighbor_config = {
     '192.0.2.1' : {
@@ -61,6 +64,29 @@ neighbor_config = {
         'passive'      : '',
         'multi_hop'    : '5',
         'update_src'   : 'lo',
+        },
+    '2001:db8::1' : {
+        'cap_dynamic'  : '',
+        'cap_ext_next' : '',
+        'remote_as'    : '123',
+        'adv_interv'   : '400',
+        'passive'      : '',
+        'password'     : 'VyOS-Secure123',
+        'shutdown'     : '',
+        'cap_over'     : '',
+        'ttl_security' : '5',
+        'local_as'     : '300',
+        'route_map_in' : route_map_in,
+        'route_map_out': route_map_out,
+        },
+    '2001:db8::2' : {
+        'remote_as'    : '456',
+        'shutdown'     : '',
+        'no_cap_nego'  : '',
+        'port'         : '667',
+        'cap_strict'   : '',
+        'pfx_list_in'  : prefix_list_in6,
+        'pfx_list_out' : prefix_list_out6,
         },
 }
 
@@ -112,11 +138,18 @@ class TestProtocolsBGP(unittest.TestCase):
         self.session.set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'action', 'permit'])
         self.session.set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'prefix', '192.0.2.128/25'])
 
+        self.session.set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'action', 'permit'])
+        self.session.set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'prefix', '2001:db8:1000::/64'])
+        self.session.set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
+        self.session.set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
+
     def tearDown(self):
         self.session.delete(['policy', 'route-map', route_map_in])
         self.session.delete(['policy', 'route-map', route_map_out])
         self.session.delete(['policy', 'prefix-list', prefix_list_in])
         self.session.delete(['policy', 'prefix-list', prefix_list_out])
+        self.session.delete(['policy', 'prefix-list6', prefix_list_in6])
+        self.session.delete(['policy', 'prefix-list6', prefix_list_out6])
 
         self.session.delete(base_path)
         self.session.commit()
@@ -194,47 +227,51 @@ class TestProtocolsBGP(unittest.TestCase):
     def test_bgp_02_neighbors(self):
         # Test out individual neighbor configuration items, not all of them are
         # also available to a peer-group!
-        for neighbor, config in neighbor_config.items():
-            if 'adv_interv' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'advertisement-interval', config["adv_interv"]])
-            if 'cap_dynamic' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'capability', 'dynamic'])
-            if 'cap_ext_next' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'capability', 'extended-nexthop'])
-            if 'description' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'description', config["description"]])
-            if 'no_cap_nego' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'disable-capability-negotiation'])
-            if 'multi_hop' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'ebgp-multihop', config["multi_hop"]])
-            if 'local_as' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'local-as', config["local_as"]])
-            if 'cap_over' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'override-capability'])
-            if 'passive' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'passive'])
-            if 'password' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'password', config["password"]])
-            if 'port' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'port', config["port"]])
-            if 'remote_as' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'remote-as', config["remote_as"]])
-            if 'cap_strict' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'strict-capability-match'])
-            if 'shutdown' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'shutdown'])
-            if 'ttl_security' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'ttl-security', 'hops', config["ttl_security"]])
-            if 'update_src' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'update-source', config["update_src"]])
-            if 'route_map_in' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-map', 'import', config["route_map_in"]])
-            if 'route_map_out' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-map', 'export', config["route_map_out"]])
-            if 'pfx_list_in' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'prefix-list', 'import', config["pfx_list_in"]])
-            if 'pfx_list_out' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'prefix-list', 'export', config["pfx_list_out"]])
+        for peer, peer_config in neighbor_config.items():
+            afi = 'ipv4-unicast'
+            if is_ipv6(peer):
+                afi = 'ipv6-unicast'
+
+            if 'adv_interv' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'advertisement-interval', peer_config["adv_interv"]])
+            if 'cap_dynamic' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'capability', 'dynamic'])
+            if 'cap_ext_next' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'capability', 'extended-nexthop'])
+            if 'description' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'description', peer_config["description"]])
+            if 'no_cap_nego' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'disable-capability-negotiation'])
+            if 'multi_hop' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'ebgp-multihop', peer_config["multi_hop"]])
+            if 'local_as' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"]])
+            if 'cap_over' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'override-capability'])
+            if 'passive' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'passive'])
+            if 'password' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'password', peer_config["password"]])
+            if 'port' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'port', peer_config["port"]])
+            if 'remote_as' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'remote-as', peer_config["remote_as"]])
+            if 'cap_strict' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'strict-capability-match'])
+            if 'shutdown' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'shutdown'])
+            if 'ttl_security' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'ttl-security', 'hops', peer_config["ttl_security"]])
+            if 'update_src' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'update-source', peer_config["update_src"]])
+            if 'route_map_in' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'route-map', 'import', peer_config["route_map_in"]])
+            if 'route_map_out' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'route-map', 'export', peer_config["route_map_out"]])
+            if 'pfx_list_in' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'prefix-list', 'import', peer_config["pfx_list_in"]])
+            if 'pfx_list_out' in peer_config:
+                self.session.set(base_path + ['neighbor', peer, 'address-family', afi, 'prefix-list', 'export', peer_config["pfx_list_out"]])
 
         # commit changes
         self.session.commit()
@@ -244,11 +281,11 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f'router bgp {ASN}', frrconfig)
 
         for peer, peer_config in neighbor_config.items():
-            if 'adv_interv' in config:
+            if 'adv_interv' in peer_config:
                 self.assertIn(f' neighbor {peer} advertisement-interval {peer_config["adv_interv"]}', frrconfig)
-            if 'port' in config:
+            if 'port' in peer_config:
                 self.assertIn(f' neighbor {peer} port {peer_config["port"]}', frrconfig)
-            if 'cap_strict' in config:
+            if 'cap_strict' in peer_config:
                 self.assertIn(f' neighbor {peer} strict-capability-match', frrconfig)
 
             self.verify_frr_config(peer, peer_config, frrconfig)
@@ -354,12 +391,12 @@ class TestProtocolsBGP(unittest.TestCase):
     def test_bgp_05_afi_ipv6(self):
         networks = {
             '2001:db8:100::/48' : {
-                },
+            },
             '2001:db8:200::/48' : {
-                },
+            },
             '2001:db8:300::/48' : {
                 'summary_only' : '',
-                },
+            },
         }
 
         # We want to redistribute ...
@@ -424,6 +461,31 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f' bgp listen limit {limit}', frrconfig)
         for prefix in listen_ranges:
             self.assertIn(f' bgp listen range {prefix} peer-group {peer_group}', frrconfig)
+
+
+    def test_bgp_07_l2vpn_evpn(self):
+        vnis = ['10010', '10020', '10030']
+        neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
+        self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
+        self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-default-gw'])
+        self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-svi-ip'])
+        self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'flooding', 'disable'])
+        for vni in vnis:
+            self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = getFRRBGPconfig()
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' address-family l2vpn evpn', frrconfig)
+        self.assertIn(f'  advertise-all-vni', frrconfig)
+        self.assertIn(f'  advertise-default-gw', frrconfig)
+        self.assertIn(f'  advertise-svi-ip', frrconfig)
+        self.assertIn(f'  flooding disable', frrconfig)
+        for vni in vnis:
+            self.assertIn(f'  vni {vni}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

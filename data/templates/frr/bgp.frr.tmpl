@@ -9,6 +9,9 @@
 {%   if config.remote_as is defined and config.remote_as is not none %}
  neighbor {{ neighbor }} remote-as {{ config.remote_as }}
 {%   endif %}
+{%   if config.advertisement_interval is defined and config.advertisement_interval is not none %}
+ neighbor {{ neighbor }} advertisement-interval {{ config.advertisement_interval }}
+{%   endif %}
 {%   if config.bfd is defined %}
  neighbor {{ neighbor }} bfd
 {%   endif %}
@@ -43,8 +46,14 @@
 {%   if config.password is defined and config.password is not none %}
  neighbor {{ neighbor }} password {{ config.password }}
 {%   endif %}
+{%   if config.port is defined and config.port is not none %}
+ neighbor {{ neighbor }} port {{ config.port }}
+{%   endif %}
 {%   if config.shutdown is defined %}
  neighbor {{ neighbor }} shutdown
+{%   endif %}
+{%   if config.strict_capability_match is defined %}
+ neighbor {{ neighbor }} strict-capability-match
 {%   endif %}
 {%   if config.ttl_security is defined and config.ttl_security.hops is defined and config.ttl_security.hops is not none %}
  neighbor {{ neighbor }} ttl-security hops {{ config.ttl_security.hops }}
