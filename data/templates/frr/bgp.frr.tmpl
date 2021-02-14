@@ -230,8 +230,10 @@ router bgp {{ asn }}
 {%       endif %}
 {%     endif %}
 {%     if afi_config.vni is defined and afi_config.vni is not none %}
-  vni {{ afi_config.vni }}
+{%       for vni in afi_config.vni %}
+  vni {{ vni }}
   exit-vni
+{%       endfor %}
 {%     endif %}
  exit-address-family
 {%   endfor %}
