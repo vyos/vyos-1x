@@ -127,10 +127,13 @@ peer_group_config = {
 }
 
 def getFRRBGPconfig():
-    return cmd(f'vtysh -c "show run" | sed -n "/router bgp {ASN}/,/^!/p"')
+    return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}/,/^!/p"')
+
+def getFRRBGPVNIconfig(vni):
+    return cmd(f'vtysh -c "show run" | sed -n "/^  vni {vni}/,/^!/p"')
 
 def getFRRRPKIconfig():
-    return cmd(f'vtysh -c "show run" | sed -n "/rpki/,/^!/p"')
+    return cmd(f'vtysh -c "show run" | sed -n "/^rpki/,/^!/p"')
 
 class TestProtocolsBGP(unittest.TestCase):
     def setUp(self):
@@ -487,7 +490,8 @@ class TestProtocolsBGP(unittest.TestCase):
         self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-svi-ip'])
         self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'flooding', 'disable'])
         for vni in vnis:
-            self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni])
+            self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni, 'advertise-default-gw'])
+            self.session.set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni, 'advertise-svi-ip'])
 
         # commit changes
         self.session.commit()
@@ -501,7 +505,10 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f'  advertise-svi-ip', frrconfig)
         self.assertIn(f'  flooding disable', frrconfig)
         for vni in vnis:
-            self.assertIn(f'  vni {vni}', frrconfig)
+            vniconfig = getFRRBGPVNIconfig(vni)
+            self.assertIn(f'vni {vni}', vniconfig)
+            self.assertIn(f'   advertise-default-gw', vniconfig)
+            self.assertIn(f'   advertise-svi-ip', vniconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
