@@ -42,6 +42,9 @@
                   <leafNode name="address">
                     <properties>
                       <help>Local address to bind our peer listener to</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                      </completionHelp>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>Local IPv4 address used to connect to the peer</description>
@@ -74,6 +77,7 @@
                         <validator name="numeric" argument="--range 10-60000"/>
                       </constraint>
                     </properties>
+                    <defaultValue>300</defaultValue>
                   </leafNode>
                   <leafNode name="transmit">
                     <properties>
@@ -86,6 +90,7 @@
                         <validator name="numeric" argument="--range 10-60000"/>
                       </constraint>
                     </properties>
+                    <defaultValue>300</defaultValue>
                   </leafNode>
                   <leafNode name="multiplier">
                     <properties>
@@ -98,6 +103,7 @@
                         <validator name="numeric" argument="--range 2-255"/>
                       </constraint>
                     </properties>
+                    <defaultValue>3</defaultValue>
                   </leafNode>
                   <leafNode name="echo-interval">
                     <properties>
