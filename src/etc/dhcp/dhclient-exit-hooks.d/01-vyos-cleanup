@@ -13,6 +13,8 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
     $hostsd_client --delete-name-servers --tag "dhcp-${interface}"
     hostsd_changes=y
 
+    if_metric="$IF_METRIC"
+
     # try to delete default ip route 
     for router in $old_routers; do
         # check if we are bound to a VRF
@@ -21,8 +23,10 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
             vrf="vrf $vrf_name"
         fi
 
-        logmsg info "Deleting default route: via $router dev ${interface} ${vrf}"
-        ip -4 route del default via $router dev ${interface} ${vrf}
+        logmsg info "Deleting default route: via $router dev ${interface} ${if_metric:+metric $if_metric} ${vrf}"
+        ip -4 route del default via $router dev ${interface} ${if_metric:+metric $if_metric} ${vrf}
+
+        if_metric=$((if_metric+1))
     done
 
     # delete rfc3442 routes

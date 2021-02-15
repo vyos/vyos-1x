@@ -958,6 +958,9 @@ class Interface(Control):
         pid_file = f'{config_base}_{ifname}.pid'
         lease_file = f'{config_base}_{ifname}.leases'
 
+        # Stop client with old config files to get the right IF_METRIC.
+        self._cmd(f'systemctl stop dhclient@{ifname}.service')
+
         if enable and 'disable' not in self._config:
             if dict_search('dhcp_options.host_name', self._config) == None:
                 # read configured system hostname.
@@ -976,10 +979,8 @@ class Interface(Control):
             # 'up' check is mandatory b/c even if the interface is A/D, as soon as
             # the DHCP client is started the interface will be placed in u/u state.
             # This is not what we intended to do when disabling an interface.
-            return self._cmd(f'systemctl restart dhclient@{ifname}.service')
+            return self._cmd(f'systemctl start dhclient@{ifname}.service')
         else:
-            self._cmd(f'systemctl stop dhclient@{ifname}.service')
-
             # cleanup old config files
             for file in [config_file, options_file, pid_file, lease_file]:
                 if os.path.isfile(file):
