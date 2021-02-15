@@ -45,6 +45,7 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/vpn/nipsec
+	rm -rf $(TMPL_DIR)/npolicy
 
 .PHONY: op_mode_definitions
 .ONESHELL:
