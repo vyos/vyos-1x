@@ -54,6 +54,26 @@ def get_config(config=None):
 
     return bgp
 
+def verify_remote_as(peer_config, asn_config):
+    if 'remote_as' in peer_config:
+        return peer_config['remote_as']
+
+    if 'peer_group' in peer_config:
+        peer_group_name = peer_config['peer_group']
+        tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', asn_config)
+        if tmp: return tmp
+
+    if 'interface' in peer_config:
+        if 'remote_as' in peer_config['interface']:
+            return peer_config['interface']['remote_as']
+
+        if 'peer_group' in peer_config['interface']:
+            peer_group_name = peer_config['interface']['peer_group']
+            tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', asn_config)
+            if tmp: return tmp
+
+    return None
+
 def verify(bgp):
     if not bgp:
         return None
@@ -79,18 +99,13 @@ def verify(bgp):
                         raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                           f'neighbor "{neighbor}" does not exist!')
 
-                # Some checks can/must only be done on a neighbor and nor a peer-group
+
+                # Some checks can/must only be done on a neighbor and not a peer-group
                 if neighbor == 'neighbor':
                     # remote-as must be either set explicitly for the neighbor
                     # or for the entire peer-group
-                    if 'interface' in peer_config:
-                        if 'remote_as' not in peer_config['interface']:
-                            if 'peer_group' not in peer_config['interface'] or 'remote_as' not in asn_config['peer_group'][ peer_config['interface']['peer_group'] ]:
-                                raise ConfigError('Remote AS must be set for neighbor or peer-group!')
-
-                    elif 'remote_as' not in peer_config:
-                        if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][ peer_config['peer_group'] ]:
-                            raise ConfigError('Remote AS must be set for neighbor or peer-group!')
+                    if not verify_remote_as(peer_config, asn_config):
+                        raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
 
                 for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
                     # Bail out early if address family is not configured
