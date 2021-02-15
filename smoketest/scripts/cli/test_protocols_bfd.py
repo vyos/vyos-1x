@@ -25,28 +25,29 @@ from vyos.util import process_named_running
 PROCESS_NAME = 'bfdd'
 base_path = ['protocols', 'bfd']
 
+dum_if = 'dum1001'
 neighbor_config = {
-    '192.0.2.1' : {
+    '192.0.2.10' : {
         'intv_rx'    : '500',
         'intv_tx'    : '600',
         'multihop'   : '',
         'source_addr': '192.0.2.254',
         },
-    '192.0.2.2' : {
+    '192.0.2.20' : {
         'echo_mode'  : '',
         'intv_echo'  : '100',
         'intv_mult'  : '111',
         'intv_rx'    : '222',
         'intv_tx'    : '333',
         'shutdown'   : '',
-        'source_intf': 'lo',
+        'source_intf': dum_if,
         },
-    '2001:db8::1' : {
-        'source_addr': 'fe80::1',
-        'source_intf': 'eth0',
+    '2001:db8::a' : {
+        'source_addr': '2001:db8::1',
+        'source_intf': dum_if,
         },
-    '2001:db8::2' : {
-        'source_addr': 'fe80::1',
+    '2001:db8::b' : {
+        'source_addr': '2001:db8::1',
         'multihop'   : '',
         },
 }
@@ -60,8 +61,11 @@ def getBFDPeerconfig(peer):
 class TestProtocolsBFD(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
+        self.session.set(['interfaces', 'dummy', dum_if, 'address', '192.0.2.1/24'])
+        self.session.set(['interfaces', 'dummy', dum_if, 'address', '2001:db8::1/64'])
 
     def tearDown(self):
+        self.session.delete(['interfaces', 'dummy', dum_if])
         self.session.delete(base_path)
         self.session.commit()
         del self.session
