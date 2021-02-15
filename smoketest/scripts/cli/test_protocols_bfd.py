@@ -26,7 +26,7 @@ PROCESS_NAME = 'bfdd'
 base_path = ['protocols', 'bfd']
 
 dum_if = 'dum1001'
-neighbor_config = {
+peers = {
     '192.0.2.10' : {
         'intv_rx'    : '500',
         'intv_tx'    : '600',
@@ -36,7 +36,7 @@ neighbor_config = {
     '192.0.2.20' : {
         'echo_mode'  : '',
         'intv_echo'  : '100',
-        'intv_mult'  : '111',
+        'intv_mult'  : '100',
         'intv_rx'    : '222',
         'intv_tx'    : '333',
         'shutdown'   : '',
@@ -52,20 +52,35 @@ neighbor_config = {
         },
 }
 
+profiles = {
+    'foo' : {
+        'echo_mode'  : '',
+        'intv_echo'  : '100',
+        'intv_mult'  : '101',
+        'intv_rx'    : '222',
+        'intv_tx'    : '333',
+        'shutdown'   : '',
+        },
+    'bar' : {
+        'intv_mult'  : '102',
+        'intv_rx'    : '444',
+        },
+}
+
 def getFRRconfig():
     return cmd('vtysh -c "show run" | sed -n "/^bfd/,/^!/p"')
 
 def getBFDPeerconfig(peer):
     return cmd(f'vtysh -c "show run" | sed -n "/^ {peer}/,/^!/p"')
 
+def getBFDProfileconfig(profile):
+    return cmd(f'vtysh -c "show run" | sed -n "/^ {profile}/,/^!/p"')
+
 class TestProtocolsBFD(unittest.TestCase):
     def setUp(self):
         self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', dum_if, 'address', '192.0.2.1/24'])
-        self.session.set(['interfaces', 'dummy', dum_if, 'address', '2001:db8::1/64'])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'dummy', dum_if])
         self.session.delete(base_path)
         self.session.commit()
         del self.session
@@ -73,8 +88,8 @@ class TestProtocolsBFD(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_bfd_simple(self):
-        for peer, peer_config in neighbor_config.items():
+    def test_bfd_peer(self):
+        for peer, peer_config in peers.items():
             if 'echo_mode' in peer_config:
                 self.session.set(base_path + ['peer', peer, 'echo-mode'])
             if 'intv_echo' in peer_config:
@@ -99,7 +114,7 @@ class TestProtocolsBFD(unittest.TestCase):
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRconfig()
-        for peer, peer_config in neighbor_config.items():
+        for peer, peer_config in peers.items():
             tmp = f'peer {peer}'
             if 'multihop' in peer_config:
                 tmp += f' multihop'
@@ -123,6 +138,44 @@ class TestProtocolsBFD(unittest.TestCase):
                 self.assertIn(f' transmit-interval {peer_config["intv_tx"]}', peerconfig)
             if 'shutdown' not in peer_config:
                 self.assertIn(f' no shutdown', peerconfig)
+
+    def test_bfd_profile(self):
+        peer = '192.0.2.10'
+
+        for profile, profile_config in profiles.items():
+            if 'echo_mode' in profile_config:
+                self.session.set(base_path + ['profile', profile, 'echo-mode'])
+            if 'intv_echo' in profile_config:
+                self.session.set(base_path + ['profile', profile, 'interval', 'echo-interval', profile_config["intv_echo"]])
+            if 'intv_mult' in profile_config:
+                self.session.set(base_path + ['profile', profile, 'interval', 'multiplier', profile_config["intv_mult"]])
+            if 'intv_rx' in profile_config:
+                self.session.set(base_path + ['profile', profile, 'interval', 'receive', profile_config["intv_rx"]])
+            if 'intv_tx' in profile_config:
+                self.session.set(base_path + ['profile', profile, 'interval', 'transmit', profile_config["intv_tx"]])
+            if 'shutdown' in profile_config:
+                self.session.set(base_path + ['profile', profile, 'shutdown'])
+
+        self.session.set(base_path + ['peer', peer, 'profile', list(profiles)[0]])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR bgpd configuration
+        for profile, profile_config in profiles.items():
+            config = getBFDProfileconfig(f'profile {profile}')
+            if 'echo_mode' in profile_config:
+                self.assertIn(f' echo-mode', config)
+            if 'intv_echo' in profile_config:
+                self.assertIn(f' echo-interval {profile_config["intv_echo"]}', config)
+            if 'intv_mult' in profile_config:
+                self.assertIn(f' detect-multiplier {profile_config["intv_mult"]}', config)
+            if 'intv_rx' in profile_config:
+                self.assertIn(f' receive-interval {profile_config["intv_rx"]}', config)
+            if 'intv_tx' in profile_config:
+                self.assertIn(f' transmit-interval {profile_config["intv_tx"]}', config)
+            if 'shutdown' not in profile_config:
+                self.assertIn(f' no shutdown', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
