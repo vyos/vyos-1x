@@ -176,8 +176,10 @@
 !
 router bgp {{ asn }}
 {# Disable eBGP policy by default until there is a CLI option #}
-{# https://phabricator.vyos.net/T3183 & https://phabricator.vyos.net/T2100 #}
+{# Workaround for T3183 until we have decided about a migration script #}
  no bgp ebgp-requires-policy
+{# Workaround for T2100 until we have decided about a migration script #}
+ no bgp network import-check
 {% if address_family is defined and address_family is not none %}
 {%   for afi, afi_config in address_family.items() %}
  !
