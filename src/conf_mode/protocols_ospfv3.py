@@ -23,6 +23,7 @@ from vyos.configdict import dict_merge
 from vyos.configverify import verify_route_maps
 from vyos.template import render_to_string
 from vyos.util import call
+from vyos.ifconfig import Interface
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
@@ -57,6 +58,14 @@ def verify(ospfv3):
         return None
 
     verify_route_maps(ospfv3)
+
+    if 'interface' in ospfv3:
+        for ifname, if_config in ospfv3['interface'].items():
+            if 'ifmtu' in if_config:
+                mtu = Interface(ifname).get_mtu()
+                if int(if_config['ifmtu']) > int(mtu):
+                    raise ConfigError(f'OSPFv3 ifmtu cannot go beyond physical MTU of "{mtu}"')
+
     return None
 
 def generate(ospfv3):
@@ -71,7 +80,8 @@ def apply(ospfv3):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section('router ospf6', '')
+    frr_cfg.modify_section(r'^interface \S+', '')
+    frr_cfg.modify_section('^router ospf6$', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospfv3['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 

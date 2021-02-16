@@ -137,7 +137,7 @@ def apply(ospf):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'interface \S+', '')
+    frr_cfg.modify_section(r'^interface \S+', '')
     frr_cfg.modify_section('^router ospf$', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
