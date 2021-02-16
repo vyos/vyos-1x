@@ -661,10 +661,15 @@
               </completionHelp>
               <valueHelp>
                 <format>txt</format>
-                <description>Interface to be passive (i.e. suppress routing updates)</description>
+                <description>Interface to exclude when suppressing routing updates</description>
+              </valueHelp>
+              <valueHelp>
+                <format>vlinkN</format>
+                <description>Virtual-link interface to exclude when suppressing routing updates</description>
               </valueHelp>
               <constraint>
                 <validator name="interface-name"/>
+                <regex>^(vlink[0-9]+)$</regex>
               </constraint>
               <multi/>
             </properties>
