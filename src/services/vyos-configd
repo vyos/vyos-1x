@@ -25,6 +25,7 @@ import logging
 import signal
 import importlib.util
 import zmq
+from contextlib import redirect_stdout, redirect_stderr
 
 from vyos.defaults import directories
 from vyos.configsource import ConfigSourceString, ConfigSourceError
@@ -104,27 +105,23 @@ conf_mode_scripts = dict(zip(imports, modules))
 exclude_set = {key_name_from_file_name(f) for f in filenames if f not in include}
 include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 
-def explicit_print(t, m):
-    try:
-        with open(t, 'w') as f:
-            f.write(m)
-            f.write("\n")
-            f.flush()
-    except Exception:
-        pass
 
 def run_script(script, config) -> int:
     config.set_level([])
     try:
-        c = script.get_config(config)
-        script.verify(c)
-        script.generate(c)
-        script.apply(c)
+        with open(session_tty, 'w') as f, redirect_stdout(f):
+            with redirect_stderr(f):
+                c = script.get_config(config)
+                script.verify(c)
+                script.generate(c)
+                script.apply(c)
     except ConfigError as e:
         logger.critical(e)
-        explicit_print(session_tty, str(e))
+        with open(session_tty, 'w') as f, redirect_stdout(f):
+            print(f"{e}\n")
         return R_ERROR_COMMIT
-    except Exception:
+    except Exception as e:
+        logger.critical(e)
         return R_ERROR_DAEMON
 
     return R_SUCCESS
