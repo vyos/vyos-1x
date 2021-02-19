@@ -58,6 +58,14 @@
 {%   if config.ttl_security is defined and config.ttl_security.hops is defined and config.ttl_security.hops is not none %}
  neighbor {{ neighbor }} ttl-security hops {{ config.ttl_security.hops }}
 {%   endif %}
+{%   if config.timers is defined %}
+{%     if config.timers.connect is defined and config.timers.connect is not none %}
+ neighbor {{ neighbor }} timers connect {{ config.timers.connect }}
+{%     endif %}
+{%     if config.timers.holdtime is defined and config.timers.keepalive is defined and config.timers.holdtime is not none and config.timers.keepalive is not none %}
+ neighbor {{ neighbor }} timers {{ config.timers.keepalive }} {{ config.timers.holdtime }}
+{%     endif %}
+{%   endif %}
 {%   if config.update_source is defined and config.update_source is not none %}
  neighbor {{ neighbor }} update-source {{ config.update_source }}
 {%   endif %}
