@@ -108,8 +108,11 @@
 {%       if afi_config.attribute_unchanged is defined and afi_config.attribute_unchanged is not none %}
   neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if afi_config.attribute_unchanged.as_path is defined }}{{ 'med ' if afi_config.attribute_unchanged.med is defined }}{{ 'next-hop ' if afi_config.attribute_unchanged.next_hop is defined }}
 {%       endif %}
-{%       if afi_config.capability is defined and afi_config.capability.orf is defined and afi_config.capability.orf.prefix_list is defined and afi_config.capability.orf.prefix_list is not none %}
-  neighbor {{ neighbor }} capability orf prefix-list {{ afi_config.capability.orf.prefix_list }}
+{%       if afi_config.capability is defined and afi_config.capability.orf is defined and afi_config.capability.orf.prefix_list is defined and afi_config.capability.orf.prefix_list.send is defined %}
+  neighbor {{ neighbor }} capability orf prefix-list send
+{%       endif %}
+{%       if afi_config.capability is defined and afi_config.capability.orf is defined and afi_config.capability.orf.prefix_list is defined and afi_config.capability.orf.prefix_list.receive is defined %}
+  neighbor {{ neighbor }} capability orf prefix-list receive
 {%       endif %}
 {%       if afi_config.default_originate is defined %}
   neighbor {{ neighbor }} default-originate {{ 'route-map ' + afi_config.default_originate.route_map if afi_config.default_originate.route_map is defined }}
