@@ -142,10 +142,10 @@ def verify(bgp):
                         if 'remote_as' in peer_config and asn != peer_config['remote_as']:
                             raise ConfigError('route-reflector-client only supported for iBGP peers')
                         else:
-                            peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', asn_config)
-                            if 'peer_group' in peer_config and peer_group_as != None and peer_group_as != asn:
-                                raise ConfigError('route-reflector-client only supported for iBGP peers')
-
+                            if 'peer_group' in peer_config:
+                                peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', asn_config)
+                                if peer_group_as != None and peer_group_as != asn:
+                                    raise ConfigError('route-reflector-client only supported for iBGP peers')
 
         # Throw an error if a peer group is not configured for allow range
         for prefix in dict_search('listen.range', asn_config) or []:
