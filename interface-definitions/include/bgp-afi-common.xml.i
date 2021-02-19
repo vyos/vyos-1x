@@ -132,7 +132,9 @@
 <leafNode name="unsuppress-map">
   <properties>
     <help>Route-map to selectively unsuppress suppressed routes</help>
-    <valueless/>
+    <completionHelp>
+      <path>policy route-map</path>
+    </completionHelp>
   </properties>
 </leafNode>
 <leafNode name="weight">
