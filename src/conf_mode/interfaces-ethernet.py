@@ -76,9 +76,16 @@ def verify(ethernet):
     verify_mirror(ethernet)
 
     # verify offloading capabilities
-    if 'offload' in ethernet and 'rps' in ethernet['offload']:
+    if dict_search('offload.rps', ethernet) != None:
         if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
             raise ConfigError('Interface does not suport RPS!')
+
+    driver = EthernetIf(ifname).get_driver_name()
+    # T3342 - Xen driver requires special treatment
+    if driver == "vif":
+        if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
+            raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
+                              'for MTU size larger then 1500 bytes')
 
     # XDP requires multiple TX queues
     if 'xdp' in ethernet:
