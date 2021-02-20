@@ -3,6 +3,6 @@
   <properties>
     <help>Detailed information</help>
   </properties>
-  <command>sudo ${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </leafNode>
 <!-- included end -->
