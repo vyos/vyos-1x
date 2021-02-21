@@ -30,6 +30,7 @@ from vyos.configverify import verify_mtu
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.ethtool import Ethtool
 from vyos.ifconfig import EthernetIf
 from vyos.template import render
 from vyos.util import call
@@ -82,10 +83,25 @@ def verify(ethernet):
 
     driver = EthernetIf(ifname).get_driver_name()
     # T3342 - Xen driver requires special treatment
-    if driver == "vif":
+    if driver == 'vif':
         if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
             raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
                               'for MTU size larger then 1500 bytes')
+
+    ethtool = Ethtool(ifname)
+    if 'ring_buffer' in ethernet:
+        max_rx = ethtool.get_rx_buffer()
+        max_tx = ethtool.get_tx_buffer()
+
+        rx = dict_search('ring_buffer.rx', ethernet)
+        if rx and int(rx) > int(max_rx):
+            raise ConfigError(f'Driver only supports a maximum RX ring-buffer '\
+                              f'size of "{max_rx}" bytes!')
+
+        tx = dict_search('ring_buffer.tx', ethernet)
+        if tx and int(tx) > int(max_tx):
+            raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
+                              f'size of "{max_tx}" bytes!')
 
     # XDP requires multiple TX queues
     if 'xdp' in ethernet:

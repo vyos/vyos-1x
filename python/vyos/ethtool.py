@@ -33,6 +33,7 @@ class Ethtool:
     #   'tx-esp-segmentation': {'fixed': True, 'on': False},
     # }
     features = { }
+    ring_buffers = { }
 
     def __init__(self, ifname):
         # Now populate features dictionaty
@@ -48,6 +49,16 @@ class Ethtool:
                     "on": value == "on",
                     "fixed": fixed
                 }
+
+        tmp = cmd(f'ethtool -g {ifname}')
+        # We are only interested in line 2-5 which contains the device maximum
+        # ringbuffers
+        for line in tmp.splitlines()[2:6]:
+            if ':' in line:
+                key, value = [s.strip() for s in line.strip().split(":", 1)]
+                key = key.lower().replace(' ', '_')
+                self.ring_buffers[key] = int(value)
+
 
     def is_fixed_lro(self):
         # in case of a missing configuration, rather return "fixed". In Ethtool
@@ -78,3 +89,13 @@ class Ethtool:
         # in case of a missing configuration, rather return "fixed". In Ethtool
         # terminology "fixed" means the setting can not be changed by the user.
         return self.features.get('udp-fragmentation-offload', True).get('fixed', True)
+
+    def get_rx_buffer(self):
+        # in case of a missing configuration rather return a "small"
+        # buffer of only 512 bytes.
+        return self.ring_buffers.get('rx', '512')
+
+    def get_tx_buffer(self):
+        # in case of a missing configuration rather return a "small"
+        # buffer of only 512 bytes.
+        return self.ring_buffers.get('tx', '512')
