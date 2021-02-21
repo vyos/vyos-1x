@@ -25,7 +25,8 @@ from vyos.util import call
 from vyos.xml import defaults
 from vyos import ConfigError
 
-config_file = r'/run/conserver/conserver.cf'
+config_file = '/run/conserver/conserver.cf'
+dropbear_systemd_file = '/etc/systemd/system/dropbear@{port}.service.d/override.conf'
 
 def get_config(config=None):
     if config:
@@ -75,9 +76,22 @@ def generate(proxy):
         return None
 
     render(config_file, 'conserver/conserver.conf.tmpl', proxy)
+    if 'device' in proxy:
+        for device in proxy['device']:
+            if 'ssh' not in proxy['device'][device]:
+                continue
+
+            tmp = {
+                'device' : device,
+                'port' : proxy['device'][device]['ssh']['port'],
+            }
+            render(dropbear_systemd_file.format(**tmp),
+                   'conserver/dropbear@.service.tmpl', tmp)
+
     return None
 
 def apply(proxy):
+    call('systemctl daemon-reload')
     call('systemctl stop dropbear@*.service conserver-server.service')
 
     if not proxy:
@@ -89,9 +103,10 @@ def apply(proxy):
 
     if 'device' in proxy:
         for device in proxy['device']:
-            if 'ssh' in proxy['device'][device]:
-                port = proxy['device'][device]['ssh']['port']
-                call(f'systemctl restart dropbear@{device}.service')
+            if 'ssh' not in proxy['device'][device]:
+                continue
+            port = proxy['device'][device]['ssh']['port']
+            call(f'systemctl restart dropbear@{port}.service')
 
     return None
 
