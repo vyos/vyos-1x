@@ -61,7 +61,7 @@ esac
 
 if [ $changes -gt 0 ]; then
   echo Success
-  pid=`pgrep pdns_recursor`
+  pid=`pgrep pdns`
   if [ -n "$pid" ]; then
      sudo rec_control reload-zones
   fi
