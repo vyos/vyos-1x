@@ -151,7 +151,9 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  #include <include/tunnel-parameters-ip.xml.i>
+                  #include <include/interface-parameters-key.xml.i>
+                  #include <include/interface-parameters-tos.xml.i>
+                  #include <include/interface-parameters-ttl.xml.i>
                 </children>
               </node>
               <node name="ipv6">
@@ -173,20 +175,7 @@
                     </properties>
                     <defaultValue>4</defaultValue>
                   </leafNode>
-                  <leafNode name="flowlabel">
-                    <properties>
-                      <help>Flowlabel</help>
-                      <valueHelp>
-                        <format>0x0-0x0FFFFF</format>
-                        <description>Tunnel key, 'inherit' or hex value</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(0x){0,1}(0?[0-9A-Fa-f]{1,5})</regex>
-                      </constraint>
-                      <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
-                    </properties>
-                    <defaultValue>inherit</defaultValue>
-                  </leafNode>
+                  #include <include/interface-parameters-flowlabel.xml.i>
                   <leafNode name="hoplimit">
                     <properties>
                       <help>Hoplimit</help>

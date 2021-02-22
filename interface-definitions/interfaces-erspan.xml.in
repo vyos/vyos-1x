@@ -51,7 +51,9 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/tunnel-parameters-ip.xml.i>
+                  #include <include/interface-parameters-key.xml.i>
+                  #include <include/interface-parameters-tos.xml.i>
+                  #include <include/interface-parameters-ttl.xml.i>
                 </children>
               </node>
               <leafNode name="version">
