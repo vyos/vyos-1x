@@ -43,6 +43,31 @@
                 </properties>
               </leafNode>
               #include <include/port-number.xml.i>
+              <leafNode name="protocol">
+                <properties>
+                  <help>Load balancing protocol</help>
+                  <completionHelp>
+                    <list>tcp udp sctp</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>tcp</format>
+                    <description>TCP Protocol</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>udp</format>
+                    <description>UDP Protocol</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sctp</format>
+                    <description>SCTP Protocol</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(tcp|udp|sctp)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>The load balancing protocol must be one of tcp, udp, and sctp</constraintErrorMessage>
+                </properties>
+                <defaultValue>tcp</defaultValue>
+              </leafNode>
               <leafNode name="mode">
                 <properties>
                   <help>Execute load balancing operation mode</help>

@@ -2,10 +2,17 @@
 -C
 {% if rule is defined %}
 {%   for rule, config in rule.items() if config.disable is not defined %}
--A -t {{ config.virtual_address | bracketize_ipv6 }}:{{ config.port }} -s {{ config.algorithm }}
+{%     if config.protocol == 'tcp' %}
+{%       set protocol = '-t '   %}
+{%     elif config.protocol == 'udp' %}
+{%       set protocol = '-u '   %}
+{%     elif config.protocol == 'sctp' %}
+{%       set protocol = '--sctp-service '   %}
+{%     endif   %}
+-A {{ protocol }} {{ config.virtual_address | bracketize_ipv6 }}:{{ config.port }} -s {{ config.algorithm }}
 {%     if config.backend is defined  %}
 {%       for backend, backend_config in config.backend.items() if backend_config.disable is not defined %}
-{%         set rule_cmd = '-a -t ' + config.virtual_address | bracketize_ipv6 + ':' + config.port + ' -r ' + backend | bracketize_ipv6 + ':' + config.port  %}
+{%         set rule_cmd = '-a ' + protocol + config.virtual_address | bracketize_ipv6 + ':' + config.port + ' -r ' + backend | bracketize_ipv6 + ':' + config.port  %}
 {%         if config.mode == 'direct' %}
 {{ rule_cmd }} -g
 {%         elif config.mode == 'tunnel' %}
