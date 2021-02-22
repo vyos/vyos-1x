@@ -923,12 +923,12 @@ class Interface(Control):
                         else:
                             add_vlan.append(vlan)
                             allowed_vlan_ids.append(vlan)
-                
+
                 # Remove redundant VLANs from the system
                 for vlan in list_diff(cur_vlan_ids, add_vlan):
                     cmd = f'bridge vlan del dev {ifname} vid {vlan} master'
                     self._cmd(cmd)
-                
+
                 for vlan in allowed_vlan_ids:
                     cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
                     self._cmd(cmd)
@@ -1073,6 +1073,10 @@ class Interface(Control):
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
         on any interface. """
+
+        if self.debug:
+            import pprint
+            pprint.pprint(config)
 
         # Cache the configuration - it will be reused inside e.g. DHCP handler
         # XXX: maybe pass the option via __init__ in the future and rename this
