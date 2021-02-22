@@ -1079,6 +1079,10 @@ class Interface(Control):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
+        if self.debug:
+            import pprint
+            pprint.pprint(config)
+
         # Cache the configuration - it will be reused inside e.g. DHCP handler
         # XXX: maybe pass the option via __init__ in the future and rename this
         # method to apply()?
