@@ -36,7 +36,13 @@ if not config.exists(['nat']):
     exit(0)
 else:
     for direction in ['source', 'destination']:
+        # If a node doesn't exist, we obviously have nothing to do.
         if not config.exists(['nat', direction]):
+            continue
+
+        # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
+        # but there are no rules under it.
+        if not config.list_nodes(['nat', direction]):
             continue
 
         for rule in config.list_nodes(['nat', direction, 'rule']):
