@@ -345,6 +345,10 @@ protocols {
             }
         }
         neighbor 10.0.151.222 {
+            disable-send-community {
+                extended
+                standard
+            }
             address-family {
                 ipv4-unicast {
                     default-originate {

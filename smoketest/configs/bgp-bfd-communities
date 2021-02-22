@@ -1,0 +1,533 @@
+interfaces {
+    ethernet eth0 {
+        address 192.0.2.100/25
+        address 2001:db8::ffff/64
+    }
+    loopback lo {
+    }
+}
+policy {
+    large-community-list ANYCAST_ALL {
+        rule 10 {
+            action permit
+            description "Allow all anycast from anywhere"
+            regex "4242420696:100:.*"
+        }
+    }
+    large-community-list ANYCAST_INT {
+        rule 10 {
+            action permit
+            description "Allow all anycast from int"
+            regex 4242420696:100:1
+        }
+    }
+    prefix-list BGP-BACKBONE-IN {
+        description "Inbound backbone routes from other sites"
+        rule 10 {
+            action deny
+            description "Block default route"
+            prefix 0.0.0.0/0
+        }
+        rule 20 {
+            action deny
+            description "Block int primary"
+            ge 21
+            prefix 192.168.0.0/20
+        }
+        rule 30 {
+            action deny
+            description "Block loopbacks"
+            ge 25
+            prefix 192.168.253.0/24
+        }
+        rule 40 {
+            action deny
+            description "Block backbone peering"
+            ge 25
+            prefix 192.168.254.0/24
+        }
+        rule 999 {
+            action permit
+            description "Allow everything else"
+            ge 1
+            prefix 0.0.0.0/0
+        }
+    }
+    prefix-list BGP-BACKBONE-OUT {
+        description "Outbound backbone routes to other sites"
+        rule 10 {
+            action permit
+            description "Int primary"
+            ge 23
+            prefix 192.168.0.0/20
+        }
+    }
+    prefix-list GLOBAL {
+        description "Globally redistributed routes"
+        rule 10 {
+            action permit
+            prefix 192.168.100.1/32
+        }
+        rule 20 {
+            action permit
+            prefix 192.168.7.128/25
+        }
+    }
+    prefix-list6 BGP-BACKBONE-IN-V6 {
+        description "Inbound backbone routes from other sites"
+        rule 10 {
+            action deny
+            description "Block default route"
+            prefix ::/0
+        }
+        rule 20 {
+            action deny
+            description "Block int primary"
+            ge 53
+            prefix fd52:d62e:8011::/52
+        }
+        rule 30 {
+            action deny
+            description "Block peering and stuff"
+            ge 53
+            prefix fd52:d62e:8011:f000::/52
+        }
+        rule 999 {
+            action permit
+            description "Allow everything else"
+            ge 1
+            prefix ::/0
+        }
+    }
+    prefix-list6 BGP-BACKBONE-OUT-V6 {
+        description "Outbound backbone routes to other sites"
+        rule 10 {
+            action permit
+            ge 64
+            prefix fd52:d62e:8011::/52
+        }
+    }
+    prefix-list6 GLOBAL-V6 {
+        description "Globally redistributed routes"
+        rule 10 {
+            action permit
+            ge 64
+            prefix fd52:d62e:8011:2::/63
+        }
+    }
+    route-map BGP-REDISTRIBUTE {
+        rule 10 {
+            action permit
+            description "Prepend AS and allow VPN and modem"
+            match {
+                ip {
+                    address {
+                        prefix-list GLOBAL
+                    }
+                }
+            }
+            set {
+                as-path-prepend 4242420666
+            }
+        }
+        rule 20 {
+            action permit
+            description "Allow VPN"
+            match {
+                ipv6 {
+                    address {
+                        prefix-list GLOBAL-V6
+                    }
+                }
+            }
+        }
+    }
+    route-map BGP-BACKBONE-IN {
+        rule 10 {
+            action permit
+            match {
+                ip {
+                    address {
+                        prefix-list BGP-BACKBONE-IN
+                    }
+                }
+            }
+        }
+        rule 20 {
+            action permit
+            match {
+                ipv6 {
+                    address {
+                        prefix-list BGP-BACKBONE-IN-V6
+                    }
+                }
+            }
+        }
+        rule 30 {
+            action permit
+            match {
+                large-community {
+                    large-community-list ANYCAST_ALL
+                }
+            }
+        }
+    }
+    route-map BGP-BACKBONE-OUT {
+        rule 10 {
+            action permit
+            match {
+                ip {
+                    address {
+                        prefix-list BGP-BACKBONE-OUT
+                    }
+                }
+            }
+        }
+        rule 20 {
+            action permit
+            match {
+                ipv6 {
+                    address {
+                        prefix-list BGP-BACKBONE-OUT-V6
+                    }
+                }
+            }
+        }
+        rule 30 {
+            action permit
+            match {
+                large-community {
+                    large-community-list ANYCAST_INT
+                }
+            }
+            set {
+                as-path-prepend 4242420666
+            }
+        }
+    }
+}
+protocols {
+    bfd {
+        peer 192.168.253.1 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address 192.168.253.3
+            }
+        }
+        peer 192.168.253.2 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address 192.168.253.3
+            }
+        }
+        peer 192.168.253.6 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address 192.168.253.3
+            }
+        }
+        peer 192.168.253.7 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address 192.168.253.3
+            }
+        }
+        peer 192.168.253.12 {
+            interval {
+                receive 100
+                transmit 100
+            }
+            multihop
+            source {
+                address 192.168.253.3
+            }
+        }
+        peer fd52:d62e:8011:fffe:192:168:253:1 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address fd52:d62e:8011:fffe:192:168:253:3
+            }
+        }
+        peer fd52:d62e:8011:fffe:192:168:253:2 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address fd52:d62e:8011:fffe:192:168:253:3
+            }
+        }
+        peer fd52:d62e:8011:fffe:192:168:253:6 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address fd52:d62e:8011:fffe:192:168:253:3
+            }
+        }
+        peer fd52:d62e:8011:fffe:192:168:253:7 {
+            interval {
+                receive 50
+                transmit 50
+            }
+            multihop
+            source {
+                address fd52:d62e:8011:fffe:192:168:253:3
+            }
+        }
+        peer fd52:d62e:8011:fffe:192:168:253:12 {
+            interval {
+                receive 100
+                transmit 100
+            }
+            multihop
+            source {
+                address fd52:d62e:8011:fffe:192:168:253:3
+            }
+        }
+    }
+    bgp 4242420666 {
+        address-family {
+            ipv4-unicast {
+                redistribute {
+                    connected {
+                        route-map BGP-REDISTRIBUTE
+                    }
+                    static {
+                        route-map BGP-REDISTRIBUTE
+                    }
+                }
+            }
+            ipv6-unicast {
+                redistribute {
+                    connected {
+                        route-map BGP-REDISTRIBUTE
+                    }
+                }
+            }
+        }
+        neighbor 192.168.253.1 {
+            peer-group INT
+        }
+        neighbor 192.168.253.2 {
+            peer-group INT
+        }
+        neighbor 192.168.253.6 {
+            peer-group DAL13
+        }
+        neighbor 192.168.253.7 {
+            peer-group DAL13
+        }
+        neighbor 192.168.253.12 {
+            address-family {
+                ipv4-unicast {
+                    route-map {
+                        export BGP-BACKBONE-OUT
+                        import BGP-BACKBONE-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd {
+            }
+            ebgp-multihop 2
+            remote-as 4242420669
+            update-source dum0
+        }
+        neighbor fd52:d62e:8011:fffe:192:168:253:1 {
+            address-family {
+                ipv6-unicast {
+                    peer-group INTv6
+                }
+            }
+        }
+        neighbor fd52:d62e:8011:fffe:192:168:253:2 {
+            address-family {
+                ipv6-unicast {
+                    peer-group INTv6
+                }
+            }
+        }
+        neighbor fd52:d62e:8011:fffe:192:168:253:6 {
+            address-family {
+                ipv6-unicast {
+                    peer-group DAL13v6
+                }
+            }
+        }
+        neighbor fd52:d62e:8011:fffe:192:168:253:7 {
+            address-family {
+                ipv6-unicast {
+                    peer-group DAL13v6
+                }
+            }
+        }
+        neighbor fd52:d62e:8011:fffe:192:168:253:12 {
+            address-family {
+                ipv6-unicast {
+                    route-map {
+                        export BGP-BACKBONE-OUT
+                        import BGP-BACKBONE-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd {
+            }
+            ebgp-multihop 2
+            remote-as 4242420669
+            update-source dum0
+        }
+        parameters {
+            confederation {
+                identifier 4242420696
+                peers 4242420668
+                peers 4242420669
+            }
+            default {
+                no-ipv4-unicast
+            }
+            distance {
+                global {
+                    external 220
+                    internal 220
+                    local 220
+                }
+            }
+            graceful-restart {
+            }
+        }
+        peer-group DAL13 {
+            address-family {
+                ipv4-unicast {
+                    route-map {
+                        export BGP-BACKBONE-OUT
+                        import BGP-BACKBONE-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd
+            ebgp-multihop 2
+            remote-as 4242420668
+            update-source dum0
+        }
+        peer-group DAL13v6 {
+            address-family {
+                ipv6-unicast {
+                    route-map {
+                        export BGP-BACKBONE-OUT
+                        import BGP-BACKBONE-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd
+            ebgp-multihop 2
+            remote-as 4242420668
+            update-source dum0
+        }
+        peer-group INT {
+            address-family {
+                ipv4-unicast {
+                    default-originate {
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd
+            remote-as 4242420666
+            update-source dum0
+        }
+        peer-group INTv6 {
+            address-family {
+                ipv6-unicast {
+                    default-originate {
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd
+            remote-as 4242420666
+            update-source dum0
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions 200
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+            level admin
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@10:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.6-S1 */

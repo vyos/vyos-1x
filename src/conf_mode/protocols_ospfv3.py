@@ -21,25 +21,16 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_route_maps
-from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
+from vyos.ifconfig import Interface
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/ospfv3.frr'
 frr_daemon = 'ospf6d'
-
-DEBUG = os.path.exists('/tmp/ospfv3.debug')
-if DEBUG:
-    import logging
-    lg = logging.getLogger("vyos.frr")
-    lg.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
@@ -67,6 +58,14 @@ def verify(ospfv3):
         return None
 
     verify_route_maps(ospfv3)
+
+    if 'interface' in ospfv3:
+        for ifname, if_config in ospfv3['interface'].items():
+            if 'ifmtu' in if_config:
+                mtu = Interface(ifname).get_mtu()
+                if int(if_config['ifmtu']) > int(mtu):
+                    raise ConfigError(f'OSPFv3 ifmtu cannot go beyond physical MTU of "{mtu}"')
+
     return None
 
 def generate(ospfv3):
@@ -74,33 +73,16 @@ def generate(ospfv3):
         ospfv3['new_frr_config'] = ''
         return None
 
-    # render(config) not needed, its only for debug
-    render(config_file, 'frr/ospfv3.frr.tmpl', ospfv3)
     ospfv3['new_frr_config'] = render_to_string('frr/ospfv3.frr.tmpl', ospfv3)
-
     return None
 
 def apply(ospfv3):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section('router ospf6', '')
+    frr_cfg.modify_section(r'^interface \S+', '')
+    frr_cfg.modify_section('^router ospf6$', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospfv3['new_frr_config'])
-
-    # Debugging
-    if DEBUG:
-        from pprint import pprint
-        print('')
-        print('--------- DEBUGGING ----------')
-        pprint(dir(frr_cfg))
-        print('Existing config:\n')
-        for line in frr_cfg.original_config:
-            print(line)
-        print(f'Replacement config:\n')
-        print(f'{ospfv3["new_frr_config"]}')
-        print(f'Modified config:\n')
-        print(f'{frr_cfg}')
-
     frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, re-run the blank commit x times due to frr-reload

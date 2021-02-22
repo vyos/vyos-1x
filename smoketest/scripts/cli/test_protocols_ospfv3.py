@@ -25,9 +25,14 @@ from vyos.util import process_named_running
 PROCESS_NAME = 'ospf6d'
 base_path = ['protocols', 'ospfv3']
 
+router_id = '192.0.2.1'
+default_area = '0'
 
 def getFRROSPFconfig():
     return cmd('vtysh -c "show run" | sed -n "/router ospf6/,/^!/p"')
+
+def getFRRIFconfig(iface):
+    return cmd(f'vtysh -c "show run" | sed -n "/^interface {iface}/,/^!/p"')
 
 class TestProtocolsOSPFv3(unittest.TestCase):
     def setUp(self):
@@ -43,23 +48,21 @@ class TestProtocolsOSPFv3(unittest.TestCase):
 
 
     def test_ospfv3_01_basic(self):
-        area = '0'
         seq = '10'
         prefix = '2001:db8::/32'
         acl_name = 'foo-acl-100'
-        router_id = '192.0.2.1'
 
         self.session.set(['policy', 'access-list6', acl_name, 'rule', seq, 'action', 'permit'])
         self.session.set(['policy', 'access-list6', acl_name, 'rule', seq, 'source', 'any'])
 
         self.session.set(base_path + ['parameters', 'router-id', router_id])
-        self.session.set(base_path + ['area', area, 'range', prefix, 'advertise'])
-        self.session.set(base_path + ['area', area, 'export-list', acl_name])
-        self.session.set(base_path + ['area', area, 'import-list', acl_name])
+        self.session.set(base_path + ['area', default_area, 'range', prefix, 'advertise'])
+        self.session.set(base_path + ['area', default_area, 'export-list', acl_name])
+        self.session.set(base_path + ['area', default_area, 'import-list', acl_name])
 
         interfaces = Section.interfaces('ethernet')
         for interface in interfaces:
-            self.session.set(base_path + ['area', area, 'interface', interface])
+            self.session.set(base_path + ['area', default_area, 'interface', interface])
 
         # commit changes
         self.session.commit()
@@ -67,13 +70,13 @@ class TestProtocolsOSPFv3(unittest.TestCase):
         # Verify FRR ospfd configuration
         frrconfig = getFRROSPFconfig()
         self.assertIn(f'router ospf6', frrconfig)
-        self.assertIn(f' area {area} range {prefix}', frrconfig)
+        self.assertIn(f' area {default_area} range {prefix}', frrconfig)
         self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
-        self.assertIn(f' area {area} import-list {acl_name}', frrconfig)
-        self.assertIn(f' area {area} export-list {acl_name}', frrconfig)
+        self.assertIn(f' area {default_area} import-list {acl_name}', frrconfig)
+        self.assertIn(f' area {default_area} export-list {acl_name}', frrconfig)
 
         for interface in interfaces:
-            self.assertIn(f' interface {interface} area {area}', frrconfig)
+            self.assertIn(f' interface {interface} area {default_area}', frrconfig)
 
         self.session.delete(['policy', 'access-list6', acl_name])
 
@@ -118,6 +121,46 @@ class TestProtocolsOSPFv3(unittest.TestCase):
         for protocol in redistribute:
             self.assertIn(f' redistribute {protocol} route-map {route_map}', frrconfig)
 
+    def test_ospfv3_0104_interfaces(self):
+
+        self.session.set(base_path + ['parameters', 'router-id', router_id])
+        self.session.set(base_path + ['area', default_area])
+
+        cost = '100'
+        priority = '10'
+        interfaces = Section.interfaces('ethernet')
+        for interface in interfaces:
+            if_base = base_path + ['interface', interface]
+            self.session.set(if_base + ['bfd'])
+            self.session.set(if_base + ['cost', cost])
+            self.session.set(if_base + ['instance-id', '0'])
+            self.session.set(if_base + ['mtu-ignore'])
+            self.session.set(if_base + ['network', 'point-to-point'])
+            self.session.set(if_base + ['passive'])
+            self.session.set(if_base + ['priority', priority])
+            cost = str(int(cost) + 10)
+            priority = str(int(priority) + 5)
+
+        # commit changes
+        self.session.commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = getFRROSPFconfig()
+        self.assertIn(f'router ospf6', frrconfig)
+
+        cost = '100'
+        priority = '10'
+        for interface in interfaces:
+            if_config = getFRRIFconfig(interface)
+            self.assertIn(f'interface {interface}', if_config)
+            self.assertIn(f' ipv6 ospf6 bfd', if_config)
+            self.assertIn(f' ipv6 ospf6 cost {cost}', if_config)
+            self.assertIn(f' ipv6 ospf6 mtu-ignore', if_config)
+            self.assertIn(f' ipv6 ospf6 network point-to-point', if_config)
+            self.assertIn(f' ipv6 ospf6 passive', if_config)
+            self.assertIn(f' ipv6 ospf6 priority {priority}', if_config)
+            cost = str(int(cost) + 10)
+            priority = str(int(priority) + 5)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

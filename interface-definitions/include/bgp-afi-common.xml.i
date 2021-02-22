@@ -1,4 +1,16 @@
 <!-- included start from bgp-afi-common.xml.i -->
+<leafNode name="addpath-tx-all">
+  <properties>
+    <help>Use addpath to advertise all paths to a neighbor</help>
+    <valueless/>
+  </properties>
+</leafNode>
+<leafNode name="addpath-tx-per-as">
+  <properties>
+    <help>Use addpath to advertise the bestpath per each neighboring AS</help>
+    <valueless/>
+  </properties>
+</leafNode>
 #include <include/bgp-afi-allowas-in.xml.i>
 <leafNode name="as-override">
   <properties>
@@ -120,7 +132,9 @@
 <leafNode name="unsuppress-map">
   <properties>
     <help>Route-map to selectively unsuppress suppressed routes</help>
-    <valueless/>
+    <completionHelp>
+      <path>policy route-map</path>
+    </completionHelp>
   </properties>
 </leafNode>
 <leafNode name="weight">

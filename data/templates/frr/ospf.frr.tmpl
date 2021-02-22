@@ -159,6 +159,9 @@ router ospf
  passive-interface {{ interface }}
 {% endfor %}
 {% for interface in passive_interface_exclude if passive_interface_exclude is defined %}
+{%   if interface.startswith('vlink') %}
+{%     set interface = interface.upper() %}
+{%   endif %}
  no passive-interface {{ interface }}
 {% endfor %}
 {% if redistribute is defined and redistribute is not none %}

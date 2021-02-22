@@ -30,7 +30,6 @@ class TestServiceBroadcastRelay(unittest.TestCase):
         self.session = ConfigSession(os.getpid())
         self.session.set(['interfaces', 'dummy', 'dum1001', 'address', self._address1])
         self.session.set(['interfaces', 'dummy', 'dum1002', 'address', self._address2])
-        self.session.commit()
 
     def tearDown(self):
         self.session.delete(['interfaces', 'dummy', 'dum1001'])

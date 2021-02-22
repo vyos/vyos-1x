@@ -212,11 +212,8 @@ class StaticRouteTest(unittest.TestCase):
                             self.session.set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
                         if 'interface' in next_hop_config:
                             self.session.set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
-
-                        # This is currently not supported because of an FRR issue:
-                        # https://github.com/FRRouting/frr/issues/8016
-                        # if 'vrf' in next_hop_config:
-                        #     self.session.set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
+                        if 'vrf' in next_hop_config:
+                            self.session.set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
 
 
                 if 'interface' in route_config:
@@ -226,11 +223,8 @@ class StaticRouteTest(unittest.TestCase):
                             self.session.set(base + ['interface', interface, 'disable'])
                         if 'distance' in interface_config:
                             self.session.set(base + ['interface', interface, 'distance', interface_config['distance']])
-
-                        # This is currently not supported because of an FRR issue:
-                        # https://github.com/FRRouting/frr/issues/8016
-                        # if 'vrf' in interface_config:
-                        #     self.session.set(base + ['interface', interface, 'vrf', interface_config['vrf']])
+                        if 'vrf' in interface_config:
+                            self.session.set(base + ['interface', interface, 'vrf', interface_config['vrf']])
 
                 if 'blackhole' in route_config:
                     self.session.set(base + ['blackhole'])
@@ -259,10 +253,8 @@ class StaticRouteTest(unittest.TestCase):
                             tmp += ' ' + next_hop_config['interface']
                         if 'distance' in next_hop_config:
                             tmp += ' ' + next_hop_config['distance']
-                        # This is currently not supported because of an FRR issue:
-                        # https://github.com/FRRouting/frr/issues/8016
-                        # if 'vrf' in next_hop_config:
-                        #     tmp += ' nexthop-vrf ' + next_hop_config['vrf']
+                        if 'vrf' in next_hop_config:
+                            tmp += ' nexthop-vrf ' + next_hop_config['vrf']
 
                         tmp += ' table ' + table
                         if 'disable' in next_hop_config:
@@ -277,10 +269,8 @@ class StaticRouteTest(unittest.TestCase):
                             tmp += ' ' + interface_config['interface']
                         if 'distance' in interface_config:
                             tmp += ' ' + interface_config['distance']
-                        # This is currently not supported because of an FRR issue:
-                        # https://github.com/FRRouting/frr/issues/8016
-                        # if 'vrf' in interface_config:
-                        #     tmp += ' nexthop-vrf ' + interface_config['vrf']
+                        if 'vrf' in interface_config:
+                            tmp += ' nexthop-vrf ' + interface_config['vrf']
 
                         tmp += ' table ' + table
                         if 'disable' in interface_config:

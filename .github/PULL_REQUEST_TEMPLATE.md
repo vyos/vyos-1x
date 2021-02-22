@@ -5,8 +5,11 @@
 <!--- Provide a general summary of your changes in the Title above -->
 
 ## Types of changes
-<!--- What types of changes does your code introduce? Put an 'x' in all the boxes that apply. -->
-<!--- NOTE: Markdown requires no leading or trailing whitespace inside the [ ] for checking the box, please use [x] --> 
+<!---
+What types of changes does your code introduce? Put an 'x' in all the boxes that apply.
+NOTE: Markdown requires no leading or trailing whitespace inside the [ ] for checking
+the box, please use [x]
+-->
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Code style update (formatting, renaming)
@@ -24,8 +27,14 @@
 <!--- Describe your changes in detail -->
 
 ## How to test
-<!--- Please describe in detail how you tested your changes. -->
-<!--- Include details of your testing environment, and the tests you ran to -->
+<!---
+Please describe in detail how you tested your changes. Include details of your testing
+environment, and the tests you ran. When pasting configs, logs, shell output, backtraces,
+and other large chunks of text, surround this text with triple backtics
+```
+like this
+```
+-->
 
 ## Checklist:
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->

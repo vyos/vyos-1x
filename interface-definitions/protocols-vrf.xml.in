@@ -27,6 +27,7 @@
               #include <include/static-route6.xml.i>
             </children>
           </node>
+          #include <include/vni.xml.i>
         </children>
       </tagNode>
     </children>

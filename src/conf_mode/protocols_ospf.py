@@ -22,7 +22,6 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_route_maps
 from vyos.configverify import verify_interface_exists
-from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -32,16 +31,7 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/ospf.frr'
 frr_daemon = 'ospfd'
-
-DEBUG = os.path.exists('/tmp/ospf.debug')
-if DEBUG:
-    import logging
-    lg = logging.getLogger("vyos.frr")
-    lg.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
@@ -140,34 +130,16 @@ def generate(ospf):
         ospf['new_frr_config'] = ''
         return None
 
-    # render(config) not needed, its only for debug
-    render(config_file, 'frr/ospf.frr.tmpl', ospf)
     ospf['new_frr_config'] = render_to_string('frr/ospf.frr.tmpl', ospf)
-
     return None
 
 def apply(ospf):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'interface \S+', '')
-    frr_cfg.modify_section('router ospf', '')
+    frr_cfg.modify_section(r'^interface \S+', '')
+    frr_cfg.modify_section('^router ospf$', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
-
-    # Debugging
-    if DEBUG:
-        from pprint import pprint
-        print('')
-        print('--------- DEBUGGING ----------')
-        pprint(dir(frr_cfg))
-        print('Existing config:\n')
-        for line in frr_cfg.original_config:
-            print(line)
-        print(f'Replacement config:\n')
-        print(f'{ospf["new_frr_config"]}')
-        print(f'Modified config:\n')
-        print(f'{frr_cfg}')
-
     frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload

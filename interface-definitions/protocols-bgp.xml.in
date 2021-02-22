@@ -228,19 +228,100 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="advertise-default-gw">
+                  #include <include/bgp-afi-l2vpn-common.xml.i>
+                  <leafNode name="advertise-pip">
                     <properties>
-                      <help>Advertise All default g/w mac-ip routes in EVPN</help>
+                      <help>EVPN system primary IP</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IP address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rt-auto-derive">
+                    <properties>
+                      <help>Auto derivation of Route Target (RFC8365)</help>
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="advertise-svi-ip">
+                  <node name="flooding">
                     <properties>
-                      <help>Advertise svi mac-ip routes in EVPN</help>
-                      <valueless/>
+                      <help>Specify handling for BUM packets</help>
+                    </properties>
+                    <children>
+                      <leafNode name="disable">
+                        <properties>
+                          <help>Do not flood any BUM packets</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="head-end-replication">
+                        <properties>
+                          <help>Flood BUM packets using head-end replication</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="rd">
+                    <properties>
+                      <help>Route Distinguisher</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Route Distinguisher, asn:xxx</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
+                      </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="vni">
+                  <node name="route-target">
+                    <properties>
+                      <help>Route Target</help>
+                    </properties>
+                    <children>
+                      <leafNode name="both">
+                        <properties>
+                          <help>Route Target both import and export</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Route target (x.x.x.x:yyy|xxxx:yyyy)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)(\.(25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)){3}|[0-9]{1,10}):[0-9]{1,5}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="export">
+                        <properties>
+                          <help>Route Target export</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Route target (x.x.x.x:yyy|xxxx:yyyy)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)(\.(25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)){3}|[0-9]{1,10}):[0-9]{1,5}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="import">
+                        <properties>
+                          <help>Route Target import</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Route target (x.x.x.x:yyy|xxxx:yyyy)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)(\.(25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9][0-9]|[0-9]?)){3}|[0-9]{1,10}):[0-9]{1,5}$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <tagNode name="vni">
                     <properties>
                       <help>VXLAN Network Identifier</help>
                       <valueHelp>
@@ -251,7 +332,10 @@
                         <validator name="numeric" argument="--range 1-16777215"/>
                       </constraint>
                     </properties>
-                  </leafNode>
+                    <children>
+                      #include <include/bgp-afi-l2vpn-common.xml.i>
+                    </children>
+                  </tagNode>
                 </children>
               </node>
             </children>
@@ -375,25 +459,6 @@
               #include <include/bgp-description.xml.i>
               #include <include/bgp-disable-capability-negotiation.xml.i>
               #include <include/bgp-disable-connected-check.xml.i>
-              <node name="disable-send-community">
-                <properties>
-                  <help>Disable sending community attributes to this neighbor (IPv4)</help>
-                </properties>
-                <children>
-                  <leafNode name="extended">
-                    <properties>
-                      <help>Disable sending extended community attributes to this neighbor (IPv4)</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="standard">
-                    <properties>
-                      <help>Disable sending standard community attributes to this neighbor (IPv4)</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               #include <include/bgp-ebgp-multihop.xml.i>
               <node name="interface">
                 <properties>
@@ -759,6 +824,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="graceful-shutdown">
+                <properties>
+                  <help>Graceful shutdown</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="log-neighbor-changes">
                 <properties>
                   <help>Log neighbor up/down changes and reset reason</help>

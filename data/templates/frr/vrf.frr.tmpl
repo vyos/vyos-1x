@@ -3,6 +3,9 @@
 {% if vrf is defined and vrf is not none %}
 {%   for vrf_name, vrf_config in vrf.items() %}
 vrf {{ vrf_name }}
+{%     if vrf_config.vni is defined and vrf_config.vni is not none %}
+ vni {{ vrf_config.vni }}
+{%     endif %}
 {%     if vrf_config.static is defined and vrf_config.static is not none %}
 {#       IPv4 routes #}
 {%       if vrf_config.static.route is defined and vrf_config.static.route is not none %}

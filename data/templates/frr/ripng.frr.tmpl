@@ -1,0 +1,60 @@
+!
+{# Interface specific configuration #}
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%     if iface_config.split_horizon is defined and iface_config.split_horizon.disable is defined %}
+ no ipv6 rip split-horizon
+{%     endif %}
+{%     if iface_config.split_horizon is defined and iface_config.split_horizon.poison_reverse is defined %}
+ ipv6 rip split-horizon poisoned-reverse
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+router ripng
+{% if aggregate_address is defined and aggregate_address is not none %}
+{%   for prefix in aggregate_address %}
+ aggregate-address {{ prefix }}
+{%   endfor %}
+{% endif %}
+{% if distribute_list is defined and distribute_list is not none %}
+{%   if distribute_list.access_list is defined and distribute_list.access_list is not none %}
+{%     if distribute_list.access_list.in is defined and distribute_list.access_list.in is not none %}
+ ipv6 distribute-list {{ distribute_list.access_list.in }} in
+{%     endif %}
+{%     if distribute_list.access_list.out is defined and distribute_list.access_list.out is not none %}
+ ipv6 distribute-list {{ distribute_list.access_list.out }} out
+{%     endif %}
+{%   endif %}
+{%   if distribute_list.interface is defined and distribute_list.interface is not none %}
+{%     for interface, interface_config in distribute_list.interface.items() %}
+{%       if interface_config.access_list is defined and interface_config.access_list is not none %}
+{%         if interface_config.access_list.in is defined and interface_config.access_list.in is not none %}
+ ipv6 distribute-list {{ interface_config.access_list.in }} in {{ interface }}
+{%         endif %}
+{%         if interface_config.access_list.out is defined and interface_config.access_list.out is not none %}
+ ipv6 distribute-list {{ interface_config.access_list.out }} out {{ interface }}
+{%         endif %}
+{%       endif %}
+{%       if interface_config.prefix_list is defined and interface_config.prefix_list is not none %}
+{%         if interface_config.prefix_list.in is defined and interface_config.prefix_list.in is not none %}
+ ipv6 distribute-list prefix {{ interface_config.prefix_list.in }} in {{ interface }}
+{%         endif %}
+{%         if interface_config.prefix_list.out is defined and interface_config.prefix_list.out is not none %}
+ ipv6 distribute-list prefix {{ interface_config.prefix_list.out }} out {{ interface }}
+{%         endif %}
+{%       endif %}
+{%     endfor %}
+{%   endif %}
+{%   if distribute_list.prefix_list is defined and distribute_list.prefix_list is not none %}
+{%     if distribute_list.prefix_list.in is defined and distribute_list.prefix_list.in is not none %}
+ ipv6 distribute-list prefix {{ distribute_list.prefix_list.in }} in
+{%     endif %}
+{%     if distribute_list.prefix_list.out is defined and distribute_list.prefix_list.out is not none %}
+ ipv6 distribute-list prefix {{ distribute_list.prefix_list.out }} out
+{%     endif %}
+{%   endif %}
+{% endif %}
+{% include 'frr/rip_ripng.frr.j2' %}
+!

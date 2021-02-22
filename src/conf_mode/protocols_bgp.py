@@ -20,7 +20,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -29,16 +28,7 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/bgp.frr'
 frr_daemon = 'bgpd'
-
-DEBUG = os.path.exists('/tmp/bgp.debug')
-if DEBUG:
-    import logging
-    lg = logging.getLogger("vyos.frr")
-    lg.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
@@ -63,6 +53,26 @@ def get_config(config=None):
     bgp[asn] = dict_merge(tmp, bgp[asn])
 
     return bgp
+
+def verify_remote_as(peer_config, asn_config):
+    if 'remote_as' in peer_config:
+        return peer_config['remote_as']
+
+    if 'peer_group' in peer_config:
+        peer_group_name = peer_config['peer_group']
+        tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', asn_config)
+        if tmp: return tmp
+
+    if 'interface' in peer_config:
+        if 'remote_as' in peer_config['interface']:
+            return peer_config['interface']['remote_as']
+
+        if 'peer_group' in peer_config['interface']:
+            peer_group_name = peer_config['interface']['peer_group']
+            tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', asn_config)
+            if tmp: return tmp
+
+    return None
 
 def verify(bgp):
     if not bgp:
@@ -89,20 +99,15 @@ def verify(bgp):
                         raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                           f'neighbor "{neighbor}" does not exist!')
 
-                # Some checks can/must only be done on a neighbor and nor a peer-group
+
+                # Some checks can/must only be done on a neighbor and not a peer-group
                 if neighbor == 'neighbor':
                     # remote-as must be either set explicitly for the neighbor
                     # or for the entire peer-group
-                    if 'interface' in peer_config:
-                        if 'remote_as' not in peer_config['interface']:
-                            if 'peer_group' not in peer_config['interface'] or 'remote_as' not in asn_config['peer_group'][ peer_config['interface']['peer_group'] ]:
-                                raise ConfigError('Remote AS must be set for neighbor or peer-group!')
+                    if not verify_remote_as(peer_config, asn_config):
+                        raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
 
-                    elif 'remote_as' not in peer_config:
-                        if 'peer_group' not in peer_config or 'remote_as' not in asn_config['peer_group'][ peer_config['peer_group'] ]:
-                            raise ConfigError('Remote AS must be set for neighbor or peer-group!')
-
-                for afi in ['ipv4_unicast', 'ipv6_unicast']:
+                for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
                     # Bail out early if address family is not configured
                     if 'address_family' not in peer_config or afi not in peer_config['address_family']:
                         continue
@@ -133,6 +138,15 @@ def verify(bgp):
                                 if dict_search(f'policy.route_map.{route_map}', asn_config) == None:
                                     raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
 
+                    if 'route_reflector_client' in afi_config:
+                        if 'remote_as' in peer_config and asn != peer_config['remote_as']:
+                            raise ConfigError('route-reflector-client only supported for iBGP peers')
+                        else:
+                            if 'peer_group' in peer_config:
+                                peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', asn_config)
+                                if peer_group_as != None and peer_group_as != asn:
+                                    raise ConfigError('route-reflector-client only supported for iBGP peers')
+
         # Throw an error if a peer group is not configured for allow range
         for prefix in dict_search('listen.range', asn_config) or []:
             # we can not use dict_search() here as prefix contains dots ...
@@ -156,33 +170,15 @@ def generate(bgp):
     asn = list(bgp.keys())[0]
     bgp[asn]['asn'] = asn
 
-    # render(config) not needed, its only for debug
-    render(config_file, 'frr/bgp.frr.tmpl', bgp[asn])
     bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn])
-
     return None
 
 def apply(bgp):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(f'router bgp \S+', '')
+    frr_cfg.modify_section(f'^router bgp \d+$', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
-
-    # Debugging
-    if DEBUG:
-        from pprint import pprint
-        print('')
-        print('--------- DEBUGGING ----------')
-        pprint(dir(frr_cfg))
-        print('Existing config:\n')
-        for line in frr_cfg.original_config:
-            print(line)
-        print(f'Replacement config:\n')
-        print(f'{bgp["new_frr_config"]}')
-        print(f'Modified config:\n')
-        print(f'{frr_cfg}')
-
     frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
@@ -190,7 +186,6 @@ def apply(bgp):
     if bgp['new_frr_config'] == '':
         for a in range(5):
             frr_cfg.commit_configuration(frr_daemon)
-
 
     return None
 

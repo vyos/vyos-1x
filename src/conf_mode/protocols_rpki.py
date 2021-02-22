@@ -20,7 +20,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -30,16 +29,7 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/tmp/rpki.frr'
 frr_daemon = 'bgpd'
-
-DEBUG = os.path.exists('/tmp/rpki.debug')
-if DEBUG:
-    import logging
-    lg = logging.getLogger("vyos.frr")
-    lg.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
@@ -90,10 +80,7 @@ def verify(rpki):
     return None
 
 def generate(rpki):
-    # render(config) not needed, its only for debug
-    render(config_file, 'frr/rpki.frr.tmpl', rpki)
     rpki['new_frr_config'] = render_to_string('frr/rpki.frr.tmpl', rpki)
-
     return None
 
 def apply(rpki):
@@ -102,21 +89,6 @@ def apply(rpki):
     frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section('rpki', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rpki['new_frr_config'])
-
-    # Debugging
-    if DEBUG:
-        from pprint import pprint
-        print('')
-        print('--------- DEBUGGING ----------')
-        pprint(dir(frr_cfg))
-        print('Existing config:\n')
-        for line in frr_cfg.original_config:
-            print(line)
-        print(f'Replacement config:\n')
-        print(f'{rpki["new_frr_config"]}')
-        print(f'Modified config:\n')
-        print(f'{frr_cfg}')
-
     frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, re-run the blank commit x times due to frr-reload

@@ -1,4 +1,47 @@
 !
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%     if iface_config.cost is defined and iface_config.cost is not none %}
+ ipv6 ospf6 cost {{ iface_config.cost }}
+{%     endif %}
+{%     if iface_config.priority is defined and iface_config.priority is not none %}
+ ipv6 ospf6 priority {{ iface_config.priority }}
+{%     endif %}
+{%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
+ ipv6 ospf6 hello-interval {{ iface_config.hello_interval }}
+{%     endif %}
+{%     if iface_config.retransmit_interval is defined and iface_config.retransmit_interval is not none %}
+ ipv6 ospf6 retransmit-interval {{ iface_config.retransmit_interval }}
+{%     endif %}
+{%     if iface_config.transmit_delay is defined and iface_config.transmit_delay is not none %}
+ ipv6 ospf6 transmit-delay {{ iface_config.transmit_delay }}
+{%     endif %}
+{%     if iface_config.dead_interval is defined and iface_config.dead_interval is not none %}
+ ipv6 ospf6 dead-interval {{ iface_config.dead_interval }}
+{%     endif %}
+{%     if iface_config.bfd is defined %}
+ ipv6 ospf6 bfd
+{%     endif %}
+{%     if iface_config.mtu_ignore is defined %}
+ ipv6 ospf6 mtu-ignore
+{%     endif %}
+{%     if iface_config.ifmtu is defined and iface_config.ifmtu is not none %}
+ ipv6 ospf6 ifmtu {{ iface_config.ifmtu }}
+{%     endif %}
+{%     if iface_config.network is defined and iface_config.network is not none %}
+ ipv6 ospf6 network {{ iface_config.network }}
+{%     endif %}
+{%     if iface_config.instance_id is defined and iface_config.instance_id is not none %}
+ ipv6 ospf6 instance-id {{ iface_config.instance_id }}
+{%     endif %}
+{%     if iface_config.passive is defined %}
+ ipv6 ospf6 passive
+{%     endif %}
+!
+{%   endfor %}
+{% endif %}
+!
 router ospf6
 {% if area is defined and area is not none %}
 {%   for area_id, area_config in area.items() %}
