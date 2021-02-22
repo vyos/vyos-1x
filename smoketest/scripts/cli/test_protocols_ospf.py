@@ -88,7 +88,7 @@ class TestProtocolsOSPF(unittest.TestCase):
     def test_ospf_03_access_list(self):
         acl = '100'
         seq = '10'
-        protocols = ['bgp', 'connected', 'kernel', 'rip', 'static']
+        protocols = ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
 
         self.session.set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
         self.session.set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
@@ -215,7 +215,7 @@ class TestProtocolsOSPF(unittest.TestCase):
     def test_ospf_08_redistribute(self):
         metric = '15'
         metric_type = '1'
-        redistribute = ['bgp', 'connected', 'kernel', 'rip', 'static']
+        redistribute = ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
 
         for protocol in redistribute:
             self.session.set(base_path + ['redistribute', protocol, 'metric', metric])
