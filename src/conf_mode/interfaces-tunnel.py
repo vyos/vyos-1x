@@ -140,7 +140,6 @@ def apply(tunnel):
         'parameters.ip.ttl'          : 'ttl',
         'parameters.ip.tos'          : 'tos',
         'parameters.ip.key'          : 'key',
-        'parameters.ipv6.encaplimit' : 'encaplimit'
     }
 
     # Add additional IPv6 options if tunnel is IPv6 aware
