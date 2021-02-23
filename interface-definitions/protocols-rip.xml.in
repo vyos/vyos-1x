@@ -317,6 +317,14 @@
                   #include <include/rip-redistribute.xml.i>
                 </children>
               </node>
+              <node name="isis">
+                <properties>
+                  <help>Redistribute IS-IS routes</help>
+                </properties>
+                <children>
+                  #include <include/rip-redistribute.xml.i>
+                </children>
+              </node>
               <node name="kernel">
                 <properties>
                   <help>Redistribute kernel routes</help>
