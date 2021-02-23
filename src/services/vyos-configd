@@ -34,6 +34,8 @@ from vyos import ConfigError
 
 CFG_GROUP = 'vyattacfg'
 
+script_stdout_log = '/tmp/vyos-configd-script-stdout'
+
 debug = True
 
 logger = logging.getLogger(__name__)
@@ -60,7 +62,7 @@ configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-uns
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
 
-session_tty = None
+session_out = None
 
 def key_name_from_file_name(f):
     return os.path.splitext(f)[0]
@@ -109,7 +111,7 @@ include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 def run_script(script, config) -> int:
     config.set_level([])
     try:
-        with open(session_tty, 'w') as f, redirect_stdout(f):
+        with open(session_out, 'a') as f, redirect_stdout(f):
             with redirect_stderr(f):
                 c = script.get_config(config)
                 script.verify(c)
@@ -117,7 +119,7 @@ def run_script(script, config) -> int:
                 script.apply(c)
     except ConfigError as e:
         logger.critical(e)
-        with open(session_tty, 'w') as f, redirect_stdout(f):
+        with open(session_out, 'a') as f, redirect_stdout(f):
             print(f"{e}\n")
         return R_ERROR_COMMIT
     except Exception as e:
@@ -127,7 +129,7 @@ def run_script(script, config) -> int:
     return R_SUCCESS
 
 def initialization(socket):
-    global session_tty
+    global session_out
     # Reset config strings:
     active_string = ''
     session_string = ''
@@ -155,9 +157,13 @@ def initialization(socket):
 
     logger.debug(f"config session pid is {pid_string}")
     try:
-        session_tty = os.readlink(f"/proc/{pid_string}/fd/1")
+        session_out = os.readlink(f"/proc/{pid_string}/fd/1")
     except FileNotFoundError:
-        session_tty = None
+        session_out = None
+
+    # if not a 'live' session, for example on boot, write to file
+    if '/dev/pts' not in session_out:
+        session_out = script_stdout_log
 
     try:
         configsource = ConfigSourceString(running_config_text=active_string,
