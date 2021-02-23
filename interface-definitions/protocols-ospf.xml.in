@@ -39,6 +39,10 @@
                     <description>Filter connected routes</description>
                   </valueHelp>
                   <valueHelp>
+                    <format>isis</format>
+                    <description>Filter IS-IS routes</description>
+                  </valueHelp>
+                  <valueHelp>
                     <format>kernel</format>
                     <description>Filter Kernel routes</description>
                   </valueHelp>
@@ -51,7 +55,7 @@
                     <description>Filter static routes</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(bgp|connected|kernel|rip|static)$</regex>
+                    <regex>^(bgp|connected|isis|kernel|rip|static)$</regex>
                   </constraint>
                   <constraintErrorMessage>Must be bgp, connected, kernel, rip, or static</constraintErrorMessage>
                   <multi/>
@@ -692,6 +696,16 @@
               <node name="connected">
                 <properties>
                   <help>Redistribute connected routes</help>
+                </properties>
+                <children>
+                  #include <include/ospf-metric.xml.i>
+                  #include <include/ospf-metric-type.xml.i>
+                  #include <include/ospf-route-map.xml.i>
+                </children>
+              </node>
+              <node name="isis">
+                <properties>
+                  <help>Redistribute IS-IS routes</help>
                 </properties>
                 <children>
                   #include <include/ospf-metric.xml.i>
