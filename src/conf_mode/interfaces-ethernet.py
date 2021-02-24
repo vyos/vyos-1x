@@ -91,7 +91,12 @@ def verify(ethernet):
     ethtool = Ethtool(ifname)
     if 'ring_buffer' in ethernet:
         max_rx = ethtool.get_rx_buffer()
+        if not max_rx:
+            raise ConfigError('Driver does not support RX ring-buffer configuration!')
+
         max_tx = ethtool.get_tx_buffer()
+        if not max_tx:
+            raise ConfigError('Driver does not support TX ring-buffer configuration!')
 
         rx = dict_search('ring_buffer.rx', ethernet)
         if rx and int(rx) > int(max_rx):

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.util import cmd
+from vyos.util import popen
 
 class Ethtool:
     """
@@ -37,9 +37,9 @@ class Ethtool:
 
     def __init__(self, ifname):
         # Now populate features dictionaty
-        tmp = cmd(f'ethtool -k {ifname}')
+        out, err = popen(f'ethtool -k {ifname}')
         # skip the first line, it only says: "Features for eth0":
-        for line in tmp.splitlines()[1:]:
+        for line in out.splitlines()[1:]:
             if ":" in line:
                 key, value = [s.strip() for s in line.strip().split(":", 1)]
                 fixed = "fixed" in value
@@ -50,10 +50,10 @@ class Ethtool:
                     "fixed": fixed
                 }
 
-        tmp = cmd(f'ethtool -g {ifname}')
+        out, err = popen(f'ethtool -g {ifname}')
         # We are only interested in line 2-5 which contains the device maximum
         # ringbuffers
-        for line in tmp.splitlines()[2:6]:
+        for line in out.splitlines()[2:6]:
             if ':' in line:
                 key, value = [s.strip() for s in line.strip().split(":", 1)]
                 key = key.lower().replace(' ', '_')
@@ -91,11 +91,11 @@ class Ethtool:
         return self.features.get('udp-fragmentation-offload', True).get('fixed', True)
 
     def get_rx_buffer(self):
-        # in case of a missing configuration rather return a "small"
-        # buffer of only 512 bytes.
-        return self.ring_buffers.get('rx', '512')
+        # Configuration of RX ring-buffers is not supported on every device,
+        # thus when it's impossible return None
+        return self.ring_buffers.get('rx', None)
 
     def get_tx_buffer(self):
-        # in case of a missing configuration rather return a "small"
-        # buffer of only 512 bytes.
-        return self.ring_buffers.get('tx', '512')
+        # Configuration of RX ring-buffers is not supported on every device,
+        # thus when it's impossible return None
+        return self.ring_buffers.get('tx', None)
