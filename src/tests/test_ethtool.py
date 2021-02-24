@@ -29,5 +29,3 @@ class TestVyOSEthtool(TestCase):
         self.assertFalse(tmp.is_fixed_gro())
         self.assertFalse(tmp.is_fixed_gso())
         self.assertFalse(tmp.is_fixed_sg())
-
-
