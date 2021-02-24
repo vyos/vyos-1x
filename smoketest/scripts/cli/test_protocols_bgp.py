@@ -260,7 +260,7 @@ class TestProtocolsBGP(unittest.TestCase):
         }
 
         # We want to redistribute ...
-        redistributes = ['connected', 'kernel', 'ospf', 'rip', 'static']
+        redistributes = ['connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
         for redistribute in redistributes:
             self.session.set(base_path + ['address-family', 'ipv4-unicast',
                                           'redistribute', redistribute])
