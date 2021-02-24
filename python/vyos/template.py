@@ -288,7 +288,6 @@ def compare_netmask(netmask1, netmask2):
     except:
         return False
 
-
 @register_filter('isc_static_route')
 def isc_static_route(subnet, router):
     # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
@@ -316,3 +315,22 @@ def is_file(filename):
     if os.path.exists(filename):
         return os.path.isfile(filename)
     return False
+
+@register_filter('get_dhcp_router')
+def get_dhcp_router(interface):
+    """ Static routes can point to a router received by a DHCP reply. This
+    helper is used to get the current default router from the DHCP reply.
+
+    Returns False of no router is found, returns the IP address as string if
+    a router is found.
+    """
+    interface = interface.replace('.', '_')
+    lease_file = f'/var/lib/dhcp/dhclient_{interface}.leases'
+    if not os.path.exists(lease_file):
+        return None
+
+    from vyos.util import read_file
+    for line in read_file(lease_file).splitlines():
+        if 'option routers' in line:
+            (_, _, address) = line.split()
+            return address.rstrip(';')
