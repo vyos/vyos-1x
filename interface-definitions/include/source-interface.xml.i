@@ -1,14 +1,17 @@
 <!-- included start from source-interface.xml.i -->
 <leafNode name="source-interface">
   <properties>
-    <help>Physical interface used for connection</help>
+    <help>Interface used to establish connection</help>
     <valueHelp>
       <format>interface</format>
-      <description>Physical interface used for connection</description>
+      <description>Interface name</description>
     </valueHelp>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces.py</script>
     </completionHelp>
+    <constraint>
+      <validator name="interface-name"/>
+    </constraint>
   </properties>
 </leafNode>
 <!-- included end -->
