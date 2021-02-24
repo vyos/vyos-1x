@@ -71,7 +71,7 @@ class TestProtocolsRIP(unittest.TestCase):
         interfaces = Section.interfaces('ethernet')
         neighbors = ['1.2.3.4', '1.2.3.5', '1.2.3.6']
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
-        redistribute = ['bgp', 'connected', 'kernel', 'ospf', 'static']
+        redistribute = ['bgp', 'connected', 'isis', 'kernel', 'ospf', 'static']
         timer_garbage = '888'
         timer_timeout = '1000'
         timer_update = '90'
