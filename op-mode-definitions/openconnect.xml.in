@@ -4,12 +4,12 @@
     <children>
       <node name="openconnect-server">
         <properties>
-          <help>show openconnect-server information</help>
+          <help>Show OpenConnect server information</help>
         </properties>
         <children>
           <leafNode name="sessions">
             <properties>
-              <help>Show active openconnect server sessions</help>
+              <help>Show active OpenConnect server sessions</help>
             </properties>
             <command>${vyos_op_scripts_dir}/openconnect-control.py --action="show_sessions"</command>
           </leafNode>

@@ -4,17 +4,17 @@
     <children>
       <node name="ipoe-server">
         <properties>
-          <help>Clear ipoe-server sessions or process</help>
+          <help>Clear IPoE server sessions or process</help>
         </properties>
         <children>
           <node name="session">
             <properties>
-              <help>Clear ipoe-server session</help>
+              <help>Clear IPoE server session</help>
             </properties>
             <children>
               <tagNode name="username">
                 <properties>
-                  <help>Clear ipoe-server session by username</help>
+                  <help>Clear IPoE server session by username</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_ipoe.py --selector="username"</script>
                   </completionHelp>
@@ -23,7 +23,7 @@
               </tagNode>
               <tagNode name="sid">
                 <properties>
-                  <help>Clear ipoe-server session by Session ID</help>
+                  <help>Clear IPoE server session by Session ID</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_ipoe.py --selector="sid"</script>
                   </completionHelp>
@@ -32,7 +32,7 @@
               </tagNode>
               <tagNode name="interface">
                 <properties>
-                  <help>Clear ipoe-server session by interface</help>
+                  <help>Clear IPoE server session by interface</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_ipoe.py --selector="ifname"</script>
                   </completionHelp>
@@ -49,7 +49,7 @@
     <children>
       <node name="ipoe-server">
         <properties>
-          <help>show ipoe-server status</help>
+          <help>Show IPoE server status</help>
         </properties>
         <children>
           <leafNode name="sessions">
