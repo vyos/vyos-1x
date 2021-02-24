@@ -17,7 +17,7 @@
 import re
 import sys
 
-pattern = '^(bond|br|dum|en|ersp|eth|gnv|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|vti|vtun|vxlan|wg|wlan|wlm)[0-9]+|lo$'
+pattern = '^(bond|br|dum|en|ersp|eth|gnv|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|vti|vtun|vxlan|wg|wlan|wlm)[0-9]+(.\d+)?|lo$'
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
