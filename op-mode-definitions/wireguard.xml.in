@@ -1,28 +1,28 @@
 <?xml version="1.0"?>
-<!-- wireguard key management -->
+<!-- Wireguard key management -->
 <interfaceDefinition>
   <node name="generate">
     <children>
       <node name="wireguard">
         <properties>
-          <help>wireguard key generation utility</help>
+          <help>Generate Wireguard keys</help>
         </properties>
         <children>
           <leafNode name="default-keypair">
             <properties>
-              <help>generates the wireguard default-keypair</help>
+              <help>Generate the default Wireguard keypair</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey</command>
           </leafNode>
           <leafNode name="preshared-key">
             <properties>
-              <help>generate a wireguard preshared key</help>
+              <help>Generate a Wireguard preshared key</help>
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard.py --genpsk</command>
           </leafNode>
           <tagNode name="named-keypairs">
             <properties>
-              <help>Generates named wireguard keypairs</help>
+              <help>Generate specified Wireguard keypairs</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey --location "$4"</command>
           </tagNode>
@@ -34,17 +34,17 @@
     <children>
       <node name="wireguard">
         <properties>
-          <help>Show wireguard properties</help>
+          <help>Show Wireguard properties</help>
         </properties>
         <children>
           <node name="keypairs">
             <properties>
-              <help>Shows named wireguard keys</help>
+              <help>Show Wireguard keys</help>
             </properties>
             <children>
               <tagNode name="pubkey">
                 <properties>
-                  <help>Show wireguard private named key</help>
+                  <help>Show specified Wireguard public key</help>
                   <completionHelp>
                     <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
                   </completionHelp>
@@ -53,7 +53,7 @@
               </tagNode>
               <tagNode name="privkey">
                 <properties>
-                  <help>Show wireguard public named key</help>
+                  <help>Show specified Wireguard private key</help>
                   <completionHelp>
                     <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
                   </completionHelp>
@@ -68,7 +68,7 @@
         <children>
           <tagNode name="wireguard">
             <properties>
-              <help>show wireguard interface information</help>
+              <help>Show Wireguard interface information</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
@@ -77,19 +77,19 @@
             <children>
               <leafNode name="allowed-ips">
                 <properties>
-                  <help>show all allowed-ips for the specified interface</help>
+                  <help>Show all IP addresses allowed for the specified interface</help>
                 </properties>
                 <command>sudo wg show "$4" allowed-ips</command>
               </leafNode>
               <leafNode name="endpoints">
                 <properties>
-                  <help>show all endpoints for the specified interface</help>
+                  <help>Show all endpoints for the specified interface</help>
                 </properties>
                 <command>sudo wg show "$4" endpoints</command>
               </leafNode>
               <leafNode name="peers">
                 <properties>
-                  <help>show all peer IDs for the specified interface</help>
+                  <help>Show all peer IDs for the specified interface</help>
                 </properties>
                 <command>sudo wg show "$4" peers</command>
               </leafNode>
@@ -98,13 +98,13 @@
           </tagNode>
           <node name="wireguard">
             <properties>
-              <help>Show wireguard interface information</help>
+              <help>Show Wireguard interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show-brief</command>
             <children>
               <leafNode name="detail">
                 <properties>
-                  <help>Show detailed wireguard interface information</help>
+                  <help>Show detailed Wireguard interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show</command>
               </leafNode>
@@ -118,12 +118,12 @@
     <children>
       <node name="wireguard">
         <properties>
-          <help>Delete wireguard properties</help>
+          <help>Delete Wireguard properties</help>
         </properties>
         <children>
           <tagNode name="keypair">
             <properties>
-              <help>Delete a wireguard keypair</help>
+              <help>Delete a Wireguard keypair</help>
               <completionHelp>
                 <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
               </completionHelp>

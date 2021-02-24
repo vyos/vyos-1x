@@ -4,7 +4,7 @@
     <children>
       <node name="pppoe-server">
         <properties>
-          <help>Show pppoe-server status</help>
+          <help>Show PPPoE server status</help>
         </properties>
         <children>
           <leafNode name="sessions">
@@ -21,7 +21,7 @@
           </leafNode>
           <leafNode name="interfaces">
             <properties>
-              <help>Show interfaces where pppoe-server listens on</help>
+              <help>Show interfaces where PPPoE server listens on</help>
             </properties>
             <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="pppoe interface show"</command>
           </leafNode>
@@ -51,13 +51,13 @@
         <children>
           <leafNode name="all">
             <properties>
-              <help>Terminate all pppoe-server users</help>
+              <help>Terminate all PPPoE server users</help>
             </properties>
             <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="terminate all"</command>
           </leafNode>
           <tagNode name="interface">
             <properties>
-              <help>Terminate a ppp interface</help>
+              <help>Terminate a PPP interface</help>
             </properties>
             <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="terminate if $4"</command>
           </tagNode>
@@ -85,7 +85,7 @@
             <children>
               <leafNode name="enable">
                 <properties>
-                  <help>Deny new connections and stop to serve pppoe after disconnect last session</help>
+                  <help>Deny new connections and stop serving PPPoE after disconnecting the last session</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/ppp-server-ctrl.py --proto="pppoe" --action="shutdown soft"</command>
               </leafNode>
