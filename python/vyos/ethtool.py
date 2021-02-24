@@ -96,6 +96,6 @@ class Ethtool:
         return self.ring_buffers.get('rx', None)
 
     def get_tx_buffer(self):
-        # Configuration of RX ring-buffers is not supported on every device,
+        # Configuration of TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
         return self.ring_buffers.get('tx', None)
