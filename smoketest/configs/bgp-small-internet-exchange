@@ -11,6 +11,100 @@ interfaces {
     }
 }
 policy {
+    as-path-list bogon-asns {
+        rule 10 {
+            action permit
+            description "RFC 7607"
+            regex _0_
+        }
+        rule 20 {
+            action permit
+            description "RFC 4893"
+            regex _23456_
+        }
+        rule 30 {
+            action permit
+            description "RFC 5398/6996/7300"
+            regex _6449[6-9]_|_65[0-4][0-9][0-9]_|_655[0-4][0-9]_|_6555[0-1]_
+        }
+        rule 40 {
+            action permit
+            description "IANA reserved"
+            regex _6555[2-9]_|_655[6-9][0-9]_|_65[6-9][0-9][0-9]_|_6[6-9][0-9][0-9][0-]_|_[7-9][0-9][0-9][0-9][0-9]_|_1[0-2][0-9][0-9][0-9][0-9]_|_130[0-9][0-9][0-9]_|_1310[0-6][0-9]_|_13107[01]_
+        }
+    }
+    prefix-list bogon-v4 {
+        rule 10 {
+            action permit
+            le 32
+            prefix 0.0.0.0/8
+        }
+        rule 20 {
+            action permit
+            le 32
+            prefix 10.0.0.0/8
+        }
+        rule 30 {
+            action permit
+            le 32
+            prefix 100.64.0.0/10
+        }
+        rule 40 {
+            action permit
+            le 32
+            prefix 127.0.0.0/8
+        }
+        rule 50 {
+            action permit
+            le 32
+            prefix 169.254.0.0/16
+        }
+        rule 60 {
+            action permit
+            le 32
+            prefix 172.16.0.0/12
+        }
+        rule 70 {
+            action permit
+            le 32
+            prefix 192.0.2.0/24
+        }
+        rule 80 {
+            action permit
+            le 32
+            prefix 192.88.99.0/24
+        }
+        rule 90 {
+            action permit
+            le 32
+            prefix 192.168.0.0/16
+        }
+        rule 100 {
+            action permit
+            le 32
+            prefix 198.18.0.0/15
+        }
+        rule 110 {
+            action permit
+            le 32
+            prefix 198.51.100.0/24
+        }
+        rule 120 {
+            action permit
+            le 32
+            prefix 203.0.113.0/24
+        }
+        rule 130 {
+            action permit
+            le 32
+            prefix 224.0.0.0/4
+        }
+        rule 140 {
+            action permit
+            le 32
+            prefix 240.0.0.0/4
+        }
+    }
     prefix-list IX-out-v4 {
         rule 10 {
             action permit
@@ -19,6 +113,88 @@ policy {
         rule 20 {
             action permit
             prefix 10.0.128.0/23
+        }
+    }
+    prefix-list prefix-filter-v4 {
+        rule 10 {
+            action permit
+            ge 25
+            prefix 0.0.0.0/0
+        }
+    }
+    prefix-list6 bogon-v6 {
+        rule 10 {
+            action permit
+            description "RFC 4291 IPv4-compatible, loopback, et al"
+            le 128
+            prefix ::/8
+        }
+        rule 20 {
+            action permit
+            description "RFC 6666 Discard-Only"
+            le 128
+            prefix 0100::/64
+        }
+        rule 30 {
+            action permit
+            description "RFC 5180 BMWG"
+            le 128
+            prefix 2001:2::/48
+        }
+        rule 40 {
+            action permit
+            description "RFC 4843 ORCHID"
+            le 128
+            prefix 2001:10::/28
+        }
+        rule 50 {
+            action permit
+            description "RFC 3849 documentation"
+            le 128
+            prefix 2001:db8::/32
+        }
+        rule 60 {
+            action permit
+            description "RFC 7526 6to4 anycast relay"
+            le 128
+            prefix 2002::/16
+        }
+        rule 70 {
+            action permit
+            description "RFC 3701 old 6bone"
+            le 128
+            prefix 3ffe::/16
+        }
+        rule 80 {
+            action permit
+            description "RFC 4193 unique local unicast"
+            le 128
+            prefix fc00::/7
+        }
+        rule 90 {
+            action permit
+            description "RFC 4291 link local unicast"
+            le 128
+            prefix fe80::/10
+        }
+        rule 100 {
+            action permit
+            description "RFC 3879 old site local unicast"
+            le 128
+            prefix fec0::/10
+        }
+        rule 110 {
+            action permit
+            description "RFC 4291 multicast"
+            le 128
+            prefix ff00::/8
+        }
+    }
+    prefix-list6 prefix-filter-v6 {
+        rule 10 {
+            action permit
+            ge 49
+            prefix ::/0
         }
     }
     prefix-list6 IX-out-v6 {
@@ -31,6 +207,88 @@ policy {
             prefix 2001:db8:200::/40
         }
     }
+    route-map eBGP-IN-v4 {
+        rule 10 {
+            action deny
+            match {
+                as-path bogon-asns
+            }
+        }
+        rule 20 {
+            action deny
+            match {
+                ip {
+                    address {
+                        prefix-list bogon-v4
+                    }
+                }
+            }
+        }
+        rule 30 {
+            action deny
+            match {
+                ip {
+                    address {
+                        prefix-list prefix-filter-v4
+                    }
+                }
+            }
+        }
+        rule 40 {
+            action permit
+            set {
+                local-preference 100
+                metric 0
+            }
+        }
+    }
+    route-map eBGP-IN-v6 {
+        rule 10 {
+            action deny
+            match {
+                as-path bogon-asns
+            }
+        }
+        rule 20 {
+            action deny
+            match {
+                ipv6 {
+                    address {
+                        prefix-list bogon-v6
+                    }
+                }
+            }
+        }
+        rule 30 {
+            action deny
+            match {
+                ipv6 {
+                    address {
+                        prefix-list prefix-filter-v6
+                    }
+                }
+            }
+        }
+        rule 40 {
+            action permit
+            set {
+                local-preference 100
+                metric 0
+            }
+        }
+    }
+    route-map IX-in-v4 {
+        rule 5 {
+            action permit
+            call eBGP-IN-v4
+            on-match {
+                next
+            }
+        }
+        rule 10 {
+            action permit
+        }
+    }
     route-map IX-out-v4 {
         rule 10 {
             action permit
@@ -41,6 +299,18 @@ policy {
                     }
                 }
             }
+        }
+    }
+    route-map IX-in-v6 {
+        rule 5 {
+            action permit
+            call eBGP-IN-v6
+            on-match {
+                next
+            }
+        }
+        rule 10 {
+            action permit
         }
     }
     route-map IX-out-v6 {
