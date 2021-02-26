@@ -50,6 +50,7 @@ server {
 {% endif %}
         }
 
+        error_page 497 =301 https://$host:{{ server.port }}$request_uri;
         error_page 501 502 503 =200 @50*_json;
 
 {% if api_set %}
