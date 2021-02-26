@@ -370,9 +370,8 @@ class TestPolicy(unittest.TestCase):
             if 'rule' not in comm_list_config:
                 continue
 
-            seq = '5'
             for rule, rule_config in comm_list_config['rule'].items():
-                tmp = f'bgp community-list {comm_list} seq {seq}'
+                tmp = f'bgp community-list {comm_list}'
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
                 else:
@@ -381,7 +380,6 @@ class TestPolicy(unittest.TestCase):
                 tmp += ' ' + rule_config['regex']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
     def test_extended_community_list(self):
         test_data = {
@@ -430,14 +428,13 @@ class TestPolicy(unittest.TestCase):
             if 'rule' not in comm_list_config:
                 continue
 
-            seq = '5'
             for rule, rule_config in comm_list_config['rule'].items():
                 # if the community is not a number but a name, the expanded
                 # keyword is used
                 expanded = ''
                 if not comm_list.isnumeric():
                     expanded = ' expanded'
-                tmp = f'bgp extcommunity-list{expanded} {comm_list} seq {seq}'
+                tmp = f'bgp extcommunity-list{expanded} {comm_list}'
 
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
@@ -447,7 +444,6 @@ class TestPolicy(unittest.TestCase):
                 tmp += ' ' + rule_config['regex']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
 
     def test_large_community_list(self):
@@ -497,9 +493,8 @@ class TestPolicy(unittest.TestCase):
             if 'rule' not in comm_list_config:
                 continue
 
-            seq = '5'
             for rule, rule_config in comm_list_config['rule'].items():
-                tmp = f'bgp large-community-list expanded {comm_list} seq {seq}'
+                tmp = f'bgp large-community-list expanded {comm_list}'
 
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
@@ -509,7 +504,6 @@ class TestPolicy(unittest.TestCase):
                 tmp += ' ' + rule_config['regex']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
 
     def test_prefix_list(self):
