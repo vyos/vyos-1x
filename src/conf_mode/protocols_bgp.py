@@ -108,16 +108,16 @@ def verify(bgp):
                 if 'password' in peer_config and ' ' in peer_config['password']:
                     raise ConfigError('You can\'t use spaces in the password')
 
-                # Check if neighbor address is assigned as system interface address
-                if is_addr_assigned(peer):
-                    raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
-
                 # Some checks can/must only be done on a neighbor and not a peer-group
                 if neighbor == 'neighbor':
                     # remote-as must be either set explicitly for the neighbor
                     # or for the entire peer-group
                     if not verify_remote_as(peer_config, asn_config):
                         raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
+
+                    # Check if neighbor address is assigned as system interface address
+                    if is_addr_assigned(peer):
+                        raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
 
                 for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
                     # Bail out early if address family is not configured
