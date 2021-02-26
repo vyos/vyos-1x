@@ -813,6 +813,12 @@
                   </tagNode>
                 </children>
               </node>
+              <leafNode name="ebgp-requires-policy">
+                <properties>
+                  <help>Enable RFC8212 functionality</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <node name="graceful-restart">
                 <properties>
                   <help>Graceful restart capability parameters</help>

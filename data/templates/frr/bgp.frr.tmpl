@@ -186,9 +186,11 @@
 {% endmacro %}
 !
 router bgp {{ asn }}
-{# Disable eBGP policy by default until there is a CLI option #}
-{# Workaround for T3183 until we have decided about a migration script #}
+{% if parameters is defined and parameters.ebgp_requires_policy is defined %}
+ bgp ebgp-requires-policy
+{% else %}
  no bgp ebgp-requires-policy
+{% endif %}
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check
 {% if address_family is defined and address_family is not none %}
