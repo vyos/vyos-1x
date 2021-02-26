@@ -23,6 +23,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -106,6 +107,10 @@ def verify(bgp):
                 # Check spaces in the password
                 if 'password' in peer_config and ' ' in peer_config['password']:
                     raise ConfigError('You can\'t use spaces in the password')
+
+                # Check if neighbor address is assigned as system interface address
+                if is_addr_assigned(peer):
+                    raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
 
                 # Some checks can/must only be done on a neighbor and not a peer-group
                 if neighbor == 'neighbor':
