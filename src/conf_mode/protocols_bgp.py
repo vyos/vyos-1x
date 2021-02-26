@@ -99,6 +99,9 @@ def verify(bgp):
                         raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                           f'neighbor "{neighbor}" does not exist!')
 
+                # ttl-security and ebgp-multihop can't be used in the same configration
+                if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
+                    raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
 
                 # Some checks can/must only be done on a neighbor and not a peer-group
                 if neighbor == 'neighbor':
