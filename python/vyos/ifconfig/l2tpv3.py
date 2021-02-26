@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -24,19 +24,7 @@ class L2TPv3If(Interface):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
-
-    default = {
-        'type': 'l2tp',
-        'peer_tunnel_id': '',
-        'local_port': 0,
-        'remote_port': 0,
-        'encapsulation': 'udp',
-        'local_address': '',
-        'remote_address': '',
-        'session_id': '',
-        'tunnel_id': '',
-        'peer_session_id': ''
-    }
+    iftype = 'l2tp'
     definition = {
         **Interface.definition,
         **{
@@ -45,20 +33,16 @@ class L2TPv3If(Interface):
             'bridgeable': True,
         }
     }
-    options = Interface.options + \
-        ['tunnel_id', 'peer_tunnel_id', 'local_port', 'remote_port',
-         'encapsulation', 'local_address', 'remote_address', 'session_id',
-         'peer_session_id']
 
     def _create(self):
         # create tunnel interface
         cmd = 'ip l2tp add tunnel tunnel_id {tunnel_id}'
         cmd += ' peer_tunnel_id {peer_tunnel_id}'
-        cmd += ' udp_sport {local_port}'
-        cmd += ' udp_dport {remote_port}'
+        cmd += ' udp_sport {source_port}'
+        cmd += ' udp_dport {destination_port}'
         cmd += ' encap {encapsulation}'
-        cmd += ' local {local_address}'
-        cmd += ' remote {remote_address}'
+        cmd += ' local {local_ip}'
+        cmd += ' remote {remote_ip}'
         self._cmd(cmd.format(**self.config))
 
         # setup session
@@ -82,20 +66,20 @@ class L2TPv3If(Interface):
         >>> i.remove()
         """
 
-        if self.exists(self.config['ifname']):
+        if self.exists(self.ifname):
             # interface is always A/D down. It needs to be enabled explicitly
             self.set_admin_state('down')
 
-            if self.config['tunnel_id'] and self.config['session_id']:
+            if {'tunnel_id', 'session_id'} <= set(self.config):
                 cmd = 'ip l2tp del session tunnel_id {tunnel_id}'
                 cmd += ' session_id {session_id}'
                 self._cmd(cmd.format(**self.config))
 
-            if self.config['tunnel_id']:
+            if 'tunnel_id' in self.config:
                 cmd = 'ip l2tp del tunnel tunnel_id {tunnel_id}'
                 self._cmd(cmd.format(**self.config))
-    
-    
+
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered

@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -148,18 +148,7 @@ class WireGuardOperational(Operational):
 @Interface.register
 class WireGuardIf(Interface):
     OperationalClass = WireGuardOperational
-
-    default = {
-        'type': 'wireguard',
-        'port': 0,
-        'private_key': None,
-        'pubkey': None,
-        'psk': '',
-        'allowed_ips': [],
-        'fwmark': 0x00,
-        'endpoint': None,
-        'keepalive': 0
-    }
+    iftype = 'wireguard'
     definition = {
         **Interface.definition,
         **{
@@ -168,9 +157,6 @@ class WireGuardIf(Interface):
             'bridgeable': False,
         }
     }
-    options = Interface.options + \
-        ['port', 'private_key', 'pubkey', 'psk',
-         'allowed_ips', 'fwmark', 'endpoint', 'keepalive']
 
     def get_mac(self):
         """

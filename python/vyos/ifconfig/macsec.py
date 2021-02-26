@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -27,12 +27,7 @@ class MACsecIf(Interface):
     other security solutions such as IPsec (layer 3) or TLS (layer 4), as all
     those solutions are used for their own specific use cases.
     """
-
-    default = {
-        'type': 'macsec',
-        'security_cipher': '',
-        'source_interface': ''
-    }
+    iftype = 'macsec'
     definition = {
         **Interface.definition,
         **{
@@ -40,8 +35,6 @@ class MACsecIf(Interface):
             'prefixes': ['macsec', ],
         },
     }
-    options = Interface.options + \
-        ['security_cipher', 'source_interface']
 
     def _create(self):
         """
@@ -49,9 +42,9 @@ class MACsecIf(Interface):
         down by default.
         """
         # create tunnel interface
-        cmd  = 'ip link add link {source_interface} {ifname} type {type}'
-        cmd += ' cipher {security_cipher}'
-        self._cmd(cmd.format(**self.config))
+        cmd  = 'ip link add link {source_interface} {ifname} type {type}'.format(**self.config)
+        cmd += f' cipher {self.config["security"]["cipher"]}'
+        self._cmd(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')

@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -20,13 +20,7 @@ class MACVLANIf(Interface):
     """
     Abstraction of a Linux MACvlan interface
     """
-
-    default = {
-        'type': 'macvlan',
-        'address': '',
-        'source_interface': '',
-        'mode': '',
-    }
+    iftype = 'macvlan'
     definition = {
         **Interface.definition,
         **{
@@ -34,17 +28,10 @@ class MACVLANIf(Interface):
             'prefixes': ['peth', ],
         },
     }
-    options = Interface.options + \
-        ['source_interface', 'mode']
 
     def _create(self):
         # please do not change the order when assembling the command
-        cmd = 'ip link add {ifname}'
-        if self.config['source_interface']:
-            cmd += ' link {source_interface}'
-        cmd += ' type macvlan'
-        if self.config['mode']:
-            cmd += ' mode {mode}'
+        cmd = 'ip link add {ifname} link {source_interface} type {type} mode {mode}'
         self._cmd(cmd.format(**self.config))
 
     def set_mode(self, mode):

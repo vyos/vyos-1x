@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,9 +17,7 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class VTIIf(Interface):
-    default = {
-        'type': 'vti',
-    }
+    iftype = 'vti'
     definition = {
         **Interface.definition,
         **{

@@ -124,45 +124,7 @@ def apply(tunnel):
     encap = tunnel['encapsulation']
     klass = dispatch[encap]
 
-    # This is a special type of interface which needs additional parameters
-    # when created using iproute2. Instead of passing a ton of arguments,
-    # use a dictionary provided by the interface class which holds all the
-    # options necessary.
-    conf = klass.get_config()
-
-    # Copy/re-assign our dictionary values to values understood by the
-    # derived _Tunnel classes
-    mapping = {
-        # this                       :  get_config()
-        'local_ip'                   : 'local',
-        'remote_ip'                  : 'remote',
-        'source_interface'           : 'dev',
-        'parameters.ip.ttl'          : 'ttl',
-        'parameters.ip.tos'          : 'tos',
-        'parameters.ip.key'          : 'key',
-    }
-
-    # Add additional IPv6 options if tunnel is IPv6 aware
-    if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
-        mappingv6 = {
-            # this                       :  get_config()
-            'parameters.ipv6.encaplimit' : 'encaplimit',
-            'parameters.ipv6.flowlabel'  : 'flowlabel',
-            'parameters.ipv6.hoplimit'   : 'hoplimit',
-            'parameters.ipv6.tclass'     : 'flowlabel'
-        }
-        mapping.update(mappingv6)
-
-    for our_key, their_key in mapping.items():
-        if dict_search(our_key, tunnel) and their_key in conf:
-            conf[their_key] = dict_search(our_key, tunnel)
-
-    if dict_search('parameters.ip.no_pmtu_discovery', tunnel) != None:
-        if 'pmtudisc' in conf['raw']:
-            conf['raw'].remove('pmtudisc')
-        conf['raw'].append('nopmtudisc')
-
-    tun = klass(tunnel['ifname'], **conf)
+    tun = klass(**tunnel)
     tun.change_options()
     tun.update(tunnel)
 

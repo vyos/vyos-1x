@@ -75,19 +75,9 @@ def apply(peth):
     if 'mode_old' in peth:
         MACVLANIf(peth['ifname']).remove()
 
-    # This is a special type of interface which needs additional parameters
-    # when created using iproute2. Instead of passing a ton of arguments,
-    # use a dictionary provided by the interface class which holds all the
-    # options necessary.
-    conf = MACVLANIf.get_config()
-
-    # Assign MACVLAN instance configuration parameters to config dict
-    conf['source_interface'] = peth['source_interface']
-    conf['mode'] = peth['mode']
-
     # It is safe to "re-create" the interface always, there is a sanity check
     # that the interface will only be create if its non existent
-    p = MACVLANIf(peth['ifname'], **conf)
+    p = MACVLANIf(**peth)
     p.update(peth)
     return None
 

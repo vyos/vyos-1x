@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,13 +16,12 @@
 # https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels/
 # https://community.hetzner.com/tutorials/linux-setup-gre-tunnel
 
-from copy import deepcopy
-
 from netaddr import EUI
 from netaddr import mac_unix_expanded
 from random import getrandbits
 
 from vyos.ifconfig.interface import Interface
+from vyos.util import dict_search
 from vyos.validate import assert_list
 
 def enable_to_on(value):
@@ -31,7 +30,6 @@ def enable_to_on(value):
     if value == 'disable':
         return 'off'
     raise ValueError(f'expect enable or disable but got "{value}"')
-
 
 @Interface.register
 class _Tunnel(Interface):
@@ -48,16 +46,30 @@ class _Tunnel(Interface):
         },
     }
 
-    default = {
-        'local' : '',
-        'remote': '',
-        'dev' : '',
-        'ttl' : '',
-        'tos' : '',
-        'key' : '',
-        'raw' : '',
+    # This table represents a mapping from VyOS internal config dict to
+    # arguments used by iproute2. For more information please refer to:
+    # - https://man7.org/linux/man-pages/man8/ip-link.8.html
+    # - https://man7.org/linux/man-pages/man8/ip-tunnel.8.html
+    mapping = {
+        'local_ip'                        : 'local',
+        'remote_ip'                       : 'remote',
+        'source_interface'                : 'dev',
+        'parameters.ip.key'               : 'key',
+        'parameters.ip.tos'               : 'tos',
+        'parameters.ip.ttl'               : 'ttl',
     }
-    options = Interface.options + list(default.keys())
+    mapping_ipv4 = {
+        'parameters.ip.key'               : 'key',
+        'parameters.ip.no_pmtu_discovery' : 'nopmtudisc',
+        'parameters.ip.tos'               : 'tos',
+        'parameters.ip.ttl'               : 'ttl',
+    }
+    mapping_ipv6 = {
+        'parameters.ipv6.encaplimit'      : 'encaplimit',
+        'parameters.ipv6.flowlabel'       : 'flowlabel',
+        'parameters.ipv6.hoplimit'        : 'hoplimit',
+        'parameters.ipv6.tclass'          : 'tclass',
+    }
 
     # TODO: This is surely used for more than tunnels
     # TODO: could be refactored elsewhere
@@ -76,28 +88,49 @@ class _Tunnel(Interface):
             },
         }
     }
-    _create_cmd = 'ip tunnel add {ifname} mode {type}'
 
     def _create(self):
-        # add " option-name option-name-value ..." for all options set
-        options = ' '.join(['{} {}'.format(k, self.config[k])
-                            for k,v in self.config.items() if v and k not in
-                                                    ['ifname', 'type', 'raw']])
-        if 'raw' in self.config:
-            options += ' ' + ' '.join(self.config['raw'])
-        self._cmd('{} {}'.format(self._create_cmd.format(**self.config), options))
+        if self.config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
+            mapping = { **self.mapping, **self.mapping_ipv6 }
+        else:
+            mapping = { **self.mapping, **self.mapping_ipv4 }
+
+        cmd = 'ip tunnel add {ifname} mode {type}'
+        if self.config['encapsulation'] == 'gre-bridge':
+            cmd = 'ip link add name {ifname} type {type}'
+        for vyos_key, iproute2_key in mapping.items():
+            # dict_search will return an empty dict "{}" for valueless nodes like
+            # "parameters.nolearning" - thus we need to test the nodes existence
+            # by using isinstance()
+            tmp = dict_search(vyos_key, self.config)
+            if isinstance(tmp, dict):
+                cmd += f' {iproute2_key}'
+            elif tmp != None:
+                cmd += f' {iproute2_key} {tmp}'
+
+        self._cmd(cmd.format(**self.config))
+
         self.set_admin_state('down')
 
     def change_options(self):
-        change = 'ip tunnel change {ifname} mode {type}'
+        if self.config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
+            mapping = { **self.mapping, **self.mapping_ipv6 }
+        else:
+            mapping = { **self.mapping, **self.mapping_ipv4 }
 
-        # add " option-name option-name-value ..." for all options set
-        options = ' '.join(['{} {}'.format(k, self.config[k])
-                            for k,v in self.config.items() if v and k not in
-                                                    ['ifname', 'type', 'raw']])
-        if 'raw' in self.config:
-            options += ' ' + ' '.join(self.config['raw'])
-        self._cmd('{} {}'.format(change.format(**self.config), options))
+        self.config['type'] = self.iftype
+        cmd = 'ip tunnel change {ifname} mode {type}'
+        for vyos_key, iproute2_key in mapping.items():
+            # dict_search will return an empty dict "{}" for valueless nodes like
+            # "parameters.nolearning" - thus we need to test the nodes existence
+            # by using isinstance()
+            tmp = dict_search(vyos_key, self.config)
+            if isinstance(tmp, dict):
+                cmd += f' {iproute2_key}'
+            elif tmp != None:
+                cmd += f' {iproute2_key} {tmp}'
+
+        self._cmd(cmd.format(**self.config))
 
     def get_mac(self):
         """
@@ -151,22 +184,15 @@ class GREIf(_Tunnel):
     https://tools.ietf.org/html/rfc2784
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre.c
     """
-
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': 'gre',
-            'raw' : ['pmtudisc'], # parameters that we can pass raw to ip command
-        },
-    }
+    iftype = 'gre'
 
 # GreTap also called GRE Bridge
 class GRETapIf(_Tunnel):
     """
     GRETapIF: GreIF using TAP instead of TUN
-
     https://en.wikipedia.org/wiki/TUN/TAP
     """
+    iftype = 'gretap'
     # no multicast, ttl or tos for gretap
     definition = {
         **_Tunnel.definition,
@@ -174,15 +200,6 @@ class GRETapIf(_Tunnel):
             'bridgeable': True,
         },
     }
-    default = {
-        'type': 'gretap',
-        'local': '',
-        'remote': '',
-        'dev': '',
-        'raw' : ['pmtudisc'], # parameters that we can pass raw to ip command
-    }
-
-    _create_cmd = 'ip link add name {ifname} type {type}'
 
     def change_options(self):
         pass
@@ -195,16 +212,7 @@ class IP6GREIf(_Tunnel):
     https://tools.ietf.org/html/rfc7676
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_gre6.c
     """
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': 'ip6gre',
-            'encaplimit': '',
-            'hoplimit': '',
-            'tclass': '',
-            'flowlabel': '',
-        },
-    }
+    iftype = 'ip6gre'
 
 class IPIPIf(_Tunnel):
     """
@@ -213,15 +221,7 @@ class IPIPIf(_Tunnel):
     For more information please refer to:
     https://tools.ietf.org/html/rfc2003
     """
-    # IPIP does not allow to pass multicast, unlike GRE
-    # but the interface itself can be set with multicast
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': 'ipip',
-            'raw' : ['pmtudisc'], # parameters that we can pass raw to ip command
-        },
-    }
+    iftype = 'ipip'
 
 class IPIP6If(_Tunnel):
     """
@@ -230,16 +230,7 @@ class IPIP6If(_Tunnel):
     For more information please refer to:
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_ip6tnl.c
     """
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': 'ipip6',
-            'encaplimit': '',
-            'hoplimit': '',
-            'tclass': '',
-            'flowlabel': '',
-        },
-    }
+    iftype = 'ipip6'
 
 class IP6IP6If(IPIP6If):
     """
@@ -248,13 +239,7 @@ class IP6IP6If(IPIP6If):
     For more information please refer to:
     https://tools.ietf.org/html/rfc2473
     """
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': 'ip6ip6',
-        },
-    }
-
+    iftype = 'ip6ip6'
 
 class SitIf(_Tunnel):
     """
@@ -263,12 +248,7 @@ class SitIf(_Tunnel):
     For more information please refer to:
     https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/tree/ip/link_iptnl.c
     """
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': 'sit',
-        },
-    }
+    iftype = 'sit'
 
 class Sit6RDIf(SitIf):
     """
@@ -277,14 +257,7 @@ class Sit6RDIf(SitIf):
     https://en.wikipedia.org/wiki/IPv6_rapid_deployment
     """
     # TODO: check if key can really be used with 6RD
-    default = {
-        **_Tunnel.default,
-        **{
-            'type': '6rd',
-            '6rd_prefix' : '',
-            '6rd_relay_prefix' : '',
-        },
-    }
+    iftype = '6rd'
 
     def _create(self):
         # do not call _Tunnel.create, building fully here

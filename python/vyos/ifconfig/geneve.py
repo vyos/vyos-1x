@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -26,14 +26,7 @@ class GeneveIf(Interface):
     https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels/#geneve
     https://lwn.net/Articles/644938/
     """
-
-    default = {
-        'type': 'geneve',
-        'vni': 0,
-        'remote': '',
-    }
-    options = Interface.options + \
-        ['vni', 'remote']
+    iftype = 'geneve'
     definition = {
         **Interface.definition,
         **{

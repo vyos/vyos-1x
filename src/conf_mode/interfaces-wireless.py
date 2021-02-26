@@ -255,17 +255,8 @@ def apply(wifi):
     if 'deleted' in wifi:
         WiFiIf(interface).remove()
     else:
-        # This is a special type of interface which needs additional parameters
-        # when created using iproute2. Instead of passing a ton of arguments,
-        # use a dictionary provided by the interface class which holds all the
-        # options necessary.
-        conf = WiFiIf.get_config()
-
-        # Assign WiFi instance configuration parameters to config dict
-        conf['phy'] = wifi['physical_device']
-
         # Finally create the new interface
-        w = WiFiIf(interface, **conf)
+        w = WiFiIf(**wifi)
         w.update(wifi)
 
         # Enable/Disable interface - interface is always placed in

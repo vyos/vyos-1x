@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,10 +17,7 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class VTunIf(Interface):
-    default = {
-        'type': 'vtun',
-        'device_type': 'tun',
-    }
+    iftype = 'vtun'
     definition = {
         **Interface.definition,
         **{
@@ -29,7 +26,6 @@ class VTunIf(Interface):
             'bridgeable': True,
         },
     }
-    options = Interface.options + ['device_type']
 
     def _create(self):
         """ Depending on OpenVPN operation mode the interface is created

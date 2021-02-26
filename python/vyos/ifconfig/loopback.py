@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,9 +22,8 @@ class LoopbackIf(Interface):
     uses to communicate with itself.
     """
     _persistent_addresses = ['127.0.0.1/8', '::1/128']
-    default = {
-        'type': 'loopback',
-    }
+    iftype = 'loopback'
+
     definition = {
         **Interface.definition,
         **{
@@ -33,9 +32,6 @@ class LoopbackIf(Interface):
             'bridgeable': True,
         }
     }
-
-    name = 'loopback'
-
     def remove(self):
         """
         Loopback interface can not be deleted from operating system. We can

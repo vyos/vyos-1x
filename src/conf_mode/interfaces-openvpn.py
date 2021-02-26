@@ -502,10 +502,7 @@ def apply(openvpn):
     # existed - nevertheless, spawn new OpenVPN process
     call(f'systemctl start openvpn@{interface}.service')
 
-    conf = VTunIf.get_config()
-    conf['device_type'] = openvpn['device_type']
-
-    o = VTunIf(interface, **conf)
+    o = VTunIf(**openvpn)
     o.update(openvpn)
 
     return None

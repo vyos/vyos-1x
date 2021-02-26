@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,12 +31,7 @@ class _ERSpan(Interface):
     """
     _ERSpan: private base class for ERSPAN tunnels
     """
-    default = {
-        **Interface.default,
-        **{
-            'type': 'erspan',
-        }
-    }
+    iftype = 'erspan'
     definition = {
         **Interface.definition,
         **{
@@ -44,18 +39,23 @@ class _ERSpan(Interface):
             'prefixes': ['ersp',],
         },
     }
-    
-    options = ['local_ip','remote_ip','encapsulation','parameters']
-    
+
     def __init__(self,ifname,**config):
         self.config = deepcopy(config) if config else {}
         super().__init__(ifname, **self.config)
-    
+
     def change_options(self):
         pass
-    
+
     def update(self, config):
-        
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class first
+        super().update(config)
+
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
         # function. We will only enable the interface if 'up' was called as
@@ -63,10 +63,9 @@ class _ERSpan(Interface):
         # as certain parameters can only be changed when the interface is
         # in admin-down state. This ensures the link does not flap during
         # reconfiguration.
-        super().update(config)
         state = 'down' if 'disable' in config else 'up'
         self.set_admin_state(state)
-    
+
     def _create(self):
         pass
 
@@ -74,7 +73,7 @@ class ERSpanIf(_ERSpan):
     """
     ERSpanIf: private base class for ERSPAN Over GRE and IPv4 tunnels
     """
-    
+
     def _create(self):
         ifname = self.config['ifname']
         local_ip = self.config['local_ip']
@@ -82,7 +81,7 @@ class ERSpanIf(_ERSpan):
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
         command = f'ip link add dev {ifname} type erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
-        
+
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
             if idx:
@@ -94,16 +93,16 @@ class ERSpanIf(_ERSpan):
             hwid=dict_search('parameters.erspan.hwid',self.config)
             if hwid:
                 command += f' erspan_hwid {hwid}'
-        
+
         ttl = dict_search('parameters.ip.ttl',self.config)
         if ttl:
             command += f' ttl {ttl}'
         tos = dict_search('parameters.ip.tos',self.config)
         if tos:
             command += f' tos {tos}'
-                
+
         self._cmd(command)
-    
+
     def change_options(self):
         ifname = self.config['ifname']
         local_ip = self.config['local_ip']
@@ -111,7 +110,7 @@ class ERSpanIf(_ERSpan):
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
         command = f'ip link set dev {ifname} type erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
-        
+
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
             if idx:
@@ -123,21 +122,21 @@ class ERSpanIf(_ERSpan):
             hwid=dict_search('parameters.erspan.hwid',self.config)
             if hwid:
                 command += f' erspan_hwid {hwid}'
-        
+
         ttl = dict_search('parameters.ip.ttl',self.config)
         if ttl:
             command += f' ttl {ttl}'
         tos = dict_search('parameters.ip.tos',self.config)
         if tos:
             command += f' tos {tos}'
-                
+
         self._cmd(command)
 
 class ER6SpanIf(_ERSpan):
     """
     ER6SpanIf: private base class for ERSPAN Over GRE and IPv6 tunnels
     """
-    
+
     def _create(self):
         ifname = self.config['ifname']
         local_ip = self.config['local_ip']
@@ -145,7 +144,7 @@ class ER6SpanIf(_ERSpan):
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
         command = f'ip link add dev {ifname} type ip6erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
-        
+
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
             if idx:
@@ -157,16 +156,16 @@ class ER6SpanIf(_ERSpan):
             hwid=dict_search('parameters.erspan.hwid',self.config)
             if hwid:
                 command += f' erspan_hwid {hwid}'
-        
+
         ttl = dict_search('parameters.ip.ttl',self.config)
         if ttl:
             command += f' ttl {ttl}'
         tos = dict_search('parameters.ip.tos',self.config)
         if tos:
             command += f' tos {tos}'
-                
+
         self._cmd(command)
-    
+
     def change_options(self):
         ifname = self.config['ifname']
         local_ip = self.config['local_ip']
@@ -174,7 +173,7 @@ class ER6SpanIf(_ERSpan):
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
         command = f'ip link set dev {ifname} type ip6erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
-        
+
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
             if idx:
@@ -186,5 +185,5 @@ class ER6SpanIf(_ERSpan):
             hwid=dict_search('parameters.erspan.hwid',self.config)
             if hwid:
                 command += f' erspan_hwid {hwid}'
-                
+
         self._cmd(command)

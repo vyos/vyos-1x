@@ -95,11 +95,11 @@ def verify_tunnel(config):
     """
     from vyos.template import is_ipv4
     from vyos.template import is_ipv6
-    
+
     if 'encapsulation' not in config:
         raise ConfigError('Must configure the tunnel encapsulation for '\
                           '{ifname}!'.format(**config))
-    
+
     if 'local_ip' not in config and 'dhcp_interface' not in config:
         raise ConfigError('local-ip is mandatory for tunnel')
 

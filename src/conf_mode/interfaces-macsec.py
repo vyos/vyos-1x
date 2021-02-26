@@ -115,17 +115,9 @@ def apply(macsec):
             os.unlink(wpa_suppl_conf.format(**macsec))
 
     else:
-        # This is a special type of interface which needs additional parameters
-        # when created using iproute2. Instead of passing a ton of arguments,
-        # use a dictionary provided by the interface class which holds all the
-        # options necessary.
-        conf = MACsecIf.get_config()
-        conf['source_interface'] = macsec['source_interface']
-        conf['security_cipher'] = macsec['security']['cipher']
-
         # It is safe to "re-create" the interface always, there is a sanity
         # check that the interface will only be create if its non existent
-        i = MACsecIf(macsec['ifname'], **conf)
+        i = MACsecIf(**macsec)
         i.update(macsec)
 
         call('systemctl restart wpa_supplicant-macsec@{source_interface}'

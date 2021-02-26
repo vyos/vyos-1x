@@ -48,7 +48,7 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'erspan']
     erspan = get_interface_dict(conf, base)
-    
+
     tmp = leaf_node_changed(conf, ['encapsulation'])
     if tmp:
         erspan.update({'encapsulation_changed': {}})
@@ -58,30 +58,30 @@ def get_config(config=None):
 def verify(erspan):
     if 'deleted' in erspan:
         return None
-    
+
     if 'encapsulation' not in erspan:
         raise ConfigError('Unable to detect the following ERSPAN tunnel encapsulation'\
                           '{ifname}!'.format(**erspan))
 
     verify_mtu_ipv6(erspan)
     verify_tunnel(erspan)
-    
+
     key = dict_search('parameters.ip.key',erspan)
     if key == None:
         raise ConfigError('parameters.ip.key is mandatory for ERSPAN tunnel')
-            
+
 
 def generate(erspan):
     return None
 
 def apply(erspan):
-    if 'deleted' in erspan or 'encapsulation_changed' in erspan: 
-        if erspan['ifname'] in interfaces(): 
-            tmp = Interface(erspan['ifname']) 
-            tmp.remove() 
-        if 'deleted' in erspan: 
-            return None 
-    
+    if 'deleted' in erspan or 'encapsulation_changed' in erspan:
+        if erspan['ifname'] in interfaces():
+            tmp = Interface(erspan['ifname'])
+            tmp.remove()
+        if 'deleted' in erspan:
+            return None
+
     dispatch = {
         'erspan': ERSpanIf,
         'ip6erspan': ER6SpanIf
@@ -90,14 +90,8 @@ def apply(erspan):
     # We need to re-map the tunnel encapsulation proto to a valid interface class
     encap = erspan['encapsulation']
     klass = dispatch[encap]
-    
-    conf = deepcopy(erspan)
-    
-    conf.update(klass.get_config())
-    
-    del conf['ifname']
-    
-    erspan_tunnel = klass(erspan['ifname'],**conf)
+
+    erspan_tunnel = klass(**erspan)
     erspan_tunnel.change_options()
     erspan_tunnel.update(erspan)
 
