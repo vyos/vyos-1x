@@ -60,6 +60,42 @@
               </constraint>
             </properties>
           </leafNode>
+          <node name="parameters">
+            <properties>
+              <help>VXLAN tunnel parameters</help>
+            </properties>
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="df">
+                    <properties>
+                      <help>Specifies the usage of the do not fragment (DF) bit</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  #include <include/interface-parameters-tos.xml.i>
+                  #include <include/interface-parameters-ttl.xml.i>
+                </children>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>IPv6 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/interface-parameters-flowlabel.xml.i>
+                </children>
+              </node>
+              <leafNode name="nolearning">
+                <properties>
+                  <help>Do not add unknown addresses into forwarding database</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="port">
             <properties>
               <help>Destination port of VXLAN tunnel (default: 8472)</help>
