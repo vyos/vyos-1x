@@ -96,7 +96,7 @@ def verify(bgp):
                 # Check if the configure peer-group exists
                 if 'peer_group' in peer_config:
                     peer_group = peer_config['peer_group']
-                    if peer_group not in asn_config['peer_group']:
+                    if 'peer_group' not in asn_config or peer_group not in asn_config['peer_group']:
                         raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                           f'neighbor "{neighbor}" does not exist!')
 
