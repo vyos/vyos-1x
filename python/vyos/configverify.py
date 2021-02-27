@@ -103,8 +103,8 @@ def verify_tunnel(config):
     if 'source_address' not in config and 'dhcp_interface' not in config:
         raise ConfigError('source-address is mandatory for tunnel')
 
-    if 'remote_ip' not in config and config['encapsulation'] != 'gre':
-        raise ConfigError('remote-ip is mandatory for tunnel')
+    if 'remote' not in config and config['encapsulation'] != 'gre':
+        raise ConfigError('remote ip address is mandatory for tunnel')
 
     if {'source_address', 'dhcp_interface'} <= set(config):
         raise ConfigError('Can not use both source-address and dhcp-interface')
@@ -114,15 +114,15 @@ def verify_tunnel(config):
         if 'source_address' in config and not is_ipv6(config['source_address']):
             raise ConfigError(f'{error_ipv6} source-address')
 
-        if 'remote_ip' in config and not is_ipv6(config['remote_ip']):
-            raise ConfigError(f'{error_ipv6} remote-ip')
+        if 'remote' in config and not is_ipv6(config['remote']):
+            raise ConfigError(f'{error_ipv6} remote')
     else:
         error_ipv4 = 'Encapsulation mode requires IPv4'
         if 'source_address' in config and not is_ipv4(config['source_address']):
             raise ConfigError(f'{error_ipv4} source-address')
 
-        if 'remote_ip' in config and not is_ipv4(config['remote_ip']):
-            raise ConfigError(f'{error_ipv4} remote-ip')
+        if 'remote' in config and not is_ipv4(config['remote']):
+            raise ConfigError(f'{error_ipv4} remote address')
 
     if config['encapsulation'] in ['sit', 'gretap']:
         if 'source_interface' in config:

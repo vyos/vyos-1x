@@ -76,11 +76,11 @@ class ERSpanIf(_ERSpan):
 
     def _create(self):
         ifname = self.config['ifname']
-        local_ip = self.config['local_ip']
-        remote_ip = self.config['remote_ip']
+        source_address = self.config['source_address']
+        remote = self.config['remote']
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
-        command = f'ip link add dev {ifname} type erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
+        command = f'ip link add dev {ifname} type erspan local {source_address} remote {remote} seq key {key} erspan_ver {version}'
 
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
@@ -105,11 +105,11 @@ class ERSpanIf(_ERSpan):
 
     def change_options(self):
         ifname = self.config['ifname']
-        local_ip = self.config['local_ip']
-        remote_ip = self.config['remote_ip']
+        source_address = self.config['source_address']
+        remote = self.config['remote']
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
-        command = f'ip link set dev {ifname} type erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
+        command = f'ip link set dev {ifname} type erspan local {source_address} remote {remote} seq key {key} erspan_ver {version}'
 
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
@@ -139,11 +139,11 @@ class ER6SpanIf(_ERSpan):
 
     def _create(self):
         ifname = self.config['ifname']
-        local_ip = self.config['local_ip']
-        remote_ip = self.config['remote_ip']
+        source_address = self.config['source_address']
+        remote = self.config['remote']
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
-        command = f'ip link add dev {ifname} type ip6erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
+        command = f'ip link add dev {ifname} type ip6erspan local {source_address} remote {remote} seq key {key} erspan_ver {version}'
 
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)
@@ -168,11 +168,11 @@ class ER6SpanIf(_ERSpan):
 
     def change_options(self):
         ifname = self.config['ifname']
-        local_ip = self.config['local_ip']
-        remote_ip = self.config['remote_ip']
+        source_address = self.config['source_address']
+        remote = self.config['remote']
         key = self.config['parameters']['ip']['key']
         version = self.config['parameters']['version']
-        command = f'ip link set dev {ifname} type ip6erspan local {local_ip} remote {remote_ip} seq key {key} erspan_ver {version}'
+        command = f'ip link set dev {ifname} type ip6erspan local {source_address} remote {remote} seq key {key} erspan_ver {version}'
 
         if int(version) == 1:
             idx=dict_search('parameters.erspan.idx',self.config)

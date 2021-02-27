@@ -20,7 +20,8 @@
           #include <include/interface-disable.xml.i>
           #include <include/interface-disable-link-detect.xml.i>
           #include <include/interface-mtu-64-8024.xml.i>
-          #include <include/tunnel-local-remote-ip.xml.i>
+          #include <include/source-address-ipv4-ipv6.xml.i>
+          #include <include/tunnel-remote.xml.i>
           <leafNode name="encapsulation">
             <properties>
               <help>Encapsulation of this tunnel interface</help>

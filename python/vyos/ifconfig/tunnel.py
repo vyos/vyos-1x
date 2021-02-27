@@ -53,7 +53,7 @@ class TunnelIf(Interface):
     mapping = {
         'source_address'                  : 'local',
         'source_interface'                : 'dev',
-        'remote_ip'                       : 'remote',
+        'remote'                          : 'remote',
         'parameters.ip.key'               : 'key',
         'parameters.ip.tos'               : 'tos',
         'parameters.ip.ttl'               : 'ttl',
