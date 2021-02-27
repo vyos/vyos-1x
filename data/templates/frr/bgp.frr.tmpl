@@ -9,9 +9,9 @@
 {%   if config.remote_as is defined and config.remote_as is not none %}
  neighbor {{ neighbor }} remote-as {{ config.remote_as }}
 {%   endif %}
-{%     if config.interface.remote_as is defined and config.interface.remote_as is not none %}
+{%   if config.interface is defined and config.interface.remote_as is defined and config.interface.remote_as is not none %}
  neighbor {{ neighbor }} interface remote-as {{ config.interface.remote_as }}
-{%     endif %}
+{%   endif %}
 {%   if config.advertisement_interval is defined and config.advertisement_interval is not none %}
  neighbor {{ neighbor }} advertisement-interval {{ config.advertisement_interval }}
 {%   endif %}
