@@ -44,22 +44,7 @@
           <leafNode name="mtu">
             <defaultValue>1450</defaultValue>
           </leafNode>
-          <leafNode name="remote">
-            <properties>
-              <help>Remote address of VXLAN tunnel</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>Remote IPv4 address of VXLAN tunnel</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6</format>
-                <description>Remote IPv6 address of VXLAN tunnel</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ip-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/tunnel-remote.xml.i>
           <leafNode name="port">
             <properties>
               <help>Destination port of VXLAN tunnel (default: 8472)</help>
