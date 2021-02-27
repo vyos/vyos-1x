@@ -40,10 +40,21 @@ from vyos.ifconfig import SitIf
 from vyos.ifconfig import Sit6RDIf
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
+from vyos.util import cmd
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+def get_tunnel_encapsulation(interface):
+    """ Returns the used encapsulation protocol for given interface.
+        If interface does not exist, None is returned.
+    """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    return tmp['linkinfo']['info_kind']
 
 def get_config(config=None):
     """
@@ -124,9 +135,15 @@ def generate(tunnel):
     return None
 
 def apply(tunnel):
-    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel:
-        if tunnel['ifname'] in interfaces():
-            tmp = Interface(tunnel['ifname'])
+    # If a gre-bridge tunnel is already existing we can not "simply" change
+    # local or remote addresses. This returns "Operation not supported" by the
+    # Kernel. There is no other solution to destroy and recreate the tunnel.
+    interface = tunnel['ifname']
+    encap = get_tunnel_encapsulation(interface)
+
+    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel or encap == 'gretap':
+        if interface in interfaces():
+            tmp = Interface(interface)
             tmp.remove()
         if 'deleted' in tunnel:
             return None
@@ -175,7 +192,7 @@ def apply(tunnel):
         if dict_search(our_key, tunnel) and their_key in conf:
             conf[their_key] = dict_search(our_key, tunnel)
 
-    tun = klass(tunnel['ifname'], **conf)
+    tun = klass(interface, **conf)
     tun.change_options()
     tun.update(tunnel)
 

@@ -19,6 +19,7 @@ import json
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.template import inc_ip
 from vyos.util import cmd
 
 from base_interfaces_test import BasicInterfaceTest
@@ -202,6 +203,36 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Check if commit is ok
         self.session.commit()
+
+    def test_gretap_parameters_change(self):
+        interface = f'tun1040'
+        gre_key = '10'
+        encapsulation = 'gre-bridge'
+        tos = '20'
+
+        self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
+        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+
+        # Check if commit is ok
+        self.session.commit()
+
+        conf = tunnel_conf(interface)
+        self.assertEqual(mtu,           conf['mtu'])
+        self.assertEqual(interface,     conf['ifname'])
+        self.assertEqual('gretap',      conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
+        self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
+
+        # Change remote ip address (inc host by 2
+        new_remote = inc_ip(remote_ip4, 2)
+        self.session.set(self._base_path + [interface, 'remote-ip', new_remote])
+        # Check if commit is ok
+        self.session.commit()
+
+        conf = tunnel_conf(interface)
+        self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
