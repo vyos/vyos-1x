@@ -100,26 +100,26 @@ def verify_tunnel(config):
         raise ConfigError('Must configure the tunnel encapsulation for '\
                           '{ifname}!'.format(**config))
 
-    if 'local_ip' not in config and 'dhcp_interface' not in config:
-        raise ConfigError('local-ip is mandatory for tunnel')
+    if 'source_address' not in config and 'dhcp_interface' not in config:
+        raise ConfigError('source-address is mandatory for tunnel')
 
     if 'remote_ip' not in config and config['encapsulation'] != 'gre':
         raise ConfigError('remote-ip is mandatory for tunnel')
 
-    if {'local_ip', 'dhcp_interface'} <= set(config):
-        raise ConfigError('Can not use both local-ip and dhcp-interface')
+    if {'source_address', 'dhcp_interface'} <= set(config):
+        raise ConfigError('Can not use both source-address and dhcp-interface')
 
     if config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre', 'ip6erspan']:
         error_ipv6 = 'Encapsulation mode requires IPv6'
-        if 'local_ip' in config and not is_ipv6(config['local_ip']):
-            raise ConfigError(f'{error_ipv6} local-ip')
+        if 'source_address' in config and not is_ipv6(config['source_address']):
+            raise ConfigError(f'{error_ipv6} source-address')
 
         if 'remote_ip' in config and not is_ipv6(config['remote_ip']):
             raise ConfigError(f'{error_ipv6} remote-ip')
     else:
         error_ipv4 = 'Encapsulation mode requires IPv4'
-        if 'local_ip' in config and not is_ipv4(config['local_ip']):
-            raise ConfigError(f'{error_ipv4} local-ip')
+        if 'source_address' in config and not is_ipv4(config['source_address']):
+            raise ConfigError(f'{error_ipv4} source-address')
 
         if 'remote_ip' in config and not is_ipv4(config['remote_ip']):
             raise ConfigError(f'{error_ipv4} remote-ip')
@@ -130,7 +130,7 @@ def verify_tunnel(config):
             raise ConfigError(f'Option source-interface can not be used with ' \
                               f'encapsulation "{encapsulation}"!')
     elif config['encapsulation'] == 'gre':
-        if 'local_ip' in config and is_ipv6(config['local_ip']):
+        if 'source_address' in config and is_ipv6(config['source_address']):
             raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
 
 def verify_eapol(config):

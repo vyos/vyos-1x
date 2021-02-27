@@ -36,12 +36,17 @@ if __name__ == '__main__':
 
     #
     # Migrate "interface tunnel <tunX> encapsulation gre-bridge" to gretap
+    # Migrate "interface tunnel <tunX> local-ip" to source-address
     for interface in config.list_nodes(base):
-        path = base + [interface, 'encapsulation']
-        if config.exists(path):
-            tmp = config.return_value(path)
+        encap_path = base + [interface, 'encapsulation']
+        if config.exists(encap_path):
+            tmp = config.return_value(encap_path)
             if tmp == 'gre-bridge':
-                config.set(path, value='gretap')
+                config.set(encap_path, value='gretap')
+
+        local_ip_path = base + [interface, 'local-ip']
+        if config.exists(local_ip_path):
+            config.rename(local_ip_path, 'source-address')
 
     try:
         with open(file_name, 'w') as f:

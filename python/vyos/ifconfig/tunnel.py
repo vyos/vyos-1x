@@ -51,9 +51,9 @@ class TunnelIf(Interface):
     # - https://man7.org/linux/man-pages/man8/ip-link.8.html
     # - https://man7.org/linux/man-pages/man8/ip-tunnel.8.html
     mapping = {
-        'local_ip'                        : 'local',
-        'remote_ip'                       : 'remote',
+        'source_address'                  : 'local',
         'source_interface'                : 'dev',
+        'remote_ip'                       : 'remote',
         'parameters.ip.key'               : 'key',
         'parameters.ip.tos'               : 'tos',
         'parameters.ip.ttl'               : 'ttl',
