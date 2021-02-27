@@ -815,7 +815,7 @@
               </node>
               <leafNode name="ebgp-requires-policy">
                 <properties>
-                  <help>Enable RFC8212 functionality</help>
+                  <help>Require in and out policy for eBGP peers (RFC8212)</help>
                   <valueless/>
                 </properties>
               </leafNode>

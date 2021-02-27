@@ -241,7 +241,7 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f' no bgp default ipv4-unicast', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
-        self.assertIn(f' bgp ebgp-requires-policy', frrconfig)
+        self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
 
 
     def test_bgp_02_neighbors(self):
@@ -455,6 +455,9 @@ class TestProtocolsBGP(unittest.TestCase):
         frrconfig = getFRRBGPconfig()
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' address-family ipv6 unicast', frrconfig)
+        # T2100: By default ebgp-requires-policy is disabled to keep VyOS
+        # 1.3 and 1.2 backwards compatibility
+        self.assertIn(f' no bgp ebgp-requires-policy', frrconfig)
 
         for redistribute in redistributes:
             # FRR calls this OSPF6
