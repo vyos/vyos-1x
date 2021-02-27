@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.template import is_ip
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -115,8 +116,9 @@ def verify(bgp):
                     if not verify_remote_as(peer_config, asn_config):
                         raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
 
+                    # Only checks for ipv4 and ipv6 neighbors
                     # Check if neighbor address is assigned as system interface address
-                    if is_addr_assigned(peer):
+                    if is_ip(peer) and is_addr_assigned(peer):
                         raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
 
                 for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
