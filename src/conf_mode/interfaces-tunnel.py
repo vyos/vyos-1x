@@ -31,20 +31,24 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
-from vyos.ifconfig import GREIf
-from vyos.ifconfig import GRETapIf
-from vyos.ifconfig import IPIPIf
-from vyos.ifconfig import IP6GREIf
-from vyos.ifconfig import IPIP6If
-from vyos.ifconfig import IP6IP6If
-from vyos.ifconfig import SitIf
-from vyos.ifconfig import Sit6RDIf
+from vyos.ifconfig import TunnelIf
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
+from vyos.util import cmd
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+def get_tunnel_encapsulation(interface):
+    """ Returns the used encapsulation protocol for given interface.
+        If interface does not exist, None is returned.
+    """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    return tmp['linkinfo']['info_kind']
 
 def get_config(config=None):
     """
@@ -79,8 +83,8 @@ def verify(tunnel):
         return None
 
     if 'encapsulation' not in tunnel:
-        raise ConfigError('Must configure the tunnel encapsulation for '\
-                          '{ifname}!'.format(**tunnel))
+        error = 'Must configure encapsulation for "{ifname}"!'
+        raise ConfigError(error.format(**tunnel))
 
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
@@ -103,29 +107,20 @@ def generate(tunnel):
     return None
 
 def apply(tunnel):
-    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel:
-        if tunnel['ifname'] in interfaces():
-            tmp = Interface(tunnel['ifname'])
+    interface = tunnel['ifname']
+    # If a gretap tunnel is already existing we can not "simply" change local or
+    # remote addresses. This returns "Operation not supported" by the Kernel.
+    # There is no other solution to destroy and recreate the tunnel.
+    encap = get_tunnel_encapsulation(interface)
+
+    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel or encap == 'gretap':
+        if interface in interfaces():
+            tmp = Interface(interface)
             tmp.remove()
         if 'deleted' in tunnel:
             return None
 
-    dispatch = {
-        'gre': GREIf,
-        'gre-bridge': GRETapIf,
-        'ipip': IPIPIf,
-        'ipip6': IPIP6If,
-        'ip6ip6': IP6IP6If,
-        'ip6gre': IP6GREIf,
-        'sit': SitIf,
-    }
-
-    # We need to re-map the tunnel encapsulation proto to a valid interface class
-    encap = tunnel['encapsulation']
-    klass = dispatch[encap]
-
-    tun = klass(**tunnel)
-    tun.change_options()
+    tun = TunnelIf(**tunnel)
     tun.update(tunnel)
 
     return None

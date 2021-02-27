@@ -124,10 +124,11 @@ def verify_tunnel(config):
         if 'remote_ip' in config and not is_ipv4(config['remote_ip']):
             raise ConfigError(f'{error_ipv4} remote-ip')
 
-    if config['encapsulation'] in ['sit', 'gre-bridge']:
+    if config['encapsulation'] in ['sit', 'gretap']:
         if 'source_interface' in config:
-            raise ConfigError('Option source-interface can not be used with ' \
-                              'encapsulation "sit" or "gre-bridge"')
+            encapsulation = config['encapsulation']
+            raise ConfigError(f'Option source-interface can not be used with ' \
+                              f'encapsulation "{encapsulation}"!')
     elif config['encapsulation'] == 'gre':
         if 'local_ip' in config and is_ipv6(config['local_ip']):
             raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
