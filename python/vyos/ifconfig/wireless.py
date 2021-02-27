@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -20,11 +20,7 @@ class WiFiIf(Interface):
     """
     Handle WIFI/WLAN interfaces.
     """
-
-    default = {
-        'type': 'wifi',
-        'phy': 'phy0'
-    }
+    iftype = 'wifi'
     definition = {
         **Interface.definition,
         **{
@@ -33,14 +29,10 @@ class WiFiIf(Interface):
             'bridgeable': True,
         }
     }
-    options = Interface.options + \
-        ['phy', 'op_mode']
-
     def _create(self):
         # all interfaces will be added in monitor mode
-        cmd = 'iw phy {phy} interface add {ifname} type monitor' \
-            .format(**self.config)
-        self._cmd(cmd)
+        cmd = 'iw phy {physical_device} interface add {ifname} type monitor'
+        self._cmd(cmd.format(**self.config))
 
         # wireless interface is administratively down by default
         self.set_admin_state('down')
@@ -81,14 +73,3 @@ class WiFiIf(Interface):
         # reconfiguration.
         state = 'down' if 'disable' in config else 'up'
         self.set_admin_state(state)
-
-
-@Interface.register
-class WiFiModemIf(WiFiIf):
-    definition = {
-        **WiFiIf.definition,
-        **{
-            'section': 'wirelessmodem',
-            'prefixes': ['wlm', ],
-        }
-    }

@@ -27,7 +27,8 @@
           </leafNode>
           #include <include/interface-ipv4-options.xml.i>
           #include <include/interface-ipv6-options.xml.i>
-          #include <include/tunnel-local-remote-ip.xml.i>
+          #include <include/source-address-ipv4-ipv6.xml.i>
+          #include <include/tunnel-remote.xml.i>
           <leafNode name="source-interface">
             <properties>
               <help>Physical Interface used for underlaying traffic</help>
@@ -79,15 +80,15 @@
             <properties>
               <help>Encapsulation of this tunnel interface</help>
               <completionHelp>
-                <list>gre gre-bridge ip6gre ip6ip6 ipip ipip6 sit</list>
+                <list>gre gretap ip6gre ip6ip6 ipip ipip6 sit</list>
               </completionHelp>
               <valueHelp>
                 <format>gre</format>
                 <description>Generic Routing Encapsulation</description>
               </valueHelp>
               <valueHelp>
-                <format>gre-bridge</format>
-                <description>Generic Routing Encapsulation bridge interface</description>
+                <format>gretap</format>
+                <description>Generic Routing Encapsulation (virtual L2 tunnel)</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6gre</format>
@@ -110,9 +111,9 @@
                 <description>Simple Internet Transition encapsulation</description>
               </valueHelp>
               <constraint>
-                <regex>^(gre|gre-bridge|ip6gre|ip6ip6|ipip|ipip6|sit)$</regex>
+                <regex>^(gre|gretap|ip6gre|ip6ip6|ipip|ipip6|sit)$</regex>
               </constraint>
-              <constraintErrorMessage>Invalid encapsulation, must be one of: gre, gre-bridge, ipip, sit, ipip6, ip6ip6, ip6gre</constraintErrorMessage>
+              <constraintErrorMessage>Invalid encapsulation, must be one of: gre, gretap, ipip, sit, ipip6, ip6ip6, ip6gre</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="multicast">

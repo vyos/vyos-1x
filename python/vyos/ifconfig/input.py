@@ -17,9 +17,6 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class InputIf(Interface):
-    default = {
-        'type': '',
-    }
     definition = {
         **Interface.definition,
         **{

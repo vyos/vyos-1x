@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,9 +31,7 @@ class BondIf(Interface):
     monitoring may be performed.
     """
 
-    default = {
-        'type': 'bond',
-    }
+    iftype = 'bond'
     definition = {
         **Interface.definition,
         ** {

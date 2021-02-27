@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,7 @@ class DummyIf(Interface):
     packets through without actually transmitting them.
     """
 
-    default = {
-        'type': 'dummy',
-    }
+    iftype = 'dummy'
     definition = {
         **Interface.definition,
         **{

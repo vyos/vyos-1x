@@ -72,18 +72,8 @@ def apply(geneve):
         g.remove()
 
     if 'deleted' not in geneve:
-        # This is a special type of interface which needs additional parameters
-        # when created using iproute2. Instead of passing a ton of arguments,
-        # use a dictionary provided by the interface class which holds all the
-        # options necessary.
-        conf = GeneveIf.get_config()
-
-        # Assign GENEVE instance configuration parameters to config dict
-        conf['vni'] = geneve['vni']
-        conf['remote'] = geneve['remote']
-
         # Finally create the new interface
-        g = GeneveIf(geneve['ifname'], **conf)
+        g = GeneveIf(**geneve)
         g.update(geneve)
 
     return None

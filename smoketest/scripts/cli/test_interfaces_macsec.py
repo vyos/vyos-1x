@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import unittest
 
@@ -22,6 +23,7 @@ from netifaces import interfaces
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.util import cmd
 from vyos.util import read_file
 from vyos.util import process_named_running
 
@@ -29,6 +31,16 @@ def get_config_value(interface, key):
     tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
     tmp = re.findall(r'\n?{}=(.*)'.format(key), tmp)
     return tmp[0]
+
+def get_cipher(interface):
+    """ Returns the used encapsulation protocol for given interface.
+        If interface does not exist, None is returned.
+    """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    return tmp['linkinfo']['info_data']['cipher_suite'].lower()
 
 class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
     @classmethod
@@ -107,8 +119,9 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check for running process
             self.assertTrue(process_named_running('wpa_supplicant'))
 
-    def test_macsec_mandatory_options(self):
+    def test_macsec_gcm_aes_128(self):
         interface = 'macsec1'
+        cipher = 'gcm-aes-128'
         self.session.set(self._base_path + [interface])
 
         # check validate() - source interface is mandatory
@@ -119,11 +132,33 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
         # check validate() - cipher is mandatory
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
-        self.session.set(self._base_path + [interface, 'security', 'cipher', 'gcm-aes-128'])
+        self.session.set(self._base_path + [interface, 'security', 'cipher', cipher])
 
         # final commit and verify
         self.session.commit()
         self.assertIn(interface, interfaces())
+        self.assertIn(interface, interfaces())
+        self.assertEqual(cipher, get_cipher(interface))
+
+    def test_macsec_gcm_aes_256(self):
+        interface = 'macsec4'
+        cipher = 'gcm-aes-256'
+        self.session.set(self._base_path + [interface])
+
+        # check validate() - source interface is mandatory
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(self._base_path + [interface, 'source-interface', 'eth0'])
+
+        # check validate() - cipher is mandatory
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+        self.session.set(self._base_path + [interface, 'security', 'cipher', cipher])
+
+        # final commit and verify
+        self.session.commit()
+        self.assertIn(interface, interfaces())
+        self.assertEqual(cipher, get_cipher(interface))
 
     def test_macsec_source_interface(self):
         # Ensure source-interface can bot be part of any other bond or bridge

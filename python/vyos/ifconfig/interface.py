@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -60,7 +60,6 @@ class Interface(Control):
     options = ['debug', 'create']
     required = []
     default = {
-        'type': '',
         'debug': True,
         'create': True,
     }
@@ -232,26 +231,21 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> i = Interface('eth0')
         """
+        self.config = deepcopy(kargs)
+        self.config['ifname'] = self.ifname = ifname
 
-        self.config = deepcopy(self.default)
-        for k in self.options:
-            if k in kargs:
-                self.config[k] = kargs[k]
-
-        # make sure the ifname is the first argument and not from the dict
-        self.config['ifname'] = ifname
         self._admin_state_down_cnt = 0
 
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
-        self.ifname = ifname
 
         if not self.exists(ifname):
-            # Any instance of Interface, such as Interface('eth0')
-            # can be used safely to access the generic function in this class
-            # as 'type' is unset, the class can not be created
-            if not self.config['type']:
+            # Any instance of Interface, such as Interface('eth0') can be used
+            # safely to access the generic function in this class as 'type' is
+            # unset, the class can not be created
+            if not self.iftype:
                 raise Exception(f'interface "{ifname}" not found')
+            self.config['type'] = self.iftype
 
             # Should an Instance of a child class (EthernetIf, DummyIf, ..)
             # be required, then create should be set to False to not accidentally create it.
@@ -1300,17 +1294,7 @@ class Interface(Control):
 
 class VLANIf(Interface):
     """ Specific class which abstracts 802.1q and 802.1ad (Q-in-Q) VLAN interfaces """
-    default = {
-        'type': 'vlan',
-        'source_interface': '',
-        'vlan_id': '',
-        'protocol': '',
-        'ingress_qos': '',
-        'egress_qos': '',
-    }
-
-    options = Interface.options + \
-        ['source_interface', 'vlan_id', 'protocol', 'ingress_qos', 'egress_qos']
+    iftype = 'vlan'
 
     def remove(self):
         """
@@ -1339,11 +1323,11 @@ class VLANIf(Interface):
             return
 
         cmd = 'ip link add link {source_interface} name {ifname} type vlan id {vlan_id}'
-        if self.config['protocol']:
+        if 'protocol' in self.config:
             cmd += ' protocol {protocol}'
-        if self.config['ingress_qos']:
+        if 'ingress_qos' in self.config:
             cmd += ' ingress-qos-map {ingress_qos}'
-        if self.config['egress_qos']:
+        if 'egress_qos' in self.config:
             cmd += ' egress-qos-map {egress_qos}'
 
         self._cmd(cmd.format(**self.config))

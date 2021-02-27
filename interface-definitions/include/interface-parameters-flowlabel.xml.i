@@ -11,6 +11,5 @@
     </constraint>
     <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
   </properties>
-  <defaultValue>inherit</defaultValue>
 </leafNode>
 <!-- included end -->

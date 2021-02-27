@@ -90,19 +90,8 @@ def apply(vxlan):
         v.remove()
 
     if 'deleted' not in vxlan:
-        # This is a special type of interface which needs additional parameters
-        # when created using iproute2. Instead of passing a ton of arguments,
-        # use a dictionary provided by the interface class which holds all the
-        # options necessary.
-        conf = VXLANIf.get_config()
-
-        # Assign VXLAN instance configuration parameters to config dict
-        for tmp in ['vni', 'group', 'source_address', 'source_interface', 'remote', 'port']:
-            if tmp in vxlan:
-                conf[tmp] = vxlan[tmp]
-
         # Finally create the new interface
-        v = VXLANIf(vxlan['ifname'], **conf)
+        v = VXLANIf(**vxlan)
         v.update(vxlan)
 
     return None

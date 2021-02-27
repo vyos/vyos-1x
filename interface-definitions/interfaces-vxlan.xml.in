@@ -44,22 +44,43 @@
           <leafNode name="mtu">
             <defaultValue>1450</defaultValue>
           </leafNode>
-          <leafNode name="remote">
+          #include <include/tunnel-remote.xml.i>
+          <node name="parameters">
             <properties>
-              <help>Remote address of VXLAN tunnel</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>Remote IPv4 address of VXLAN tunnel</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6</format>
-                <description>Remote IPv6 address of VXLAN tunnel</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ip-address"/>
-              </constraint>
+              <help>VXLAN tunnel parameters</help>
             </properties>
-          </leafNode>
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="df">
+                    <properties>
+                      <help>Specifies the usage of the do not fragment (DF) bit</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  #include <include/interface-parameters-tos.xml.i>
+                  #include <include/interface-parameters-ttl.xml.i>
+                </children>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>IPv6 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/interface-parameters-flowlabel.xml.i>
+                </children>
+              </node>
+              <leafNode name="nolearning">
+                <properties>
+                  <help>Do not add unknown addresses into forwarding database</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="port">
             <properties>
               <help>Destination port of VXLAN tunnel (default: 8472)</help>

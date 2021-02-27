@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -30,15 +30,7 @@ from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
 from vyos.ifconfig.vtun import VTunIf
 from vyos.ifconfig.vti import VTIIf
-from vyos.ifconfig.pppoe import PPPoEIf
-from vyos.ifconfig.tunnel import GREIf
-from vyos.ifconfig.tunnel import GRETapIf
-from vyos.ifconfig.tunnel import IP6GREIf
-from vyos.ifconfig.tunnel import IPIPIf
-from vyos.ifconfig.tunnel import IPIP6If
-from vyos.ifconfig.tunnel import IP6IP6If
-from vyos.ifconfig.tunnel import SitIf
-from vyos.ifconfig.tunnel import Sit6RDIf
+from vyos.ifconfig.tunnel import TunnelIf
 from vyos.ifconfig.erspan import ERSpanIf
 from vyos.ifconfig.erspan import ER6SpanIf
 from vyos.ifconfig.wireless import WiFiIf
