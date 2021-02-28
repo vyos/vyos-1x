@@ -27,8 +27,9 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
         cls._test_mtu = True
         cls._base_path = ['interfaces', 'vxlan']
         cls._options = {
-            'vxlan0': ['vni 10', 'remote 127.0.0.2'],
-            'vxlan1': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
+            'vxlan10': ['vni 10', 'remote 127.0.0.2'],
+            'vxlan20': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
+            'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1'],
         }
         cls._interfaces = list(cls._options)
 
