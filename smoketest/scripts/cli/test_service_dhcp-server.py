@@ -200,6 +200,7 @@ class TestServiceDHCPServer(unittest.TestCase):
 
     def test_dhcp_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
+        domain_name = 'private'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
