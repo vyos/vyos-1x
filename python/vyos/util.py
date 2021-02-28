@@ -645,3 +645,13 @@ def dict_search(path, dict):
     for p in parts[:-1]:
         c = c.get(p, {})
     return c.get(parts[-1], None)
+
+def get_json_iface_options(interface):
+    """ Returns the used encapsulation protocol for given interface.
+        If interface does not exist, None is returned.
+    """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    return tmp

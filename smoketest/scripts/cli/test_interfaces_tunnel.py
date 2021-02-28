@@ -15,10 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import json
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.util import get_json_iface_options
 from vyos.template import inc_ip
 from vyos.util import cmd
 
@@ -28,38 +28,6 @@ remote_ip4 = '192.0.2.100'
 remote_ip6 = '2001:db8::ffff'
 source_if = 'dum2222'
 mtu = 1476
-
-def tunnel_conf(interface):
-    tmp = cmd(f'ip -d -j link show {interface}')
-    # {'address': '2.2.2.2',
-    #  'broadcast': '192.0.2.10',
-    #  'flags': ['POINTOPOINT', 'NOARP', 'UP', 'LOWER_UP'],
-    #  'group': 'default',
-    #  'gso_max_segs': 65535,
-    #  'gso_max_size': 65536,
-    #  'ifindex': 10,
-    #  'ifname': 'tun10',
-    #  'inet6_addr_gen_mode': 'none',
-    #  'link': None,
-    #  'link_pointtopoint': True,
-    #  'link_type': 'gre',
-    #  'linkinfo': {'info_data': {'local': '2.2.2.2',
-    #                             'pmtudisc': True,
-    #                             'remote': '192.0.2.10',
-    #                             'tos': '0x1',
-    #                             'ttl': 255},
-    #               'info_kind': 'gre'},
-    #  'linkmode': 'DEFAULT',
-    #  'max_mtu': 65511,
-    #  'min_mtu': 68,
-    #  'mtu': 1476,
-    #  'num_rx_queues': 1,
-    #  'num_tx_queues': 1,
-    #  'operstate': 'UNKNOWN',
-    #  'promiscuity': 0,
-    #  'qdisc': 'noqueue',
-    #  'txqlen': 1000}
-    return json.loads(tmp)[0]
 
 class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     @classmethod
@@ -119,7 +87,10 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check if commit is ok
             self.session.commit()
 
-            conf = tunnel_conf(interface)
+            conf = get_json_iface_options(interface)
+            if encapsulation not in ['sit', 'gretap']:
+                self.assertEqual(source_if, conf['link'])
+
             self.assertEqual(interface, conf['ifname'])
             self.assertEqual(mtu, conf['mtu'])
 
@@ -164,7 +135,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check if commit is ok
             self.session.commit()
 
-            conf = tunnel_conf(interface)
+            conf = get_json_iface_options(interface)
             self.assertEqual(interface, conf['ifname'])
             self.assertEqual(mtu, conf['mtu'])
             self.assertEqual(source_if, conf['link'])
@@ -204,6 +175,32 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
+    def test_tunnel_parameters_gre(self):
+        interface = f'tun1030'
+        gre_key = '10'
+        encapsulation = 'gre'
+        tos = '20'
+
+        self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
+        self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote', remote_ip4])
+
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'no-pmtu-discovery'])
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'key', gre_key])
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'tos', tos])
+
+        # Check if commit is ok
+        self.session.commit()
+
+        conf = get_json_iface_options(interface)
+        self.assertEqual(mtu,           conf['mtu'])
+        self.assertEqual(interface,     conf['ifname'])
+        self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
+        self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
+        self.assertFalse(               conf['linkinfo']['info_data']['pmtudisc'])
+
     def test_gretap_parameters_change(self):
         interface = f'tun1040'
         gre_key = '10'
@@ -217,7 +214,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
-        conf = tunnel_conf(interface)
+        conf = get_json_iface_options(interface)
         self.assertEqual(mtu,           conf['mtu'])
         self.assertEqual(interface,     conf['ifname'])
         self.assertEqual('gretap',      conf['linkinfo']['info_kind'])
@@ -231,7 +228,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
-        conf = tunnel_conf(interface)
+        conf = get_json_iface_options(interface)
         self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
 if __name__ == '__main__':
