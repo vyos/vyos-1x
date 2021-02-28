@@ -233,11 +233,6 @@ class BridgeIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
-        # call base class first
-        super().update(config)
-
-        ifname = config['ifname']
-
         # Set ageing time
         value = config.get('aging')
         self.set_ageing_time(value)
@@ -277,6 +272,7 @@ class BridgeIf(Interface):
         vlan_filter = '1' if 'enable_vlan' in config else '0'
         self.set_vlan_filter(vlan_filter)
 
+        ifname = config['ifname']
         if int(vlan_filter):
             add_vlan = []
             cur_vlan_ids = get_vlan_ids(ifname)
@@ -364,12 +360,5 @@ class BridgeIf(Interface):
                         cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
                         self._cmd(cmd)
 
-        # Enable/Disable of an interface must always be done at the end of the
-        # derived class to make use of the ref-counting set_admin_state()
-        # function. We will only enable the interface if 'up' was called as
-        # often as 'down'. This is required by some interface implementations
-        # as certain parameters can only be changed when the interface is
-        # in admin-down state. This ensures the link does not flap during
-        # reconfiguration.
-        state = 'down' if 'disable' in config else 'up'
-        self.set_admin_state(state)
+        # call base class first
+        super().update(config)

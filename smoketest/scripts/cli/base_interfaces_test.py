@@ -292,6 +292,42 @@ class BasicInterfaceTest:
                     self.assertEqual(tmp, self._mtu)
                     self.assertEqual(Interface(vif).get_admin_state(), 'up')
 
+        def test_vif_8021q_lower_up_down(self):
+            # Testcase for https://phabricator.vyos.net/T3349
+            if not self._test_vlan:
+                self.skipTest('not supported')
+
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.session.set(base + option.split())
+
+                # disable the lower interface
+                self.session.set(base + ['disable'])
+
+                for vlan in self._vlan_range:
+                    vlan_base = self._base_path + [interface, 'vif', vlan]
+                    # disable the vlan interface
+                    self.session.set(vlan_base + ['disable'])
+
+            self.session.commit()
+
+            # re-enable all lower interfaces
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                self.session.delete(base + ['disable'])
+
+            self.session.commit()
+
+            # verify that the lower interfaces are admin up and the vlan
+            # interfaces are all admin down
+            for interface in self._interfaces:
+                self.assertEqual(Interface(interface).get_admin_state(), 'up')
+
+                for vlan in self._vlan_range:
+                    ifname = f'{interface}.{vlan}'
+                    self.assertEqual(Interface(ifname).get_admin_state(), 'down')
+
 
         def test_vif_s_8021ad_vlan_interfaces(self):
             # XXX: This testcase is not allowed to run as first testcase, reason

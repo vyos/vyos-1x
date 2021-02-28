@@ -318,9 +318,6 @@ class EthernetIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
-        # call base class first
-        super().update(config)
-
         # disable ethernet flow control (pause frames)
         value = 'off' if 'disable_flow_control' in config else 'on'
         self.set_flow_control(value)
@@ -354,12 +351,5 @@ class EthernetIf(Interface):
             for b_type in config['ring_buffer']:
                 self.set_ring_buffer(b_type, config['ring_buffer'][b_type])
 
-        # Enable/Disable of an interface must always be done at the end of the
-        # derived class to make use of the ref-counting set_admin_state()
-        # function. We will only enable the interface if 'up' was called as
-        # often as 'down'. This is required by some interface implementations
-        # as certain parameters can only be changed when the interface is
-        # in admin-down state. This ensures the link does not flap during
-        # reconfiguration.
-        state = 'down' if 'disable' in config else 'up'
-        self.set_admin_state(state)
+        # call base class first
+        super().update(config)
