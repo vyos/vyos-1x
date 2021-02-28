@@ -16,7 +16,10 @@
 
 import unittest
 
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.configsession import ConfigSession
+from vyos.ifconfig import Interface
+from vyos.util import get_json_iface_options
+
 from base_interfaces_test import BasicInterfaceTest
 
 class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -33,5 +36,30 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
         }
         cls._interfaces = list(cls._options)
 
+    def test_vxlan_parameters(self):
+        addr = '192.0.2.0/31'
+        tos = '40'
+        ttl = 20
+        for intf in self._interfaces:
+            self.session.set(self._base_path + [intf, 'address', addr])
+            for option in self._options.get(intf, []):
+                self.session.set(self._base_path + [intf] + option.split())
+
+            self.session.set(self._base_path + [intf, 'parameters', 'ip', 'dont-fragment'])
+            self.session.set(self._base_path + [intf, 'parameters', 'ip', 'tos', tos])
+            self.session.set(self._base_path + [intf, 'parameters', 'ip', 'ttl', str(ttl)])
+            ttl += 10
+
+        self.session.commit()
+
+        ttl = 20
+        for interface in self._interfaces:
+            options = get_json_iface_options(interface)
+            self.assertEqual('set',      options['linkinfo']['info_data']['df'])
+            self.assertEqual(f'0x{tos}', options['linkinfo']['info_data']['tos'])
+            self.assertEqual(ttl,        options['linkinfo']['info_data']['ttl'])
+            self.assertEqual(Interface(interface).get_admin_state(), 'up')
+            ttl += 10
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

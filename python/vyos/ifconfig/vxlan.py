@@ -54,14 +54,15 @@ class VXLANIf(Interface):
         # arguments used by iproute2. For more information please refer to:
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         mapping = {
-            'source_address'            : 'local',
-            'source_interface'          : 'dev',
-            'remote'                    : 'remote',
-            'group'                     : 'group',
-            'parameters.ip.tos'         : 'tos',
-            'parameters.ip.ttl'         : 'ttl',
-            'parameters.ipv6.flowlabel' : 'flowlabel',
-            'parameters.nolearning'     : 'nolearning',
+            'source_address'             : 'local',
+            'source_interface'           : 'dev',
+            'remote'                     : 'remote',
+            'group'                      : 'group',
+            'parameters.ip.dont_fragment': 'df set',
+            'parameters.ip.tos'          : 'tos',
+            'parameters.ip.ttl'          : 'ttl',
+            'parameters.ipv6.flowlabel'  : 'flowlabel',
+            'parameters.nolearning'      : 'nolearning',
         }
 
         cmd = 'ip link add {ifname} type {type} id {vni} dstport {port}'
