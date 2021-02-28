@@ -14,8 +14,7 @@
       <description>IPv6 source address</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-address"/>
-      <validator name="ipv6-address"/>
+      <validator name="ip-address"/>
     </constraint>
   </properties>
 </leafNode>
