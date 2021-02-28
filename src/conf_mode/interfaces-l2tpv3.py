@@ -34,7 +34,6 @@ airbag.enable()
 
 k_mod = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
 
-
 def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -65,15 +64,15 @@ def verify(l2tpv3):
 
     interface = l2tpv3['ifname']
 
-    for key in ['local_ip', 'remote_ip', 'tunnel_id', 'peer_tunnel_id',
+    for key in ['source_address', 'remote', 'tunnel_id', 'peer_tunnel_id',
                 'session_id', 'peer_session_id']:
         if key not in l2tpv3:
             tmp = key.replace('_', '-')
-            raise ConfigError(f'L2TPv3 {tmp} must be configured!')
+            raise ConfigError(f'Missing mandatory L2TPv3 option: "{tmp}"!')
 
-    if not is_addr_assigned(l2tpv3['local_ip']):
-        raise ConfigError('L2TPv3 local-ip address '
-                          '"{local_ip}" is not configured!'.format(**l2tpv3))
+    if not is_addr_assigned(l2tpv3['source_address']):
+        raise ConfigError('L2TPv3 source-address address "{source_address}" '
+                          'not configured on any interface!'.format(**l2tpv3))
 
     verify_mtu_ipv6(l2tpv3)
     verify_address(l2tpv3)

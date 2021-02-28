@@ -27,12 +27,12 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
         cls._test_ipv6 = True
         cls._base_path = ['interfaces', 'l2tpv3']
         cls._options = {
-            'l2tpeth10': ['local-ip 127.0.0.1', 'remote-ip 127.10.10.10',
+            'l2tpeth10': ['source-address 127.0.0.1', 'remote 127.10.10.10',
                           'tunnel-id 100', 'peer-tunnel-id 10',
                           'session-id 100', 'peer-session-id 10',
                           'source-port 1010', 'destination-port 10101'],
-            'l2tpeth20': ['local-ip 127.0.0.1', 'peer-session-id 20',
-                          'peer-tunnel-id 200', 'remote-ip 127.20.20.20',
+            'l2tpeth20': ['source-address 127.0.0.1', 'peer-session-id 20',
+                          'peer-tunnel-id 200', 'remote 127.20.20.20',
                           'session-id 20', 'tunnel-id 200',
                           'source-port 2020', 'destination-port 20202'],
         }

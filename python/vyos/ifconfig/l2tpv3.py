@@ -41,8 +41,8 @@ class L2TPv3If(Interface):
         cmd += ' udp_sport {source_port}'
         cmd += ' udp_dport {destination_port}'
         cmd += ' encap {encapsulation}'
-        cmd += ' local {local_ip}'
-        cmd += ' remote {remote_ip}'
+        cmd += ' local {source_address}'
+        cmd += ' remote {remote}'
         self._cmd(cmd.format(**self.config))
 
         # setup session

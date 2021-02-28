@@ -28,30 +28,30 @@ if __name__ == '__main__':
         config_file = f.read()
 
     config = ConfigTree(config_file)
-    base = ['interfaces', 'tunnel']
 
-    if not config.exists(base):
-        # Nothing to do
-        exit(0)
+    for type in ['tunnel', 'l2tpv3']:
+        base = ['interfaces', type]
+        if not config.exists(base):
+            # Nothing to do
+            continue
 
-    #
-    # Migrate "interface tunnel <tunX> encapsulation gre-bridge" to gretap
-    # Migrate "interface tunnel <tunX> local-ip" to source-address
-    # Migrate "interface tunnel <tunX> remote-ip" to remote
-    for interface in config.list_nodes(base):
-        encap_path = base + [interface, 'encapsulation']
-        if config.exists(encap_path):
-            tmp = config.return_value(encap_path)
-            if tmp == 'gre-bridge':
-                config.set(encap_path, value='gretap')
+        for interface in config.list_nodes(base):
+            # Migrate "interface tunnel <tunX> encapsulation gre-bridge" to gretap
+            encap_path = base + [interface, 'encapsulation']
+            if type == 'tunnel' and config.exists(encap_path):
+                tmp = config.return_value(encap_path)
+                if tmp == 'gre-bridge':
+                    config.set(encap_path, value='gretap')
 
-        local_ip_path = base + [interface, 'local-ip']
-        if config.exists(local_ip_path):
-            config.rename(local_ip_path, 'source-address')
+            # Migrate "interface tunnel|l2tpv3 <interface> local-ip" to source-address
+            # Migrate "interface tunnel|l2tpv3 <interface> remote-ip" to remote
+            local_ip_path = base + [interface, 'local-ip']
+            if config.exists(local_ip_path):
+                config.rename(local_ip_path, 'source-address')
 
-        remote_ip_path = base + [interface, 'remote-ip']
-        if config.exists(remote_ip_path):
-            config.rename(remote_ip_path, 'remote')
+            remote_ip_path = base + [interface, 'remote-ip']
+            if config.exists(remote_ip_path):
+                config.rename(remote_ip_path, 'remote')
 
     try:
         with open(file_name, 'w') as f:
