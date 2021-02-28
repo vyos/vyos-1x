@@ -343,9 +343,6 @@ class BondIf(Interface):
         if 'shutdown_required' in config:
             self.set_admin_state('down')
 
-        # call base class first
-        super().update(config)
-
         # ARP monitor targets need to be synchronized between sysfs and CLI.
         # Unfortunately an address can't be send twice to sysfs as this will
         # result in the following exception:  OSError: [Errno 22] Invalid argument.
@@ -404,12 +401,5 @@ class BondIf(Interface):
         value = config.get('primary')
         if value: self.set_primary(value)
 
-        # Enable/Disable of an interface must always be done at the end of the
-        # derived class to make use of the ref-counting set_admin_state()
-        # function. We will only enable the interface if 'up' was called as
-        # often as 'down'. This is required by some interface implementations
-        # as certain parameters can only be changed when the interface is
-        # in admin-down state. This ensures the link does not flap during
-        # reconfiguration.
-        state = 'down' if 'disable' in config else 'up'
-        self.set_admin_state(state)
+        # call base class first
+        super().update(config)
