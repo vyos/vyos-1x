@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,19 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import json
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import cmd
+from vyos.util import get_json_iface_options
 
 from base_interfaces_test import BasicInterfaceTest
 
 mtu = 1500
-
-def erspan_conf(interface):
-    tmp = cmd(f'ip -d -j link show {interface}')
-    return json.loads(tmp)[0]
 
 class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     def setUp(self):
@@ -57,7 +52,7 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-        conf = erspan_conf(interface)
+        conf = get_json_iface_options(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(mtu, conf['mtu'])
@@ -78,7 +73,7 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-        conf = erspan_conf(interface)
+        conf = get_json_iface_options(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(mtu, conf['mtu'])

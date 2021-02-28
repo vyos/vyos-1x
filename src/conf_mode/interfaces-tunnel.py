@@ -34,21 +34,11 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import TunnelIf
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.util import cmd
+from vyos.util import get_json_iface_options
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
-def get_tunnel_encapsulation(interface):
-    """ Returns the used encapsulation protocol for given interface.
-        If interface does not exist, None is returned.
-    """
-    if not os.path.exists(f'/sys/class/net/{interface}'):
-        return None
-    from json import loads
-    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
-    return tmp['linkinfo']['info_kind']
 
 def get_config(config=None):
     """
@@ -111,7 +101,9 @@ def apply(tunnel):
     # If a gretap tunnel is already existing we can not "simply" change local or
     # remote addresses. This returns "Operation not supported" by the Kernel.
     # There is no other solution to destroy and recreate the tunnel.
-    encap = get_tunnel_encapsulation(interface)
+    encap = ''
+    tmp = get_json_iface_options(interface)
+    if tmp: encap = dict_search('linkinfo.info_kind', tmp)
 
     if 'deleted' in tunnel or 'encapsulation_changed' in tunnel or encap == 'gretap':
         if interface in interfaces():

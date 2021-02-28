@@ -25,6 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.util import get_json_iface_options
 from vyos.util import process_named_running
 
 def get_config_value(interface, key):
@@ -33,13 +34,7 @@ def get_config_value(interface, key):
     return tmp[0]
 
 def get_cipher(interface):
-    """ Returns the used encapsulation protocol for given interface.
-        If interface does not exist, None is returned.
-    """
-    if not os.path.exists(f'/sys/class/net/{interface}'):
-        return None
-    from json import loads
-    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    tmp = get_json_iface_options(interface)
     return tmp['linkinfo']['info_data']['cipher_suite'].lower()
 
 class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
