@@ -99,6 +99,12 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.set(base + ['enable-vlan'])
         super().test_vif_8021q_interfaces()
 
+    def test_vif_8021q_lower_up_down(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.session.set(base + ['enable-vlan'])
+        super().test_vif_8021q_interfaces()
+
     def test_bridge_vlan_filter(self):
 
         vif_vlan = 2
