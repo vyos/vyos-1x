@@ -102,8 +102,10 @@ ac-name={{ access_concentrator }}
 interface={{ iface }}
 {%     endif %}
 {%     if iface_config.vlan_id is defined and iface_config.vlan_range is not defined %}
-vlan-mon={{ iface }},{{ iface_config.vlan_id | join(',') }}
-interface=re:{{ iface | replace('.', '\\.') }}\.\d+
+{%       for vlan in iface_config.vlan_id %}
+interface={{ iface }}.{{ vlan }}
+vlan-mon={{ iface }},{{ vlan }}
+{%       endfor %}
 {%     endif %}
 {%     if iface_config.vlan_range is defined and iface_config.vlan_id is not defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan_range | join(',') }}
