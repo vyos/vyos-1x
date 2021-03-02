@@ -10,6 +10,26 @@
         </properties>
         <children>
           #include <include/generic-disable-node.xml.i>
+          <node name="global-parameters">
+            <properties>
+              <help>Additional global parameters for DHCPv6 server</help>
+            </properties>
+            <children>
+              <leafNode name="name-server">
+                <properties>
+                  <help>IPv6 address of a Recursive DNS Server</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of DNS name server</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="preference">
             <properties>
               <help>Preference of this DHCPv6 server compared with others</help>

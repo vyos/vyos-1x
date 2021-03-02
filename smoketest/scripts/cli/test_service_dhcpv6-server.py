@@ -151,5 +151,26 @@ class TestServiceDHCPServer(unittest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_global_nameserver(self):
+        shared_net_name = 'SMOKE-3'
+        ns_global_1 = '2001:db8::1111'
+        ns_global_2 = '2001:db8::2222'
+
+        self.session.set(base_path + ['global-parameters', 'name-server', ns_global_1])
+        self.session.set(base_path + ['global-parameters', 'name-server', ns_global_2])
+        self.session.set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet])
+
+        # commit changes
+        self.session.commit()
+
+        config = read_file(DHCPD_CONF)
+        self.assertIn(f'option dhcp6.name-servers {ns_global_1};', config)
+        self.assertIn(f'option dhcp6.name-servers {ns_global_2};', config)
+        self.assertIn(f'subnet6 {subnet}' + r' {', config)
+        self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
