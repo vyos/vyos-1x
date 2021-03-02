@@ -13,7 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.ifconfig.interface import Interface
+from vyos.ifconfig import Interface
+from vyos.util import dict_search
 
 @Interface.register
 class GeneveIf(Interface):
@@ -37,8 +38,27 @@ class GeneveIf(Interface):
     }
 
     def _create(self):
-        cmd = 'ip link add name {ifname} type geneve id {vni} remote {remote}'.format(**self.config)
-        self._cmd(cmd)
+        # This table represents a mapping from VyOS internal config dict to
+        # arguments used by iproute2. For more information please refer to:
+        # - https://man7.org/linux/man-pages/man8/ip-link.8.html
+        mapping = {
+            'parameters.ip.dont_fragment': 'df set',
+            'parameters.ip.tos'          : 'tos',
+            'parameters.ip.ttl'          : 'ttl',
+            'parameters.ipv6.flowlabel'  : 'flowlabel',
+        }
 
+        cmd = 'ip link add name {ifname} type {type} id {vni} remote {remote}'
+        for vyos_key, iproute2_key in mapping.items():
+            # dict_search will return an empty dict "{}" for valueless nodes like
+            # "parameters.nolearning" - thus we need to test the nodes existence
+            # by using isinstance()
+            tmp = dict_search(vyos_key, self.config)
+            if isinstance(tmp, dict):
+                cmd += f' {iproute2_key}'
+            elif tmp != None:
+                cmd += f' {iproute2_key} {tmp}'
+
+        self._cmd(cmd.format(**self.config))
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
