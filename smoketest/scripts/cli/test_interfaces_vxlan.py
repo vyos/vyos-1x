@@ -32,16 +32,14 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
         cls._options = {
             'vxlan10': ['vni 10', 'remote 127.0.0.2'],
             'vxlan20': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
-            'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1'],
+            'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1', 'parameters ipv6 flowlabel 0x1000'],
         }
         cls._interfaces = list(cls._options)
 
     def test_vxlan_parameters(self):
-        addr = '192.0.2.0/31'
         tos = '40'
         ttl = 20
         for intf in self._interfaces:
-            self.session.set(self._base_path + [intf, 'address', addr])
             for option in self._options.get(intf, []):
                 self.session.set(self._base_path + [intf] + option.split())
 
@@ -55,6 +53,31 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
         ttl = 20
         for interface in self._interfaces:
             options = get_json_iface_options(interface)
+
+            vni = options['linkinfo']['info_data']['id']
+            self.assertIn(f'vni {vni}', self._options[interface])
+
+            if any('link' in s for s in self._options[interface]):
+                link = options['linkinfo']['info_data']['link']
+                self.assertIn(f'source-interface {link}', self._options[interface])
+
+            if any('local6' in s for s in self._options[interface]):
+                remote = options['linkinfo']['info_data']['local6']
+                self.assertIn(f'source-address {local6}', self._options[interface])
+
+            if any('remote6' in s for s in self._options[interface]):
+                remote = options['linkinfo']['info_data']['remote6']
+                self.assertIn(f'remote {remote}', self._options[interface])
+
+            if any('group' in s for s in self._options[interface]):
+                group = options['linkinfo']['info_data']['group']
+                self.assertIn(f'group {group}', self._options[interface])
+
+            if any('flowlabel' in s for s in self._options[interface]):
+                label = options['linkinfo']['info_data']['label']
+                self.assertIn(f'parameters ipv6 flowlabel {label}', self._options[interface])
+
+            self.assertEqual('vxlan',    options['linkinfo']['info_kind'])
             self.assertEqual('set',      options['linkinfo']['info_data']['df'])
             self.assertEqual(f'0x{tos}', options['linkinfo']['info_data']['tos'])
             self.assertEqual(ttl,        options['linkinfo']['info_data']['ttl'])
@@ -62,4 +85,4 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
             ttl += 10
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

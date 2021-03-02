@@ -14,7 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos import ConfigError
-from vyos.ifconfig.interface import Interface
+from vyos.ifconfig import Interface
 from vyos.util import dict_search
 
 @Interface.register
@@ -77,4 +77,5 @@ class VXLANIf(Interface):
                 cmd += f' {iproute2_key} {tmp}'
 
         self._cmd(cmd.format(**self.config))
+        # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
