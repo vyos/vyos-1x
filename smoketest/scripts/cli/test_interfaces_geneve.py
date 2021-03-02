@@ -52,8 +52,6 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
         ttl = 20
         for interface in self._interfaces:
             options = get_json_iface_options(interface)
-            import pprint
-            pprint.pprint(options)
 
             vni = options['linkinfo']['info_data']['id']
             self.assertIn(f'vni {vni}',       self._options[interface])
