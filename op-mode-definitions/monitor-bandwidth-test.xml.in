@@ -7,12 +7,25 @@
           <help>Initiate or wait for bandwidth test</help>
         </properties>
         <children>
-          <leafNode name="accept">
+          <node name="accept">
             <properties>
-              <help>Wait for bandwidth test connections (port TCP/5001)</help>
+              <help>Wait for bandwidth test connections</help>
             </properties>
-            <command>/usr/bin/iperf -V -s</command>
-          </leafNode>
+            <children>
+              <leafNode name="tcp">
+                <properties>
+                  <help>Wait for bandwidth test connections (port TCP/5001)</help>
+                </properties>
+                <command>/usr/bin/iperf -V -s</command>
+              </leafNode>
+              <leafNode name="udp">
+                <properties>
+                  <help>Wait for bandwidth test connections (port UDP/5001)</help>
+                </properties>
+                <command>/usr/bin/iperf -V -s -u</command>
+              </leafNode>
+            </children>
+          </node>
           <tagNode name="initiate">
             <properties>
               <help>Initiate a bandwidth test to specified host (port TCP/5001)</help>
