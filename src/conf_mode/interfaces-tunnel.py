@@ -105,7 +105,7 @@ def apply(tunnel):
     tmp = get_json_iface_options(interface)
     if tmp: encap = dict_search('linkinfo.info_kind', tmp)
 
-    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel or encap == 'gretap':
+    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel or encap in ['gretap', 'ip6gretap']:
         if interface in interfaces():
             tmp = Interface(interface)
             tmp.remove()

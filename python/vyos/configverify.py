@@ -109,7 +109,7 @@ def verify_tunnel(config):
     if {'source_address', 'dhcp_interface'} <= set(config):
         raise ConfigError('Can not use both source-address and dhcp-interface')
 
-    if config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre', 'ip6erspan']:
+    if config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre', 'ip6gretap', 'ip6erspan']:
         error_ipv6 = 'Encapsulation mode requires IPv6'
         if 'source_address' in config and not is_ipv6(config['source_address']):
             raise ConfigError(f'{error_ipv6} source-address')
@@ -124,7 +124,7 @@ def verify_tunnel(config):
         if 'remote' in config and not is_ipv4(config['remote']):
             raise ConfigError(f'{error_ipv4} remote address')
 
-    if config['encapsulation'] in ['sit', 'gretap']:
+    if config['encapsulation'] in ['sit', 'gretap', 'ip6gretap']:
         if 'source_interface' in config:
             encapsulation = config['encapsulation']
             raise ConfigError(f'Option source-interface can not be used with ' \

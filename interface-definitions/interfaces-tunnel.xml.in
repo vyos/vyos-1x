@@ -80,7 +80,7 @@
             <properties>
               <help>Encapsulation of this tunnel interface</help>
               <completionHelp>
-                <list>gre gretap ip6gre ip6ip6 ipip ipip6 sit</list>
+                <list>gre gretap ip6gre ip6gretap ip6ip6 ipip ipip6 sit</list>
               </completionHelp>
               <valueHelp>
                 <format>gre</format>
@@ -93,6 +93,10 @@
               <valueHelp>
                 <format>ip6gre</format>
                 <description>GRE over IPv6 network</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ip6gretap</format>
+                <description>Generic Routing Encapsulation over IPv6 (virtual L2 tunnel)</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6ip6</format>
@@ -111,9 +115,9 @@
                 <description>Simple Internet Transition encapsulation</description>
               </valueHelp>
               <constraint>
-                <regex>^(gre|gretap|ip6gre|ip6ip6|ipip|ipip6|sit)$</regex>
+                <regex>^(gre|gretap|ip6gre|ip6gretap|ip6ip6|ipip|ipip6|sit)$</regex>
               </constraint>
-              <constraintErrorMessage>Invalid encapsulation, must be one of: gre, gretap, ipip, sit, ipip6, ip6ip6, ip6gre</constraintErrorMessage>
+              <constraintErrorMessage>Invalid encapsulation, must be one of: gre, gretap, ip6gre, ip6gretap, ipip, sit, ipip6 or ip6ip6</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="multicast">

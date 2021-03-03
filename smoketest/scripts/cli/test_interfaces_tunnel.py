@@ -105,7 +105,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         interface = f'tun1010'
         local_if_addr = f'10.10.200.1/24'
-        for encapsulation in ['ipip6', 'ip6ip6', 'ip6gre']:
+        for encapsulation in ['ipip6', 'ip6ip6', 'ip6gre', 'ip6gretap']:
             self.session.set(self._base_path + [interface, 'address', local_if_addr])
             self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
             self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
@@ -123,14 +123,21 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
             # Configure Tunnel Source interface
             self.session.set(self._base_path + [interface, 'source-interface', source_if])
+            # Source interface can not be used with ip6gretap
+            if encapsulation in ['ip6gretap']:
+                with self.assertRaises(ConfigSessionError):
+                    self.session.commit()
+                self.session.delete(self._base_path + [interface, 'source-interface'])
 
             # Check if commit is ok
             self.session.commit()
 
             conf = get_json_iface_options(interface)
+            if encapsulation not in ['ip6gretap']:
+                self.assertEqual(source_if, conf['link'])
+
             self.assertEqual(interface, conf['ifname'])
             self.assertEqual(mtu, conf['mtu'])
-            self.assertEqual(source_if, conf['link'])
 
             # Not applicable for ip6gre
             if 'proto' in conf['linkinfo']['info_data']:

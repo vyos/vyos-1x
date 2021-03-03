@@ -94,7 +94,7 @@ class TunnelIf(Interface):
         super().__init__(ifname, **kargs)
 
         # The gretap interface has the possibility to act as L2 bridge
-        if self.iftype == 'gretap':
+        if self.iftype in ['gretap', 'ip6gretap']:
             # no multicast, ttl or tos for gretap
             self.definition = {
                 **TunnelIf.definition,
@@ -111,7 +111,7 @@ class TunnelIf(Interface):
             mapping = { **self.mapping, **self.mapping_ipv4 }
 
         cmd = 'ip tunnel add {ifname} mode {encapsulation}'
-        if self.iftype == 'gretap':
+        if self.iftype in ['gretap', 'ip6gretap']:
             cmd = 'ip link add name {ifname} type {encapsulation}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
@@ -129,7 +129,7 @@ class TunnelIf(Interface):
 
     def _change_options(self):
         # gretap interfaces do not support changing any parameter
-        if self.iftype == 'gretap':
+        if self.iftype in ['gretap', 'ip6gretap']:
             return
 
         if self.config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
