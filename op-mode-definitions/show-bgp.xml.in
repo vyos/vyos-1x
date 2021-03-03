@@ -69,6 +69,7 @@
                 <properties>
                   <help>Ethernet Virtual Private Network</help>
                 </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                 <children>
                   #include <include/bgp-afi-common.xml.i>
                   <node name="all">
@@ -106,12 +107,7 @@
                     <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                     <children>
                       #include <include/vtysh-generic-detail.xml.i>
-                      <tagNode name="vni">
-                        <properties>
-                          <help>VxLAN Network Identifier</help>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                      </tagNode>
+                      #include <include/vni-tagnode.xml.i>
                     </children>
                   </node>
                   <leafNode name="import-rt">
@@ -240,17 +236,16 @@
                           </leafNode>
                         </children>
                       </node>
-                      <tagNode name="vni">
-                        <properties>
-                          <help>VXLAN Network Identifier</help>
-                          <completionHelp>
-                            <list>1-16777215 all</list>
-                          </completionHelp>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                      </tagNode>
+                      #include <include/vni-tagnode-all.xml.i>
                     </children>
                   </node>
+                  #include <include/vni-tagnode.xml.i>
+                  <leafNode name="vni">
+                    <properties>
+                      <help>VXLAN network identifier (VNI)</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                  </leafNode>
                 </children>
               </node>
             </children>
