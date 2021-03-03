@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="evpn">
+        <properties>
+          <help>Show Ethernet VPN (EVPN) information</help>
+        </properties>
+        <children>
+          <node name="arp-cache">
+            <properties>
+              <help>ARP and ND cache</help>
+            </properties>
+            <children>
+              #include <include/vni-tagnode-all.xml.i>
+            </children>
+          </node>
+          <node name="mac">
+            <properties>
+              <help>MAC addresses</help>
+            </properties>
+            <children>
+              #include <include/vni-tagnode-all.xml.i>
+            </children>
+          </node>
+          <node name="next-hops">
+            <properties>
+              <help>Remote VTEPs</help>
+            </properties>
+            <children>
+              #include <include/vni-tagnode-all.xml.i>
+            </children>
+          </node>
+          <node name="rmac">
+            <properties>
+              <help>RMAC</help>
+            </properties>
+            <children>
+              #include <include/vni-tagnode-all.xml.i>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
