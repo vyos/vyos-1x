@@ -4,7 +4,7 @@
 gw-ip-address={{ gateway_address }}
 {%   endif %}
 {%   if client_ip_pool.start is defined and client_ip_pool.stop is defined and client_ip_pool.start is not none and client_ip_pool.stop is not none %}
-{{ client_ip_pool.start }}-{{ client_ip_pool.stop }}
+{{ client_ip_pool.start }}-{{ client_ip_pool.stop.split('.')[3] }}
 {%   endif %}
 {%   if client_ip_pool.subnet is defined and client_ip_pool.subnet is not none %}
 {%     for subnet in client_ip_pool.subnet %}
