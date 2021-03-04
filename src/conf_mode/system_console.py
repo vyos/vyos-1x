@@ -17,9 +17,8 @@
 import os
 import re
 
-from fileinput import input as replace_in_file
 from vyos.config import Config
-from vyos.util import call
+from vyos.util import call, read_file, write_file
 from vyos.template import render
 from vyos import ConfigError, airbag
 airbag.enable()
@@ -98,15 +97,27 @@ def generate(console):
     if not os.path.isfile(grub_config):
         return None
 
-    # stdin/stdout are redirected in replace_in_file(), thus print() is fine
-    p = re.compile(r'^(.* console=ttyS0),[0-9]+(.*)$')
-    for line in replace_in_file(grub_config, inplace=True):
-        if line.startswith('serial --unit'):
-            line = f'serial --unit=0 --speed={speed}\n'
-        elif p.match(line):
-            line = '{},{}{}\n'.format(p.search(line)[1], speed, p.search(line)[2])
+    lines = read_file(grub_config).split('\n')
 
-        print(line, end='')
+    p = re.compile(r'^(.* console=ttyS0),[0-9]+(.*)$')
+    write = False
+    newlines = []
+    for line in lines:
+        if line.startswith('serial --unit'):
+            newline = f'serial --unit=0 --speed={speed}'
+        elif p.match(line):
+            newline = '{},{}{}'.format(p.search(line)[1], speed, p.search(line)[2])
+        else:
+            newline = line
+
+        if newline != line:
+            write = True
+
+        newlines.append(newline)
+    newlines.append('')
+
+    if write:
+        write_file(grub_config, '\n'.join(newlines))
 
     return None
 
