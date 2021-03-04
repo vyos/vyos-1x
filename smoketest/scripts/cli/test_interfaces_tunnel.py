@@ -88,20 +88,13 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.commit()
 
             conf = get_json_iface_options(interface)
-            if encapsulation not in ['sit', 'gretap']:
+            if encapsulation not in ['sit', 'gre-bridge']:
                 self.assertEqual(source_if, conf['link'])
 
             self.assertEqual(interface, conf['ifname'])
             self.assertEqual(mtu, conf['mtu'])
-
-            if encapsulation not in ['sit', 'gre-bridge']:
-                self.assertEqual(source_if, conf['link'])
-                self.assertEqual(encapsulation, conf['link_type'])
-            elif encapsulation in ['gre-bridge']:
-                self.assertEqual('ether', conf['link_type'])
-
             self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
-            self.assertEqual(remote_ip4,     conf['linkinfo']['info_data']['remote'])
+            self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
 
             # cleanup this instance
             self.session.delete(self._base_path + [interface])
@@ -140,16 +133,17 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.assertEqual(mtu, conf['mtu'])
             self.assertEqual(source_if, conf['link'])
 
-            # remap encapsulation protocol(s)
+            # Not applicable for ip6gre
+            if 'proto' in conf['linkinfo']['info_data']:
+                self.assertEqual(encapsulation, conf['linkinfo']['info_data']['proto'])
+
+            # remap encapsulation protocol(s) only for ipip6, ip6ip6
             if encapsulation in ['ipip6', 'ip6ip6']:
-                encapsulation = 'tunnel6'
-            elif encapsulation in ['ip6gre']:
-                encapsulation = 'gre6'
+                encapsulation = 'ip6tnl'
 
-            self.assertEqual(encapsulation, conf['link_type'])
-
+            self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
             self.assertEqual(self.local_v6, conf['linkinfo']['info_data']['local'])
-            self.assertEqual(remote_ip6,     conf['linkinfo']['info_data']['remote'])
+            self.assertEqual(remote_ip6,    conf['linkinfo']['info_data']['remote'])
 
             # cleanup this instance
             self.session.delete(self._base_path + [interface])
@@ -182,10 +176,9 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         tos = '20'
 
         self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-        self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
-        self.session.set(self._base_path + [interface, 'remote', remote_ip4])
+        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
 
-        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'no-pmtu-discovery'])
         self.session.set(self._base_path + [interface, 'parameters', 'ip', 'key', gre_key])
         self.session.set(self._base_path + [interface, 'parameters', 'ip', 'tos', tos])
 
@@ -199,7 +192,6 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
         self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
-        self.assertFalse(               conf['linkinfo']['info_data']['pmtudisc'])
 
     def test_gretap_parameters_change(self):
         interface = f'tun1040'
