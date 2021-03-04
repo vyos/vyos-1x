@@ -1,5 +1,8 @@
 # redefine ip command to use FRR when it is available
 
+# default route distance
+IF_METRIC=${IF_METRIC:-210}
+
 # get status of FRR
 function frr_alive () {
     /usr/lib/frr/watchfrr.sh all_status
@@ -15,11 +18,12 @@ function frr_alive () {
 # convert ip route command to vtysh
 function iptovtysh () {
     # prepare variables for vtysh command
-    local VTYSH_DISTANCE="210"
-    local VTYSH_TAG="210"
+    local VTYSH_ACTION=$3
     local VTYSH_NETADDR=""
     local VTYSH_GATEWAY=""
     local VTYSH_DEV=""
+    local VTYSH_TAG="210"
+    local VTYSH_DISTANCE=""
     # convert default route to 0.0.0.0/0
     if [ "$4" == "default" ] ; then
         VTYSH_NETADDR="0.0.0.0/0"
@@ -30,15 +34,21 @@ function iptovtysh () {
     if [[ ! $VTYSH_NETADDR =~ ^.*/[[:digit:]]+$ ]] ; then
         VTYSH_NETADDR="$VTYSH_NETADDR/32"
     fi
+    shift 4
     # get gateway address
-    if [ "$5" == "via" ] ; then
-        VTYSH_GATEWAY=$6
+    if [ "$1" == "via" ] ; then
+        VTYSH_GATEWAY=$2
+        shift 2
     fi
     # get device name
-    if [ "$5" == "dev" ]; then
-        VTYSH_DEV=$6
-    elif [ "$7" == "dev" ]; then
-        VTYSH_DEV=$8
+    if [ "$1" == "dev" ]; then
+        VTYSH_DEV=$2
+        shift 2
+    fi
+    # get distance
+    if [ "$1" == "metric" ]; then
+        VTYSH_DISTANCE=$2
+        shift 2
     fi
 
     # Add route to VRF routing table
@@ -49,7 +59,7 @@ function iptovtysh () {
     VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VTYSH_VRF"
 
     # delete route if the command is "del"
-    if [ "$3" == "del" ] ; then
+    if [ "$VTYSH_ACTION" == "del" ] ; then
         VTYSH_CMD="no $VTYSH_CMD"
     fi
     logmsg info "Converted vtysh command: \"$VTYSH_CMD\""
