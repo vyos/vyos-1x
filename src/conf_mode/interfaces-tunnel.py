@@ -102,10 +102,14 @@ def apply(tunnel):
     # remote addresses. This returns "Operation not supported" by the Kernel.
     # There is no other solution to destroy and recreate the tunnel.
     encap = ''
+    remote = ''
     tmp = get_json_iface_options(interface)
-    if tmp: encap = dict_search('linkinfo.info_kind', tmp)
+    if tmp:
+        encap = dict_search('linkinfo.info_kind', tmp)
+        remote = dict_search('linkinfo.info_data.remote', tmp)
 
-    if 'deleted' in tunnel or 'encapsulation_changed' in tunnel or encap in ['gretap', 'ip6gretap']:
+    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or
+        encap in ['gretap', 'ip6gretap'] or remote in ['any']):
         if interface in interfaces():
             tmp = Interface(interface)
             tmp.remove()
