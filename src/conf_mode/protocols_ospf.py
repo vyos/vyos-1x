@@ -60,7 +60,7 @@ def get_config(config=None):
         del default_values['area']['area_type']['nssa']
     if 'mpls_te' not in ospf:
         del default_values['mpls_te']
-    for protocol in ['bgp', 'connected', 'kernel', 'rip', 'static']:
+    for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
     # XXX: T2665: we currently have no nice way for defaults under tag nodes,
