@@ -144,7 +144,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
 
         start = '192.0.2.10'
         stop = '192.0.2.20'
-        start_stop = f'{start}-{stop}'
+        stop_octet = stop.split('.')[3]
+        start_stop = f'{start}-{stop_octet}'
         self.set(['client-ip-pool', 'start', start])
         self.set(['client-ip-pool', 'stop', stop])
 
