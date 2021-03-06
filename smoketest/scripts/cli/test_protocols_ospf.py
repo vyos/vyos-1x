@@ -28,7 +28,7 @@ base_path = ['protocols', 'ospf']
 route_map = 'foo-bar-baz10'
 
 def getFRROSPFconfig():
-    return cmd('vtysh -c "show run" | sed -n "/router ospf/,/^!/p"')
+    return cmd('vtysh -c "show run" | sed -n "/^router ospf/,/^!/p"')
 
 def getFRRInterfaceConfig(interface):
     return cmd(f'vtysh -c "show run" | sed -n "/^interface {interface}$/,/^!/p"')
@@ -258,6 +258,19 @@ class TestProtocolsOSPF(unittest.TestCase):
 
         # Verify FRR ospfd configuration
         frrconfig = getFRROSPFconfig()
+        import pprint
+        # From time to time the CI fails with an error like:
+        # ======================================================================
+        # FAIL: test_ospf_09_virtual_link (__main__.TestProtocolsOSPF)
+        # ----------------------------------------------------------------------
+        # Traceback (most recent call last):
+        #   File "/usr/libexec/vyos/tests/smoke/cli/test_protocols_ospf.py", line 261, in test_ospf_09_virtual_link
+        #     self.assertIn(f'router ospf', frrconfig)
+        # AssertionError: 'router ospf' not found in ''
+        #
+        # Add some debug code so we can find the root cause
+        pprint.pprint(frrconfig)
+
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} shortcut {shortcut}', frrconfig)
         self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
