@@ -5,6 +5,7 @@
     <help>Source IP of routing updates</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+      <script>${vyos_completion_dir}/list_interfaces.py</script>
     </completionHelp>
     <valueHelp>
       <format>ipv4</format>
