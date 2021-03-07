@@ -208,6 +208,12 @@ router bgp {{ asn }}
   aggregate-address {{ ip }}{{ ' as-set' if afi_config.aggregate_address[ip].as_set is defined }}{{ ' summary-only' if afi_config.aggregate_address[ip].summary_only is defined }}
 {%       endfor %}
 {%     endif %}
+{%     if afi_config.maximum_paths is defined and afi_config.maximum_paths is not none %}
+  maximum-paths {{ afi_config.maximum_paths }}
+{%     endif %}
+{%     if afi_config.maximum_paths_ibgp is defined and afi_config.maximum_paths_ibgp is not none %}
+  maximum-paths ibgp {{ afi_config.maximum_paths_ibgp }}
+{%     endif %}
 {%     if afi_config.redistribute is defined and afi_config.redistribute is not none %}
 {%       for protocol in afi_config.redistribute %}
 {%         if protocol == 'table' %}

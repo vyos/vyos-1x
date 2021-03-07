@@ -131,6 +131,9 @@ peer_group_config = {
 def getFRRBGPconfig():
     return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}/,/^!/p"')
 
+def getFRRBgpAfiConfig(afi):
+    return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}/,/^!/p" | sed -n "/^ address-family {afi} unicast/,/^ exit-address-family/p"')
+
 def getFRRBGPVNIconfig(vni):
     return cmd(f'vtysh -c "show run" | sed -n "/^  vni {vni}/,/^!/p"')
 
@@ -218,6 +221,10 @@ class TestProtocolsBGP(unittest.TestCase):
         router_id = '127.0.0.1'
         local_pref = '500'
         stalepath_time = '60'
+        max_path_v4 = '2'
+        max_path_v4ibgp = '4'
+        max_path_v6 = '8'
+        max_path_v6ibgp = '16'
 
         self.session.set(base_path + ['parameters', 'router-id', router_id])
         self.session.set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -228,6 +235,12 @@ class TestProtocolsBGP(unittest.TestCase):
         self.session.set(base_path + ['parameters', 'graceful-restart', 'stalepath-time', stalepath_time])
         self.session.set(base_path + ['parameters', 'graceful-shutdown'])
         self.session.set(base_path + ['parameters', 'ebgp-requires-policy'])
+
+        # AFI maximum path support
+        self.session.set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', max_path_v4])
+        self.session.set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths-ibgp', max_path_v4ibgp])
+        self.session.set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', max_path_v6])
+        self.session.set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths-ibgp', max_path_v6ibgp])
 
         # commit changes
         self.session.commit()
@@ -242,6 +255,14 @@ class TestProtocolsBGP(unittest.TestCase):
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
+
+        afiv4_config = getFRRBgpAfiConfig('ipv4')
+        self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
+        self.assertIn(f'  maximum-paths ibgp {max_path_v4ibgp}', afiv4_config)
+
+        afiv6_config = getFRRBgpAfiConfig('ipv6')
+        self.assertIn(f'  maximum-paths {max_path_v6}', afiv6_config)
+        self.assertIn(f'  maximum-paths ibgp {max_path_v6ibgp}', afiv6_config)
 
 
     def test_bgp_02_neighbors(self):

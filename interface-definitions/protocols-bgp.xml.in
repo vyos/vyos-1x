@@ -62,6 +62,7 @@
                       #include <include/bgp-route-map.xml.i>
                     </children>
                   </tagNode>
+                  #include <include/bgp-afi-maximum-paths.xml.i>
                   <node name="redistribute">
                     <properties>
                       <help>Redistribute routes from other protocols into BGP</help>
@@ -171,6 +172,7 @@
                       #include <include/bgp-route-map.xml.i>
                     </children>
                   </tagNode>
+                  #include <include/bgp-afi-maximum-paths.xml.i>
                   <node name="redistribute">
                     <properties>
                       <help>Redistribute routes from other protocols into BGP</help>
