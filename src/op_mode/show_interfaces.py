@@ -71,7 +71,10 @@ def filtered_interfaces(ifnames, iftypes, vif, vrrp):
         if ifnames and ifname not in ifnames:
             continue
 
-        interface = Interface(ifname)
+        # return the class which can handle this interface name
+        klass = Section.klass(ifname)
+        # connect to the interface
+        interface = klass(ifname, create=False, debug=False)
 
         if iftypes and interface.definition['section'] not in iftypes:
             continue
