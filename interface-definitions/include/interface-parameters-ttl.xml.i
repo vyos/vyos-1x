@@ -1,10 +1,10 @@
 <!-- included start from interface-parameters-ttl.xml.i -->
 <leafNode name="ttl">
   <properties>
-    <help>Specifies TTL value to use in outgoing packets (default: 0)</help>
+    <help>Specifies TTL value to use in outgoing packets</help>
     <valueHelp>
       <format>0</format>
-      <description>Copy value from original IP header</description>
+      <description>Inherit - copy value from original IP header</description>
     </valueHelp>
     <valueHelp>
       <format>1-255</format>
