@@ -30,7 +30,7 @@ from vyos.util import cmd
 
 
 # interfaces = Sections.reserved()
-interfaces = ['eno', 'ens', 'enp', 'enx', 'eth', 'vmnet', 'lo', 'tun', 'wan', 'pppoe', 'pppoa', 'adsl']
+interfaces = ['eno', 'ens', 'enp', 'enx', 'eth', 'vmnet', 'lo', 'tun', 'wan', 'pppoe']
 glob_ifnames = '/sys/class/net/({})*'.format('|'.join(interfaces))
 
 
@@ -174,7 +174,7 @@ def run_show_intf(ifnames, iftypes, vif, vrrp):
 
         out = cmd(f'ip addr show {interface.ifname}')
         out = re.sub(f'^\d+:\s+','',out)
-        if re.search("link/tunnel6", out):
+        if re.search('link/tunnel6', out):
             tunnel = cmd(f'ip -6 tun show {interface.ifname}')
             # tun0: ip/ipv6 remote ::2 local ::1 encaplimit 4 hoplimit 64 tclass inherit flowlabel inherit (flowinfo 0x00000000)
             tunnel = re.sub('.*encap', 'encap', tunnel)

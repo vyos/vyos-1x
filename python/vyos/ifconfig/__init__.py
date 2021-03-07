@@ -30,6 +30,7 @@ from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
 from vyos.ifconfig.vtun import VTunIf
 from vyos.ifconfig.vti import VTIIf
+from vyos.ifconfig.pppoe import PPPoEIf
 from vyos.ifconfig.tunnel import TunnelIf
 from vyos.ifconfig.erspan import ERSpanIf
 from vyos.ifconfig.erspan import ER6SpanIf
