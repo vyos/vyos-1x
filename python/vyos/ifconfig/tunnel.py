@@ -90,19 +90,21 @@ class TunnelIf(Interface):
     }
 
     def __init__(self, ifname, **kargs):
-        self.iftype = kargs['encapsulation']
+        # T3357: we do not have the 'encapsulation' in kargs when calling this
+        # class from op-mode like "show interfaces tunnel"
+        if 'encapsulation' in kargs:
+            self.iftype = kargs['encapsulation']
+            # The gretap interface has the possibility to act as L2 bridge
+            if self.iftype in ['gretap', 'ip6gretap']:
+                # no multicast, ttl or tos for gretap
+                self.definition = {
+                    **TunnelIf.definition,
+                    **{
+                        'bridgeable': True,
+                    },
+                }
+
         super().__init__(ifname, **kargs)
-
-        # The gretap interface has the possibility to act as L2 bridge
-        if self.iftype in ['gretap', 'ip6gretap']:
-            # no multicast, ttl or tos for gretap
-            self.definition = {
-                **TunnelIf.definition,
-                **{
-                    'bridgeable': True,
-                },
-            }
-
 
     def _create(self):
         if self.config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
