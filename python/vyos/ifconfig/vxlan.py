@@ -46,7 +46,8 @@ class VXLANIf(Interface):
         'remote': '',
         'source_address': '',
         'source_interface': '',
-        'vni': 0
+        'vni': 0,
+        'ttl': '16',
     }
     definition = {
         **Interface.definition,
@@ -56,8 +57,8 @@ class VXLANIf(Interface):
             'bridgeable': True,
         }
     }
-    options = Interface.options + \
-        ['group', 'remote', 'source_interface', 'port', 'vni', 'source_address']
+    options = Interface.options + ['group', 'remote', 'source_interface',
+                                   'port', 'vni', 'source_address', 'ttl']
 
     mapping = {
         'ifname': 'add',
@@ -65,10 +66,11 @@ class VXLANIf(Interface):
         'port':   'dstport',
         'source_address': 'local',
         'source_interface': 'dev',
+        'ttl': 'ttl',
     }
 
     def _create(self):
-        cmdline = ['ifname', 'type', 'vni', 'port']
+        cmdline = ['ifname', 'type', 'vni', 'port', 'ttl']
 
         if self.config['source_address']:
             cmdline.append('source_address')
