@@ -237,10 +237,10 @@ class TestProtocolsBGP(unittest.TestCase):
         self.session.set(base_path + ['parameters', 'ebgp-requires-policy'])
 
         # AFI maximum path support
-        self.session.set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', max_path_v4])
-        self.session.set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths-ibgp', max_path_v4ibgp])
-        self.session.set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', max_path_v6])
-        self.session.set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths-ibgp', max_path_v6ibgp])
+        self.session.set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
+        self.session.set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ibgp', max_path_v4ibgp])
+        self.session.set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', 'ebgp', max_path_v6])
+        self.session.set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', 'ibgp', max_path_v6ibgp])
 
         # commit changes
         self.session.commit()

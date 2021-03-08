@@ -1186,6 +1186,10 @@ protocols {
                 }
             }
         }
+        maximum-paths {
+            ebgp 8
+            ibgp 16
+        }
         neighbor 192.0.16.209 {
             address-family {
                 ipv4-unicast {
