@@ -42,8 +42,8 @@ function iptovtysh () {
     fi
 
     # Add route to VRF routing table
-    local VTYSH_VRF_NAME=$(basename /sys/class/net/$VTYSH_DEV/upper_* | sed -e 's/upper_//')
-    if [ -n $VTYSH_VRF_NAME ]; then
+    local VTYSH_VRF_NAME=$(/usr/sbin/ip link show dev $VTYSH_DEV | sed -nre '1s/.* master ([^ ]*) .*/\1/p')
+    if /usr/sbin/ip -d link show dev $VTYSH_DEV | grep -q "vrf_slave"; then
         VTYSH_VRF="vrf $VTYSH_VRF_NAME"
     fi
     VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VTYSH_VRF"
