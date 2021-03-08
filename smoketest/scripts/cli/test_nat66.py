@@ -44,7 +44,7 @@ class TestNAT66(unittest.TestCase):
         translation_prefix = 'fc01::/64'
         self.session.set(src_path + ['rule', '1', 'outbound-interface', 'eth1'])
         self.session.set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
-        self.session.set(src_path + ['rule', '1', 'translation', 'prefix', translation_prefix])
+        self.session.set(src_path + ['rule', '1', 'translation', 'address', translation_prefix])
 
         # check validate() - outbound-interface must be defined
         self.session.commit()
@@ -68,6 +68,36 @@ class TestNAT66(unittest.TestCase):
             self.assertEqual(iface, 'eth1')
             # check for translation address
             self.assertEqual(f'{translation_address}/{translation_mask}', translation_prefix)
+            self.assertEqual(f'{address}/{mask}', source_prefix)
+    
+    def test_source_nat66_address(self):
+        source_prefix = 'fc00::/64'
+        translation_address = 'fc00::1'
+        self.session.set(src_path + ['rule', '1', 'outbound-interface', 'eth1'])
+        self.session.set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
+        self.session.set(src_path + ['rule', '1', 'translation', 'address', translation_address])
+
+        # check validate() - outbound-interface must be defined
+        self.session.commit()
+
+        tmp = cmd('sudo nft -j list table ip6 nat')
+        data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
+
+        for idx in range(0, len(data_json)):
+            data = data_json[idx]
+
+            self.assertEqual(data['chain'], 'POSTROUTING')
+            self.assertEqual(data['family'], 'ip6')
+            self.assertEqual(data['table'], 'nat')
+
+            iface = dict_search('match.right', data['expr'][0])
+            address = dict_search('match.right.prefix.addr', data['expr'][2])
+            mask = dict_search('match.right.prefix.len', data['expr'][2])
+            snat_address = dict_search('snat.addr', data['expr'][3])
+
+            self.assertEqual(iface, 'eth1')
+            # check for translation address
+            self.assertEqual(snat_address, translation_address)
             self.assertEqual(f'{address}/{mask}', source_prefix)
     
     def test_destination_nat66(self):
@@ -139,7 +169,7 @@ class TestNAT66(unittest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
 
-        self.session.set(src_path + ['rule', rule, 'translation', 'prefix', translation_prefix])
+        self.session.set(src_path + ['rule', rule, 'translation', 'address', translation_prefix])
         self.session.commit()
 
     def test_nat66_no_rules(self):
