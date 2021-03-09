@@ -13,7 +13,7 @@
               <help>System serial interface name (ttyS or ttyUSB)</help>
               <completionHelp>
                 <script>ls -1 /dev | grep ttyS</script>
-                <script>ls -1 /dev/serial/by-bus</script>
+                <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
               </completionHelp>
               <valueHelp>
                 <format>ttySxxx</format>
@@ -36,7 +36,7 @@
                     <list>300 1200 2400 4800 9600 19200 38400 57600 115200</list>
                   </completionHelp>
                   <constraint>
-                    <regex>(300|1200|2400|4800|9600|19200|38400|57600|115200)</regex>
+                    <regex>^(300|1200|2400|4800|9600|19200|38400|57600|115200)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -47,7 +47,7 @@
                     <list>7 8</list>
                   </completionHelp>
                   <constraint>
-                    <regex>(7|8)</regex>
+                    <validator name="numeric" argument="--range 7-8"/>
                   </constraint>
                 </properties>
                 <defaultValue>8</defaultValue>
@@ -59,7 +59,7 @@
                     <list>1 2</list>
                   </completionHelp>
                   <constraint>
-                    <regex>(1|2)</regex>
+                    <validator name="numeric" argument="--range 1-2"/>
                   </constraint>
                 </properties>
                 <defaultValue>1</defaultValue>
@@ -71,7 +71,7 @@
                     <list>even odd none</list>
                   </completionHelp>
                   <constraint>
-                    <regex>(even|odd|none)</regex>
+                    <regex>^(even|odd|none)$</regex>
                   </constraint>
                 </properties>
                 <defaultValue>none</defaultValue>
