@@ -5,7 +5,6 @@
       <node name="console-server" owner="${vyos_conf_scripts_dir}/service_console-server.py">
         <properties>
           <help>Serial Console Server</help>
-          <priority>990</priority>
         </properties>
         <children>
           <tagNode name="device">
