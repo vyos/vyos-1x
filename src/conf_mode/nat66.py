@@ -28,6 +28,7 @@ from vyos.util import cmd
 from vyos.util import check_kmod
 from vyos.util import dict_search
 from vyos.template import is_ipv6
+from vyos.template import is_ip_network
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -116,10 +117,10 @@ def verify(nat):
                 if config['outbound_interface'] not in interfaces():
                     print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
-            prefix = dict_search('translation.prefix', config)
-            if prefix != None:
-                if not is_ipv6(prefix):
-                    raise ConfigError(f'Warning: IPv6 prefix {prefix} is not a valid address prefix')
+            addr = dict_search('translation.address', config)
+            if addr != None:
+                if addr != 'masquerade' and not is_ipv6(addr):
+                    raise ConfigError(f'Warning: IPv6 address {addr} is not a valid address')
 
             prefix = dict_search('source.prefix', config)
             if prefix != None:
