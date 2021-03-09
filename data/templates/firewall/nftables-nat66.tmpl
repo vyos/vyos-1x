@@ -13,14 +13,20 @@
 {%     endif %}
 {%     set trns_address = dnat_type + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
 {%   elif chain == "POSTROUTING" %}
-{%     if config.translation.address | is_ip_network %}
-{#       support 1:1 network translation #}
-{%       set snat_type = "snat prefix to " %}
-{%     else   %}
-{%       set snat_type = "snat to " %}
-{%     endif %}
+{%     if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
+{%         if config.translation.address == 'masquerade' %}
+{%             set trns_address = config.translation.address %}
+{%         else   %}
+{%             if config.translation.address | is_ip_network %}
+{#                 support 1:1 network translation #}
+{%                 set snat_type = "snat prefix to " %}
+{%             else   %}
+{%                 set snat_type = "snat to " %}
+{%             endif %}
+{%             set trns_address = snat_type + config.translation.address %}
+{%         endif %}
+{%     endif   %}
 {%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined else '' %}
-{%     set trns_address = snat_type + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none %}
 {%   endif %}
 {%   set comment   = "NPT-NAT-" + rule %}
 {%   if rule.log %}

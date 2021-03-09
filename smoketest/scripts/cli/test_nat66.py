@@ -157,7 +157,6 @@ class TestNAT66(unittest.TestCase):
         # T2813: Ensure translation address is specified
         rule = '5'
         source_prefix = 'fc00::/64'
-        translation_prefix = 'fc00:2::/64'
         self.session.set(src_path + ['rule', rule, 'source', 'prefix', source_prefix])
 
         # check validate() - outbound-interface must be defined
@@ -169,7 +168,7 @@ class TestNAT66(unittest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
 
-        self.session.set(src_path + ['rule', rule, 'translation', 'address', translation_prefix])
+        self.session.set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
         self.session.commit()
 
     def test_nat66_no_rules(self):

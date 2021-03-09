@@ -49,7 +49,7 @@ def merge_npt(config,base,rule):
 
     if config.exists(base + ['translation','prefix']):
         tmp = config.return_value(base + ['translation','prefix'])
-        config.set(merge_base + ['translation','prefix'],value=tmp)
+        config.set(merge_base + ['translation','address'],value=tmp)
 
 if not config.exists(['nat', 'nptv6']):
     # Nothing to do
