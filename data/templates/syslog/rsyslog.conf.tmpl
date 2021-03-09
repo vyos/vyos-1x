@@ -2,47 +2,47 @@
 ## file based logging
 {% if files['global']['marker'] %}
 $ModLoad immark
-{% if files['global']['marker-interval'] %}
+{%   if files['global']['marker-interval'] %}
 $MarkMessagePeriod  {{files['global']['marker-interval']}}
-{% endif %}
+{%   endif %}
 {% endif %}
 {% if files['global']['preserver_fqdn'] %}
 $PreserveFQDN on
 {% endif %}
-{% for file in files %}
-$outchannel {{file}},{{files[file]['log-file']}},{{files[file]['max-size']}},{{files[file]['action-on-max-size']}}
-{{files[file]['selectors']}} :omfile:${{file}}
+{% for file, file_options in files.items() %}
+$outchannel {{ file }},{{ file_options['log-file'] }},{{ file_options['max-size'] }},{{ file_options['action-on-max-size'] }}
+{{ file_options['selectors'] }} :omfile:${{ file }}
 {% endfor %}
-{% if console %}
+{% if console is defined and console is not none %}
 ## console logging
-{% for con in console %}
-{{console[con]['selectors']}} /dev/console
-{% endfor %}
+{%   for con, con_options in console.items() %}
+{{ con_options['selectors'] }} /dev/console
+{%   endfor %}
 {% endif %}
-{% if hosts %}
+{% if hosts is defined and hosts is not none %}
 ## remote logging
-{% for host in hosts %}
-{%   if hosts[host]['proto'] == 'tcp' %}
-{%     if hosts[host]['port'] %}
-{%       if hosts[host]['oct_count'] %}
-{{hosts[host]['selectors']}} @@(o){{host}}:{{hosts[host]['port']}};RSYSLOG_SyslogProtocol23Format
+{%   for host, host_options in hosts.items() %}
+{%     if host_options.proto == 'tcp' %}
+{%       if host_options.port is defined %}
+{%         if host_options.oct_count is defined %}
+{{ host_options.selectors }} @@(o){{ host }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
+{%         else %}
+{{ host_options.selectors }} @@{{ host }}:{{ host_options.port }}
+{%         endif %}
 {%       else %}
-{{hosts[host]['selectors']}} @@{{host}}:{{hosts[host]['port']}}
+{{ host_options.selectors }} @@{{ host }}
 {%       endif %}
 {%     else %}
-{{hosts[host]['selectors']}} @@{{host}}
+{%       if host_options['port'] %}
+{{ host_options.selectors }} @{{ host | bracketize_ipv6 }}:{{ host_options.port }}
+{%       else %}
+{{ host_options.selectors }} @{{ host | bracketize_ipv6 }}
+{%       endif %}
 {%     endif %}
-{%   else %}
-{%     if hosts[host]['port'] %}
-{{hosts[host]['selectors']}} @{{host}}:{{hosts[host]['port']}}
-{%     else %}
-{{hosts[host]['selectors']}} @{{host}}
-{%     endif %}
-{%   endif %}
-{% endfor %}
+{%   endfor %}
 {% endif %}
-{% if user %}
-{% for u in user %}
-{{user[u]['selectors']}} :omusrmsg:{{u}}
-{% endfor %}
+{% if user is defined and user is not none %}
+{%   for username, user_options in user.items() %}
+{{ user_options.selectors }} :omusrmsg:{{ username }}
+{%   endfor %}
 {% endif %}
