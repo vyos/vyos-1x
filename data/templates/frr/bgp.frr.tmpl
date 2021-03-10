@@ -280,6 +280,20 @@ router bgp {{ asn }}
 {%     if vni_config.advertise_svi_ip is defined %}
    advertise-svi-ip
 {%     endif %}
+{%     if vni_config.rd is defined and vni_config.rd is not none %}
+   rd {{ vni_config.rd }}
+{%     endif %}
+{%     if vni_config.route_target is defined and vni_config.route_target is not none %}
+{%       if vni_config.route_target.both is defined and vni_config.route_target.both is not none %}
+   route-target both {{ vni_config.route_target.both }}
+{%       endif %}
+{%       if vni_config.route_target.export is defined and vni_config.route_target.export is not none %}
+   route-target export {{ vni_config.route_target.export }}
+{%       endif %}
+{%       if vni_config.route_target.import is defined and vni_config.route_target.import is not none %}
+   route-target import {{ vni_config.route_target.import }}
+{%       endif %}
+{%     endif %}
   exit-vni
 {%       endfor %}
 {%     endif %}
