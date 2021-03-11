@@ -1,7 +1,7 @@
 !
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
-interface {{ iface }}
+interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     if iface_config.authentication is defined and iface_config.authentication is not none %}
 {%       if iface_config.authentication.plaintext_password is defined and iface_config.authentication.plaintext_password is not none %}
  ip ospf authentication-key {{ iface_config.authentication.plaintext_password }}
@@ -50,7 +50,7 @@ interface {{ iface }}
 {%   endfor %}
 {% endif %}
 !
-router ospf
+router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if access_list is defined and access_list is not none %}
 {%   for acl, acl_config in access_list.items() %}
 {%     for protocol in acl_config.export if acl_config.export is defined %}

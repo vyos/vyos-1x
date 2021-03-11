@@ -27,6 +27,14 @@
               #include <include/static-route6.xml.i>
             </children>
           </node>
+          <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py $VAR(../@)">
+            <properties>
+              <help>Open Shortest Path First (OSPF)</help>
+            </properties>
+            <children>
+              #include <include/ospf/ospf-common-config.xml.i>
+            </children>
+          </node>
           #include <include/vni.xml.i>
         </children>
       </tagNode>
