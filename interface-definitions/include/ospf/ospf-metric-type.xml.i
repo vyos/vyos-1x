@@ -1,4 +1,4 @@
-<!-- included start from ospf-metric-type.xml.i -->
+<!-- included start from ospf/ospf-metric-type.xml.i -->
 <leafNode name="metric-type">
   <properties>
     <help>OSPF metric type for default routes (default: 2)</help>

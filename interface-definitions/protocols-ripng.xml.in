@@ -137,7 +137,7 @@
               <multi/>
             </properties>
           </leafNode>
-          #include <include/ospf-route-map.xml.i>
+          #include <include/ospf/ospf-route-map.xml.i>
           #include <include/rip-timers.xml.i>
         </children>
       </node>

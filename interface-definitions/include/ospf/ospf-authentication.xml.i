@@ -1,4 +1,4 @@
-<!-- included start from ospf-authentication.xml.i -->
+<!-- included start from ospf/ospf-authentication.xml.i -->
 <node name="authentication">
   <properties>
     <help>Authentication</help>

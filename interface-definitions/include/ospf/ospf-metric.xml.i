@@ -1,4 +1,4 @@
-<!-- included start from ospf-metric.xml.i -->
+<!-- included start from ospf/ospf-metric.xml.i -->
 <leafNode name="metric">
   <properties>
     <help>OSPF default metric</help>
