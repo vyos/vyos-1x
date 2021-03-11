@@ -64,7 +64,7 @@ The guidelines in a nutshell:
 Tests are executed at build time, you can also execute them by hand with:
 
 ```
-pipenv install
+pipenv install --dev
 pipenv shell
 make test
 ```
