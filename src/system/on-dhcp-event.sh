@@ -22,21 +22,21 @@ domain=$5
 file=/etc/hosts
 changes=0
 
-if [ -z "$client_name" ]; then
-    logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
-    client_name=$(echo "client-"$client_mac | tr : -)
-fi
-
-if [ "$domain" == "..YYZ!" ]; then
-    client_fqdn_name=$client_name
-    client_search_expr=$client_name
-else
-    client_fqdn_name=$client_name.$domain
-    client_search_expr="$client_name\\.$domain"
-fi
-
 case "$action" in
   commit) # add mapping for new lease
+    if [ -z "$client_name" ]; then
+        logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
+        client_name=$(echo "client-"$client_mac | tr : -)
+    fi
+
+    if [ "$domain" == "..YYZ!" ]; then
+        client_fqdn_name=$client_name
+        client_search_expr=$client_name
+    else
+        client_fqdn_name=$client_name.$domain
+        client_search_expr="$client_name\\.$domain"
+    fi
+
     grep -q "   $client_search_expr     " $file
     if [ $? == 0 ]; then
        echo host $client_fqdn_name already exists, exiting

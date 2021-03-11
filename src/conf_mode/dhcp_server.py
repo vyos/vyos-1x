@@ -45,17 +45,13 @@ config_tmpl = """
 on release {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
     set ClientIp = binary-to-ascii(10, 8, ".",leased-address);
-    set ClientMac = binary-to-ascii(16, 8, ":",substring(hardware, 1, 6));
-    set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
-    execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "release", ClientName, ClientIp, ClientMac, ClientDomain);
+    execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "release", "", ClientIp, "", "");
 }
 
 on expiry {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
     set ClientIp = binary-to-ascii(10, 8, ".",leased-address);
-    set ClientMac = binary-to-ascii(16, 8, ":",substring(hardware, 1, 6));
-    set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
-    execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "release", ClientName, ClientIp, ClientMac, ClientDomain);
+    execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "release", "", ClientIp, "", "");
 }
 {% endif %}
 {%- if host_decl_name %}
@@ -214,11 +210,15 @@ shared-network {{ network.name }} {
     on commit {
         set shared-networkname = "{{ network.name }}";
         {% if hostfile_update -%}
-        set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
         set ClientIp = binary-to-ascii(10, 8, ".", leased-address);
         set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
-        set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
-        execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "commit", ClientName, ClientIp, ClientMac, ClientDomain);
+        set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name, "empty_hostname");
+        if not (ClientName = "empty_hostname") {
+            set ClientDomain = pick-first-value(config-option domain-name, "..YYZ!");
+            execute("/usr/libexec/vyos/system/on-dhcp-event.sh", "commit", ClientName, ClientIp, ClientMac, ClientDomain);
+        } else {
+            log(concat("Hostname is not defined for client with IP: ", ClientIP, " MAC: ", ClientMac));
+        }
         {% endif -%}
     }
 }
