@@ -50,7 +50,7 @@ interface {{ iface }}
 {%   endfor %}
 {% endif %}
 !
-router ospf
+router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if access_list is defined and access_list is not none %}
 {%   for acl, acl_config in access_list.items() %}
 {%     for protocol in acl_config.export if acl_config.export is defined %}

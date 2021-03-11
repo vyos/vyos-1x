@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -38,16 +39,30 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'ospf']
+
+    vrf = None
+    if len(argv) > 1:
+        vrf = argv[1]
+
+    base_path = ['protocols', 'ospf']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    base = vrf and ['protocols', 'vrf', vrf, 'ospf'] or base_path
     ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         return ospf
 
+    # Assign the name of our VRF context
+    if vrf: ospf['vrf'] = vrf
+
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
+    # XXX: Note that we can not call defaults(base), as defaults does not work
+    # on an instance of a tag node. As we use the exact same CLI definition for
+    # both the non-vrf and vrf version this is absolutely safe!
+    default_values = defaults(base_path)
 
     # We have to cleanup the default dict, as default values could enable features
     # which are not explicitly enabled on the CLI. Example: default-information
@@ -137,8 +152,13 @@ def apply(ospf):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'^interface \S+', '')
-    frr_cfg.modify_section('^router ospf$', '')
+
+    if 'vrf' in ospf:
+        frr_cfg.modify_section('^router ospf vrf \S+', '')
+    else:
+        frr_cfg.modify_section(r'^interface \S+', '')
+        frr_cfg.modify_section('^router ospf$', '')
+
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
