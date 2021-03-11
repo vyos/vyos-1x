@@ -11,5 +11,5 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/ospf/ospf-route-map.xml.i>
+#include <include/route-map.xml.i>
 <!-- included end -->

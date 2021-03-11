@@ -246,7 +246,7 @@
                   <help>Redistribute BGP routes</help>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-route-map.xml.i>
+                  #include <include/route-map.xml.i>
                 </children>
               </node>
               <node name="connected">
@@ -254,7 +254,7 @@
                   <help>Redistribute connected routes</help>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-route-map.xml.i>
+                  #include <include/route-map.xml.i>
                 </children>
               </node>
               <node name="kernel">
@@ -262,7 +262,7 @@
                   <help>Redistribute kernel routes</help>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-route-map.xml.i>
+                  #include <include/route-map.xml.i>
                 </children>
               </node>
               <node name="ripng">
@@ -270,7 +270,7 @@
                   <help>Redistribute RIPNG routes</help>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-route-map.xml.i>
+                  #include <include/route-map.xml.i>
                 </children>
               </node>
               <node name="static">
@@ -278,12 +278,12 @@
                   <help>Redistribute static routes</help>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-route-map.xml.i>
+                  #include <include/route-map.xml.i>
                 </children>
               </node>
             </children>
           </node>
-          #include <include/ospf/ospf-route-map.xml.i>
+          #include <include/route-map.xml.i>
         </children>
       </node>
     </children>

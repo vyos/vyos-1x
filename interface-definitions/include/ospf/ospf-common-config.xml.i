@@ -313,7 +313,7 @@
         </leafNode>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
   </children>
@@ -680,7 +680,7 @@
       <children>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
     <node name="connected">
@@ -690,7 +690,7 @@
       <children>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
     <node name="isis">
@@ -700,7 +700,7 @@
       <children>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
     <node name="kernel">
@@ -710,7 +710,7 @@
       <children>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
     <node name="rip">
@@ -720,7 +720,7 @@
       <children>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
     <node name="static">
@@ -730,7 +730,7 @@
       <children>
         #include <include/ospf/ospf-metric.xml.i>
         #include <include/ospf/ospf-metric-type.xml.i>
-        #include <include/ospf/ospf-route-map.xml.i>
+        #include <include/route-map.xml.i>
       </children>
     </node>
   </children>
@@ -754,7 +754,7 @@
     </leafNode>
   </children>
 </node>
-#include <include/ospf/ospf-route-map.xml.i>
+#include <include/route-map.xml.i>
 <node name="timers">
   <properties>
     <help>Adjust routing timers</help>
