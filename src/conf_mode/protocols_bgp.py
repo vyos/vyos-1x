@@ -17,9 +17,11 @@
 import os
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.template import is_ip
 from vyos.template import render_to_string
 from vyos.util import call
@@ -37,11 +39,25 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'bgp']
+
+    vrf = None
+    if len(argv) > 1:
+        vrf = argv[1]
+
+    base_path = ['protocols', 'bgp']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    base = vrf and ['protocols', 'vrf', vrf, 'bgp'] or base_path
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # Assign the name of our VRF context. This MUST be done before the return
+    # statement below, else on deletion we will delete the default instance
+    # instead of the VRF instance.
+    if vrf: bgp[asn]['vrf'] = vrf
 
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
+        bgp.update({'deleted' : ''})
         return bgp
 
     # We also need some additional information from the config,
@@ -85,6 +101,9 @@ def verify(bgp):
         raise ConfigError('Only one BGP AS number can be defined!')
 
     for asn, asn_config in bgp.items():
+
+        verify_vrf(asn_config)
+
         # Common verification for both peer-group and neighbor statements
         for neighbor in ['neighbor', 'peer_group']:
             # bail out early if there is no neighbor or peer-group statement
@@ -175,7 +194,7 @@ def verify(bgp):
     return None
 
 def generate(bgp):
-    if not bgp:
+    if not bgp or 'deleted' in bgp:
         bgp['new_frr_config'] = ''
         return None
 
@@ -191,7 +210,13 @@ def apply(bgp):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(f'^router bgp \d+$', '')
+
+    if 'vrf' in bgp:
+        vrf = bgp['vrf']
+        frr_cfg.modify_section(f'^router bgp \d+ vrf {vrf}$', '')
+    else:
+        frr_cfg.modify_section('^router bgp \d+$', '')
+
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 

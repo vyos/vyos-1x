@@ -185,7 +185,7 @@
 {%   endif %}
 {% endmacro %}
 !
-router bgp {{ asn }}
+router bgp {{ asn }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if parameters is defined and parameters.ebgp_requires_policy is defined %}
  bgp ebgp-requires-policy
 {% else %}

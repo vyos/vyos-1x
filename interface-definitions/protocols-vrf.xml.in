@@ -27,6 +27,21 @@
               #include <include/static-route6.xml.i>
             </children>
           </node>
+          <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py $VAR(../@)">
+            <properties>
+              <help>Border Gateway Protocol (BGP)</help>
+              <valueHelp>
+                <format>u32:1-4294967294</format>
+                <description>Autonomous System Number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-4294967294"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/bgp/bgp-common-config.xml.i>
+            </children>
+          </tagNode>
           <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py $VAR(../@)">
             <properties>
               <help>Open Shortest Path First (OSPF)</help>
