@@ -1,9 +1,13 @@
 #!/usr/sbin/nft -f
 
 {% macro nptv6_rule(rule,config, chain) %}
-{%     set src_prefix  = "ip6 saddr " + config.source.prefix if config.source is defined and config.source.prefix is defined and config.source.prefix is not none  %}
-{%     set dest_address  = "ip6 daddr " + config.destination.address if config.destination is defined and config.destination.address is defined and config.destination.address is not none %}
+{%   set comment  = '' %}
+{%   set base_log = '' %}
+{%   set src_prefix  = "ip6 saddr " + config.source.prefix if config.source is defined and config.source.prefix is defined and config.source.prefix is not none  %}
+{%   set dest_address  = "ip6 daddr " + config.destination.address if config.destination is defined and config.destination.address is defined and config.destination.address is not none %}
 {%   if chain == "PREROUTING" %}
+{%     set comment   = "DST-NAT66-" + rule %}
+{%     set base_log  = '[NAT66-DST-' + rule %}
 {%     set interface = " iifname \"" + config.inbound_interface + "\"" if config.inbound_interface is defined and config.inbound_interface != 'any' else '' %}
 {%     if config.translation.address | is_ip_network %}
 {#       support 1:1 network translation #}
@@ -13,6 +17,8 @@
 {%     endif %}
 {%     set trns_address = dnat_type + config.translation.address if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
 {%   elif chain == "POSTROUTING" %}
+{%     set comment   = 'SRC-NAT66-' + rule %}
+{%     set base_log  = '[NAT66-SRC-' + rule %}
 {%     if config.translation is defined and config.translation.address is defined and config.translation.address is not none  %}
 {%         if config.translation.address == 'masquerade' %}
 {%             set trns_address = config.translation.address %}
@@ -28,10 +34,12 @@
 {%     endif   %}
 {%     set interface = " oifname \"" + config.outbound_interface + "\"" if config.outbound_interface is defined else '' %}
 {%   endif %}
-{%   set comment   = "NPT-NAT-" + rule %}
-{%   if rule.log %}
-{%     set base_log = "[NPT-DST-" + rule %}
-{%     set log = base_log + "]" %}
+{%   if config.log is defined %}
+{%     if config.translation is defined and config.translation.address is defined and config.translation.address == 'masquerade' %}
+{%       set log = base_log +'-MASQ]' %}
+{%     else %}
+{%       set log = base_log + "]" %}
+{%     endif %}
 {%   endif %}
 {%   set output = "add rule ip6 nat " + chain + interface %}
 {#   Count packets #}
