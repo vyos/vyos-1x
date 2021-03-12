@@ -8,5 +8,5 @@
     </valueHelp>
   </properties>
 </leafNode>
-#include <include/bgp-route-map.xml.i>
+#include <include/route-map.xml.i>
 <!-- included end -->

@@ -38,7 +38,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      #include <include/bgp-afi-aggregate-address.xml.i>
+                      #include <include/bgp/bgp-afi-aggregate-address.xml.i>
                     </children>
                   </tagNode>
                   <tagNode name="network">
@@ -59,10 +59,10 @@
                           <valueless/>
                         </properties>
                       </leafNode>
-                      #include <include/bgp-route-map.xml.i>
+                      #include <include/route-map.xml.i>
                     </children>
                   </tagNode>
-                  #include <include/bgp-afi-maximum-paths.xml.i>
+                  #include <include/bgp/bgp-afi-maximum-paths.xml.i>
                   <node name="redistribute">
                     <properties>
                       <help>Redistribute routes from other protocols into BGP</help>
@@ -73,7 +73,7 @@
                           <help>Redistribute connected routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="isis">
@@ -81,7 +81,7 @@
                           <help>Redistribute IS-IS routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="kernel">
@@ -89,7 +89,7 @@
                           <help>Redistribute kernel routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="ospf">
@@ -97,7 +97,7 @@
                           <help>Redistribute OSPF routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="rip">
@@ -105,7 +105,7 @@
                           <help>Redistribute RIP routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="static">
@@ -113,7 +113,7 @@
                           <help>Redistribute static routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <leafNode name="table">
@@ -142,7 +142,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      #include <include/bgp-afi-aggregate-address.xml.i>
+                      #include <include/bgp/bgp-afi-aggregate-address.xml.i>
                     </children>
                   </tagNode>
                   <tagNode name="network">
@@ -169,10 +169,10 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      #include <include/bgp-route-map.xml.i>
+                      #include <include/route-map.xml.i>
                     </children>
                   </tagNode>
-                  #include <include/bgp-afi-maximum-paths.xml.i>
+                  #include <include/bgp/bgp-afi-maximum-paths.xml.i>
                   <node name="redistribute">
                     <properties>
                       <help>Redistribute routes from other protocols into BGP</help>
@@ -183,7 +183,7 @@
                           <help>Redistribute connected routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="kernel">
@@ -191,7 +191,7 @@
                           <help>Redistribute kernel routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="ospfv3">
@@ -199,7 +199,7 @@
                           <help>Redistribute OSPFv3 routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="ripng">
@@ -207,7 +207,7 @@
                           <help>Redistribute RIPng routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <node name="static">
@@ -215,7 +215,7 @@
                           <help>Redistribute static routes into BGP</help>
                         </properties>
                         <children>
-                          #include <include/bgp-afi-redistribute-metric-route-map.xml.i>
+                          #include <include/bgp/bgp-afi-redistribute-metric-route-map.xml.i>
                         </children>
                       </node>
                       <leafNode name="table">
@@ -238,7 +238,7 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  #include <include/bgp-afi-l2vpn-common.xml.i>
+                  #include <include/bgp/bgp-afi-l2vpn-common.xml.i>
                   <leafNode name="advertise-pip">
                     <properties>
                       <help>EVPN system primary IP</help>
@@ -288,7 +288,7 @@
                       </constraint>
                     </properties>
                     <children>
-                      #include <include/bgp-afi-l2vpn-common.xml.i>
+                      #include <include/bgp/bgp-afi-l2vpn-common.xml.i>
                     </children>
                   </tagNode>
                 </children>
@@ -329,7 +329,7 @@
                   </constraint>
                 </properties>
                 <children>
-                  #include <include/bgp-peer-group.xml.i>
+                  #include <include/bgp/bgp-peer-group.xml.i>
                 </children>
               </tagNode>
             </children>
@@ -361,9 +361,9 @@
                   <help>Parameters relating to IPv4 or IPv6 routes</help>
                 </properties>
                 <children>
-                  #include <include/bgp-neighbor-afi-ipv4-unicast.xml.i>
-                  #include <include/bgp-neighbor-afi-ipv6-unicast.xml.i>
-                  #include <include/bgp-neighbor-afi-l2vpn-evpn.xml.i>
+                  #include <include/bgp/bgp-neighbor-afi-ipv4-unicast.xml.i>
+                  #include <include/bgp/bgp-neighbor-afi-ipv6-unicast.xml.i>
+                  #include <include/bgp/bgp-neighbor-afi-l2vpn-evpn.xml.i>
                 </children>
               </node>
               <leafNode name="advertisement-interval">
@@ -378,35 +378,35 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/bgp-bfd.xml.i>
-              #include <include/bgp-capability.xml.i>
-              #include <include/bgp-description.xml.i>
-              #include <include/bgp-disable-capability-negotiation.xml.i>
-              #include <include/bgp-disable-connected-check.xml.i>
-              #include <include/bgp-ebgp-multihop.xml.i>
+              #include <include/bgp/bgp-bfd.xml.i>
+              #include <include/bgp/bgp-capability.xml.i>
+              #include <include/bgp/bgp-description.xml.i>
+              #include <include/bgp/bgp-disable-capability-negotiation.xml.i>
+              #include <include/bgp/bgp-disable-connected-check.xml.i>
+              #include <include/bgp/bgp-ebgp-multihop.xml.i>
               <node name="interface">
                 <properties>
                   <help>Interface parameters</help>
                 </properties>
                 <children>
-                  #include <include/bgp-peer-group.xml.i>
-                  #include <include/bgp-remote-as.xml.i>
+                  #include <include/bgp/bgp-peer-group.xml.i>
+                  #include <include/bgp/bgp-remote-as.xml.i>
                   <node name="v6only">
                     <properties>
                       <help>Enable BGP with v6 link-local only</help>
                     </properties>
                     <children>
-                      #include <include/bgp-peer-group.xml.i>
-                      #include <include/bgp-remote-as.xml.i>
+                      #include <include/bgp/bgp-peer-group.xml.i>
+                      #include <include/bgp/bgp-remote-as.xml.i>
                     </children>
                   </node>
                 </children>
               </node>
-              #include <include/bgp-local-as.xml.i>
-              #include <include/bgp-override-capability.xml.i>
-              #include <include/bgp-passive.xml.i>
-              #include <include/bgp-password.xml.i>
-              #include <include/bgp-peer-group.xml.i>
+              #include <include/bgp/bgp-local-as.xml.i>
+              #include <include/bgp/bgp-override-capability.xml.i>
+              #include <include/bgp/bgp-passive.xml.i>
+              #include <include/bgp/bgp-password.xml.i>
+              #include <include/bgp/bgp-peer-group.xml.i>
               <leafNode name="port">
                 <properties>
                   <help>Neighbor BGP port</help>
@@ -419,8 +419,8 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/bgp-remote-as.xml.i>
-              #include <include/bgp-shutdown.xml.i>
+              #include <include/bgp/bgp-remote-as.xml.i>
+              #include <include/bgp/bgp-shutdown.xml.i>
               <leafNode name="strict-capability-match">
                 <properties>
                   <help>Enable strict capability negotiation</help>
@@ -448,12 +448,12 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  #include <include/bgp-timers-holdtime.xml.i>
-                  #include <include/bgp-timers-keepalive.xml.i>
+                  #include <include/bgp/bgp-timers-holdtime.xml.i>
+                  #include <include/bgp/bgp-timers-keepalive.xml.i>
                 </children>
               </node>
-              #include <include/bgp-ttl-security.xml.i>
-              #include <include/bgp-update-source.xml.i>
+              #include <include/bgp/bgp-ttl-security.xml.i>
+              #include <include/bgp/bgp-update-source.xml.i>
             </children>
           </tagNode>
           <node name="parameters">
@@ -808,35 +808,35 @@
                   <help>BGP peer-group address-family parameters</help>
                 </properties>
                 <children>
-                  #include <include/bgp-neighbor-afi-ipv4-unicast.xml.i>
-                  #include <include/bgp-neighbor-afi-ipv6-unicast.xml.i>
-                  #include <include/bgp-neighbor-afi-l2vpn-evpn.xml.i>
+                  #include <include/bgp/bgp-neighbor-afi-ipv4-unicast.xml.i>
+                  #include <include/bgp/bgp-neighbor-afi-ipv6-unicast.xml.i>
+                  #include <include/bgp/bgp-neighbor-afi-l2vpn-evpn.xml.i>
                 </children>
               </node>
-              #include <include/bgp-bfd.xml.i>
-              #include <include/bgp-capability.xml.i>
-              #include <include/bgp-description.xml.i>
-              #include <include/bgp-disable-capability-negotiation.xml.i>
-              #include <include/bgp-disable-connected-check.xml.i>
-              #include <include/bgp-ebgp-multihop.xml.i>
-              #include <include/bgp-local-as.xml.i>
-              #include <include/bgp-override-capability.xml.i>
-              #include <include/bgp-passive.xml.i>
-              #include <include/bgp-password.xml.i>
-              #include <include/bgp-remote-as.xml.i>
-              #include <include/bgp-shutdown.xml.i>
-              #include <include/bgp-ttl-security.xml.i>
-              #include <include/bgp-update-source.xml.i>
+              #include <include/bgp/bgp-bfd.xml.i>
+              #include <include/bgp/bgp-capability.xml.i>
+              #include <include/bgp/bgp-description.xml.i>
+              #include <include/bgp/bgp-disable-capability-negotiation.xml.i>
+              #include <include/bgp/bgp-disable-connected-check.xml.i>
+              #include <include/bgp/bgp-ebgp-multihop.xml.i>
+              #include <include/bgp/bgp-local-as.xml.i>
+              #include <include/bgp/bgp-override-capability.xml.i>
+              #include <include/bgp/bgp-passive.xml.i>
+              #include <include/bgp/bgp-password.xml.i>
+              #include <include/bgp/bgp-remote-as.xml.i>
+              #include <include/bgp/bgp-shutdown.xml.i>
+              #include <include/bgp/bgp-ttl-security.xml.i>
+              #include <include/bgp/bgp-update-source.xml.i>
             </children>
           </tagNode>
-          #include <include/bgp-route-map.xml.i>
+          #include <include/route-map.xml.i>
           <node name="timers">
             <properties>
               <help>BGP protocol timers</help>
             </properties>
             <children>
-              #include <include/bgp-timers-holdtime.xml.i>
-              #include <include/bgp-timers-keepalive.xml.i>
+              #include <include/bgp/bgp-timers-holdtime.xml.i>
+              #include <include/bgp/bgp-timers-keepalive.xml.i>
             </children>
           </node>
         </children>

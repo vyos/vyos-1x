@@ -11,14 +11,14 @@
     <valueless/>
   </properties>
 </leafNode>
-#include <include/bgp-afi-allowas-in.xml.i>
+#include <include/bgp/bgp-afi-allowas-in.xml.i>
 <leafNode name="as-override">
   <properties>
     <help>AS for routes sent to this peer to be the local AS</help>
     <valueless/>
   </properties>
 </leafNode>
-#include <include/bgp-afi-attribute-unchanged.xml.i>
+#include <include/bgp/bgp-afi-attribute-unchanged.xml.i>
 <node name="disable-send-community">
   <properties>
     <help>Disable sending community attributes to this peer</help>
@@ -43,7 +43,7 @@
     <help>Originate default route to this peer</help>
   </properties>
   <children>
-    #include <include/bgp-route-map.xml.i>
+    #include <include/route-map.xml.i>
   </children>
 </node>
 <node name="distribute-list">
@@ -118,17 +118,17 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/bgp-afi-nexthop-self.xml.i>
+#include <include/bgp/bgp-afi-nexthop-self.xml.i>
 <leafNode name="remove-private-as">
   <properties>
     <help>Remove private AS numbers from AS path in outbound route updates</help>
     <valueless/>
   </properties>
 </leafNode>
-#include <include/bgp-afi-route-map.xml.i>
-#include <include/bgp-afi-route-reflector-client.xml.i>
-#include <include/bgp-afi-route-server-client.xml.i>
-#include <include/bgp-afi-soft-reconfiguration.xml.i>
+#include <include/bgp/bgp-afi-route-map.xml.i>
+#include <include/bgp/bgp-afi-route-reflector-client.xml.i>
+#include <include/bgp/bgp-afi-route-server-client.xml.i>
+#include <include/bgp/bgp-afi-soft-reconfiguration.xml.i>
 <leafNode name="unsuppress-map">
   <properties>
     <help>Route-map to selectively unsuppress suppressed routes</help>

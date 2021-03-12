@@ -23,5 +23,5 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/bgp-route-target.xml.i>
+#include <include/bgp/bgp-route-target.xml.i>
 <!-- included end -->
