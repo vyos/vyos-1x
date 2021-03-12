@@ -335,59 +335,13 @@
     <help>Administrative distance</help>
   </properties>
   <children>
-    <leafNode name="global">
-      <properties>
-        <help>OSPF administrative distance</help>
-        <valueHelp>
-          <format>u32:1-255</format>
-          <description>Administrative distance</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 1-255"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/ospf/ospf-distance-global.xml.i>
     <node name="ospf">
       <properties>
         <help>OSPF administrative distance</help>
       </properties>
       <children>
-        <leafNode name="external">
-          <properties>
-            <help>Distance for external routes</help>
-            <valueHelp>
-              <format>u32:1-255</format>
-              <description>Distance for external routes</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-255"/>
-            </constraint>
-          </properties>
-        </leafNode>
-        <leafNode name="inter-area">
-          <properties>
-            <help>Distance for inter-area routes</help>
-            <valueHelp>
-              <format>u32:1-255</format>
-              <description>Distance for inter-area routes</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-255"/>
-            </constraint>
-          </properties>
-        </leafNode>
-        <leafNode name="intra-area">
-          <properties>
-            <help>Distance for intra-area routes</help>
-            <valueHelp>
-              <format>u32:1-255</format>
-              <description>Distance for intra-area routes</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-255"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/ospf/ospf-distance-per-protocol.xml.i>
       </children>
     </node>
   </children>
@@ -632,18 +586,7 @@
         <valueless/>
       </properties>
     </leafNode>
-    <leafNode name="router-id">
-      <properties>
-        <help>Override the default router identifier</help>
-        <valueHelp>
-          <format>ipv4</format>
-          <description>Override the default router identifier</description>
-        </valueHelp>
-        <constraint>
-          <validator name="ipv4-address"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/ospf/ospf-router-id.xml.i>
   </children>
 </node>
 #include <include/routing-passive-interface-xml.i>
