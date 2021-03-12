@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-redistribute-metric-route-map.xml.i -->
+<!-- include start from bgp-afi-redistribute-metric-route-map.xml.i -->
 <leafNode name="metric">
   <properties>
     <help>Metric for redistributed routes</help>
@@ -9,4 +9,4 @@
   </properties>
 </leafNode>
 #include <include/route-map.xml.i>
-<!-- included end -->
+<!-- include end -->

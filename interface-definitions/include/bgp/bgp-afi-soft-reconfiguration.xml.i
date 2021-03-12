@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-soft-reconfiguration.xml.i -->
+<!-- include start from bgp-afi-soft-reconfiguration.xml.i -->
 <node name="soft-reconfiguration">
   <properties>
     <help>Soft reconfiguration for peer</help>
@@ -12,4 +12,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

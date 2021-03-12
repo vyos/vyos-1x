@@ -1,4 +1,4 @@
-<!-- included start from interface-parameters-flowlabel.xml.i -->
+<!-- include start from interface-parameters-flowlabel.xml.i -->
 <leafNode name="flowlabel">
   <properties>
     <help>Specifies the flow label to use in outgoing packets</help>
@@ -12,4 +12,4 @@
     <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

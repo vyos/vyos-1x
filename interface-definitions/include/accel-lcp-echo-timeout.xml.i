@@ -1,4 +1,4 @@
-<!-- included start from accel-lcp-echo-timeout.xml.i -->
+<!-- include start from accel-lcp-echo-timeout.xml.i -->
 <leafNode name="lcp-echo-timeout">
   <properties>
     <help>Timeout in seconds to wait for any peer activity. If this option specified it turns on adaptive lcp echo functionality and "lcp-echo-failure" is not used.</help>
@@ -8,4 +8,4 @@
   </properties>
   <defaultValue>0</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

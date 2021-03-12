@@ -1,4 +1,4 @@
-<!-- included start from webproxy-url-filtering.xml.i -->
+<!-- include start from webproxy-url-filtering.xml.i -->
 <leafNode name="allow-category">
   <properties>
     <help>Category to allow</help>
@@ -116,4 +116,4 @@
     <multi/>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

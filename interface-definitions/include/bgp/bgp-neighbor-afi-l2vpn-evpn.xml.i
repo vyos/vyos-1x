@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-l2vpn-evpn.xml.i -->
+<!-- include start from bgp-neighbor-afi-l2vpn-evpn.xml.i -->
 <node name="l2vpn-evpn">
   <properties>
     <help>L2VPN EVPN BGP settings</help>
@@ -13,4 +13,4 @@
     #include <include/bgp/bgp-afi-soft-reconfiguration.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

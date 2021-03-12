@@ -1,4 +1,4 @@
-<!-- included start from bgp-timers-keepalive.xml.i -->
+<!-- include start from bgp-timers-keepalive.xml.i -->
 <leafNode name="keepalive">
   <properties>
     <help>BGP keepalive interval for this neighbor</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

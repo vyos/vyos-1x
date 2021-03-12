@@ -1,4 +1,4 @@
-<!-- included start from ospf/ospf-authentication.xml.i -->
+<!-- include start from ospf/ospf-authentication.xml.i -->
 <node name="authentication">
   <properties>
     <help>Authentication</help>
@@ -53,4 +53,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

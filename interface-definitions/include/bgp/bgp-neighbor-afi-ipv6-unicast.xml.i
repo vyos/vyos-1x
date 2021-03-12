@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-ipv6-unicast.xml.i -->
+<!-- include start from bgp-neighbor-afi-ipv6-unicast.xml.i -->
 <node name="ipv6-unicast">
   <properties>
     <help>IPv6 BGP neighbor parameters</help>
@@ -17,4 +17,4 @@
     #include <include/bgp/bgp-afi-common.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

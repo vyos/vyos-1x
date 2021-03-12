@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-capability-orf.xml.i -->
+<!-- include start from bgp-afi-capability-orf.xml.i -->
 <node name="orf">
   <properties>
     <help>Advertise ORF capability to this peer</help>
@@ -25,4 +25,4 @@
     </node>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

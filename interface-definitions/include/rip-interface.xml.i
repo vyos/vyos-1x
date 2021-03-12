@@ -1,4 +1,4 @@
-<!-- included start from rip-interface.xml.i -->
+<!-- include start from rip-interface.xml.i -->
 <tagNode name="interface">
   <properties>
     <help>Interface name</help>
@@ -35,4 +35,4 @@
     </node>
   </children>
 </tagNode>
-<!-- included end -->
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-nexthop-self.xml.i -->
+<!-- include start from bgp-afi-nexthop-self.xml.i -->
 <node name="nexthop-self">
   <properties>
     <help>Disable the next hop calculation for this peer</help>
@@ -12,4 +12,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

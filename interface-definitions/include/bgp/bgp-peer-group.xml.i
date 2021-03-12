@@ -1,4 +1,4 @@
-<!-- included start from bgp-peer-group.xml.i -->
+<!-- include start from bgp-peer-group.xml.i -->
 <leafNode name="peer-group">
   <properties>
     <help>Peer group for this peer</help>
@@ -11,4 +11,4 @@
     </valueHelp>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

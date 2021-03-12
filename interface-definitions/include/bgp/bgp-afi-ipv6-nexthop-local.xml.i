@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-ipv6-nexthop-local.xml.i -->
+<!-- include start from bgp-afi-ipv6-nexthop-local.xml.i -->
     <node name="nexthop-local">
       <properties>
         <help>Nexthop attributes</help>
@@ -12,4 +12,4 @@
         </leafNode>
       </children>
     </node>
-<!-- included end -->
+<!-- include end -->

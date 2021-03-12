@@ -1,4 +1,4 @@
-<!-- included start from bgp-ebgp-multihop.xml.i -->
+<!-- include start from bgp-ebgp-multihop.xml.i -->
 <leafNode name="ebgp-multihop">
   <properties>
     <help>Allow this EBGP neighbor to not be on a directly connected network</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

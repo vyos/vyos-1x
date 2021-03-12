@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-attribute-unchanged.xml.i -->
+<!-- include start from bgp-afi-attribute-unchanged.xml.i -->
 <node name="attribute-unchanged">
   <properties>
     <help>BGP attributes are sent unchanged</help>
@@ -24,4 +24,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

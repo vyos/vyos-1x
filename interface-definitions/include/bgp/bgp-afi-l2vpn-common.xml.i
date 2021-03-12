@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-l2vpn-common.xml.i -->
+<!-- include start from bgp-afi-l2vpn-common.xml.i -->
 <leafNode name="advertise-default-gw">
   <properties>
     <help>Advertise All default g/w mac-ip routes in EVPN</help>
@@ -24,4 +24,4 @@
   </properties>
 </leafNode>
 #include <include/bgp/bgp-route-target.xml.i>
-<!-- included end -->
+<!-- include end -->

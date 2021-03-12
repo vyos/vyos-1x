@@ -1,4 +1,4 @@
-<!-- included start from bgp-local-as.xml.i -->
+<!-- include start from bgp-local-as.xml.i -->
 <tagNode name="local-as">
   <properties>
     <help>Local AS number [REQUIRED]</help>
@@ -19,4 +19,4 @@
     </leafNode>
   </children>
 </tagNode>
-<!-- included end -->
+<!-- include end -->

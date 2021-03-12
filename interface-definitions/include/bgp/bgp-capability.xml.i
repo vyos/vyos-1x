@@ -1,4 +1,4 @@
-<!-- included start from bgp-capability.xml.i -->
+<!-- include start from bgp-capability.xml.i -->
 <node name="capability">
   <properties>
     <help>Advertise capabilities to this peer-group</help>
@@ -18,4 +18,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

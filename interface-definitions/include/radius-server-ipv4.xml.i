@@ -1,4 +1,4 @@
-<!-- included start from radius-server-ipv4.xml.i -->
+<!-- include start from radius-server-ipv4.xml.i -->
 <node name="radius">
   <properties>
     <help>RADIUS based user authentication</help>
@@ -24,4 +24,4 @@
     </tagNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

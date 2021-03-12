@@ -1,4 +1,4 @@
-<!-- included start from rip-prefix-list.xml.i -->
+<!-- include start from rip-prefix-list.xml.i -->
 <node name="prefix-list">
   <properties>
     <help>Prefix-list</help>
@@ -30,4 +30,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-maximum-paths.xml.i -->
+<!-- include start from bgp-afi-maximum-paths.xml.i -->
 <node name="maximum-paths">
   <properties>
     <help>Forward packets over multiple paths</help>
@@ -30,4 +30,4 @@
     </leafNode>
     </children>
 </node>
-<!-- included end -->
+<!-- include end -->

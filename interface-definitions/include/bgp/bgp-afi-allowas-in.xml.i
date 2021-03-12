@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-allowas-in.xml.i -->
+<!-- include start from bgp-afi-allowas-in.xml.i -->
 <node name="allowas-in">
   <properties>
     <help>Accept route that contains the local-as in the as-path</help>
@@ -18,4 +18,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

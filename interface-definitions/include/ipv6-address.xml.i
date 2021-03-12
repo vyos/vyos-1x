@@ -1,4 +1,4 @@
-<!-- included start from ipv6-address.xml.i -->
+<!-- include start from ipv6-address.xml.i -->
 <node name="address">
   <properties>
     <help>IPv6 address configuration modes</help>
@@ -9,4 +9,4 @@
     #include <include/ipv6-address-no-default-link-local.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

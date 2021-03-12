@@ -1,4 +1,4 @@
-<!-- included start from rip-timers.xml.i -->
+<!-- include start from rip-timers.xml.i -->
 <node name="timers">
   <properties>
     <help>RIPng timer values</help>
@@ -45,4 +45,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

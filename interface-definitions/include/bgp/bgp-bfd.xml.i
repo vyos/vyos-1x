@@ -1,4 +1,4 @@
-<!-- included start from bgp-bfd.xml.i -->
+<!-- include start from bgp-bfd.xml.i -->
 <node name="bfd">
   <properties>
     <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
@@ -12,4 +12,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

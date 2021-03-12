@@ -1,4 +1,4 @@
-<!-- included start from bgp-timers-holdtime.xml.i -->
+<!-- include start from bgp-timers-holdtime.xml.i -->
 <leafNode name="holdtime">
   <properties>
     <help>BGP hold timer for this neighbor</help>
@@ -15,4 +15,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

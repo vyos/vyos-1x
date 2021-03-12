@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-route-map.xml.i -->
+<!-- include start from bgp-afi-route-map.xml.i -->
 <node name="route-map">
   <properties>
     <help>Route-map to filter route updates to/from this peer</help>
@@ -22,4 +22,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

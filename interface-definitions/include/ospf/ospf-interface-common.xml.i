@@ -1,4 +1,4 @@
-<!-- included start from ospf/ospf-interface-common.xml.i -->
+<!-- include start from ospf/ospf-interface-common.xml.i -->
 <leafNode name="bfd">
   <properties>
     <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
@@ -36,4 +36,4 @@
   </properties>
   <defaultValue>1</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

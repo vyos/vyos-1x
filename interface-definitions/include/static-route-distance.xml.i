@@ -1,4 +1,4 @@
-<!-- included start from static-route-distance.xml.i -->
+<!-- include start from static-route-distance.xml.i -->
 <leafNode name="distance">
   <properties>
     <help>Distance for this route</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

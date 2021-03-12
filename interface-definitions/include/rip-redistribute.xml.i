@@ -1,4 +1,4 @@
-<!-- included start from rip-redistribute.xml.i -->
+<!-- include start from rip-redistribute.xml.i -->
 <leafNode name="metric">
   <properties>
     <help>Metric for redistributed routes</help>
@@ -12,4 +12,4 @@
   </properties>
 </leafNode>
 #include <include/route-map.xml.i>
-<!-- included end -->
+<!-- include end -->

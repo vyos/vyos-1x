@@ -1,4 +1,4 @@
-<!-- included start from bgp/bgp-common-config.xml.i -->
+<!-- include start from bgp/bgp-common-config.xml.i -->
 <node name="address-family">
   <properties>
     <help>BGP address-family parameters</help>
@@ -822,4 +822,4 @@
     #include <include/bgp/bgp-timers-keepalive.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

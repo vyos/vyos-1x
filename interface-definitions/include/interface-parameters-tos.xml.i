@@ -1,4 +1,4 @@
-<!-- included start from tunnel-parameters-tos.xml.i -->
+<!-- include start from tunnel-parameters-tos.xml.i -->
 <leafNode name="tos">
   <properties>
     <help>Specifies TOS value to use in outgoing packets</help>
@@ -13,4 +13,4 @@
   </properties>
   <defaultValue>inherit</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

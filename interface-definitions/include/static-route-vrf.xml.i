@@ -1,4 +1,4 @@
-<!-- included start from static-route-vrf.xml.i -->
+<!-- include start from static-route-vrf.xml.i -->
 <leafNode name="vrf">
   <properties>
     <help>VRF to leak route</help>
@@ -16,4 +16,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

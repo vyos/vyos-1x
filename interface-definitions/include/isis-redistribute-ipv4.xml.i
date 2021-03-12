@@ -1,4 +1,4 @@
-<!-- included start from isis-redistribute-ipv4.xml.i -->
+<!-- include start from isis-redistribute-ipv4.xml.i -->
 <node name="level-1">
   <properties>
     <help>Redistribute into level-1</help>
@@ -53,4 +53,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

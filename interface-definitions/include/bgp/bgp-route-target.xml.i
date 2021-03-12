@@ -1,4 +1,4 @@
-<!-- included start from bgp-route-target.xml.i -->
+<!-- include start from bgp-route-target.xml.i -->
 <node name="route-target">
   <properties>
     <help>Route Target</help>
@@ -42,4 +42,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

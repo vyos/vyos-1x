@@ -1,4 +1,4 @@
-<!-- included start from bgp-update-source.xml.i -->
+<!-- include start from bgp-update-source.xml.i -->
 <leafNode name="update-source">
   <!-- Need to check format interfaces -->
   <properties>
@@ -26,4 +26,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

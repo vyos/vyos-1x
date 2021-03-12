@@ -1,4 +1,4 @@
-<!-- included start from ospf/ospf-common-config.xml.i -->
+<!-- include start from ospf/ospf-common-config.xml.i -->
 <tagNode name="access-list">
   <properties>
     <help>Access list to filter networks in routing updates</help>
@@ -758,4 +758,4 @@
     </node>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

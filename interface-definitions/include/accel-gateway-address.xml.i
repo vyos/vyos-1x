@@ -1,4 +1,4 @@
-<!-- included start from accel-gateway-address.xml.i -->
+<!-- include start from accel-gateway-address.xml.i -->
 <leafNode name="gateway-address">
   <properties>
     <help>Gateway IP address</help>
@@ -12,4 +12,4 @@
     </valueHelp>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

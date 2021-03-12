@@ -1,4 +1,4 @@
-<!-- included start from bgp-ttl-security.xml.i -->
+<!-- include start from bgp-ttl-security.xml.i -->
 <node name="ttl-security">
   <properties>
     <help>Ttl security mechanism</help>
@@ -18,4 +18,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

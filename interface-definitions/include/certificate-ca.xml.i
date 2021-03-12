@@ -1,4 +1,4 @@
-<!-- included start from certificate-ca.xml.i -->
+<!-- include start from certificate-ca.xml.i -->
 <leafNode name="ca-cert-file">
   <properties>
     <help>Certificate Authority in x509 PEM format</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

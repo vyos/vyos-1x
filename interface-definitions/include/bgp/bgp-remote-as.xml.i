@@ -1,4 +1,4 @@
-<!-- included start from bgp-remote-as.xml.i -->
+<!-- include start from bgp-remote-as.xml.i -->
 <leafNode name="remote-as">
   <properties>
     <help>Neighbor BGP AS number [REQUIRED]</help>
@@ -24,4 +24,4 @@
     <constraintErrorMessage>Invalid AS number</constraintErrorMessage>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->
