@@ -192,15 +192,23 @@
                 <children>
                   <leafNode name="encaplimit">
                     <properties>
-                      <help>Encaplimit field</help>
+                      <help>Set fixed encapsulation limit</help>
+                      <completionHelp>
+                        <list>none</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>0-255</format>
                         <description>Encaplimit (default 4)</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>none</format>
+                        <description>Encaplimit disabled</description>
+                      </valueHelp>
                       <constraint>
+                        <regex>^(none)$</regex>
                         <validator name="numeric" argument="--range 0-255"/>
                       </constraint>
-                      <constraintErrorMessage>key must be between 0-255</constraintErrorMessage>
+                      <constraintErrorMessage>Tunnel encaplimit must be 0-255 or none</constraintErrorMessage>
                     </properties>
                     <defaultValue>4</defaultValue>
                   </leafNode>
