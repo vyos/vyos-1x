@@ -1,0 +1,166 @@
+interfaces {
+    ethernet eth0 {
+        address 192.0.2.1/24
+    }
+     ethernet eth1 {
+         vrf black
+     }
+     ethernet eth2 {
+         vrf black
+     }
+}
+protocols {
+    ospf {
+        area 0 {
+            network 192.0.2.0/24
+        }
+        interface eth0 {
+            authentication {
+                md5 {
+                    key-id 10 {
+                        md5-key ospfkey
+                    }
+                }
+            }
+        }
+        log-adjacency-changes {
+        }
+        parameters {
+            abr-type cisco
+            router-id 1.2.3.4
+        }
+        passive-interface default
+        passive-interface-exclude eth0
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    nt
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+vrf {
+    name black {
+        protocols {
+            bgp 65000 {
+                address-family {
+                    ipv4-unicast {
+                        network 10.0.150.0/23 {
+                        }
+                    }
+                    ipv6-unicast {
+                        network 2001:db8:200::/40 {
+                        }
+                    }
+                }
+                neighbor 10.0.151.222 {
+                    disable-send-community {
+                        extended
+                        standard
+                    }
+                    address-family {
+                        ipv4-unicast {
+                            default-originate {
+                            }
+                            soft-reconfiguration {
+                                inbound
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as 65010
+                }
+                neighbor 10.0.151.252 {
+                    peer-group VYOSv4
+                }
+                neighbor 10.0.151.254 {
+                    peer-group VYOSv4
+                }
+                neighbor 2001:db8:200:ffff::3 {
+                    peer-group VYOSv6
+                }
+                neighbor 2001:db8:200:ffff::a {
+                    peer-group VYOSv6
+                }
+                neighbor 2001:db8:200:ff::101:2 {
+                    remote-as 65010
+                }
+                parameters {
+                    default {
+                        no-ipv4-unicast
+                    }
+                    log-neighbor-changes
+                    router-id 10.0.151.251
+                }
+                peer-group VYOSv4 {
+                    address-family {
+                        ipv4-unicast {
+                            nexthop-self {
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as 65000
+                    update-source dum0
+                }
+                peer-group VYOSv6 {
+                    address-family {
+                        ipv6-unicast {
+                            nexthop-self {
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as 65000
+                    update-source dum0
+                }
+            }
+
+        }
+        table 2000
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@2:conntrack-sync@1:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@20:ipoe-server@1:ipsec@5:l2tp@3:lldp@1:mdns@1:nat@5:nat66@1:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@9:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@20:vrf@2:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.4-rolling-202103130218

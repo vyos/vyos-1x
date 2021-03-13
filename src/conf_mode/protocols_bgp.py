@@ -21,7 +21,6 @@ from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configverify import verify_vrf
 from vyos.template import is_ip
 from vyos.template import render_to_string
 from vyos.util import call
@@ -47,15 +46,14 @@ def get_config(config=None):
     base_path = ['protocols', 'bgp']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    base = vrf and ['protocols', 'vrf', vrf, 'bgp'] or base_path
+    base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
     # instead of the VRF instance.
-    if vrf: bgp[asn]['vrf'] = vrf
+    if vrf: bgp.update({'vrf' : vrf})
 
-    # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         bgp.update({'deleted' : ''})
         return bgp
@@ -96,13 +94,19 @@ def verify(bgp):
     if not bgp:
         return None
 
-    # Check if declared more than one ASN
-    if len(bgp) > 1:
-        raise ConfigError('Only one BGP AS number can be defined!')
+    # FRR bgpd only supports one Autonomous System Number, verify this!
+    asn = 0
+    for key in bgp:
+        if key.isnumeric():
+            asn +=1
+        if asn > 1:
+            raise ConfigError('Only one BGP AS number can be defined!')
 
     for asn, asn_config in bgp.items():
-
-        verify_vrf(asn_config)
+        # Workaround for https://phabricator.vyos.net/T1711
+        # We also have a vrf, and deleted key now - so we can only veriy "numbers"
+        if not asn.isnumeric():
+            continue
 
         # Common verification for both peer-group and neighbor statements
         for neighbor in ['neighbor', 'peer_group']:
@@ -202,6 +206,8 @@ def generate(bgp):
     # of the config dict
     asn = list(bgp.keys())[0]
     bgp[asn]['asn'] = asn
+    if 'vrf' in bgp:
+        bgp[asn]['vrf'] = bgp['vrf']
 
     bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn])
     return None

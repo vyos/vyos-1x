@@ -29,8 +29,8 @@ route_map = 'foo-bar-baz10'
 
 def getFRRconfig(vrf=None):
     if vrf:
-        return cmd(f'vtysh -c "show run" | sed -n "/^router ospf vrf {vrf}/,/^!/p"')
-    return cmd('vtysh -c "show run" | sed -n "/^router ospf/,/^!/p"')
+        return cmd(f'vtysh -c "show run" | sed -n "/^router ospf vrf {vrf}$/,/^!/p"')
+    return cmd('vtysh -c "show run" | sed -n "/^router ospf$/,/^!/p"')
 
 def getFRRInterfaceConfig(interface):
     return cmd(f'vtysh -c "show run" | sed -n "/^interface {interface}$/,/^!/p"')
@@ -237,6 +237,7 @@ class TestProtocolsOSPF(unittest.TestCase):
             else:
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
+
     def test_ospf_09_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
         area = '10'
@@ -279,6 +280,7 @@ class TestProtocolsOSPF(unittest.TestCase):
         for network in networks:
             self.assertIn(f' network {network} area {area}', frrconfig)
 
+
     def test_ospf_10_interface_configureation(self):
         interfaces = Section.interfaces('ethernet')
         password = 'vyos1234'
@@ -310,17 +312,21 @@ class TestProtocolsOSPF(unittest.TestCase):
             self.assertIn(f' ip ospf priority {priority}', config)
             self.assertIn(f' bandwidth {bandwidth}', config)
 
-    def test_ospf_01_11_vrfs(self):
+
+    def test_ospf_11_vrfs(self):
         vrfs = ['red', 'green', 'blue']
         # It is safe to assume that when the basic VRF test works, all
         # other OSPF related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.
         table = '1000'
         for vrf in vrfs:
-            self.session.set(['vrf', 'name', vrf, 'table', table])
-            self.session.set(['protocols', 'vrf', vrf, 'ospf'])
+            vrf_base = ['vrf', 'name', vrf]
+            self.session.set(vrf_base + ['table', table])
+            self.session.set(vrf_base + ['protocols', 'ospf'])
             table = str(int(table) + 1000)
 
+        # Also set a default VRF OSPF config
+        self.session.set(base_path)
         self.session.commit()
 
         # Verify FRR ospfd configuration
@@ -335,9 +341,8 @@ class TestProtocolsOSPF(unittest.TestCase):
             self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
             self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
-            self.session.delete(['protocols', 'vrf', vrf])
             self.session.delete(['vrf', 'name', vrf])
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

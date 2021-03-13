@@ -21,6 +21,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.util import cmd
+from vyos.util import get_json_iface_options
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
@@ -85,7 +86,6 @@ routes = {
     },
 }
 
-vrfs = ['red', 'green', 'blue']
 tables = ['80', '81', '82']
 
 class StaticRouteTest(unittest.TestCase):
@@ -98,9 +98,6 @@ class StaticRouteTest(unittest.TestCase):
             if is_ipv6(route):
                 route_type = 'route6'
             self.session.delete(base_path + [route_type, route])
-
-        for vrf in vrfs:
-            self.session.delete(vrf_path + [vrf])
 
         for table in tables:
             self.session.delete(base_path + ['table', table])
@@ -290,47 +287,65 @@ class StaticRouteTest(unittest.TestCase):
 
 
     def test_protocols_vrf_static(self):
-        for vrf in vrfs:
+        # Create VRF instances and apply the static routes from above to FRR.
+        # Re-read the configured routes and match them if they are programmed
+        # properly. This also includes VRF leaking
+        vrfs = {
+            'red'   : { 'table' : '1000' },
+            'green' : { 'table' : '2000' },
+            'blue'  : { 'table' : '3000' },
+        }
+
+        for vrf, vrf_config in vrfs.items():
+            vrf_base_path = ['vrf', 'name', vrf]
+            self.session.set(vrf_base_path + ['table', vrf_config['table']])
+
             for route, route_config in routes.items():
                 route_type = 'route'
                 if is_ipv6(route):
                     route_type = 'route6'
-                base = vrf_path + [vrf, 'static', route_type, route]
+                route_base_path = vrf_base_path + ['protocols', 'static', route_type, route]
 
                 if 'next_hop' in route_config:
                     for next_hop, next_hop_config in route_config['next_hop'].items():
-                        self.session.set(base + ['next-hop', next_hop])
+                        self.session.set(route_base_path + ['next-hop', next_hop])
                         if 'disable' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'disable'])
+                            self.session.set(route_base_path + ['next-hop', next_hop, 'disable'])
                         if 'distance' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
+                            self.session.set(route_base_path + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
                         if 'interface' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
+                            self.session.set(route_base_path + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
                         if 'vrf' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
+                            self.session.set(route_base_path + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
 
 
                 if 'interface' in route_config:
                     for interface, interface_config in route_config['interface'].items():
-                        self.session.set(base + ['interface', interface])
+                        self.session.set(route_base_path + ['interface', interface])
                         if 'disable' in interface_config:
-                            self.session.set(base + ['interface', interface, 'disable'])
+                            self.session.set(route_base_path + ['interface', interface, 'disable'])
                         if 'distance' in interface_config:
-                            self.session.set(base + ['interface', interface, 'distance', interface_config['distance']])
+                            self.session.set(route_base_path + ['interface', interface, 'distance', interface_config['distance']])
                         if 'vrf' in interface_config:
-                            self.session.set(base + ['interface', interface, 'vrf', interface_config['vrf']])
+                            self.session.set(route_base_path + ['interface', interface, 'vrf', interface_config['vrf']])
 
                 if 'blackhole' in route_config:
-                    self.session.set(base + ['blackhole'])
+                    self.session.set(route_base_path + ['blackhole'])
                     if 'distance' in route_config['blackhole']:
-                        self.session.set(base + ['blackhole', 'distance', route_config['blackhole']['distance']])
+                        self.session.set(route_base_path + ['blackhole', 'distance', route_config['blackhole']['distance']])
                     if 'tag' in route_config['blackhole']:
-                        self.session.set(base + ['blackhole', 'tag', route_config['blackhole']['tag']])
+                        self.session.set(route_base_path + ['blackhole', 'tag', route_config['blackhole']['tag']])
 
         # commit changes
         self.session.commit()
 
-        for vrf in vrfs:
+        for vrf, vrf_config in vrfs.items():
+            tmp = get_json_iface_options(vrf)
+
+            # Compare VRF table ID
+            self.assertEqual(tmp['linkinfo']['info_data']['table'], int(vrf_config['table']))
+            self.assertEqual(tmp['linkinfo']['info_kind'],          'vrf')
+
             # Verify FRR bgpd configuration
             frrconfig = getFRRCconfig(vrf)
             self.assertIn(f'vrf {vrf}', frrconfig)
@@ -380,6 +395,7 @@ class StaticRouteTest(unittest.TestCase):
 
                     self.assertIn(tmp, frrconfig)
 
+        self.session.delete(['vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

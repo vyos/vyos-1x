@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.template import render_to_string
@@ -34,8 +35,19 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'static']
+
+    vrf = None
+    if len(argv) > 1:
+        vrf = argv[1]
+
+    base_path = ['protocols', 'static']
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    base = vrf and ['vrf', 'name', vrf, 'protocols', 'static'] or base_path
     static = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # Assign the name of our VRF context
+    if vrf: static['vrf'] = vrf
+
     return static
 
 def verify(static):
@@ -50,8 +62,14 @@ def apply(static):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'^ip route .*', '')
-    frr_cfg.modify_section(r'^ipv6 route .*', '')
+
+    if 'vrf' in static:
+        vrf = static['vrf']
+        frr_cfg.modify_section(f'^vrf {vrf}$', '')
+    else:
+        frr_cfg.modify_section(r'^ip route .*', '')
+        frr_cfg.modify_section(r'^ipv6 route .*', '')
+
     frr_cfg.add_before(r'(interface .*|line vty)', static['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 

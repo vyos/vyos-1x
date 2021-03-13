@@ -24,7 +24,6 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_maps
 from vyos.configverify import verify_interface_exists
-from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -50,7 +49,7 @@ def get_config(config=None):
     base_path = ['protocols', 'ospf']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    base = vrf and ['protocols', 'vrf', vrf, 'ospf'] or base_path
+    base = vrf and ['vrf', 'name', vrf, 'protocols', 'ospf'] or base_path
     ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
     # Assign the name of our VRF context. This MUST be done before the return
@@ -141,7 +140,6 @@ def verify(ospf):
     if not ospf:
         return None
 
-    verify_vrf(ospf)
     verify_route_maps(ospf)
 
     if 'interface' in ospf:
