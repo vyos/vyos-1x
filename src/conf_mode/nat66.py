@@ -28,7 +28,6 @@ from vyos.util import cmd
 from vyos.util import check_kmod
 from vyos.util import dict_search
 from vyos.template import is_ipv6
-from vyos.template import is_ip_network
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
