@@ -80,8 +80,10 @@ def get_config(config=None):
 
     if not conf.exists(base):
         nat['helper_functions'] = 'remove'
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_HELPER')
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT','NAT_CONNTRACK')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_HELPER')
+        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
         nat['deleted'] = ''
         return nat
 
@@ -91,8 +93,10 @@ def get_config(config=None):
         nat['helper_functions'] = 'add'
         
         # Retrieve current table handler positions
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_IGNORE')
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT','VYATTA_CT_OUTPUT_HOOK')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_IGNORE')
+        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
     else:
         nat['helper_functions'] = 'has'
 
