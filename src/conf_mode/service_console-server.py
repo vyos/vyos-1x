@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from psutil import process_iter
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -60,14 +61,19 @@ def verify(proxy):
     if not proxy:
         return None
 
+    processes = process_iter(['name', 'cmdline'])
     if 'device' in proxy:
-        for device in proxy['device']:
-            if 'speed' not in proxy['device'][device]:
-                raise ConfigError(f'Serial port speed must be defined for "{device}"!')
+        for device, device_config in proxy['device'].items():
+            for process in processes:
+                if 'agetty' in process.name() and device in process.cmdline():
+                    raise ConfigError(f'Port "{device}" already provides a '\
+                                      'console used by "system console"!')
 
-            if 'ssh' in proxy['device'][device]:
-                if 'port' not in proxy['device'][device]['ssh']:
-                    raise ConfigError(f'SSH port must be defined for "{device}"!')
+            if 'speed' not in device_config:
+                raise ConfigError(f'Port "{device}" requires speed to be set!')
+
+            if 'ssh' in device_config and 'port' not in device_config['ssh']:
+                raise ConfigError(f'Port "{device}" requires SSH port to be set!')
 
     return None
 
@@ -77,13 +83,13 @@ def generate(proxy):
 
     render(config_file, 'conserver/conserver.conf.tmpl', proxy)
     if 'device' in proxy:
-        for device in proxy['device']:
-            if 'ssh' not in proxy['device'][device]:
+        for device, device_config in proxy['device'].items():
+            if 'ssh' not in device_config:
                 continue
 
             tmp = {
                 'device' : device,
-                'port' : proxy['device'][device]['ssh']['port'],
+                'port' : device_config['ssh']['port'],
             }
             render(dropbear_systemd_file.format(**tmp),
                    'conserver/dropbear@.service.tmpl', tmp)
@@ -102,10 +108,10 @@ def apply(proxy):
     call('systemctl restart conserver-server.service')
 
     if 'device' in proxy:
-        for device in proxy['device']:
-            if 'ssh' not in proxy['device'][device]:
+        for device, device_config in proxy['device'].items():
+            if 'ssh' not in device_config:
                 continue
-            port = proxy['device'][device]['ssh']['port']
+            port = device_config['ssh']['port']
             call(f'systemctl restart dropbear@{port}.service')
 
     return None
