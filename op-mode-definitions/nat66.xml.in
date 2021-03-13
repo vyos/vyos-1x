@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-      <node name="nat">
+      <node name="nat66">
         <properties>
           <help>Show Network Address Translation (NAT) information</help>
         </properties>
@@ -16,13 +16,13 @@
                 <properties>
                   <help>Show configured source NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_rules.py --source</command>
+                <command>${vyos_op_scripts_dir}/show_nat66_rules.py --source</command>
               </node>
               <node name="statistics">
                 <properties>
                   <help>Show statistics for configured source NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_statistics.py --source</command>
+                <command>${vyos_op_scripts_dir}/show_nat66_statistics.py --source</command>
               </node>
               <node name="translations">
                 <properties>
@@ -33,19 +33,19 @@
                     <properties>
                       <help>Show active source NAT translations for an IP address</help>
                       <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source --verbose --ipaddr="$6"</command>
+                    <command>${vyos_op_scripts_dir}/show_nat66_translations.py --type=source --verbose --ipaddr="$6"</command>
                   </tagNode>
                   <node name="detail">
                     <properties>
                       <help>Show active source NAT translations detail</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source --verbose</command>
+                    <command>${vyos_op_scripts_dir}/show_nat66_translations.py --type=source --verbose</command>
                   </node>
                 </children>
-                <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source</command>
+                <command>${vyos_op_scripts_dir}/show_nat66_translations.py --type=source</command>
               </node>
             </children>
           </node>
@@ -58,13 +58,13 @@
                 <properties>
                   <help>Show configured destination NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_rules.py --destination</command>
+                <command>${vyos_op_scripts_dir}/show_nat66_rules.py --destination</command>
               </node>
               <node name="statistics">
                 <properties>
                   <help>Show statistics for configured destination NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_statistics.py --destination</command>
+                <command>${vyos_op_scripts_dir}/show_nat66_statistics.py --destination</command>
               </node>
               <node name="translations">
                 <properties>
@@ -75,19 +75,19 @@
                     <properties>
                       <help>Show active NAT destination translations for an IP address</help>
                       <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination --verbose --ipaddr="$6"</command>
+                    <command>${vyos_op_scripts_dir}/show_nat66_translations.py --type=destination --verbose --ipaddr="$6"</command>
                   </tagNode>
                   <node name="detail">
                     <properties>
                       <help>Show active destination NAT translations detail</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination --verbose</command>
+                    <command>${vyos_op_scripts_dir}/show_nat66_translations.py --type=destination --verbose</command>
                   </node>
                 </children>
-                <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination</command>
+                <command>${vyos_op_scripts_dir}/show_nat66_translations.py --type=destination</command>
               </node>
             </children>
           </node>
