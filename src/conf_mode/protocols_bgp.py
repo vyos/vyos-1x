@@ -189,11 +189,13 @@ def verify(bgp):
             # we can not use dict_search() here as prefix contains dots ...
             if 'peer_group' not in asn_config['listen']['range'][prefix]:
                 raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
-            else:
-                peer_group = asn_config['listen']['range'][prefix]['peer_group']
-                # the peer group must also exist
-                if not dict_search(f'peer_group.{peer_group}', asn_config):
-                    raise ConfigError(f'Peer-group "{peer_group}" for listen range "{prefix}" does not exist!')
+
+            peer_group = asn_config['listen']['range'][prefix]['peer_group']
+            if 'peer_group' not in asn_config or peer_group not in asn_config['peer_group']:
+                raise ConfigError(f'Peer-group "{peer_group}" for listen range "{prefix}" does not exist!')
+
+            if not verify_remote_as(asn_config['listen']['range'][prefix], asn_config):
+                raise ConfigError(f'Peer-group "{peer_group}" requires remote-as to be set!')
 
     return None
 
