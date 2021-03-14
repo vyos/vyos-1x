@@ -1,0 +1,1266 @@
+<?xml version="1.0"?>
+<!-- Policy access|prefix|route-map lists -->
+<interfaceDefinition>
+  <node name="npolicy" owner="${vyos_conf_scripts_dir}/policy-lists.py">
+    <properties>
+      <help>Routing policy</help>
+    </properties>
+    <children>
+      <tagNode name="access-list">
+        <properties>
+          <help>IP access-list filter</help>
+          <valueHelp>
+            <format>u32:1-99</format>
+            <description>IP standard access list</description>
+          </valueHelp>
+          <valueHelp>
+            <format>u32:100-199</format>
+            <description>IP extended access list</description>
+          </valueHelp>
+          <valueHelp>
+            <format>u32:1300-1999</format>
+            <description>IP standard access list (expanded range)</description>
+          </valueHelp>
+          <valueHelp>
+            <format>u32:2000-2699</format>
+            <description>IP extended access list (expanded range)</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this access-list</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Access-list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <node name="destination">
+                <properties>
+                  <help>Destination network or address</help>
+                </properties>
+                <children>
+                  <leafNode name="any">
+                    <properties>
+                      <help>Any IP address to match</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host">
+                    <properties>
+                      <help>Single host IP address to match</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Host address to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-host"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="inverse-mask">
+                    <properties>
+                      <help>Network/netmask to match (requires network be defined)</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Inverse-mask to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="network">
+                    <properties>
+                      <help>Network/netmask to match (requires inverse-mask be defined)</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>Inverse-mask to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source network or address to match</help>
+                </properties>
+                <children>
+                  <leafNode name="any">
+                    <properties>
+                      <help>Any IP address to match</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host">
+                    <properties>
+                      <help>Single host IP address to match</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Host address to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-host"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="inverse-mask">
+                    <properties>
+                      <help>Network/netmask to match (requires network be defined)</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Inverse-mask to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="network">
+                    <properties>
+                      <help>Network/netmask to match (requires inverse-mask be defined)</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>Inverse-mask to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END access-list -->
+      <tagNode name="access-list6">
+        <properties>
+          <help>IPv6 access-list filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Name of IPv6 access-list</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this access-list6</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Access-list6 rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <node name="source">
+                <properties>
+                  <help>Source IPv6 network to match</help>
+                </properties>
+                <children>
+                  <leafNode name="any">
+                    <properties>
+                      <help>Any IP address to match</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="exact-match">
+                    <properties>
+                      <help>Exact match of the network prefixes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="network">
+                    <properties>
+                      <help>Network/netmask to match</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 address and prefix length</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END access-list6 -->
+      <tagNode name="as-path-list">
+        <properties>
+          <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>AS path list name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this as-path-list</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>AS path list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <leafNode name="regex">
+                <properties>
+                  <help>Regular expression to match against an AS path</help>
+                  <valueHelp>
+                    <format>&lt;asn&gt;</format>
+                    <description>AS path regular expression (ex: "64501 64502")</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END as-path-list -->
+      <tagNode name="community-list">
+        <properties>
+          <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Border Gateway Protocol (BGP) community-list filter</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this BGP community list</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Community-list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <leafNode name="regex">
+                <properties>
+                  <help>Regular expression to match against a community list</help>
+                  <valueHelp>
+                    <format>&lt;aa:nn&gt;</format>
+                    <description>Community list regular expression or one of: internet, local-AS, no-advertise, no-export</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END community-list -->
+      <tagNode name="extcommunity-list">
+        <properties>
+          <help>Border Gateway Protocol (BGP) extended community-list filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Border Gateway Protocol (BGP) extended community-list filter</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this BGP extended community list</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Extended community-list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <leafNode name="regex">
+                <properties>
+                  <help>Regular expression to match against an extended community list</help>
+                  <valueHelp>
+                    <format>&lt;aa:nn:nn&gt;</format>
+                    <description>Extended community list regular expression</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;rt aa:nn:nn&gt;</format>
+                    <description>Extended community list regular expression</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;soo aa:nn&gt;</format>
+                    <description>Extended community list regular expression</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END extcommunity-list -->
+      <tagNode name="large-community-list">
+        <properties>
+          <help>Border Gateway Protocol (BGP) large-community-list filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Border Gateway Protocol (BGP) large-community-list filter</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this BGP extended community list</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Large community-list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <leafNode name="regex">
+                <properties>
+                  <help>Regular expression to match against a large community list</help>
+                  <valueHelp>
+                    <format>&lt;aa:nn:nn&gt;</format>
+                    <description>Large community list regular expression</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END large-community-list -->
+      <tagNode name="prefix-list">
+        <properties>
+          <help>IP prefix-list filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Prefix list name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this prefix-list</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Prefix-list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <leafNode name="ge">
+                <properties>
+                  <help>Prefix length to match a netmask greater than or equal to it</help>
+                  <valueHelp>
+                    <format>u32:0-32</format>
+                    <description>Netmask greater than length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-32"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="le">
+                <properties>
+                  <help>Prefix length to match a netmask less than or equal to it</help>
+                  <valueHelp>
+                    <format>u32:0-32</format>
+                    <description>Netmask less than length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-32"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="prefix">
+                <properties>
+                  <help>Prefix to match</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Prefix to match against</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END prefix-list -->
+      <tagNode name="prefix-list6">
+        <properties>
+          <help>IPv6 prefix-list filter</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Prefix list name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this prefix-list6</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Prefix-list rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              #include <include/policy-list-rule-description.xml.i>
+              <leafNode name="ge">
+                <properties>
+                  <help>Prefix length to match a netmask greater than or equal to it</help>
+                  <valueHelp>
+                    <format>u32:0-128</format>
+                    <description>Netmask greater than length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-128"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="le">
+                <properties>
+                  <help>Prefix length to match a netmask less than or equal to it</help>
+                  <valueHelp>
+                    <format>u32:0-128</format>
+                    <description>Netmask less than length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-128"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="prefix">
+                <properties>
+                  <help>Prefix to match</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END prefix-list6 -->
+      <tagNode name="route-map">
+        <properties>
+          <help>IP route-map</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Route map name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/policy-list-description.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule for this route-map</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Route-map rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/policy-list-action.xml.i>
+              <leafNode name="call">
+                <properties>
+                  <help>Call another route-map on match</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Route map name</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <path>policy route-map</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="continue">
+                <properties>
+                  <help>Jump to a different rule in this route-map on a match</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Rule number</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              #include <include/policy-list-rule-description.xml.i>
+              <node name="match">
+                <properties>
+                  <help>Route parameters to match</help>
+                </properties>
+                <children>
+                  <leafNode name="as-path">
+                    <properties>
+                      <help>BGP as-path-list to match</help>
+                      <completionHelp>
+                        <path>policy as-path-list</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <node name="community">
+                    <properties>
+                      <help>BGP community-list to match</help>
+                    </properties>
+                    <children>
+                      <leafNode name="community-list">
+                        <properties>
+                          <help>BGP community-list to match</help>
+                          <completionHelp>
+                            <path>policy community-list</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="exact-match">
+                        <properties>
+                          <help>Community-list to exactly match</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="extcommunity">
+                    <properties>
+                      <help>BGP extended community to match</help>
+                      <completionHelp>
+                        <path>policy extcommunity-list</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>First hop interface of a route to match</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <node name="ip">
+                    <properties>
+                      <help>IP prefix parameters to match</help>
+                    </properties>
+                    <children>
+                      <node name="address">
+                        <properties>
+                          <help>IP address of route to match</help>
+                        </properties>
+                        <children>
+                          <leafNode name="access-list">
+                            <properties>
+                              <help>IP access-list to match</help>
+                              <valueHelp>
+                                <format>u32:1-99</format>
+                                <description>IP standard access list</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:100-199</format>
+                                <description>IP extended access list</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:1300-1999</format>
+                                <description>IP standard access list (expanded range)</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:2000-2699</format>
+                                <description>IP extended access list (expanded range)</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix-list">
+                            <properties>
+                              <help>IP prefix-list to match</help>
+                              <completionHelp>
+                                <path>policy prefix-list</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                <!--  T3304 but it overwrite node nexthop
+                      <leafNode name="nexthop">
+                        <properties>
+                          <help>IP next-hop of route to match</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Next-hop IPv4 router address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>   -->
+                      <node name="nexthop">
+                        <properties>
+                          <help>IP next-hop of route to match</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Next-hop IPv4 router address</description>
+                          </valueHelp>
+                        </properties>
+                        <children>
+                          <leafNode name="access-list">
+                            <properties>
+                              <help>IP access-list to match</help>
+                              <valueHelp>
+                                <format>u32:1-99</format>
+                                <description>IP standard access list</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:100-199</format>
+                                <description>IP extended access list</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:1300-1999</format>
+                                <description>IP standard access list (expanded range)</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:2000-2699</format>
+                                <description>IP extended access list (expanded range)</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix-list">
+                            <properties>
+                              <help>IP prefix-list to match</help>
+                              <completionHelp>
+                                <path>policy prefix-list</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <node name="route-source">
+                        <properties>
+                          <help>test</help>
+                        </properties>
+                        <children>
+                          <leafNode name="access-list">
+                            <properties>
+                              <help>IP access-list to match</help>
+                              <valueHelp>
+                                <format>u32:1-99</format>
+                                <description>IP standard access list</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:100-199</format>
+                                <description>IP extended access list</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:1300-1999</format>
+                                <description>IP standard access list (expanded range)</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>u32:2000-2699</format>
+                                <description>IP extended access list (expanded range)</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix-list">
+                            <properties>
+                              <help>IP prefix-list to match</help>
+                              <completionHelp>
+                                <path>policy prefix-list</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="ipv6">
+                    <properties>
+                      <help>IPv6 prefix parameters to match</help>
+                    </properties>
+                    <children>
+                      <node name="address">
+                        <properties>
+                          <help>IPv6 address of route to match</help>
+                        </properties>
+                        <children>
+                          <leafNode name="access-list">
+                            <properties>
+                              <help>IPv6 access-list to match</help>
+                              <valueHelp>
+                                <format>txt</format>
+                                <description>IPV6 access list name</description>
+                              </valueHelp>
+                              <completionHelp>
+                                <path>policy access-list6</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix-list">
+                            <properties>
+                              <help>IPv6 prefix-list to match</help>
+                              <completionHelp>
+                                <path>policy prefix-list6</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <leafNode name="nexthop">
+                        <properties>
+                          <help>IPv6 next-hop of route to match</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Peer IP address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="large-community">
+                    <properties>
+                      <help>Match BGP large communities</help>
+                    </properties>
+                    <children>
+                      <leafNode name="large-community-list">
+                        <properties>
+                          <help>BGP large-community-list to match</help>
+                          <completionHelp>
+                            <path>policy large-community-list</path>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="local-preference">
+                    <properties>
+                      <help>local-preference_help</help>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>Local Preference</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="metric">
+                    <properties>
+                      <help>Metric of route to match</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Route metric</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="origin">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) origin code to match</help>
+                      <completionHelp>
+                        <list>egp igp incomplete</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>egp</format>
+                        <description>Exterior gateway protocol origin</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>igp</format>
+                        <description>Interior gateway protocol origin</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>incomplete</format>
+                        <description>Incomplete origin</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(egp|igp|incomplete)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="peer">
+                    <properties>
+                      <help>Peer address to match</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Peer IP address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rpki">
+                    <properties>
+                      <help>Match RPKI validation result</help>
+                      <completionHelp>
+                        <list>invalid notfound valid</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>invalid</format>
+                        <description>Match invalid entries</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>notfound</format>
+                        <description>Match notfound entries</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>valid</format>
+                        <description>Match valid entries</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(invalid|notfound|valid)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="tag">
+                    <properties>
+                      <help>Route tag to match</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Route tag</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="on-match">
+                <properties>
+                  <help>Exit policy on matches</help>
+                </properties>
+                <children>
+                  <leafNode name="goto">
+                    <properties>
+                      <help>Rule number to goto on match</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Rule number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="next">
+                    <properties>
+                      <help>Next sequence number to goto on match</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="set">
+                <properties>
+                  <help>Route parameters</help>
+                </properties>
+                <children>
+                  <node name="aggregator">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) aggregator attribute</help>
+                    </properties>
+                    <children>
+                      <leafNode name="as">
+                        <properties>
+                          <help>AS number of an aggregation</help>
+                          <valueHelp>
+                            <format>u32:1-4294967295</format>
+                            <description>Rule number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-4294967295"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ip">
+                        <properties>
+                          <help>IP address of an aggregation</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IP address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="as-path-exclude">
+                    <properties>
+                      <help>Remove ASN(s) from a Border Gateway Protocol (BGP) AS-path attribute</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>BGP AS path exclude string (ex: "456 64500 45001")</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="as-path-prepend">
+                    <properties>
+                      <help>as-path-prepend_help</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>BGP AS path prepend string (ex: "64501 64501")</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="atomic-aggregate">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) atomic aggregate attribute</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bgp-extcommunity-rt">
+                    <properties>
+                      <help>Set route target value</help>
+                      <valueHelp>
+                        <format>&lt;aa:nn&gt;</format>
+                        <description>ExtCommunity in format: asn:value</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <node name="comm-list">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) communities matching a community-list</help>
+                    </properties>
+                    <children>
+                      <leafNode name="comm-list">
+                        <properties>
+                          <help>BGP communities with a community-list</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>BGP communities with a community-list</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="delete">
+                        <properties>
+                          <help>Delete BGP communities matching the community-list</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="community">
+                    <properties>
+                      <help>community_help</help>
+                      <completionHelp>
+                        <list>local-AS no-advertise no-export internet additive none</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>&lt;aa:nn&gt;</format>
+                        <description>Community in 4 octet AS:value format</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>local-AS</format>
+                        <description>local-AS</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>no-advertise</format>
+                        <description>no-advertise</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>no-export</format>
+                        <description>no-export</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>internet</format>
+                        <description>internet</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>additive</format>
+                        <description>additive</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>none</format>
+                        <description>none</description>
+                      </valueHelp>
+              <!--   Need to add properly validator     
+                      <constraint>
+                        <regex>^(local-AS|no-advertise|no-export|internet|additive|none)$</regex>
+                      </constraint>  -->
+                    </properties>
+                  </leafNode>
+                  <leafNode name="distance">
+                    <properties>
+                      <help>Locally significant administrative distance</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>Distance value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="extcommunity-rt">
+                    <properties>
+                      <help>Set route target value</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>ASN:nn_or_IP_address:nn VPN extended community</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="extcommunity-soo">
+                    <properties>
+                      <help>Set Site of Origin value</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>ASN:nn_or_IP_address:nn VPN extended community</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ip-next-hop">
+                    <properties>
+                      <help>Nexthop IP address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IP address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <node name="ipv6-next-hop">
+                    <properties>
+                      <help>Nexthop IPv6 address</help>
+                    </properties>
+                    <children>
+                      <leafNode name="global">
+                        <properties>
+                          <help>Nexthop IPv6 global address</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address and prefix length</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="local">
+                        <properties>
+                          <help>Nexthop IPv6 local address</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address and prefix length</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="large-community">
+                    <properties>
+                      <help>Set BGP large community value</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>ASN:nn:mm BGP large community</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <path>policy large-community-list</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="local-preference">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) local preference attribute</help>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>Local preference value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="metric">
+                    <properties>
+                      <help>Destination routing protocol metric</help>
+                      <valueHelp>
+                        <format>&lt;+/-metric&gt;</format>
+                        <description>Add or subtract metric</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>Metric value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="metric-type">
+                    <properties>
+                      <help>Open Shortest Path First (OSPF) external metric-type</help>
+                      <completionHelp>
+                        <list>type-1 type-2</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>type-1</format>
+                        <description>OSPF external type 1 metric</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>type-2</format>
+                        <description>OSPF external type 2 metric</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(type-1|type-2)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="origin">
+                    <properties>
+                      <help>origin_help</help>
+                      <completionHelp>
+                        <list>igp egp incomplete</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>igp</format>
+                        <description>Interior gateway protocol origin</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>egp</format>
+                        <description>Exterior gateway protocol origin</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>incomplete</format>
+                        <description>Incomplete origin</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(igp|egp|incomplete)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="originator-id">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) originator ID attribute</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Orignator IP address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-host"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="src">
+                    <properties>
+                      <help>Source address for route</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-host"/>
+                        <validator name="ipv6-host"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="table">
+                    <properties>
+                      <help>Set prefixes to table</help>
+                      <valueHelp>
+                        <format>u32:1-200</format>
+                        <description>Table value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-200"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="tag">
+                    <properties>
+                      <help>Tag value for routing protocol</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Tag value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="weight">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP) weight attribute</help>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>BGP weight</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <!-- END route-map -->
+    </children>
+  </node>
+</interfaceDefinition>
