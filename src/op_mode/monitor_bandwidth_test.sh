@@ -26,5 +26,5 @@ elif [[ $(dig $1 AAAA +short | grep -v '\.$' | wc -l) -gt 0 ]]; then
     OPT="-V"
 fi
 
-/usr/bin/iperf $OPT -c $1
+/usr/bin/iperf $OPT -c $1 $2
 
