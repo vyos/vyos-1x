@@ -1,15 +1,14 @@
-<!-- include start from rip-redistribute.xml.i -->
-<leafNode name="metric">
+<!-- include start from rip/rip-default-metric.xml.i -->
+<leafNode name="default-metric">
   <properties>
-    <help>Metric for redistributed routes</help>
+    <help>Metric of redistributed routes</help>
     <valueHelp>
       <format>u32:1-16</format>
-      <description>Redistribute route metric</description>
+      <description>Default metric</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-16"/>
     </constraint>
   </properties>
 </leafNode>
-#include <include/route-map.xml.i>
 <!-- include end -->
