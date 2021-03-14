@@ -4,12 +4,12 @@
     <children>
       <node name="nat">
         <properties>
-          <help>Show Network Address Translation (NAT) information</help>
+          <help>Show IPv4 to IPv4 Network Address Translation (NAT) information</help>
         </properties>
         <children>
           <node name="source">
             <properties>
-              <help>Show source Network Address Translation (NAT) information</help>
+              <help>Show source IPv4 to IPv4 Network Address Translation (NAT) information</help>
             </properties>
             <children>
               <node name="rules">
@@ -51,7 +51,7 @@
           </node>
           <node name="destination">
             <properties>
-              <help>Show destination Network Address Translation (NAT) information</help>
+              <help>Show destination IPv4 to IPv4 Network Address Translation (NAT) information</help>
             </properties>
             <children>
               <node name="rules">
