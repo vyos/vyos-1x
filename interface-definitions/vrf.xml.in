@@ -39,8 +39,8 @@
                   <priority>600</priority>
                 </properties>
                 <children>
-                  #include <include/static-route.xml.i>
-                  #include <include/static-route6.xml.i>
+                  #include <include/static/static-route.xml.i>
+                  #include <include/static/static-route6.xml.i>
                 </children>
               </node>
               <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py $VAR(../../@)">

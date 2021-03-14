@@ -151,7 +151,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
-              #include <include/static-route-distance.xml.i>
+              #include <include/static/static-route-distance.xml.i>
             </children>
           </tagNode>
           #include <include/routing-passive-interface-xml.i>

@@ -1,4 +1,4 @@
-<!-- include start from static-route-vrf.xml.i -->
+<!-- include start from static/static-route-vrf.xml.i -->
 <leafNode name="vrf">
   <properties>
     <help>VRF to leak route</help>

@@ -1,4 +1,4 @@
-<!-- include start from static-route.xml.i -->
+<!-- include start from static/static-route.xml.i -->
 <tagNode name="route">
   <properties>
     <help>VRF static IPv4 route</help>
@@ -16,7 +16,7 @@
         <help>Silently discard pkts when matched</help>
       </properties>
       <children>
-        #include <include/static-route-distance.xml.i>
+        #include <include/static/static-route-distance.xml.i>
         <leafNode name="tag">
           <properties>
             <help>Tag value for this route</help>
@@ -62,8 +62,8 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/static-route-distance.xml.i>
-        #include <include/static-route-vrf.xml.i>
+        #include <include/static/static-route-distance.xml.i>
+        #include <include/static/static-route-vrf.xml.i>
       </children>
     </tagNode>
     <tagNode name="next-hop">
@@ -79,9 +79,9 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/static-route-distance.xml.i>
-        #include <include/static-route-interface.xml.i>
-        #include <include/static-route-vrf.xml.i>
+        #include <include/static/static-route-distance.xml.i>
+        #include <include/static/static-route-interface.xml.i>
+        #include <include/static/static-route-vrf.xml.i>
       </children>
     </tagNode>
   </children>
