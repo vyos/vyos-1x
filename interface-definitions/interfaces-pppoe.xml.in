@@ -42,7 +42,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface-dial-on-demand.xml.i>
+          #include <include/interface/interface-dial-on-demand.xml.i>
           <leafNode name="default-route">
             <properties>
               <help>Default route insertion behaviour (default: auto)</help>
@@ -68,10 +68,10 @@
             </properties>
             <defaultValue>auto</defaultValue>
           </leafNode>
-          #include <include/dhcpv6-options.xml.i>
-          #include <include/interface-description.xml.i>
-          #include <include/interface-disable.xml.i>
-          #include <include/interface-vrf.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
+          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/interface-vrf.xml.i>
           <leafNode name="idle-timeout">
             <properties>
               <help>Delay before disconnecting idle session (in seconds)</help>
@@ -86,7 +86,7 @@
               <help>IPv4 routing parameters</help>
             </properties>
             <children>
-              #include <include/interface-source-validation.xml.i>
+              #include <include/interface/interface-source-validation.xml.i>
             </children>
           </node>
           <node name="ipv6">
@@ -99,7 +99,7 @@
                   <help>IPv6 address configuration modes</help>
                 </properties>
                 <children>
-                  #include <include/ipv6-address-autoconf.xml.i>
+                  #include <include/interface/ipv6-address-autoconf.xml.i>
                 </children>
               </node>
             </children>
@@ -124,7 +124,7 @@
               </constraint>
             </properties>
           </leafNode>
-          #include <include/interface-mtu-68-1500.xml.i>
+          #include <include/interface/interface-mtu-68-1500.xml.i>
           <leafNode name="mtu">
             <defaultValue>1492</defaultValue>
           </leafNode>

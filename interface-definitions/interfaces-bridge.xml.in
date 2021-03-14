@@ -16,7 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
           <leafNode name="aging">
             <properties>
               <help>MAC address aging interval</help>
@@ -34,13 +34,13 @@
             </properties>
             <defaultValue>300</defaultValue>
           </leafNode>
-          #include <include/interface-description.xml.i>
-          #include <include/dhcp-options.xml.i>
-          #include <include/dhcpv6-options.xml.i>
-          #include <include/interface-disable-link-detect.xml.i>
-          #include <include/interface-disable.xml.i>
-          #include <include/interface-vrf.xml.i>
-          #include <include/interface-mtu-68-16000.xml.i>
+          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/dhcp-options.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
+          #include <include/interface/interface-disable-link-detect.xml.i>
+          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/interface-vrf.xml.i>
+          #include <include/interface/interface-mtu-68-16000.xml.i>
           <leafNode name="forwarding-delay">
             <properties>
               <help>Forwarding delay</help>
@@ -82,10 +82,10 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface-ipv4-options.xml.i>
-          #include <include/interface-ipv6-options.xml.i>
-          #include <include/interface-mac.xml.i>
-          #include <include/interface-mirror.xml.i>
+          #include <include/interface/interface-ipv4-options.xml.i>
+          #include <include/interface/interface-ipv6-options.xml.i>
+          #include <include/interface/interface-mac.xml.i>
+          #include <include/interface/interface-mirror.xml.i>
           <leafNode name="enable-vlan">
             <properties>
               <help>Enable VLAN aware bridge</help>
@@ -202,7 +202,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          #include <include/vif.xml.i>
+          #include <include/interface/vif.xml.i>
         </children>
       </tagNode>
     </children>

@@ -16,12 +16,12 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/interface-description.xml.i>
-          #include <include/interface-disable.xml.i>
-          #include <include/interface-disable-link-detect.xml.i>
-          #include <include/interface-mtu-64-8024.xml.i>
+          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/interface-disable-link-detect.xml.i>
+          #include <include/interface/interface-mtu-64-8024.xml.i>
           #include <include/source-address-ipv4-ipv6.xml.i>
-          #include <include/tunnel-remote.xml.i>
+          #include <include/interface/tunnel-remote.xml.i>
           <leafNode name="encapsulation">
             <properties>
               <help>Encapsulation of this tunnel interface</help>
@@ -52,9 +52,9 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/interface-parameters-key.xml.i>
-                  #include <include/interface-parameters-tos.xml.i>
-                  #include <include/interface-parameters-ttl.xml.i>
+                  #include <include/interface/interface-parameters-key.xml.i>
+                  #include <include/interface/interface-parameters-tos.xml.i>
+                  #include <include/interface/interface-parameters-ttl.xml.i>
                 </children>
               </node>
               <leafNode name="version">

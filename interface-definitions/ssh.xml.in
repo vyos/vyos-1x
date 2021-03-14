@@ -182,7 +182,7 @@
               </constraint>
             </properties>
           </leafNode>
-          #include <include/interface-vrf.xml.i>
+          #include <include/interface/interface-vrf.xml.i>
         </children>
       </node>
     </children>
