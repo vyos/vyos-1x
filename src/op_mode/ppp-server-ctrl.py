@@ -59,7 +59,10 @@ def main():
 
         output, err = popen(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][args.proto]) + args.action + ses_pattern, stderr=DEVNULL, decode='utf-8')
         if not err:
-            print(output)
+            try:
+                print(output)
+            except BrokenPipeError:
+                sys.exit(0)
         else:
             print("{} server is not running".format(args.proto))
 
