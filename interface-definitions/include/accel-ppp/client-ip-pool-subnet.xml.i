@@ -1,4 +1,4 @@
-<!-- include start from accel-client-ip-pool-subnet.xml.i -->
+<!-- include start from accel-ppp/client-ip-pool-subnet.xml.i -->
 <leafNode name="subnet">
   <properties>
     <help>Client IP subnet (CIDR notation)</help>

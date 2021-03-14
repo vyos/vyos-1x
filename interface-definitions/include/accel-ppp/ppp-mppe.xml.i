@@ -1,4 +1,4 @@
-<!-- include start from accel-ppp-mppe.xml.i -->
+<!-- include start from accel-ppp/ppp-mppe.xml.i -->
 <leafNode name="mppe">
   <properties>
     <help>Specifies mppe negotiation preferences</help>

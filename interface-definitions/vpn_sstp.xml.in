@@ -13,38 +13,38 @@
               <help>Authentication for remote access SSTP Server</help>
             </properties>
             <children>
-              #include <include/accel-auth-local-users.xml.i>
-              #include <include/accel-auth-mode.xml.i>
-              #include <include/accel-auth-protocols.xml.i>
+              #include <include/accel-ppp/auth-local-users.xml.i>
+              #include <include/accel-ppp/auth-mode.xml.i>
+              #include <include/accel-ppp/auth-protocols.xml.i>
               #include <include/radius-server-ipv4.xml.i>
-              #include <include/accel-radius-additions.xml.i>
+              #include <include/accel-ppp/radius-additions.xml.i>
               <node name="radius">
                 <children>
-                  #include <include/accel-radius-additions-rate-limit.xml.i>
+                  #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
                 </children>
               </node>
             </children>
           </node>
           #include <include/interface/interface-mtu-68-1500.xml.i>
-          #include <include/accel-gateway-address.xml.i>
-          #include <include/accel-name-server.xml.i>
+          #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/name-server.xml.i>
           <node name="client-ip-pool">
             <properties>
               <help>Client IP pools and gateway setting</help>
             </properties>
             <children>
-              #include <include/accel-client-ip-pool-subnet.xml.i>
+              #include <include/accel-ppp/client-ip-pool-subnet.xml.i>
             </children>
           </node>
-          #include <include/accel-client-ipv6-pool.xml.i>
+          #include <include/accel-ppp/client-ipv6-pool.xml.i>
           <node name="ppp-options">
             <properties>
               <help>PPP (Point-to-Point Protocol) settings</help>
             </properties>
             <children>
-              #include <include/accel-ppp-mppe.xml.i>
-              #include <include/accel-lcp-echo-interval-failure.xml.i>
-              #include <include/accel-lcp-echo-timeout.xml.i>
+              #include <include/accel-ppp/ppp-mppe.xml.i>
+              #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
+              #include <include/accel-ppp/lcp-echo-timeout.xml.i>
             </children>
           </node>
           <node name="ssl">

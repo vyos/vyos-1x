@@ -1,4 +1,4 @@
-<!-- include start from accel-radius-additions-rate-limit.xml.i -->
+<!-- include start from accel-ppp/radius-additions-rate-limit.xml.i -->
 <node name="rate-limit">
   <properties>
     <help>Upload/Download speed limits</help>

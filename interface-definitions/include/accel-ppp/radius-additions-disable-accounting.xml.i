@@ -1,4 +1,4 @@
-<!-- include start from accel-radius-additions-disable-accounting.xml.i -->
+<!-- include start from accel-ppp/radius-additions-disable-accounting.xml.i -->
 <leafNode name="disable-accounting">
   <properties>
     <help>Disable accounting</help>

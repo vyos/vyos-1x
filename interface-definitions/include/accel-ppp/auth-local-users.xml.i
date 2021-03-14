@@ -1,4 +1,4 @@
-<!-- include start from accel-auth-local-users.xml.i -->
+<!-- include start from accel-ppp/auth-local-users.xml.i -->
 <node name="local-users">
   <properties>
     <help>Local user authentication for PPPoE server</help>

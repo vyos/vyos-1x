@@ -190,7 +190,7 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/accel-name-server.xml.i>
+              #include <include/accel-ppp/name-server.xml.i>
             </children>
           </node>
       </children>
