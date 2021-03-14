@@ -1,4 +1,4 @@
-<!-- included start from interface-source-validation.xml.i -->
+<!-- include start from interface-source-validation.xml.i -->
 <leafNode name="source-validation">
   <properties>
     <help>Source validation by reversed path (RFC3704)</help>
@@ -22,4 +22,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from pn-ipsec-hash.xml.i -->
+<!-- include start from pn-ipsec-hash.xml.i -->
                   <leafNode name="hash">
                     <properties>
                       <help>Hash algorithm</help>
@@ -62,4 +62,4 @@
                       </constraint>
                     </properties>
                   </leafNode>
-<!-- included end -->
+<!-- include end -->

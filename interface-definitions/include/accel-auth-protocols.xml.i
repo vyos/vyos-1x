@@ -1,4 +1,4 @@
-<!-- included start from accel-auth-protocols.xml.i -->
+<!-- include start from accel-auth-protocols.xml.i -->
 <leafNode name="protocols">
   <properties>
     <help>Authentication protocol for remote access peer SSTP VPN</help>
@@ -28,4 +28,4 @@
   </properties>
   <defaultValue>pap chap mschap mschap-v2</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from mac.xml.i -->
+<!-- include start from mac.xml.i -->
 <leafNode name="mac">
   <properties>
     <help>Media Access Control (MAC) address</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

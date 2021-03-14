@@ -1,4 +1,4 @@
-<!-- included start from interface-parameters-key.xml.i -->
+<!-- include start from interface-parameters-key.xml.i -->
 <leafNode name="key">
   <properties>
     <help>Tunnel key</help>
@@ -12,4 +12,4 @@
     <constraintErrorMessage>key must be between 0-4294967295</constraintErrorMessage>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

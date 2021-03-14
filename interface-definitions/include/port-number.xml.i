@@ -1,4 +1,4 @@
-<!-- included start from port-number.xml.i -->
+<!-- include start from port-number.xml.i -->
 <leafNode name="port">
   <properties>
     <help>Port number used by connection</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

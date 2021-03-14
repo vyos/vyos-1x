@@ -1,4 +1,4 @@
-<!-- included start from radius-server-port.xml.i -->
+<!-- include start from radius-server-port.xml.i -->
 <leafNode name="port">
   <properties>
     <help>Authentication port</help>
@@ -12,4 +12,4 @@
   </properties>
   <defaultValue>1812</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

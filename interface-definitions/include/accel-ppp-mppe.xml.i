@@ -1,4 +1,4 @@
-<!-- included start from accel-ppp-mppe.xml.i -->
+<!-- include start from accel-ppp-mppe.xml.i -->
 <leafNode name="mppe">
   <properties>
     <help>Specifies mppe negotiation preferences</help>
@@ -23,4 +23,4 @@
   </properties>
   <defaultValue>prefer</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from dhcp-options.xml.i -->
+<!-- include start from dhcp-options.xml.i -->
 <node name="dhcp-options">
   <properties>
     <help>DHCP client settings/options</help>
@@ -27,4 +27,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

@@ -1,7 +1,7 @@
-<!-- included start from radius-server-key.xml.i -->
+<!-- include start from radius-server-key.xml.i -->
 <leafNode name="key">
   <properties>
     <help>Shared secret key</help>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

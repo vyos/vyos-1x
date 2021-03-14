@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-aggregate-address.xml.i -->
+<!-- include start from bgp-afi-aggregate-address.xml.i -->
 <leafNode name="as-set">
   <properties>
     <help>Generate AS-set path information for this aggregate address</help>
@@ -11,4 +11,4 @@
     <valueless/>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

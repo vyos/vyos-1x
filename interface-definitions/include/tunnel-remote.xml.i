@@ -1,4 +1,4 @@
-<!-- included start from tunnel-remote.xml.i -->
+<!-- include start from tunnel-remote.xml.i -->
 <leafNode name="remote">
   <properties>
     <help>Tunnel remote address</help>
@@ -15,4 +15,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

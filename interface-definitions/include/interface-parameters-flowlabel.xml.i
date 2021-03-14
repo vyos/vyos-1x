@@ -1,4 +1,4 @@
-<!-- included start from interface-parameters-flowlabel.xml.i -->
+<!-- include start from interface-parameters-flowlabel.xml.i -->
 <leafNode name="flowlabel">
   <properties>
     <help>Specifies the flow label to use in outgoing packets</help>
@@ -13,4 +13,4 @@
   </properties>
   <defaultValue>inherit</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

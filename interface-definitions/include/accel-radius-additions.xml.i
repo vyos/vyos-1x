@@ -1,4 +1,4 @@
-<!-- included start from accel-radius-additions.xml.i -->
+<!-- include start from accel-radius-additions.xml.i -->
 <node name="radius">
   <children>
     <leafNode name="acct-interim-jitter">
@@ -150,4 +150,4 @@
     </node>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

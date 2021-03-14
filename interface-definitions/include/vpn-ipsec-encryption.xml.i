@@ -1,4 +1,4 @@
-<!-- included start from vpn-ipsec-encryption.xml.i -->
+<!-- include start from vpn-ipsec-encryption.xml.i -->
                   <leafNode name="encryption">
                     <properties>
                       <help>Encryption algorithm</help>
@@ -230,4 +230,4 @@
                       </constraint>
                     </properties>
                   </leafNode>
-<!-- included end -->
+<!-- include end -->

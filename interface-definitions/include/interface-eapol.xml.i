@@ -1,4 +1,4 @@
-<!-- included start from interface-eapol.xml.i -->
+<!-- include start from interface-eapol.xml.i -->
 <node name="eapol">
   <properties>
      <help>Extensible Authentication Protocol over Local Area Network</help>
@@ -9,4 +9,4 @@
     #include <include/certificate-key.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

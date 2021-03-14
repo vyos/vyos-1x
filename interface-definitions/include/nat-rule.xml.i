@@ -1,4 +1,4 @@
-<!-- included start from nat-rule.xml.i -->
+<!-- include start from nat-rule.xml.i -->
 <tagNode name="rule">
   <properties>
     <help>Rule number for NAT</help>
@@ -298,4 +298,4 @@
     </node>
   </children>
 </tagNode>
-<!-- included end -->
+<!-- include end -->

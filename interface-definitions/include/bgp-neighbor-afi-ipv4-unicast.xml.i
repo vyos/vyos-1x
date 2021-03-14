@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-ipv4-unicast.xml.i -->
+<!-- include start from bgp-neighbor-afi-ipv4-unicast.xml.i -->
 <node name="ipv4-unicast">
   <properties>
     <help>IPv4 BGP neighbor parameters</help>
@@ -283,4 +283,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

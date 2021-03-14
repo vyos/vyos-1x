@@ -1,4 +1,4 @@
-<!-- included start from bgp-peer-group-afi-ipv6-unicast.xml.i -->
+<!-- include start from bgp-peer-group-afi-ipv6-unicast.xml.i -->
 <node name="ipv6-unicast">
   <properties>
     <help>IPv6 BGP neighbor parameters</help>
@@ -316,4 +316,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

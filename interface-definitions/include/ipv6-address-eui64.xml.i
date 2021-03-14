@@ -1,4 +1,4 @@
-<!-- included start from ipv6-address-eui64.xml.i -->
+<!-- include start from ipv6-address-eui64.xml.i -->
 <leafNode name="eui64">
   <properties>
     <help>Prefix for IPv6 address with MAC-based EUI-64</help>
@@ -12,4 +12,4 @@
     <multi/>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->
