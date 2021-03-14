@@ -23,14 +23,14 @@
               <help>Authentication for remote access PPPoE Server</help>
             </properties>
             <children>
-              #include <include/accel-auth-local-users.xml.i>
-              #include <include/accel-auth-mode.xml.i>
-              #include <include/accel-auth-protocols.xml.i>
+              #include <include/accel-ppp/auth-local-users.xml.i>
+              #include <include/accel-ppp/auth-mode.xml.i>
+              #include <include/accel-ppp/auth-protocols.xml.i>
               #include <include/radius-server-ipv4.xml.i>
-              #include <include/accel-radius-additions.xml.i>
+              #include <include/accel-ppp/radius-additions.xml.i>
               <node name="radius">
                 <children>
-                  #include <include/accel-radius-additions-rate-limit.xml.i>
+                  #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
                   <leafNode name="called-sid-format">
                     <properties>
                       <help>Format of Called-Station-Id attribute</help>
@@ -60,12 +60,12 @@
               <help>Pool of client IP addresses (must be within a /24)</help>
             </properties>
             <children>
-              #include <include/accel-client-ip-pool-start-stop.xml.i>
-              #include <include/accel-client-ip-pool-subnet.xml.i>
+              #include <include/accel-ppp/client-ip-pool-start-stop.xml.i>
+              #include <include/accel-ppp/client-ip-pool-subnet.xml.i>
             </children>
           </node>
-          #include <include/accel-client-ipv6-pool.xml.i>
-          #include <include/accel-name-server.xml.i>
+          #include <include/accel-ppp/client-ipv6-pool.xml.i>
+          #include <include/accel-ppp/name-server.xml.i>
           <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>
@@ -95,8 +95,8 @@
               </leafNode>
             </children>
           </tagNode>
-          #include <include/accel-gateway-address.xml.i>
-          #include <include/accel-mtu-128-16384.xml.i>
+          #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/mtu-128-16384.xml.i>
           <node name="limits">
             <properties>
               <help>Limits the connection rate from a single source</help>
@@ -133,7 +133,7 @@
               <multi/>
             </properties>
           </leafNode>
-          #include <include/accel-wins-server.xml.i>
+          #include <include/accel-ppp/wins-server.xml.i>
           <node name="ppp-options">
             <properties>
               <help>Advanced protocol options</help>
@@ -161,9 +161,9 @@
                   <valueless />
                 </properties>
               </leafNode>
-              #include <include/accel-ppp-mppe.xml.i>
-              #include <include/accel-lcp-echo-interval-failure.xml.i>
-              #include <include/accel-lcp-echo-timeout.xml.i>
+              #include <include/accel-ppp/ppp-mppe.xml.i>
+              #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
+              #include <include/accel-ppp/lcp-echo-timeout.xml.i>
               <leafNode name="ipv4">
                 <properties>
                   <help>IPv4 (IPCP) negotiation algorithm</help>

@@ -1,4 +1,4 @@
-<!-- include start from accel-name-server.xml.i -->
+<!-- include start from accel-ppp/name-server.xml.i -->
 <leafNode name="name-server">
   <properties>
     <help>Domain Name Server (DNS) propagated to client</help>

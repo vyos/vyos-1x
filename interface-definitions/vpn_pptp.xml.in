@@ -12,7 +12,7 @@
               <help>Remote access PPTP VPN</help>
             </properties>
             <children>
-              #include <include/accel-mtu-128-16384.xml.i>
+              #include <include/accel-ppp/mtu-128-16384.xml.i>
               <leafNode name="outside-address">
                 <properties>
                   <help>External IP address to which VPN clients will connect</help>
@@ -34,16 +34,16 @@
                   <multi/>
                 </properties>
               </leafNode>
-              #include <include/accel-wins-server.xml.i>
+              #include <include/accel-ppp/wins-server.xml.i>
               <node name="client-ip-pool">
                 <properties>
                   <help>Pool of client IP addresses (must be within a /24)</help>
                 </properties>
                 <children>
-                  #include <include/accel-client-ip-pool-start-stop.xml.i>
+                  #include <include/accel-ppp/client-ip-pool-start-stop.xml.i>
                 </children>
               </node>
-              #include <include/accel-gateway-address.xml.i>
+              #include <include/accel-ppp/gateway-address.xml.i>
               <node name="authentication">
                 <properties>
                   <help>Authentication for remote access PPTP VPN</help>
@@ -93,7 +93,7 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
-                  #include <include/accel-auth-mode.xml.i>
+                  #include <include/accel-ppp/auth-mode.xml.i>
                   <node name="local-users">
                     <properties>
                       <help>Local user authentication for remote access PPTP VPN</help>
@@ -120,7 +120,7 @@
                     </children>
                   </node>
                   #include <include/radius-server-ipv4.xml.i>
-                  #include <include/accel-radius-additions.xml.i>
+                  #include <include/accel-ppp/radius-additions.xml.i>
                 </children>
               </node>
             </children>

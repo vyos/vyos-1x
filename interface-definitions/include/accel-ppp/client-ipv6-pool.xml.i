@@ -1,4 +1,4 @@
-<!-- include start from accel-client-ipv6-pool.xml.i -->
+<!-- include start from accel-ppp/client-ipv6-pool.xml.i -->
 <node name="client-ipv6-pool">
   <properties>
     <help>Pool of client IPv6 addresses</help>

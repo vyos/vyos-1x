@@ -1,4 +1,4 @@
-<!-- include start from accel-client-ip-pool-start-stop.xml.i -->
+<!-- include start from accel-ppp/client-ip-pool-start-stop.xml.i -->
 <leafNode name="start">
   <properties>
     <help>First IP address in the pool</help>

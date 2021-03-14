@@ -1,4 +1,4 @@
-<!-- include start from accel-wins-server.xml.i -->
+<!-- include start from accel-ppp/wins-server.xml.i -->
 <leafNode name="wins-server">
   <properties>
     <help>Windows Internet Name Service (WINS) servers propagated to client</help>

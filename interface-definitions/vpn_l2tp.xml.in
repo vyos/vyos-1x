@@ -12,7 +12,7 @@
               <help>Remote access L2TP VPN</help>
             </properties>
             <children>
-              #include <include/accel-mtu-128-16384.xml.i>
+              #include <include/accel-ppp/mtu-128-16384.xml.i>
               <leafNode name="outside-address">
                 <properties>
                   <help>External IP address to which VPN clients will connect</help>
@@ -21,8 +21,8 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/accel-gateway-address.xml.i>
-              #include <include/accel-name-server.xml.i>
+              #include <include/accel-ppp/gateway-address.xml.i>
+              #include <include/accel-ppp/name-server.xml.i>
               <node name="lns">
                 <properties>
                   <help>L2TP Network Server (LNS)</help>
@@ -143,17 +143,17 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/accel-wins-server.xml.i>
+              #include <include/accel-ppp/wins-server.xml.i>
               <node name="client-ip-pool">
                 <properties>
                   <help>Pool of client IP addresses (must be within a /24)</help>
                 </properties>
                 <children>
-                  #include <include/accel-client-ip-pool-start-stop.xml.i>
-                  #include <include/accel-client-ip-pool-subnet.xml.i>
+                  #include <include/accel-ppp/client-ip-pool-start-stop.xml.i>
+                  #include <include/accel-ppp/client-ip-pool-subnet.xml.i>
                 </children>
               </node>
-              #include <include/accel-client-ipv6-pool.xml.i>
+              #include <include/accel-ppp/client-ipv6-pool.xml.i>
               <leafNode name="description">
                 <properties>
                   <help>Description for L2TP remote-access settings</help>
@@ -209,15 +209,15 @@
                       <multi />
                     </properties>
                   </leafNode>
-                  #include <include/accel-ppp-mppe.xml.i>
-                  #include <include/accel-auth-mode.xml.i>
-                  #include <include/accel-auth-local-users.xml.i>
+                  #include <include/accel-ppp/ppp-mppe.xml.i>
+                  #include <include/accel-ppp/auth-mode.xml.i>
+                  #include <include/accel-ppp/auth-local-users.xml.i>
                   #include <include/radius-server-ipv4.xml.i>
                   <node name="radius">
                     <children>
                       <tagNode name="server">
                         <children>
-                          #include <include/accel-radius-additions-disable-accounting.xml.i>
+                          #include <include/accel-ppp/radius-additions-disable-accounting.xml.i>
                           <leafNode name="fail-time">
                             <properties>
                               <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
@@ -307,7 +307,7 @@
                   <help>Advanced protocol options</help>
                 </properties>
                 <children>
-                  #include <include/accel-lcp-echo-interval-failure.xml.i>
+                  #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
                 </children>
               </node>
             </children>

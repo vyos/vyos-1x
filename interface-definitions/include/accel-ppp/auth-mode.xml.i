@@ -1,4 +1,4 @@
-<!-- include start from accel-auth-mode.xml.i -->
+<!-- include start from accel-ppp/auth-mode.xml.i -->
 <leafNode name="mode">
   <properties>
     <help>Authentication mode used by this server</help>

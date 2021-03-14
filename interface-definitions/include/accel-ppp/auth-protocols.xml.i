@@ -1,4 +1,4 @@
-<!-- include start from accel-auth-protocols.xml.i -->
+<!-- include start from accel-ppp/auth-protocols.xml.i -->
 <leafNode name="protocols">
   <properties>
     <help>Authentication protocol for remote access peer SSTP VPN</help>
