@@ -1,4 +1,4 @@
-<!-- included start from interface-parameters-ttl.xml.i -->
+<!-- include start from interface-parameters-ttl.xml.i -->
 <leafNode name="ttl">
   <properties>
     <help>Specifies TTL value to use in outgoing packets</help>
@@ -17,4 +17,4 @@
   </properties>
   <defaultValue>0</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from nat-interface.xml.i -->
+<!-- include start from nat-interface.xml.i -->
 <leafNode name="outbound-interface">
   <properties>
     <help>Outbound interface of NAT traffic</help>
@@ -8,4 +8,4 @@
     </completionHelp>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

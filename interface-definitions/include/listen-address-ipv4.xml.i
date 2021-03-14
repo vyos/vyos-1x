@@ -1,4 +1,4 @@
-<!-- included start from listen-address-ipv4.xml.i -->
+<!-- include start from listen-address-ipv4.xml.i -->
 <leafNode name="listen-address">
   <properties>
     <help>Local IPv4 addresses for service to listen on</help>
@@ -15,4 +15,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

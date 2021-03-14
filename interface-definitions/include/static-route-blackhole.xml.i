@@ -1,4 +1,4 @@
-<!-- included start from static-route-blackhole.xml.i -->
+<!-- include start from static-route-blackhole.xml.i -->
 <node name="blackhole">
   <properties>
     <help>Silently discard packets when matched</help>
@@ -7,4 +7,4 @@
     #include <include/static-route-distance.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

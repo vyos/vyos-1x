@@ -128,17 +128,19 @@ peer_group_config = {
         },
 }
 
-def getFRRBGPconfig():
-    return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}/,/^!/p"')
+def getFRRBGPconfig(vrf=None):
+    if vrf:
+        return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN} vrf {vrf}$/,/^!/p"')
+    return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}$/,/^!/p"')
 
 def getFRRBgpAfiConfig(afi):
-    return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}/,/^!/p" | sed -n "/^ address-family {afi} unicast/,/^ exit-address-family/p"')
+    return cmd(f'vtysh -c "show run" | sed -n "/^router bgp {ASN}$/,/^!/p" | sed -n "/^ address-family {afi} unicast/,/^ exit-address-family/p"')
 
 def getFRRBGPVNIconfig(vni):
-    return cmd(f'vtysh -c "show run" | sed -n "/^  vni {vni}/,/^!/p"')
+    return cmd(f'vtysh -c "show run" | sed -n "/^  vni {vni}$/,/^!/p"')
 
 def getFRRRPKIconfig():
-    return cmd(f'vtysh -c "show run" | sed -n "/^rpki/,/^!/p"')
+    return cmd(f'vtysh -c "show run" | sed -n "/^rpki$/,/^!/p"')
 
 class TestProtocolsBGP(unittest.TestCase):
     def setUp(self):
@@ -550,6 +552,28 @@ class TestProtocolsBGP(unittest.TestCase):
             self.assertIn(f'vni {vni}', vniconfig)
             self.assertIn(f'   advertise-default-gw', vniconfig)
             self.assertIn(f'   advertise-svi-ip', vniconfig)
+
+    def test_bgp_08_vrf_simple(self):
+        router_id = '127.0.0.3'
+        vrfs = ['red', 'green', 'blue']
+        # It is safe to assume that when the basic VRF test works, all
+        # other OSPF related features work, as we entirely inherit the CLI
+        # templates and Jinja2 FRR template.
+        table = '1000'
+        for vrf in vrfs:
+            vrf_base = ['vrf', 'name', vrf]
+            self.session.set(vrf_base + ['table', table])
+            self.session.set(vrf_base + ['protocols', 'bgp', ASN, 'parameters', 'router-id', router_id])
+            table = str(int(table) + 1000)
+
+        self.session.commit()
+
+        for vrf in vrfs:
+            # Verify FRR bgpd configuration
+            frrconfig = getFRRBGPconfig(vrf)
+
+            self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
+            self.assertIn(f' bgp router-id {router_id}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

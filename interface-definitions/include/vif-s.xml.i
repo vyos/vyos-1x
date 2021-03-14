@@ -1,4 +1,4 @@
-<!-- included start from vif-s.xml.i -->
+<!-- include start from vif-s.xml.i -->
 <tagNode name="vif-s">
   <properties>
     <help>QinQ TAG-S Virtual Local Area Network (VLAN) ID</help>
@@ -64,4 +64,4 @@
     #include <include/interface-vrf.xml.i>
   </children>
 </tagNode>
-<!-- included end -->
+<!-- include end -->

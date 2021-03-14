@@ -33,12 +33,6 @@ from vyos.validate import is_intf_addr_assigned
 base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
 
-def get_vrf_ipv4_routes(vrf):
-    return json.loads(cmd(f'ip -4 -j route show vrf {vrf}'))
-
-def get_vrf_ipv6_routes(vrf):
-    return json.loads(cmd(f'ip -6 -j route show vrf {vrf}'))
-
 class VRFTest(unittest.TestCase):
     _interfaces = []
 

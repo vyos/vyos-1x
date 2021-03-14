@@ -1,4 +1,4 @@
-<!-- included start from rip-redistribute.xml.i -->
+<!-- include start from rip-redistribute.xml.i -->
 <leafNode name="metric">
   <properties>
     <help>Metric for redistributed routes</help>
@@ -11,5 +11,5 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/ospf-route-map.xml.i>
-<!-- included end -->
+#include <include/route-map.xml.i>
+<!-- include end -->

@@ -1,4 +1,4 @@
-<!-- included start from static-route.xml.i -->
+<!-- include start from static-route.xml.i -->
 <tagNode name="route">
   <properties>
     <help>VRF static IPv4 route</help>
@@ -86,5 +86,5 @@
     </tagNode>
   </children>
 </tagNode>
-<!-- included end -->
+<!-- include end -->
 

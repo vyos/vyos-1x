@@ -1,4 +1,4 @@
-<!-- included start from interface-ipv4-options.xml.i -->
+<!-- include start from interface-ipv4-options.xml.i -->
 <node name="ip">
   <properties>
     <help>IPv4 routing parameters</help>
@@ -15,4 +15,4 @@
     #include <include/interface-source-validation.xml.i>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

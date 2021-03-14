@@ -34,7 +34,7 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import TunnelIf
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
@@ -103,7 +103,7 @@ def apply(tunnel):
     # There is no other solution to destroy and recreate the tunnel.
     encap = ''
     remote = ''
-    tmp = get_json_iface_options(interface)
+    tmp = get_interface_config(interface)
     if tmp:
         encap = dict_search('linkinfo.info_kind', tmp)
         remote = dict_search('linkinfo.info_data.remote', tmp)

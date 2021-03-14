@@ -646,7 +646,7 @@ def dict_search(path, dict):
         c = c.get(p, {})
     return c.get(parts[-1], None)
 
-def get_json_iface_options(interface):
+def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
     """
@@ -655,3 +655,16 @@ def get_json_iface_options(interface):
     from json import loads
     tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
     return tmp
+
+def get_all_vrfs():
+    """ Return a dictionary of all system wide known VRF instances """
+    from json import loads
+    tmp = loads(cmd('ip -j vrf list'))
+    # Result is of type [{"name":"red","table":1000},{"name":"blue","table":2000}]
+    # so we will re-arrange it to a more nicer representation:
+    # {'red': {'table': 1000}, 'blue': {'table': 2000}}
+    data = {}
+    for entry in tmp:
+        name = entry.pop('name')
+        data[name] = entry
+    return data

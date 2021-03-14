@@ -1,4 +1,4 @@
-<!-- included start from vif.xml.i -->
+<!-- include start from vif.xml.i -->
 <tagNode name="vif">
   <properties>
     <help>Virtual Local Area Network (VLAN) ID</help>
@@ -49,4 +49,4 @@
     #include <include/interface-mtu-68-16000.xml.i>
   </children>
 </tagNode>
-<!-- included end -->
+<!-- include end -->

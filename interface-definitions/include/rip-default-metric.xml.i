@@ -1,4 +1,4 @@
-<!-- included start from rip-default-metric.xml.i -->
+<!-- include start from rip-default-metric.xml.i -->
 <leafNode name="default-metric">
   <properties>
     <help>Metric of redistributed routes</help>
@@ -11,4 +11,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

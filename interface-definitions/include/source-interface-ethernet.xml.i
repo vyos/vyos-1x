@@ -1,4 +1,4 @@
-<!-- included start from source-interface-ethernet.xml.i -->
+<!-- include start from source-interface-ethernet.xml.i -->
 <leafNode name="source-interface">
   <properties>
     <help>Physical interface the traffic will go through</help>
@@ -11,4 +11,4 @@
     </completionHelp>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

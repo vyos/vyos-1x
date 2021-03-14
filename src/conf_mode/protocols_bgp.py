@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -37,11 +38,24 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'bgp']
+
+    vrf = None
+    if len(argv) > 1:
+        vrf = argv[1]
+
+    base_path = ['protocols', 'bgp']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    # Bail out early if configuration tree does not exist
+    # Assign the name of our VRF context. This MUST be done before the return
+    # statement below, else on deletion we will delete the default instance
+    # instead of the VRF instance.
+    if vrf: bgp.update({'vrf' : vrf})
+
     if not conf.exists(base):
+        bgp.update({'deleted' : ''})
         return bgp
 
     # We also need some additional information from the config,
@@ -80,11 +94,20 @@ def verify(bgp):
     if not bgp:
         return None
 
-    # Check if declared more than one ASN
-    if len(bgp) > 1:
-        raise ConfigError('Only one BGP AS number can be defined!')
+    # FRR bgpd only supports one Autonomous System Number, verify this!
+    asn = 0
+    for key in bgp:
+        if key.isnumeric():
+            asn +=1
+        if asn > 1:
+            raise ConfigError('Only one BGP AS number can be defined!')
 
     for asn, asn_config in bgp.items():
+        # Workaround for https://phabricator.vyos.net/T1711
+        # We also have a vrf, and deleted key now - so we can only veriy "numbers"
+        if not asn.isnumeric():
+            continue
+
         # Common verification for both peer-group and neighbor statements
         for neighbor in ['neighbor', 'peer_group']:
             # bail out early if there is no neighbor or peer-group statement
@@ -175,7 +198,7 @@ def verify(bgp):
     return None
 
 def generate(bgp):
-    if not bgp:
+    if not bgp or 'deleted' in bgp:
         bgp['new_frr_config'] = ''
         return None
 
@@ -183,6 +206,8 @@ def generate(bgp):
     # of the config dict
     asn = list(bgp.keys())[0]
     bgp[asn]['asn'] = asn
+    if 'vrf' in bgp:
+        bgp[asn]['vrf'] = bgp['vrf']
 
     bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn])
     return None
@@ -191,7 +216,13 @@ def apply(bgp):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(f'^router bgp \d+$', '')
+
+    if 'vrf' in bgp:
+        vrf = bgp['vrf']
+        frr_cfg.modify_section(f'^router bgp \d+ vrf {vrf}$', '')
+    else:
+        frr_cfg.modify_section('^router bgp \d+$', '')
+
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 

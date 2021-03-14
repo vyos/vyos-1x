@@ -1,4 +1,4 @@
-<!-- included start from accel-mtu-128-16384.xml.i -->
+<!-- include start from accel-mtu-128-16384.xml.i -->
 <leafNode name="mtu">
   <properties>
     <help>Maximum Transmission Unit (MTU) - default 1492</help>
@@ -8,4 +8,4 @@
   </properties>
   <defaultValue>1492</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

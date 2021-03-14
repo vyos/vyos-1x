@@ -1,4 +1,4 @@
-<!-- included start from accel-lcp-echo-interval-failure.xml.i -->
+<!-- include start from accel-lcp-echo-interval-failure.xml.i -->
 <leafNode name="lcp-echo-interval">
   <properties>
     <help>LCP echo-requests/sec</help>
@@ -17,4 +17,4 @@
   </properties>
   <defaultValue>3</defaultValue>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

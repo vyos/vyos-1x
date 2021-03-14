@@ -17,14 +17,17 @@
 import os
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configverify import verify_route_maps
 from vyos.configverify import verify_interface_exists
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import get_interface_config
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
@@ -38,16 +41,33 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'ospf']
+
+    vrf = None
+    if len(argv) > 1:
+        vrf = argv[1]
+
+    base_path = ['protocols', 'ospf']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    base = vrf and ['vrf', 'name', vrf, 'protocols', 'ospf'] or base_path
     ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # Assign the name of our VRF context. This MUST be done before the return
+    # statement below, else on deletion we will delete the default instance
+    # instead of the VRF instance.
+    if vrf: ospf['vrf'] = vrf
 
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
+        ospf.update({'deleted' : ''})
         return ospf
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
+    # XXX: Note that we can not call defaults(base), as defaults does not work
+    # on an instance of a tag node. As we use the exact same CLI definition for
+    # both the non-vrf and vrf version this is absolutely safe!
+    default_values = defaults(base_path)
 
     # We have to cleanup the default dict, as default values could enable features
     # which are not explicitly enabled on the CLI. Example: default-information
@@ -99,6 +119,14 @@ def get_config(config=None):
             ospf['interface'][interface] = dict_merge(default_values,
                 ospf['interface'][interface])
 
+    # As we no re-use this Python handler for both VRF and non VRF instances for
+    # OSPF we need to find out if any interfaces changed so properly adjust
+    # the FRR configuration and not by acctident change interfaces from a
+    # different VRF.
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        ospf['interface_removed'] = list(interfaces_removed)
+
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify()
     base = ['policy']
@@ -121,12 +149,22 @@ def verify(ospf):
             # time. FRR will only activate the last option set via CLI.
             if {'hello_multiplier', 'dead_interval'} <= set(ospf['interface'][interface]):
                 raise ConfigError(f'Can not use hello-multiplier and dead-interval ' \
-                                  f'concurrently for "{interface}"!')
+                                  f'concurrently for {interface}!')
+
+            if 'vrf' in ospf:
+                # If interface specific options are set, we must ensure that the
+                # interface is bound to our requesting VRF. Due to the VyOS/Vyatta
+                # priorities the interface is bound to the VRF after creation of
+                # the VRF itself, and before any routing protocol is configured.
+                vrf = ospf['vrf']
+                tmp = get_interface_config(interface)
+                if 'master' not in tmp or tmp['master'] != vrf:
+                    raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
 
     return None
 
 def generate(ospf):
-    if not ospf:
+    if not ospf or 'deleted' in ospf:
         ospf['new_frr_config'] = ''
         return None
 
@@ -137,8 +175,19 @@ def apply(ospf):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'^interface \S+', '')
-    frr_cfg.modify_section('^router ospf$', '')
+
+    if 'vrf' in ospf:
+        vrf = ospf['vrf']
+        frr_cfg.modify_section(f'^router ospf vrf {vrf}$', '')
+    else:
+        frr_cfg.modify_section('^router ospf$', '')
+
+    for key in ['interface', 'interface_removed']:
+        if key not in ospf:
+            continue
+        for interface in ospf[key]:
+            frr_cfg.modify_section(f'^interface {interface}$', '')
+
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 

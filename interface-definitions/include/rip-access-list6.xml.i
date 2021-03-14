@@ -1,4 +1,4 @@
-<!-- included start from rip-access-list.xml.i -->
+<!-- include start from rip-access-list.xml.i -->
 <node name="access-list">
   <properties>
     <help>Access-list</help>
@@ -36,4 +36,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

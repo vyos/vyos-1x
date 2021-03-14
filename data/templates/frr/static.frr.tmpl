@@ -1,17 +1,28 @@
 {% from 'frr/static_routes_macro.j2' import static_routes %}
 !
+{% set ip_prefix = 'ip' %}
+{% set ipv6_prefix = 'ipv6' %}
+{% if vrf is defined and vrf is not none %}
+{#   We need to add an additional whitespace in front of the prefix #}
+{#   when VRFs are in use, thus we use a variable for prefix handling #}
+{%   set ip_prefix = ' ip' %}
+{%   set ipv6_prefix = ' ipv6' %}
+vrf {{ vrf }}
+{% endif %}
 {# IPv4 routing #}
 {% if route is defined and route is not none %}
 {%   for prefix, prefix_config in route.items() %}
-{{ static_routes('ip', prefix, prefix_config) }}
+{{ static_routes(ip_prefix, prefix, prefix_config) }}
 {%-   endfor -%}
 {% endif %}
-!
 {# IPv6 routing #}
 {% if route6 is defined and route6 is not none %}
 {%   for prefix, prefix_config in route6.items() %}
-{{ static_routes('ipv6', prefix, prefix_config) }}
+{{ static_routes(ipv6_prefix, prefix, prefix_config) }}
 {%-   endfor -%}
+{% endif %}
+{% if vrf is defined and vrf is not none %}
+ exit-vrf
 {% endif %}
 !
 {# Policy route tables #}

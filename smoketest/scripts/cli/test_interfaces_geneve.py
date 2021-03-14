@@ -18,7 +18,7 @@ import unittest
 
 from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 
 from base_interfaces_test import BasicInterfaceTest
 
@@ -51,7 +51,7 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
 
         ttl = 20
         for interface in self._interfaces:
-            options = get_json_iface_options(interface)
+            options = get_interface_config(interface)
 
             vni = options['linkinfo']['info_data']['id']
             self.assertIn(f'vni {vni}',       self._options[interface])

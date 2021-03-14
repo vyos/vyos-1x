@@ -1,4 +1,4 @@
-<!-- included start from rip-default-information.xml.i -->
+<!-- include start from rip-default-information.xml.i -->
 <node name="default-information">
   <properties>
     <help>Control distribution of default route</help>
@@ -12,4 +12,4 @@
     </leafNode>
   </children>
 </node>
-<!-- included end -->
+<!-- include end -->

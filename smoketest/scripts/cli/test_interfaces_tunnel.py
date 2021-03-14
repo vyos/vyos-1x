@@ -18,7 +18,7 @@ import unittest
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 from vyos.template import inc_ip
 
 from base_interfaces_test import BasicInterfaceTest
@@ -84,7 +84,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check if commit is ok
             self.session.commit()
 
-            conf = get_json_iface_options(interface)
+            conf = get_interface_config(interface)
             if encapsulation not in ['sit', 'gretap']:
                 self.assertEqual(source_if, conf['link'])
 
@@ -132,7 +132,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             # Check if commit is ok
             self.session.commit()
 
-            conf = get_json_iface_options(interface)
+            conf = get_interface_config(interface)
             if encapsulation not in ['ip6gretap']:
                 self.assertEqual(source_if, conf['link'])
 
@@ -192,7 +192,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
-        conf = get_json_iface_options(interface)
+        conf = get_interface_config(interface)
         self.assertEqual(mtu,           conf['mtu'])
         self.assertEqual(interface,     conf['ifname'])
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
@@ -214,7 +214,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
-        conf = get_json_iface_options(interface)
+        conf = get_interface_config(interface)
         self.assertEqual(mtu,           conf['mtu'])
         self.assertEqual(interface,     conf['ifname'])
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
@@ -228,7 +228,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         # Check if commit is ok
         self.session.commit()
 
-        conf = get_json_iface_options(interface)
+        conf = get_interface_config(interface)
         self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-<!-- included start from static-route-interface.xml.i -->
+<!-- include start from static-route-interface.xml.i -->
 <leafNode name="interface">
   <properties>
     <help>Gateway interface name</help>
@@ -14,4 +14,4 @@
     </constraint>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->
