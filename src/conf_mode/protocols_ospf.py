@@ -27,7 +27,7 @@ from vyos.configverify import verify_interface_exists
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
@@ -157,7 +157,7 @@ def verify(ospf):
                 # priorities the interface is bound to the VRF after creation of
                 # the VRF itself, and before any routing protocol is configured.
                 vrf = ospf['vrf']
-                tmp = get_json_iface_options(interface)
+                tmp = get_interface_config(interface)
                 if 'master' not in tmp or tmp['master'] != vrf:
                     raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
 

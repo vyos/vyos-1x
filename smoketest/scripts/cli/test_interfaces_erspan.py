@@ -18,7 +18,7 @@ import unittest
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 
 from base_interfaces_test import BasicInterfaceTest
 
@@ -52,7 +52,7 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-        conf = get_json_iface_options(interface)
+        conf = get_interface_config(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(mtu, conf['mtu'])
@@ -73,7 +73,7 @@ class ERSPanTunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.commit()
 
-        conf = get_json_iface_options(interface)
+        conf = get_interface_config(interface)
         self.assertEqual(interface, conf['ifname'])
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(mtu, conf['mtu'])

@@ -21,7 +21,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.util import cmd
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
@@ -340,7 +340,7 @@ class StaticRouteTest(unittest.TestCase):
         self.session.commit()
 
         for vrf, vrf_config in vrfs.items():
-            tmp = get_json_iface_options(vrf)
+            tmp = get_interface_config(vrf)
 
             # Compare VRF table ID
             self.assertEqual(tmp['linkinfo']['info_data']['table'], int(vrf_config['table']))
