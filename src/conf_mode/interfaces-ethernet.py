@@ -108,12 +108,6 @@ def verify(ethernet):
             raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
                               f'size of "{max_tx}" bytes!')
 
-    # XDP requires multiple TX queues
-    if 'xdp' in ethernet:
-        queues = glob(f'/sys/class/net/{ifname}/queues/tx-*')
-        if len(queues) < 2:
-            raise ConfigError('XDP requires additional TX queues, too few available!')
-
     if {'is_bond_member', 'mac'} <= set(ethernet):
         print(f'WARNING: changing mac address "{mac}" will be ignored as "{ifname}" '
               f'is a member of bond "{is_bond_member}"'.format(**ethernet))

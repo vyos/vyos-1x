@@ -1049,30 +1049,6 @@ class Interface(Control):
             self._popen(mirror_cmd)
 
 
-    def set_xdp(self, state):
-        """
-        Enable Kernel XDP support. State can be either True or False.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> i = Interface('eth0')
-        >>> i.set_xdp(True)
-        """
-        if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-
-        ifname = self.config['ifname']
-        cmd = f'xdp_loader -d {ifname} -U --auto-mode'
-        if state:
-            # Using 'xdp' will automatically decide if the driver supports
-            # 'xdpdrv' or only 'xdpgeneric'. A user later sees which driver is
-            # actually in use by calling 'ip a' or 'show interfaces ethernet'
-            cmd = f'xdp_loader -d {ifname} --auto-mode -F --progsec xdp_router ' \
-                  f'--filename /usr/share/vyos/xdp/xdp_prog_kern.o && ' \
-                  f'xdp_prog_user -d {ifname}'
-
-        return self._cmd(cmd)
-
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -1245,9 +1221,6 @@ class Interface(Control):
         if 'is_bridge_member' in config:
             bridge_dict = config.get('is_bridge_member')
             self.add_to_bridge(bridge_dict)
-
-        # eXpress Data Path - highly experimental
-        self.set_xdp('xdp' in config)
 
         # configure port mirror
         self.set_mirror()
