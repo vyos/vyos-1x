@@ -25,7 +25,7 @@
               </node>
             </children>
           </node>
-          #include <include/interface-mtu-68-1500.xml.i>
+          #include <include/interface/interface-mtu-68-1500.xml.i>
           #include <include/accel-gateway-address.xml.i>
           #include <include/accel-name-server.xml.i>
           <node name="client-ip-pool">
