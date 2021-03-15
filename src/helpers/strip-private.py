@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
