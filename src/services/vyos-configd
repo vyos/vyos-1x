@@ -25,7 +25,7 @@ import logging
 import signal
 import importlib.util
 import zmq
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import contextmanager
 
 from vyos.defaults import directories
 from vyos.configsource import ConfigSourceString, ConfigSourceError
@@ -108,6 +108,23 @@ conf_mode_scripts = dict(zip(imports, modules))
 exclude_set = {key_name_from_file_name(f) for f in filenames if f not in include}
 include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 
+@contextmanager
+def stdout_redirected(filename, mode):
+    saved_stdout_fd = None
+    destination_file = None
+    try:
+        sys.stdout.flush()
+        saved_stdout_fd = os.dup(sys.stdout.fileno())
+        destination_file = open(filename, mode)
+        os.dup2(destination_file.fileno(), sys.stdout.fileno())
+        yield
+    finally:
+        if saved_stdout_fd is not None:
+            os.dup2(saved_stdout_fd, sys.stdout.fileno())
+            os.close(saved_stdout_fd)
+        if destination_file is not None:
+            destination_file.close()
+
 def explicit_print(path, mode, msg):
     try:
         with open(path, mode) as f:
@@ -118,12 +135,10 @@ def explicit_print(path, mode, msg):
 def run_script(script, config) -> int:
     config.set_level([])
     try:
-        with open(session_out, session_mode) as f, redirect_stdout(f):
-            with redirect_stderr(f):
-                c = script.get_config(config)
-                script.verify(c)
-                script.generate(c)
-                script.apply(c)
+        c = script.get_config(config)
+        script.verify(c)
+        script.generate(c)
+        script.apply(c)
     except ConfigError as e:
         logger.critical(e)
         explicit_print(session_out, session_mode, str(e))
@@ -206,7 +221,8 @@ def process_node_data(config, data) -> int:
     if script_name in exclude_set:
         return R_PASS
 
-    result = run_script(conf_mode_scripts[script_name], config)
+    with stdout_redirected(session_out, session_mode):
+        result = run_script(conf_mode_scripts[script_name], config)
 
     return result
 
