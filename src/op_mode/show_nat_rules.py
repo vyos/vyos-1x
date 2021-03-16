@@ -41,9 +41,12 @@ if args.source or args.destination:
     for idx in range(0, len(data_json)):
         data = data_json[idx]
         comment = data['comment']
+        rule = comment.replace('SRC-NAT-','')
+        rule = rule.replace('DST-NAT-','')
+        rule = rule.replace(' tcp_udp','')
         chain = data['chain']
         if not (args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING'):
-            exit(0)
+            continue
         interface = dict_search('match.right', data['expr'][0])
         srcdest = dict_search('match.right.prefix.addr', data['expr'][1])
         if srcdest:
@@ -65,7 +68,7 @@ if args.source or args.destination:
             else:
                 tran_addr = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
         
-        print(format_nat66_rule % (comment, srcdest, tran_addr, interface))
+        print(format_nat66_rule % (rule, srcdest, tran_addr, interface))
     
     exit(0)
 else:
