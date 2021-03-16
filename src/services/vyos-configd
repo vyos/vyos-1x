@@ -108,6 +108,12 @@ conf_mode_scripts = dict(zip(imports, modules))
 exclude_set = {key_name_from_file_name(f) for f in filenames if f not in include}
 include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 
+def explicit_print(path, mode, msg):
+    try:
+        with open(path, mode) as f:
+            f.write(f"\n{msg}\n\n")
+    except OSError:
+        logger.critical("error explicit_print")
 
 def run_script(script, config) -> int:
     config.set_level([])
@@ -120,8 +126,7 @@ def run_script(script, config) -> int:
                 script.apply(c)
     except ConfigError as e:
         logger.critical(e)
-        with open(session_out, session_mode) as f, redirect_stdout(f):
-            print(f"{e}\n")
+        explicit_print(session_out, session_mode, str(e))
         return R_ERROR_COMMIT
     except Exception as e:
         logger.critical(e)
