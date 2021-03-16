@@ -41,9 +41,7 @@ if args.source or args.destination:
     for idx in range(0, len(data_json)):
         data = data_json[idx]
         comment = data['comment']
-        rule = comment.replace('SRC-NAT-','')
-        rule = rule.replace('DST-NAT-','')
-        rule = rule.replace(' tcp_udp','')
+        rule = int(''.join(list(filter(str.isdigit, comment))))
         chain = data['chain']
         if not (args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING'):
             continue
