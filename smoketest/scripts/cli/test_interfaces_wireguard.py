@@ -17,8 +17,10 @@
 import os
 import unittest
 
-from vyos.configsession import ConfigSession, ConfigSessionError
-from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
+
 
 # Generate WireGuard default keypair
 if not os.path.isdir('/config/auth/wireguard/default'):
@@ -26,17 +28,15 @@ if not os.path.isdir('/config/auth/wireguard/default'):
 
 base_path = ['interfaces', 'wireguard']
 
-class WireGuardInterfaceTest(unittest.TestCase):
+class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         self._test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
                           '2001:db8:1::ffff/64', '2001:db8:101::1/112']
         self._interfaces = ['wg0', 'wg1']
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_wireguard_peer(self):
         # Create WireGuard interfaces with associated peers
@@ -46,19 +46,19 @@ class WireGuardInterfaceTest(unittest.TestCase):
             pubkey = 'n6ZZL7ph/QJUJSUUTyu19c77my1dRCDHkMzFQUO9Z3A='
 
             for addr in self._test_addr:
-                self.session.set(base_path + [intf, 'address', addr])
+                self.cli_set(base_path + [intf, 'address', addr])
 
-            self.session.set(base_path + [intf, 'peer', peer, 'address', '127.0.0.1'])
-            self.session.set(base_path + [intf, 'peer', peer, 'port', '1337'])
+            self.cli_set(base_path + [intf, 'peer', peer, 'address', '127.0.0.1'])
+            self.cli_set(base_path + [intf, 'peer', peer, 'port', '1337'])
 
             # Allow different prefixes to traverse the tunnel
             allowed_ips = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
             for ip in allowed_ips:
-                self.session.set(base_path + [intf, 'peer', peer, 'allowed-ips', ip])
+                self.cli_set(base_path + [intf, 'peer', peer, 'allowed-ips', ip])
 
-            self.session.set(base_path + [intf, 'peer', peer, 'preshared-key', psk])
-            self.session.set(base_path + [intf, 'peer', peer, 'pubkey', pubkey])
-            self.session.commit()
+            self.cli_set(base_path + [intf, 'peer', peer, 'preshared-key', psk])
+            self.cli_set(base_path + [intf, 'peer', peer, 'pubkey', pubkey])
+            self.cli_commit()
 
             self.assertTrue(os.path.isdir(f'/sys/class/net/{intf}'))
 
@@ -71,26 +71,26 @@ class WireGuardInterfaceTest(unittest.TestCase):
         pubkey_1 = 'n1CUsmR0M2LUUsyicBd6blZICwUqqWWHbu4ifZ2/9gk='
         pubkey_2 = 'ebFx/1G0ti8tvuZd94sEIosAZZIznX+dBAKG/8DFm0I='
 
-        self.session.set(base_path + [interface, 'address', '172.16.0.1/24'])
+        self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
 
-        self.session.set(base_path + [interface, 'peer', 'PEER01', 'pubkey', pubkey_1])
-        self.session.set(base_path + [interface, 'peer', 'PEER01', 'port', port])
-        self.session.set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
-        self.session.set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'pubkey', pubkey_1])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'port', port])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
 
-        self.session.set(base_path + [interface, 'peer', 'PEER02', 'pubkey', pubkey_2])
-        self.session.set(base_path + [interface, 'peer', 'PEER02', 'port', port])
-        self.session.set(base_path + [interface, 'peer', 'PEER02', 'allowed-ips', '10.205.212.11/32'])
-        self.session.set(base_path + [interface, 'peer', 'PEER02', 'address', '192.0.2.2'])
+        self.cli_set(base_path + [interface, 'peer', 'PEER02', 'pubkey', pubkey_2])
+        self.cli_set(base_path + [interface, 'peer', 'PEER02', 'port', port])
+        self.cli_set(base_path + [interface, 'peer', 'PEER02', 'allowed-ips', '10.205.212.11/32'])
+        self.cli_set(base_path + [interface, 'peer', 'PEER02', 'address', '192.0.2.2'])
 
         # Commit peers
-        self.session.commit()
+        self.cli_commit()
 
         self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
 
         # Delete second peer
-        self.session.delete(base_path + [interface, 'peer', 'PEER01'])
-        self.session.commit()
+        self.cli_delete(base_path + [interface, 'peer', 'PEER01'])
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

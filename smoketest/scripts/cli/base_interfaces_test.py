@@ -22,6 +22,8 @@ from netifaces import AF_INET6
 from netifaces import ifaddresses
 from netifaces import interfaces
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
@@ -53,7 +55,7 @@ def is_mirrored_to(interface, mirror_if, qdisc):
     return ret_val
 
 class BasicInterfaceTest:
-    class BaseTest(unittest.TestCase):
+    class TestCase(VyOSUnitTestSHIM.TestCase):
         _test_ip = False
         _test_mtu = False
         _test_vlan = False
@@ -69,29 +71,26 @@ class BasicInterfaceTest:
         _qinq_range = ['10', '20', '30']
         _vlan_range = ['100', '200', '300', '2000']
         _test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
-                      '2001:db8:1::ffff/64', '2001:db8:101::1/112']
+                      '2001:db8:1::ffff/64', '2001:db8:101::1/128']
 
         _mirror_interfaces = []
         # choose IPv6 minimum MTU value for tests - this must always work
         _mtu = '1280'
 
         def setUp(self):
-            self.session = ConfigSession(os.getpid())
-
             # Setup mirror interfaces for SPAN (Switch Port Analyzer)
             for span in self._mirror_interfaces:
                 section = Section.section(span)
-                self.session.set(['interfaces', section, span])
+                self.cli_set(['interfaces', section, span])
 
         def tearDown(self):
             # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
             for span in self._mirror_interfaces:
                 section = Section.section(span)
-                self.session.delete(['interfaces', section, span])
+                self.cli_delete(['interfaces', section, span])
 
-            self.session.delete(self._base_path)
-            self.session.commit()
-            del self.session
+            self.cli_delete(self._base_path)
+            self.cli_commit()
 
             # Verify that no previously interface remained on the system
             for intf in self._interfaces:
@@ -104,10 +103,10 @@ class BasicInterfaceTest:
             # Check the two-way mirror rules of ingress and egress
             for mirror in self._mirror_interfaces:
                 for interface in self._interfaces:
-                    self.session.set(self._base_path + [interface, 'mirror', 'ingress', mirror])
-                    self.session.set(self._base_path + [interface, 'mirror', 'egress',  mirror])
+                    self.cli_set(self._base_path + [interface, 'mirror', 'ingress', mirror])
+                    self.cli_set(self._base_path + [interface, 'mirror', 'egress',  mirror])
 
-            self.session.commit()
+            self.cli_commit()
 
             # Verify config
             for mirror in self._mirror_interfaces:
@@ -119,11 +118,11 @@ class BasicInterfaceTest:
             # Check if description can be added to interface and
             # can be read back
             for intf in self._interfaces:
-                self.session.set(self._base_path + [intf, 'disable'])
+                self.cli_set(self._base_path + [intf, 'disable'])
                 for option in self._options.get(intf, []):
-                    self.session.set(self._base_path + [intf] + option.split())
+                    self.cli_set(self._base_path + [intf] + option.split())
 
-            self.session.commit()
+            self.cli_commit()
 
             # Validate interface description
             for intf in self._interfaces:
@@ -134,11 +133,11 @@ class BasicInterfaceTest:
             # can be read back
             for intf in self._interfaces:
                 test_string=f'Description-Test-{intf}'
-                self.session.set(self._base_path + [intf, 'description', test_string])
+                self.cli_set(self._base_path + [intf, 'description', test_string])
                 for option in self._options.get(intf, []):
-                    self.session.set(self._base_path + [intf] + option.split())
+                    self.cli_set(self._base_path + [intf] + option.split())
 
-            self.session.commit()
+            self.cli_commit()
 
             # Validate interface description
             for intf in self._interfaces:
@@ -146,9 +145,9 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/sys/class/net/{intf}/ifalias')
                 self.assertEqual(tmp, test_string)
                 self.assertEqual(Interface(intf).get_alias(), test_string)
-                self.session.delete(self._base_path + [intf, 'description'])
+                self.cli_delete(self._base_path + [intf, 'description'])
 
-            self.session.commit()
+            self.cli_commit()
 
             # Validate remove interface description "empty"
             for intf in self._interfaces:
@@ -159,11 +158,11 @@ class BasicInterfaceTest:
         def test_add_single_ip_address(self):
             addr = '192.0.2.0/31'
             for intf in self._interfaces:
-                self.session.set(self._base_path + [intf, 'address', addr])
+                self.cli_set(self._base_path + [intf, 'address', addr])
                 for option in self._options.get(intf, []):
-                    self.session.set(self._base_path + [intf] + option.split())
+                    self.cli_set(self._base_path + [intf] + option.split())
 
-            self.session.commit()
+            self.cli_commit()
 
             for intf in self._interfaces:
                 self.assertTrue(is_intf_addr_assigned(intf, addr))
@@ -173,11 +172,11 @@ class BasicInterfaceTest:
             # Add address
             for intf in self._interfaces:
                 for addr in self._test_addr:
-                    self.session.set(self._base_path + [intf, 'address', addr])
+                    self.cli_set(self._base_path + [intf, 'address', addr])
                     for option in self._options.get(intf, []):
-                        self.session.set(self._base_path + [intf] + option.split())
+                        self.cli_set(self._base_path + [intf] + option.split())
 
-            self.session.commit()
+            self.cli_commit()
 
             # Validate address
             for intf in self._interfaces:
@@ -197,10 +196,10 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 base = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
 
             # after commit we must have an IPv6 link-local address
-            self.session.commit()
+            self.cli_commit()
 
             for interface in self._interfaces:
                 for addr in ifaddresses(interface)[AF_INET6]:
@@ -209,10 +208,10 @@ class BasicInterfaceTest:
             # disable IPv6 link-local address assignment
             for interface in self._interfaces:
                 base = self._base_path + [interface]
-                self.session.set(base + ['ipv6', 'address', 'no-default-link-local'])
+                self.cli_set(base + ['ipv6', 'address', 'no-default-link-local'])
 
             # after commit we must have no IPv6 link-local address
-            self.session.commit()
+            self.cli_commit()
 
             for interface in self._interfaces:
                 self.assertTrue(AF_INET6 not in ifaddresses(interface))
@@ -223,12 +222,12 @@ class BasicInterfaceTest:
 
             for intf in self._interfaces:
                 base = self._base_path + [intf]
-                self.session.set(base + ['mtu', self._mtu])
+                self.cli_set(base + ['mtu', self._mtu])
                 for option in self._options.get(intf, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
 
             # commit interface changes
-            self.session.commit()
+            self.cli_commit()
 
             # verify changed MTU
             for intf in self._interfaces:
@@ -246,14 +245,14 @@ class BasicInterfaceTest:
 
             for intf in self._interfaces:
                 base = self._base_path + [intf]
-                self.session.set(base + ['mtu', self._mtu])
-                self.session.set(base + ['ipv6', 'address', 'no-default-link-local'])
+                self.cli_set(base + ['mtu', self._mtu])
+                self.cli_set(base + ['ipv6', 'address', 'no-default-link-local'])
 
                 for option in self._options.get(intf, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
 
             # commit interface changes
-            self.session.commit()
+            self.cli_commit()
 
             # verify changed MTU
             for intf in self._interfaces:
@@ -273,15 +272,15 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 base = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
 
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
-                    self.session.set(base + ['mtu', self._mtu])
+                    self.cli_set(base + ['mtu', self._mtu])
                     for address in self._test_addr:
-                        self.session.set(base + ['address', address])
+                        self.cli_set(base + ['address', address])
 
-            self.session.commit()
+            self.cli_commit()
 
             for intf in self._interfaces:
                 for vlan in self._vlan_range:
@@ -306,29 +305,29 @@ class BasicInterfaceTest:
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
-                self.session.set(base + ['mtu', mtu_1500])
+                self.cli_set(base + ['mtu', mtu_1500])
                 for option in self._options.get(interface, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
                     if 'source-interface' in option:
                         iface = option.split()[-1]
                         iface_type = Section.section(iface)
-                        self.session.set(['interfaces', iface_type, iface, 'mtu', mtu_9000])
+                        self.cli_set(['interfaces', iface_type, iface, 'mtu', mtu_9000])
 
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
-                    self.session.set(base + ['mtu', mtu_9000])
+                    self.cli_set(base + ['mtu', mtu_9000])
 
             # check validate() - VIF MTU must not be larger the parent interface
             # MTU size.
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
+                self.cli_commit()
 
             # Change MTU on base interface to be the same as on the VIF interface
             for interface in self._interfaces:
                 base = self._base_path + [interface]
-                self.session.set(base + ['mtu', mtu_9000])
+                self.cli_set(base + ['mtu', mtu_9000])
 
-            self.session.commit()
+            self.cli_commit()
 
             # Verify MTU on base and VIF interfaces
             for interface in self._interfaces:
@@ -348,24 +347,24 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 base = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
 
                 # disable the lower interface
-                self.session.set(base + ['disable'])
+                self.cli_set(base + ['disable'])
 
                 for vlan in self._vlan_range:
                     vlan_base = self._base_path + [interface, 'vif', vlan]
                     # disable the vlan interface
-                    self.session.set(vlan_base + ['disable'])
+                    self.cli_set(vlan_base + ['disable'])
 
-            self.session.commit()
+            self.cli_commit()
 
             # re-enable all lower interfaces
             for interface in self._interfaces:
                 base = self._base_path + [interface]
-                self.session.delete(base + ['disable'])
+                self.cli_delete(base + ['disable'])
 
-            self.session.commit()
+            self.cli_commit()
 
             # verify that the lower interfaces are admin up and the vlan
             # interfaces are all admin down
@@ -388,16 +387,16 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 base = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(base + option.split())
+                    self.cli_set(base + option.split())
 
                 for vif_s in self._qinq_range:
                     for vif_c in self._vlan_range:
                         base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c', vif_c]
-                        self.session.set(base + ['mtu', self._mtu])
+                        self.cli_set(base + ['mtu', self._mtu])
                         for address in self._test_addr:
-                            self.session.set(base + ['address', address])
+                            self.cli_set(base + ['address', address])
 
-            self.session.commit()
+            self.cli_commit()
 
             for interface in self._interfaces:
                 for vif_s in self._qinq_range:
@@ -420,20 +419,20 @@ class BasicInterfaceTest:
                 arp_tmo = '300'
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(path + option.split())
+                    self.cli_set(path + option.split())
 
                 # Options
-                self.session.set(path + ['ip', 'arp-cache-timeout', arp_tmo])
-                self.session.set(path + ['ip', 'disable-arp-filter'])
-                self.session.set(path + ['ip', 'disable-forwarding'])
-                self.session.set(path + ['ip', 'enable-arp-accept'])
-                self.session.set(path + ['ip', 'enable-arp-announce'])
-                self.session.set(path + ['ip', 'enable-arp-ignore'])
-                self.session.set(path + ['ip', 'enable-proxy-arp'])
-                self.session.set(path + ['ip', 'proxy-arp-pvlan'])
-                self.session.set(path + ['ip', 'source-validation', 'loose'])
+                self.cli_set(path + ['ip', 'arp-cache-timeout', arp_tmo])
+                self.cli_set(path + ['ip', 'disable-arp-filter'])
+                self.cli_set(path + ['ip', 'disable-forwarding'])
+                self.cli_set(path + ['ip', 'enable-arp-accept'])
+                self.cli_set(path + ['ip', 'enable-arp-announce'])
+                self.cli_set(path + ['ip', 'enable-arp-ignore'])
+                self.cli_set(path + ['ip', 'enable-proxy-arp'])
+                self.cli_set(path + ['ip', 'proxy-arp-pvlan'])
+                self.cli_set(path + ['ip', 'source-validation', 'loose'])
 
-            self.session.commit()
+            self.cli_commit()
 
             for interface in self._interfaces:
                 tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
@@ -471,13 +470,13 @@ class BasicInterfaceTest:
                 dad_transmits = '10'
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(path + option.split())
+                    self.cli_set(path + option.split())
 
                 # Options
-                self.session.set(path + ['ipv6', 'disable-forwarding'])
-                self.session.set(path + ['ipv6', 'dup-addr-detect-transmits', dad_transmits])
+                self.cli_set(path + ['ipv6', 'disable-forwarding'])
+                self.cli_set(path + ['ipv6', 'dup-addr-detect-transmits', dad_transmits])
 
-            self.session.commit()
+            self.cli_commit()
 
             for interface in self._interfaces:
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/forwarding')
@@ -495,16 +494,16 @@ class BasicInterfaceTest:
                 duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(path + option.split())
+                    self.cli_set(path + option.split())
 
                 # Enable DHCPv6 client
-                self.session.set(path + ['address', 'dhcpv6'])
-                self.session.set(path + ['dhcpv6-options', 'rapid-commit'])
-                self.session.set(path + ['dhcpv6-options', 'parameters-only'])
-                self.session.set(path + ['dhcpv6-options', 'duid', duid])
+                self.cli_set(path + ['address', 'dhcpv6'])
+                self.cli_set(path + ['dhcpv6-options', 'rapid-commit'])
+                self.cli_set(path + ['dhcpv6-options', 'parameters-only'])
+                self.cli_set(path + ['dhcpv6-options', 'duid', duid])
                 duid_base += 1
 
-            self.session.commit()
+            self.cli_commit()
 
             duid_base = 10
             for interface in self._interfaces:
@@ -535,21 +534,21 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(path + option.split())
+                    self.cli_set(path + option.split())
 
                 address = '1'
                 # prefix delegation stuff
                 pd_base = path + ['dhcpv6-options', 'pd', '0']
-                self.session.set(pd_base + ['length', prefix_len])
+                self.cli_set(pd_base + ['length', prefix_len])
 
                 for delegatee in delegatees:
                     section = Section.section(delegatee)
-                    self.session.set(['interfaces', section, delegatee])
-                    self.session.set(pd_base + ['interface', delegatee, 'address', address])
+                    self.cli_set(['interfaces', section, delegatee])
+                    self.cli_set(pd_base + ['interface', delegatee, 'address', address])
                     # increment interface address
                     address = str(int(address) + 1)
 
-            self.session.commit()
+            self.cli_commit()
 
             for interface in self._interfaces:
                 dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
@@ -577,7 +576,7 @@ class BasicInterfaceTest:
                 # we can already cleanup the test delegatee interface here
                 # as until commit() is called, nothing happens
                 section = Section.section(delegatee)
-                self.session.delete(['interfaces', section, delegatee])
+                self.cli_delete(['interfaces', section, delegatee])
 
         def test_dhcpv6pd_manual_sla_id(self):
             if not self._test_ipv6_pd:
@@ -591,25 +590,25 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
-                    self.session.set(path + option.split())
+                    self.cli_set(path + option.split())
 
                 # prefix delegation stuff
                 address = '1'
                 sla_id = '1'
                 pd_base = path + ['dhcpv6-options', 'pd', '0']
-                self.session.set(pd_base + ['length', prefix_len])
+                self.cli_set(pd_base + ['length', prefix_len])
 
                 for delegatee in delegatees:
                     section = Section.section(delegatee)
-                    self.session.set(['interfaces', section, delegatee])
-                    self.session.set(pd_base + ['interface', delegatee, 'address', address])
-                    self.session.set(pd_base + ['interface', delegatee, 'sla-id', sla_id])
+                    self.cli_set(['interfaces', section, delegatee])
+                    self.cli_set(pd_base + ['interface', delegatee, 'address', address])
+                    self.cli_set(pd_base + ['interface', delegatee, 'sla-id', sla_id])
 
                     # increment interface address
                     address = str(int(address) + 1)
                     sla_id = str(int(sla_id) + 1)
 
-            self.session.commit()
+            self.cli_commit()
 
             # Verify dhcpc6 client configuration
             for interface in self._interfaces:
@@ -638,4 +637,4 @@ class BasicInterfaceTest:
                 # we can already cleanup the test delegatee interface here
                 # as until commit() is called, nothing happens
                 section = Section.section(delegatee)
-                self.session.delete(['interfaces', section, delegatee])
+                self.cli_delete(['interfaces', section, delegatee])

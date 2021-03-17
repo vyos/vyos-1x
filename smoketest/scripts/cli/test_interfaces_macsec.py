@@ -37,20 +37,22 @@ def get_cipher(interface):
     tmp = get_interface_config(interface)
     return tmp['linkinfo']['info_data']['cipher_suite'].lower()
 
-class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
+class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-         cls._test_ip = True
-         cls._test_ipv6 = True
-         cls._base_path = ['interfaces', 'macsec']
-         cls._options = { 'macsec0': ['source-interface eth0', 'security cipher gcm-aes-128'] }
+        cls._test_ip = True
+        cls._test_ipv6 = True
+        cls._base_path = ['interfaces', 'macsec']
+        cls._options = { 'macsec0': ['source-interface eth0', 'security cipher gcm-aes-128'] }
 
-         # if we have a physical eth1 interface, add a second macsec instance
-         if 'eth1' in Section.interfaces('ethernet'):
-             macsec = { 'macsec1': [f'source-interface eth1', 'security cipher gcm-aes-128'] }
-             cls._options.update(macsec)
+        # if we have a physical eth1 interface, add a second macsec instance
+        if 'eth1' in Section.interfaces('ethernet'):
+            macsec = { 'macsec1': [f'source-interface eth1', 'security cipher gcm-aes-128'] }
+            cls._options.update(macsec)
 
-         cls._interfaces = list(cls._options)
+        cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def test_macsec_encryption(self):
         # MACsec can be operating in authentication and encryption mode - both
@@ -66,31 +68,31 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
                 if option.split()[0] == 'source-interface':
                     src_interface = option.split()[1]
 
-                self.session.set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface] + option.split())
 
             # Encrypt link
-            self.session.set(self._base_path + [interface, 'security', 'encrypt'])
+            self.cli_set(self._base_path + [interface, 'security', 'encrypt'])
 
             # check validate() - Physical source interface MTU must be higher then our MTU
-            self.session.set(self._base_path + [interface, 'mtu', '1500'])
+            self.cli_set(self._base_path + [interface, 'mtu', '1500'])
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.delete(self._base_path + [interface, 'mtu'])
+                self.cli_commit()
+            self.cli_delete(self._base_path + [interface, 'mtu'])
 
             # check validate() - MACsec security keys mandartory when encryption is enabled
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.set(self._base_path + [interface, 'security', 'mka', 'cak', mak_cak])
+                self.cli_commit()
+            self.cli_set(self._base_path + [interface, 'security', 'mka', 'cak', mak_cak])
 
             # check validate() - MACsec security keys mandartory when encryption is enabled
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.set(self._base_path + [interface, 'security', 'mka', 'ckn', mak_ckn])
+                self.cli_commit()
+            self.cli_set(self._base_path + [interface, 'security', 'mka', 'ckn', mak_ckn])
 
-            self.session.set(self._base_path + [interface, 'security', 'replay-window', replay_window])
+            self.cli_set(self._base_path + [interface, 'security', 'replay-window', replay_window])
 
             # final commit of settings
-            self.session.commit()
+            self.cli_commit()
 
             tmp = get_config_value(src_interface, 'macsec_integ_only')
             self.assertTrue("0" in tmp)
@@ -117,20 +119,20 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
     def test_macsec_gcm_aes_128(self):
         interface = 'macsec1'
         cipher = 'gcm-aes-128'
-        self.session.set(self._base_path + [interface])
+        self.cli_set(self._base_path + [interface])
 
         # check validate() - source interface is mandatory
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'source-interface', 'eth0'])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'source-interface', 'eth0'])
 
         # check validate() - cipher is mandatory
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'security', 'cipher', cipher])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'cipher', cipher])
 
         # final commit and verify
-        self.session.commit()
+        self.cli_commit()
         self.assertIn(interface, interfaces())
         self.assertIn(interface, interfaces())
         self.assertEqual(cipher, get_cipher(interface))
@@ -138,20 +140,20 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
     def test_macsec_gcm_aes_256(self):
         interface = 'macsec4'
         cipher = 'gcm-aes-256'
-        self.session.set(self._base_path + [interface])
+        self.cli_set(self._base_path + [interface])
 
         # check validate() - source interface is mandatory
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'source-interface', 'eth0'])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'source-interface', 'eth0'])
 
         # check validate() - cipher is mandatory
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'security', 'cipher', cipher])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'cipher', cipher])
 
         # final commit and verify
-        self.session.commit()
+        self.cli_commit()
         self.assertIn(interface, interfaces())
         self.assertEqual(cipher, get_cipher(interface))
 
@@ -163,24 +165,24 @@ class MACsecInterfaceTest(BasicInterfaceTest.BaseTest):
 
         for interface, option_value in self._options.items():
             for option in option_value:
-                self.session.set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface] + option.split())
                 if option.split()[0] == 'source-interface':
                     src_interface = option.split()[1]
 
-            self.session.set(base_bridge + ['member', 'interface', src_interface])
+            self.cli_set(base_bridge + ['member', 'interface', src_interface])
             # check validate() - Source interface must not already be a member of a bridge
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.delete(base_bridge)
+                self.cli_commit()
+            self.cli_delete(base_bridge)
 
-            self.session.set(base_bond + ['member', 'interface', src_interface])
+            self.cli_set(base_bond + ['member', 'interface', src_interface])
             # check validate() - Source interface must not already be a member of a bridge
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.delete(base_bond)
+                self.cli_commit()
+            self.cli_delete(base_bond)
 
             # final commit and verify
-            self.session.commit()
+            self.cli_commit()
             self.assertIn(interface, interfaces())
 
 if __name__ == '__main__':

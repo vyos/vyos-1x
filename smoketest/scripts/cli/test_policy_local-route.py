@@ -17,21 +17,24 @@
 import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
 
-class PolicyLocalRouteTest(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self._sources = ['203.0.113.1', '203.0.113.2']
+class PolicyLocalRouteTest(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._sources = ['203.0.113.1', '203.0.113.2']
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def tearDown(self):
         # Delete all policies
-        self.session.delete(['policy', 'local-route'])
-        self.session.commit()
-        del self.session
+        self.cli_delete(['policy', 'local-route'])
+        self.cli_commit()
 
     # Test set table for some sources
     def test_table_id(self):
@@ -39,10 +42,10 @@ class PolicyLocalRouteTest(unittest.TestCase):
         rule = '50'
         table = '23'
         for src in self._sources:
-            self.session.set(base + ['rule', rule, 'set', 'table', table])
-            self.session.set(base + ['rule', rule, 'source', src])
+            self.cli_set(base + ['rule', rule, 'set', 'table', table])
+            self.cli_set(base + ['rule', rule, 'source', src])
 
-        self.session.commit()
+        self.cli_commit()
 
         # Check generated configuration
 

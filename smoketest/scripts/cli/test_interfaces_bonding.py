@@ -25,7 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import get_interface_config
 from vyos.util import read_file
 
-class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
+class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -53,6 +53,9 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         for member in cls._members:
             cls._options['bond0'].append(f'member interface {member}')
 
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
+
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
 
@@ -75,16 +78,16 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         # configure member interfaces
         for interface in self._interfaces:
             for option in self._options.get(interface, []):
-                self.session.set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface] + option.split())
 
-        self.session.commit()
+        self.cli_commit()
 
         # remove single bond member port
         for interface in self._interfaces:
             remove_member = self._members[0]
-            self.session.delete(self._base_path + [interface, 'member', 'interface', remove_member])
+            self.cli_delete(self._base_path + [interface, 'member', 'interface', remove_member])
 
-        self.session.commit()
+        self.cli_commit()
 
         # removed member port must be admin-up
         for interface in self._interfaces:
@@ -97,11 +100,11 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         min_links = len(self._interfaces)
         for interface in self._interfaces:
             for option in self._options.get(interface, []):
-                self.session.set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface] + option.split())
 
-            self.session.set(self._base_path + [interface, 'min-links', str(min_links)])
+            self.cli_set(self._base_path + [interface, 'min-links', str(min_links)])
 
-        self.session.commit()
+        self.cli_commit()
 
         # verify config
         for interface in self._interfaces:
@@ -116,11 +119,11 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         lacp_rate = 'fast'
         for interface in self._interfaces:
             for option in self._options.get(interface, []):
-                self.session.set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface] + option.split())
 
-            self.session.set(self._base_path + [interface, 'lacp-rate', lacp_rate])
+            self.cli_set(self._base_path + [interface, 'lacp-rate', lacp_rate])
 
-        self.session.commit()
+        self.cli_commit()
 
         # verify config
         for interface in self._interfaces:
@@ -136,11 +139,11 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
         for hash_policy in hash_policies:
             for interface in self._interfaces:
                 for option in self._options.get(interface, []):
-                    self.session.set(self._base_path + [interface] + option.split())
+                    self.cli_set(self._base_path + [interface] + option.split())
 
-                self.session.set(self._base_path + [interface, 'hash-policy', hash_policy])
+                self.cli_set(self._base_path + [interface, 'hash-policy', hash_policy])
 
-            self.session.commit()
+            self.cli_commit()
 
             # verify config
             for interface in self._interfaces:

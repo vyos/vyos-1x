@@ -34,7 +34,7 @@ def get_wpa_supplicant_value(interface, key):
     tmp = re.findall(r'\n?{}=(.*)'.format(key), tmp)
     return tmp[0]
 
-class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
+class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -61,37 +61,39 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         for interface in cls._interfaces:
             cls._macs[interface] = read_file(f'/sys/class/net/{interface}/address')
 
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
+
 
     def tearDown(self):
         for interface in self._interfaces:
             # when using a dedicated interface to test via TEST_ETH environment
             # variable only this one will be cleared in the end - usable to test
             # ethernet interfaces via SSH
-            self.session.delete(self._base_path + [interface])
-            self.session.set(self._base_path + [interface, 'duplex', 'auto'])
-            self.session.set(self._base_path + [interface, 'speed', 'auto'])
-            self.session.set(self._base_path + [interface, 'hw-id', self._macs[interface]])
+            self.cli_delete(self._base_path + [interface])
+            self.cli_set(self._base_path + [interface, 'duplex', 'auto'])
+            self.cli_set(self._base_path + [interface, 'speed', 'auto'])
+            self.cli_set(self._base_path + [interface, 'hw-id', self._macs[interface]])
 
         # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
         for span in self._mirror_interfaces:
             section = Section.section(span)
-            self.session.delete(['interfaces', section, span])
+            self.cli_delete(['interfaces', section, span])
 
-        self.session.commit()
-        del self.session
+        self.cli_commit()
 
     def test_dhcp_disable_interface(self):
         # When interface is configured as admin down, it must be admin down
         # even when dhcpc starts on the given interface
         for interface in self._interfaces:
-            self.session.set(self._base_path + [interface, 'disable'])
+            self.cli_set(self._base_path + [interface, 'disable'])
 
             # Also enable DHCP (ISC DHCP always places interface in admin up
             # state so we check that we do not start DHCP client.
             # https://phabricator.vyos.net/T2767
-            self.session.set(self._base_path + [interface, 'address', 'dhcp'])
+            self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
 
-        self.session.commit()
+        self.cli_commit()
 
         # Validate interface state
         for interface in self._interfaces:
@@ -111,9 +113,9 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         rps_cpus &= ~1
 
         for interface in self._interfaces:
-            self.session.set(self._base_path + [interface, 'offload', 'rps'])
+            self.cli_set(self._base_path + [interface, 'offload', 'rps'])
 
-        self.session.commit()
+        self.cli_commit()
 
         for interface in self._interfaces:
             cpus = read_file(f'/sys/class/net/{interface}/queues/rx-0/rps_cpus')
@@ -125,35 +127,35 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
 
     def test_non_existing_interface(self):
         unknonw_interface = self._base_path + ['eth667']
-        self.session.set(unknonw_interface)
+        self.cli_set(unknonw_interface)
 
         # check validate() - interface does not exist
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         # we need to remove this wrong interface from the configuration
         # manually, else tearDown() will have problem in commit()
-        self.session.delete(unknonw_interface)
+        self.cli_delete(unknonw_interface)
 
     def test_speed_duplex_verify(self):
         for interface in self._interfaces:
-            self.session.set(self._base_path + [interface, 'speed', '1000'])
+            self.cli_set(self._base_path + [interface, 'speed', '1000'])
 
             # check validate() - if either speed or duplex is not auto, the
             # other one must be manually configured, too
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.set(self._base_path + [interface, 'speed', 'auto'])
-            self.session.commit()
+                self.cli_commit()
+            self.cli_set(self._base_path + [interface, 'speed', 'auto'])
+            self.cli_commit()
 
     def test_eapol_support(self):
         for interface in self._interfaces:
             # Enable EAPoL
-            self.session.set(self._base_path + [interface, 'eapol', 'ca-cert-file', ca_cert])
-            self.session.set(self._base_path + [interface, 'eapol', 'cert-file', ssl_cert])
-            self.session.set(self._base_path + [interface, 'eapol', 'key-file', ssl_key])
+            self.cli_set(self._base_path + [interface, 'eapol', 'ca-cert-file', ca_cert])
+            self.cli_set(self._base_path + [interface, 'eapol', 'cert-file', ssl_cert])
+            self.cli_set(self._base_path + [interface, 'eapol', 'key-file', ssl_key])
 
-        self.session.commit()
+        self.cli_commit()
 
         # Check for running process
         self.assertTrue(process_named_running('wpa_supplicant'))

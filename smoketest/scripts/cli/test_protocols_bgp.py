@@ -17,6 +17,8 @@
 import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -87,14 +89,10 @@ peer_group_config = {
 def getFRRBGPconfig():
     return cmd(f'vtysh -c "show run" | sed -n "/router bgp {ASN}/,/^!/p"')
 
-class TestProtocolsBGP(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def verify_frr_config(self, peer, peer_config, frrconfig):
         # recurring patterns to verify for both a simple neighbor and a peer-group
@@ -129,15 +127,15 @@ class TestProtocolsBGP(unittest.TestCase):
         router_id = '127.0.0.1'
         local_pref = '500'
 
-        self.session.set(base_path + ['parameters', 'router-id', router_id])
-        self.session.set(base_path + ['parameters', 'log-neighbor-changes'])
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
         # Default local preference (higher=more preferred)
-        self.session.set(base_path + ['parameters', 'default', 'local-pref', local_pref])
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', local_pref])
         # Deactivate IPv4 unicast for a peer by default
-        self.session.set(base_path + ['parameters', 'default', 'no-ipv4-unicast'])
+        self.cli_set(base_path + ['parameters', 'default', 'no-ipv4-unicast'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRBGPconfig()
@@ -155,40 +153,40 @@ class TestProtocolsBGP(unittest.TestCase):
         # also available to a peer-group!
         for neighbor, config in neighbor_config.items():
             if 'adv_interv' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'advertisement-interval', config["adv_interv"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'advertisement-interval', config["adv_interv"]])
             if 'cap_dynamic' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'capability', 'dynamic'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'capability', 'dynamic'])
             if 'cap_ext_next' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'capability', 'extended-nexthop'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'capability', 'extended-nexthop'])
             if 'description' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'description', config["description"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'description', config["description"]])
             if 'no_cap_nego' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'disable-capability-negotiation'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'disable-capability-negotiation'])
             if 'multi_hop' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'ebgp-multihop', config["multi_hop"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'ebgp-multihop', config["multi_hop"]])
             if 'local_as' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'local-as', config["local_as"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'local-as', config["local_as"]])
             if 'cap_over' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'override-capability'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'override-capability'])
             if 'passive' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'passive'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'passive'])
             if 'password' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'password', config["password"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'password', config["password"]])
             if 'port' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'port', config["port"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'port', config["port"]])
             if 'remote_as' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'remote-as', config["remote_as"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', config["remote_as"]])
             if 'cap_strict' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'strict-capability-match'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'strict-capability-match'])
             if 'shutdown' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'shutdown'])
+                self.cli_set(base_path + ['neighbor', neighbor, 'shutdown'])
             if 'ttl_security' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'ttl-security', 'hops', config["ttl_security"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'ttl-security', 'hops', config["ttl_security"]])
             if 'update_src' in config:
-                self.session.set(base_path + ['neighbor', neighbor, 'update-source', config["update_src"]])
+                self.cli_set(base_path + ['neighbor', neighbor, 'update-source', config["update_src"]])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRBGPconfig()
@@ -208,34 +206,34 @@ class TestProtocolsBGP(unittest.TestCase):
         # Test out individual peer-group configuration items
         for peer_group, config in peer_group_config.items():
             if 'cap_dynamic' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'capability', 'dynamic'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'dynamic'])
             if 'cap_ext_next' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'capability', 'extended-nexthop'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'extended-nexthop'])
             if 'description' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'description', config["description"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'description', config["description"]])
             if 'no_cap_nego' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'disable-capability-negotiation'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'disable-capability-negotiation'])
             if 'multi_hop' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'ebgp-multihop', config["multi_hop"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'ebgp-multihop', config["multi_hop"]])
             if 'local_as' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"]])
             if 'cap_over' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'override-capability'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'override-capability'])
             if 'passive' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'passive'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'passive'])
             if 'password' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'password', config["password"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'password', config["password"]])
             if 'remote_as' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'remote-as', config["remote_as"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', config["remote_as"]])
             if 'shutdown' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'shutdown'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'shutdown'])
             if 'ttl_security' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'ttl-security', 'hops', config["ttl_security"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'ttl-security', 'hops', config["ttl_security"]])
             if 'update_src' in config:
-                self.session.set(base_path + ['peer-group', peer_group, 'update-source', config["update_src"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'update-source', config["update_src"]])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRBGPconfig()
@@ -262,21 +260,21 @@ class TestProtocolsBGP(unittest.TestCase):
         # We want to redistribute ...
         redistributes = ['connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
         for redistribute in redistributes:
-            self.session.set(base_path + ['address-family', 'ipv4-unicast',
+            self.cli_set(base_path + ['address-family', 'ipv4-unicast',
                                           'redistribute', redistribute])
 
         for network, network_config in networks.items():
-            self.session.set(base_path + ['address-family', 'ipv4-unicast',
+            self.cli_set(base_path + ['address-family', 'ipv4-unicast',
                                           'network', network])
             if 'as_set' in network_config:
-                self.session.set(base_path + ['address-family', 'ipv4-unicast',
+                self.cli_set(base_path + ['address-family', 'ipv4-unicast',
                                               'aggregate-address', network, 'as-set'])
             if 'summary_only' in network_config:
-                self.session.set(base_path + ['address-family', 'ipv4-unicast',
+                self.cli_set(base_path + ['address-family', 'ipv4-unicast',
                                               'aggregate-address', network, 'summary-only'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRBGPconfig()
@@ -308,18 +306,18 @@ class TestProtocolsBGP(unittest.TestCase):
         # We want to redistribute ...
         redistributes = ['connected', 'kernel', 'ospfv3', 'ripng', 'static']
         for redistribute in redistributes:
-            self.session.set(base_path + ['address-family', 'ipv6-unicast',
+            self.cli_set(base_path + ['address-family', 'ipv6-unicast',
                                           'redistribute', redistribute])
 
         for network, network_config in networks.items():
-            self.session.set(base_path + ['address-family', 'ipv6-unicast',
+            self.cli_set(base_path + ['address-family', 'ipv6-unicast',
                                           'network', network])
             if 'summary_only' in network_config:
-                self.session.set(base_path + ['address-family', 'ipv6-unicast',
+                self.cli_set(base_path + ['address-family', 'ipv6-unicast',
                                               'aggregate-address', network, 'summary-only'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRBGPconfig()

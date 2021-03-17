@@ -15,10 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import os
 import unittest
 
-from vyos.configsession import ConfigSession, ConfigSessionError
+from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 from vyos.util import process_named_running
 
@@ -37,44 +39,40 @@ def get_config_value(key, file=CONFIG_FILE):
     tmp = re.findall(r'\n{}=+(.*)'.format(key), tmp)
     return tmp[0]
 
-class TestServicePowerDNS(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Delete DNS forwarding configuration
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_basic_forwarding(self):
         # Check basic DNS forwarding settings
         cache_size = '20'
         negative_ttl = '120'
 
-        self.session.set(base_path + ['cache-size', cache_size])
-        self.session.set(base_path + ['negative-ttl', negative_ttl])
+        self.cli_set(base_path + ['cache-size', cache_size])
+        self.cli_set(base_path + ['negative-ttl', negative_ttl])
 
         # check validate() - allow from must be defined
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
         for network in allow_from:
-            self.session.set(base_path + ['allow-from', network])
+            self.cli_set(base_path + ['allow-from', network])
 
         # check validate() - listen-address must be defined
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
         for address in listen_adress:
-            self.session.set(base_path + ['listen-address', address])
+            self.cli_set(base_path + ['listen-address', address])
 
         # configure DNSSEC
-        self.session.set(base_path + ['dnssec', 'validate'])
+        self.cli_set(base_path + ['dnssec', 'validate'])
 
         # Do not use local /etc/hosts file in name resolution
-        self.session.set(base_path + ['ignore-hosts-file'])
+        self.cli_set(base_path + ['ignore-hosts-file'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check configured cache-size
         tmp = get_config_value('max-cache-entries')
@@ -103,16 +101,16 @@ class TestServicePowerDNS(unittest.TestCase):
         # DNSSEC option testing
 
         for network in allow_from:
-            self.session.set(base_path + ['allow-from', network])
+            self.cli_set(base_path + ['allow-from', network])
         for address in listen_adress:
-            self.session.set(base_path + ['listen-address', address])
+            self.cli_set(base_path + ['listen-address', address])
 
         options = ['off', 'process-no-validate', 'process', 'log-fail', 'validate']
         for option in options:
-            self.session.set(base_path + ['dnssec', option])
+            self.cli_set(base_path + ['dnssec', option])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             tmp = get_config_value('dnssec')
             self.assertEqual(tmp, option)
@@ -124,16 +122,16 @@ class TestServicePowerDNS(unittest.TestCase):
         # Externe Domain Name Servers (DNS) addresses
 
         for network in allow_from:
-            self.session.set(base_path + ['allow-from', network])
+            self.cli_set(base_path + ['allow-from', network])
         for address in listen_adress:
-            self.session.set(base_path + ['listen-address', address])
+            self.cli_set(base_path + ['listen-address', address])
 
         nameservers = ['192.0.2.1', '192.0.2.2']
         for nameserver in nameservers:
-            self.session.set(base_path + ['name-server', nameserver])
+            self.cli_set(base_path + ['name-server', nameserver])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         tmp = get_config_value(r'\+.', file=FORWARD_FILE)
         self.assertEqual(tmp, ', '.join(nameservers))
@@ -148,26 +146,26 @@ class TestServicePowerDNS(unittest.TestCase):
 
     def test_domain_forwarding(self):
         for network in allow_from:
-            self.session.set(base_path + ['allow-from', network])
+            self.cli_set(base_path + ['allow-from', network])
         for address in listen_adress:
-            self.session.set(base_path + ['listen-address', address])
+            self.cli_set(base_path + ['listen-address', address])
 
         domains = ['vyos.io', 'vyos.net', 'vyos.com']
         nameservers = ['192.0.2.1', '192.0.2.2']
         for domain in domains:
             for nameserver in nameservers:
-                self.session.set(base_path + ['domain', domain, 'server', nameserver])
+                self.cli_set(base_path + ['domain', domain, 'server', nameserver])
 
             # Test 'recursion-desired' flag for only one domain
             if domain == domains[0]:
-                self.session.set(base_path + ['domain', domain, 'recursion-desired'])
+                self.cli_set(base_path + ['domain', domain, 'recursion-desired'])
 
             # Test 'negative trust anchor' flag for the second domain only
             if domain == domains[1]:
-                self.session.set(base_path + ['domain', domain, 'addnta'])
+                self.cli_set(base_path + ['domain', domain, 'addnta'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Test configured name-servers
         hosts_conf = read_file(HOSTSD_FILE)

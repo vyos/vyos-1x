@@ -19,6 +19,8 @@ import os
 import json
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from netifaces import interfaces
 
 from vyos.configsession import ConfigSession
@@ -39,7 +41,7 @@ def get_vrf_ipv4_routes(vrf):
 def get_vrf_ipv6_routes(vrf):
     return json.loads(cmd(f'ip -6 -j route show vrf {vrf}'))
 
-class VRFTest(unittest.TestCase):
+class VRFTest(VyOSUnitTestSHIM.TestCase):
     _interfaces = []
 
     @classmethod
@@ -54,13 +56,13 @@ class VRFTest(unittest.TestCase):
                 if not '.' in tmp:
                     cls._interfaces.append(tmp)
 
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def tearDown(self):
         # delete all VRFs
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
         for vrf in vrfs:
             self.assertNotIn(vrf, interfaces())
 
@@ -69,20 +71,20 @@ class VRFTest(unittest.TestCase):
         for vrf in vrfs:
             base = base_path + ['name', vrf]
             description = f'VyOS-VRF-{vrf}'
-            self.session.set(base + ['description', description])
+            self.cli_set(base + ['description', description])
 
             # check validate() - a table ID is mandatory
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
+                self.cli_commit()
 
-            self.session.set(base + ['table', table])
+            self.cli_set(base + ['table', table])
             if vrf == 'green':
-                self.session.set(base + ['disable'])
+                self.cli_set(base + ['disable'])
 
             table = str(int(table) + 1)
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify VRF configuration
         table = '1000'
@@ -113,11 +115,11 @@ class VRFTest(unittest.TestCase):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
-            self.session.set(base + ['table', str(table)])
+            self.cli_set(base + ['table', str(table)])
             table = str(int(table) + 1)
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify VRF configuration
         for vrf in vrfs:
@@ -129,13 +131,13 @@ class VRFTest(unittest.TestCase):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
-            self.session.set(base + ['table', str(table)])
+            self.cli_set(base + ['table', str(table)])
             table = str(int(table) + 1)
 
-        self.session.set(base_path +  ['bind-to-all'])
+        self.cli_set(base_path +  ['bind-to-all'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify VRF configuration
         tmp = read_file('/proc/sys/net/ipv4/tcp_l3mdev_accept')
@@ -149,31 +151,31 @@ class VRFTest(unittest.TestCase):
         table = '1000'
         vrf = vrfs[0]
         base = base_path + ['name', vrf]
-        self.session.set(base + ['table', table])
+        self.cli_set(base + ['table', table])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check if VRF has been created
         self.assertTrue(vrf in interfaces())
 
         table = str(int(table) + 1)
-        self.session.set(base + ['table', table])
+        self.cli_set(base + ['table', table])
         # check validate() - table ID can not be altered!
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
     def test_vrf_assign_interface(self):
         vrf = vrfs[0]
         table = '5000'
-        self.session.set(['vrf', 'name', vrf, 'table', table])
+        self.cli_set(['vrf', 'name', vrf, 'table', table])
 
         for interface in self._interfaces:
             section = Section.section(interface)
-            self.session.set(['interfaces', section, interface, 'vrf', vrf])
+            self.cli_set(['interfaces', section, interface, 'vrf', vrf])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify & cleanup
         for interface in self._interfaces:
@@ -182,7 +184,7 @@ class VRFTest(unittest.TestCase):
             self.assertEqual(tmp, vrf)
             # cleanup
             section = Section.section(interface)
-            self.session.delete(['interfaces', section, interface, 'vrf'])
+            self.cli_delete(['interfaces', section, interface, 'vrf'])
 
     def test_vrf_static_routes(self):
         routes = {
@@ -206,15 +208,15 @@ class VRFTest(unittest.TestCase):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
-            self.session.set(base + ['table', str(table)])
+            self.cli_set(base + ['table', str(table)])
 
             # required interface for leaking to default table
-            self.session.set(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
+            self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
 
             # we also need an interface in "UP" state to install routes
-            self.session.set(['interfaces', 'dummy', f'dum{table}', 'vrf', vrf])
-            self.session.set(['interfaces', 'dummy', f'dum{table}', 'address', '192.0.2.1/24'])
-            self.session.set(['interfaces', 'dummy', f'dum{table}', 'address', '2001:db8::1/64'])
+            self.cli_set(['interfaces', 'dummy', f'dum{table}', 'vrf', vrf])
+            self.cli_set(['interfaces', 'dummy', f'dum{table}', 'address', '192.0.2.1/24'])
+            self.cli_set(['interfaces', 'dummy', f'dum{table}', 'address', '2001:db8::1/64'])
             table = str(int(table) + 1)
 
             proto_base = ['protocols', 'vrf', vrf, 'static']
@@ -222,14 +224,14 @@ class VRFTest(unittest.TestCase):
                 route_type = 'route'
                 if is_ipv6(route):
                     route_type = 'route6'
-                self.session.set(proto_base + [route_type, route, 'next-hop', route_config['next_hop']])
+                self.cli_set(proto_base + [route_type, route, 'next-hop', route_config['next_hop']])
                 if 'distance' in route_config:
-                    self.session.set(proto_base + [route_type, route, 'next-hop', route_config['next_hop'], 'distance', route_config['distance']])
+                    self.cli_set(proto_base + [route_type, route, 'next-hop', route_config['next_hop'], 'distance', route_config['distance']])
                 if 'next_hop_vrf' in route_config:
-                    self.session.set(proto_base + [route_type, route, 'next-hop', route_config['next_hop'], 'next-hop-vrf', route_config['next_hop_vrf']])
+                    self.cli_set(proto_base + [route_type, route, 'next-hop', route_config['next_hop'], 'next-hop-vrf', route_config['next_hop_vrf']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify routes
         table = '2000'
@@ -249,9 +251,9 @@ class VRFTest(unittest.TestCase):
                 self.assertTrue(found)
 
             # Cleanup
-            self.session.delete(['protocols', 'vrf', vrf])
-            self.session.delete(['interfaces', 'dummy', f'dum{table}'])
-            self.session.delete(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
+            self.cli_delete(['protocols', 'vrf', vrf])
+            self.cli_delete(['interfaces', 'dummy', f'dum{table}'])
+            self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
 
             table = str(int(table) + 1)
 

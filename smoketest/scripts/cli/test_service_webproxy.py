@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
@@ -29,23 +30,21 @@ base_path = ['service', 'webproxy']
 listen_if = 'dum3632'
 listen_ip = '192.0.2.1'
 
-class TestServiceWebProxy(unittest.TestCase):
+class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', listen_if, 'address', listen_ip + '/32'])
+        self.cli_set(['interfaces', 'dummy', listen_if, 'address', listen_ip + '/32'])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'dummy', listen_if])
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(['interfaces', 'dummy', listen_if])
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_01_basic_proxy(self):
         default_cache = '100'
-        self.session.set(base_path + ['listen-address', listen_ip])
+        self.cli_set(base_path + ['listen-address', listen_ip])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(PROXY_CONF)
         self.assertIn(f'http_port {listen_ip}:3128 intercept', config)
@@ -84,24 +83,24 @@ class TestServiceWebProxy(unittest.TestCase):
         block_mine = ['application/pdf', 'application/x-sh']
         body_max_size = '4096'
 
-        self.session.set(base_path + ['listen-address', listen_ip])
-        self.session.set(base_path + ['append-domain', domain])
-        self.session.set(base_path + ['default-port', port])
-        self.session.set(base_path + ['cache-size', cache_size])
-        self.session.set(base_path + ['disable-access-log'])
+        self.cli_set(base_path + ['listen-address', listen_ip])
+        self.cli_set(base_path + ['append-domain', domain])
+        self.cli_set(base_path + ['default-port', port])
+        self.cli_set(base_path + ['cache-size', cache_size])
+        self.cli_set(base_path + ['disable-access-log'])
 
-        self.session.set(base_path + ['minimum-object-size', min_obj_size])
-        self.session.set(base_path + ['maximum-object-size', max_obj_size])
+        self.cli_set(base_path + ['minimum-object-size', min_obj_size])
+        self.cli_set(base_path + ['maximum-object-size', max_obj_size])
 
-        self.session.set(base_path + ['outgoing-address', listen_ip])
+        self.cli_set(base_path + ['outgoing-address', listen_ip])
 
         for mime in block_mine:
-            self.session.set(base_path + ['reply-block-mime', mime])
+            self.cli_set(base_path + ['reply-block-mime', mime])
 
-        self.session.set(base_path + ['reply-body-max-size', body_max_size])
+        self.cli_set(base_path + ['reply-body-max-size', body_max_size])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(PROXY_CONF)
         self.assertIn(f'http_port {listen_ip}:{port} intercept', config)
@@ -132,34 +131,34 @@ class TestServiceWebProxy(unittest.TestCase):
         ldap_attr = 'cn'
         ldap_filter = '(cn=%s)'
 
-        self.session.set(base_path + ['listen-address', listen_ip, 'disable-transparent'])
-        self.session.set(base_path + ['authentication', 'children', auth_children])
-        self.session.set(base_path + ['authentication', 'credentials-ttl', cred_ttl])
+        self.cli_set(base_path + ['listen-address', listen_ip, 'disable-transparent'])
+        self.cli_set(base_path + ['authentication', 'children', auth_children])
+        self.cli_set(base_path + ['authentication', 'credentials-ttl', cred_ttl])
 
-        self.session.set(base_path + ['authentication', 'realm', realm])
-        self.session.set(base_path + ['authentication', 'method', 'ldap'])
+        self.cli_set(base_path + ['authentication', 'realm', realm])
+        self.cli_set(base_path + ['authentication', 'method', 'ldap'])
         # check validate() - LDAP authentication is enabled, but server not set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(base_path + ['authentication', 'ldap', 'server', ldap_server])
+            self.cli_commit()
+        self.cli_set(base_path + ['authentication', 'ldap', 'server', ldap_server])
 
         # check validate() - LDAP password can not be set when bind-dn is not define
-        self.session.set(base_path + ['authentication', 'ldap', 'password', ldap_password])
+        self.cli_set(base_path + ['authentication', 'ldap', 'password', ldap_password])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(base_path + ['authentication', 'ldap', 'bind-dn', ldap_bind_dn])
+            self.cli_commit()
+        self.cli_set(base_path + ['authentication', 'ldap', 'bind-dn', ldap_bind_dn])
 
         # check validate() - LDAP base-dn must be set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(base_path + ['authentication', 'ldap', 'base-dn', ldap_base_dn])
+            self.cli_commit()
+        self.cli_set(base_path + ['authentication', 'ldap', 'base-dn', ldap_base_dn])
 
-        self.session.set(base_path + ['authentication', 'ldap', 'username-attribute', ldap_attr])
-        self.session.set(base_path + ['authentication', 'ldap', 'filter-expression', ldap_filter])
-        self.session.set(base_path + ['authentication', 'ldap', 'use-ssl'])
+        self.cli_set(base_path + ['authentication', 'ldap', 'username-attribute', ldap_attr])
+        self.cli_set(base_path + ['authentication', 'ldap', 'filter-expression', ldap_filter])
+        self.cli_set(base_path + ['authentication', 'ldap', 'use-ssl'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(PROXY_CONF)
         self.assertIn(f'http_port {listen_ip}:3128', config) # disable-transparent
@@ -175,7 +174,7 @@ class TestServiceWebProxy(unittest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_04_cache_peer(self):
-        self.session.set(base_path + ['listen-address', listen_ip])
+        self.cli_set(base_path + ['listen-address', listen_ip])
 
         cache_peers = {
             'foo' : '192.0.2.1',
@@ -183,12 +182,12 @@ class TestServiceWebProxy(unittest.TestCase):
             'baz' : '192.0.2.3',
         }
         for peer in cache_peers:
-            self.session.set(base_path + ['cache-peer', peer, 'address', cache_peers[peer]])
+            self.cli_set(base_path + ['cache-peer', peer, 'address', cache_peers[peer]])
             if peer == 'baz':
-                self.session.set(base_path + ['cache-peer', peer, 'type', 'sibling'])
+                self.cli_set(base_path + ['cache-peer', peer, 'type', 'sibling'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(PROXY_CONF)
         self.assertIn('never_direct allow all', config)
@@ -214,22 +213,22 @@ class TestServiceWebProxy(unittest.TestCase):
         local_ok = ['10.0.0.0', 'vyos.net']
         local_ok_url = ['vyos.net', 'vyos.io']
 
-        self.session.set(base_path + ['listen-address', listen_ip])
-        self.session.set(base_path + ['url-filtering', 'squidguard', 'log', 'all'])
+        self.cli_set(base_path + ['listen-address', listen_ip])
+        self.cli_set(base_path + ['url-filtering', 'squidguard', 'log', 'all'])
 
         for block in local_block:
-            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-block', block])
+            self.cli_set(base_path + ['url-filtering', 'squidguard', 'local-block', block])
         for ok in local_ok:
-            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-ok', ok])
+            self.cli_set(base_path + ['url-filtering', 'squidguard', 'local-ok', ok])
         for url in local_block_url:
-            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-block-url', url])
+            self.cli_set(base_path + ['url-filtering', 'squidguard', 'local-block-url', url])
         for url in local_ok_url:
-            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-ok-url', url])
+            self.cli_set(base_path + ['url-filtering', 'squidguard', 'local-ok-url', url])
         for pattern in local_block_pattern:
-            self.session.set(base_path + ['url-filtering', 'squidguard', 'local-block-keyword', pattern])
+            self.cli_set(base_path + ['url-filtering', 'squidguard', 'local-block-keyword', pattern])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check regular Squid config
         config = read_file(PROXY_CONF)

@@ -12,10 +12,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
 
 from vyos.configsession import ConfigSession
@@ -26,26 +26,22 @@ from vyos.util import get_half_cpus
 from vyos.util import process_named_running
 
 class BasicAccelPPPTest:
-    class BaseTest(unittest.TestCase):
-
+    class TestCase(VyOSUnitTestSHIM.TestCase):
         def setUp(self):
-            self.session = ConfigSession(os.getpid())
             self._gateway = '192.0.2.1'
-
             # ensure we can also run this test on a live system - so lets clean
             # out the current configuration :)
-            self.session.delete(self._base_path)
+            self.cli_delete(self._base_path)
 
         def tearDown(self):
-            self.session.delete(self._base_path)
-            self.session.commit()
-            del self.session
+            self.cli_delete(self._base_path)
+            self.cli_commit()
 
         def set(self, path):
-            self.session.set(self._base_path + path)
+            self.cli_set(self._base_path + path)
 
         def delete(self, path):
-            self.session.delete(self._base_path + path)
+            self.cli_delete(self._base_path + path)
 
         def basic_config(self):
             # PPPoE local auth mode requires local users to be configured!
@@ -65,7 +61,7 @@ class BasicAccelPPPTest:
                 self.set(['name-server', ns])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             # Validate configuration values
             conf = ConfigParser(allow_no_value=True, delimiters='=')
@@ -95,11 +91,11 @@ class BasicAccelPPPTest:
 
             # upload rate-limit requires also download rate-limit
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
+                self.cli_commit()
             self.set(['authentication', 'local-users', 'username', user, 'rate-limit', 'download', download])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             # Validate configuration values
             conf = ConfigParser(allow_no_value=True, delimiters='=')
@@ -123,7 +119,7 @@ class BasicAccelPPPTest:
             # Check local-users default value(s)
             self.delete(['authentication', 'local-users', 'username', user, 'static-ip'])
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             # check local users
             tmp = cmd(f'sudo cat {self._chap_secrets}')
@@ -162,7 +158,7 @@ class BasicAccelPPPTest:
             self.set(['authentication', 'radius', 'source-address', source_address])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             # Validate configuration values
             conf = ConfigParser(allow_no_value=True, delimiters='=')
@@ -200,7 +196,7 @@ class BasicAccelPPPTest:
             self.set(['authentication', 'radius', 'server', radius_server, 'disable-accounting'])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             conf.read(self._config_file)
 

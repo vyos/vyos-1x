@@ -17,6 +17,8 @@
 import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -58,17 +60,15 @@ def getFRRconfig():
 def getBFDPeerconfig(peer):
     return cmd(f'vtysh -c "show run" | sed -n "/^ {peer}/,/^!/p"')
 
-class TestProtocolsBFD(unittest.TestCase):
+class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', dum_if, 'address', '192.0.2.1/24'])
-        self.session.set(['interfaces', 'dummy', dum_if, 'address', '2001:db8::1/64'])
+        self.cli_set(['interfaces', 'dummy', dum_if, 'address', '192.0.2.1/24'])
+        self.cli_set(['interfaces', 'dummy', dum_if, 'address', '2001:db8::1/64'])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'dummy', dum_if])
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(['interfaces', 'dummy', dum_if])
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -76,26 +76,26 @@ class TestProtocolsBFD(unittest.TestCase):
     def test_bfd_simple(self):
         for peer, peer_config in neighbor_config.items():
             if 'echo_mode' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'echo-mode'])
+                self.cli_set(base_path + ['peer', peer, 'echo-mode'])
             if 'intv_echo' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'interval', 'echo-interval', peer_config["intv_echo"]])
+                self.cli_set(base_path + ['peer', peer, 'interval', 'echo-interval', peer_config["intv_echo"]])
             if 'intv_mult' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'interval', 'multiplier', peer_config["intv_mult"]])
+                self.cli_set(base_path + ['peer', peer, 'interval', 'multiplier', peer_config["intv_mult"]])
             if 'intv_rx' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'interval', 'receive', peer_config["intv_rx"]])
+                self.cli_set(base_path + ['peer', peer, 'interval', 'receive', peer_config["intv_rx"]])
             if 'intv_tx' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'interval', 'transmit', peer_config["intv_tx"]])
+                self.cli_set(base_path + ['peer', peer, 'interval', 'transmit', peer_config["intv_tx"]])
             if 'multihop' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'multihop'])
+                self.cli_set(base_path + ['peer', peer, 'multihop'])
             if 'shutdown' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'shutdown'])
+                self.cli_set(base_path + ['peer', peer, 'shutdown'])
             if 'source_addr' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'source', 'address', peer_config["source_addr"]])
+                self.cli_set(base_path + ['peer', peer, 'source', 'address', peer_config["source_addr"]])
             if 'source_intf' in peer_config:
-                self.session.set(base_path + ['peer', peer, 'source', 'interface', peer_config["source_intf"]])
+                self.cli_set(base_path + ['peer', peer, 'source', 'interface', peer_config["source_intf"]])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = getFRRconfig()

@@ -17,6 +17,8 @@
 import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.ifconfig import Section
 from vyos.util import cmd
@@ -29,17 +31,13 @@ base_path = ['protocols', 'ospfv3']
 def getFRROSPFconfig():
     return cmd('vtysh -c "show run" | sed -n "/router ospf6/,/^!/p"')
 
-class TestProtocolsOSPFv3(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
 
     def test_ospfv3_01_basic(self):
@@ -49,20 +47,20 @@ class TestProtocolsOSPFv3(unittest.TestCase):
         acl_name = 'foo-acl-100'
         router_id = '192.0.2.1'
 
-        self.session.set(['policy', 'access-list6', acl_name, 'rule', seq, 'action', 'permit'])
-        self.session.set(['policy', 'access-list6', acl_name, 'rule', seq, 'source', 'any'])
+        self.cli_set(['policy', 'access-list6', acl_name, 'rule', seq, 'action', 'permit'])
+        self.cli_set(['policy', 'access-list6', acl_name, 'rule', seq, 'source', 'any'])
 
-        self.session.set(base_path + ['parameters', 'router-id', router_id])
-        self.session.set(base_path + ['area', area, 'range', prefix, 'advertise'])
-        self.session.set(base_path + ['area', area, 'export-list', acl_name])
-        self.session.set(base_path + ['area', area, 'import-list', acl_name])
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['area', area, 'range', prefix, 'advertise'])
+        self.cli_set(base_path + ['area', area, 'export-list', acl_name])
+        self.cli_set(base_path + ['area', area, 'import-list', acl_name])
 
         interfaces = Section.interfaces('ethernet')
         for interface in interfaces:
-            self.session.set(base_path + ['area', area, 'interface', interface])
+            self.cli_set(base_path + ['area', area, 'interface', interface])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
         frrconfig = getFRROSPFconfig()
@@ -75,7 +73,7 @@ class TestProtocolsOSPFv3(unittest.TestCase):
         for interface in interfaces:
             self.assertIn(f' interface {interface} area {area}', frrconfig)
 
-        self.session.delete(['policy', 'access-list6', acl_name])
+        self.cli_delete(['policy', 'access-list6', acl_name])
 
 
     def test_ospfv3_02_distance(self):
@@ -84,13 +82,13 @@ class TestProtocolsOSPFv3(unittest.TestCase):
         dist_inter_area = '120'
         dist_intra_area = '130'
 
-        self.session.set(base_path + ['distance', 'global', dist_global])
-        self.session.set(base_path + ['distance', 'ospfv3', 'external', dist_external])
-        self.session.set(base_path + ['distance', 'ospfv3', 'inter-area', dist_inter_area])
-        self.session.set(base_path + ['distance', 'ospfv3', 'intra-area', dist_intra_area])
+        self.cli_set(base_path + ['distance', 'global', dist_global])
+        self.cli_set(base_path + ['distance', 'ospfv3', 'external', dist_external])
+        self.cli_set(base_path + ['distance', 'ospfv3', 'inter-area', dist_inter_area])
+        self.cli_set(base_path + ['distance', 'ospfv3', 'intra-area', dist_intra_area])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
         frrconfig = getFRROSPFconfig()
@@ -104,13 +102,13 @@ class TestProtocolsOSPFv3(unittest.TestCase):
         route_map_seq = '10'
         redistribute = ['bgp', 'connected', 'kernel', 'ripng', 'static']
 
-        self.session.set(['policy', 'route-map', route_map, 'rule', route_map_seq, 'action', 'permit'])
+        self.cli_set(['policy', 'route-map', route_map, 'rule', route_map_seq, 'action', 'permit'])
 
         for protocol in redistribute:
-            self.session.set(base_path + ['redistribute', protocol, 'route-map', route_map])
+            self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
         frrconfig = getFRROSPFconfig()

@@ -14,14 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 
@@ -29,14 +28,10 @@ PROCESS_NAME = 'dhcrelay'
 RELAY_CONF = '/run/dhcp-relay/dhcrelay.conf'
 base_path = ['service', 'dhcp-relay']
 
-class TestServiceDHCPRelay(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestServiceDHCPRelay(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_relay_default(self):
         max_size = '800'
@@ -44,28 +39,28 @@ class TestServiceDHCPRelay(unittest.TestCase):
         agents_packets = 'append'
         servers = ['192.0.2.1', '192.0.2.2']
 
-        self.session.set(base_path + ['interface', 'lo'])
+        self.cli_set(base_path + ['interface', 'lo'])
         # check validate() - DHCP relay does not support the loopback interface
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(base_path + ['interface', 'lo'])
+            self.cli_commit()
+        self.cli_delete(base_path + ['interface', 'lo'])
 
         # activate DHCP relay on all ethernet interfaces
         for tmp in Section.interfaces("ethernet"):
-            self.session.set(base_path + ['interface', tmp])
+            self.cli_set(base_path + ['interface', tmp])
 
         # check validate() - No DHCP relay server(s) configured
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
         for server in servers:
-            self.session.set(base_path + ['server', server])
+            self.cli_set(base_path + ['server', server])
 
-        self.session.set(base_path + ['relay-options', 'max-size', max_size])
-        self.session.set(base_path + ['relay-options', 'hop-count', hop_count])
-        self.session.set(base_path + ['relay-options', 'relay-agents-packets', agents_packets])
+        self.cli_set(base_path + ['relay-options', 'max-size', max_size])
+        self.cli_set(base_path + ['relay-options', 'hop-count', hop_count])
+        self.cli_set(base_path + ['relay-options', 'relay-agents-packets', agents_packets])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check configured port
         config = read_file(RELAY_CONF)

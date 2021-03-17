@@ -14,14 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import inc_ip
-from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 
@@ -37,16 +36,14 @@ nis_servers = ['2001:db8:ffff::1', '2001:db8:ffff::2']
 interface = 'eth1'
 interface_addr = inc_ip(subnet, 1) + '/64'
 
-class TestServiceDHCPServer(unittest.TestCase):
+class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'ethernet', interface, 'address', interface_addr])
+        self.cli_set(['interfaces', 'ethernet', interface, 'address', interface_addr])
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.delete(['interfaces', 'ethernet', interface, 'address', interface_addr])
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_delete(['interfaces', 'ethernet', interface, 'address', interface_addr])
+        self.cli_commit()
 
     def test_single_pool(self):
         shared_net_name = 'SMOKE-1'
@@ -62,38 +59,38 @@ class TestServiceDHCPServer(unittest.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
 
-        self.session.set(base_path + ['preference', preference])
+        self.cli_set(base_path + ['preference', preference])
 
         # we use the first subnet IP address as default gateway
-        self.session.set(pool + ['name-server', dns_1])
-        self.session.set(pool + ['name-server', dns_2])
-        self.session.set(pool + ['name-server', dns_2])
-        self.session.set(pool + ['lease-time', 'default', lease_time])
-        self.session.set(pool + ['lease-time', 'maximum', max_lease_time])
-        self.session.set(pool + ['lease-time', 'minimum', min_lease_time])
-        self.session.set(pool + ['nis-domain', domain])
-        self.session.set(pool + ['nisplus-domain', domain])
-        self.session.set(pool + ['sip-server', sip_server])
-        self.session.set(pool + ['sntp-server', sntp_server])
-        self.session.set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
+        self.cli_set(pool + ['name-server', dns_1])
+        self.cli_set(pool + ['name-server', dns_2])
+        self.cli_set(pool + ['name-server', dns_2])
+        self.cli_set(pool + ['lease-time', 'default', lease_time])
+        self.cli_set(pool + ['lease-time', 'maximum', max_lease_time])
+        self.cli_set(pool + ['lease-time', 'minimum', min_lease_time])
+        self.cli_set(pool + ['nis-domain', domain])
+        self.cli_set(pool + ['nisplus-domain', domain])
+        self.cli_set(pool + ['sip-server', sip_server])
+        self.cli_set(pool + ['sntp-server', sntp_server])
+        self.cli_set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
 
         for server in nis_servers:
-            self.session.set(pool + ['nis-server', server])
-            self.session.set(pool + ['nisplus-server', server])
+            self.cli_set(pool + ['nis-server', server])
+            self.cli_set(pool + ['nisplus-server', server])
 
         for search in search_domains:
-            self.session.set(pool + ['domain-search', search])
+            self.cli_set(pool + ['domain-search', search])
 
         client_base = 1
         for client in ['client1', 'client2', 'client3']:
             cid = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{}'.format(client_base)
-            self.session.set(pool + ['static-mapping', client, 'identifier', cid])
-            self.session.set(pool + ['static-mapping', client, 'ipv6-address', inc_ip(subnet, client_base)])
-            self.session.set(pool + ['static-mapping', client, 'ipv6-prefix', inc_ip(subnet, client_base << 64) + '/64'])
+            self.cli_set(pool + ['static-mapping', client, 'identifier', cid])
+            self.cli_set(pool + ['static-mapping', client, 'ipv6-address', inc_ip(subnet, client_base)])
+            self.cli_set(pool + ['static-mapping', client, 'ipv6-prefix', inc_ip(subnet, client_base << 64) + '/64'])
             client_base += 1
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         self.assertIn(f'option dhcp6.preference {preference};', config)
@@ -139,12 +136,12 @@ class TestServiceDHCPServer(unittest.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
 
-        self.session.set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
-        self.session.set(pool + ['prefix-delegation', 'start', delegate_start, 'stop', delegate_stop])
-        self.session.set(pool + ['prefix-delegation', 'start', delegate_start, 'prefix-length', delegate_len])
+        self.cli_set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
+        self.cli_set(pool + ['prefix-delegation', 'start', delegate_start, 'stop', delegate_stop])
+        self.cli_set(pool + ['prefix-delegation', 'start', delegate_start, 'prefix-length', delegate_len])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         self.assertIn(f'subnet6 {subnet}' + r' {', config)
@@ -159,12 +156,12 @@ class TestServiceDHCPServer(unittest.TestCase):
         ns_global_1 = '2001:db8::1111'
         ns_global_2 = '2001:db8::2222'
 
-        self.session.set(base_path + ['global-parameters', 'name-server', ns_global_1])
-        self.session.set(base_path + ['global-parameters', 'name-server', ns_global_2])
-        self.session.set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet])
+        self.cli_set(base_path + ['global-parameters', 'name-server', ns_global_1])
+        self.cli_set(base_path + ['global-parameters', 'name-server', ns_global_2])
+        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         self.assertIn(f'option dhcp6.name-servers {ns_global_1}, {ns_global_2};', config)

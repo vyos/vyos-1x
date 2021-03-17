@@ -14,22 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.util import read_file
 
 base_path = ['system', 'ip']
 
-class TestSystemIP(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestSystemIP(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_system_ip_forwarding(self):
         # Test if IPv4 forwarding can be disabled globally, default is '1'
@@ -37,8 +33,8 @@ class TestSystemIP(unittest.TestCase):
         all_forwarding = '/proc/sys/net/ipv4/conf/all/forwarding'
         self.assertEqual(read_file(all_forwarding), '1')
 
-        self.session.set(base_path + ['disable-forwarding'])
-        self.session.commit()
+        self.cli_set(base_path + ['disable-forwarding'])
+        self.cli_commit()
 
         self.assertEqual(read_file(all_forwarding), '0')
 
@@ -50,9 +46,9 @@ class TestSystemIP(unittest.TestCase):
         self.assertEqual(read_file(use_neigh), '0')
         self.assertEqual(read_file(hash_policy), '0')
 
-        self.session.set(base_path + ['multipath', 'ignore-unreachable-nexthops'])
-        self.session.set(base_path + ['multipath', 'layer4-hashing'])
-        self.session.commit()
+        self.cli_set(base_path + ['multipath', 'ignore-unreachable-nexthops'])
+        self.cli_set(base_path + ['multipath', 'layer4-hashing'])
+        self.cli_commit()
 
         self.assertEqual(read_file(use_neigh), '1')
         self.assertEqual(read_file(hash_policy), '1')
@@ -69,8 +65,8 @@ class TestSystemIP(unittest.TestCase):
         self.assertEqual(read_file(gc_thresh1), '1024')
 
         for size in [1024, 2048, 4096, 8192, 16384, 32768]:
-            self.session.set(base_path + ['arp', 'table-size', str(size)])
-            self.session.commit()
+            self.cli_set(base_path + ['arp', 'table-size', str(size)])
+            self.cli_commit()
 
             self.assertEqual(read_file(gc_thresh3), str(size))
             self.assertEqual(read_file(gc_thresh2), str(size // 2))

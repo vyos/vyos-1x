@@ -19,7 +19,7 @@ import unittest
 from vyos.ifconfig import Section
 from base_interfaces_test import BasicInterfaceTest
 
-class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
+class PEthInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -35,6 +35,8 @@ class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
             'peth1': ['source-interface eth1'],
         }
         cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -19,7 +19,7 @@ import unittest
 from vyos.configsession import ConfigSession
 from base_interfaces_test import BasicInterfaceTest
 
-class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
+class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -30,6 +30,8 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
             'gnv1': ['vni 20', 'remote 127.0.1.2'],
         }
         cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

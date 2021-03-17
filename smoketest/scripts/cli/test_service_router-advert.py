@@ -15,8 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.util import read_file
@@ -33,26 +34,24 @@ def get_config_value(key):
     tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
     return tmp[0].split()[0].replace(';','')
 
-class TestServiceRADVD(unittest.TestCase):
+class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(address_base + ['2001:db8::1/64'])
+        self.cli_set(address_base + ['2001:db8::1/64'])
 
     def tearDown(self):
-        self.session.delete(address_base)
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(address_base)
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_single(self):
-        self.session.set(base_path + ['prefix', '::/64', 'no-on-link-flag'])
-        self.session.set(base_path + ['prefix', '::/64', 'no-autonomous-flag'])
-        self.session.set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
-        self.session.set(base_path + ['dnssl', '2001:db8::1234'])
-        self.session.set(base_path + ['other-config-flag'])
+        self.cli_set(base_path + ['prefix', '::/64', 'no-on-link-flag'])
+        self.cli_set(base_path + ['prefix', '::/64', 'no-autonomous-flag'])
+        self.cli_set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['dnssl', '2001:db8::1234'])
+        self.cli_set(base_path + ['other-config-flag'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # verify values
         tmp = get_config_value('interface')

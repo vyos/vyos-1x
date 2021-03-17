@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 020 VyOS maintainers and contributors
+# Copyright (C) 2020 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,7 +27,7 @@ local_if = ['interfaces', 'dummy', 'dum667']
 ac_name = 'ACN'
 interface = 'eth0'
 
-class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
+class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
     def setUp(self):
         self._base_path = ['service', 'pppoe-server']
         self._process_name = 'accel-pppd'
@@ -37,7 +37,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         super().setUp()
 
     def tearDown(self):
-        self.session.delete(local_if)
+        self.cli_delete(local_if)
         super().tearDown()
 
     def verify(self, conf):
@@ -66,7 +66,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         super().verify(conf)
 
     def basic_config(self):
-        self.session.set(local_if + ['address', '192.0.2.1/32'])
+        self.cli_set(local_if + ['address', '192.0.2.1/32'])
 
         self.set(['access-concentrator', ac_name])
         self.set(['interface', interface])
@@ -96,7 +96,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.set(['ppp-options', 'interface-cache', interface_cache])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
@@ -131,7 +131,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.set( ['authentication', 'protocols', 'mschap-v2'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True)
@@ -157,7 +157,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.set(['client-ip-pool', 'stop', stop])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True)
@@ -194,7 +194,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.BaseTest):
         self.set(['client-ipv6-pool', 'delegate', delegate_prefix, 'delegation-prefix', delegate_mask])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')

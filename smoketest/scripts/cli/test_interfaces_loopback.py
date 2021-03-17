@@ -23,16 +23,17 @@ from vyos.validate import is_intf_addr_assigned
 
 loopbacks = ['127.0.0.1', '::1']
 
-class LoopbackInterfaceTest(BasicInterfaceTest.BaseTest):
+class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-         cls._base_path = ['interfaces', 'loopback']
-         cls._interfaces = ['lo']
+        cls._base_path = ['interfaces', 'loopback']
+        cls._interfaces = ['lo']
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def tearDown(self):
-        self.session.delete(self._base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(self._base_path)
+        self.cli_commit()
 
         # loopback interface must persist!
         for intf in self._interfaces:

@@ -14,32 +14,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
+
 from vyos.configsession import ConfigSession
 from vyos.util import process_named_running
 
 config_file = '/run/LCDd/LCDd.conf'
 base_path = ['system', 'lcd']
 
-class TestSystemLCD(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestSystemLCD(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_system_display(self):
         # configure some system display
-        self.session.set(base_path + ['device', 'ttyS1'])
-        self.session.set(base_path + ['model', 'cfa-533'])
+        self.cli_set(base_path + ['device', 'ttyS1'])
+        self.cli_set(base_path + ['model', 'cfa-533'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # load up ini-styled LCDd.conf
         conf = ConfigParser()

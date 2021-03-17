@@ -16,10 +16,13 @@
 
 import unittest
 
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.configsession import ConfigSession
+from vyos.ifconfig import Interface
+from vyos.util import get_interface_config
+
 from base_interfaces_test import BasicInterfaceTest
 
-class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
+class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -32,6 +35,8 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
             'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1'],
         }
         cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -18,11 +18,13 @@ import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 
-class DummyInterfaceTest(BasicInterfaceTest.BaseTest):
+class DummyInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._base_path = ['interfaces', 'dummy']
         cls._interfaces = ['dum435', 'dum8677', 'dum0931', 'dum089']
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

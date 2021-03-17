@@ -19,6 +19,8 @@ import os
 import json
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from netifaces import interfaces
 
 from vyos.configsession import ConfigSession
@@ -71,29 +73,27 @@ interface_routes = {
     },
 }
 
-
-class StaticRouteTest(unittest.TestCase):
+class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         # we need an alive next-hop interface
-        self.session.set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/24'])
-        self.session.set(['interfaces', 'dummy', dummy_if, 'address', '2001:db8::1/64'])
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/24'])
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '2001:db8::1/64'])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'dummy', dummy_if])
-        self.session.commit()
+        self.cli_delete(['interfaces', 'dummy', dummy_if])
+        self.cli_commit()
 
     def test_static_routes(self):
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
                 route_type = 'route6'
-            self.session.set(base_path + [route_type, route, 'next-hop', route_config['next_hop']])
+            self.cli_set(base_path + [route_type, route, 'next-hop', route_config['next_hop']])
             if 'distance' in route_config:
-                self.session.set(base_path + [route_type, route, 'next-hop', route_config['next_hop'], 'distance', route_config['distance']])
+                self.cli_set(base_path + [route_type, route, 'next-hop', route_config['next_hop'], 'distance', route_config['distance']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify routes
         for route, route_config in routes.items():
@@ -114,19 +114,19 @@ class StaticRouteTest(unittest.TestCase):
             route_type = 'route'
             if is_ipv6(route):
                 route_type = 'route6'
-            self.session.delete(base_path + [route_type, route])
+            self.cli_delete(base_path + [route_type, route])
 
     def test_interface_routes(self):
         for route, route_config in interface_routes.items():
             route_type = 'interface-route'
             if is_ipv6(route):
                 route_type = 'interface-route6'
-            self.session.set(base_path + [route_type, route, 'next-hop-interface', route_config['next_hop']])
+            self.cli_set(base_path + [route_type, route, 'next-hop-interface', route_config['next_hop']])
             if 'distance' in route_config:
-                self.session.set(base_path + [route_type, route, 'next-hop-interface', route_config['next_hop'], 'distance', route_config['distance']])
+                self.cli_set(base_path + [route_type, route, 'next-hop-interface', route_config['next_hop'], 'distance', route_config['distance']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify routes
         for route, route_config in interface_routes.items():
@@ -148,7 +148,7 @@ class StaticRouteTest(unittest.TestCase):
             route_type = 'interface-route'
             if is_ipv6(route):
                 route_type = 'interface-route6'
-            self.session.delete(base_path + [route_type, route])
+            self.cli_delete(base_path + [route_type, route])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

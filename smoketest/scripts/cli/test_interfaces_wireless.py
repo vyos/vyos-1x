@@ -31,7 +31,7 @@ def get_config_value(interface, key):
     tmp = re.findall(f'{key}=+(.*)', tmp)
     return tmp[0]
 
-class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
+class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -47,6 +47,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
                        'type access-point', 'address 192.0.2.13/30', 'channel 0'],
         }
         cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
@@ -67,12 +69,12 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         interface = 'wlan0'
         ssid = 'ssid'
 
-        self.session.set(self._base_path + [interface, 'ssid', ssid])
-        self.session.set(self._base_path + [interface, 'country-code', 'se'])
-        self.session.set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
 
         # auto-powersave is special
-        self.session.set(self._base_path + [interface, 'capabilities', 'ht', 'auto-powersave'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', 'auto-powersave'])
 
         ht_opt = {
             # VyOS CLI option           hostapd - ht_capab setting
@@ -88,7 +90,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             'smps static'             : '[SMPS-STATIC]',
         }
         for key in ht_opt:
-            self.session.set(self._base_path + [interface, 'capabilities', 'ht'] + key.split())
+            self.cli_set(self._base_path + [interface, 'capabilities', 'ht'] + key.split())
 
         vht_opt = {
             # VyOS CLI option           hostapd - ht_capab setting
@@ -105,9 +107,9 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
             'short-gi 160'            : '[SHORT-GI-160]',
         }
         for key in vht_opt:
-            self.session.set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
+            self.cli_set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
 
-        self.session.commit()
+        self.cli_commit()
 
         #
         # Validate Config
@@ -148,29 +150,29 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
         mode = 'n'
         country = 'de'
 
-        self.session.set(self._base_path + [interface, 'physical-device', phy])
-        self.session.set(self._base_path + [interface, 'type', 'access-point'])
-        self.session.set(self._base_path + [interface, 'mode', mode])
+        self.cli_set(self._base_path + [interface, 'physical-device', phy])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'mode', mode])
 
         # SSID must be set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'ssid', ssid])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
 
         # Channel must be set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'channel', channel])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'channel', channel])
 
         # Country-Code must be set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(self._base_path + [interface, 'country-code', country])
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'country-code', country])
 
-        self.session.set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
-        self.session.set(self._base_path + [interface, 'security', 'wpa', 'passphrase', wpa_key])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', wpa_key])
 
-        self.session.commit()
+        self.cli_commit()
 
         #
         # Validate Config
@@ -211,13 +213,13 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # We need a bridge where we can hook our access-point interface to
         bridge_path = ['interfaces', 'bridge', bridge]
-        self.session.set(bridge_path + ['member', 'interface', interface])
+        self.cli_set(bridge_path + ['member', 'interface', interface])
 
-        self.session.set(self._base_path + [interface, 'ssid', ssid])
-        self.session.set(self._base_path + [interface, 'country-code', 'se'])
-        self.session.set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
 
-        self.session.commit()
+        self.cli_commit()
 
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
@@ -228,9 +230,9 @@ class WirelessInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.assertIn(interface, bridge_members)
 
-        self.session.delete(bridge_path)
-        self.session.delete(self._base_path)
-        self.session.commit()
+        self.cli_delete(bridge_path)
+        self.cli_delete(self._base_path)
+        self.cli_commit()
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
