@@ -33,17 +33,24 @@ if args.source or args.destination:
     tmp = cmd('sudo nft -j list table ip6 nat')
     tmp = json.loads(tmp)
     
-    format_nat66_rule = '%-10s %-50s %-50s %-10s'
-    print(format_nat66_rule % ("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
-    print(format_nat66_rule % ("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
+    format_nat66_rule = '{0: <10} {1: <50} {2: <50} {3: <10}'
+    print(format_nat66_rule.format("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
+    print(format_nat66_rule.format("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
 
     data_json = jmespath.search('nftables[?rule].rule[?chain]', tmp)
     for idx in range(0, len(data_json)):
         data = data_json[idx]
+        
+        # If there is no index 3, we don't think this is the record we need to check
+        if len(data['expr']) <= 3:
+            continue
+        
         comment = data['comment']
+        rule = comment.replace('SRC-NAT66-','')
+        rule = rule.replace('DST-NAT66-','')
         chain = data['chain']
         if not (args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING'):
-            exit(0)
+            continue
         interface = dict_search('match.right', data['expr'][0])
         srcdest = dict_search('match.right.prefix.addr', data['expr'][2])
         if srcdest:
@@ -52,6 +59,7 @@ if args.source or args.destination:
                 srcdest = srcdest + '/' + str(addr_tmp)
         else:
             srcdest = dict_search('match.right', data['expr'][2])
+        
         tran_addr = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
         if tran_addr:
             addr_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
@@ -60,12 +68,10 @@ if args.source or args.destination:
         else:
             if 'masquerade' in data['expr'][3]:
                 tran_addr = 'masquerade'
-            elif 'log' in data['expr'][3]:
-                continue
             else:
                 tran_addr = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
         
-        print(format_nat66_rule % (comment, srcdest, tran_addr, interface))
+        print(format_nat66_rule.format(rule, srcdest, tran_addr, interface))
     
     exit(0)
 else:
