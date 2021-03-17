@@ -23,16 +23,15 @@ from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.ifconfig import Interface
 from vyos.template import render
+from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search
+from vyos.util import get_interface_config
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
-
-def _cmd(command):
-    cmd(command, raising=ConfigError, message='Error changing VRF')
 
 def list_rules():
     command = 'ip -j -4 rule show'
@@ -111,8 +110,7 @@ def verify(vrf):
 
             # routing table id can't be changed - OS restriction
             if os.path.isdir(f'/sys/class/net/{name}'):
-                tmp = loads(cmd(f'ip -j -d link show {name}'))[0]
-                tmp = str(dict_search('linkinfo.info_data.table', tmp))
+                tmp = str(dict_search('linkinfo.info_data.table', get_interface_config(name)))
                 if tmp and tmp != config['table']:
                     raise ConfigError(f'VRF "{name}" table id modification not possible!')
 
@@ -140,14 +138,14 @@ def apply(vrf):
     bind_all = '0'
     if 'bind_to_all' in vrf:
         bind_all = '1'
-    _cmd(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
-    _cmd(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
+    call(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
+    call(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if os.path.isdir(f'/sys/class/net/{tmp}'):
-            _cmd(f'ip -4 route del vrf {tmp} unreachable default metric 4278198272')
-            _cmd(f'ip -6 route del vrf {tmp} unreachable default metric 4278198272')
-            _cmd(f'ip link delete dev {tmp}')
+            call(f'ip -4 route del vrf {tmp} unreachable default metric 4278198272')
+            call(f'ip -6 route del vrf {tmp} unreachable default metric 4278198272')
+            call(f'ip link delete dev {tmp}')
 
     if 'name' in vrf:
         for name, config in vrf['name'].items():
@@ -156,16 +154,16 @@ def apply(vrf):
             if not os.path.isdir(f'/sys/class/net/{name}'):
                 # For each VRF apart from your default context create a VRF
                 # interface with a separate routing table
-                _cmd(f'ip link add {name} type vrf table {table}')
+                call(f'ip link add {name} type vrf table {table}')
                 # The kernel Documentation/networking/vrf.txt also recommends
                 # adding unreachable routes to the VRF routing tables so that routes
                 # afterwards are taken.
-                _cmd(f'ip -4 route add vrf {name} unreachable default metric 4278198272')
-                _cmd(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
+                call(f'ip -4 route add vrf {name} unreachable default metric 4278198272')
+                call(f'ip -6 route add vrf {name} unreachable default metric 4278198272')
                 # We also should add proper loopback IP addresses to the newly
                 # created VRFs for services bound to the loopback address (SNMP, NTP)
-                _cmd(f'ip -4 addr add 127.0.0.1/8 dev {name}')
-                _cmd(f'ip -6 addr add ::1/128 dev {name}')
+                call(f'ip -4 addr add 127.0.0.1/8 dev {name}')
+                call(f'ip -6 addr add ::1/128 dev {name}')
 
             # set VRF description for e.g. SNMP monitoring
             vrf_if = Interface(name)
@@ -199,18 +197,18 @@ def apply(vrf):
     # change preference when VRFs are enabled and local lookup table is default
     if not local_pref and 'name' in vrf:
         for af in ['-4', '-6']:
-            _cmd(f'ip {af} rule add pref 32765 table local')
-            _cmd(f'ip {af} rule del pref 0')
+            call(f'ip {af} rule add pref 32765 table local')
+            call(f'ip {af} rule del pref 0')
 
     # return to default lookup preference when no VRF is configured
     if 'name' not in vrf:
         for af in ['-4', '-6']:
-            _cmd(f'ip {af} rule add pref 0 table local')
-            _cmd(f'ip {af} rule del pref 32765')
+            call(f'ip {af} rule add pref 0 table local')
+            call(f'ip {af} rule del pref 32765')
 
             # clean out l3mdev-table rule if present
             if 1000 in [r.get('priority') for r in list_rules() if r.get('priority') == 1000]:
-                _cmd(f'ip {af} rule del pref 1000')
+                call(f'ip {af} rule del pref 1000')
 
     return None
 
