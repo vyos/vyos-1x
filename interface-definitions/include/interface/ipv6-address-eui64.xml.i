@@ -3,8 +3,8 @@
   <properties>
     <help>Prefix for IPv6 address with MAC-based EUI-64</help>
     <valueHelp>
-      <format>ipv6net</format>
-      <description>IPv6 network and prefix length</description>
+      <format>&lt;h:h:h:h:h:h:h:h/64&gt;</format>
+      <description>IPv6 /64 network</description>
     </valueHelp>
     <constraint>
       <validator name="ipv6-prefix"/>
