@@ -83,6 +83,10 @@ routes = {
 tables = ['80', '81', '82']
 
 class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
+    def setUp(self):
+        # This is our "target" VRF when leaking routes:
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
+
     def tearDown(self):
         for route, route_config in routes.items():
             route_type = 'route'
@@ -94,8 +98,6 @@ class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(base_path + ['table', table])
 
         tmp = self.getFRRconfig('', end='')
-        import pprint
-        pprint.pprint(tmp)
         self.cli_commit()
 
     def test_protocols_static(self):
@@ -288,7 +290,6 @@ class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
             'green' : { 'table' : '2000' },
             'blue'  : { 'table' : '3000' },
         }
-        self.debug = True
 
         for vrf, vrf_config in vrfs.items():
             vrf_base_path = ['vrf', 'name', vrf]
