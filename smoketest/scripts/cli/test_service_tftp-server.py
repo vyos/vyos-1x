@@ -14,11 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import os
 import unittest
 
 from psutil import process_iter
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
@@ -32,28 +31,26 @@ dummy_if_path = ['interfaces', 'dummy', 'dum69']
 address_ipv4 = '192.0.2.1'
 address_ipv6 = '2001:db8::1'
 
-class TestServiceTFTPD(unittest.TestCase):
+class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(dummy_if_path + ['address', address_ipv4 + '/32'])
-        self.session.set(dummy_if_path + ['address', address_ipv6 + '/128'])
+        self.cli_set(dummy_if_path + ['address', address_ipv4 + '/32'])
+        self.cli_set(dummy_if_path + ['address', address_ipv6 + '/128'])
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.delete(dummy_if_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_delete(dummy_if_path)
+        self.cli_commit()
 
     def test_01_tftpd_single(self):
         directory = '/tmp'
         port = '69' # default port
 
-        self.session.set(base_path + ['allow-upload'])
-        self.session.set(base_path + ['directory', directory])
-        self.session.set(base_path + ['listen-address', address_ipv4])
+        self.cli_set(base_path + ['allow-upload'])
+        self.cli_set(base_path + ['directory', directory])
+        self.cli_set(base_path + ['listen-address', address_ipv4])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file('/etc/default/tftpd0')
         # verify listen IP address
@@ -71,13 +68,13 @@ class TestServiceTFTPD(unittest.TestCase):
         address = [address_ipv4, address_ipv6]
         port = '70'
 
-        self.session.set(base_path + ['directory', directory])
+        self.cli_set(base_path + ['directory', directory])
         for addr in address:
-            self.session.set(base_path + ['listen-address', addr])
-            self.session.set(base_path + ['port', port])
+            self.cli_set(base_path + ['listen-address', addr])
+            self.cli_set(base_path + ['port', port])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         for idx in range(0, len(address)):
             config = read_file(f'/etc/default/tftpd{idx}')

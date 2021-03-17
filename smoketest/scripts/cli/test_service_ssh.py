@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
+import re
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
@@ -38,18 +40,16 @@ def get_config_value(key):
     tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
     return tmp
 
-class TestServiceSSH(unittest.TestCase):
+class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
-        self.session.delete(base_path)
+        self.cli_delete(base_path)
 
     def tearDown(self):
         # delete testing SSH config
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         self.assertTrue(os.path.isfile(key_rsa))
         self.assertTrue(os.path.isfile(key_dsa))
@@ -58,10 +58,10 @@ class TestServiceSSH(unittest.TestCase):
     def test_ssh_default(self):
         # Check if SSH service runs with default settings - used for checking
         # behavior of <defaultValue> in XML definition
-        self.session.set(base_path)
+        self.cli_set(base_path)
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check configured port
         port = get_config_value('Port')[0]
@@ -72,15 +72,15 @@ class TestServiceSSH(unittest.TestCase):
 
     def test_ssh_single_listen_address(self):
         # Check if SSH service can be configured and runs
-        self.session.set(base_path + ['port', '1234'])
-        self.session.set(base_path + ['disable-host-validation'])
-        self.session.set(base_path + ['disable-password-authentication'])
-        self.session.set(base_path + ['loglevel', 'verbose'])
-        self.session.set(base_path + ['client-keepalive-interval', '100'])
-        self.session.set(base_path + ['listen-address', '127.0.0.1'])
+        self.cli_set(base_path + ['port', '1234'])
+        self.cli_set(base_path + ['disable-host-validation'])
+        self.cli_set(base_path + ['disable-password-authentication'])
+        self.cli_set(base_path + ['loglevel', 'verbose'])
+        self.cli_set(base_path + ['client-keepalive-interval', '100'])
+        self.cli_set(base_path + ['listen-address', '127.0.0.1'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check configured port
         port = get_config_value('Port')[0]
@@ -114,14 +114,14 @@ class TestServiceSSH(unittest.TestCase):
         # listen ports and listen-addresses
         ports = ['22', '2222', '2223', '2224']
         for port in ports:
-            self.session.set(base_path + ['port', port])
+            self.cli_set(base_path + ['port', port])
 
         addresses = ['127.0.0.1', '::1']
         for address in addresses:
-            self.session.set(base_path + ['listen-address', address])
+            self.cli_set(base_path + ['listen-address', address])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check configured port
         tmp = get_config_value('Port')
@@ -139,17 +139,17 @@ class TestServiceSSH(unittest.TestCase):
     def test_ssh_vrf(self):
         # Check if SSH service can be bound to given VRF
         port = '22'
-        self.session.set(base_path + ['port', port])
-        self.session.set(base_path + ['vrf', vrf])
+        self.cli_set(base_path + ['port', port])
+        self.cli_set(base_path + ['vrf', vrf])
 
         # VRF does yet not exist - an error must be thrown
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
-        self.session.set(['vrf', 'name', vrf, 'table', '1338'])
+        self.cli_set(['vrf', 'name', vrf, 'table', '1338'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check configured port
         tmp = get_config_value('Port')
@@ -163,7 +163,7 @@ class TestServiceSSH(unittest.TestCase):
         self.assertIn(PROCESS_NAME, tmp)
 
         # delete VRF
-        self.session.delete(['vrf', 'name', vrf])
+        self.cli_delete(['vrf', 'name', vrf])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

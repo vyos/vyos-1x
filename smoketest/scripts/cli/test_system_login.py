@@ -14,10 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 import platform
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from distutils.version import LooseVersion
 from platform import release as kernel_version
@@ -32,31 +33,27 @@ from vyos.template import inc_ip
 base_path = ['system', 'login']
 users = ['vyos1', 'vyos2']
 
-class TestSystemLogin(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Delete individual users from configuration
         for user in users:
-            self.session.delete(base_path + ['user', user])
+            self.cli_delete(base_path + ['user', user])
 
-        self.session.commit()
-        del self.session
+        self.cli_commit()
 
     def test_system_login_user(self):
         # Check if user can be created and we can SSH to localhost
-        self.session.set(['service', 'ssh', 'port', '22'])
+        self.cli_set(['service', 'ssh', 'port', '22'])
 
         for user in users:
             name = "VyOS Roxx " + user
             home_dir = "/tmp/" + user
 
-            self.session.set(base_path + ['user', user, 'authentication', 'plaintext-password', user])
-            self.session.set(base_path + ['user', user, 'full-name', 'VyOS Roxx'])
-            self.session.set(base_path + ['user', user, 'home-directory', home_dir])
+            self.cli_set(base_path + ['user', user, 'authentication', 'plaintext-password', user])
+            self.cli_set(base_path + ['user', user, 'full-name', 'VyOS Roxx'])
+            self.cli_set(base_path + ['user', user, 'home-directory', home_dir])
 
-        self.session.commit()
+        self.cli_commit()
 
         for user in users:
             cmd = ['su','-', user]
@@ -93,18 +90,18 @@ class TestSystemLogin(unittest.TestCase):
         radius_port = '2000'
         radius_timeout = '1'
 
-        self.session.set(base_path + ['radius', 'server', radius_server, 'key', radius_key])
-        self.session.set(base_path + ['radius', 'server', radius_server, 'port', radius_port])
-        self.session.set(base_path + ['radius', 'server', radius_server, 'timeout', radius_timeout])
-        self.session.set(base_path + ['radius', 'source-address', radius_source])
-        self.session.set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+        self.cli_set(base_path + ['radius', 'server', radius_server, 'key', radius_key])
+        self.cli_set(base_path + ['radius', 'server', radius_server, 'port', radius_port])
+        self.cli_set(base_path + ['radius', 'server', radius_server, 'timeout', radius_timeout])
+        self.cli_set(base_path + ['radius', 'source-address', radius_source])
+        self.cli_set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
 
         # check validate() - Only one IPv4 source-address supported
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+            self.cli_commit()
+        self.cli_delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
 
-        self.session.commit()
+        self.cli_commit()
 
         # this file must be read with higher permissions
         pam_radius_auth_conf = cmd('sudo cat /etc/pam_radius_auth.conf')
@@ -147,18 +144,18 @@ class TestSystemLogin(unittest.TestCase):
         radius_port = '4000'
         radius_timeout = '4'
 
-        self.session.set(base_path + ['radius', 'server', radius_server, 'key', radius_key])
-        self.session.set(base_path + ['radius', 'server', radius_server, 'port', radius_port])
-        self.session.set(base_path + ['radius', 'server', radius_server, 'timeout', radius_timeout])
-        self.session.set(base_path + ['radius', 'source-address', radius_source])
-        self.session.set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+        self.cli_set(base_path + ['radius', 'server', radius_server, 'key', radius_key])
+        self.cli_set(base_path + ['radius', 'server', radius_server, 'port', radius_port])
+        self.cli_set(base_path + ['radius', 'server', radius_server, 'timeout', radius_timeout])
+        self.cli_set(base_path + ['radius', 'source-address', radius_source])
+        self.cli_set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
 
         # check validate() - Only one IPv4 source-address supported
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+            self.cli_commit()
+        self.cli_delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
 
-        self.session.commit()
+        self.cli_commit()
 
         # this file must be read with higher permissions
         pam_radius_auth_conf = cmd('sudo cat /etc/pam_radius_auth.conf')

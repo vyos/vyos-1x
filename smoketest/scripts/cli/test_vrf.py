@@ -20,6 +20,7 @@ import json
 import unittest
 
 from netifaces import interfaces
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
@@ -33,7 +34,7 @@ from vyos.validate import is_intf_addr_assigned
 base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
 
-class VRFTest(unittest.TestCase):
+class VRFTest(VyOSUnitTestSHIM.TestCase):
     _interfaces = []
 
     @classmethod
@@ -47,14 +48,13 @@ class VRFTest(unittest.TestCase):
             for tmp in Section.interfaces('ethernet'):
                 if not '.' in tmp:
                     cls._interfaces.append(tmp)
-
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def tearDown(self):
         # delete all VRFs
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
         for vrf in vrfs:
             self.assertNotIn(vrf, interfaces())
 
@@ -63,20 +63,20 @@ class VRFTest(unittest.TestCase):
         for vrf in vrfs:
             base = base_path + ['name', vrf]
             description = f'VyOS-VRF-{vrf}'
-            self.session.set(base + ['description', description])
+            self.cli_set(base + ['description', description])
 
             # check validate() - a table ID is mandatory
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
+                self.cli_commit()
 
-            self.session.set(base + ['table', table])
+            self.cli_set(base + ['table', table])
             if vrf == 'green':
-                self.session.set(base + ['disable'])
+                self.cli_set(base + ['disable'])
 
             table = str(int(table) + 1)
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify VRF configuration
         table = '1000'
@@ -107,11 +107,11 @@ class VRFTest(unittest.TestCase):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
-            self.session.set(base + ['table', str(table)])
+            self.cli_set(base + ['table', str(table)])
             table = str(int(table) + 1)
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify VRF configuration
         for vrf in vrfs:
@@ -125,31 +125,31 @@ class VRFTest(unittest.TestCase):
         table = '1000'
         vrf = vrfs[0]
         base = base_path + ['name', vrf]
-        self.session.set(base + ['table', table])
+        self.cli_set(base + ['table', table])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check if VRF has been created
         self.assertTrue(vrf in interfaces())
 
         table = str(int(table) + 1)
-        self.session.set(base + ['table', table])
+        self.cli_set(base + ['table', table])
         # check validate() - table ID can not be altered!
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
     def test_vrf_assign_interface(self):
         vrf = vrfs[0]
         table = '5000'
-        self.session.set(['vrf', 'name', vrf, 'table', table])
+        self.cli_set(['vrf', 'name', vrf, 'table', table])
 
         for interface in self._interfaces:
             section = Section.section(interface)
-            self.session.set(['interfaces', section, interface, 'vrf', vrf])
+            self.cli_set(['interfaces', section, interface, 'vrf', vrf])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify & cleanup
         for interface in self._interfaces:
@@ -158,7 +158,7 @@ class VRFTest(unittest.TestCase):
             self.assertEqual(tmp, vrf)
             # cleanup
             section = Section.section(interface)
-            self.session.delete(['interfaces', section, interface, 'vrf'])
+            self.cli_delete(['interfaces', section, interface, 'vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -21,6 +21,8 @@ from glob import glob
 from ipaddress import IPv4Network
 from netifaces import interfaces
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -58,85 +60,83 @@ def get_vrf(interface):
         tmp = tmp.replace('upper_', '')
         return tmp
 
-class TestInterfacesOpenVPN(unittest.TestCase):
+class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
-        self.session.set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.delete(['interfaces', 'dummy', dummy_if])
-        self.session.delete(['vrf'])
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_delete(['interfaces', 'dummy', dummy_if])
+        self.cli_delete(['vrf'])
+        self.cli_commit()
 
     def test_openvpn_client_verify(self):
         # Create OpenVPN client interface and test verify() steps.
         interface = 'vtun2000'
         path = base_path + [interface]
-        self.session.set(path + ['mode', 'client'])
+        self.cli_set(path + ['mode', 'client'])
 
         # check validate() - cannot specify both "encryption disable-ncp" and
         # "encryption ncp-ciphers" at the same time
-        self.session.set(path + ['encryption', 'disable-ncp'])
-        self.session.set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
+        self.cli_set(path + ['encryption', 'disable-ncp'])
+        self.cli_set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
 
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['encryption', 'ncp-ciphers'])
+            self.cli_commit()
+        self.cli_delete(path + ['encryption', 'ncp-ciphers'])
 
         # check validate() - cannot specify local-port in client mode
-        self.session.set(path + ['local-port', '5000'])
+        self.cli_set(path + ['local-port', '5000'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['local-port'])
+            self.cli_commit()
+        self.cli_delete(path + ['local-port'])
 
         # check validate() - cannot specify local-host in client mode
-        self.session.set(path + ['local-host', '127.0.0.1'])
+        self.cli_set(path + ['local-host', '127.0.0.1'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['local-host'])
+            self.cli_commit()
+        self.cli_delete(path + ['local-host'])
 
         # check validate() - cannot specify protocol tcp-passive in client mode
-        self.session.set(path + ['protocol', 'tcp-passive'])
+        self.cli_set(path + ['protocol', 'tcp-passive'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['protocol'])
+            self.cli_commit()
+        self.cli_delete(path + ['protocol'])
 
         # check validate() - remote-host must be set in client mode
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['remote-host', '192.0.9.9'])
+            self.cli_commit()
+        self.cli_set(path + ['remote-host', '192.0.9.9'])
 
         # check validate() - cannot specify "tls dh-file" in client mode
-        self.session.set(path + ['tls', 'dh-file', dh_pem])
+        self.cli_set(path + ['tls', 'dh-file', dh_pem])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['tls'])
+            self.cli_commit()
+        self.cli_delete(path + ['tls'])
 
         # check validate() - must specify one of "shared-secret-key-file" and "tls"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['shared-secret-key-file', s2s_key])
+            self.cli_commit()
+        self.cli_set(path + ['shared-secret-key-file', s2s_key])
 
         # check validate() - must specify one of "shared-secret-key-file" and "tls"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['shared-secret-key-file', s2s_key])
+            self.cli_commit()
+        self.cli_delete(path + ['shared-secret-key-file', s2s_key])
 
-        self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
-        self.session.set(path + ['tls', 'cert-file', ssl_cert])
-        self.session.set(path + ['tls', 'key-file', ssl_key])
+        self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
+        self.cli_set(path + ['tls', 'cert-file', ssl_cert])
+        self.cli_set(path + ['tls', 'key-file', ssl_key])
 
         # check validate() - can not have auth username without a password
-        self.session.set(path + ['authentication', 'username', 'vyos'])
+        self.cli_set(path + ['authentication', 'username', 'vyos'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['authentication', 'password', 'vyos'])
+            self.cli_commit()
+        self.cli_set(path + ['authentication', 'password', 'vyos'])
 
         # client commit must pass
-        self.session.commit()
+        self.cli_commit()
 
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
@@ -152,22 +152,22 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             path = base_path + [interface]
             auth_hash = 'sha1'
 
-            self.session.set(path + ['device-type', 'tun'])
-            self.session.set(path + ['encryption', 'cipher', 'aes256'])
-            self.session.set(path + ['hash', auth_hash])
-            self.session.set(path + ['mode', 'client'])
-            self.session.set(path + ['persistent-tunnel'])
-            self.session.set(path + ['protocol', protocol])
-            self.session.set(path + ['remote-host', remote_host])
-            self.session.set(path + ['remote-port', remote_port])
-            self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
-            self.session.set(path + ['tls', 'cert-file', ssl_cert])
-            self.session.set(path + ['tls', 'key-file', ssl_key])
-            self.session.set(path + ['vrf', vrf_name])
-            self.session.set(path + ['authentication', 'username', interface+'user'])
-            self.session.set(path + ['authentication', 'password', interface+'secretpw'])
+            self.cli_set(path + ['device-type', 'tun'])
+            self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+            self.cli_set(path + ['hash', auth_hash])
+            self.cli_set(path + ['mode', 'client'])
+            self.cli_set(path + ['persistent-tunnel'])
+            self.cli_set(path + ['protocol', protocol])
+            self.cli_set(path + ['remote-host', remote_host])
+            self.cli_set(path + ['remote-port', remote_port])
+            self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
+            self.cli_set(path + ['tls', 'cert-file', ssl_cert])
+            self.cli_set(path + ['tls', 'key-file', ssl_key])
+            self.cli_set(path + ['vrf', vrf_name])
+            self.cli_set(path + ['authentication', 'username', interface+'user'])
+            self.cli_set(path + ['authentication', 'password', interface+'secretpw'])
 
-        self.session.commit()
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -200,8 +200,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(f'{interface}secretpw', pw)
 
         # check that no interface remained after deleting them
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -213,104 +213,104 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         path = base_path + [interface]
 
         # check validate() - must speciy operating mode
-        self.session.set(path)
+        self.cli_set(path)
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['mode', 'server'])
+            self.cli_commit()
+        self.cli_set(path + ['mode', 'server'])
 
         # check validate() - cannot specify protocol tcp-active in server mode
-        self.session.set(path + ['protocol', 'tcp-active'])
+        self.cli_set(path + ['protocol', 'tcp-active'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['protocol'])
+            self.cli_commit()
+        self.cli_delete(path + ['protocol'])
 
         # check validate() - cannot specify local-port in client mode
-        self.session.set(path + ['remote-port', '5000'])
+        self.cli_set(path + ['remote-port', '5000'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['remote-port'])
+            self.cli_commit()
+        self.cli_delete(path + ['remote-port'])
 
         # check validate() - cannot specify local-host in client mode
-        self.session.set(path + ['remote-host', '127.0.0.1'])
+        self.cli_set(path + ['remote-host', '127.0.0.1'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['remote-host'])
+            self.cli_commit()
+        self.cli_delete(path + ['remote-host'])
 
         # check validate() - must specify "tls dh-file" when not using EC keys
         # in server mode
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['tls', 'dh-file', dh_pem])
+            self.cli_commit()
+        self.cli_set(path + ['tls', 'dh-file', dh_pem])
 
         # check validate() - must specify "server subnet" or add interface to
         # bridge in server mode
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         # check validate() - server client-ip-pool is too large
         # [100.64.0.4 -> 100.127.255.251 = 4194295], maximum is 65536 addresses.
-        self.session.set(path + ['server', 'subnet', '100.64.0.0/10'])
+        self.cli_set(path + ['server', 'subnet', '100.64.0.0/10'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         # check validate() - cannot specify more than 1 IPv4 and 1 IPv6 server subnet
-        self.session.set(path + ['server', 'subnet', '100.64.0.0/20'])
+        self.cli_set(path + ['server', 'subnet', '100.64.0.0/20'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['server', 'subnet', '100.64.0.0/10'])
+            self.cli_commit()
+        self.cli_delete(path + ['server', 'subnet', '100.64.0.0/10'])
 
         # check validate() - must specify "tls ca-cert-file"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
+            self.cli_commit()
+        self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
 
         # check validate() - must specify "tls cert-file"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['tls', 'cert-file', ssl_cert])
+            self.cli_commit()
+        self.cli_set(path + ['tls', 'cert-file', ssl_cert])
 
         # check validate() - must specify "tls key-file"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['tls', 'key-file', ssl_key])
+            self.cli_commit()
+        self.cli_set(path + ['tls', 'key-file', ssl_key])
 
         # check validate() - cannot specify "tls role" in client-server mode'
-        self.session.set(path + ['tls', 'role', 'active'])
+        self.cli_set(path + ['tls', 'role', 'active'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         # check validate() - cannot specify "tls role" in client-server mode'
-        self.session.set(path + ['tls', 'auth-file', auth_key])
+        self.cli_set(path + ['tls', 'auth-file', auth_key])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         # check validate() - cannot specify "tcp-passive" when "tls role" is "active"
-        self.session.set(path + ['protocol', 'tcp-passive'])
+        self.cli_set(path + ['protocol', 'tcp-passive'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['protocol'])
+            self.cli_commit()
+        self.cli_delete(path + ['protocol'])
 
         # check validate() - cannot specify "tls dh-file" when "tls role" is "active"
-        self.session.set(path + ['tls', 'dh-file', dh_pem])
+        self.cli_set(path + ['tls', 'dh-file', dh_pem])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['tls', 'dh-file'])
+            self.cli_commit()
+        self.cli_delete(path + ['tls', 'dh-file'])
 
         # Now test the other path with tls role passive
-        self.session.set(path + ['tls', 'role', 'passive'])
+        self.cli_set(path + ['tls', 'role', 'passive'])
         # check validate() - cannot specify "tcp-active" when "tls role" is "passive"
-        self.session.set(path + ['protocol', 'tcp-active'])
+        self.cli_set(path + ['protocol', 'tcp-active'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['protocol'])
+            self.cli_commit()
+        self.cli_delete(path + ['protocol'])
 
 
         # check validate() - must specify "tls dh-file" when "tls role" is "passive"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['tls', 'dh-file', dh_pem])
+            self.cli_commit()
+        self.cli_set(path + ['tls', 'dh-file', dh_pem])
 
-        self.session.commit()
+        self.cli_commit()
 
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
@@ -330,29 +330,29 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             path = base_path + [interface]
             port = str(2000 + ii)
 
-            self.session.set(path + ['device-type', 'tun'])
-            self.session.set(path + ['encryption', 'cipher', 'aes192'])
-            self.session.set(path + ['hash', auth_hash])
-            self.session.set(path + ['mode', 'server'])
-            self.session.set(path + ['local-port', port])
-            self.session.set(path + ['server', 'subnet', subnet])
-            self.session.set(path + ['server', 'topology', 'subnet'])
-            self.session.set(path + ['keep-alive', 'failure-count', '5'])
-            self.session.set(path + ['keep-alive', 'interval', '5'])
+            self.cli_set(path + ['device-type', 'tun'])
+            self.cli_set(path + ['encryption', 'cipher', 'aes192'])
+            self.cli_set(path + ['hash', auth_hash])
+            self.cli_set(path + ['mode', 'server'])
+            self.cli_set(path + ['local-port', port])
+            self.cli_set(path + ['server', 'subnet', subnet])
+            self.cli_set(path + ['server', 'topology', 'subnet'])
+            self.cli_set(path + ['keep-alive', 'failure-count', '5'])
+            self.cli_set(path + ['keep-alive', 'interval', '5'])
 
             # clients
-            self.session.set(path + ['server', 'client', 'client1', 'ip', client_ip])
+            self.cli_set(path + ['server', 'client', 'client1', 'ip', client_ip])
             for route in client1_routes:
-                self.session.set(path + ['server', 'client', 'client1', 'subnet', route])
+                self.cli_set(path + ['server', 'client', 'client1', 'subnet', route])
 
-            self.session.set(path + ['replace-default-route'])
-            self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
-            self.session.set(path + ['tls', 'cert-file', ssl_cert])
-            self.session.set(path + ['tls', 'key-file', ssl_key])
-            self.session.set(path + ['tls', 'dh-file', dh_pem])
-            self.session.set(path + ['vrf', vrf_name])
+            self.cli_set(path + ['replace-default-route'])
+            self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
+            self.cli_set(path + ['tls', 'cert-file', ssl_cert])
+            self.cli_set(path + ['tls', 'key-file', ssl_key])
+            self.cli_set(path + ['tls', 'dh-file', dh_pem])
+            self.cli_set(path + ['vrf', vrf_name])
 
-        self.session.commit()
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -404,8 +404,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(interface, interfaces())
 
         # check that no interface remained after deleting them
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -423,23 +423,23 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             path = base_path + [interface]
             port = str(2000 + ii)
 
-            self.session.set(path + ['device-type', 'tun'])
-            self.session.set(path + ['encryption', 'cipher', 'aes192'])
-            self.session.set(path + ['hash', auth_hash])
-            self.session.set(path + ['mode', 'server'])
-            self.session.set(path + ['local-port', port])
-            self.session.set(path + ['server', 'subnet', subnet])
-            self.session.set(path + ['server', 'topology', 'net30'])
-            self.session.set(path + ['replace-default-route'])
-            self.session.set(path + ['keep-alive', 'failure-count', '10'])
-            self.session.set(path + ['keep-alive', 'interval', '5'])
-            self.session.set(path + ['tls', 'ca-cert-file', ca_cert])
-            self.session.set(path + ['tls', 'cert-file', ssl_cert])
-            self.session.set(path + ['tls', 'key-file', ssl_key])
-            self.session.set(path + ['tls', 'dh-file', dh_pem])
-            self.session.set(path + ['vrf', vrf_name])
+            self.cli_set(path + ['device-type', 'tun'])
+            self.cli_set(path + ['encryption', 'cipher', 'aes192'])
+            self.cli_set(path + ['hash', auth_hash])
+            self.cli_set(path + ['mode', 'server'])
+            self.cli_set(path + ['local-port', port])
+            self.cli_set(path + ['server', 'subnet', subnet])
+            self.cli_set(path + ['server', 'topology', 'net30'])
+            self.cli_set(path + ['replace-default-route'])
+            self.cli_set(path + ['keep-alive', 'failure-count', '10'])
+            self.cli_set(path + ['keep-alive', 'interval', '5'])
+            self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
+            self.cli_set(path + ['tls', 'cert-file', ssl_cert])
+            self.cli_set(path + ['tls', 'key-file', ssl_key])
+            self.cli_set(path + ['tls', 'dh-file', dh_pem])
+            self.cli_set(path + ['vrf', vrf_name])
 
-        self.session.commit()
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -479,8 +479,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             self.assertIn(interface, interfaces())
 
         # check that no interface remained after deleting them
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -493,57 +493,57 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         interface = 'vtun5000'
         path = base_path + [interface]
 
-        self.session.set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['mode', 'site-to-site'])
 
         # check validate() - encryption ncp-ciphers cannot be specified in site-to-site mode
-        self.session.set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
+        self.cli_set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['encryption'])
+            self.cli_commit()
+        self.cli_delete(path + ['encryption'])
 
         # check validate() - must specify "local-address" or add interface to bridge
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['local-address', '10.0.0.1'])
-        self.session.set(path + ['local-address', '2001:db8:1::1'])
+            self.cli_commit()
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['local-address', '2001:db8:1::1'])
 
         # check validate() - cannot specify more than 1 IPv4 local-address
-        self.session.set(path + ['local-address', '10.0.0.2'])
+        self.cli_set(path + ['local-address', '10.0.0.2'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['local-address', '10.0.0.2'])
+            self.cli_commit()
+        self.cli_delete(path + ['local-address', '10.0.0.2'])
 
         # check validate() - cannot specify more than 1 IPv6 local-address
-        self.session.set(path + ['local-address', '2001:db8:1::2'])
+        self.cli_set(path + ['local-address', '2001:db8:1::2'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['local-address', '2001:db8:1::2'])
+            self.cli_commit()
+        self.cli_delete(path + ['local-address', '2001:db8:1::2'])
 
         # check validate() - IPv4 "local-address" requires IPv4 "remote-address"
         # or IPv4 "local-address subnet"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['remote-address', '192.168.0.1'])
-        self.session.set(path + ['remote-address', '2001:db8:ffff::1'])
+            self.cli_commit()
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['remote-address', '2001:db8:ffff::1'])
 
         # check validate() - Cannot specify more than 1 IPv4 "remote-address"
-        self.session.set(path + ['remote-address', '192.168.0.2'])
+        self.cli_set(path + ['remote-address', '192.168.0.2'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['remote-address', '192.168.0.2'])
+            self.cli_commit()
+        self.cli_delete(path + ['remote-address', '192.168.0.2'])
 
         # check validate() - Cannot specify more than 1 IPv6 "remote-address"
-        self.session.set(path + ['remote-address', '2001:db8:ffff::2'])
+        self.cli_set(path + ['remote-address', '2001:db8:ffff::2'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['remote-address', '2001:db8:ffff::2'])
+            self.cli_commit()
+        self.cli_delete(path + ['remote-address', '2001:db8:ffff::2'])
 
         # check validate() - Must specify one of "shared-secret-key-file" and "tls"
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(path + ['shared-secret-key-file', s2s_key])
+            self.cli_commit()
+        self.cli_set(path + ['shared-secret-key-file', s2s_key])
 
-        self.session.commit()
+        self.cli_commit()
 
     def test_openvpn_site2site_interfaces_tun(self):
         # Create two OpenVPN site-to-site interfaces
@@ -561,23 +561,23 @@ class TestInterfacesOpenVPN(unittest.TestCase):
             path = base_path + [interface]
             port = str(3000 + ii)
 
-            self.session.set(path + ['local-address', local_address])
+            self.cli_set(path + ['local-address', local_address])
 
             # even numbers use tun type, odd numbers use tap type
             if ii % 2 == 0:
-                self.session.set(path + ['device-type', 'tun'])
+                self.cli_set(path + ['device-type', 'tun'])
             else:
-                self.session.set(path + ['device-type', 'tap'])
-                self.session.set(path + ['local-address', local_address, 'subnet-mask', local_address_subnet])
+                self.cli_set(path + ['device-type', 'tap'])
+                self.cli_set(path + ['local-address', local_address, 'subnet-mask', local_address_subnet])
 
-            self.session.set(path + ['mode', 'site-to-site'])
-            self.session.set(path + ['local-port', port])
-            self.session.set(path + ['remote-port', port])
-            self.session.set(path + ['shared-secret-key-file', s2s_key])
-            self.session.set(path + ['remote-address', remote_address])
-            self.session.set(path + ['vrf', vrf_name])
+            self.cli_set(path + ['mode', 'site-to-site'])
+            self.cli_set(path + ['local-port', port])
+            self.cli_set(path + ['remote-port', port])
+            self.cli_set(path + ['shared-secret-key-file', s2s_key])
+            self.cli_set(path + ['remote-address', remote_address])
+            self.cli_set(path + ['vrf', vrf_name])
 
-        self.session.commit()
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -608,8 +608,8 @@ class TestInterfacesOpenVPN(unittest.TestCase):
 
 
         # check that no interface remained after deleting them
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         for ii in num_range:
             interface = f'vtun{ii}'

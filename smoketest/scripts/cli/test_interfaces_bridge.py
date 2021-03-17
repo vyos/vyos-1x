@@ -27,7 +27,7 @@ from vyos.util import cmd
 from vyos.util import read_file
 from vyos.validate import is_intf_addr_assigned
 
-class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
+class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -53,9 +53,12 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             cls._options['br0'].append(f'member interface {member}')
         cls._interfaces = list(cls._options)
 
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
+
     def tearDown(self):
         for intf in self._interfaces:
-            self.session.delete(self._base_path + [intf])
+            self.cli_delete(self._base_path + [intf])
 
         super().tearDown()
 
@@ -63,21 +66,21 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         # Add member interfaces to bridge and set STP cost/priority
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['stp'])
-            self.session.set(base + ['address', '192.0.2.1/24'])
+            self.cli_set(base + ['stp'])
+            self.cli_set(base + ['address', '192.0.2.1/24'])
 
             cost = 1000
             priority = 10
             # assign members to bridge interface
             for member in self._members:
                 base_member = base + ['member', 'interface', member]
-                self.session.set(base_member + ['cost', str(cost)])
-                self.session.set(base_member + ['priority', str(priority)])
+                self.cli_set(base_member + ['cost', str(cost)])
+                self.cli_set(base_member + ['priority', str(priority)])
                 cost += 1
                 priority += 1
 
         # commit config
-        self.session.commit()
+        self.cli_commit()
 
         # check member interfaces are added on the bridge
         bridge_members = []
@@ -89,20 +92,20 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # delete all members
         for interface in self._interfaces:
-            self.session.delete(self._base_path + [interface, 'member'])
+            self.cli_delete(self._base_path + [interface, 'member'])
 
-        self.session.commit()
+        self.cli_commit()
 
     def test_vif_8021q_interfaces(self):
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['enable-vlan'])
+            self.cli_set(base + ['enable-vlan'])
         super().test_vif_8021q_interfaces()
 
     def test_vif_8021q_lower_up_down(self):
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['enable-vlan'])
+            self.cli_set(base + ['enable-vlan'])
         super().test_vif_8021q_interfaces()
 
     def test_bridge_vlan_filter(self):
@@ -111,10 +114,10 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.session.set(base + ['enable-vlan'])
-            self.session.set(base + ['address', '192.0.2.1/24'])
-            self.session.set(base + ['vif', str(vif_vlan), 'address', '192.0.3.1/24'])
-            self.session.set(base + ['vif', str(vif_vlan), 'mtu', self._mtu])
+            self.cli_set(base + ['enable-vlan'])
+            self.cli_set(base + ['address', '192.0.2.1/24'])
+            self.cli_set(base + ['vif', str(vif_vlan), 'address', '192.0.3.1/24'])
+            self.cli_set(base + ['vif', str(vif_vlan), 'mtu', self._mtu])
 
             vlan_id = 101
             allowed_vlan = 2
@@ -122,13 +125,13 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
             # assign members to bridge interface
             for member in self._members:
                 base_member = base + ['member', 'interface', member]
-                self.session.set(base_member + ['allowed-vlan', str(allowed_vlan)])
-                self.session.set(base_member + ['allowed-vlan', allowed_vlan_range])
-                self.session.set(base_member + ['native-vlan', str(vlan_id)])
+                self.cli_set(base_member + ['allowed-vlan', str(allowed_vlan)])
+                self.cli_set(base_member + ['allowed-vlan', allowed_vlan_range])
+                self.cli_set(base_member + ['native-vlan', str(vlan_id)])
                 vlan_id += 1
 
         # commit config
-        self.session.commit()
+        self.cli_commit()
 
         # Detect the vlan filter function
         for interface in self._interfaces:
@@ -184,7 +187,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # delete all members
         for interface in self._interfaces:
-            self.session.delete(self._base_path + [interface, 'member'])
+            self.cli_delete(self._base_path + [interface, 'member'])
 
 
     def test_bridge_vlan_members(self):
@@ -193,10 +196,10 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         for interface in self._interfaces:
             for member in self._members:
                 for vif in vifs:
-                    self.session.set(['interfaces', 'ethernet', member, 'vif', vif])
-                    self.session.set(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
+                    self.cli_set(['interfaces', 'ethernet', member, 'vif', vif])
+                    self.cli_set(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
 
-        self.session.commit()
+        self.cli_commit()
 
         # Verify config
         for interface in self._interfaces:
@@ -209,8 +212,8 @@ class BridgeInterfaceTest(BasicInterfaceTest.BaseTest):
         for interface in self._interfaces:
             for member in self._members:
                 for vif in vifs:
-                    self.session.delete(['interfaces', 'ethernet', member, 'vif', vif])
-                    self.session.delete(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
+                    self.cli_delete(['interfaces', 'ethernet', member, 'vif', vif])
+                    self.cli_delete(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -14,12 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
-from vyos.configsession import ConfigSession
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.ifconfig import Section
-from vyos.util import cmd
 from vyos.util import process_named_running
 
 PROCESS_NAME = 'ospfd'
@@ -27,37 +26,25 @@ base_path = ['protocols', 'ospf']
 
 route_map = 'foo-bar-baz10'
 
-def getFRRconfig(vrf=None):
-    if vrf:
-        return cmd(f'vtysh -c "show run" | sed -n "/^router ospf vrf {vrf}$/,/^!/p"')
-    return cmd('vtysh -c "show run" | sed -n "/^router ospf$/,/^!/p"')
-
-def getFRRInterfaceConfig(interface):
-    return cmd(f'vtysh -c "show run" | sed -n "/^interface {interface}$/,/^!/p"')
-
-class TestProtocolsOSPF(unittest.TestCase):
+class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
-        self.session.set(['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+        self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
 
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
-
-        self.session.delete(['policy', 'route-map', route_map])
-        self.session.delete(base_path)
-
-        self.session.commit()
-        del self.session
+        self.cli_delete(['policy', 'route-map', route_map])
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_ospf_01_defaults(self):
         # commit changes
-        self.session.set(base_path)
-        self.session.commit()
+        self.cli_set(base_path)
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
@@ -68,17 +55,17 @@ class TestProtocolsOSPF(unittest.TestCase):
         bandwidth = '1000'
         metric = '123'
 
-        self.session.set(base_path + ['auto-cost', 'reference-bandwidth', bandwidth])
-        self.session.set(base_path + ['parameters', 'router-id', router_id])
-        self.session.set(base_path + ['parameters', 'abr-type', abr_type])
-        self.session.set(base_path + ['log-adjacency-changes', 'detail'])
-        self.session.set(base_path + ['default-metric', metric])
+        self.cli_set(base_path + ['auto-cost', 'reference-bandwidth', bandwidth])
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['parameters', 'abr-type', abr_type])
+        self.cli_set(base_path + ['log-adjacency-changes', 'detail'])
+        self.cli_set(base_path + ['default-metric', metric])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth {bandwidth}', frrconfig)
         self.assertIn(f' ospf router-id {router_id}', frrconfig)
@@ -92,22 +79,22 @@ class TestProtocolsOSPF(unittest.TestCase):
         seq = '10'
         protocols = ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
 
-        self.session.set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
-        self.session.set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
-        self.session.set(['policy', 'access-list', acl, 'rule', seq, 'destination', 'any'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'destination', 'any'])
         for ptotocol in protocols:
-            self.session.set(base_path + ['access-list', acl, 'export', ptotocol])
+            self.cli_set(base_path + ['access-list', acl, 'export', ptotocol])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         for ptotocol in protocols:
             self.assertIn(f' distribute-list {acl} out {ptotocol}', frrconfig) # defaults
-        self.session.delete(['policy', 'access-list', acl])
+        self.cli_delete(['policy', 'access-list', acl])
 
 
     def test_ospf_04_default_originate(self):
@@ -115,25 +102,25 @@ class TestProtocolsOSPF(unittest.TestCase):
         metric = '50'
         metric_type = '1'
 
-        self.session.set(base_path + ['default-information', 'originate', 'metric', metric])
-        self.session.set(base_path + ['default-information', 'originate', 'metric-type', metric_type])
-        self.session.set(base_path + ['default-information', 'originate', 'route-map', route_map])
+        self.cli_set(base_path + ['default-information', 'originate', 'metric', metric])
+        self.cli_set(base_path + ['default-information', 'originate', 'metric-type', metric_type])
+        self.cli_set(base_path + ['default-information', 'originate', 'route-map', route_map])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         self.assertIn(f' default-information originate metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
         # Now set 'always'
-        self.session.set(base_path + ['default-information', 'originate', 'always'])
-        self.session.commit()
+        self.cli_set(base_path + ['default-information', 'originate', 'always'])
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f' default-information originate always metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
 
@@ -146,21 +133,21 @@ class TestProtocolsOSPF(unittest.TestCase):
         on_shutdown = '60'
         refresh = '50'
 
-        self.session.set(base_path + ['distance', 'global', global_distance])
-        self.session.set(base_path + ['distance', 'ospf', 'external', external])
-        self.session.set(base_path + ['distance', 'ospf', 'intra-area', intra_area])
+        self.cli_set(base_path + ['distance', 'global', global_distance])
+        self.cli_set(base_path + ['distance', 'ospf', 'external', external])
+        self.cli_set(base_path + ['distance', 'ospf', 'intra-area', intra_area])
 
-        self.session.set(base_path + ['max-metric', 'router-lsa', 'on-startup', on_startup])
-        self.session.set(base_path + ['max-metric', 'router-lsa', 'on-shutdown', on_shutdown])
+        self.cli_set(base_path + ['max-metric', 'router-lsa', 'on-startup', on_startup])
+        self.cli_set(base_path + ['max-metric', 'router-lsa', 'on-shutdown', on_shutdown])
 
-        self.session.set(base_path + ['mpls-te', 'enable'])
-        self.session.set(base_path + ['refresh', 'timers', refresh])
+        self.cli_set(base_path + ['mpls-te', 'enable'])
+        self.cli_set(base_path + ['refresh', 'timers', refresh])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' mpls-te on', frrconfig)
         self.assertIn(f' mpls-te router-address 0.0.0.0', frrconfig) # default
@@ -172,10 +159,10 @@ class TestProtocolsOSPF(unittest.TestCase):
 
 
         # enable inter-area
-        self.session.set(base_path + ['distance', 'ospf', 'inter-area', inter_area])
-        self.session.commit()
+        self.cli_set(base_path + ['distance', 'ospf', 'inter-area', inter_area])
+        self.cli_commit()
 
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f' distance ospf intra-area {intra_area} inter-area {inter_area} external {external}', frrconfig)
 
 
@@ -184,30 +171,30 @@ class TestProtocolsOSPF(unittest.TestCase):
         poll_interval = '20'
         neighbors = ['1.1.1.1', '2.2.2.2', '3.3.3.3']
         for neighbor in neighbors:
-            self.session.set(base_path + ['neighbor', neighbor, 'priority', priority])
-            self.session.set(base_path + ['neighbor', neighbor, 'poll-interval', poll_interval])
+            self.cli_set(base_path + ['neighbor', neighbor, 'priority', priority])
+            self.cli_set(base_path + ['neighbor', neighbor, 'poll-interval', poll_interval])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         for neighbor in neighbors:
             self.assertIn(f' neighbor {neighbor} priority {priority} poll-interval {poll_interval}', frrconfig) # default
 
 
     def test_ospf_07_passive_interface(self):
-        self.session.set(base_path + ['passive-interface', 'default'])
+        self.cli_set(base_path + ['passive-interface', 'default'])
         interfaces = Section.interfaces('ethernet')
         for interface in interfaces:
-            self.session.set(base_path + ['passive-interface-exclude', interface])
+            self.cli_set(base_path + ['passive-interface-exclude', interface])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' passive-interface default', frrconfig) # default
         for interface in interfaces:
@@ -220,16 +207,16 @@ class TestProtocolsOSPF(unittest.TestCase):
         redistribute = ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
 
         for protocol in redistribute:
-            self.session.set(base_path + ['redistribute', protocol, 'metric', metric])
-            self.session.set(base_path + ['redistribute', protocol, 'route-map', route_map])
+            self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])
+            self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
             if protocol not in ['kernel', 'static']:
-                self.session.set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
+                self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         for protocol in redistribute:
             if protocol in ['kernel', 'static']:
@@ -248,32 +235,19 @@ class TestProtocolsOSPF(unittest.TestCase):
         transmit = '5'
         dead = '40'
 
-        self.session.set(base_path + ['area', area, 'shortcut', shortcut])
-        self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'hello-interval', hello])
-        self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'retransmit-interval', retransmit])
-        self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'transmit-delay', transmit])
-        self.session.set(base_path + ['area', area, 'virtual-link', virtual_link, 'dead-interval', dead])
+        self.cli_set(base_path + ['area', area, 'shortcut', shortcut])
+        self.cli_set(base_path + ['area', area, 'virtual-link', virtual_link, 'hello-interval', hello])
+        self.cli_set(base_path + ['area', area, 'virtual-link', virtual_link, 'retransmit-interval', retransmit])
+        self.cli_set(base_path + ['area', area, 'virtual-link', virtual_link, 'transmit-delay', transmit])
+        self.cli_set(base_path + ['area', area, 'virtual-link', virtual_link, 'dead-interval', dead])
         for network in networks:
-            self.session.set(base_path + ['area', area, 'network', network])
+            self.cli_set(base_path + ['area', area, 'network', network])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
-        import pprint
-        # From time to time the CI fails with an error like:
-        # ======================================================================
-        # FAIL: test_ospf_09_virtual_link (__main__.TestProtocolsOSPF)
-        # ----------------------------------------------------------------------
-        # Traceback (most recent call last):
-        #   File "/usr/libexec/vyos/tests/smoke/cli/test_protocols_ospf.py", line 261, in test_ospf_09_virtual_link
-        #     self.assertIn(f'router ospf', frrconfig)
-        # AssertionError: 'router ospf' not found in ''
-        #
-        # Add some debug code so we can find the root cause
-        pprint.pprint(frrconfig)
-
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} shortcut {shortcut}', frrconfig)
         self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
@@ -290,19 +264,19 @@ class TestProtocolsOSPF(unittest.TestCase):
         priority = '200'
 
         for interface in interfaces:
-            self.session.set(base_path + ['interface', interface, 'authentication', 'plaintext-password', password])
-            self.session.set(base_path + ['interface', interface, 'bandwidth', bandwidth])
-            self.session.set(base_path + ['interface', interface, 'bfd'])
-            self.session.set(base_path + ['interface', interface, 'cost', cost])
-            self.session.set(base_path + ['interface', interface, 'mtu-ignore'])
-            self.session.set(base_path + ['interface', interface, 'network', network])
-            self.session.set(base_path + ['interface', interface, 'priority', priority])
+            self.cli_set(base_path + ['interface', interface, 'authentication', 'plaintext-password', password])
+            self.cli_set(base_path + ['interface', interface, 'bandwidth', bandwidth])
+            self.cli_set(base_path + ['interface', interface, 'bfd'])
+            self.cli_set(base_path + ['interface', interface, 'cost', cost])
+            self.cli_set(base_path + ['interface', interface, 'mtu-ignore'])
+            self.cli_set(base_path + ['interface', interface, 'network', network])
+            self.cli_set(base_path + ['interface', interface, 'priority', priority])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         for interface in interfaces:
-            config = getFRRInterfaceConfig(interface)
+            config = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf authentication-key {password}', config)
             self.assertIn(f' ip ospf bfd', config)
@@ -321,28 +295,28 @@ class TestProtocolsOSPF(unittest.TestCase):
         table = '1000'
         for vrf in vrfs:
             vrf_base = ['vrf', 'name', vrf]
-            self.session.set(vrf_base + ['table', table])
-            self.session.set(vrf_base + ['protocols', 'ospf'])
+            self.cli_set(vrf_base + ['table', table])
+            self.cli_set(vrf_base + ['protocols', 'ospf'])
             table = str(int(table) + 1000)
 
         # Also set a default VRF OSPF config
-        self.session.set(base_path)
-        self.session.commit()
+        self.cli_set(base_path)
+        self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = getFRRconfig()
+        frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
         for vrf in vrfs:
-            frrconfig = getFRRconfig(vrf)
+            frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}')
             self.assertIn(f'router ospf vrf {vrf}', frrconfig)
             self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
             self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
-            self.session.delete(['vrf', 'name', vrf])
+            self.cli_delete(['vrf', 'name', vrf])
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

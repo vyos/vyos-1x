@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
@@ -28,46 +29,44 @@ base_path = ['protocols', 'igmp-proxy']
 upstream_if = 'eth1'
 downstream_if = 'eth2'
 
-class TestProtocolsIGMPProxy(unittest.TestCase):
+class TestProtocolsIGMPProxy(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'ethernet', upstream_if, 'address', '172.16.1.1/24'])
+        self.cli_set(['interfaces', 'ethernet', upstream_if, 'address', '172.16.1.1/24'])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'ethernet', upstream_if, 'address'])
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(['interfaces', 'ethernet', upstream_if, 'address'])
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_igmpproxy(self):
         threshold = '20'
         altnet = '192.0.2.0/24'
         whitelist = '10.0.0.0/8'
 
-        self.session.set(base_path + ['disable-quickleave'])
-        self.session.set(base_path + ['interface', upstream_if, 'threshold', threshold])
-        self.session.set(base_path + ['interface', upstream_if, 'alt-subnet', altnet])
-        self.session.set(base_path + ['interface', upstream_if, 'whitelist', whitelist])
+        self.cli_set(base_path + ['disable-quickleave'])
+        self.cli_set(base_path + ['interface', upstream_if, 'threshold', threshold])
+        self.cli_set(base_path + ['interface', upstream_if, 'alt-subnet', altnet])
+        self.cli_set(base_path + ['interface', upstream_if, 'whitelist', whitelist])
 
         # Must define an upstream and at least 1 downstream interface!
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(base_path + ['interface', upstream_if, 'role', 'upstream'])
+            self.cli_commit()
+        self.cli_set(base_path + ['interface', upstream_if, 'role', 'upstream'])
 
         # Interface does not exist
-        self.session.set(base_path + ['interface', 'eth20', 'role', 'upstream'])
+        self.cli_set(base_path + ['interface', 'eth20', 'role', 'upstream'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(base_path + ['interface', 'eth20'])
+            self.cli_commit()
+        self.cli_delete(base_path + ['interface', 'eth20'])
 
         # Only 1 upstream interface allowed
-        self.session.set(base_path + ['interface', downstream_if, 'role', 'upstream'])
+        self.cli_set(base_path + ['interface', downstream_if, 'role', 'upstream'])
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(base_path + ['interface', downstream_if, 'role', 'downstream'])
+            self.cli_commit()
+        self.cli_set(base_path + ['interface', downstream_if, 'role', 'downstream'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Check generated configuration
         config = read_file(IGMP_PROXY_CONF)

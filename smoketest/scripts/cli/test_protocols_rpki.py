@@ -17,6 +17,8 @@
 import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -29,22 +31,15 @@ rpki_known_hosts = '/config/auth/known_hosts'
 rpki_ssh_key = '/config/auth/id_rsa_rpki'
 rpki_ssh_pub = f'{rpki_ssh_key}.pub'
 
-def getFRRRPKIconfig():
-    return cmd(f'vtysh -c "show run" | sed -n "/rpki/,/^!/p"')
-
-class TestProtocolsRPKI(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
         # Nothing RPKI specific should be left over in the config
         #
         # Disabled until T3266 is resolved
-        # frrconfig = getFRRRPKIconfig()
+        # frrconfig = self.getFRRconfig('rpki')
         # self.assertNotIn('rpki', frrconfig)
 
         # Check for running process
@@ -71,16 +66,16 @@ class TestProtocolsRPKI(unittest.TestCase):
             },
         }
 
-        self.session.set(base_path + ['polling-period', polling])
+        self.cli_set(base_path + ['polling-period', polling])
         for peer, peer_config in cache.items():
-            self.session.set(base_path + ['cache', peer, 'port', peer_config['port']])
-            self.session.set(base_path + ['cache', peer, 'preference', peer_config['preference']])
+            self.cli_set(base_path + ['cache', peer, 'port', peer_config['port']])
+            self.cli_set(base_path + ['cache', peer, 'preference', peer_config['preference']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = getFRRRPKIconfig()
+        frrconfig = self.getFRRconfig('rpki')
         self.assertIn(f'rpki polling_period {polling}', frrconfig)
 
         for peer, peer_config in cache.items():
@@ -103,21 +98,21 @@ class TestProtocolsRPKI(unittest.TestCase):
             },
         }
 
-        self.session.set(base_path + ['polling-period', polling])
+        self.cli_set(base_path + ['polling-period', polling])
 
         for peer, peer_config in cache.items():
-            self.session.set(base_path + ['cache', peer, 'port', peer_config['port']])
-            self.session.set(base_path + ['cache', peer, 'preference', peer_config['preference']])
-            self.session.set(base_path + ['cache', peer, 'ssh', 'username', peer_config['username']])
-            self.session.set(base_path + ['cache', peer, 'ssh', 'public-key-file', rpki_ssh_pub])
-            self.session.set(base_path + ['cache', peer, 'ssh', 'private-key-file', rpki_ssh_key])
-            self.session.set(base_path + ['cache', peer, 'ssh', 'known-hosts-file', rpki_known_hosts])
+            self.cli_set(base_path + ['cache', peer, 'port', peer_config['port']])
+            self.cli_set(base_path + ['cache', peer, 'preference', peer_config['preference']])
+            self.cli_set(base_path + ['cache', peer, 'ssh', 'username', peer_config['username']])
+            self.cli_set(base_path + ['cache', peer, 'ssh', 'public-key-file', rpki_ssh_pub])
+            self.cli_set(base_path + ['cache', peer, 'ssh', 'private-key-file', rpki_ssh_key])
+            self.cli_set(base_path + ['cache', peer, 'ssh', 'known-hosts-file', rpki_known_hosts])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = getFRRRPKIconfig()
+        frrconfig = self.getFRRconfig('rpki')
         self.assertIn(f'rpki polling_period {polling}', frrconfig)
 
         for peer, peer_config in cache.items():
@@ -140,12 +135,12 @@ class TestProtocolsRPKI(unittest.TestCase):
         }
 
         for peer, peer_config in cache.items():
-            self.session.set(base_path + ['cache', peer, 'port', peer_config['port']])
-            self.session.set(base_path + ['cache', peer, 'preference', peer_config['preference']])
+            self.cli_set(base_path + ['cache', peer, 'port', peer_config['port']])
+            self.cli_set(base_path + ['cache', peer, 'preference', peer_config['preference']])
 
         # check validate() - preferences must be unique
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
 
 if __name__ == '__main__':

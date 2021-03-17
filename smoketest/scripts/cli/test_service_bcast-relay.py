@@ -14,46 +14,46 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 
 base_path = ['service', 'broadcast-relay']
 
-class TestServiceBroadcastRelay(unittest.TestCase):
+class TestServiceBroadcastRelay(VyOSUnitTestSHIM.TestCase):
     _address1 = '192.0.2.1/24'
     _address2 = '192.0.2.1/24'
 
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
-        self.session.set(['interfaces', 'dummy', 'dum1001', 'address', self._address1])
-        self.session.set(['interfaces', 'dummy', 'dum1002', 'address', self._address2])
+        self.cli_set(['interfaces', 'dummy', 'dum1001', 'address', self._address1])
+        self.cli_set(['interfaces', 'dummy', 'dum1002', 'address', self._address2])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'dummy', 'dum1001'])
-        self.session.delete(['interfaces', 'dummy', 'dum1002'])
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(['interfaces', 'dummy', 'dum1001'])
+        self.cli_delete(['interfaces', 'dummy', 'dum1002'])
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_broadcast_relay_service(self):
         ids = range(1, 5)
         for id in ids:
             base = base_path + ['id', str(id)]
-            self.session.set(base + ['description', 'vyos'])
-            self.session.set(base + ['port', str(10000 + id)])
+            self.cli_set(base + ['description', 'vyos'])
+            self.cli_set(base + ['port', str(10000 + id)])
 
             # check validate() - two interfaces must be present
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
+                self.cli_commit()
 
-            self.session.set(base + ['interface', 'dum1001'])
-            self.session.set(base + ['interface', 'dum1002'])
-            self.session.set(base + ['address', self._address1.split('/')[0]])
+            self.cli_set(base + ['interface', 'dum1001'])
+            self.cli_set(base + ['interface', 'dum1002'])
+            self.cli_set(base + ['address', self._address1.split('/')[0]])
 
-        self.session.commit()
+        self.cli_commit()
 
         for id in ids:
             # check if process is running

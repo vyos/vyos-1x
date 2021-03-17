@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 import unittest
 
-from vyos.configsession import ConfigSession, ConfigSessionError
-import vyos.util as util
+from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
+
+from vyos.util import read_file
 
 RESOLV_CONF = '/etc/resolv.conf'
 
@@ -27,25 +30,20 @@ test_servers = ['192.0.2.10', '2001:db8:1::100']
 base_path = ['system', 'name-server']
 
 def get_name_servers():
-    resolv_conf = util.read_file(RESOLV_CONF)
+    resolv_conf = read_file(RESOLV_CONF)
     return re.findall(r'\n?nameserver\s+(.*)', resolv_conf)
 
-class TestSystemNameServer(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestSystemNameServer(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Delete existing name servers
-        self.session.delete(base_path)
-        self.session.commit()
-
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_nameserver_add(self):
         # Check if server is added to resolv.conf
         for s in test_servers:
-            self.session.set(base_path + [s])
-        self.session.commit()
+            self.cli_set(base_path + [s])
+        self.cli_commit()
 
         servers = get_name_servers()
         for s in servers:
@@ -54,8 +52,8 @@ class TestSystemNameServer(unittest.TestCase):
     def test_nameserver_delete(self):
         # Test if a deleted server disappears from resolv.conf
         for s in test_servers:
-          self.session.delete(base_path + [s])
-        self.session.commit()
+          self.cli_delete(base_path + [s])
+        self.cli_commit()
 
         servers = get_name_servers()
         for s in servers:

@@ -20,7 +20,7 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from vyos.util import cmd
 
-class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
+class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -37,6 +37,8 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
                           'source-port 2020', 'destination-port 20202'],
         }
         cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()

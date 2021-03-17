@@ -19,6 +19,7 @@ import jmespath
 import json
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -28,16 +29,15 @@ base_path = ['nat']
 src_path = base_path + ['source']
 dst_path = base_path + ['destination']
 
-class TestNAT(unittest.TestCase):
+class TestNAT(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
-        self.session = ConfigSession(os.getpid())
-        self.session.delete(base_path)
+        self.cli_delete(base_path)
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_snat(self):
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']
@@ -48,15 +48,15 @@ class TestNAT(unittest.TestCase):
             # depending of rule order we check either for source address for NAT
             # or configured destination address for NAT
             if int(rule) < 200:
-                self.session.set(src_path + ['rule', rule, 'source', 'address', network])
-                self.session.set(src_path + ['rule', rule, 'outbound-interface', outbound_iface_100])
-                self.session.set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
+                self.cli_set(src_path + ['rule', rule, 'source', 'address', network])
+                self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface_100])
+                self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
             else:
-                self.session.set(src_path + ['rule', rule, 'destination', 'address', network])
-                self.session.set(src_path + ['rule', rule, 'outbound-interface', outbound_iface_200])
-                self.session.set(src_path + ['rule', rule, 'exclude'])
+                self.cli_set(src_path + ['rule', rule, 'destination', 'address', network])
+                self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface_200])
+                self.cli_set(src_path + ['rule', rule, 'exclude'])
 
-        self.session.commit()
+        self.cli_commit()
 
         tmp = cmd('sudo nft -j list table nat')
         data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
@@ -98,17 +98,17 @@ class TestNAT(unittest.TestCase):
 
         for rule in rules:
             port = f'10{rule}'
-            self.session.set(dst_path + ['rule', rule, 'source', 'port', port])
-            self.session.set(dst_path + ['rule', rule, 'translation', 'address', '192.0.2.1'])
-            self.session.set(dst_path + ['rule', rule, 'translation', 'port', port])
+            self.cli_set(dst_path + ['rule', rule, 'source', 'port', port])
+            self.cli_set(dst_path + ['rule', rule, 'translation', 'address', '192.0.2.1'])
+            self.cli_set(dst_path + ['rule', rule, 'translation', 'port', port])
             if int(rule) < 200:
-                self.session.set(dst_path + ['rule', rule, 'protocol', inbound_proto_100])
-                self.session.set(dst_path + ['rule', rule, 'inbound-interface', inbound_iface_100])
+                self.cli_set(dst_path + ['rule', rule, 'protocol', inbound_proto_100])
+                self.cli_set(dst_path + ['rule', rule, 'inbound-interface', inbound_iface_100])
             else:
-                self.session.set(dst_path + ['rule', rule, 'protocol', inbound_proto_200])
-                self.session.set(dst_path + ['rule', rule, 'inbound-interface', inbound_iface_200])
+                self.cli_set(dst_path + ['rule', rule, 'protocol', inbound_proto_200])
+                self.cli_set(dst_path + ['rule', rule, 'inbound-interface', inbound_iface_200])
 
-        self.session.commit()
+        self.cli_commit()
 
         tmp = cmd('sudo nft -j list table nat')
         data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
@@ -141,31 +141,31 @@ class TestNAT(unittest.TestCase):
     def test_snat_required_translation_address(self):
         # T2813: Ensure translation address is specified
         rule = '5'
-        self.session.set(src_path + ['rule', rule, 'source', 'address', '192.0.2.0/24'])
+        self.cli_set(src_path + ['rule', rule, 'source', 'address', '192.0.2.0/24'])
 
         # check validate() - outbound-interface must be defined
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(src_path + ['rule', rule, 'outbound-interface', 'eth0'])
+            self.cli_commit()
+        self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'eth0'])
 
         # check validate() - translation address not specified
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
-        self.session.set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
-        self.session.commit()
+        self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
+        self.cli_commit()
 
     def test_dnat_negated_addresses(self):
         # T3186: negated addresses are not accepted by nftables
         rule = '1000'
-        self.session.set(dst_path + ['rule', rule, 'destination', 'address', '!192.0.2.1'])
-        self.session.set(dst_path + ['rule', rule, 'destination', 'port', '53'])
-        self.session.set(dst_path + ['rule', rule, 'inbound-interface', 'eth0'])
-        self.session.set(dst_path + ['rule', rule, 'protocol', 'tcp_udp'])
-        self.session.set(dst_path + ['rule', rule, 'source', 'address', '!192.0.2.1'])
-        self.session.set(dst_path + ['rule', rule, 'translation', 'address', '192.0.2.1'])
-        self.session.set(dst_path + ['rule', rule, 'translation', 'port', '53'])
-        self.session.commit()
+        self.cli_set(dst_path + ['rule', rule, 'destination', 'address', '!192.0.2.1'])
+        self.cli_set(dst_path + ['rule', rule, 'destination', 'port', '53'])
+        self.cli_set(dst_path + ['rule', rule, 'inbound-interface', 'eth0'])
+        self.cli_set(dst_path + ['rule', rule, 'protocol', 'tcp_udp'])
+        self.cli_set(dst_path + ['rule', rule, 'source', 'address', '!192.0.2.1'])
+        self.cli_set(dst_path + ['rule', rule, 'translation', 'address', '192.0.2.1'])
+        self.cli_set(dst_path + ['rule', rule, 'translation', 'port', '53'])
+        self.cli_commit()
 
     def test_nat_no_rules(self):
         # T3206: deleting all rules but keep the direction 'destination' or
@@ -173,9 +173,9 @@ class TestNAT(unittest.TestCase):
         #
         # Test that both 'nat destination' and 'nat source' nodes can exist
         # without any rule
-        self.session.set(src_path)
-        self.session.set(dst_path)
-        self.session.commit()
+        self.cli_set(src_path)
+        self.cli_set(dst_path)
+        self.cli_commit()
 
 
 if __name__ == '__main__':

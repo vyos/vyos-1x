@@ -14,13 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 from vyos.template import address_from_cidr
@@ -37,17 +36,15 @@ dns_1 = inc_ip(subnet, 2)
 dns_2 = inc_ip(subnet, 3)
 domain_name = 'vyos.net'
 
-class TestServiceDHCPServer(unittest.TestCase):
+class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         cidr_mask = subnet.split('/')[-1]
-        self.session.set(['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
+        self.cli_set(['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
 
     def tearDown(self):
-        self.session.delete(['interfaces', 'dummy', 'dum8765'])
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(['interfaces', 'dummy', 'dum8765'])
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_dhcp_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
@@ -57,25 +54,25 @@ class TestServiceDHCPServer(unittest.TestCase):
         range_1_start = inc_ip(subnet, 40)
         range_1_stop  = inc_ip(subnet, 50)
 
-        self.session.set(base_path + ['dynamic-dns-update'])
+        self.cli_set(base_path + ['dynamic-dns-update'])
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.session.set(pool + ['default-router', router])
-        self.session.set(pool + ['dns-server', dns_1])
-        self.session.set(pool + ['dns-server', dns_2])
-        self.session.set(pool + ['domain-name', domain_name])
+        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['dns-server', dns_1])
+        self.cli_set(pool + ['dns-server', dns_2])
+        self.cli_set(pool + ['domain-name', domain_name])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(pool + ['range', '0', 'start', range_0_start])
-        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
-        self.session.set(pool + ['range', '1', 'start', range_1_start])
-        self.session.set(pool + ['range', '1', 'stop', range_1_stop])
+            self.cli_commit()
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['range', '1', 'start', range_1_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_1_stop])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         network = address_from_cidr(subnet)
@@ -110,42 +107,42 @@ class TestServiceDHCPServer(unittest.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.session.set(pool + ['default-router', router])
-        self.session.set(pool + ['dns-server', dns_1])
-        self.session.set(pool + ['dns-server', dns_2])
-        self.session.set(pool + ['domain-name', domain_name])
-        self.session.set(pool + ['ip-forwarding'])
-        self.session.set(pool + ['smtp-server', smtp_server])
-        self.session.set(pool + ['pop-server', smtp_server])
-        self.session.set(pool + ['time-server', time_server])
-        self.session.set(pool + ['tftp-server-name', tftp_server])
+        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['dns-server', dns_1])
+        self.cli_set(pool + ['dns-server', dns_2])
+        self.cli_set(pool + ['domain-name', domain_name])
+        self.cli_set(pool + ['ip-forwarding'])
+        self.cli_set(pool + ['smtp-server', smtp_server])
+        self.cli_set(pool + ['pop-server', smtp_server])
+        self.cli_set(pool + ['time-server', time_server])
+        self.cli_set(pool + ['tftp-server-name', tftp_server])
         for search in search_domains:
-            self.session.set(pool + ['domain-search', search])
-        self.session.set(pool + ['bootfile-name', bootfile_name])
-        self.session.set(pool + ['bootfile-server', bootfile_server])
-        self.session.set(pool + ['wpad-url', wpad])
-        self.session.set(pool + ['server-identifier', server_identifier])
+            self.cli_set(pool + ['domain-search', search])
+        self.cli_set(pool + ['bootfile-name', bootfile_name])
+        self.cli_set(pool + ['bootfile-server', bootfile_server])
+        self.cli_set(pool + ['wpad-url', wpad])
+        self.cli_set(pool + ['server-identifier', server_identifier])
 
-        self.session.set(pool + ['static-route', 'destination-subnet', '10.0.0.0/24'])
-        self.session.set(pool + ['static-route', 'router', '192.0.2.1'])
+        self.cli_set(pool + ['static-route', 'destination-subnet', '10.0.0.0/24'])
+        self.cli_set(pool + ['static-route', 'router', '192.0.2.1'])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.set(pool + ['range', '0', 'start', range_0_start])
-        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+            self.cli_commit()
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
         # failover
         failover_local = router
         failover_remote = inc_ip(router, 1)
 
-        self.session.set(pool + ['failover', 'local-address', failover_local])
-        self.session.set(pool + ['failover', 'name', shared_net_name])
-        self.session.set(pool + ['failover', 'peer-address', failover_remote])
-        self.session.set(pool + ['failover', 'status', 'primary'])
+        self.cli_set(pool + ['failover', 'local-address', failover_local])
+        self.cli_set(pool + ['failover', 'name', shared_net_name])
+        self.cli_set(pool + ['failover', 'peer-address', failover_remote])
+        self.cli_set(pool + ['failover', 'status', 'primary'])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
 
@@ -204,24 +201,24 @@ class TestServiceDHCPServer(unittest.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.session.set(pool + ['default-router', router])
-        self.session.set(pool + ['dns-server', dns_1])
-        self.session.set(pool + ['dns-server', dns_2])
-        self.session.set(pool + ['domain-name', domain_name])
+        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['dns-server', dns_1])
+        self.cli_set(pool + ['dns-server', dns_2])
+        self.cli_set(pool + ['domain-name', domain_name])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         client_base = 10
         for client in ['client1', 'client2', 'client3']:
             mac = '00:50:00:00:00:{}'.format(client_base)
-            self.session.set(pool + ['static-mapping', client, 'mac-address', mac])
-            self.session.set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
+            self.cli_set(pool + ['static-mapping', client, 'mac-address', mac])
+            self.cli_set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
             client_base += 1
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         network = address_from_cidr(subnet)
@@ -264,25 +261,25 @@ class TestServiceDHCPServer(unittest.TestCase):
 
             pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
             # we use the first subnet IP address as default gateway
-            self.session.set(pool + ['default-router', router])
-            self.session.set(pool + ['dns-server', dns_1])
-            self.session.set(pool + ['domain-name', domain_name])
-            self.session.set(pool + ['lease', lease_time])
+            self.cli_set(pool + ['default-router', router])
+            self.cli_set(pool + ['dns-server', dns_1])
+            self.cli_set(pool + ['domain-name', domain_name])
+            self.cli_set(pool + ['lease', lease_time])
 
-            self.session.set(pool + ['range', '0', 'start', range_0_start])
-            self.session.set(pool + ['range', '0', 'stop', range_0_stop])
-            self.session.set(pool + ['range', '1', 'start', range_1_start])
-            self.session.set(pool + ['range', '1', 'stop', range_1_stop])
+            self.cli_set(pool + ['range', '0', 'start', range_0_start])
+            self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+            self.cli_set(pool + ['range', '1', 'start', range_1_start])
+            self.cli_set(pool + ['range', '1', 'stop', range_1_stop])
 
             client_base = 60
             for client in ['client1', 'client2', 'client3', 'client4']:
                 mac = '02:50:00:00:00:{}'.format(client_base)
-                self.session.set(pool + ['static-mapping', client, 'mac-address', mac])
-                self.session.set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
+                self.cli_set(pool + ['static-mapping', client, 'mac-address', mac])
+                self.cli_set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
                 client_base += 1
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         for network in ['0', '1', '2', '3']:
@@ -329,13 +326,13 @@ class TestServiceDHCPServer(unittest.TestCase):
         range_0_stop  = inc_ip(subnet, 20)
 
         pool = base_path + ['shared-network-name', 'EXCLUDE-TEST', 'subnet', subnet]
-        self.session.set(pool + ['default-router', router])
-        self.session.set(pool + ['exclude', router])
-        self.session.set(pool + ['range', '0', 'start', range_0_start])
-        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['exclude', router])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # VErify
         config = read_file(DHCPD_CONF)
@@ -362,13 +359,13 @@ class TestServiceDHCPServer(unittest.TestCase):
         range_0_start_excl = inc_ip(exclude_addr, 1)
 
         pool = base_path + ['shared-network-name', 'EXCLUDE-TEST-2', 'subnet', subnet]
-        self.session.set(pool + ['default-router', router])
-        self.session.set(pool + ['exclude', exclude_addr])
-        self.session.set(pool + ['range', '0', 'start', range_0_start])
-        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['exclude', exclude_addr])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify
         config = read_file(DHCPD_CONF)
@@ -386,7 +383,7 @@ class TestServiceDHCPServer(unittest.TestCase):
     def test_dhcp_relay_server(self):
         # Listen on specific address and return DHCP leases from a non
         # directly connected pool
-        self.session.set(base_path + ['listen-address', router])
+        self.cli_set(base_path + ['listen-address', router])
 
         relay_subnet = '10.0.0.0/16'
         relay_router = inc_ip(relay_subnet, 1)
@@ -395,12 +392,12 @@ class TestServiceDHCPServer(unittest.TestCase):
         range_0_stop  = '10.0.250.255'
 
         pool = base_path + ['shared-network-name', 'RELAY', 'subnet', relay_subnet]
-        self.session.set(pool + ['default-router', relay_router])
-        self.session.set(pool + ['range', '0', 'start', range_0_start])
-        self.session.set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['default-router', relay_router])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         config = read_file(DHCPD_CONF)
         network = address_from_cidr(subnet)

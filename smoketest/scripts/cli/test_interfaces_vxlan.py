@@ -22,7 +22,7 @@ from vyos.util import get_interface_config
 
 from base_interfaces_test import BasicInterfaceTest
 
-class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
+class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -35,20 +35,22 @@ class VXLANInterfaceTest(BasicInterfaceTest.BaseTest):
             'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1', 'parameters ipv6 flowlabel 0x1000'],
         }
         cls._interfaces = list(cls._options)
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
 
     def test_vxlan_parameters(self):
         tos = '40'
         ttl = 20
         for intf in self._interfaces:
             for option in self._options.get(intf, []):
-                self.session.set(self._base_path + [intf] + option.split())
+                self.cli_set(self._base_path + [intf] + option.split())
 
-            self.session.set(self._base_path + [intf, 'parameters', 'ip', 'dont-fragment'])
-            self.session.set(self._base_path + [intf, 'parameters', 'ip', 'tos', tos])
-            self.session.set(self._base_path + [intf, 'parameters', 'ip', 'ttl', str(ttl)])
+            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'dont-fragment'])
+            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'tos', tos])
+            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'ttl', str(ttl)])
             ttl += 10
 
-        self.session.commit()
+        self.cli_commit()
 
         ttl = 20
         for interface in self._interfaces:

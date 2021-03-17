@@ -18,10 +18,11 @@ import re
 import os
 import unittest
 
-from getpass import getuser
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import read_file
+from vyos.util import cmd
 from vyos.util import process_named_running
 
 PROCESS_NAME = 'ddclient'
@@ -29,21 +30,17 @@ DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
 base_path = ['service', 'dns', 'dynamic']
 
 def get_config_value(key):
-    tmp = read_file(DDCLIENT_CONF)
+    tmp = cmd(f'sudo cat {DDCLIENT_CONF}')
     tmp = re.findall(r'\n?{}=+(.*)'.format(key), tmp)
     tmp = tmp[0].rstrip(',')
     return tmp
 
-class TestServiceDDNS(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
+class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Delete DDNS configuration
-        self.session.delete(base_path)
-        self.session.commit()
-
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_dyndns_service(self):
         ddns = ['interface', 'eth0', 'service']
@@ -53,45 +50,44 @@ class TestServiceDDNS(unittest.TestCase):
             user = 'vyos_user'
             password = 'vyos_pass'
             zone = 'vyos.io'
-            self.session.delete(base_path)
-            self.session.set(base_path + ddns + [service, 'host-name', 'test.ddns.vyos.io'])
-            self.session.set(base_path + ddns + [service, 'login', user])
-            self.session.set(base_path + ddns + [service, 'password', password])
-            self.session.set(base_path + ddns + [service, 'zone', zone])
+            self.cli_delete(base_path)
+            self.cli_set(base_path + ddns + [service, 'host-name', 'test.ddns.vyos.io'])
+            self.cli_set(base_path + ddns + [service, 'login', user])
+            self.cli_set(base_path + ddns + [service, 'password', password])
+            self.cli_set(base_path + ddns + [service, 'zone', zone])
 
             # commit changes
             if service == 'cloudflare':
-                self.session.commit()
+                self.cli_commit()
             else:
                 # zone option only works on cloudflare, an exception is raised
                 # for all others
                 with self.assertRaises(ConfigSessionError):
-                    self.session.commit()
-                self.session.delete(base_path + ddns + [service, 'zone', 'vyos.io'])
+                    self.cli_commit()
+                self.cli_delete(base_path + ddns + [service, 'zone', 'vyos.io'])
                 # commit changes again - now it should work
-                self.session.commit()
+                self.cli_commit()
 
             # we can only read the configuration file when we operate as 'root'
-            if getuser() == 'root':
-                protocol = get_config_value('protocol')
-                login = get_config_value('login')
-                pwd = get_config_value('password')
+            protocol = get_config_value('protocol')
+            login = get_config_value('login')
+            pwd = get_config_value('password')
 
-                # some services need special treatment
-                protoname = service
-                if service == 'cloudflare':
-                    tmp = get_config_value('zone')
-                    self.assertTrue(tmp == zone)
-                elif service == 'afraid':
-                    protoname = 'freedns'
-                elif service == 'dyndns':
-                    protoname = 'dyndns2'
-                elif service == 'zoneedit':
-                    protoname = 'zoneedit1'
+            # some services need special treatment
+            protoname = service
+            if service == 'cloudflare':
+                tmp = get_config_value('zone')
+                self.assertTrue(tmp == zone)
+            elif service == 'afraid':
+                protoname = 'freedns'
+            elif service == 'dyndns':
+                protoname = 'dyndns2'
+            elif service == 'zoneedit':
+                protoname = 'zoneedit1'
 
-                self.assertTrue(protocol == protoname)
-                self.assertTrue(login == user)
-                self.assertTrue(pwd == "'" + password + "'")
+            self.assertTrue(protocol == protoname)
+            self.assertTrue(login == user)
+            self.assertTrue(pwd == "'" + password + "'")
 
             # Check for running process
             self.assertTrue(process_named_running(PROCESS_NAME))
@@ -101,11 +97,11 @@ class TestServiceDDNS(unittest.TestCase):
         ddns = ['interface', 'eth0', 'rfc2136', 'vyos']
         ddns_key_file = '/config/auth/my.key'
 
-        self.session.set(base_path + ddns + ['key', ddns_key_file])
-        self.session.set(base_path + ddns + ['record', 'test.ddns.vyos.io'])
-        self.session.set(base_path + ddns + ['server', 'ns1.vyos.io'])
-        self.session.set(base_path + ddns + ['ttl', '300'])
-        self.session.set(base_path + ddns + ['zone', 'vyos.io'])
+        self.cli_set(base_path + ddns + ['key', ddns_key_file])
+        self.cli_set(base_path + ddns + ['record', 'test.ddns.vyos.io'])
+        self.cli_set(base_path + ddns + ['server', 'ns1.vyos.io'])
+        self.cli_set(base_path + ddns + ['ttl', '300'])
+        self.cli_set(base_path + ddns + ['zone', 'vyos.io'])
 
         # ensure an exception will be raised as no key is present
         if os.path.exists(ddns_key_file):
@@ -113,13 +109,13 @@ class TestServiceDDNS(unittest.TestCase):
 
         # check validate() - the key file does not exist yet
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
         with open(ddns_key_file, 'w') as f:
             f.write('S3cretKey')
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # TODO: inspect generated configuration file
 

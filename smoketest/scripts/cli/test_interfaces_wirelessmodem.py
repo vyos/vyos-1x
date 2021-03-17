@@ -18,7 +18,10 @@ import os
 import unittest
 
 from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
+from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 
 config_file = '/etc/ppp/peers/{}'
 base_path = ['interfaces', 'wirelessmodem']
@@ -30,33 +33,31 @@ def get_config_value(interface, key):
                 return list(line.split())
     return []
 
-class WWANInterfaceTest(unittest.TestCase):
+class WWANInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         self._interfaces = ['wlm0', 'wlm1']
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_wwan(self):
         for interface in self._interfaces:
-            self.session.set(base_path + [interface, 'no-peer-dns'])
-            self.session.set(base_path + [interface, 'connect-on-demand'])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'connect-on-demand'])
 
             # check validate() - APN must be configure
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.set(base_path + [interface, 'apn', 'vyos.net'])
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'apn', 'vyos.net'])
 
             # check validate() - device must be configure
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.set(base_path + [interface, 'device', 'ttyS0'])
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'device', 'ttyS0'])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
         # verify configuration file(s)
         for interface in self._interfaces:

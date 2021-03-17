@@ -14,22 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 
 base_path = ['system', 'acceleration', 'qat']
 
-class TestSystemLCD(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestIntelQAT(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_basic(self):
         """ Check if configuration script is in place and that the config
@@ -37,11 +34,11 @@ class TestSystemLCD(unittest.TestCase):
         be extended with QAT autodetection once run on a QAT enabled device """
 
         # configure some system display
-        self.session.set(base_path)
+        self.cli_set(base_path)
 
         # An error must be thrown if QAT device could not be found
         with self.assertRaises(ConfigSessionError):
-            self.session.commit()
+            self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

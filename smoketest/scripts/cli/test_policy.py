@@ -14,26 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
-from vyos.util import cmd
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.util import cmd
 
 base_path = ['policy']
 
-def getFRRconfig(section):
-    return cmd(f'vtysh -c "show run" | sed -n "/^{section}/,/^!/p"')
-
-class TestPolicy(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class TestPolicy(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_access_list(self):
         acls = {
@@ -101,25 +95,25 @@ class TestPolicy(unittest.TestCase):
 
         for acl, acl_config in acls.items():
             path = base_path + ['access-list', acl]
-            self.session.set(path + ['description', f'VyOS-ACL-{acl}'])
+            self.cli_set(path + ['description', f'VyOS-ACL-{acl}'])
             if 'rule' not in acl_config:
                 continue
 
             for rule, rule_config in acl_config['rule'].items():
-                self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 for direction in ['source', 'destination']:
                     if direction in rule_config:
                         if 'any' in rule_config[direction]:
-                            self.session.set(path + ['rule', rule, direction, 'any'])
+                            self.cli_set(path + ['rule', rule, direction, 'any'])
                         if 'host' in rule_config[direction]:
-                            self.session.set(path + ['rule', rule, direction, 'host', rule_config[direction]['host']])
+                            self.cli_set(path + ['rule', rule, direction, 'host', rule_config[direction]['host']])
                         if 'network' in rule_config[direction]:
-                            self.session.set(path + ['rule', rule, direction, 'network', rule_config[direction]['network']])
-                            self.session.set(path + ['rule', rule, direction, 'inverse-mask', rule_config[direction]['inverse-mask']])
+                            self.cli_set(path + ['rule', rule, direction, 'network', rule_config[direction]['network']])
+                            self.cli_set(path + ['rule', rule, direction, 'inverse-mask', rule_config[direction]['inverse-mask']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('access-list')
+        config = self.getFRRconfig('access-list', end='')
         for acl, acl_config in acls.items():
             seq = '5'
             for rule, rule_config in acl_config['rule'].items():
@@ -190,24 +184,24 @@ class TestPolicy(unittest.TestCase):
 
         for acl, acl_config in acls.items():
             path = base_path + ['access-list6', acl]
-            self.session.set(path + ['description', f'VyOS-ACL-{acl}'])
+            self.cli_set(path + ['description', f'VyOS-ACL-{acl}'])
             if 'rule' not in acl_config:
                 continue
 
             for rule, rule_config in acl_config['rule'].items():
-                self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 for direction in ['source', 'destination']:
                     if direction in rule_config:
                         if 'any' in rule_config[direction]:
-                            self.session.set(path + ['rule', rule, direction, 'any'])
+                            self.cli_set(path + ['rule', rule, direction, 'any'])
                         if 'network' in rule_config[direction]:
-                            self.session.set(path + ['rule', rule, direction, 'network', rule_config[direction]['network']])
+                            self.cli_set(path + ['rule', rule, direction, 'network', rule_config[direction]['network']])
                         if 'exact-match' in rule_config[direction]:
-                            self.session.set(path + ['rule', rule, direction, 'exact-match'])
+                            self.cli_set(path + ['rule', rule, direction, 'exact-match'])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('ipv6 access-list')
+        config = self.getFRRconfig('ipv6 access-list', end='')
         for acl, acl_config in acls.items():
             seq = '5'
             for rule, rule_config in acl_config['rule'].items():
@@ -295,19 +289,19 @@ class TestPolicy(unittest.TestCase):
 
         for as_path, as_path_config in test_data.items():
             path = base_path + ['as-path-list', as_path]
-            self.session.set(path + ['description', f'VyOS-ASPATH-{as_path}'])
+            self.cli_set(path + ['description', f'VyOS-ASPATH-{as_path}'])
             if 'rule' not in as_path_config:
                 continue
 
             for rule, rule_config in as_path_config['rule'].items():
                 if 'action' in rule_config:
-                    self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 if 'regex' in rule_config:
-                    self.session.set(path + ['rule', rule, 'regex', rule_config['regex']])
+                    self.cli_set(path + ['rule', rule, 'regex', rule_config['regex']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('bgp as-path access-list')
+        config = self.getFRRconfig('bgp as-path access-list', end='')
         for as_path, as_path_config in test_data.items():
             if 'rule' not in as_path_config:
                 continue
@@ -353,19 +347,19 @@ class TestPolicy(unittest.TestCase):
 
         for comm_list, comm_list_config in test_data.items():
             path = base_path + ['community-list', comm_list]
-            self.session.set(path + ['description', f'VyOS-COMM-{comm_list}'])
+            self.cli_set(path + ['description', f'VyOS-COMM-{comm_list}'])
             if 'rule' not in comm_list_config:
                 continue
 
             for rule, rule_config in comm_list_config['rule'].items():
                 if 'action' in rule_config:
-                    self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 if 'regex' in rule_config:
-                    self.session.set(path + ['rule', rule, 'regex', rule_config['regex']])
+                    self.cli_set(path + ['rule', rule, 'regex', rule_config['regex']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('bgp community-list')
+        config = self.getFRRconfig('bgp community-list', end='')
         for comm_list, comm_list_config in test_data.items():
             if 'rule' not in comm_list_config:
                 continue
@@ -413,19 +407,19 @@ class TestPolicy(unittest.TestCase):
 
         for comm_list, comm_list_config in test_data.items():
             path = base_path + ['extcommunity-list', comm_list]
-            self.session.set(path + ['description', f'VyOS-EXTCOMM-{comm_list}'])
+            self.cli_set(path + ['description', f'VyOS-EXTCOMM-{comm_list}'])
             if 'rule' not in comm_list_config:
                 continue
 
             for rule, rule_config in comm_list_config['rule'].items():
                 if 'action' in rule_config:
-                    self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 if 'regex' in rule_config:
-                    self.session.set(path + ['rule', rule, 'regex', rule_config['regex']])
+                    self.cli_set(path + ['rule', rule, 'regex', rule_config['regex']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('bgp extcommunity-list')
+        config = self.getFRRconfig('bgp extcommunity-list', end='')
         for comm_list, comm_list_config in test_data.items():
             if 'rule' not in comm_list_config:
                 continue
@@ -480,19 +474,19 @@ class TestPolicy(unittest.TestCase):
 
         for comm_list, comm_list_config in test_data.items():
             path = base_path + ['large-community-list', comm_list]
-            self.session.set(path + ['description', f'VyOS-LARGECOMM-{comm_list}'])
+            self.cli_set(path + ['description', f'VyOS-LARGECOMM-{comm_list}'])
             if 'rule' not in comm_list_config:
                 continue
 
             for rule, rule_config in comm_list_config['rule'].items():
                 if 'action' in rule_config:
-                    self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 if 'regex' in rule_config:
-                    self.session.set(path + ['rule', rule, 'regex', rule_config['regex']])
+                    self.cli_set(path + ['rule', rule, 'regex', rule_config['regex']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('bgp large-community-list')
+        config = self.getFRRconfig('bgp large-community-list', end='')
         for comm_list, comm_list_config in test_data.items():
             if 'rule' not in comm_list_config:
                 continue
@@ -556,23 +550,23 @@ class TestPolicy(unittest.TestCase):
 
         for prefix_list, prefix_list_config in test_data.items():
             path = base_path + ['prefix-list', prefix_list]
-            self.session.set(path + ['description', f'VyOS-PFX-LIST-{prefix_list}'])
+            self.cli_set(path + ['description', f'VyOS-PFX-LIST-{prefix_list}'])
             if 'rule' not in prefix_list_config:
                 continue
 
             for rule, rule_config in prefix_list_config['rule'].items():
                 if 'action' in rule_config:
-                    self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 if 'prefix' in rule_config:
-                    self.session.set(path + ['rule', rule, 'prefix', rule_config['prefix']])
+                    self.cli_set(path + ['rule', rule, 'prefix', rule_config['prefix']])
                 if 'ge' in rule_config:
-                    self.session.set(path + ['rule', rule, 'ge', rule_config['ge']])
+                    self.cli_set(path + ['rule', rule, 'ge', rule_config['ge']])
                 if 'le' in rule_config:
-                    self.session.set(path + ['rule', rule, 'le', rule_config['le']])
+                    self.cli_set(path + ['rule', rule, 'le', rule_config['le']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('ip prefix-list')
+        config = self.getFRRconfig('ip prefix-list', end='')
         for prefix_list, prefix_list_config in test_data.items():
             if 'rule' not in prefix_list_config:
                 continue
@@ -639,23 +633,23 @@ class TestPolicy(unittest.TestCase):
 
         for prefix_list, prefix_list_config in test_data.items():
             path = base_path + ['prefix-list6', prefix_list]
-            self.session.set(path + ['description', f'VyOS-PFX-LIST-{prefix_list}'])
+            self.cli_set(path + ['description', f'VyOS-PFX-LIST-{prefix_list}'])
             if 'rule' not in prefix_list_config:
                 continue
 
             for rule, rule_config in prefix_list_config['rule'].items():
                 if 'action' in rule_config:
-                    self.session.set(path + ['rule', rule, 'action', rule_config['action']])
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
                 if 'prefix' in rule_config:
-                    self.session.set(path + ['rule', rule, 'prefix', rule_config['prefix']])
+                    self.cli_set(path + ['rule', rule, 'prefix', rule_config['prefix']])
                 if 'ge' in rule_config:
-                    self.session.set(path + ['rule', rule, 'ge', rule_config['ge']])
+                    self.cli_set(path + ['rule', rule, 'ge', rule_config['ge']])
                 if 'le' in rule_config:
-                    self.session.set(path + ['rule', rule, 'le', rule_config['le']])
+                    self.cli_set(path + ['rule', rule, 'le', rule_config['le']])
 
-        self.session.commit()
+        self.cli_commit()
 
-        config = getFRRconfig('ipv6 prefix-list')
+        config = self.getFRRconfig('ipv6 prefix-list', end='')
         for prefix_list, prefix_list_config in test_data.items():
             if 'rule' not in prefix_list_config:
                 continue
@@ -676,6 +670,33 @@ class TestPolicy(unittest.TestCase):
                     tmp += ' le ' + rule_config['le']
 
                 self.assertIn(tmp, config)
+
+
+    # Test set table for some sources
+    def test_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['203.0.113.1', '203.0.113.2']
+        rule = '50'
+        table = '23'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+
+        self.cli_commit()
+
+        # Check generated configuration
+
+        # Expected values
+        original = """
+        50:	from 203.0.113.1 lookup 23
+        50:	from 203.0.113.2 lookup 23
+        """
+        tmp = cmd('ip rule show prio 50')
+        original = original.split()
+        tmp = tmp.split()
+
+        self.assertEqual(tmp, original)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

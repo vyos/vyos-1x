@@ -14,23 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
+
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
-from vyos.util import cmd
 from vyos.util import get_interface_config
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
-
-def getFRRCconfig(vrf=None):
-    if vrf:
-        return cmd(f'vtysh -c "show run" | sed -n "/^vrf {vrf}/,/^!/p"')
-    else:
-        return cmd(f'vtysh -c "show run" | sed -n "/^ip route/,/^!/p"')
 
 routes = {
     '10.0.0.0/8' : {
@@ -88,22 +82,21 @@ routes = {
 
 tables = ['80', '81', '82']
 
-class StaticRouteTest(unittest.TestCase):
-    def setUp(self):
-        self.session = ConfigSession(os.getpid())
-
+class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
                 route_type = 'route6'
-            self.session.delete(base_path + [route_type, route])
+            self.cli_delete(base_path + [route_type, route])
 
         for table in tables:
-            self.session.delete(base_path + ['table', table])
+            self.cli_delete(base_path + ['table', table])
 
-        self.session.commit()
-        del self.session
+        tmp = self.getFRRconfig('', end='')
+        import pprint
+        pprint.pprint(tmp)
+        self.cli_commit()
 
     def test_protocols_static(self):
         for route, route_config in routes.items():
@@ -113,39 +106,39 @@ class StaticRouteTest(unittest.TestCase):
             base = base_path + [route_type, route]
             if 'next_hop' in route_config:
                 for next_hop, next_hop_config in route_config['next_hop'].items():
-                    self.session.set(base + ['next-hop', next_hop])
+                    self.cli_set(base + ['next-hop', next_hop])
                     if 'disable' in next_hop_config:
-                        self.session.set(base + ['next-hop', next_hop, 'disable'])
+                        self.cli_set(base + ['next-hop', next_hop, 'disable'])
                     if 'distance' in next_hop_config:
-                        self.session.set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
+                        self.cli_set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
                     if 'interface' in next_hop_config:
-                        self.session.set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
+                        self.cli_set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
                     if 'vrf' in next_hop_config:
-                        self.session.set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
+                        self.cli_set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
 
 
             if 'interface' in route_config:
                 for interface, interface_config in route_config['interface'].items():
-                    self.session.set(base + ['interface', interface])
+                    self.cli_set(base + ['interface', interface])
                     if 'disable' in interface_config:
-                        self.session.set(base + ['interface', interface, 'disable'])
+                        self.cli_set(base + ['interface', interface, 'disable'])
                     if 'distance' in interface_config:
-                        self.session.set(base + ['interface', interface, 'distance', interface_config['distance']])
+                        self.cli_set(base + ['interface', interface, 'distance', interface_config['distance']])
                     if 'vrf' in interface_config:
-                        self.session.set(base + ['interface', interface, 'vrf', interface_config['vrf']])
+                        self.cli_set(base + ['interface', interface, 'vrf', interface_config['vrf']])
 
             if 'blackhole' in route_config:
-                self.session.set(base + ['blackhole'])
+                self.cli_set(base + ['blackhole'])
                 if 'distance' in route_config['blackhole']:
-                    self.session.set(base + ['blackhole', 'distance', route_config['blackhole']['distance']])
+                    self.cli_set(base + ['blackhole', 'distance', route_config['blackhole']['distance']])
                 if 'tag' in route_config['blackhole']:
-                    self.session.set(base + ['blackhole', 'tag', route_config['blackhole']['tag']])
+                    self.cli_set(base + ['blackhole', 'tag', route_config['blackhole']['tag']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = getFRRCconfig()
+        frrconfig = self.getFRRconfig('ip route', end='')
 
         # Verify routes
         for route, route_config in routes.items():
@@ -202,39 +195,39 @@ class StaticRouteTest(unittest.TestCase):
 
                 if 'next_hop' in route_config:
                     for next_hop, next_hop_config in route_config['next_hop'].items():
-                        self.session.set(base + ['next-hop', next_hop])
+                        self.cli_set(base + ['next-hop', next_hop])
                         if 'disable' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'disable'])
+                            self.cli_set(base + ['next-hop', next_hop, 'disable'])
                         if 'distance' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
+                            self.cli_set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
                         if 'interface' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
+                            self.cli_set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
                         if 'vrf' in next_hop_config:
-                            self.session.set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
+                            self.cli_set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
 
 
                 if 'interface' in route_config:
                     for interface, interface_config in route_config['interface'].items():
-                        self.session.set(base + ['interface', interface])
+                        self.cli_set(base + ['interface', interface])
                         if 'disable' in interface_config:
-                            self.session.set(base + ['interface', interface, 'disable'])
+                            self.cli_set(base + ['interface', interface, 'disable'])
                         if 'distance' in interface_config:
-                            self.session.set(base + ['interface', interface, 'distance', interface_config['distance']])
+                            self.cli_set(base + ['interface', interface, 'distance', interface_config['distance']])
                         if 'vrf' in interface_config:
-                            self.session.set(base + ['interface', interface, 'vrf', interface_config['vrf']])
+                            self.cli_set(base + ['interface', interface, 'vrf', interface_config['vrf']])
 
                 if 'blackhole' in route_config:
-                    self.session.set(base + ['blackhole'])
+                    self.cli_set(base + ['blackhole'])
                     if 'distance' in route_config['blackhole']:
-                        self.session.set(base + ['blackhole', 'distance', route_config['blackhole']['distance']])
+                        self.cli_set(base + ['blackhole', 'distance', route_config['blackhole']['distance']])
                     if 'tag' in route_config['blackhole']:
-                        self.session.set(base + ['blackhole', 'tag', route_config['blackhole']['tag']])
+                        self.cli_set(base + ['blackhole', 'tag', route_config['blackhole']['tag']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = getFRRCconfig()
+        frrconfig = self.getFRRconfig('ip route', end='')
 
         for table in tables:
             # Verify routes
@@ -295,10 +288,11 @@ class StaticRouteTest(unittest.TestCase):
             'green' : { 'table' : '2000' },
             'blue'  : { 'table' : '3000' },
         }
+        self.debug = True
 
         for vrf, vrf_config in vrfs.items():
             vrf_base_path = ['vrf', 'name', vrf]
-            self.session.set(vrf_base_path + ['table', vrf_config['table']])
+            self.cli_set(vrf_base_path + ['table', vrf_config['table']])
 
             for route, route_config in routes.items():
                 route_type = 'route'
@@ -308,36 +302,36 @@ class StaticRouteTest(unittest.TestCase):
 
                 if 'next_hop' in route_config:
                     for next_hop, next_hop_config in route_config['next_hop'].items():
-                        self.session.set(route_base_path + ['next-hop', next_hop])
+                        self.cli_set(route_base_path + ['next-hop', next_hop])
                         if 'disable' in next_hop_config:
-                            self.session.set(route_base_path + ['next-hop', next_hop, 'disable'])
+                            self.cli_set(route_base_path + ['next-hop', next_hop, 'disable'])
                         if 'distance' in next_hop_config:
-                            self.session.set(route_base_path + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
+                            self.cli_set(route_base_path + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
                         if 'interface' in next_hop_config:
-                            self.session.set(route_base_path + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
+                            self.cli_set(route_base_path + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
                         if 'vrf' in next_hop_config:
-                            self.session.set(route_base_path + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
+                            self.cli_set(route_base_path + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
 
 
                 if 'interface' in route_config:
                     for interface, interface_config in route_config['interface'].items():
-                        self.session.set(route_base_path + ['interface', interface])
+                        self.cli_set(route_base_path + ['interface', interface])
                         if 'disable' in interface_config:
-                            self.session.set(route_base_path + ['interface', interface, 'disable'])
+                            self.cli_set(route_base_path + ['interface', interface, 'disable'])
                         if 'distance' in interface_config:
-                            self.session.set(route_base_path + ['interface', interface, 'distance', interface_config['distance']])
+                            self.cli_set(route_base_path + ['interface', interface, 'distance', interface_config['distance']])
                         if 'vrf' in interface_config:
-                            self.session.set(route_base_path + ['interface', interface, 'vrf', interface_config['vrf']])
+                            self.cli_set(route_base_path + ['interface', interface, 'vrf', interface_config['vrf']])
 
                 if 'blackhole' in route_config:
-                    self.session.set(route_base_path + ['blackhole'])
+                    self.cli_set(route_base_path + ['blackhole'])
                     if 'distance' in route_config['blackhole']:
-                        self.session.set(route_base_path + ['blackhole', 'distance', route_config['blackhole']['distance']])
+                        self.cli_set(route_base_path + ['blackhole', 'distance', route_config['blackhole']['distance']])
                     if 'tag' in route_config['blackhole']:
-                        self.session.set(route_base_path + ['blackhole', 'tag', route_config['blackhole']['tag']])
+                        self.cli_set(route_base_path + ['blackhole', 'tag', route_config['blackhole']['tag']])
 
         # commit changes
-        self.session.commit()
+        self.cli_commit()
 
         for vrf, vrf_config in vrfs.items():
             tmp = get_interface_config(vrf)
@@ -347,7 +341,7 @@ class StaticRouteTest(unittest.TestCase):
             self.assertEqual(tmp['linkinfo']['info_kind'],          'vrf')
 
             # Verify FRR bgpd configuration
-            frrconfig = getFRRCconfig(vrf)
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f'vrf {vrf}', frrconfig)
 
             # Verify routes
@@ -395,7 +389,7 @@ class StaticRouteTest(unittest.TestCase):
 
                     self.assertIn(tmp, frrconfig)
 
-        self.session.delete(['vrf'])
+        self.cli_delete(['vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

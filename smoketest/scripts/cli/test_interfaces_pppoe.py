@@ -15,11 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import os
 import unittest
 
 from psutil import process_iter
-from vyos.configsession import ConfigSession, ConfigSessionError
+from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 
 config_file = '/etc/ppp/peers/{}'
@@ -42,16 +44,14 @@ def get_dhcp6c_config_value(interface, key):
         out.append(item.replace(';',''))
     return out
 
-class PPPoEInterfaceTest(unittest.TestCase):
+class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.session = ConfigSession(os.getpid())
         self._interfaces = ['pppoe10', 'pppoe20', 'pppoe30']
         self._source_interface = 'eth0'
 
     def tearDown(self):
-        self.session.delete(base_path)
-        self.session.commit()
-        del self.session
+        self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_pppoe_client(self):
         # Check if PPPoE dialer can be configured and runs
@@ -60,19 +60,19 @@ class PPPoEInterfaceTest(unittest.TestCase):
             passwd = 'VyOS-passwd-' + interface
             mtu = '1400'
 
-            self.session.set(base_path + [interface, 'authentication', 'user', user])
-            self.session.set(base_path + [interface, 'authentication', 'password', passwd])
-            self.session.set(base_path + [interface, 'default-route', 'auto'])
-            self.session.set(base_path + [interface, 'mtu', mtu])
-            self.session.set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'default-route', 'auto'])
+            self.cli_set(base_path + [interface, 'mtu', mtu])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
 
             # check validate() - a source-interface is required
             with self.assertRaises(ConfigSessionError):
-                self.session.commit()
-            self.session.set(base_path + [interface, 'source-interface', self._source_interface])
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
         # verify configuration file(s)
         for interface in self._interfaces:
@@ -101,12 +101,12 @@ class PPPoEInterfaceTest(unittest.TestCase):
     def test_pppoe_clent_disabled_interface(self):
         # Check if PPPoE Client can be disabled
         for interface in self._interfaces:
-            self.session.set(base_path + [interface, 'authentication', 'user', 'vyos'])
-            self.session.set(base_path + [interface, 'authentication', 'password', 'vyos'])
-            self.session.set(base_path + [interface, 'source-interface', self._source_interface])
-            self.session.set(base_path + [interface, 'disable'])
+            self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
+            self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'disable'])
 
-            self.session.commit()
+            self.cli_commit()
 
         # Validate PPPoE client process
         running = False
@@ -124,21 +124,21 @@ class PPPoEInterfaceTest(unittest.TestCase):
         sla_id = '0'
         sla_len = '8'
         for interface in self._interfaces:
-            self.session.set(base_path + [interface, 'authentication', 'user', 'vyos'])
-            self.session.set(base_path + [interface, 'authentication', 'password', 'vyos'])
-            self.session.set(base_path + [interface, 'default-route', 'none'])
-            self.session.set(base_path + [interface, 'no-peer-dns'])
-            self.session.set(base_path + [interface, 'source-interface', self._source_interface])
-            self.session.set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+            self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
+            self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
+            self.cli_set(base_path + [interface, 'default-route', 'none'])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
 
             # prefix delegation stuff
             dhcpv6_pd_base = base_path + [interface, 'dhcpv6-options', 'pd', '0']
-            self.session.set(dhcpv6_pd_base + ['length', '56'])
-            self.session.set(dhcpv6_pd_base + ['interface', self._source_interface, 'address', address])
-            self.session.set(dhcpv6_pd_base + ['interface', self._source_interface, 'sla-id',  sla_id])
+            self.cli_set(dhcpv6_pd_base + ['length', '56'])
+            self.cli_set(dhcpv6_pd_base + ['interface', self._source_interface, 'address', address])
+            self.cli_set(dhcpv6_pd_base + ['interface', self._source_interface, 'sla-id',  sla_id])
 
             # commit changes
-            self.session.commit()
+            self.cli_commit()
 
             # verify "normal" PPPoE value - 1492 is default MTU
             tmp = get_config_value(interface, 'mtu')[1]

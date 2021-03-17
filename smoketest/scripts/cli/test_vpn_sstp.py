@@ -23,17 +23,13 @@ ca_cert = '/tmp/ca.crt'
 ssl_cert = '/tmp/server.crt'
 ssl_key = '/tmp/server.key'
 
-class TestVPNSSTPServer(BasicAccelPPPTest.BaseTest):
+class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
     def setUp(self):
         self._base_path = ['vpn', 'sstp']
         self._process_name = 'accel-pppd'
         self._config_file = '/run/accel-pppd/sstp.conf'
         self._chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
-
         super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
 
     def basic_config(self):
         # SSL is mandatory
