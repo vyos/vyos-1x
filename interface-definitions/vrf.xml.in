@@ -36,7 +36,7 @@
               <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">
                 <properties>
                   <help>Static route parameters</help>
-                  <priority>600</priority>
+                  <priority>481</priority>
                 </properties>
                 <children>
                   #include <include/static/static-route.xml.i>
@@ -46,7 +46,7 @@
               <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py $VAR(../../@)">
                 <properties>
                   <help>Border Gateway Protocol (BGP)</help>
-                  <priority>820</priority>
+                  <priority>821</priority>
                   <valueHelp>
                     <format>u32:1-4294967294</format>
                     <description>Autonomous System Number</description>
@@ -62,7 +62,7 @@
               <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py $VAR(../../@)">
                 <properties>
                   <help>Open Shortest Path First (OSPF)</help>
-                  <priority>620</priority>
+                  <priority>621</priority>
                 </properties>
                 <children>
                   #include <include/ospf/ospf-common-config.xml.i>
