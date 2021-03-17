@@ -20,9 +20,10 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
+from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
 from vyos.util import call
-from vyos.configverify import verify_route_maps
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -52,6 +53,23 @@ def get_config(config=None):
 
 def verify(static):
     verify_route_maps(static)
+
+    for route in ['route', 'route6']:
+        # if there is no route(6) key in the dictionary we can immediately
+        # bail out early
+        if route not in static:
+            continue
+
+        # When leaking routes to other VRFs we must ensure that the destination
+        # VRF exists
+        for prefix, prefix_options in static[route].items():
+            # both the interface and next-hop CLI node can have a VRF subnode,
+            # thus we check this using a for loop
+            for type in ['interface', 'next_hop']:
+                if type in prefix_options:
+                    for interface, interface_config in prefix_options[type].items():
+                        verify_vrf(interface_config)
+
     return None
 
 def generate(static):
