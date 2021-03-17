@@ -7,8 +7,9 @@
       <description>IPv6 /64 network</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv6-prefix"/>
+      <validator name="ipv6-eui64-prefix"/>
     </constraint>
+    <constraintErrorMessage>EUI64 prefix length must be 64</constraintErrorMessage>
     <multi/>
   </properties>
 </leafNode>
