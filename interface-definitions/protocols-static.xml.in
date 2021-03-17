@@ -5,6 +5,7 @@
        <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py">
         <properties>
           <help>Static route parameters</help>
+          <priority>480</priority>
         </properties>
         <children>
           #include <include/static/static-route-map.xml.i>
