@@ -57,6 +57,14 @@ def get_config(config=None):
     # instead of the VRF instance.
     if vrf: ospf['vrf'] = vrf
 
+    # As we no re-use this Python handler for both VRF and non VRF instances for
+    # OSPF we need to find out if any interfaces changed so properly adjust
+    # the FRR configuration and not by acctident change interfaces from a
+    # different VRF.
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        ospf['interface_removed'] = list(interfaces_removed)
+
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         ospf.update({'deleted' : ''})
@@ -118,14 +126,6 @@ def get_config(config=None):
 
             ospf['interface'][interface] = dict_merge(default_values,
                 ospf['interface'][interface])
-
-    # As we no re-use this Python handler for both VRF and non VRF instances for
-    # OSPF we need to find out if any interfaces changed so properly adjust
-    # the FRR configuration and not by acctident change interfaces from a
-    # different VRF.
-    interfaces_removed = node_changed(conf, base + ['interface'])
-    if interfaces_removed:
-        ospf['interface_removed'] = list(interfaces_removed)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify()
