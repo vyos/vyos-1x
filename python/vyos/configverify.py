@@ -80,7 +80,7 @@ def verify_vrf(config):
     recurring validation of VRF configuration.
     """
     from netifaces import interfaces
-    if 'vrf' in config:
+    if 'vrf' in config and config['vrf'] != 'default':
         if config['vrf'] not in interfaces():
             raise ConfigError('VRF "{vrf}" does not exist'.format(**config))
 
