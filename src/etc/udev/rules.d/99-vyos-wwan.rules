@@ -1,0 +1,11 @@
+ACTION!="add|change", GOTO="mbim_to_qmi_rules_end"
+
+SUBSYSTEM!="usb", GOTO="mbim_to_qmi_rules_end"
+
+# ignore any device with only one configuration
+ATTR{bNumConfigurations}=="1", GOTO="mbim_to_qmi_rules_end"
+
+# force Sierra Wireless MC7710 to configuration #1
+ATTR{idVendor}=="1199",ATTR{idProduct}=="68a2",ATTR{bConfigurationValue}="1"
+
+LABEL="mbim_to_qmi_rules_end"
