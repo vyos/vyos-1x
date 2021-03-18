@@ -25,6 +25,7 @@ import logging
 import signal
 import importlib.util
 import zmq
+from contextlib import contextmanager
 
 from vyos.defaults import directories
 from vyos.configsource import ConfigSourceString, ConfigSourceError
@@ -32,6 +33,8 @@ from vyos.config import Config
 from vyos import ConfigError
 
 CFG_GROUP = 'vyattacfg'
+
+script_stdout_log = '/tmp/vyos-configd-script-stdout'
 
 debug = True
 
@@ -59,7 +62,8 @@ configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-uns
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
 
-session_tty = None
+session_out = None
+session_mode = None
 
 def key_name_from_file_name(f):
     return os.path.splitext(f)[0]
@@ -104,14 +108,29 @@ conf_mode_scripts = dict(zip(imports, modules))
 exclude_set = {key_name_from_file_name(f) for f in filenames if f not in include}
 include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 
-def explicit_print(t, m):
+@contextmanager
+def stdout_redirected(filename, mode):
+    saved_stdout_fd = None
+    destination_file = None
     try:
-        with open(t, 'w') as f:
-            f.write(m)
-            f.write("\n")
-            f.flush()
-    except Exception:
-        pass
+        sys.stdout.flush()
+        saved_stdout_fd = os.dup(sys.stdout.fileno())
+        destination_file = open(filename, mode)
+        os.dup2(destination_file.fileno(), sys.stdout.fileno())
+        yield
+    finally:
+        if saved_stdout_fd is not None:
+            os.dup2(saved_stdout_fd, sys.stdout.fileno())
+            os.close(saved_stdout_fd)
+        if destination_file is not None:
+            destination_file.close()
+
+def explicit_print(path, mode, msg):
+    try:
+        with open(path, mode) as f:
+            f.write(f"\n{msg}\n\n")
+    except OSError:
+        logger.critical("error explicit_print")
 
 def run_script(script, config) -> int:
     config.set_level([])
@@ -122,15 +141,17 @@ def run_script(script, config) -> int:
         script.apply(c)
     except ConfigError as e:
         logger.critical(e)
-        explicit_print(session_tty, str(e))
+        explicit_print(session_out, session_mode, str(e))
         return R_ERROR_COMMIT
-    except Exception:
+    except Exception as e:
+        logger.critical(e)
         return R_ERROR_DAEMON
 
     return R_SUCCESS
 
 def initialization(socket):
-    global session_tty
+    global session_out
+    global session_mode
     # Reset config strings:
     active_string = ''
     session_string = ''
@@ -158,9 +179,15 @@ def initialization(socket):
 
     logger.debug(f"config session pid is {pid_string}")
     try:
-        session_tty = os.readlink(f"/proc/{pid_string}/fd/1")
+        session_out = os.readlink(f"/proc/{pid_string}/fd/1")
+        session_mode = 'w'
     except FileNotFoundError:
-        session_tty = None
+        session_out = None
+
+    # if not a 'live' session, for example on boot, write to file
+    if not session_out or '/dev/pts' not in session_out:
+        session_out = script_stdout_log
+        session_mode = 'a'
 
     try:
         configsource = ConfigSourceString(running_config_text=active_string,
@@ -194,7 +221,8 @@ def process_node_data(config, data) -> int:
     if script_name in exclude_set:
         return R_PASS
 
-    result = run_script(conf_mode_scripts[script_name], config)
+    with stdout_redirected(session_out, session_mode):
+        result = run_script(conf_mode_scripts[script_name], config)
 
     return result
 
