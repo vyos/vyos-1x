@@ -5,6 +5,7 @@
       <node name="ripng" owner="${vyos_conf_scripts_dir}/protocols_ripng.py">
         <properties>
           <help>Routing Information Protocol (RIPng) parameters</help>
+          <priority>660</priority>
         </properties>
         <children>
           <leafNode name="aggregate-address">
