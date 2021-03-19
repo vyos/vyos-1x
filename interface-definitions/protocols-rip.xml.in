@@ -5,6 +5,7 @@
       <node name="rip" owner="${vyos_conf_scripts_dir}/protocols_rip.py">
         <properties>
           <help>Routing Information Protocol (RIP) parameters</help>
+          <priority>650</priority>
         </properties>
         <children>
           <leafNode name="default-distance">
