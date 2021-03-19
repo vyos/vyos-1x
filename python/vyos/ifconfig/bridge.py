@@ -312,8 +312,14 @@ class BridgeIf(Interface):
                 # not have any addresses configured by CLI so just flush any
                 # remaining ones
                 lower.flush_addrs()
+
                 # enslave interface port to bridge
                 self.add_port(interface)
+
+                # always set private-vlan/port isolation
+                tmp = dict_search('isolated', interface_config)
+                value = 'on' if (tmp != None) else 'off'
+                lower.set_port_isolation(value)
 
                 # set bridge port path cost
                 if 'cost' in interface_config:

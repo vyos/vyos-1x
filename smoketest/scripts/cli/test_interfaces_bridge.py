@@ -25,6 +25,7 @@ from netifaces import interfaces
 from vyos.ifconfig import Section
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
@@ -62,6 +63,32 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
 
         super().tearDown()
 
+    def test_isolated_interfaces(self):
+        # Add member interfaces to bridge and set STP cost/priority
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['stp'])
+
+            # assign members to bridge interface
+            for member in self._members:
+                base_member = base + ['member', 'interface', member]
+                self.cli_set(base_member + ['isolated'])
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            tmp = get_interface_config(interface)
+            # STP must be enabled as configured above
+            self.assertEqual(1, tmp['linkinfo']['info_data']['stp_state'])
+
+            # validate member interface configuration
+            for member in self._members:
+                tmp = get_interface_config(member)
+                # Isolated must be enabled as configured above
+                self.assertTrue(tmp['linkinfo']['info_slave_data']['isolated'])
+
+
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority
         for interface in self._interfaces:
@@ -82,19 +109,20 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         # commit config
         self.cli_commit()
 
-        # check member interfaces are added on the bridge
-        bridge_members = []
-        for tmp in glob(f'/sys/class/net/{interface}/lower_*'):
-            bridge_members.append(os.path.basename(tmp).replace('lower_', ''))
-
-        for member in self._members:
-            self.assertIn(member, bridge_members)
-
-        # delete all members
+        # Add member interfaces to bridge and set STP cost/priority
         for interface in self._interfaces:
-            self.cli_delete(self._base_path + [interface, 'member'])
+            cost = 1000
+            priority = 10
+            for member in self._members:
+                tmp = get_interface_config(member)
+                self.assertEqual(interface, tmp['master'])
+                self.assertFalse(           tmp['linkinfo']['info_slave_data']['isolated'])
+                self.assertEqual(cost,      tmp['linkinfo']['info_slave_data']['cost'])
+                self.assertEqual(priority,  tmp['linkinfo']['info_slave_data']['priority'])
 
-        self.cli_commit()
+                cost += 1
+                priority += 1
+
 
     def test_vif_8021q_interfaces(self):
         for interface in self._interfaces:
@@ -109,7 +137,6 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         super().test_vif_8021q_interfaces()
 
     def test_bridge_vlan_filter(self):
-
         vif_vlan = 2
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
@@ -217,4 +244,3 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

@@ -113,6 +113,10 @@ class Interface(Control):
             'convert': lambda name: name if name else '',
             'shellcmd': 'ip link set dev {ifname} alias "{value}"',
         },
+        'bridge_port_isolation': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'shellcmd': 'bridge link set dev {ifname} isolated {value}',
+        },
         'mac': {
             'validate': assert_mac,
             'shellcmd': 'ip link set dev {ifname} address {value}',
@@ -688,6 +692,20 @@ class Interface(Control):
         >>> Interface('eth0').set_path_priority(4)
         """
         self.set_interface('path_priority', priority)
+
+    def set_port_isolation(self, on_or_off):
+        """
+        Controls whether a given port will be isolated, which means it will be
+        able to communicate with non-isolated ports only. By default this flag
+        is off.
+
+        Use enable=1 to enable or enable=0 to disable
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').set_port_isolation('on')
+        """
+        self.set_interface('bridge_port_isolation', on_or_off)
 
     def set_proxy_arp(self, enable):
         """

@@ -178,6 +178,12 @@
                     </properties>
                     <defaultValue>32</defaultValue>
                   </leafNode>
+                  <leafNode name="isolated">
+                    <properties>
+                      <help>Port is isolated (also known as Private-VLAN)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>
