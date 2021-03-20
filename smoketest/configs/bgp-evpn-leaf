@@ -118,12 +118,12 @@ system {
         }
     }
     ntp {
-        server 0.pool.ntp.org {
+        listen-address 192.0.2.41
+        listen-address 2001:db8::41
+        server 0.de.pool.ntp.org {
+            prefer
         }
-        server 1.pool.ntp.org {
-        }
-        server 2.pool.ntp.org {
-        }
+        vrf MGMT
     }
     syslog {
         global {
