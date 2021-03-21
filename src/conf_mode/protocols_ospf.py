@@ -50,7 +50,8 @@ def get_config(config=None):
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'ospf'] or base_path
-    ospf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    ospf = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                get_first_key=True)
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
@@ -91,6 +92,7 @@ def get_config(config=None):
     for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
+
     # XXX: T2665: we currently have no nice way for defaults under tag nodes,
     # clean them out and add them manually :(
     del default_values['neighbor']
@@ -152,10 +154,11 @@ def verify(ospf):
                                   f'concurrently for {interface}!')
 
             if 'vrf' in ospf:
-                # If interface specific options are set, we must ensure that the
-                # interface is bound to our requesting VRF. Due to the VyOS/Vyatta
-                # priorities the interface is bound to the VRF after creation of
-                # the VRF itself, and before any routing protocol is configured.
+                # If interface specific options are set, we must ensure that
+                # the interface is bound to our requesting VRF. Due to the VyOS
+                # priorities the interface is bound to the VRF after creation
+                # of the VRF itself, and before any routing protocol is
+                # configured.
                 vrf = ospf['vrf']
                 tmp = get_interface_config(interface)
                 if 'master' not in tmp or tmp['master'] != vrf:
