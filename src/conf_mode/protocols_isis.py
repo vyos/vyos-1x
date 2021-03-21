@@ -17,30 +17,61 @@
 import os
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import node_changed
-from vyos import ConfigError
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import get_interface_config
 from vyos.template import render_to_string
+from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
+
+frr_daemon = 'isisd'
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'isis']
+
+    vrf = None
+    if len(argv) > 1:
+        vrf = argv[1]
+
+    base_path = ['protocols', 'isis']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    base = vrf and ['vrf', 'name', vrf, 'protocols', 'isis'] or base_path
     isis = conf.get_config_dict(base, key_mangling=('-', '_'),
                                 get_first_key=True)
+
+    # Assign the name of our VRF context. This MUST be done before the return
+    # statement below, else on deletion we will delete the default instance
+    # instead of the VRF instance.
+    if vrf: isis['vrf'] = vrf
+
+    # As we no re-use this Python handler for both VRF and non VRF instances for
+    # IS-IS we need to find out if any interfaces changed so properly adjust
+    # the FRR configuration and not by acctident change interfaces from a
+    # different VRF.
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        isis['interface_removed'] = list(interfaces_removed)
+
+    # Bail out early if configuration tree does not exist
+    if not conf.exists(base):
+        isis.update({'deleted' : ''})
+        return isis
+
     return isis
 
 def verify(isis):
     # bail out early - looks like removal from running config
-    if not isis:
+    if not isis or 'deleted' in isis:
         return None
 
     if 'domain' not in isis:
@@ -52,6 +83,17 @@ def verify(isis):
     # If interface not set
     if 'interface' not in isis:
         raise ConfigError('Interface used for routing updates is mandatory!')
+
+    for interface in isis['interface']:
+        if 'vrf' in isis:
+            # If interface specific options are set, we must ensure that the
+            # interface is bound to our requesting VRF. Due to the VyOS
+            # priorities the interface is bound to the VRF after creation of
+            # the VRF itself, and before any routing protocol is configured.
+            vrf = isis['vrf']
+            tmp = get_interface_config(interface)
+            if 'master' not in tmp or tmp['master'] != vrf:
+                raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
 
     # If md5 and plaintext-password set at the same time
     if 'area_password' in isis:
@@ -111,7 +153,7 @@ def verify(isis):
     return None
 
 def generate(isis):
-    if not isis:
+    if not isis or 'deleted' in isis:
         isis['new_frr_config'] = ''
         return None
 
@@ -121,17 +163,29 @@ def generate(isis):
 def apply(isis):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(daemon='isisd')
-    frr_cfg.modify_section('^interface \S+$', '')
-    frr_cfg.modify_section('^router isis \S+$', '')
+    frr_cfg.load_configuration(frr_daemon)
+
+    # Generate empty helper string which can be ammended to FRR commands,
+    # it will be either empty (default VRF) or contain the "vrf <name" statement
+    vrf = ''
+    if 'vrf' in isis:
+        vrf = ' vrf ' + isis['vrf']
+
+    frr_cfg.modify_section(f'^router isis \S+{vrf}$', '')
+    for key in ['interface', 'interface_removed']:
+        if key not in isis:
+            continue
+        for interface in isis[key]:
+            frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
+
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['new_frr_config'])
-    frr_cfg.commit_configuration(daemon='isisd')
+    frr_cfg.commit_configuration(frr_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if isis['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(daemon='isisd')
+            frr_cfg.commit_configuration(frr_daemon)
 
     return None
 

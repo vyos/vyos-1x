@@ -36,7 +36,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_isis_redistribute(self):
+    def test_isis_01_redistribute(self):
         prefix_list = 'EXPORT-ISIS'
         route_map = 'EXPORT-ISIS'
         rule = '10'
@@ -57,7 +57,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
-        tmp = self.getFRRconfig(f'router isis {domain}', end='')
+        # XXX: FRR represents router isis with a trailing whitespace :/
+        tmp = self.getFRRconfig(f'router isis {domain} ')
         self.assertIn(f' net {net}', tmp)
         self.assertIn(f' redistribute ipv4 connected level-2 route-map {route_map}', tmp)
 
@@ -66,6 +67,41 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip router isis {domain}', tmp)
 
         self.cli_delete(['policy'])
+
+
+    def test_isis_02_vrfs(self):
+        vrfs = ['red', 'green', 'blue']
+        # It is safe to assume that when the basic VRF test works, all other
+        # IS-IS related features work, as we entirely inherit the CLI templates
+        # and Jinja2 FRR template.
+        table = '1000'
+        vrf = 'red'
+        vrf_base = ['vrf', 'name', vrf]
+        vrf_iface = 'eth1'
+        self.cli_set(vrf_base + ['table', table])
+        self.cli_set(vrf_base + ['protocols', 'isis', 'domain', domain])
+        self.cli_set(vrf_base + ['protocols', 'isis', 'net', net])
+        self.cli_set(vrf_base + ['protocols', 'isis', 'interface', vrf_iface])
+        self.cli_set(['interfaces', 'ethernet', vrf_iface, 'vrf', vrf])
+
+        # Also set a default VRF IS-IS config
+        self.cli_set(base_path + ['domain', domain])
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', 'eth0'])
+        self.cli_commit()
+
+        # Verify FRR isisd configuration
+        # XXX: FRR represents router isis with a trailing whitespace :/
+        tmp = self.getFRRconfig(f'router isis {domain} ')
+        self.assertIn(f'router isis {domain}', tmp)
+        self.assertIn(f' net {net}', tmp)
+
+        tmp = self.getFRRconfig(f'router isis {domain} vrf {vrf}')
+        self.assertIn(f'router isis {domain} vrf {vrf}', tmp)
+        self.assertIn(f' net {net}', tmp)
+
+        self.cli_delete(['vrf', 'name', vrf])
+        self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

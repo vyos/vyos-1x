@@ -33,16 +33,6 @@
               <help>Routing protocol parameters</help>
             </properties>
             <children>
-              <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">
-                <properties>
-                  <help>Static route parameters</help>
-                  <priority>481</priority>
-                </properties>
-                <children>
-                  #include <include/static/static-route.xml.i>
-                  #include <include/static/static-route6.xml.i>
-                </children>
-              </node>
               <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py $VAR(../../@)">
                 <properties>
                   <help>Border Gateway Protocol (BGP)</help>
@@ -59,6 +49,15 @@
                   #include <include/bgp/bgp-common-config.xml.i>
                 </children>
               </tagNode>
+              <node name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py $VAR(../../@)">
+                <properties>
+                  <help>Intermediate System to Intermediate System (IS-IS)</help>
+                  <priority>611</priority>
+                </properties>
+                <children>
+                  #include <include/isis/isis-common-config.xml.i>
+                </children>
+              </node>
               <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py $VAR(../../@)">
                 <properties>
                   <help>Open Shortest Path First (OSPF)</help>
@@ -66,6 +65,16 @@
                 </properties>
                 <children>
                   #include <include/ospf/ospf-common-config.xml.i>
+                </children>
+              </node>
+              <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">
+                <properties>
+                  <help>Static route parameters</help>
+                  <priority>481</priority>
+                </properties>
+                <children>
+                  #include <include/static/static-route.xml.i>
+                  #include <include/static/static-route6.xml.i>
                 </children>
               </node>
             </children>
