@@ -1,5 +1,5 @@
 !
-router isis {{ process }}
+router isis {{ domain }}
  net {{ net }}
 {% if dynamic_hostname is defined %}
  hostname dynamic
@@ -134,7 +134,7 @@ router isis {{ process }}
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
 interface {{ iface }}
- ip router isis {{ process }}
+ ip router isis {{ domain }}
 {%     if iface_config.bfd is defined %}
  isis bfd
 {%     endif %}

@@ -2,14 +2,10 @@
 <interfaceDefinition>
   <node name="protocols">
     <children>
-      <tagNode name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py">
+      <node name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py">
         <properties>
           <help>Intermediate System to Intermediate System (IS-IS)</help>
           <priority>610</priority>
-          <valueHelp>
-            <format>text(TAG)</format>
-            <description>ISO Routing area tag</description>
-          </valueHelp>
         </properties>
         <children>
           <node name="area-password">
@@ -101,6 +97,15 @@
               </node>
             </children>
           </node>
+          <leafNode name="domain">
+            <properties>
+              <help>Domain name used for this instance</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>IS-IS routing area domain/tag</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
           <node name="domain-password">
             <properties>
               <help>Set the authentication password for a routing domain</help>
@@ -766,7 +771,7 @@
             </children>
           </tagNode>
         </children>
-      </tagNode>
+      </node>
     </children>
   </node>
 </interfaceDefinition>
