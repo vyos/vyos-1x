@@ -115,40 +115,44 @@ def verify(isis):
     # If Redistribute set, but level don't set
     if 'redistribute' in isis:
         proc_level = isis.get('level','').replace('-','_')
-        for proto, proto_config in isis.get('redistribute', {}).get('ipv4', {}).items():
-            if 'level_1' not in proto_config and 'level_2' not in proto_config:
-                raise ConfigError('Redistribute level-1 or level-2 should be specified in \"protocols isis {} redistribute ipv4 {}\"'.format(process, proto))
-        for redistribute_level in proto_config.keys():
-            if proc_level and proc_level != 'level_1_2' and proc_level != redistribute_level:
-                raise ConfigError('\"protocols isis {0} redistribute ipv4 {2} {3}\" cannot be used with \"protocols isis {0} level {1}\"'.format(process, proc_level, proto, redistribute_level))
+        for afi in ['ipv4']:
+            if afi not in isis['redistribute']:
+                continue
+
+            for proto, proto_config in isis['redistribute'][afi].items():
+                if 'level_1' not in proto_config and 'level_2' not in proto_config:
+                    raise ConfigError(f'Redistribute level-1 or level-2 should be specified in ' \
+                                      f'"protocols isis {process} redistribute {afi} {proto}"!')
+
+                for redistr_level, redistr_config in proto_config.items():
+                    if proc_level and proc_level != 'level_1_2' and proc_level != redistr_level:
+                        raise ConfigError(f'"protocols isis {process} redistribute {afi} {proto} {redistr_level}" ' \
+                                          f'can not be used with \"protocols isis {process} level {proc_level}\"')
 
     # Segment routing checks
-    if dict_search('segment_routing', isis):
-        if dict_search('segment_routing.global_block', isis):
-            high_label_value = dict_search('segment_routing.global_block.high_label_value', isis)
-            low_label_value = dict_search('segment_routing.global_block.low_label_value', isis)
-            # If segment routing global block high value is blank, throw error
-            if low_label_value and not high_label_value:
-                raise ConfigError('Segment routing global block high value must not be left blank')
-            # If segment routing global block low value is blank, throw error
-            if high_label_value and not low_label_value:
-                raise ConfigError('Segment routing global block low value must not be left blank')
-            # If segment routing global block low value is higher than the high value, throw error
-            if int(low_label_value) > int(high_label_value):
-                raise ConfigError('Segment routing global block low value must be lower than high value')
+    if dict_search('segment_routing.global_block', isis):
+        high_label_value = dict_search('segment_routing.global_block.high_label_value', isis)
+        low_label_value = dict_search('segment_routing.global_block.low_label_value', isis)
 
-        if dict_search('segment_routing.local_block', isis):
-            high_label_value = dict_search('segment_routing.local_block.high_label_value', isis)
-            low_label_value = dict_search('segment_routing.local_block.low_label_value', isis)
-            # If segment routing local block high value is blank, throw error
-            if low_label_value and not high_label_value:
-                raise ConfigError('Segment routing local block high value must not be left blank')
-            # If segment routing local block low value is blank, throw error
-            if high_label_value and not low_label_value:
-                raise ConfigError('Segment routing local block low value must not be left blank')
-            # If segment routing local block low value is higher than the high value, throw error
-            if int(low_label_value) > int(high_label_value):
-                raise ConfigError('Segment routing local block low value must be lower than high value')
+        # If segment routing global block high value is blank, throw error
+        if (low_label_value and not high_label_value) or (high_label_value and not low_label_value):
+            raise ConfigError('Segment routing global block requires both low and high value!')
+
+        # If segment routing global block low value is higher than the high value, throw error
+        if int(low_label_value) > int(high_label_value):
+            raise ConfigError('Segment routing global block low value must be lower than high value')
+
+    if dict_search('segment_routing.local_block', isis):
+        high_label_value = dict_search('segment_routing.local_block.high_label_value', isis)
+        low_label_value = dict_search('segment_routing.local_block.low_label_value', isis)
+
+        # If segment routing local block high value is blank, throw error
+        if (low_label_value and not high_label_value) or (high_label_value and not low_label_value):
+            raise ConfigError('Segment routing local block requires both high and low value!')
+
+        # If segment routing local block low value is higher than the high value, throw error
+        if int(low_label_value) > int(high_label_value):
+            raise ConfigError('Segment routing local block low value must be lower than high value')
 
     return None
 
