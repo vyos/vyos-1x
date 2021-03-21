@@ -20,7 +20,9 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
+from vyos.configverify import verify_interface_exists
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import get_interface_config
@@ -67,6 +69,13 @@ def get_config(config=None):
         isis.update({'deleted' : ''})
         return isis
 
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify()
+    base = ['policy']
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
+    # Merge policy dict into OSPF dict
+    isis = dict_merge(tmp, isis)
+
     return isis
 
 def verify(isis):
@@ -85,6 +94,7 @@ def verify(isis):
         raise ConfigError('Interface used for routing updates is mandatory!')
 
     for interface in isis['interface']:
+        verify_interface_exists(interface)
         if 'vrf' in isis:
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS
@@ -128,6 +138,12 @@ def verify(isis):
                     if proc_level and proc_level != 'level_1_2' and proc_level != redistr_level:
                         raise ConfigError(f'"protocols isis {process} redistribute {afi} {proto} {redistr_level}" ' \
                                           f'can not be used with \"protocols isis {process} level {proc_level}\"')
+
+                    if 'route_map' in redistr_config:
+                        name = redistr_config['route_map']
+                        tmp = name.replace('-', '_')
+                        if dict_search(f'policy.route_map.{tmp}', isis) == None:
+                            raise ConfigError(f'Route-map {name} does not exist!')
 
     # Segment routing checks
     if dict_search('segment_routing.global_block', isis):
