@@ -154,11 +154,10 @@ def verify(ospf):
                                   f'concurrently for {interface}!')
 
             if 'vrf' in ospf:
-                # If interface specific options are set, we must ensure that
-                # the interface is bound to our requesting VRF. Due to the VyOS
-                # priorities the interface is bound to the VRF after creation
-                # of the VRF itself, and before any routing protocol is
-                # configured.
+            # If interface specific options are set, we must ensure that the
+            # interface is bound to our requesting VRF. Due to the VyOS
+            # priorities the interface is bound to the VRF after creation of
+            # the VRF itself, and before any routing protocol is configured.
                 vrf = ospf['vrf']
                 tmp = get_interface_config(interface)
                 if 'master' not in tmp or tmp['master'] != vrf:
@@ -179,17 +178,18 @@ def apply(ospf):
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
 
+    # Generate empty helper string which can be ammended to FRR commands,
+    # it will be either empty (default VRF) or contain the "vrf <name" statement
+    vrf = ''
     if 'vrf' in ospf:
-        vrf = ospf['vrf']
-        frr_cfg.modify_section(f'^router ospf vrf {vrf}$', '')
-    else:
-        frr_cfg.modify_section('^router ospf$', '')
+        vrf = ' vrf ' + ospf['vrf']
 
+    frr_cfg.modify_section(f'^router ospf{vrf}$', '')
     for key in ['interface', 'interface_removed']:
         if key not in ospf:
             continue
         for interface in ospf[key]:
-            frr_cfg.modify_section(f'^interface {interface}$', '')
+            frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
 
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)

@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="zebra">
+        <properties>
+          <help>Zebra routing information</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        <children>
+          <node name="client">
+            <properties>
+              <help>Client information </help>
+            </properties>
+            <children>
+              <node name="summary">
+                <properties>
+                  <help>Brief Summary</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+            </children>
+          </node>
+          <node name="dplane">
+            <properties>
+              <help>Zebra dataplane information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </node>
+          <node name="router">
+            <properties>
+              <help>Zebra Router Information</help>
+            </properties>
+            <children>
+              <node name="table">
+                <properties>
+                  <help>Table Information about this Zebra Router</help>
+                </properties>
+                <children>
+                  <node name="summary">
+                    <properties>
+                      <help>Summary Information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

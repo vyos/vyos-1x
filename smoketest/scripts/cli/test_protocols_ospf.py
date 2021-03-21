@@ -288,16 +288,16 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
 
     def test_ospf_11_vrfs(self):
-        vrfs = ['red', 'green', 'blue']
         # It is safe to assume that when the basic VRF test works, all
         # other OSPF related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.
         table = '1000'
-        for vrf in vrfs:
-            vrf_base = ['vrf', 'name', vrf]
-            self.cli_set(vrf_base + ['table', table])
-            self.cli_set(vrf_base + ['protocols', 'ospf'])
-            table = str(int(table) + 1000)
+        vrf = 'blue'
+        vrf_base = ['vrf', 'name', vrf]
+        vrf_iface = 'eth1'
+        self.cli_set(vrf_base + ['table', table])
+        self.cli_set(vrf_base + ['protocols', 'ospf', 'interface', vrf_iface])
+        self.cli_set(['interfaces', 'ethernet', vrf_iface, 'vrf', vrf])
 
         # Also set a default VRF OSPF config
         self.cli_set(base_path)
@@ -309,14 +309,13 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
-        for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}')
-            self.assertIn(f'router ospf vrf {vrf}', frrconfig)
-            self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
-            self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
+        frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}')
+        self.assertIn(f'router ospf vrf {vrf}', frrconfig)
+        self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
+        self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
-            self.cli_delete(['vrf', 'name', vrf])
-
+        self.cli_delete(['vrf', 'name', vrf])
+        self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
