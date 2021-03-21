@@ -55,6 +55,11 @@ def verify(isis):
         if 'net' not in isis_config:
             raise ConfigError('ISIS net format iso is mandatory!')
 
+        # last byte in IS-IS area address must be 0
+        tmp = isis_config['net'].split('.')
+        if int(tmp[-1]) != 0:
+            raise ConfigError('Last byte of IS-IS network entity title must always be 0!')
+
         # If interface not set
         if 'interface' not in isis_config:
             raise ConfigError('ISIS interface is mandatory!')
