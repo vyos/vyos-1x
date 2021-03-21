@@ -6,7 +6,7 @@
         <properties>
           <help>Show peer status of NTP daemon</help>
         </properties>
-        <command>if ps -C ntpd &amp;&gt;/dev/null; then ntpq -n -c peers; else echo NTP daemon disabled; fi</command>
+        <command>${vyos_op_scripts_dir}/show_ntp.sh --basic</command>
         <children>
           <tagNode name="server">
             <properties>
@@ -15,15 +15,14 @@
                 <script>${vyos_completion_dir}/list_ntp_servers.sh</script>
               </completionHelp>
             </properties>
-            <command>/usr/sbin/ntpdate -q "$4"</command>
+            <command>${vyos_op_scripts_dir}/show_ntp.sh --server "$4"</command>
           </tagNode>
           <node name="info">
             <properties>
               <help>Show NTP operational summary</help>
             </properties>
-            <command>if ps -C ntpd &amp;&gt;/dev/null; then ntpq -n -c sysinfo; ntpq -n -c kerninfo; else echo NTP daemon disabled; fi</command>
-        </node>
-
+            <command>${vyos_op_scripts_dir}/show_ntp.sh --info</command>
+          </node>
         </children>
       </node>
     </children>
