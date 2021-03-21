@@ -14,14 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
-import sys
+
+from sys import argv
+from sys import exit
 
 pattern = '^(bond|br|dum|en|ersp|eth|gnv|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|vti|vtun|vxlan|wg|wlan|wlm)[0-9]+(.\d+)?|lo$'
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        sys.exit(1)
-    if not re.match(pattern, sys.argv[1]):
-        sys.exit(1)
-    sys.exit(0)
+    if len(argv) != 2:
+        exit(1)
+    interface = argv[1]
+
+    if re.match(pattern, interface):
+        exit(0)
+    if os.path.exists(f'/sys/class/net/{interface}'):
+        exit(0)
+    exit(1)
