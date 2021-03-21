@@ -163,12 +163,7 @@
                   <constraintErrorMessage>Must be broadcast or point-to-point</constraintErrorMessage>
                 </properties>
               </leafNode>
-              <leafNode name="passive">
-                <properties>
-                  <help>Disable forming of adjacency</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/isis/passive.xml.i>
             </children>
           </tagNode>
           <node name="parameters">

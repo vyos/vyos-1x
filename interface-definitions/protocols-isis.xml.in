@@ -489,7 +489,7 @@
                       <help>Border Gateway Protocol (BGP)</help>
                     </properties>
                     <children>
-                      #include <include/isis-redistribute-ipv4.xml.i>
+                      #include <include/isis/isis-redistribute-ipv4.xml.i>
                     </children>
                   </node>
                   <node name="connected">
@@ -497,7 +497,7 @@
                       <help>Redistribute connected routes into IS-IS</help>
                     </properties>
                     <children>
-                      #include <include/isis-redistribute-ipv4.xml.i>
+                      #include <include/isis/isis-redistribute-ipv4.xml.i>
                     </children>
                   </node>
                   <node name="kernel">
@@ -505,7 +505,7 @@
                       <help>Redistribute kernel routes into IS-IS</help>
                     </properties>
                     <children>
-                      #include <include/isis-redistribute-ipv4.xml.i>
+                      #include <include/isis/isis-redistribute-ipv4.xml.i>
                     </children>
                   </node>
                   <node name="ospf">
@@ -513,7 +513,7 @@
                       <help>Redistribute OSPF routes into IS-IS</help>
                     </properties>
                     <children>
-                      #include <include/isis-redistribute-ipv4.xml.i>
+                      #include <include/isis/isis-redistribute-ipv4.xml.i>
                     </children>
                   </node>
                   <node name="rip">
@@ -521,7 +521,7 @@
                       <help>Redistribute RIP routes into IS-IS</help>
                     </properties>
                     <children>
-                      #include <include/isis-redistribute-ipv4.xml.i>
+                      #include <include/isis/isis-redistribute-ipv4.xml.i>
                     </children>
                   </node>
                   <node name="static">
@@ -529,7 +529,7 @@
                       <help>Redistribute static routes into IS-IS</help>
                     </properties>
                     <children>
-                      #include <include/isis-redistribute-ipv4.xml.i>
+                      #include <include/isis/isis-redistribute-ipv4.xml.i>
                     </children>
                   </node>
                 </children>
@@ -637,12 +637,7 @@
               </completionHelp>
             </properties>
             <children>
-              <leafNode name="bfd">
-                <properties>
-                  <help>Enable BFD support</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/bfd.xml.i>
               <leafNode name="circuit-type">
                 <properties>
                   <help>Configure circuit type for interface</help>
@@ -721,12 +716,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="passive">
-                <properties>
-                  <help>Configure the passive mode for interface</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/isis/passive.xml.i>
               <node name="password">
                 <properties>
                   <help>Configure the authentication password for a circuit</help>

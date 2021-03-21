@@ -1,10 +1,5 @@
 <!-- include start from ospf/ospf-interface-common.xml.i -->
-<leafNode name="bfd">
-  <properties>
-    <help>Enable Bidirectional Forwarding Detection (BFD) support</help>
-    <valueless/>
-  </properties>
-</leafNode>
+#include <include/bfd.xml.i>
 <leafNode name="cost">
   <properties>
     <help>Interface cost</help>
