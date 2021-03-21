@@ -88,15 +88,6 @@
     </node>
   </children>
 </node>
-<leafNode name="domain">
-  <properties>
-    <help>Domain name used for this instance</help>
-    <valueHelp>
-      <format>txt</format>
-      <description>IS-IS routing area domain/tag</description>
-    </valueHelp>
-  </properties>
-</leafNode>
 <node name="domain-password">
   <properties>
     <help>Set the authentication password for a routing domain</help>

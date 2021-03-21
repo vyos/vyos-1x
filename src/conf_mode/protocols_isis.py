@@ -83,9 +83,6 @@ def verify(isis):
     if not isis or 'deleted' in isis:
         return None
 
-    if 'domain' not in isis:
-        raise ConfigError('Routing domain name/tag must be set!')
-
     if 'net' not in isis:
         raise ConfigError('Network entity is mandatory!')
 
@@ -196,7 +193,7 @@ def apply(isis):
     if 'vrf' in isis:
         vrf = 'vrf ' + isis['vrf']
 
-    frr_cfg.modify_section(f'^router isis \S+ {vrf}', '')
+    frr_cfg.modify_section(f'^router isis VyOS {vrf}', '')
     for key in ['interface', 'interface_removed']:
         if key not in isis:
             continue

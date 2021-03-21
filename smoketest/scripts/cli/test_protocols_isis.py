@@ -25,7 +25,7 @@ from vyos.util import process_named_running
 PROCESS_NAME = 'isisd'
 base_path = ['protocols', 'isis']
 
-domain = 'FOOO'
+domain = 'VyOS'
 net = '49.0001.1921.6800.1002.00'
 
 class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
@@ -45,7 +45,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route-map', route_map, 'rule', rule, 'action', 'permit'])
         self.cli_set(['policy', 'route-map', route_map, 'rule', rule, 'match', 'ip', 'address', 'prefix-list', prefix_list])
 
-        self.cli_set(base_path + ['domain', domain])
         self.cli_set(base_path + ['net', net])
         self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
 
@@ -79,13 +78,11 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         vrf_base = ['vrf', 'name', vrf]
         vrf_iface = 'eth1'
         self.cli_set(vrf_base + ['table', table])
-        self.cli_set(vrf_base + ['protocols', 'isis', 'domain', domain])
         self.cli_set(vrf_base + ['protocols', 'isis', 'net', net])
         self.cli_set(vrf_base + ['protocols', 'isis', 'interface', vrf_iface])
         self.cli_set(['interfaces', 'ethernet', vrf_iface, 'vrf', vrf])
 
         # Also set a default VRF IS-IS config
-        self.cli_set(base_path + ['domain', domain])
         self.cli_set(base_path + ['net', net])
         self.cli_set(base_path + ['interface', 'eth0'])
         self.cli_commit()
