@@ -9,6 +9,7 @@
       <tagNode name="access-list">
         <properties>
           <help>IP access-list filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>u32:1-99</format>
             <description>IP standard access list</description>
@@ -144,10 +145,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END access-list -->
       <tagNode name="access-list6">
         <properties>
           <help>IPv6 access-list filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Name of IPv6 access-list</description>
@@ -204,10 +205,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END access-list6 -->
       <tagNode name="as-path-list">
         <properties>
           <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>AS path list name</description>
@@ -242,10 +243,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END as-path-list -->
       <tagNode name="community-list">
         <properties>
           <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Border Gateway Protocol (BGP) community-list filter</description>
@@ -280,10 +281,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END community-list -->
       <tagNode name="extcommunity-list">
         <properties>
           <help>Border Gateway Protocol (BGP) extended community-list filter</help>
+          <priority>490</priority>
           <valueHelp>
             <format>txt</format>
             <description>Border Gateway Protocol (BGP) extended community-list filter</description>
@@ -326,10 +327,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END extcommunity-list -->
       <tagNode name="large-community-list">
         <properties>
           <help>Border Gateway Protocol (BGP) large-community-list filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Border Gateway Protocol (BGP) large-community-list filter</description>
@@ -364,10 +365,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END large-community-list -->
       <tagNode name="prefix-list">
         <properties>
           <help>IP prefix-list filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Prefix list name</description>
@@ -429,10 +430,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END prefix-list -->
       <tagNode name="prefix-list6">
         <properties>
           <help>IPv6 prefix-list filter</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Prefix list name</description>
@@ -494,10 +495,10 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END prefix-list6 -->
       <tagNode name="route-map">
         <properties>
           <help>IP route-map</help>
+          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Route map name</description>
@@ -1028,7 +1029,7 @@
                         <format>none</format>
                         <description>none</description>
                       </valueHelp>
-              <!--   Need to add properly validator     
+              <!--   Need to add properly validator
                       <constraint>
                         <regex>^(local-AS|no-advertise|no-export|internet|additive|none)$</regex>
                       </constraint>  -->
@@ -1260,7 +1261,6 @@
           </tagNode>
         </children>
       </tagNode>
-      <!-- END route-map -->
     </children>
   </node>
 </interfaceDefinition>
