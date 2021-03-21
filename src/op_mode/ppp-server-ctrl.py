@@ -61,7 +61,7 @@ def main():
         if not err:
             try:
                 print(output)
-            except BrokenPipeError:
+            except:
                 sys.exit(0)
         else:
             print("{} server is not running".format(args.proto))
