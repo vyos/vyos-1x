@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,131 +13,115 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
-import re
-import fileinput
+import sys
+import tempfile
+from ftplib import FTP
+import urllib.parse
+import urllib.request
 
 from vyos.util import cmd
-from vyos.util import DEVNULL
+from paramiko import SSHClient
 
+def upload_ftp(local_path, hostname, remote_path,\
+               username='anonymous', password='', port=21):
+    with open(local_path, 'rb') as file:
+        with FTP() as conn:
+            conn.connect(hostname, port)
+            conn.login(username, password)
+            conn.storbinary(f'STOR {remote_path}', file)
 
-def check_and_add_host_key(host_name):
+def download_ftp(local_path, hostname, remote_path,\
+                 username='anonymous', password='', port=21):
+    with open(local_path, 'wb') as file:
+        with FTP() as conn:
+            conn.connect(hostname, port)
+            conn.login(username, password)
+            conn.retrbinary(f'RETR {remote_path}', file.write)
+
+def upload_sftp(local_path, hostname, remote_path,\
+                username=None, password=None, port=22):
+    with SSHClient() as ssh:
+        ssh.load_system_host_keys()
+        ssh.connect(hostname, port, username, password)
+        with ssh.open_sftp() as sftp:
+            sftp.put(local_path, remote_path)
+
+def download_sftp(local_path, hostname, remote_path,\
+                  username=None, password=None, port=22):
+    with SSHClient() as ssh:
+        ssh.load_system_host_keys()
+        ssh.connect(hostname, port, username, password)
+        with ssh.open_sftp() as sftp:
+            sftp.get(remote_path, local_path)
+
+def upload_tftp(local_path, hostname, remote_path, port=69):
+    with open(local_path, 'rb') as file:
+        cmd(f'curl -s -T - tftp://{hostname}:{port}/{remote_path}', stderr=None, input=file.read())
+
+def download_tftp(local_path, hostname, remote_path, port=69):
+    with open(local_path, 'wb') as file:
+        file.write(cmd(f'curl -s tftp://{hostname}:{port}/{remote_path}', stderr=None))
+
+def download_http(urlstring, local_path):
+    with open(local_path, 'wb') as file:
+        with urllib.request.urlopen(urlstring) as response:
+            file.write(response.read())
+
+def download(local_path, urlstring):
     """
-    Filter host keys and prompt for adding key to known_hosts file, if
-    needed.
+    Dispatch the appropriate download function for the given URL and save to local path.
     """
-    known_hosts = '{}/.ssh/known_hosts'.format(os.getenv('HOME'))
-    if not os.path.exists(known_hosts):
-        mode = 0o600
-        os.mknod(known_hosts, 0o600)
-
-    keyscan_cmd = 'ssh-keyscan -t rsa {}'.format(host_name)
-
-    try:
-        host_key = cmd(keyscan_cmd, stderr=DEVNULL)
-    except OSError:
-        sys.exit("Can not get RSA host key")
-
-    # libssh2 (jessie; stretch) does not recognize ec host keys, and curl
-    # will fail with error 51 if present in known_hosts file; limit to rsa.
-    usable_keys = False
-    offending_keys = []
-    for line in fileinput.input(known_hosts, inplace=True):
-        if host_name in line and 'ssh-rsa' in line:
-            if line.split()[-1] != host_key.split()[-1]:
-                offending_keys.append(line)
-                continue
-            else:
-                usable_keys = True
-        if host_name in line and not 'ssh-rsa' in line:
-            continue
-
-        sys.stdout.write(line)
-
-    if usable_keys:
-        return
-
-    if offending_keys:
-        print("Host key has changed!")
-        print("If you trust the host key fingerprint below, continue.")
-
-    fingerprint_cmd = 'ssh-keygen -lf /dev/stdin'
-    try:
-        fingerprint = cmd(fingerprint_cmd, stderr=DEVNULL, input=host_key)
-    except OSError:
-        sys.exit("Can not get RSA host key fingerprint.")
-
-    print("RSA host key fingerprint is {}".format(fingerprint.split()[1]))
-    response = input("Do you trust this host? [y]/n ")
-
-    if not response or response == 'y':
-        with open(known_hosts, 'a+') as f:
-            print("Adding {} to the list of known"
-                  " hosts.".format(host_name))
-            f.write(host_key)
+    url = urllib.parse.urlparse(urlstring)
+    if url.scheme == 'http' or url.scheme == 'https':
+        download_http(urlstring, local_path)
+    elif url.scheme == 'ftp':
+        username = url.username if url.username else 'anonymous'
+        download_ftp(local_path, url.hostname, url.path, username, url.password)
+    elif url.scheme == 'sftp' or url.scheme == 'scp':
+        # None means we don't want to use password authentication.
+        # An empty string (what urlparse returns when a password doesn't
+        # exist in the URL) means the password is an empty string.
+        password = url.password if url.password else None
+        download_sftp(local_path, url.hostname, url.path, url.username, password)
+    elif url.scheme == 'tftp':
+        download_tftp(local_path, url.hostname, url.path)
     else:
-        sys.exit("Host not trusted")
+        ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def get_remote_config(remote_file):
-    """ Invoke curl to download remote (config) file.
+def upload(local_path, urlstring):
+    """
+    Dispatch the appropriate upload function for the given URL and upload from local path.
+    """
+    url = urllib.parse.urlparse(urlstring)
+    if url.scheme == 'ftp':
+        username = url.username if url.username else 'anonymous'
+        upload_ftp(local_path, url.hostname, url.path, username, url.password)
+    elif url.scheme == 'sftp' or url.scheme == 'scp':
+        password = url.password if url.password else None
+        upload_sftp(local_path, url.hostname, url.path, url.username, password)
+    elif url.scheme == 'tftp':
+        upload_tftp(local_path, url.hostname, url.path)
+    else:
+        ValueError(f'Unsupported URL scheme: {url.scheme}')
 
+def get_remote_config(urlstring):
+    """
+    Download remote (config) file and return the contents.
         Args:
             remote file URI:
                 scp://<user>[:<passwd>]@<host>/<file>
                 sftp://<user>[:<passwd>]@<host>/<file>
                 http://<host>/<file>
                 https://<host>/<file>
-                ftp://<user>[:<passwd>]@<host>/<file>
+                ftp://[<user>[:<passwd>]@]<host>/<file>
                 tftp://<host>/<file>
     """
-    request = dict.fromkeys(['protocol', 'user', 'host', 'file'])
-    protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
-    or_protocols = '|'.join(protocols)
-
-    request_match = re.match(r'(' + or_protocols + r')://(.*?)(/.*)',
-                             remote_file)
-    if request_match:
-        (request['protocol'], request['host'],
-                request['file']) = request_match.groups()
-    else:
-        print("Malformed URI")
-        sys.exit(1)
-
-    user_match = re.search(r'(.*)@(.*)', request['host'])
-    if user_match:
-        request['user'] = user_match.groups()[0]
-        request['host'] = user_match.groups()[1]
-
-    remote_file = '{0}://{1}{2}'.format(request['protocol'], request['host'], request['file'])
-
-    if request['protocol'] in ('scp', 'sftp'):
-        check_and_add_host_key(request['host'])
-
-    redirect_opt = ''
-
-    if request['protocol'] in ('http', 'https'):
-        redirect_opt = '-L'
-        # Try header first, and look for 'OK' or 'Moved' codes:
-        curl_cmd = 'curl {0} -q -I {1}'.format(redirect_opt, remote_file)
-        try:
-            curl_output = cmd(curl_cmd)
-        except OSError:
-            sys.exit(1)
-
-        return_vals = re.findall(r'^HTTP\/\d+\.?\d\s+(\d+)\s+(.*)$',
-                                 curl_output, re.MULTILINE)
-        for val in return_vals:
-            if int(val[0]) not in [200, 301, 302]:
-                print('HTTP error: {0} {1}'.format(*val))
-                sys.exit(1)
-
-    if request['user']:
-        curl_cmd = 'curl -# -u {0} {1}'.format(request['user'], remote_file)
-    else:
-        curl_cmd = 'curl {0} -# {1}'.format(redirect_opt, remote_file)
-
+    url = urllib.parse.urlparse(urlstring)
+    temp = tempfile.NamedTemporaryFile(delete=False).name
     try:
-        return cmd(curl_cmd, stderr=None)
-    except OSError:
-        return None
+        download(temp, urlstring)
+        with open(temp, 'r') as file:
+            return file.read()
+    finally:
+        os.remove(temp)
