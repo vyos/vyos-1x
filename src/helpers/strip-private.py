@@ -19,7 +19,7 @@ import argparse
 import re
 import sys
 
-from netaddr import IPAddress, AddrFormatError
+from netaddr import IPNetwork, AddrFormatError
 
 
 parser = argparse.ArgumentParser(description='strip off private information from VyOS config')
@@ -58,7 +58,7 @@ def ip_match(match: re.Match, subst: str) -> str:
     result = match.group(0)
     # Is this a valid IP address?
     try:
-        addr = IPAddress(result)
+        addr = IPNetwork(result).ip
     # No? Then we've got nothing to do with it.
     except AddrFormatError:
         return result
