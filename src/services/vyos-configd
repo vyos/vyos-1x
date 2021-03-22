@@ -185,7 +185,7 @@ def initialization(socket):
         session_out = None
 
     # if not a 'live' session, for example on boot, write to file
-    if not session_out or '/dev/pts' not in session_out:
+    if not session_out or not os.path.isfile('/tmp/vyos-config-status'):
         session_out = script_stdout_log
         session_mode = 'a'
 
