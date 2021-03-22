@@ -97,6 +97,7 @@ Depends:
   python3-jmespath,
   python3-netaddr,
   python3-netifaces,
+  python3-paramiko,
   python3-psutil,
   python3-pystache,
   python3-pyudev,
