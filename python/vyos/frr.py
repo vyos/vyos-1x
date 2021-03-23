@@ -86,6 +86,7 @@ _frr_daemons = ['zebra', 'bgpd', 'fabricd', 'isisd', 'ospf6d', 'ospfd', 'pbrd',
 
 path_vtysh = '/usr/bin/vtysh'
 path_frr_reload = '/usr/lib/frr/frr-reload.py'
+path_config = '/run/frr'
 
 
 class FrrError(Exception):
@@ -205,6 +206,25 @@ def reload_configuration(config, daemon=None):
         raise OSError(code, output)
 
     return output
+
+
+def save_configuration(daemon=None):
+    """Save FRR configuration to /run/frr/{daemon}.conf
+       It save configuration on each commit.
+    """
+    if daemon and daemon not in _frr_daemons:
+        raise ValueError(f'The specified daemon type is not supported {repr(daemon)}')
+
+    cmd = f"{path_vtysh} -d {daemon} -c 'show run no-header'"
+    output, code = util.popen(cmd, stderr=util.STDOUT)
+    if code:
+        raise OSError(code, output)
+
+    with open(f"{path_config}/{daemon}.conf", "w") as f:
+        f.write(output)
+    config = output
+
+    return config
 
 
 def execute(command):

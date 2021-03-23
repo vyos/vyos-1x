@@ -91,6 +91,9 @@ def apply(ospfv3):
         for a in range(5):
             frr_cfg.commit_configuration(frr_daemon)
 
+    # Save configuration to /run/frr/{daemon}.conf
+    frr.save_configuration(frr_daemon)
+
     return None
 
 if __name__ == '__main__':
