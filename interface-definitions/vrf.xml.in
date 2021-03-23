@@ -3,8 +3,8 @@
   <node name="vrf" owner="${vyos_conf_scripts_dir}/vrf.py">
     <properties>
       <help>Virtual Routing and Forwarding</help>
-      <!-- must be before any interface creation -->
-      <priority>10</priority>
+      <!-- must be before any interface, check /opt/vyatta/sbin/priority.pl -->
+      <priority>299</priority>
     </properties>
     <children>
       <leafNode name="bind-to-all">
