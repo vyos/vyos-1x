@@ -20,6 +20,7 @@ from vyos.util import dict_search
 data = {
     'string': 'fooo',
     'nested': {'string': 'bar', 'empty': '', 'list': ['foo', 'bar']},
+    'non': {},
     'list': ['bar', 'baz'],
     'dict': {'key_1': {}, 'key_2': 'vyos'}
 }
@@ -30,7 +31,8 @@ class TestDictSearch(TestCase):
 
     def test_non_existing_keys(self):
         # TestDictSearch: Return False when querying for non-existent key
-        self.assertFalse(dict_search('non_existing', data))
+        self.assertEqual(dict_search('non_existing', data), None)
+        self.assertEqual(dict_search('non.existing.fancy.key', data), None)
 
     def test_string(self):
         # TestDictSearch: Return value when querying string
@@ -50,8 +52,14 @@ class TestDictSearch(TestCase):
 
     def test_nested_dict_key_empty(self):
         # TestDictSearch: Return False when querying for a nested string whose last key is empty
+        self.assertEqual(dict_search('nested.empty', data), '')
         self.assertFalse(dict_search('nested.empty', data))
 
     def test_nested_list(self):
         # TestDictSearch: Return list items when querying nested list
         self.assertEqual(dict_search('nested.list', data), data['nested']['list'])
+
+    def test_invalid_input(self):
+        # TestDictSearch: Return list items when querying nested list
+        self.assertEqual(dict_search('nested.list', None), None)
+        self.assertEqual(dict_search(None, data), None)
