@@ -218,7 +218,7 @@ def process_node_data(config, data) -> int:
         logger.critical(f"Missing script_name")
         return R_ERROR_DAEMON
 
-    if script_name in exclude_set:
+    if script_name not in include_set:
         return R_PASS
 
     with stdout_redirected(session_out, session_mode):
