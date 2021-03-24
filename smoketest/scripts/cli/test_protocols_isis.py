@@ -56,8 +56,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
-        # XXX: FRR represents router isis with a trailing whitespace :/
-        tmp = self.getFRRconfig(f'router isis {domain} ')
+        tmp = self.getFRRconfig(f'router isis {domain}')
         self.assertIn(f' net {net}', tmp)
         self.assertIn(f' redistribute ipv4 connected level-2 route-map {route_map}', tmp)
 
@@ -88,8 +87,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR isisd configuration
-        # XXX: FRR represents router isis with a trailing whitespace :/
-        tmp = self.getFRRconfig(f'router isis {domain} ')
+        tmp = self.getFRRconfig(f'router isis {domain}')
         self.assertIn(f'router isis {domain}', tmp)
         self.assertIn(f' net {net}', tmp)
 
