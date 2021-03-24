@@ -114,7 +114,7 @@ def verify(dyndns):
                     raise ConfigError(f'"password" {error_msg}')
 
                 if 'zone' in config:
-                    if service != 'cloudflare':
+                    if service != 'cloudflare' and ('protocol' not in config or config['protocol'] != 'cloudflare'):
                         raise ConfigError(f'"zone" option only supported with CloudFlare')
 
                 if 'custom' in config:
