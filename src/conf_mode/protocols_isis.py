@@ -191,9 +191,9 @@ def apply(isis):
     # it will be either empty (default VRF) or contain the "vrf <name" statement
     vrf = ''
     if 'vrf' in isis:
-        vrf = 'vrf ' + isis['vrf']
+        vrf = ' vrf ' + isis['vrf']
 
-    frr_cfg.modify_section(f'^router isis VyOS {vrf}', '')
+    frr_cfg.modify_section(f'^router isis VyOS{vrf}$', '')
     for key in ['interface', 'interface_removed']:
         if key not in isis:
             continue
