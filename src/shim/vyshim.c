@@ -75,26 +75,30 @@ int main(int argc, char* argv[])
     void *context = zmq_ctx_new();
     void *requester = zmq_socket(context, ZMQ_REQ);
 
+    int ex_index;
     int init_timeout = 0;
 
     debug_print("Connecting to vyos-configd ...\n");
     zmq_connect(requester, SOCKET_PATH);
+
+    for (int i = argc-1; i > 0 ; i--) {
+        strncat(&string_node_data[0], argv[i], 127);
+    }
+
+    debug_print("data to send: %s\n", string_node_data);
+
+    char *test = strstr(string_node_data, "VYOS_TAGNODE_VALUE");
+    ex_index = test ? 2 : 1;
 
     if (access(COMMIT_MARKER, F_OK) != -1) {
         init_timeout = initialization(requester);
         if (!init_timeout) remove(COMMIT_MARKER);
     }
 
-    int end = argc > 3 ? 2 : argc - 1;
-
     // if initial communication failed, pass through execution of script
     if (init_timeout) {
-        int ret = pass_through(argv, end);
+        int ret = pass_through(argv, ex_index);
         return ret;
-    }
-
-    for (int i = end; i > 0 ; i--) {
-        strncat(&string_node_data[0], argv[i], 127);
     }
 
     char error_code[1];
@@ -116,13 +120,13 @@ int main(int argc, char* argv[])
 
     if (err & PASS) {
         debug_print("Received PASS\n");
-        int ret = pass_through(argv, end);
+        int ret = pass_through(argv, ex_index);
         return ret;
     }
 
     if (err & ERROR_DAEMON) {
         debug_print("Received ERROR_DAEMON\n");
-        int ret = pass_through(argv, end);
+        int ret = pass_through(argv, ex_index);
         return ret;
     }
 
@@ -232,14 +236,14 @@ int initialization(void* Requester)
     return 0;
 }
 
-int pass_through(char **argv, int end)
+int pass_through(char **argv, int ex_index)
 {
-    char *newargv[] = { NULL, NULL };
+    char **newargv = NULL;
     pid_t child_pid;
 
-    newargv[0] = argv[end];
-    if (end > 1) {
-        putenv(argv[end - 1]);
+    newargv = &argv[ex_index];
+    if (ex_index > 1) {
+        putenv(argv[ex_index - 1]);
     }
 
     debug_print("pass-through invoked\n");
@@ -248,9 +252,9 @@ int pass_through(char **argv, int end)
         debug_print("fork() failed\n");
         return -1;
     } else if (child_pid == 0) {
-        if (-1 == execv(argv[end], newargv)) {
+        if (-1 == execv(argv[ex_index], newargv)) {
             debug_print("pass_through execve failed %s: %s\n",
-                        argv[end], strerror(errno));
+                        argv[ex_index], strerror(errno));
             return -1;
         }
     } else if (child_pid > 0) {
