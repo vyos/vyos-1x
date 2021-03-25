@@ -132,7 +132,9 @@ def explicit_print(path, mode, msg):
     except OSError:
         logger.critical("error explicit_print")
 
-def run_script(script, config) -> int:
+def run_script(script, config, args) -> int:
+    if args:
+        script.argv = args
     config.set_level([])
     try:
         c = script.get_config(config)
@@ -206,23 +208,26 @@ def process_node_data(config, data) -> int:
         return R_ERROR_DAEMON
 
     script_name = None
+    args = None
 
-    res = re.match(r'^.+\/([^/].+).py(VYOS_TAGNODE_VALUE=.+)?', data)
+    res = re.match(r'^(VYOS_TAGNODE_VALUE=[^/]+)?.*\/([^/]+).py(.*)', data)
     if res.group(1):
-        script_name = res.group(1)
-    if res.group(2):
-        env = res.group(2).split('=')
+        env = res.group(1).split('=')
         os.environ[env[0]] = env[1]
-
+    if res.group(2):
+        script_name = res.group(2)
     if not script_name:
         logger.critical(f"Missing script_name")
         return R_ERROR_DAEMON
+    if res.group(3):
+        args = res.group(3).split()
+        args.insert(0, f'{script_name}.py')
 
     if script_name not in include_set:
         return R_PASS
 
     with stdout_redirected(session_out, session_mode):
-        result = run_script(conf_mode_scripts[script_name], config)
+        result = run_script(conf_mode_scripts[script_name], config, args)
 
     return result
 

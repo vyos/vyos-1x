@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
     debug_print("Connecting to vyos-configd ...\n");
     zmq_connect(requester, SOCKET_PATH);
 
-    for (int i = argc-1; i > 0 ; i--) {
+    for (int i = 1; i < argc ; i++) {
         strncat(&string_node_data[0], argv[i], 127);
     }
 
