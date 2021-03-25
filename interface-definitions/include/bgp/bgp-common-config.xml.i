@@ -24,6 +24,75 @@
             #include <include/bgp/bgp-afi-aggregate-address.xml.i>
           </children>
         </tagNode>
+        <node name="distance">
+          <properties>
+            <help>Administrative distances for BGP routes</help>
+          </properties>
+          <children>
+            <leafNode name="external">
+              <properties>
+                <help>eBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>eBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="internal">
+              <properties>
+                <help>iBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>iBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="local">
+              <properties>
+                <help>Locally originated BGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>Locally originated BGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <tagNode name="prefix">
+              <properties>
+                <help>Administrative distance for a specific BGP prefix</help>
+                <valueHelp>
+                  <format>ipv4net</format>
+                  <description>Administrative distance for a specific BGP prefix</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv4-prefix"/>
+                </constraint>
+              </properties>
+              <children>
+                <leafNode name="distance">
+                  <properties>
+                    <help>Administrative distance for prefix</help>
+                    <valueHelp>
+                      <format>u32:1-255</format>
+                      <description>Administrative distance for external BGP routes</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-255"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -108,6 +177,229 @@
         </node>
       </children>
     </node>
+    <node name="ipv4-multicast">
+      <properties>
+        <help>Multicast IPv4 BGP settings</help>
+      </properties>
+      <children>
+        <tagNode name="aggregate-address">
+          <properties>
+            <help>BGP aggregate network/prefix</help>
+            <valueHelp>
+              <format>ipv4net</format>
+              <description>BGP aggregate network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            #include <include/bgp/bgp-afi-aggregate-address.xml.i>
+          </children>
+        </tagNode>
+        <node name="distance">
+          <properties>
+            <help>Administrative distances for BGP routes</help>
+          </properties>
+          <children>
+            <leafNode name="external">
+              <properties>
+                <help>eBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>eBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="internal">
+              <properties>
+                <help>iBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>iBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="local">
+              <properties>
+                <help>Locally originated BGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>Locally originated BGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <tagNode name="prefix">
+              <properties>
+                <help>Administrative distance for a specific BGP prefix</help>
+                <valueHelp>
+                  <format>ipv4net</format>
+                  <description>Administrative distance for a specific BGP prefix</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv4-prefix"/>
+                </constraint>
+              </properties>
+              <children>
+                <leafNode name="distance">
+                  <properties>
+                    <help>Administrative distance for prefix</help>
+                    <valueHelp>
+                      <format>u32:1-255</format>
+                      <description>Administrative distance for external BGP routes</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-255"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+        <tagNode name="network">
+          <properties>
+            <help>Import BGP network/prefix into multicast IPv4 RIB</help>
+            <valueHelp>
+              <format>ipv4net</format>
+              <description>Multicast IPv4 BGP network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            <leafNode name="backdoor">
+              <properties>
+                <help>Use BGP network/prefix as a backdoor route</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            #include <include/route-map.xml.i>
+          </children>
+        </tagNode>
+      </children>
+    </node>
+    <node name="ipv4-labeled-unicast">
+      <properties>
+        <help>Labeled Unicast IPv4 BGP settings</help>
+      </properties>
+      <children>
+        <tagNode name="aggregate-address">
+          <properties>
+            <help>BGP aggregate network/prefix</help>
+            <valueHelp>
+              <format>ipv4net</format>
+              <description>BGP aggregate network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            #include <include/bgp/bgp-afi-aggregate-address.xml.i>
+          </children>
+        </tagNode>
+        <tagNode name="network">
+          <properties>
+            <help>Import BGP network/prefix into labeled unicast IPv4 RIB</help>
+            <valueHelp>
+              <format>ipv4net</format>
+              <description>Labeled Unicast IPv4 BGP network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            <leafNode name="backdoor">
+              <properties>
+                <help>Use BGP network/prefix as a backdoor route</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            #include <include/route-map.xml.i>
+          </children>
+        </tagNode>
+      </children>
+    </node>
+    <node name="ipv4-flowspec">
+      <properties>
+        <help>Flowspec IPv4 BGP settings</help>
+      </properties>
+      <children>
+        <node name="local-install">
+          <properties>
+            <help>Apply local policy routing to interface</help>
+          </properties>
+          <children>
+            <leafNode name="interface">
+              <properties>
+                <help>Interface</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces.py</script>
+                </completionHelp>
+                <multi/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="ipv4-vpn">
+      <properties>
+        <help>Unicast VPN IPv4 BGP settings</help>
+      </properties>
+      <children>
+        <tagNode name="network">
+          <properties>
+            <help>Import BGP network/prefix into unicast VPN IPv4 RIB</help>
+            <valueHelp>
+              <format>ipv4net</format>
+              <description>Unicast VPN IPv4 BGP network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            <leafNode name="rd">
+              <properties>
+                <help>Route Distinguisher</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>Route Distinguisher, asn:xxx</description>
+                </valueHelp>
+                <constraint>
+                  <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="label">
+              <properties>
+                <help>MPLS label value assigned to route</help>
+                <valueHelp>
+                  <format>u32:0-1048575</format>
+                  <description>MPLS label value</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-1048575"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
+      </children>
+    </node>
     <node name="ipv6-unicast">
       <properties>
         <help>IPv6 BGP settings</help>
@@ -128,6 +420,75 @@
             #include <include/bgp/bgp-afi-aggregate-address.xml.i>
           </children>
         </tagNode>
+        <node name="distance">
+          <properties>
+            <help>Administrative distances for BGP routes</help>
+          </properties>
+          <children>
+            <leafNode name="external">
+              <properties>
+                <help>eBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>eBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="internal">
+              <properties>
+                <help>iBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>iBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="local">
+              <properties>
+                <help>Locally originated BGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>Locally originated BGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <tagNode name="prefix">
+              <properties>
+                <help>Administrative distance for a specific BGP prefix</help>
+                <valueHelp>
+                  <format>ipv6net</format>
+                  <description>Administrative distance for a specific BGP prefix</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-prefix"/>
+                </constraint>
+              </properties>
+              <children>
+                <leafNode name="distance">
+                  <properties>
+                    <help>Administrative distance for prefix</help>
+                    <valueHelp>
+                      <format>u32:1-255</format>
+                      <description>Administrative distance for external BGP routes</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-255"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -208,6 +569,235 @@
             </leafNode>
           </children>
         </node>
+      </children>
+    </node>
+    <node name="ipv6-multicast">
+      <properties>
+        <help>Multicast IPv6 BGP settings</help>
+      </properties>
+      <children>
+        <tagNode name="aggregate-address">
+          <properties>
+            <help>BGP aggregate network/prefix</help>
+            <valueHelp>
+              <format>ipv6net</format>
+              <description>BGP aggregate network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            #include <include/bgp/bgp-afi-aggregate-address.xml.i>
+          </children>
+        </tagNode>
+        <node name="distance">
+          <properties>
+            <help>Administrative distances for BGP routes</help>
+          </properties>
+          <children>
+            <leafNode name="external">
+              <properties>
+                <help>eBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>eBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="internal">
+              <properties>
+                <help>iBGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>iBGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="local">
+              <properties>
+                <help>Locally originated BGP routes administrative distance</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>Locally originated BGP routes administrative distance</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <tagNode name="prefix">
+              <properties>
+                <help>Administrative distance for a specific BGP prefix</help>
+                <valueHelp>
+                  <format>ipv6net</format>
+                  <description>Administrative distance for a specific BGP prefix</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-prefix"/>
+                </constraint>
+              </properties>
+              <children>
+                <leafNode name="distance">
+                  <properties>
+                    <help>Administrative distance for prefix</help>
+                    <valueHelp>
+                      <format>u32:1-255</format>
+                      <description>Administrative distance for external BGP routes</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-255"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+        <tagNode name="network">
+          <properties>
+            <help>Import BGP network/prefix into multicast IPv6 RIB</help>
+            <valueHelp>
+              <format>ipv6net</format>
+              <description>Multicast IPv6 BGP network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            <leafNode name="path-limit">
+              <properties>
+                <help>AS-path hopcount limit</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>AS path hop count limit</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            #include <include/route-map.xml.i>
+          </children>
+        </tagNode>
+      </children>
+    </node>
+    <node name="ipv6-labeled-unicast">
+      <properties>
+        <help>Labeled Unicast IPv6 BGP settings</help>
+      </properties>
+      <children>
+        <tagNode name="aggregate-address">
+          <properties>
+            <help>BGP aggregate network/prefix</help>
+            <valueHelp>
+              <format>ipv6net</format>
+              <description>BGP aggregate network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            #include <include/bgp/bgp-afi-aggregate-address.xml.i>
+          </children>
+        </tagNode>
+        <tagNode name="network">
+          <properties>
+            <help>Import BGP network/prefix into labeled unicast IPv6 RIB</help>
+            <valueHelp>
+              <format>ipv6net</format>
+              <description>Labeled Unicast IPv6 BGP network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            <leafNode name="backdoor">
+              <properties>
+                <help>Use BGP network/prefix as a backdoor route</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            #include <include/route-map.xml.i>
+          </children>
+        </tagNode>
+      </children>
+    </node>
+    <node name="ipv6-flowspec">
+      <properties>
+        <help>Flowspec IPv6 BGP settings</help>
+      </properties>
+      <children>
+        <node name="local-install">
+          <properties>
+            <help>Apply local policy routing to interface</help>
+          </properties>
+          <children>
+            <leafNode name="interface">
+              <properties>
+                <help>Interface</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces.py</script>
+                </completionHelp>
+                <multi/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="ipv6-vpn">
+      <properties>
+        <help>Unicast VPN IPv6 BGP settings</help>
+      </properties>
+      <children>
+        <tagNode name="network">
+          <properties>
+            <help>Import BGP network/prefix into unicast VPN IPv6 RIB</help>
+            <valueHelp>
+              <format>ipv6net</format>
+              <description>Unicast VPN IPv6 BGP network/prefix</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-prefix"/>
+            </constraint>
+          </properties>
+          <children>
+            <leafNode name="rd">
+              <properties>
+                <help>Route Distinguisher</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>Route Distinguisher, asn:xxx</description>
+                </valueHelp>
+                <constraint>
+                  <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="label">
+              <properties>
+                <help>MPLS label value assigned to route</help>
+                <valueHelp>
+                  <format>u32:0-1048575</format>
+                  <description>MPLS label value</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-1048575"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
       </children>
     </node>
     <node name="l2vpn-evpn">
@@ -346,6 +936,14 @@
       <children>
         #include <include/bgp/bgp-neighbor-afi-ipv4-unicast.xml.i>
         #include <include/bgp/bgp-neighbor-afi-ipv6-unicast.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv4-labeled-unicast.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv6-labeled-unicast.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv4-vpn.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv6-vpn.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv4-flowspec.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv6-flowspec.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv4-multicast.xml.i>
+        #include <include/bgp/bgp-neighbor-afi-ipv6-multicast.xml.i>
         #include <include/bgp/bgp-neighbor-afi-l2vpn-evpn.xml.i>
       </children>
     </node>

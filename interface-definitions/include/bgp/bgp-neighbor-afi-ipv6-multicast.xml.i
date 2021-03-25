@@ -1,0 +1,12 @@
+<!-- included start from bgp-neighbor-afi-ipv6-multicast.xml.i -->
+<node name="ipv6-multicast">
+  <properties>
+    <help>IPv6 Multicast BGP neighbor parameters</help>
+  </properties>
+  <children>
+    #include <include/bgp/bgp-afi-ipv6-nexthop-local.xml.i>
+    #include <include/bgp/bgp-afi-ipv6-prefix-list.xml.i>
+    #include <include/bgp/bgp-afi-common.xml.i>
+  </children>
+</node>
+<!-- include end -->
