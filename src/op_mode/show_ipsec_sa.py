@@ -70,6 +70,7 @@ for sa in sas:
         else:
             for csa in installed_sas:
                 isa = installed_sas[csa]
+                csa_name = isa['name']
 
                 bytes_in = hurry.filesize.size(int(isa["bytes-in"].decode()))
                 bytes_out = hurry.filesize.size(int(isa["bytes-out"].decode()))
@@ -103,7 +104,7 @@ for sa in sas:
                 if dh_group:
                     proposal = "{0}/{1}".format(proposal, dh_group)
 
-                data = [peer, state, uptime, bytes_str, pkts_str, remote_host, remote_id, proposal]
+                data = [csa_name, state, uptime, bytes_str, pkts_str, remote_host, remote_id, proposal]
                 sa_data.append(data)
 
 headers = ["Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out", "Remote address", "Remote ID", "Proposal"]
