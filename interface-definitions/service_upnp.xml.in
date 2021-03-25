@@ -164,7 +164,7 @@
               </leafNode>
             </children>
           </node>
-          <tagNode name="rule">
+          <tagNode name="rules">
             <properties>
               <help>UPnP Rule</help>
               <constraint>
