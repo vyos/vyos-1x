@@ -42,8 +42,15 @@ if args.source or args.destination:
         data = data_json[idx]
         
         # If there is no index 3, we don't think this is the record we need to check
+        # We need to filter the rule for Len (expr) <= 3 first, which is not what we should be concerned with
         if len(data['expr']) <= 3:
             continue
+        
+        # The following key values must exist
+        # When the rule JSON does not have some keys, this is not a rule we can work with
+        for keys in ['comment', 'chain', 'expr']:
+            if keys not in data:
+                continue
         
         comment = data['comment']
         rule = comment.replace('SRC-NAT66-','')

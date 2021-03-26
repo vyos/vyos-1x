@@ -40,6 +40,16 @@ if args.source or args.destination:
     data_json = jmespath.search('nftables[?rule].rule[?chain]', tmp)
     for idx in range(0, len(data_json)):
         data = data_json[idx]
+        
+        # If there is no index 3, we don't think this is the record we need to check
+        if len(data['expr']) <= 3:
+            continue
+        
+        # The following key values must exist
+        for keys in ['comment', 'chain', 'expr']:
+            if keys not in data:
+                continue
+        
         comment = data['comment']
         rule = int(''.join(list(filter(str.isdigit, comment))))
         chain = data['chain']
