@@ -126,6 +126,7 @@ Depends:
   udp-broadcast-relay,
   usb-modeswitch,
   usbutils,
+  vyos-http-api-tools,
   vyos-utils,
   wide-dhcpv6-client,
   wireguard-tools,
