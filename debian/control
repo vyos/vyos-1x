@@ -141,6 +141,7 @@ Depends:
   usbutils,
   vyatta-bash,
   vyatta-cfg,
+  vyos-http-api-tools,
   vyos-utils,
   wide-dhcpv6-client,
   wireguard-tools,
