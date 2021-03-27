@@ -1301,27 +1301,6 @@ class VLANIf(Interface):
     options = Interface.options + \
         ['source_interface', 'vlan_id', 'protocol', 'ingress_qos', 'egress_qos']
 
-    def remove(self):
-        """
-        Remove interface from operating system. Removing the interface
-        deconfigures all assigned IP addresses and clear possible DHCP(v6)
-        client processes.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> VLANIf('eth0.10').remove
-        """
-        # Do we have sub interfaces (VLANs)? As interfaces need to be deleted
-        # "in order" starting from Q-in-Q we delete them first.
-        for upper in glob(f'/sys/class/net/{self.ifname}/upper*'):
-            # an upper interface could be named: upper_bond0.1000.1100, thus
-            # we need top drop the upper_ prefix
-            vif_c = os.path.basename(upper)
-            vif_c = vif_c.replace('upper_', '')
-            VLANIf(vif_c).remove()
-
-        super().remove()
-
     def _create(self):
         # bail out early if interface already exists
         if self.exists(f'{self.ifname}'):
