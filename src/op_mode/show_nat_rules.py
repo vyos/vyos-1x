@@ -41,16 +41,26 @@ if args.source or args.destination:
     for idx in range(0, len(data_json)):
         data = data_json[idx]
         
-        # If there is no index 3, we don't think this is the record we need to check
-        if len(data['expr']) <= 3:
+        # The following key values must exist
+        # When the rule JSON does not have some keys, this is not a rule we can work with
+        continue_rule = False
+        for key in ['comment', 'chain', 'expr']:
+            if key not in data:
+                continue_rule = True
+                continue
+        if continue_rule:
             continue
         
-        # The following key values must exist
-        for keys in ['comment', 'chain', 'expr']:
-            if keys not in data:
-                continue
-        
         comment = data['comment']
+        
+        # Check the annotation to see if the annotation format is created by VYOS
+        continue_rule = True
+        for comment_prefix in ['SRC-NAT-', 'DST-NAT-']:
+            if comment_prefix in comment:
+                continue_rule = False
+        if continue_rule:
+            continue
+        
         rule = int(''.join(list(filter(str.isdigit, comment))))
         chain = data['chain']
         if not (args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING'):

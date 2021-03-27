@@ -36,23 +36,35 @@ if args.source or args.destination:
     format_nat66_rule = '{0: <10} {1: <50} {2: <50} {3: <10}'
     print(format_nat66_rule.format("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
     print(format_nat66_rule.format("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
-
+    
     data_json = jmespath.search('nftables[?rule].rule[?chain]', tmp)
     for idx in range(0, len(data_json)):
         data = data_json[idx]
         
-        # If there is no index 3, we don't think this is the record we need to check
-        # We need to filter the rule for Len (expr) <= 3 first, which is not what we should be concerned with
-        if len(data['expr']) <= 3:
-            continue
-        
         # The following key values must exist
         # When the rule JSON does not have some keys, this is not a rule we can work with
-        for keys in ['comment', 'chain', 'expr']:
-            if keys not in data:
+        continue_rule = False
+        for key in ['comment', 'chain', 'expr']:
+            if key not in data:
+                continue_rule = True
                 continue
+        if continue_rule:
+            continue
         
         comment = data['comment']
+        
+        # Check the annotation to see if the annotation format is created by VYOS
+        continue_rule = True
+        for comment_prefix in ['SRC-NAT66-', 'DST-NAT66-']:
+            if comment_prefix in comment:
+                continue_rule = False
+        if continue_rule:
+            continue
+        
+        # When log is detected from the second index of expr, then this rule should be ignored
+        if 'log' in data['expr'][2]:
+            continue
+        
         rule = comment.replace('SRC-NAT66-','')
         rule = rule.replace('DST-NAT66-','')
         chain = data['chain']
