@@ -18,7 +18,7 @@
              <properties>
                <help>Show system version and versions of all packages</help>
              </properties>
-             <command>echo "Package versions:"; dpkg -l | awk '$0~/>/{exit}1'</command>
+             <command>echo "Package versions:"; dpkg -l | cat</command>
           </leafNode>
           <leafNode name="frr">
              <properties>
