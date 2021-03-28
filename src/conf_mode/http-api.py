@@ -19,6 +19,7 @@
 import sys
 import os
 import json
+import time
 from copy import deepcopy
 
 import vyos.defaults
@@ -33,11 +34,6 @@ airbag.enable()
 config_file = '/etc/vyos/http-api.conf'
 
 vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
-
-# XXX: this model will need to be extended for tag nodes
-dependencies = [
-    'https.py',
-]
 
 def get_config(config=None):
     http_api = deepcopy(vyos.defaults.api_data)
@@ -103,8 +99,10 @@ def apply(http_api):
     else:
         call('systemctl stop vyos-http-api.service')
 
-    for dep in dependencies:
-        cmd(f'{vyos_conf_scripts_dir}/{dep}', raising=ConfigError)
+    # Let uvicorn settle before restarting Nginx
+    time.sleep(2)
+
+    cmd(f'{vyos_conf_scripts_dir}/https.py', raising=ConfigError)
 
 if __name__ == '__main__':
     try:
