@@ -280,7 +280,7 @@
 </node>
 <node name="listen">
   <properties>
-    <help>Listen for and accept BGP dynamic neighbors from range</help>
+    <help>BGP dynamic neighbors listen commands</help>
   </properties>
   <children>
     <leafNode name="limit">
@@ -297,7 +297,7 @@
     </leafNode>
     <tagNode name="range">
       <properties>
-        <help>BGP dynamic neighbors listen range</help>
+        <help>Dynamic neighbors listen range</help>
         <valueHelp>
           <format>ipv4net</format>
           <description>IPv4 dynamic neighbors listen range</description>
@@ -317,6 +317,18 @@
     </tagNode>
   </children>
 </node>
+<leafNode name="local-as">
+  <properties>
+    <help>Autonomous System Number (ASN)</help>
+    <valueHelp>
+      <format>u32:1-4294967294</format>
+      <description>Autonomous System Number</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-4294967294"/>
+    </constraint>
+  </properties>
+</leafNode>
 <tagNode name="neighbor">
   <properties>
     <help>BGP neighbor</help>
