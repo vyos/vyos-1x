@@ -30,26 +30,28 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['protocols', 'isis']
+base = ['protocols', 'bgp']
 config = ConfigTree(config_file)
 
 if not config.exists(base):
     # Nothing to do
     exit(0)
 
-# Only one IS-IS process is supported, thus this operation is save
-isis_base = base + config.list_nodes(base)
+# Only one BGP process is supported, thus this operation is savea
+asn = config.list_nodes(base)
+bgp_base = base + asn
+print(asn)
 
 # We need a temporary copy of the config
-tmp_base = ['protocols', 'isis2']
-config.copy(isis_base, tmp_base)
+tmp_base = ['protocols', 'bgp2']
+config.copy(bgp_base, tmp_base)
 
 # Now it's save to delete the old configuration
 config.delete(base)
 
-# Rename temporary copy to new final config (IS-IS domain key is static and no
-# longer required to be set via CLI)
-config.rename(tmp_base, 'isis')
+# Rename temporary copy to new final config and set new "local-as" option
+config.rename(tmp_base, 'bgp')
+config.set(base + ['local-as'], value=asn[0])
 
 try:
     with open(file_name, 'w') as f:

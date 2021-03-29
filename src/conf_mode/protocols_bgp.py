@@ -62,21 +62,18 @@ def get_config(config=None):
     # prefix-lists and route-maps for instance.
     base = ['policy']
     tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # As we only support one ASN (later checked in begin of verify()) we add the
-    # new information only to the first AS number
-    asn = next(iter(bgp))
     # Merge policy dict into bgp dict
-    bgp[asn] = dict_merge(tmp, bgp[asn])
+    bgp = dict_merge(tmp, bgp)
 
     return bgp
 
-def verify_remote_as(peer_config, asn_config):
+def verify_remote_as(peer_config, bgp_config):
     if 'remote_as' in peer_config:
         return peer_config['remote_as']
 
     if 'peer_group' in peer_config:
         peer_group_name = peer_config['peer_group']
-        tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', asn_config)
+        tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', bgp_config)
         if tmp: return tmp
 
     if 'interface' in peer_config:
@@ -85,117 +82,106 @@ def verify_remote_as(peer_config, asn_config):
 
         if 'peer_group' in peer_config['interface']:
             peer_group_name = peer_config['interface']['peer_group']
-            tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', asn_config)
+            tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', bgp_config)
             if tmp: return tmp
 
     return None
 
 def verify(bgp):
-    if not bgp:
+    if not bgp or 'deleted' in bgp:
         return None
 
-    # FRR bgpd only supports one Autonomous System Number, verify this!
-    asn = 0
-    for key in bgp:
-        if key.isnumeric():
-            asn +=1
-        if asn > 1:
-            raise ConfigError('Only one BGP AS number can be defined!')
+    if 'local_as' not in bgp:
+        raise ConfigError('BGP local-as number must be defined!')
 
-    for asn, asn_config in bgp.items():
-        # Workaround for https://phabricator.vyos.net/T1711
-        # We also have a vrf, and deleted key now - so we can only veriy "numbers"
-        if not asn.isnumeric():
+    # Common verification for both peer-group and neighbor statements
+    for neighbor in ['neighbor', 'peer_group']:
+        # bail out early if there is no neighbor or peer-group statement
+        # this also saves one indention level
+        if neighbor not in bgp:
             continue
 
-        # Common verification for both peer-group and neighbor statements
-        for neighbor in ['neighbor', 'peer_group']:
-            # bail out early if there is no neighbor or peer-group statement
-            # this also saves one indention level
-            if neighbor not in asn_config:
-                continue
+        for peer, peer_config in bgp[neighbor].items():
+            # Only regular "neighbor" statement can have a peer-group set
+            # Check if the configure peer-group exists
+            if 'peer_group' in peer_config:
+                peer_group = peer_config['peer_group']
+                if 'peer_group' not in bgp or peer_group not in bgp['peer_group']:
+                    raise ConfigError(f'Specified peer-group "{peer_group}" for '\
+                                      f'neighbor "{neighbor}" does not exist!')
 
-            for peer, peer_config in asn_config[neighbor].items():
-                # Only regular "neighbor" statement can have a peer-group set
-                # Check if the configure peer-group exists
-                if 'peer_group' in peer_config:
-                    peer_group = peer_config['peer_group']
-                    if 'peer_group' not in asn_config or peer_group not in asn_config['peer_group']:
-                        raise ConfigError(f'Specified peer-group "{peer_group}" for '\
-                                          f'neighbor "{neighbor}" does not exist!')
+            # ttl-security and ebgp-multihop can't be used in the same configration
+            if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
+                raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
 
-                # ttl-security and ebgp-multihop can't be used in the same configration
-                if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
-                    raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
+            # Check spaces in the password
+            if 'password' in peer_config and ' ' in peer_config['password']:
+                raise ConfigError('You can\'t use spaces in the password')
 
-                # Check spaces in the password
-                if 'password' in peer_config and ' ' in peer_config['password']:
-                    raise ConfigError('You can\'t use spaces in the password')
+            # Some checks can/must only be done on a neighbor and not a peer-group
+            if neighbor == 'neighbor':
+                # remote-as must be either set explicitly for the neighbor
+                # or for the entire peer-group
+                if not verify_remote_as(peer_config, bgp):
+                    raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
 
-                # Some checks can/must only be done on a neighbor and not a peer-group
-                if neighbor == 'neighbor':
-                    # remote-as must be either set explicitly for the neighbor
-                    # or for the entire peer-group
-                    if not verify_remote_as(peer_config, asn_config):
-                        raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
+                # Only checks for ipv4 and ipv6 neighbors
+                # Check if neighbor address is assigned as system interface address
+                if is_ip(peer) and is_addr_assigned(peer):
+                    raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
 
-                    # Only checks for ipv4 and ipv6 neighbors
-                    # Check if neighbor address is assigned as system interface address
-                    if is_ip(peer) and is_addr_assigned(peer):
-                        raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
+            for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
+                # Bail out early if address family is not configured
+                if 'address_family' not in peer_config or afi not in peer_config['address_family']:
+                    continue
 
-                for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
-                    # Bail out early if address family is not configured
-                    if 'address_family' not in peer_config or afi not in peer_config['address_family']:
-                        continue
+                afi_config = peer_config['address_family'][afi]
+                # Validate if configured Prefix list exists
+                if 'prefix_list' in afi_config:
+                    for tmp in ['import', 'export']:
+                        if tmp not in afi_config['prefix_list']:
+                            # bail out early
+                            continue
+                        # get_config_dict() mangles all '-' characters to '_' this is legitimate, thus all our
+                        # compares will run on '_' as also '_' is a valid name for a prefix-list
+                        prefix_list = afi_config['prefix_list'][tmp].replace('-', '_')
+                        if afi == 'ipv4_unicast':
+                            if dict_search(f'policy.prefix_list.{prefix_list}', bgp) == None:
+                                raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+                        elif afi == 'ipv6_unicast':
+                            if dict_search(f'policy.prefix_list6.{prefix_list}', bgp) == None:
+                                raise ConfigError(f'prefix-list6 "{prefix_list}" used for "{tmp}" does not exist!')
 
-                    afi_config = peer_config['address_family'][afi]
-                    # Validate if configured Prefix list exists
-                    if 'prefix_list' in afi_config:
-                        for tmp in ['import', 'export']:
-                            if tmp not in afi_config['prefix_list']:
-                                # bail out early
-                                continue
-                            # get_config_dict() mangles all '-' characters to '_' this is legitimate, thus all our
-                            # compares will run on '_' as also '_' is a valid name for a prefix-list
-                            prefix_list = afi_config['prefix_list'][tmp].replace('-', '_')
-                            if afi == 'ipv4_unicast':
-                                if dict_search(f'policy.prefix_list.{prefix_list}', asn_config) == None:
-                                    raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
-                            elif afi == 'ipv6_unicast':
-                                if dict_search(f'policy.prefix_list6.{prefix_list}', asn_config) == None:
-                                    raise ConfigError(f'prefix-list6 "{prefix_list}" used for "{tmp}" does not exist!')
+                if 'route_map' in afi_config:
+                    for tmp in ['import', 'export']:
+                        if tmp in afi_config['route_map']:
+                            # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
+                            # compares will run on '_' as also '_' is a valid name for a route-map
+                            route_map = afi_config['route_map'][tmp].replace('-', '_')
+                            if dict_search(f'policy.route_map.{route_map}', bgp) == None:
+                                raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
 
-                    if 'route_map' in afi_config:
-                        for tmp in ['import', 'export']:
-                            if tmp in afi_config['route_map']:
-                                # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
-                                # compares will run on '_' as also '_' is a valid name for a route-map
-                                route_map = afi_config['route_map'][tmp].replace('-', '_')
-                                if dict_search(f'policy.route_map.{route_map}', asn_config) == None:
-                                    raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
+                if 'route_reflector_client' in afi_config:
+                    if 'remote_as' in peer_config and bgp['local_as'] != peer_config['remote_as']:
+                        raise ConfigError('route-reflector-client only supported for iBGP peers')
+                    else:
+                        if 'peer_group' in peer_config:
+                            peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', bgp)
+                            if peer_group_as != None and peer_group_as != bgp['local_as']:
+                                raise ConfigError('route-reflector-client only supported for iBGP peers')
 
-                    if 'route_reflector_client' in afi_config:
-                        if 'remote_as' in peer_config and asn != peer_config['remote_as']:
-                            raise ConfigError('route-reflector-client only supported for iBGP peers')
-                        else:
-                            if 'peer_group' in peer_config:
-                                peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', asn_config)
-                                if peer_group_as != None and peer_group_as != asn:
-                                    raise ConfigError('route-reflector-client only supported for iBGP peers')
+    # Throw an error if a peer group is not configured for allow range
+    for prefix in dict_search('listen.range', bgp) or []:
+        # we can not use dict_search() here as prefix contains dots ...
+        if 'peer_group' not in bgp['listen']['range'][prefix]:
+            raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
 
-        # Throw an error if a peer group is not configured for allow range
-        for prefix in dict_search('listen.range', asn_config) or []:
-            # we can not use dict_search() here as prefix contains dots ...
-            if 'peer_group' not in asn_config['listen']['range'][prefix]:
-                raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
+        peer_group = bgp['listen']['range'][prefix]['peer_group']
+        if 'peer_group' not in bgp or peer_group not in bgp['peer_group']:
+            raise ConfigError(f'Peer-group "{peer_group}" for listen range "{prefix}" does not exist!')
 
-            peer_group = asn_config['listen']['range'][prefix]['peer_group']
-            if 'peer_group' not in asn_config or peer_group not in asn_config['peer_group']:
-                raise ConfigError(f'Peer-group "{peer_group}" for listen range "{prefix}" does not exist!')
-
-            if not verify_remote_as(asn_config['listen']['range'][prefix], asn_config):
-                raise ConfigError(f'Peer-group "{peer_group}" requires remote-as to be set!')
+        if not verify_remote_as(bgp['listen']['range'][prefix], bgp):
+            raise ConfigError(f'Peer-group "{peer_group}" requires remote-as to be set!')
 
     return None
 
@@ -204,14 +190,7 @@ def generate(bgp):
         bgp['new_frr_config'] = ''
         return None
 
-    # only one BGP AS is supported, so we can directly send the first key
-    # of the config dict
-    asn = list(bgp.keys())[0]
-    bgp[asn]['asn'] = asn
-    if 'vrf' in bgp:
-        bgp[asn]['vrf'] = bgp['vrf']
-
-    bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp[asn])
+    bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp)
     return None
 
 def apply(bgp):

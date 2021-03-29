@@ -33,22 +33,15 @@
               <help>Routing protocol parameters</help>
             </properties>
             <children>
-              <tagNode name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py $VAR(../../@)">
+              <node name="bgp" owner="${vyos_conf_scripts_dir}/protocols_bgp.py $VAR(../../@)">
                 <properties>
                   <help>Border Gateway Protocol (BGP)</help>
                   <priority>821</priority>
-                  <valueHelp>
-                    <format>u32:1-4294967294</format>
-                    <description>Autonomous System Number</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-4294967294"/>
-                  </constraint>
                 </properties>
                 <children>
                   #include <include/bgp/bgp-common-config.xml.i>
                 </children>
-              </tagNode>
+              </node>
               <node name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py $VAR(../../@)">
                 <properties>
                   <help>Intermediate System to Intermediate System (IS-IS)</help>

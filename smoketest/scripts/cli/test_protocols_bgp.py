@@ -24,7 +24,7 @@ from vyos.util import process_named_running
 
 PROCESS_NAME = 'bgpd'
 ASN = '64512'
-base_path = ['protocols', 'bgp', ASN]
+base_path = ['protocols', 'bgp']
 
 route_map_in = 'foo-map-in'
 route_map_out = 'foo-map-out'
@@ -213,6 +213,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
+
+        # Local AS number MUST be defined
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['local-as', ASN])
+
         # Default local preference (higher = more preferred, default value is 100)
         self.cli_set(base_path + ['parameters', 'default', 'local-pref', local_pref])
         # Deactivate IPv4 unicast for a peer by default
@@ -251,6 +257,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
 
     def test_bgp_02_neighbors(self):
+        self.cli_set(base_path + ['local-as', ASN])
         # Test out individual neighbor configuration items, not all of them are
         # also available to a peer-group!
         for peer, peer_config in neighbor_config.items():
@@ -325,6 +332,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.verify_frr_config(peer, peer_config, frrconfig)
 
     def test_bgp_03_peer_groups(self):
+        self.cli_set(base_path + ['local-as', ASN])
         # Test out individual peer-group configuration items
         for peer_group, config in peer_group_config.items():
             if 'cap_dynamic' in config:
@@ -395,6 +403,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 },
         }
 
+        self.cli_set(base_path + ['local-as', ASN])
+
         # We want to redistribute ...
         redistributes = ['connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
         for redistribute in redistributes:
@@ -441,6 +451,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             },
         }
 
+        self.cli_set(base_path + ['local-as', ASN])
+
         # We want to redistribute ...
         redistributes = ['connected', 'kernel', 'ospfv3', 'ripng', 'static']
         for redistribute in redistributes:
@@ -482,7 +494,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         limit = '64'
         listen_ranges = ['192.0.2.0/25', '192.0.2.128/25']
         peer_group = 'listenfoobar'
+
+        self.cli_set(base_path + ['local-as', ASN])
         self.cli_set(base_path + ['listen', 'limit', limit])
+
         for prefix in listen_ranges:
             self.cli_set(base_path + ['listen', 'range', prefix])
             # check validate() - peer-group must be defined for range/prefix
@@ -511,6 +526,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_07_l2vpn_evpn(self):
         vnis = ['10010', '10020', '10030']
         neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
+
+        self.cli_set(base_path + ['local-as', ASN])
+
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-default-gw'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-svi-ip'])
@@ -539,14 +557,17 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_08_vrf_simple(self):
         router_id = '127.0.0.3'
         vrfs = ['red', 'green', 'blue']
+
         # It is safe to assume that when the basic VRF test works, all
-        # other OSPF related features work, as we entirely inherit the CLI
+        # other BGP related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.
         table = '1000'
+
         for vrf in vrfs:
             vrf_base = ['vrf', 'name', vrf]
             self.cli_set(vrf_base + ['table', table])
-            self.cli_set(vrf_base + ['protocols', 'bgp', ASN, 'parameters', 'router-id', router_id])
+            self.cli_set(vrf_base + ['protocols', 'bgp', 'local-as', ASN])
+            self.cli_set(vrf_base + ['protocols', 'bgp', 'parameters', 'router-id', router_id])
             table = str(int(table) + 1000)
 
         self.cli_commit()
