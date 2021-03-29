@@ -47,12 +47,13 @@ config.copy(isis_base, tmp_base)
 # Now it's save to delete the old configuration
 config.delete(base)
 
-# Rename temporary copy to new final config and set domain key
+# Rename temporary copy to new final config (IS-IS domain key is static and no
+# longer required to be set via CLI)
 config.rename(tmp_base, 'isis')
 
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
 except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    print(f'Failed to save the modified config: {e}')
+    exit(1)
