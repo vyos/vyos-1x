@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 Francois Mertz fireboxled@gmail.com
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,10 +28,10 @@ class TestIntelQAT(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-    def test_basic(self):
-        """ Check if configuration script is in place and that the config
-        script throws an error as QAT device is not present in Qemu. This *must*
-        be extended with QAT autodetection once run on a QAT enabled device """
+    def test_simple_unsupported(self):
+        # Check if configuration script is in place and that the config script
+        # throws an error as QAT device is not present in Qemu. This *must* be
+        # extended with QAT autodetection once run on a QAT enabled device
 
         # configure some system display
         self.cli_set(base_path)
