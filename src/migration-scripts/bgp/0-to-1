@@ -40,7 +40,6 @@ if not config.exists(base):
 # Only one BGP process is supported, thus this operation is savea
 asn = config.list_nodes(base)
 bgp_base = base + asn
-print(asn)
 
 # We need a temporary copy of the config
 tmp_base = ['protocols', 'bgp2']
