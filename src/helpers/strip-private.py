@@ -79,13 +79,18 @@ def strip_lines(rules: tuple) -> None:
     """
     Read stdin line by line and apply the given stripping rules.
     """
-    for line in sys.stdin:
-        if not args.keep_address:
-            line = strip_address(line)
-        for (condition, regexp, subst) in rules:
-            if condition:
-                line = regexp.sub(subst, line)
-        print(line, end='')
+    try:
+        for line in sys.stdin:
+            if not args.keep_address:
+                line = strip_address(line)
+            for (condition, regexp, subst) in rules:
+                if condition:
+                    line = regexp.sub(subst, line)
+            print(line, end='')
+    # stdin can be cut for any reason, such as user interrupt or the pager terminating before the text can be read.
+    # All we can do is gracefully exit.
+    except (BrokenPipeError, EOFError, KeyboardInterrupt):
+        sys.exit(1)
 
 if __name__ == "__main__":
     args = parser.parse_args()
