@@ -57,11 +57,11 @@ def download_sftp(local_path, hostname, remote_path,\
 
 def upload_tftp(local_path, hostname, remote_path, port=69):
     with open(local_path, 'rb') as file:
-        cmd(f'curl -s -T - tftp://{hostname}:{port}/{remote_path}', stderr=None, input=file.read())
+        cmd(f'curl -s -T - tftp://{hostname}:{port}/{remote_path}', stderr=None, input=file.read()).encode()
 
 def download_tftp(local_path, hostname, remote_path, port=69):
     with open(local_path, 'wb') as file:
-        file.write(cmd(f'curl -s tftp://{hostname}:{port}/{remote_path}', stderr=None))
+        file.write(cmd(f'curl -s tftp://{hostname}:{port}/{remote_path}', stderr=None).encode())
 
 def download_http(urlstring, local_path):
     with open(local_path, 'wb') as file:
