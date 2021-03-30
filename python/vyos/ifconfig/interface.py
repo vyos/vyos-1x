@@ -1069,6 +1069,10 @@ class Interface(Control):
         if not isinstance(state, bool):
             raise ValueError("Value out of range")
 
+        # https://phabricator.vyos.net/T3448 - there is (yet) no RPI support for XDP
+        if not os.path.exists('/usr/sbin/xdp_loader'):
+            return
+
         ifname = self.config['ifname']
         cmd = f'xdp_loader -d {ifname} -U --auto-mode'
         if state:
