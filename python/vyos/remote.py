@@ -57,11 +57,11 @@ def download_sftp(local_path, hostname, remote_path,\
 
 def upload_tftp(local_path, hostname, remote_path, port=69):
     with open(local_path, 'rb') as file:
-        cmd(f'curl -s -T - tftp://{hostname}:{port}/{remote_path}', stderr=None, input=file.read())
+        cmd(f'curl -s -T - tftp://{hostname}:{port}/{remote_path}', stderr=None, input=file.read()).encode()
 
 def download_tftp(local_path, hostname, remote_path, port=69):
     with open(local_path, 'wb') as file:
-        file.write(cmd(f'curl -s tftp://{hostname}:{port}/{remote_path}', stderr=None))
+        file.write(cmd(f'curl -s tftp://{hostname}:{port}/{remote_path}', stderr=None).encode())
 
 def download_http(urlstring, local_path):
     with open(local_path, 'wb') as file:
@@ -79,10 +79,6 @@ def download(local_path, urlstring):
         username = url.username if url.username else 'anonymous'
         download_ftp(local_path, url.hostname, url.path, username, url.password)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        # None means we don't want to use password authentication.
-        # An empty string (what urlparse returns when a password doesn't
-        # exist in the URL) means the password is an empty string.
-        password = url.password if url.password else None
         download_sftp(local_path, url.hostname, url.path, url.username, password)
     elif url.scheme == 'tftp':
         download_tftp(local_path, url.hostname, url.path)
@@ -98,7 +94,6 @@ def upload(local_path, urlstring):
         username = url.username if url.username else 'anonymous'
         upload_ftp(local_path, url.hostname, url.path, username, url.password)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        password = url.password if url.password else None
         upload_sftp(local_path, url.hostname, url.path, url.username, password)
     elif url.scheme == 'tftp':
         upload_tftp(local_path, url.hostname, url.path)
