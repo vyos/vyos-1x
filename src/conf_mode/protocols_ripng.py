@@ -57,8 +57,6 @@ def get_config(config=None):
     # Merge policy dict into OSPF dict
     ripng = dict_merge(tmp, ripng)
 
-    import pprint
-    pprint.pprint(ripng)
     return ripng
 
 def verify(ripng):
@@ -99,9 +97,6 @@ def generate(ripng):
         return None
 
     ripng['new_frr_config'] = render_to_string('frr/ripng.frr.tmpl', ripng)
-    import pprint
-    pprint.pprint(ripng['new_frr_config'])
-
     return None
 
 def apply(ripng):
