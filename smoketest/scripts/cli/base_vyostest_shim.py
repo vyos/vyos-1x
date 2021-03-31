@@ -71,9 +71,9 @@ class VyOSUnitTestSHIM:
         def cli_commit(self):
             self._session.commit()
 
-        def getFRRconfig(self, string, end='$'):
+        def getFRRconfig(self, string, end='$', endsection='^!'):
             """ Retrieve current "running configuration" from FRR """
-            command = f'vtysh -c "show run" | sed -n "/^{string}{end}/,/^!/p"'
+            command = f'vtysh -c "show run" | sed -n "/^{string}{end}/,/{endsection}/p"'
 
             count = 0
             tmp = ''

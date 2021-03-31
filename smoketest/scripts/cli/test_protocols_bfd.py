@@ -112,21 +112,22 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
             peerconfig = self.getFRRconfig(f' peer {peer}', end='')
 
             if 'echo_mode' in peer_config:
-                self.assertIn(f' echo-mode', peerconfig)
+                self.assertIn(f'echo-mode', peerconfig)
             if 'intv_echo' in peer_config:
-                self.assertIn(f' echo-interval {peer_config["intv_echo"]}', peerconfig)
+                self.assertIn(f'echo-interval {peer_config["intv_echo"]}', peerconfig)
             if 'intv_mult' in peer_config:
-                self.assertIn(f' detect-multiplier {peer_config["intv_mult"]}', peerconfig)
+                self.assertIn(f'detect-multiplier {peer_config["intv_mult"]}', peerconfig)
             if 'intv_rx' in peer_config:
-                self.assertIn(f' receive-interval {peer_config["intv_rx"]}', peerconfig)
+                self.assertIn(f'receive-interval {peer_config["intv_rx"]}', peerconfig)
             if 'intv_tx' in peer_config:
-                self.assertIn(f' transmit-interval {peer_config["intv_tx"]}', peerconfig)
-            if 'shutdown' not in peer_config:
-                self.assertIn(f' no shutdown', peerconfig)
+                self.assertIn(f'transmit-interval {peer_config["intv_tx"]}', peerconfig)
+            if 'shutdown' in peer_config:
+                self.assertIn(f'shutdown', peerconfig)
+            else:
+                self.assertNotIn(f'shutdown', peerconfig)
 
     def test_bfd_profile(self):
         peer = '192.0.2.10'
-        self.debug = True
 
         for profile, profile_config in profiles.items():
             if 'echo_mode' in profile_config:
@@ -149,19 +150,21 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         for profile, profile_config in profiles.items():
-            config = self.getFRRconfig(f' profile {profile}', end='')
+            config = self.getFRRconfig(f' profile {profile}', endsection='^ !')
             if 'echo_mode' in profile_config:
-                self.assertIn(f' echo-mode', config)
+                self.assertIn(f'echo-mode', config)
             if 'intv_echo' in profile_config:
-                self.assertIn(f' echo-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f'echo-interval {profile_config["intv_echo"]}', config)
             if 'intv_mult' in profile_config:
-                self.assertIn(f' detect-multiplier {profile_config["intv_mult"]}', config)
+                self.assertIn(f'detect-multiplier {profile_config["intv_mult"]}', config)
             if 'intv_rx' in profile_config:
-                self.assertIn(f' receive-interval {profile_config["intv_rx"]}', config)
+                self.assertIn(f'receive-interval {profile_config["intv_rx"]}', config)
             if 'intv_tx' in profile_config:
-                self.assertIn(f' transmit-interval {profile_config["intv_tx"]}', config)
-            if 'shutdown' not in profile_config:
-                self.assertIn(f' no shutdown', config)
+                self.assertIn(f'transmit-interval {profile_config["intv_tx"]}', config)
+            if 'shutdown' in profile_config:
+                self.assertIn(f'shutdown', config)
+            else:
+                self.assertNotIn(f'shutdown', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
