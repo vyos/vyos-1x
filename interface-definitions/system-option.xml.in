@@ -36,11 +36,11 @@
              <properties>
                <help>System keyboard layout, type ISO2</help>
                <completionHelp>
-                 <list>us fr de fi no dk</list>
+                 <list>us fr de fi no dk dvorak</list>
                </completionHelp>
                <valueHelp>
                  <format>us</format>
-                 <description>United States of America</description>
+                 <description>United States</description>
                </valueHelp>
                <valueHelp>
                  <format>fr</format>
@@ -61,6 +61,10 @@
                <valueHelp>
                  <format>dk</format>
                  <description>Denmark</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>dvorak</format>
+                 <description>Dvorak</description>
                </valueHelp>
              </properties>
              <defaultValue>us</defaultValue>
