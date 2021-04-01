@@ -68,6 +68,7 @@ Apply the new configuration:
 import tempfile
 import re
 from vyos import util
+from vyos.util import chown
 import logging
 from logging.handlers import SysLogHandler
 import os
@@ -220,8 +221,13 @@ def save_configuration(daemon=None):
     if code:
         raise OSError(code, output)
 
-    with open(f"{path_config}/{daemon}.conf", "w") as f:
+    daemon_conf = f'{path_config}/{daemon}.conf'
+
+    with open(daemon_conf, "w") as f:
         f.write(output)
+    # Set permissions (frr:frr) for /run/frr/{daemon}.conf
+    if os.path.exists(daemon_conf):
+        chown(daemon_conf, 'frr', 'frr')
     config = output
 
     return config
