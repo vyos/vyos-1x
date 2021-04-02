@@ -170,12 +170,11 @@ def process_node(n, tmpl_dir):
           print("Processing node {}".format(name))
 
         nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
-        if not os.path.exists(nodedef_path):
+        # Only create the "node.def" file if it exists but is empty, or if it
+        # does not exist at all.
+        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
             with open(nodedef_path, "w") as f:
                 f.write(make_node_def(props, command))
-        else:
-           # Something has already generated this file
-           pass
 
         if children is not None:
             inner_nodes = children.iterfind("*")
