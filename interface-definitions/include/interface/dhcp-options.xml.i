@@ -37,6 +37,24 @@
         </constraint>
       </properties>
     </leafNode>
+    <leafNode name="reject">
+      <properties>
+        <help>IP addresses or subnets from which to reject DHCP leases</help>
+        <valueHelp>
+          <format>ipv4</format>
+          <description>IPv4 address to match</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ipv4net</format>
+          <description>IPv4 prefix to match</description>
+        </valueHelp>
+        <constraint>
+          <validator name="ipv4-address"/>
+          <validator name="ipv4-prefix"/>
+        </constraint>
+        <multi/>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->

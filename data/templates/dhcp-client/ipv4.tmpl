@@ -20,5 +20,9 @@ interface "{{ ifname }}" {
     # The require statement lists options that must be sent in order for an offer to be
     # accepted. Offers that do not contain all the listed options will be ignored!
     require subnet-mask;
+{% if dhcp_options.reject is defined and dhcp_options.reject is not none %}
+    # Block addresses coming from theses dhcp servers if configured.
+    reject {{ dhcp_options.reject | join(', ') }};
+{% endif %}
 }
 
