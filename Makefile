@@ -47,6 +47,8 @@ interface_definitions: $(config_xml_obj)
 	rm -rf $(TMPL_DIR)/vpn/nipsec
 	rm -rf $(TMPL_DIR)/npolicy
 
+	find $(TMPL_DIR) -name node.def -empty && sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
+
 .PHONY: op_mode_definitions
 .ONESHELL:
 op_mode_definitions: $(op_xml_obj)
@@ -71,6 +73,8 @@ op_mode_definitions: $(op_xml_obj)
 	# XXX: ping must be able to recursivly call itself as the
 	# options are provided from the script itself
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
+
+	find $(op_TMPL_DIR) -name node.def -empty && sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
 .PHONY: component_versions
 .ONESHELL:
