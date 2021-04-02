@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="protocols">
+    <properties>
+      <help>Routing protocols</help>
+    </properties>
     <children>
        <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py">
         <properties>
