@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="interfaces">
+    <properties>
+      <help>Network interfaces</help>
+    </properties>
     <children>
       <tagNode name="ethernet" owner="${vyos_conf_scripts_dir}/interfaces-ethernet.py">
         <properties>
