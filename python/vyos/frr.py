@@ -69,6 +69,7 @@ import tempfile
 import re
 from vyos import util
 from vyos.util import chown
+from vyos.util import cmd
 import logging
 from logging.handlers import SysLogHandler
 import os
@@ -209,28 +210,14 @@ def reload_configuration(config, daemon=None):
     return output
 
 
-def save_configuration(daemon=None):
-    """Save FRR configuration to /run/frr/{daemon}.conf
-       It save configuration on each commit.
+def save_configuration():
+    """Save FRR configuration to /run/frr/config/frr.conf
+       It save configuration on each commit. T3217
     """
-    if daemon and daemon not in _frr_daemons:
-        raise ValueError(f'The specified daemon type is not supported {repr(daemon)}')
 
-    cmd = f"{path_vtysh} -d {daemon} -c 'show run no-header'"
-    output, code = util.popen(cmd, stderr=util.STDOUT)
-    if code:
-        raise OSError(code, output)
+    cmd(f'{path_vtysh} -n -w')
 
-    daemon_conf = f'{path_config}/{daemon}.conf'
-
-    with open(daemon_conf, "w") as f:
-        f.write(output)
-    # Set permissions (frr:frr) for /run/frr/{daemon}.conf
-    if os.path.exists(daemon_conf):
-        chown(daemon_conf, 'frr', 'frr')
-    config = output
-
-    return config
+    return
 
 
 def execute(command):

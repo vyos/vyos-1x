@@ -200,8 +200,8 @@ def apply(ospf):
         for a in range(5):
             frr_cfg.commit_configuration(frr_daemon)
 
-    # Save configuration to /run/frr/{daemon}.conf
-    frr.save_configuration(frr_daemon)
+    # Save configuration to /run/frr/config/frr.conf
+    frr.save_configuration()
 
     return None
 
