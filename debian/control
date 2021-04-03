@@ -37,6 +37,7 @@ Depends:
   libvyosconfig0,
   lsscsi,
   mdns-repeater,
+  minisign,
   nginx-light,
   ntp,
   ntpdate,
