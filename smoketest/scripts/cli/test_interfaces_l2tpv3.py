@@ -58,4 +58,7 @@ class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
 
 
 if __name__ == '__main__':
+    # when re-running this test, cleanup loaded modules first so they are
+    # reloaded on demand - not needed but test more and more features
+    cmd('sudo rmmod l2tp_ip6 l2tp_eth l2tp_eth l2tp_netlink l2tp_core')
     unittest.main(verbosity=2)
