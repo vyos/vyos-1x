@@ -30,8 +30,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 declare -a vals
-eval "bgp_as=$(cli-shell-api listActiveNodes protocols bgp)"
-eval "vals=($(cli-shell-api listActiveNodes protocols bgp $bgp_as neighbor))"
+eval "vals=($(cli-shell-api listActiveNodes protocols bgp neighbor))"
 
 if [ $ipv4 -eq 1 ] && [ $ipv6 -eq 1 ]; then
     echo -n '<x.x.x.x>' '<h:h:h:h:h:h:h:h>' ${vals[@]}

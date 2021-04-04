@@ -16,8 +16,7 @@
 # Return BGP peer-groups from CLI
 
 declare -a vals
-eval "bgp_as=$(cli-shell-api listNodes protocols bgp)"
-eval "vals=($(cli-shell-api listNodes protocols bgp $bgp_as peer-group))"
+eval "vals=($(cli-shell-api listNodes protocols bgp peer-group))"
 
 echo -n ${vals[@]}
 exit 0
