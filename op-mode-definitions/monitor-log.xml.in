@@ -7,6 +7,14 @@
           <help>Monitor last lines of messages file</help>
         </properties>
         <command>tail --follow=name /var/log/messages</command>
+        <children>
+          <node name="colored">
+            <properties>
+              <help>Output log in a colored fashion</help>
+            </properties>
+            <command>grc tail --follow=name /var/log/messages</command>
+          </node>
+        </children>
       </node>
     </children>
   </node>
