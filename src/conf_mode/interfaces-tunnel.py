@@ -61,6 +61,9 @@ def get_config(config=None):
     nhrp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
     if nhrp: tunnel.update({'nhrp' : list(nhrp.keys())})
 
+    if 'encapsulation' in tunnel and tunnel['encapsulation'] not in ['erspan', 'ip6erspan']:
+        del tunnel['parameters']['erspan']
+
     return tunnel
 
 def verify(tunnel):
@@ -72,14 +75,28 @@ def verify(tunnel):
 
         return None
 
-    if 'encapsulation' not in tunnel:
-        error = 'Must configure encapsulation for "{ifname}"!'
-        raise ConfigError(error.format(**tunnel))
+    verify_tunnel(tunnel)
+
+    if tunnel['encapsulation'] in ['erspan', 'ip6erspan']:
+        if dict_search('parameters.ip.key', tunnel) == None:
+            raise ConfigError('ERSPAN requires ip key parameter!')
+
+        # this is a default field
+        ver = int(tunnel['parameters']['erspan']['version'])
+        if ver == 1:
+            if 'hw_id' in tunnel['parameters']['erspan']:
+                raise ConfigError('ERSPAN version 1 does not support hw-id!')
+            if 'direction' in tunnel['parameters']['erspan']:
+                raise ConfigError('ERSPAN version 1 does not support direction!')
+        elif ver == 2:
+            if 'idx' in tunnel['parameters']['erspan']:
+                raise ConfigError('ERSPAN version 2 does not index parameter!')
+            if 'direction' not in tunnel['parameters']['erspan']:
+                raise ConfigError('ERSPAN version 2 requires direction to be set!')
 
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
     verify_vrf(tunnel)
-    verify_tunnel(tunnel)
 
     if 'source_interface' in tunnel:
         verify_interface_exists(tunnel['source_interface'])
@@ -91,7 +108,6 @@ def verify(tunnel):
             raise ConfigError('Disabled PMTU requires TTL set to "0"!')
         if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
             raise ConfigError('Can not disable PMTU discovery for given encapsulation')
-
 
 def generate(tunnel):
     return None
@@ -108,8 +124,8 @@ def apply(tunnel):
         encap = dict_search('linkinfo.info_kind', tmp)
         remote = dict_search('linkinfo.info_data.remote', tmp)
 
-    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or
-        encap in ['gretap', 'ip6gretap'] or remote in ['any']):
+    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or encap in
+        ['gretap', 'ip6gretap', 'erspan', 'ip6erspan'] or remote in ['any']):
         if interface in interfaces():
             tmp = Interface(interface)
             tmp.remove()

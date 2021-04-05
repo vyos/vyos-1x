@@ -32,8 +32,6 @@ from vyos.ifconfig.vtun import VTunIf
 from vyos.ifconfig.vti import VTIIf
 from vyos.ifconfig.pppoe import PPPoEIf
 from vyos.ifconfig.tunnel import TunnelIf
-from vyos.ifconfig.erspan import ERSpanIf
-from vyos.ifconfig.erspan import ER6SpanIf
 from vyos.ifconfig.wireless import WiFiIf
 from vyos.ifconfig.l2tpv3 import L2TPv3If
 from vyos.ifconfig.macsec import MACsecIf

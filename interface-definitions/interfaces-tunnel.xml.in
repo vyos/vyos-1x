@@ -80,8 +80,12 @@
             <properties>
               <help>Encapsulation of this tunnel interface</help>
               <completionHelp>
-                <list>gre gretap ip6gre ip6gretap ip6ip6 ipip ipip6 sit</list>
+                <list>erspan gre gretap ip6erspan ip6gre ip6gretap ip6ip6 ipip ipip6 sit</list>
               </completionHelp>
+              <valueHelp>
+                <format>erspan</format>
+                <description>Encapsulated Remote Switched Port Analyzer</description>
+              </valueHelp>
               <valueHelp>
                 <format>gre</format>
                 <description>Generic Routing Encapsulation</description>
@@ -89,6 +93,10 @@
               <valueHelp>
                 <format>gretap</format>
                 <description>Generic Routing Encapsulation (virtual L2 tunnel)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ip6erspan</format>
+                <description>Encapsulated Remote Switched Port Analyzer over IPv6 network</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6gre</format>
@@ -115,9 +123,9 @@
                 <description>Simple Internet Transition encapsulation</description>
               </valueHelp>
               <constraint>
-                <regex>^(gre|gretap|ip6gre|ip6gretap|ip6ip6|ipip|ipip6|sit)$</regex>
+                <regex>^(erspan|gre|gretap|ip6erspan|ip6gre|ip6gretap|ip6ip6|ipip|ipip6|sit)$</regex>
               </constraint>
-              <constraintErrorMessage>Invalid encapsulation, must be one of: gre, gretap, ip6gre, ip6gretap, ipip, sit, ipip6 or ip6ip6</constraintErrorMessage>
+              <constraintErrorMessage>Invalid encapsulation, must be one of: erspan, gre, gretap, ip6erspan, ip6gre, ip6gretap, ipip, sit, ipip6 or ip6ip6</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="multicast">
@@ -145,6 +153,81 @@
               <help>Tunnel parameters</help>
             </properties>
             <children>
+              <node name="erspan">
+                <properties>
+                  <help>ERSPAN Tunnel parameters</help>
+                </properties>
+                <children>
+
+<!---
+Temporary disabled b/c of https://github.com/shemminger/iproute2/issues/41
+                  <leafNode name="direction">
+                    <properties>
+                      <help>Specifies mirrored traffic direction</help>
+                      <completionHelp>
+                        <list>ingress egress</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ingress</format>
+                        <description>Mirror ingress direction</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>egress</format>
+                        <description>Mirror egress direction</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(ingress|egress)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="hw-id">
+                    <properties>
+                      <help>Unique identifier of ERSPAN engine within a system</help>
+                      <valueHelp>
+                        <format>0-1048575</format>
+                        <description>Unique identifier of ERSPAN engine</description>
+                      </valueHelp>
+                      <constraint>
+fix double hyphen below ...
+                        <validator name="numeric" argument="- -range 0-1048575"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+-->
+                  <leafNode name="index">
+                    <properties>
+                      <help>Specifify ERSPAN version 1 index field</help>
+                      <valueHelp>
+                        <format>0-63</format>
+                        <description>Platform-depedent field for specifying port number and direction</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-63"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="version">
+                    <properties>
+                      <help>Protocol version</help>
+                      <valueHelp>
+                        <format>1</format>
+                        <description>ERSPAN Type II</description>
+                      </valueHelp>
+<!--
+Temporary disabled b/c of https://github.com/shemminger/iproute2/issues/41
+                      <valueHelp>
+                        <format>2</format>
+                        <description>ERSPAN Type III</description>
+                      </valueHelp>
+-->
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-1"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>1</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
               <node name="ip">
                 <properties>
                   <help>IPv4 specific tunnel parameters</help>

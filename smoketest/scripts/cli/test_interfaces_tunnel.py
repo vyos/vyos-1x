@@ -232,5 +232,91 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         conf = get_interface_config(interface)
         self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
+    def test_erspan(self):
+        interface = f'tun1070'
+        encapsulation = 'erspan'
+        ip_key = '77'
+        idx = '20'
+
+        self.cli_set(self._base_path + [interface, 'encapsulation', encapsulation])
+        self.cli_set(self._base_path + [interface, 'source-address', self.local_v4])
+        self.cli_set(self._base_path + [interface, 'remote', remote_ip4])
+
+        self.cli_set(self._base_path + [interface, 'parameters', 'erspan', 'index', idx])
+
+        # ERSPAN requires ip key parameter
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', ip_key])
+
+        # Check if commit is ok
+        self.cli_commit()
+
+        conf = get_interface_config(interface)
+        self.assertEqual(mtu,               conf['mtu'])
+        self.assertEqual(interface,         conf['ifname'])
+        self.assertEqual(encapsulation,     conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4,     conf['linkinfo']['info_data']['local'])
+        self.assertEqual(remote_ip4,        conf['linkinfo']['info_data']['remote'])
+        self.assertEqual(0,                 conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
+        self.assertEqual(int(idx),          conf['linkinfo']['info_data']['erspan_index'])
+        self.assertEqual(1,                 conf['linkinfo']['info_data']['erspan_ver'])
+        self.assertTrue(                    conf['linkinfo']['info_data']['iseq'])
+        self.assertTrue(                    conf['linkinfo']['info_data']['oseq'])
+
+        # Change remote ip address (inc host by 2
+        new_remote = inc_ip(remote_ip4, 2)
+        self.cli_set(self._base_path + [interface, 'remote', new_remote])
+        # Check if commit is ok
+        self.cli_commit()
+
+        conf = get_interface_config(interface)
+        self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
+
+    def test_ip6erspan(self):
+        interface = f'tun1070'
+        encapsulation = 'ip6erspan'
+        ip_key = '77'
+        erspan_ver = '2'
+        direction = 'ingres'
+
+        self.cli_set(self._base_path + [interface, 'encapsulation', encapsulation])
+        self.cli_set(self._base_path + [interface, 'source-address', self.local_v6])
+        self.cli_set(self._base_path + [interface, 'remote', remote_ip6])
+
+        self.cli_set(self._base_path + [interface, 'parameters', 'erspan', 'index', '10'])
+
+        # ERSPAN requires ip key parameter
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', ip_key])
+
+        # Check if commit is ok
+        self.cli_commit()
+
+        conf = get_interface_config(interface)
+        self.assertEqual(mtu,               conf['mtu'])
+        self.assertEqual(interface,         conf['ifname'])
+        self.assertEqual(encapsulation,     conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v6,     conf['linkinfo']['info_data']['local'])
+        self.assertEqual(remote_ip6,        conf['linkinfo']['info_data']['remote'])
+        self.assertEqual(0,                 conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
+        self.assertEqual(1,                 conf['linkinfo']['info_data']['erspan_ver'])
+        self.assertTrue(                    conf['linkinfo']['info_data']['iseq'])
+        self.assertTrue(                    conf['linkinfo']['info_data']['oseq'])
+
+        # Change remote ip address (inc host by 2
+        new_remote = inc_ip(remote_ip6, 2)
+        self.cli_set(self._base_path + [interface, 'remote', new_remote])
+        # Check if commit is ok
+        self.cli_commit()
+
+        conf = get_interface_config(interface)
+        self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

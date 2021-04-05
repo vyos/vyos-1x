@@ -63,6 +63,10 @@ class TunnelIf(Interface):
         'parameters.ip.no_pmtu_discovery' : 'nopmtudisc',
         'parameters.ip.tos'               : 'tos',
         'parameters.ip.ttl'               : 'ttl',
+        'parameters.erspan.direction'     : 'erspan_dir',
+        'parameters.erspan.hw_id'         : 'erspan_hwid',
+        'parameters.erspan.index'         : 'erspan',
+        'parameters.erspan.version'       : 'erspan_ver',
     }
     mapping_ipv6 = {
         'parameters.ipv6.encaplimit'      : 'encaplimit',
@@ -113,8 +117,12 @@ class TunnelIf(Interface):
             mapping = { **self.mapping, **self.mapping_ipv4 }
 
         cmd = 'ip tunnel add {ifname} mode {encapsulation}'
-        if self.iftype in ['gretap', 'ip6gretap']:
+        if self.iftype in ['gretap', 'ip6gretap', 'erspan', 'ip6erspan']:
             cmd = 'ip link add name {ifname} type {encapsulation}'
+            # ERSPAN requires the serialisation of packets
+            if self.iftype in ['erspan', 'ip6erspan']:
+                cmd += ' seq'
+
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
@@ -131,7 +139,7 @@ class TunnelIf(Interface):
 
     def _change_options(self):
         # gretap interfaces do not support changing any parameter
-        if self.iftype in ['gretap', 'ip6gretap']:
+        if self.iftype in ['gretap', 'ip6gretap', 'erspan', 'ip6erspan']:
             return
 
         if self.config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
