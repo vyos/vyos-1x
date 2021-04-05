@@ -437,7 +437,7 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
 
-        def test_dhcpv6_clinet_options(self):
+        def test_dhcpv6_client_options(self):
             if not self._test_ipv6_dhcpc6:
                 self.skipTest('not supported')
 
