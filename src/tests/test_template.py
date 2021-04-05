@@ -14,12 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import vyos.template
+
 from unittest import TestCase
 
 class TestVyOSTemplate(TestCase):
     def setUp(self):
         pass
+
+    def test_is_interface(self):
+        for interface in ['lo', 'eth0']:
+            if os.path.exists(f'/sys/class/net/{interface}'):
+                self.assertTrue(vyos.template.is_interface(interface))
+            else:
+                self.assertFalse(vyos.template.is_interface(interface))
+        self.assertFalse(vyos.template.is_interface('non-existent'))
 
     def test_is_ip(self):
         self.assertTrue(vyos.template.is_ip('192.0.2.1'))

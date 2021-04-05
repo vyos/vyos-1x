@@ -207,6 +207,11 @@ def network_from_ipv4(address):
     cidr_prefix = ip_interface(f'{address}/{netmask}').network
     return address_from_cidr(cidr_prefix)
 
+@register_filter('is_interface')
+def is_interface(interface):
+    """ Check if parameter is a valid local interface name """
+    return os.path.exists(f'/sys/class/net/{interface}')
+
 @register_filter('is_ip')
 def is_ip(addr):
     """ Check addr if it is an IPv4 or IPv6 address """
