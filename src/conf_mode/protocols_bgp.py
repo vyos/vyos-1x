@@ -22,6 +22,7 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import is_ip
+from vyos.template import is_interface
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import dict_search
@@ -128,7 +129,12 @@ def verify(bgp):
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
                 if is_ip(peer) and is_addr_assigned(peer):
-                    raise ConfigError(f'Can\'t configure local address as neighbor "{peer}"')
+                    raise ConfigError(f'Can not configure a local address as neighbor "{peer}"')
+                elif is_interface(peer):
+                    if 'peer_group' in peer_config:
+                        raise ConfigError(f'peer-group must be set under the interface node of "{peer}"')
+                    if 'remote_as' in peer_config:
+                        raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
 
             for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
                 # Bail out early if address family is not configured
