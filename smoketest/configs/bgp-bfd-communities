@@ -421,8 +421,6 @@ protocols {
                     local 220
                 }
             }
-            graceful-restart {
-            }
         }
         peer-group DAL13 {
             address-family {
