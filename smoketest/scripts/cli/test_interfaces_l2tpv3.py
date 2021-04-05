@@ -14,13 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import json
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 from vyos.util import cmd
 
-class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
+class L2TPv3InterfaceTest(BasicInterfaceTest.BaseTest):
     @classmethod
     def setUpClass(cls):
         cls._test_ip = True
@@ -51,9 +52,17 @@ class GeneveInterfaceTest(BasicInterfaceTest.BaseTest):
                     for opt in self._options[interface]:
                         dict.update({opt.split()[0].replace('-','_'): opt.split()[1]})
 
-                    for key in ['peer_session_id', 'peer_tunnel_id', 'session_id', 'tunnel_id']:
+                    for key in ['peer_session_id', 'peer_tunnel_id',
+                                'session_id', 'tunnel_id']:
                         self.assertEqual(str(config[key]), dict[key])
 
 
 if __name__ == '__main__':
+    # when re-running this test, cleanup loaded modules first so they are
+    # reloaded on demand - not needed but test more and more features
+    for module in ['l2tp_ip6', 'l2tp_ip', 'l2tp_eth', 'l2tp_eth',
+                   'l2tp_netlink', 'l2tp_core']:
+        if os.path.exists(f'/sys/module/{module}'):
+            cmd(f'sudo rmmod {module}')
+
     unittest.main(verbosity=2)
