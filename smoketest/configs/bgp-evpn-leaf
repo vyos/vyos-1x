@@ -29,6 +29,7 @@ interfaces {
     loopback lo {
     }
     vxlan vxlan100 {
+        mtu 1500
         parameters {
             nolearning
         }
