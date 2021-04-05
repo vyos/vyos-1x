@@ -21,40 +21,34 @@ interfaces {
         address 172.18.202.10/24
     }
     l2tpv3 l2tpeth10 {
-        description "L2 VPN Tunnel"
         destination-port 5010
         encapsulation ip
         local-ip 172.18.202.10
-        mtu 1500
         peer-session-id 110
         peer-tunnel-id 10
-        remote-ip 172.18.254.201
+        remote-ip 172.18.202.110
         session-id 110
         source-port 5010
         tunnel-id 10
     }
     l2tpv3 l2tpeth20 {
-        description "L2 VPN Tunnel"
         destination-port 5020
         encapsulation ip
         local-ip 172.18.202.10
-        mtu 1500
         peer-session-id 120
         peer-tunnel-id 20
-        remote-ip 172.18.254.202
+        remote-ip 172.18.202.120
         session-id 120
         source-port 5020
         tunnel-id 20
     }
     l2tpv3 l2tpeth30 {
-        description "L2 VPN Tunnel"
         destination-port 5030
         encapsulation ip
         local-ip 172.18.202.10
-        mtu 1500
         peer-session-id 130
         peer-tunnel-id 30
-        remote-ip 172.18.254.203
+        remote-ip 172.18.202.130
         session-id 130
         source-port 5030
         tunnel-id 30
@@ -93,8 +87,7 @@ interfaces {
 protocols {
     static {
         route 0.0.0.0/0 {
-            next-hop 172.18.202.1 {
-                distance 10
+            next-hop 172.18.202.254 {
             }
         }
     }
