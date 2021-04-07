@@ -115,6 +115,10 @@ def verify(bgp):
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
                 raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
 
+            # Check if neighbor has both override capability and strict capability match configured at the same time.
+            if 'override_capability' in peer_config and 'strict_capability_match' in peer_config:
+                raise ConfigError(f'Neighbor "{peer}" cannot have both override-capability and strict-capability-match configured at the same time!')
+
             # Check spaces in the password
             if 'password' in peer_config and ' ' in peer_config['password']:
                 raise ConfigError('You can\'t use spaces in the password')
@@ -136,10 +140,20 @@ def verify(bgp):
                     if 'remote_as' in peer_config:
                         raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
 
-            for afi in ['ipv4_unicast', 'ipv6_unicast', 'l2vpn_evpn']:
+            for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
+                        'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
+                        'l2vpn_evpn']:
                 # Bail out early if address family is not configured
                 if 'address_family' not in peer_config or afi not in peer_config['address_family']:
                     continue
+
+                # Check if neighbor has both ipv4 unicast and ipv4 labeled unicast configured at the same time.
+                if 'ipv4_unicast' in peer_config['address_family'] and 'ipv4_labeled_unicast' in peer_config['address_family']:
+                    raise ConfigError(f'Neighbor "{peer}" cannot have both ipv4-unicast and ipv4-labeled-unicast configured at the same time!')
+                    
+                # Check if neighbor has both ipv6 unicast and ipv6 labeled unicast configured at the same time.
+                if 'ipv6_unicast' in peer_config['address_family'] and 'ipv6_labeled_unicast' in peer_config['address_family']:
+                    raise ConfigError(f'Neighbor "{peer}" cannot have both ipv6-unicast and ipv6-labeled-unicast configured at the same time!')
 
                 afi_config = peer_config['address_family'][afi]
                 # Validate if configured Prefix list exists
@@ -188,6 +202,30 @@ def verify(bgp):
 
         if not verify_remote_as(bgp['listen']['range'][prefix], bgp):
             raise ConfigError(f'Peer-group "{peer_group}" requires remote-as to be set!')
+
+    # Throw an error if the global administrative distance parameters aren't all filled out.
+    if dict_search('parameters.distance', bgp) == None:
+        pass
+    else:
+        if dict_search('parameters.distance.global', bgp):
+            for key in ['external', 'internal', 'local']:
+                if dict_search(f'parameters.distance.global.{key}', bgp) == None:
+                    raise ConfigError('Missing mandatory configuration option for '\
+                                     f'global administrative distance {key}!')
+        
+    # Throw an error if the address family specific administrative distance parameters aren't all filled out.
+    if dict_search('address_family', bgp) == None:
+        pass
+    else:
+        for address_family_name in dict_search('address_family', bgp):
+            if dict_search(f'address_family.{address_family_name}.distance', bgp) == None:
+                pass
+            else:
+                for key in ['external', 'internal', 'local']:
+                    if dict_search(f'address_family.{address_family_name}.distance.{key}', bgp) == None:
+                        address_family_name = address_family_name.replace('_', '-')
+                        raise ConfigError('Missing mandatory configuration option for '\
+                                         f'{address_family_name} administrative distance {key}!')
 
     return None
 

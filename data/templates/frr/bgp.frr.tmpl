@@ -90,8 +90,24 @@
 {%     for afi, afi_config in config.address_family.items() %}
 {%       if afi == 'ipv4_unicast' %}
  address-family ipv4 unicast
+{%       elif afi == 'ipv4_multicast' %}
+ address-family ipv4 multicast
+{%       elif afi == 'ipv4_labeled_unicast' %}
+ address-family ipv4 labeled-unicast
+{%       elif afi == 'ipv4_vpn' %}
+ address-family ipv4 vpn
+{%       elif afi == 'ipv4_flowspec' %}
+ address-family ipv4 flowspec
 {%       elif afi == 'ipv6_unicast' %}
  address-family ipv6 unicast
+{%       elif afi == 'ipv6_multicast' %}
+ address-family ipv6 multicast
+{%       elif afi == 'ipv6_labeled_unicast' %}
+ address-family ipv6 labeled-unicast
+{%       elif afi == 'ipv6_vpn' %}
+ address-family ipv6 vpn
+{%       elif afi == 'ipv6_flowspec' %}
+ address-family ipv6 flowspec
 {%       elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
 {%       endif %}
@@ -198,8 +214,24 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
  !
 {%     if afi == 'ipv4_unicast' %}
  address-family ipv4 unicast
+{%     elif afi == 'ipv4_multicast' %}
+ address-family ipv4 multicast
+{%     elif afi == 'ipv4_labeled_unicast' %}
+ address-family ipv4 labeled-unicast
+{%     elif afi == 'ipv4_vpn' %}
+ address-family ipv4 vpn
+{%     elif afi == 'ipv4_flowspec' %}
+ address-family ipv4 flowspec
 {%     elif afi == 'ipv6_unicast' %}
  address-family ipv6 unicast
+{%     elif afi == 'ipv6_multicast' %}
+ address-family ipv6 multicast
+{%     elif afi == 'ipv6_labeled_unicast' %}
+ address-family ipv6 labeled-unicast
+{%     elif afi == 'ipv6_vpn' %}
+ address-family ipv6 vpn
+{%     elif afi == 'ipv6_flowspec' %}
+ address-family ipv6 flowspec
 {%     elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
 {%     endif %}
@@ -231,9 +263,24 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 {%     endif %}
 {%     if afi_config.network is defined and afi_config.network is not none %}
 {%       for network in afi_config.network %}
-  network {{ network }}{% if afi_config.network[network].route_map is defined %} route-map {{ afi_config.network[network].route_map }}{% endif %}{% if afi_config.network[network].backdoor is defined %} backdoor{% endif %}
+  network {{ network }}{% if afi_config.network[network].route_map is defined %} route-map {{ afi_config.network[network].route_map }}{% endif %}{% if afi_config.network[network].backdoor is defined %} backdoor{% endif %}{% if afi_config.network[network].rd is defined and afi_config.network[network].label is defined%} rd {{ afi_config.network[network].rd }} label {{ afi_config.network[network].label }}{% endif %}
 {#######   we need this blank line!! #######}
 
+{%       endfor %}
+{%     endif %}
+{%     if afi_config.distance is defined and afi_config.distance is not none %}
+{%       if afi_config.distance is defined and afi_config.distance.external is defined and afi_config.distance.internal is defined and afi_config.distance.local is defined %}
+ distance bgp {{ afi_config.distance.external }} {{ afi_config.distance.internal }} {{ afi_config.distance.local }}
+{%       endif %}
+{%       if afi_config.distance.prefix is defined and afi_config.distance.prefix is not none %}
+{%         for prefix in afi_config.distance.prefix %}
+ distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
+{%         endfor %}
+{%       endif %}
+{%     endif %}
+{%     if afi_config.local_install is defined and afi_config.local_install is not none %}
+{%       for interface in afi_config.local_install.interface %}
+ local-install {{ interface }}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.advertise_all_vni is defined %}
@@ -367,8 +414,6 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
  bgp deterministic-med
 {%   endif %}
 {%   if parameters.distance is defined and parameters.distance is not none %}
- !
- address-family ipv4 unicast
 {%     if parameters.distance.global is defined and parameters.distance.global.external is defined and parameters.distance.global.internal is defined and parameters.distance.global.local is defined %}
   distance bgp {{ parameters.distance.global.external }} {{ parameters.distance.global.internal }} {{ parameters.distance.global.local }}
 {%     endif %}
@@ -377,8 +422,6 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
   distance {{ parameters.distance.prefix[prefix].distance }} {{ prefix }}
 {%       endfor %}
 {%     endif %}
- exit-address-family
- !
 {%   endif %}
 {%   if parameters.graceful_restart is defined %}
  bgp graceful-restart {{ 'stalepath-time ' + parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}

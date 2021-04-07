@@ -102,8 +102,7 @@ peer_group_config = {
         'password'     : 'VyOS-Secure123',
         'shutdown'     : '',
         'cap_over'     : '',
-#        XXX: not available in current Perl backend
-#       'ttl_security': '5',
+        'ttl_security': '5',
         },
     'bar' : {
         'description'  : 'foo peer bar group',
@@ -127,7 +126,6 @@ peer_group_config = {
         },
 }
 
-
 class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         self.cli_set(['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
@@ -141,6 +139,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'prefix', '2001:db8:1000::/64'])
         self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
         self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
+
+        self.cli_set(base_path + ['local-as', ASN])
 
     def tearDown(self):
         self.cli_delete(['policy', 'route-map', route_map_in])
@@ -214,7 +214,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
 
-        # Local AS number MUST be defined
+        # Local AS number MUST be defined - as this is set in setUp() we remove
+        # this once for testing of the proper error
+        self.cli_delete(base_path + ['local-as'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(base_path + ['local-as', ASN])
@@ -257,7 +259,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
 
     def test_bgp_02_neighbors(self):
-        self.cli_set(base_path + ['local-as', ASN])
         # Test out individual neighbor configuration items, not all of them are
         # also available to a peer-group!
         for peer, peer_config in neighbor_config.items():
@@ -332,7 +333,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.verify_frr_config(peer, peer_config, frrconfig)
 
     def test_bgp_03_peer_groups(self):
-        self.cli_set(base_path + ['local-as', ASN])
         # Test out individual peer-group configuration items
         for peer_group, config in peer_group_config.items():
             if 'cap_dynamic' in config:
@@ -403,8 +403,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 },
         }
 
-        self.cli_set(base_path + ['local-as', ASN])
-
         # We want to redistribute ...
         redistributes = ['connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
         for redistribute in redistributes:
@@ -451,8 +449,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             },
         }
 
-        self.cli_set(base_path + ['local-as', ASN])
-
         # We want to redistribute ...
         redistributes = ['connected', 'kernel', 'ospfv3', 'ripng', 'static']
         for redistribute in redistributes:
@@ -495,7 +491,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         listen_ranges = ['192.0.2.0/25', '192.0.2.128/25']
         peer_group = 'listenfoobar'
 
-        self.cli_set(base_path + ['local-as', ASN])
         self.cli_set(base_path + ['listen', 'limit', limit])
 
         for prefix in listen_ranges:
@@ -527,8 +522,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         vnis = ['10010', '10020', '10030']
         neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
 
-        self.cli_set(base_path + ['local-as', ASN])
-
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-default-gw'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-svi-ip'])
@@ -554,7 +547,76 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'   advertise-default-gw', vniconfig)
             self.assertIn(f'   advertise-svi-ip', vniconfig)
 
-    def test_bgp_08_vrf_simple(self):
+    def test_bgp_08_zebra_route_map(self):
+        # Implemented because of T3328
+        self.cli_set(base_path + ['route-map', route_map_in])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol bgp route-map {route_map_in}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
+
+    def test_bgp_09_distance_and_flowspec(self):
+        distance_external = '25'
+        distance_internal = '30'
+        distance_local = '35'
+        distance_v4_prefix = '169.254.0.0/32'
+        distance_v6_prefix = '2001::/128'
+        distance_prefix_value = '110'
+        distance_families = ['ipv4-unicast', 'ipv6-unicast','ipv4-multicast', 'ipv6-multicast']
+        verify_families = ['ipv4 unicast', 'ipv6 unicast','ipv4 multicast', 'ipv6 multicast']
+        flowspec_families = ['address-family ipv4 flowspec', 'address-family ipv6 flowspec']
+        flowspec_int = 'lo'
+        
+        # Per family distance support
+        for family in distance_families:
+            self.cli_set(base_path + ['address-family', family, 'distance', 'external', distance_external])
+            self.cli_set(base_path + ['address-family', family, 'distance', 'internal', distance_internal])
+            self.cli_set(base_path + ['address-family', family, 'distance', 'local', distance_local])
+            if 'ipv4' in family:
+                self.cli_set(base_path + ['address-family', family, 'distance',
+                                          'prefix', distance_v4_prefix, 'distance', distance_prefix_value])
+            if 'ipv6' in family:
+                self.cli_set(base_path + ['address-family', family, 'distance',
+                                          'prefix', distance_v6_prefix, 'distance', distance_prefix_value])
+        
+        # IPv4 flowspec interface check
+        self.cli_set(base_path + ['address-family', 'ipv4-flowspec', 'local-install', 'interface', flowspec_int])
+        
+        # IPv6 flowspec interface check
+        self.cli_set(base_path + ['address-family', 'ipv6-flowspec', 'local-install', 'interface', flowspec_int])
+        
+        # Commit changes
+        self.cli_commit()
+        
+        # Verify FRR distances configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        for family in verify_families:
+            self.assertIn(f'address-family {family}', frrconfig)
+            self.assertIn(f'distance bgp {distance_external} {distance_internal} {distance_local}', frrconfig)
+            if 'ipv4' in family:
+                self.assertIn(f'distance {distance_prefix_value} {distance_v4_prefix}', frrconfig)
+            if 'ipv6' in family:
+                self.assertIn(f'distance {distance_prefix_value} {distance_v6_prefix}', frrconfig)
+        
+        # Verify FRR flowspec configuration
+        for family in flowspec_families:
+            self.assertIn(f'{family}', frrconfig)
+            self.assertIn(f'local-install {flowspec_int}', frrconfig)
+    
+    def test_bgp_10_vrf_simple(self):
         router_id = '127.0.0.3'
         vrfs = ['red', 'green', 'blue']
 
@@ -578,6 +640,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
             self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
             self.assertIn(f' bgp router-id {router_id}', frrconfig)
-
+            
 if __name__ == '__main__':
     unittest.main(verbosity=2)
