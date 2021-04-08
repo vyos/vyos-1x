@@ -16,14 +16,7 @@
         </constraint>
       </properties>
     </leafNode>
-    <leafNode name="route-map">
-      <properties>
-        <help>Route map reference</help>
-        <completionHelp>
-          <path>policy route-map</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
+    #include <include/route-map.xml.i>
   </children>
 </node>
 <node name="level-2">
@@ -43,14 +36,7 @@
         </constraint>
       </properties>
     </leafNode>
-    <leafNode name="route-map">
-      <properties>
-        <help>Route map reference</help>
-        <completionHelp>
-          <path>policy route-map</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
+    #include <include/route-map.xml.i>
   </children>
 </node>
 <!-- include end -->
