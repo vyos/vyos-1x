@@ -20,7 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_common_route_maps
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.ifconfig import Interface
@@ -45,10 +45,12 @@ def get_config(config=None):
         return ospfv3
 
     # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify()
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into OSPF dict
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     ospfv3 = dict_merge(tmp, ospfv3)
 
     return ospfv3
@@ -57,7 +59,7 @@ def verify(ospfv3):
     if not ospfv3:
         return None
 
-    verify_route_maps(ospfv3)
+    verify_common_route_maps(ospfv3)
 
     if 'interface' in ospfv3:
         for ifname, if_config in ospfv3['interface'].items():

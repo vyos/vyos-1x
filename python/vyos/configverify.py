@@ -337,18 +337,16 @@ def verify_accel_ppp_base_service(config):
 def verify_diffie_hellman_length(file, min_keysize):
     """ Verify Diffie-Hellamn keypair length given via file. It must be greater
     then or equal to min_keysize """
+    import os
+    import re
+    from vyos.util import cmd
 
     try:
         keysize = str(min_keysize)
     except:
         return False
 
-    import os
-    import re
-    from vyos.util import cmd
-
     if os.path.exists(file):
-
         out = cmd(f'openssl dhparam -inform PEM -in {file} -text')
         prog = re.compile('\d+\s+bit')
         if prog.search(out):
@@ -358,26 +356,55 @@ def verify_diffie_hellman_length(file, min_keysize):
 
     return False
 
-def verify_route_maps(config):
+def verify_common_route_maps(config):
     """
     Common helper function used by routing protocol implementations to perform
     recurring validation if the specified route-map for either zebra to kernel
     installation exists (this is the top-level route_map key) or when a route
     is redistributed with a route-map that it exists!
     """
-    if 'route_map' in config:
-        route_map = config['route_map']
+    # XXX: This function is called in combination with a previous call to:
+    # tmp = conf.get_config_dict(['policy']) - see protocols_ospf.py as example.
+    # We should NOT call this with the key_mangling option as this would rename
+    # route-map hypens '-' to underscores '_' and one could no longer distinguish
+    # what should have been the "proper" route-map name, as foo-bar and foo_bar
+    # are two entire different route-map instances!
+    for route_map in ['route-map', 'route_map']:
+        if route_map not in config:
+            continue
+        tmp = config[route_map]
         # Check if the specified route-map exists, if not error out
-        if dict_search(f'policy.route_map.{route_map}', config) == None:
-            raise ConfigError(f'Specified route-map "{route_map}" does not exist!')
+        if dict_search(f'policy.route-map.{tmp}', config) == None:
+            raise ConfigError(f'Specified route-map "{tmp}" does not exist!')
 
     if 'redistribute' in config:
         for protocol, protocol_config in config['redistribute'].items():
             if 'route_map' in protocol_config:
-                # A hyphen in a route-map name will be converted to _, take care
-                # about this effect during validation
-                route_map = protocol_config['route_map'].replace('-','_')
-                # Check if the specified route-map exists, if not error out
-                if dict_search(f'policy.route_map.{route_map}', config) == None:
-                    raise ConfigError(f'Redistribution route-map "{route_map}" ' \
-                                      f'for "{protocol}" does not exist!')
+                verify_route_map(protocol_config['route_map'], config)
+
+def verify_route_map(route_map_name, config):
+    """
+    Common helper function used by routing protocol implementations to perform
+    recurring validation if a specified route-map exists!
+    """
+    # Check if the specified route-map exists, if not error out
+    if dict_search(f'policy.route-map.{route_map_name}', config) == None:
+        raise ConfigError(f'Specified route-map "{route_map_name}" does not exist!')
+
+def verify_prefix_list(prefix_list, config, version=''):
+    """
+    Common helper function used by routing protocol implementations to perform
+    recurring validation if a specified prefix-list exists!
+    """
+    # Check if the specified prefix-list exists, if not error out
+    if dict_search(f'policy.prefix-list{version}.{prefix_list}', config) == None:
+        raise ConfigError(f'Specified prefix-list{version} "{prefix_list}" does not exist!')
+
+def verify_access_list(access_list, config, version=''):
+    """
+    Common helper function used by routing protocol implementations to perform
+    recurring validation if a specified prefix-list exists!
+    """
+    # Check if the specified ACL exists, if not error out
+    if dict_search(f'policy.access-list{version}.{access_list}', config) == None:
+        raise ConfigError(f'Specified access-list{version} "{access_list}" does not exist!')
