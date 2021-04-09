@@ -11,14 +11,21 @@
             <command>vtysh -c "show ip bgp"</command>
             <children>
               #include <include/bgp/show-ip-bgp-common.xml.i>
+              <leafNode name="vrf">
+                <properties>
+                  <help>Show BGP VRF information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
               <tagNode name="vrf">
                 <properties>
-                  <help>Show bgp routing protocol for given VRF</help>
+                  <help>Show BGP VRF related information</help>
                   <completionHelp>
                     <path>vrf name</path>
                     <list>all</list>
                   </completionHelp>
                 </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                 <children>
                   #include <include/bgp/show-ip-bgp-common.xml.i>
                 </children>
