@@ -186,16 +186,14 @@
 {% endmacro %}
 !
 router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
-{% if parameters is defined %}
-{%   if parameters.ebgp_requires_policy is defined %}
+{% if parameters is defined and parameters.ebgp_requires_policy is defined %}
  bgp ebgp-requires-policy
-{%   else %}
+{% else %}
  no bgp ebgp-requires-policy
-{%   endif %}
-{%   if parameters.default is defined and parameters.default.no_ipv4_unicast is defined %}
+{% endif %}
+{% if parameters is defined and parameters.default is defined and parameters.default.no_ipv4_unicast is defined %}
 {#   Option must be set before any neighbor - see https://phabricator.vyos.net/T3463 #}
  no bgp default ipv4-unicast
-{%   endif %}
 {% endif %}
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check
