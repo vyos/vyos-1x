@@ -232,7 +232,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         conf = get_interface_config(interface)
         self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
-    def test_erspan(self):
+    def test_erspan_v1(self):
         interface = f'tun1070'
         encapsulation = 'erspan'
         ip_key = '77'
@@ -262,6 +262,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
         self.assertEqual(int(idx),          conf['linkinfo']['info_data']['erspan_index'])
+        # version defaults to 1
         self.assertEqual(1,                 conf['linkinfo']['info_data']['erspan_ver'])
         self.assertTrue(                    conf['linkinfo']['info_data']['iseq'])
         self.assertTrue(                    conf['linkinfo']['info_data']['oseq'])
@@ -275,23 +276,34 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         conf = get_interface_config(interface)
         self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
-    def test_ip6erspan(self):
+    def test_ip6erspan_v2(self):
         interface = f'tun1070'
         encapsulation = 'ip6erspan'
         ip_key = '77'
-        erspan_ver = '2'
-        direction = 'ingres'
+        erspan_ver = 2
+        direction = 'ingress'
 
         self.cli_set(self._base_path + [interface, 'encapsulation', encapsulation])
         self.cli_set(self._base_path + [interface, 'source-address', self.local_v6])
         self.cli_set(self._base_path + [interface, 'remote', remote_ip6])
 
-        self.cli_set(self._base_path + [interface, 'parameters', 'erspan', 'index', '10'])
-
         # ERSPAN requires ip key parameter
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', ip_key])
+
+        self.cli_set(self._base_path + [interface, 'parameters', 'erspan', 'version', str(erspan_ver)])
+
+        # ERSPAN index is not valid on version 2
+        self.cli_set(self._base_path + [interface, 'parameters', 'erspan', 'index', '10'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + [interface, 'parameters', 'erspan', 'index'])
+
+        # ERSPAN requires direction to be set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'parameters', 'erspan', 'direction', direction])
 
         # Check if commit is ok
         self.cli_commit()
@@ -305,7 +317,8 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(0,                 conf['linkinfo']['info_data']['ttl'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
-        self.assertEqual(1,                 conf['linkinfo']['info_data']['erspan_ver'])
+        self.assertEqual(erspan_ver,        conf['linkinfo']['info_data']['erspan_ver'])
+        self.assertEqual(direction,         conf['linkinfo']['info_data']['erspan_dir'])
         self.assertTrue(                    conf['linkinfo']['info_data']['iseq'])
         self.assertTrue(                    conf['linkinfo']['info_data']['oseq'])
 
