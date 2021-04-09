@@ -1,4 +1,5 @@
 <!-- included start from bgp/show-bgp-common.xml.i -->
+#include <include/bgp/afi-common.xml.i>
 #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
 <tagNode name="ipv4">
   <properties>
