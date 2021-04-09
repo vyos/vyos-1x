@@ -22,6 +22,7 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
+from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_interface_exists
 from vyos.util import call
 from vyos.util import dict_search
@@ -70,10 +71,12 @@ def get_config(config=None):
         return isis
 
     # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify()
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into OSPF dict
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     isis = dict_merge(tmp, isis)
 
     return isis
@@ -90,6 +93,8 @@ def verify(isis):
     tmp = isis['net'].split('.')
     if int(tmp[-1]) != 0:
         raise ConfigError('Last byte of IS-IS network entity title must always be 0!')
+
+    verify_common_route_maps(isis)
 
     # If interface not set
     if 'interface' not in isis:
@@ -140,12 +145,6 @@ def verify(isis):
                     if proc_level and proc_level != 'level_1_2' and proc_level != redistr_level:
                         raise ConfigError(f'"protocols isis {process} redistribute {afi} {proto} {redistr_level}" ' \
                                           f'can not be used with \"protocols isis {process} level {proc_level}\"')
-
-                    if 'route_map' in redistr_config:
-                        name = redistr_config['route_map']
-                        tmp = name.replace('-', '_')
-                        if dict_search(f'policy.route_map.{tmp}', isis) == None:
-                            raise ConfigError(f'Route-map {name} does not exist!')
 
     # Segment routing checks
     if dict_search('segment_routing.global_block', isis):

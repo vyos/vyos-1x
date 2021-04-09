@@ -142,6 +142,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
         self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
 
+        self.cli_set(base_path + ['local-as', ASN])
+
     def tearDown(self):
         self.cli_delete(['policy', 'route-map', route_map_in])
         self.cli_delete(['policy', 'route-map', route_map_out])
@@ -214,7 +216,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
 
-        # Local AS number MUST be defined
+        # Local AS number MUST be defined - as this is set in setUp() we remove
+        # this once for testing of the proper error
+        self.cli_delete(base_path + ['local-as'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(base_path + ['local-as', ASN])
@@ -257,7 +261,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
 
     def test_bgp_02_neighbors(self):
-        self.cli_set(base_path + ['local-as', ASN])
         # Test out individual neighbor configuration items, not all of them are
         # also available to a peer-group!
         for peer, peer_config in neighbor_config.items():
@@ -332,7 +335,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.verify_frr_config(peer, peer_config, frrconfig)
 
     def test_bgp_03_peer_groups(self):
-        self.cli_set(base_path + ['local-as', ASN])
         # Test out individual peer-group configuration items
         for peer_group, config in peer_group_config.items():
             if 'cap_dynamic' in config:
@@ -403,8 +405,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 },
         }
 
-        self.cli_set(base_path + ['local-as', ASN])
-
         # We want to redistribute ...
         redistributes = ['connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
         for redistribute in redistributes:
@@ -451,8 +451,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             },
         }
 
-        self.cli_set(base_path + ['local-as', ASN])
-
         # We want to redistribute ...
         redistributes = ['connected', 'kernel', 'ospfv3', 'ripng', 'static']
         for redistribute in redistributes:
@@ -495,7 +493,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         listen_ranges = ['192.0.2.0/25', '192.0.2.128/25']
         peer_group = 'listenfoobar'
 
-        self.cli_set(base_path + ['local-as', ASN])
         self.cli_set(base_path + ['listen', 'limit', limit])
 
         for prefix in listen_ranges:
@@ -526,8 +523,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_07_l2vpn_evpn(self):
         vnis = ['10010', '10020', '10030']
         neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
-
-        self.cli_set(base_path + ['local-as', ASN])
 
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-default-gw'])

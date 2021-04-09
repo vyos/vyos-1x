@@ -20,7 +20,7 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
-from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
 from vyos.util import call
@@ -52,7 +52,7 @@ def get_config(config=None):
     return static
 
 def verify(static):
-    verify_route_maps(static)
+    verify_common_route_maps(static)
 
     for route in ['route', 'route6']:
         # if there is no route(6) key in the dictionary we can immediately

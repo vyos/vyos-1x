@@ -21,6 +21,8 @@ from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_prefix_list
+from vyos.configverify import verify_route_map
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
@@ -59,11 +61,13 @@ def get_config(config=None):
         bgp.update({'deleted' : ''})
         return bgp
 
-    # We also need some additional information from the config,
-    # prefix-lists and route-maps for instance.
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into bgp dict
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     bgp = dict_merge(tmp, bgp)
 
     return bgp
@@ -148,24 +152,15 @@ def verify(bgp):
                         if tmp not in afi_config['prefix_list']:
                             # bail out early
                             continue
-                        # get_config_dict() mangles all '-' characters to '_' this is legitimate, thus all our
-                        # compares will run on '_' as also '_' is a valid name for a prefix-list
-                        prefix_list = afi_config['prefix_list'][tmp].replace('-', '_')
                         if afi == 'ipv4_unicast':
-                            if dict_search(f'policy.prefix_list.{prefix_list}', bgp) == None:
-                                raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+                            verify_prefix_list(afi_config['prefix_list'][tmp], bgp)
                         elif afi == 'ipv6_unicast':
-                            if dict_search(f'policy.prefix_list6.{prefix_list}', bgp) == None:
-                                raise ConfigError(f'prefix-list6 "{prefix_list}" used for "{tmp}" does not exist!')
+                            verify_prefix_list(afi_config['prefix_list'][tmp], bgp, version='6')
 
                 if 'route_map' in afi_config:
                     for tmp in ['import', 'export']:
                         if tmp in afi_config['route_map']:
-                            # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
-                            # compares will run on '_' as also '_' is a valid name for a route-map
-                            route_map = afi_config['route_map'][tmp].replace('-', '_')
-                            if dict_search(f'policy.route_map.{route_map}', bgp) == None:
-                                raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
+                            verify_route_map(afi_config['route_map'][tmp], bgp)
 
                 if 'route_reflector_client' in afi_config:
                     if 'remote_as' in peer_config and bgp['local_as'] != peer_config['remote_as']:

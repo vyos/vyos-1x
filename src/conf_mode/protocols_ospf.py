@@ -22,7 +22,8 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
-from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_common_route_maps
+from vyos.configverify import verify_route_map
 from vyos.configverify import verify_interface_exists
 from vyos.template import render_to_string
 from vyos.util import call
@@ -130,10 +131,12 @@ def get_config(config=None):
                 ospf['interface'][interface])
 
     # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify()
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into OSPF dict
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     ospf = dict_merge(tmp, ospf)
 
     return ospf
@@ -142,7 +145,11 @@ def verify(ospf):
     if not ospf:
         return None
 
-    verify_route_maps(ospf)
+    verify_common_route_maps(ospf)
+
+    # As we can have a default-information route-map, we need to validate it!
+    route_map_name = dict_search('default_information.originate.route_map', ospf)
+    if route_map_name: verify_route_map(route_map_name, ospf)
 
     if 'interface' in ospf:
         for interface in ospf['interface']:
