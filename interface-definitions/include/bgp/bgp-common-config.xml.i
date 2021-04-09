@@ -215,6 +215,29 @@
         <help>L2VPN EVPN BGP settings</help>
       </properties>
       <children>
+        <node name="advertise">
+          <properties>
+            <help>Advertise prefix routes</help>
+          </properties>
+          <children>
+            <node name="ipv4">
+              <properties>
+                <help>IPv4 address family</help>
+              </properties>
+              <children>
+                #include <include/bgp/bgp-afi-l2vpn-advertise.xml.i>
+              </children>
+            </node>
+            <node name="ipv6">
+              <properties>
+                <help>IPv6 address family</help>
+              </properties>
+              <children>
+                #include <include/bgp/bgp-afi-l2vpn-advertise.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
         <leafNode name="advertise-all-vni">
           <properties>
             <help>Advertise All local VNIs</help>

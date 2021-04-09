@@ -240,6 +240,13 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 
 {%       endfor %}
 {%     endif %}
+{%     if afi_config.advertise is defined and afi_config.advertise is not none %}
+{%       for adv_afi, adv_afi_config in afi_config.advertise.items() %}
+{%         if adv_afi_config.unicast is defined and adv_afi_config.unicast is not none %}
+ advertise {{ adv_afi }} unicast {{ 'route-map ' + adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
+{%     endif %}
+{%       endfor %}
+{%     endif %}
 {%     if afi_config.advertise_all_vni is defined %}
   advertise-all-vni
 {%     endif %}
