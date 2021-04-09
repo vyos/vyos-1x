@@ -1,4 +1,4 @@
-<!-- included start from bgp-common.xml.i -->
+<!-- included start from bgp/show-ip-bgp-common.xml.i -->
 <leafNode name="attribute-info">
   <properties>
     <help>Show BGP attribute information</help>
@@ -17,8 +17,8 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </leafNode>
-#include <include/bgp-afi-common.xml.i>
-#include <include/bgp-afi-ipv4-ipv6-common.xml.i>
+#include <include/bgp/afi-common.xml.i>
+#include <include/bgp/afi-ipv4-ipv6-common.xml.i>
 <tagNode name="prefix-list">
   <properties>
     <completionHelp>

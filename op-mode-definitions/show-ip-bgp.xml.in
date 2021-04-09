@@ -10,7 +10,7 @@
             </properties>
             <command>vtysh -c "show ip bgp"</command>
             <children>
-              #include <include/bgp-common.xml.i>
+              #include <include/bgp/show-ip-bgp-common.xml.i>
               <tagNode name="vrf">
                 <properties>
                   <help>Show bgp routing protocol for given VRF</help>
@@ -20,7 +20,7 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  #include <include/bgp-common.xml.i>
+                  #include <include/bgp/show-ip-bgp-common.xml.i>
                 </children>
               </tagNode>
             </children>

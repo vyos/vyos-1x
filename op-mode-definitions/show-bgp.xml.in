@@ -8,7 +8,7 @@
         </properties>
         <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
         <children>
-          #include <include/bgp-afi-ipv4-ipv6-common.xml.i>
+          #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
           <tagNode name="ipv4">
             <properties>
               <help>Network in the BGP routing table to display</help>
@@ -17,7 +17,7 @@
               </completionHelp>
             </properties>
             <children>
-              #include <include/bgp-prefix-bestpath-multipath.xml.i>
+              #include <include/bgp/prefix-bestpath-multipath.xml.i>
             </children>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </tagNode>
@@ -26,8 +26,8 @@
               <help>IPv4 Address Family</help>
             </properties>
             <children>
-              #include <include/bgp-afi-common.xml.i>
-              #include <include/bgp-afi-ipv4-ipv6-common.xml.i>
+              #include <include/bgp/afi-common.xml.i>
+              #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
             </children>
           </node>
           <tagNode name="ipv6">
@@ -38,7 +38,7 @@
               </completionHelp>
             </properties>
             <children>
-              #include <include/bgp-prefix-bestpath-multipath.xml.i>
+              #include <include/bgp/prefix-bestpath-multipath.xml.i>
             </children>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </tagNode>
@@ -47,8 +47,8 @@
               <help>IPv6 Address Family</help>
             </properties>
             <children>
-              #include <include/bgp-afi-common.xml.i>
-              #include <include/bgp-afi-ipv4-ipv6-common.xml.i>
+              #include <include/bgp/afi-common.xml.i>
+              #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
             </children>
           </node>
           <node name="l2vpn">
@@ -71,7 +71,7 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                 <children>
-                  #include <include/bgp-afi-common.xml.i>
+                  #include <include/bgp/afi-common.xml.i>
                   <node name="all">
                     <properties>
                       <help>Display information about all EVPN NLRIs</help>

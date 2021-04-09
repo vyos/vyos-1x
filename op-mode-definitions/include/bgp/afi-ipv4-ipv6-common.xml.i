@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-ipv4-ipv6-common.xml.i -->
+<!-- included start from bgp/afi-ipv4-ipv6-common.xml.i -->
 <node name="community">
   <properties>
     <help>Display routes matching the community</help>
