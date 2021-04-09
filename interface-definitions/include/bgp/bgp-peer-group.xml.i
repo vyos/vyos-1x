@@ -3,7 +3,7 @@
   <properties>
     <help>Peer group for this peer</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_bgp_peer_groups.sh</script>
+      <path>protocols bgp peer-group</path>
     </completionHelp>
     <valueHelp>
       <format>txt</format>
