@@ -102,8 +102,7 @@ peer_group_config = {
         'password'     : 'VyOS-Secure123',
         'shutdown'     : '',
         'cap_over'     : '',
-#        XXX: not available in current Perl backend
-#       'ttl_security': '5',
+        'ttl_security': '5',
         },
     'bar' : {
         'description'  : 'foo peer bar group',
@@ -126,7 +125,6 @@ peer_group_config = {
         'route_map_out': route_map_out,
         },
 }
-
 
 class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
