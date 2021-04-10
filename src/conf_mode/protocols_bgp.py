@@ -115,6 +115,16 @@ def verify(bgp):
                     raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                       f'neighbor "{neighbor}" does not exist!')
 
+            if 'local_as' in peer_config:
+                if len(peer_config['local_as']) > 1:
+                    raise ConfigError('Only one local-as number may be specified!')
+
+                # Neighbor local-as override can not be the same as the local-as
+                # we use for this BGP instane!
+                asn = list(peer_config['local_as'].keys())[0]
+                if asn == bgp['local_as']:
+                    raise ConfigError('Cannot have local-as same as BGP AS number')
+
             # ttl-security and ebgp-multihop can't be used in the same configration
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
                 raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
