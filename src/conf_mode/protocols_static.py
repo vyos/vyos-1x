@@ -20,6 +20,7 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
@@ -28,8 +29,6 @@ from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
-
-frr_daemon = 'staticd'
 
 def get_config(config=None):
     if config:
@@ -48,6 +47,15 @@ def get_config(config=None):
 
     # Assign the name of our VRF context
     if vrf: static['vrf'] = vrf
+
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
+    static = dict_merge(tmp, static)
 
     return static
 
@@ -77,9 +85,18 @@ def generate(static):
     return None
 
 def apply(static):
+    static_daemon = 'staticd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'^ip protocol static route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    frr_cfg.load_configuration(static_daemon)
 
     if 'vrf' in static:
         vrf = static['vrf']
@@ -89,13 +106,13 @@ def apply(static):
         frr_cfg.modify_section(r'^ipv6 route .*', '')
 
     frr_cfg.add_before(r'(interface .*|line vty)', static['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.commit_configuration(static_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if static['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
+            frr_cfg.commit_configuration(static_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

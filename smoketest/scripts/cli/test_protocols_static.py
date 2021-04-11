@@ -82,7 +82,7 @@ routes = {
 
 tables = ['80', '81', '82']
 
-class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
+class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         # This is our "target" VRF when leaking routes:
         self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
@@ -100,7 +100,7 @@ class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
         tmp = self.getFRRconfig('', end='')
         self.cli_commit()
 
-    def test_protocols_static(self):
+    def test_01_static(self):
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
@@ -187,7 +187,7 @@ class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
 
                 self.assertIn(tmp, frrconfig)
 
-    def test_protocols_static_table(self):
+    def test_02_static_table(self):
         for table in tables:
             for route, route_config in routes.items():
                 route_type = 'route'
@@ -281,7 +281,7 @@ class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
                     self.assertIn(tmp, frrconfig)
 
 
-    def test_protocols_vrf_static(self):
+    def test_03_static_vrf(self):
         # Create VRF instances and apply the static routes from above to FRR.
         # Re-read the configured routes and match them if they are programmed
         # properly. This also includes VRF leaking
@@ -391,6 +391,32 @@ class StaticRouteTest(VyOSUnitTestSHIM.TestCase):
                     self.assertIn(tmp, frrconfig)
 
         self.cli_delete(['vrf'])
+
+    def test_04_static_zebra_route_map(self):
+        # Implemented because of T3328
+        self.debug = True
+        route_map = 'foo-static-in'
+        self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+
+        self.cli_set(base_path + ['route-map', route_map])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol static route-map {route_map}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
+
+        self.cli_delete(['policy', 'route-map', route_map])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
