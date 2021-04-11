@@ -64,8 +64,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             tmp = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f' ip router isis {domain}', tmp)
 
-        self.cli_delete(['policy'])
-
+        self.cli_delete(['policy', 'route-map', route_map])
+        self.cli_delete(['policy', 'prefix-list', prefix_list])
 
     def test_isis_02_vrfs(self):
         vrfs = ['red', 'green', 'blue']
@@ -97,6 +97,39 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
+
+    def test_isis_03_zebra_route_map(self):
+        # Implemented because of T3328
+        route_map = 'foo-isis-in'
+
+        self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
+
+        interfaces = Section.interfaces('ethernet')
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface])
+
+        self.cli_set(base_path + ['route-map', route_map])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol isis route-map {route_map}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
+
+        self.cli_delete(['policy', 'route-map', route_map])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
